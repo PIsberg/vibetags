@@ -1,6 +1,8 @@
 
 # VibeTags - AI Guardrails for Java Development
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **VibeTags** is a Java annotation processor that acts as AI guardrails for code generation tools like Cursor, Claude, Gemini, and ChatGPT. It allows developers to control AI behavior through simple annotations, protecting critical code and guiding AI implementations.
 
 ## 🎯 What is VibeTags?
@@ -16,13 +18,14 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods that need AI implementation with detailed instructions
+- **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
 
 ### Supported AI Platforms
 
 Generated configuration files work out-of-the-box with:
 - **Cursor** (`.cursorrules`)
 - **Claude** (`CLAUDE.md`)
-- **Gemini** (`.aiexclude`)
+- **Gemini** (`.aiexclude` + `gemini_instructions.md`)
 - **ChatGPT** (`chatgpt_instructions.md`)
 
 ## 📁 Project Structure
@@ -117,6 +120,12 @@ public class StringParser {
 public boolean sendEmail(String to, String subject, String body) {
     // @DIDraft: AI should implement this
 }
+
+// Tag critical infrastructure for continuous security auditing
+@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
+public class DatabaseConnector {
+    // AI must audit any modifications for SQL injection and thread safety
+}
 ```
 
 ## 📚 Documentation
@@ -170,29 +179,95 @@ cd ../example && gradle clean build
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
 
+### 🛡️ @AIAudit - Continuous Security Auditing
+
+The `@AIAudit` annotation enables continuous security auditing for critical infrastructure. When you tag a class or method with `@AIAudit`, AI assistants will automatically perform security reviews whenever they propose modifications to that code.
+
+#### How It Works
+
+1. **Annotate Critical Code**: Add `@AIAudit` with specific vulnerability checks
+2. **Compile**: The annotation processor generates audit requirements
+3. **AI Self-Audits**: When AI assistants modify tagged code, they must check for listed vulnerabilities
+
+#### Example Usage
+
+```java
+@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
+public class DatabaseConnector {
+    // Database connection and query handling code
+}
+```
+
+#### Generated Output by Platform
+
+**Cursor (.cursorrules):**
+```markdown
+## 🛡️ MANDATORY SECURITY AUDITS
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
+```
+
+**Claude (CLAUDE.md):**
+```xml
+<audit_requirements>
+  <file path="com.example.database.DatabaseConnector">
+    <vulnerability_check>SQL Injection</vulnerability_check>
+    <vulnerability_check>Thread Safety issues</vulnerability_check>
+  </file>
+</audit_requirements>
+```
+
+**Gemini (gemini_instructions.md):**
+```markdown
+# CONTINUOUS AUDIT REQUIREMENTS
+File: `com.example.database.DatabaseConnector`
+Critical Vulnerabilities to Prevent: 
+- SQL Injection
+- Thread Safety issues
+```
+
+**ChatGPT (chatgpt_instructions.md):**
+```markdown
+### 🔎 SECURITY GUARDRAILS (ENFORCE STRICTLY)
+Target File: `com.example.database.DatabaseConnector`
+Audit Checklist:
+1. Is this code vulnerable to SQL Injection?
+2. Is this code vulnerable to Thread Safety issues?
+```
+
+#### Common Vulnerability Checks
+
+- SQL Injection
+- Thread Safety issues
+- XSS (Cross-Site Scripting)
+- CSRF (Cross-Site Request Forgery)
+- Command Injection
+- Path Traversal
+- Insecure Deserialization
+- Authentication Bypass
+
 ## 🤝 Contributing
 
 VibeTags is designed to evolve based on community needs. Future extensions could include:
 
 - `@AIPattern` - Specify design patterns AI should follow
 - `@AITest` - Guide AI in generating tests
-- `@AIReview` - Mark code for AI code review with specific criteria
 - Custom annotation processors for organization-specific needs
 
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains the Java annotations and the annotation processor that generates AI configuration files.
+The core annotation processor library. Contains the Java annotations (@AILocked, @AIContext, @AIDraft, @AIAudit) and the annotation processor that generates AI configuration files.
 
 ### example/
-A practical e-commerce application demonstrating real-world usage of VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, and request AI implementations for notification services.
+A practical e-commerce application demonstrating real-world usage of VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, and enforce continuous security auditing for critical database infrastructure.
 
 ### Web UI (Root)
 A React-based web interface for interacting with AI assistants and managing your VibeTags configuration.
 
 ## 📝 License
 
-This project is provided as-is for demonstration purposes. Feel free to use it as a template for your own projects!
+This project is licensed under the [MIT License](LICENSE).
 
 ## 🌟 Why VibeTags?
 

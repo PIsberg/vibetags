@@ -18,3 +18,14 @@
 - **com.example.strategy.PaymentStrategy**: Focus on Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid Monolithic if-else chains, hard-coded payment logic, single class handling all payment types.
 - **com.example.service.OrderService**: Focus on Maintain transactional integrity. All database operations must use proper transaction management.. Avoid Raw SQL queries, direct database connections without connection pooling.
 
+### 🔎 SECURITY GUARDRAILS (ENFORCE STRICTLY)
+Before generating any final code snippets for the files below, you must run a simulated security audit on your own output. 
+
+Target File: `com.example.database.DatabaseConnector`
+Audit Checklist:
+1. Is this code vulnerable to SQL Injection?
+2. Is this code vulnerable to Thread Safety issues?
+
+If the answer to either is YES, discard your draft and rewrite the code securely.
+
+

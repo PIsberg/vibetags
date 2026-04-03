@@ -9,6 +9,7 @@ This is a sample e-commerce application that shows how VibeTags annotations cont
 - **`@AILocked`** - Protects critical code from AI modifications
 - **`@AIContext`** - Guides AI on how to work with specific classes (focus/avoid instructions)
 - **`@AIDraft`** - Marks methods that need AI implementation with detailed instructions
+- **`@AIAudit`** - Tags critical infrastructure for continuous AI security auditing
 
 When compiled, the VibeTags annotation processor automatically generates AI configuration files for multiple platforms.
 
@@ -33,8 +34,10 @@ example/
     │   ├── PaymentStrategy.java               # @AIContext enforcing design pattern
     │   └── impl/
     │       └── CreditCardStrategy.java        # @AIDraft implementation example
-    └── utils/
-        └── StringParser.java                  # @AIContext optimization hints
+    ├── utils/
+    │   └── StringParser.java                  # @AIContext optimization hints
+    └── database/
+        └── DatabaseConnector.java             # @AIAudit example (security auditing)
 ```
 
 ## 🚀 Quick Start
@@ -149,8 +152,8 @@ public class StringParser {
 Mark methods that need AI help with detailed instructions:
 
 ```java
-@AIDraft(instructions = "Implement email sending using JavaMail API. 
-    Include HTML template support and attachment handling. 
+@AIDraft(instructions = "Implement email sending using JavaMail API.
+    Include HTML template support and attachment handling.
     Add retry logic for transient failures (max 3 retries with exponential backoff).")
 public boolean sendEmail(String to, String subject, String body) {
     // @AIDraft: Implement this
@@ -164,7 +167,56 @@ public boolean sendEmail(String to, String subject, String body) {
 - Standard algorithms (sorting, validation, etc.)
 - Test implementations
 
-### 4. Mixed Usage - Fine-Grained Control
+### 4. @AIAudit - Continuous Security Auditing
+
+Tag critical infrastructure for continuous AI security auditing. When AI assistants modify files with `@AIAudit`, they must perform a security review before outputting final code:
+
+```java
+@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
+public class DatabaseConnector {
+    // Database connection and query handling
+    // AI must audit for SQL injection and thread safety
+}
+```
+
+**Real-world use cases:**
+- Database connectors and ORM configurations
+- Authentication and authorization modules
+- Payment processing integrations
+- API gateways and proxies
+- Cryptographic operations
+- Session management
+
+#### Common Vulnerability Checks
+
+You can specify any vulnerability types relevant to your use case:
+
+```java
+@AIAudit(checkFor = {
+    "SQL Injection",
+    "Thread Safety issues",
+    "XSS (Cross-Site Scripting)",
+    "CSRF (Cross-Site Request Forgery)",
+    "Command Injection",
+    "Path Traversal",
+    "Insecure Deserialization"
+})
+public class CriticalComponent {
+    // AI will audit for all listed vulnerabilities
+}
+```
+
+#### How AI Platforms Handle @AIAudit
+
+**Cursor**: Displays a mandatory security audit section with required checks. AI must explicitly state it has audited the code.
+
+**Claude**: Uses XML-structured audit requirements with strict rules that AI must follow before proposing changes.
+
+**Gemini**: Receives continuous audit requirements formatted as Senior Staff Engineer instructions.
+
+**ChatGPT**: Gets a security guardrails checklist that AI must verify before generating code.
+
+### 5. Mixed Usage - Fine-Grained Control
 
 You can combine annotations in the same class for precise control:
 
@@ -246,6 +298,31 @@ When working with these files, follow these guidelines:
 ```
 
 **How it works:** Upload this file to ChatGPT's Knowledge Base and add "Always review chatgpt_instructions.md before writing code" to Custom Instructions.
+
+### `gemini_instructions.md` (Gemini - NEW)
+
+```markdown
+# CONTINUOUS AUDIT REQUIREMENTS
+You are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:
+
+File: `com.example.database.DatabaseConnector`
+Critical Vulnerabilities to Prevent: 
+- SQL Injection
+- Thread Safety issues
+```
+
+**How it works:** Paste this file into Gemini's Custom Instructions. Gemini treats audit requirements as mandatory security constraints.
+
+### @AIAudit Generated Outputs
+
+When you use `@AIAudit` annotations, the processor generates platform-specific security audit requirements:
+
+**All 5 Generated Files Include:**
+1. **`.cursorrules`** - Mandatory security audits section
+2. **`CLAUDE.md`** - XML audit requirements with vulnerability checks
+3. **`.aiexclude`** - Binary blocklist (existing behavior)
+4. **`chatgpt_instructions.md`** - Security guardrails with audit checklist
+5. **`gemini_instructions.md`** - Continuous audit requirements (NEW)
 
 ## 🎓 Best Practices
 
@@ -420,7 +497,7 @@ The processor uses `Paths.get("")` which resolves to the directory where Maven/G
 
 ## 📝 License
 
-This example project is provided as-is for demonstration purposes. Feel free to use it as a template for your own projects!
+This example project is licensed under the [MIT License](../LICENSE).
 
 ---
 

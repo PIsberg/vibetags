@@ -1,0 +1,106 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-maven:
+    name: Maven Build (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '11', '17', '21' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Build VibeTags Library (Maven)
+        run: |
+          cd vibetags
+          mvn clean install -B
+      
+      - name: Build Example Project (Maven)
+        run: |
+          cd example
+          mvn clean compile -B
+      
+      - name: Verify Generated AI Config Files
+        run: |
+          cd example
+          echo "Checking generated files exist..."
+          test -f .cursorrules && echo "✓ .cursorrules exists" || (echo "✗ .cursorrules missing" && exit 1)
+          test -f CLAUDE.md && echo "✓ CLAUDE.md exists" || (echo "✗ CLAUDE.md missing" && exit 1)
+          test -f .aiexclude && echo "✓ .aiexclude exists" || (echo "✗ .aiexclude missing" && exit 1)
+          test -f chatgpt_instructions.md && echo "✓ chatgpt_instructions.md exists" || (echo "✗ chatgpt_instructions.md missing" && exit 1)
+          test -f gemini_instructions.md && echo "✓ gemini_instructions.md exists" || (echo "✗ gemini_instructions.md missing" && exit 1)
+          echo "All generated files present ✓"
+      
+      - name: Verify @AIAudit Content
+        run: |
+          cd example
+          echo "Checking @AIAudit content in generated files..."
+          grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "✓ Cursor audit section exists" || (echo "✗ Cursor audit section missing" && exit 1)
+          grep -q "audit_requirements" CLAUDE.md && echo "✓ Claude audit requirements exist" || (echo "✗ Claude audit requirements missing" && exit 1)
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "✓ Gemini audit requirements exist" || (echo "✗ Gemini audit requirements missing" && exit 1)
+          grep -q "SECURITY GUARDRAILS" chatgpt_instructions.md && echo "✓ ChatGPT audit guardrails exist" || (echo "✗ ChatGPT audit guardrails missing" && exit 1)
+          echo "All @AIAudit content verified ✓"
+
+  build-gradle:
+    name: Gradle Build (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '11', '17', '21' ]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: gradle
+      
+      - name: Build VibeTags Library (Gradle)
+        run: |
+          cd vibetags
+          gradle wrapper || echo "Wrapper generation skipped"
+          gradle clean build publishToMavenLocal --no-daemon
+      
+      - name: Build Example Project (Gradle)
+        run: |
+          cd example
+          gradle wrapper || echo "Wrapper generation skipped"
+          gradle clean build --no-daemon
+      
+      - name: Verify Generated AI Config Files
+        run: |
+          cd example
+          echo "Checking generated files exist..."
+          test -f .cursorrules && echo "✓ .cursorrules exists" || (echo "✗ .cursorrules missing" && exit 1)
+          test -f CLAUDE.md && echo "✓ CLAUDE.md exists" || (echo "✗ CLAUDE.md missing" && exit 1)
+          test -f .aiexclude && echo "✓ .aiexclude exists" || (echo "✗ .aiexclude missing" && exit 1)
+          test -f chatgpt_instructions.md && echo "✓ chatgpt_instructions.md exists" || (echo "✗ chatgpt_instructions.md missing" && exit 1)
+          test -f gemini_instructions.md && echo "✓ gemini_instructions.md exists" || (echo "✗ gemini_instructions.md missing" && exit 1)
+          echo "All generated files present ✓"
+      
+      - name: Verify @AIAudit Content
+        run: |
+          cd example
+          echo "Checking @AIAudit content in generated files..."
+          grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "✓ Cursor audit section exists" || (echo "✗ Cursor audit section missing" && exit 1)
+          grep -q "audit_requirements" CLAUDE.md && echo "✓ Claude audit requirements exist" || (echo "✗ Claude audit requirements missing" && exit 1)
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "✓ Gemini audit requirements exist" || (echo "✗ Gemini audit requirements missing" && exit 1)
+          grep -q "SECURITY GUARDRAILS" chatgpt_instructions.md && echo "✓ ChatGPT audit guardrails exist" || (echo "✗ ChatGPT audit guardrails missing" && exit 1)
+          echo "All @AIAudit content verified ✓"

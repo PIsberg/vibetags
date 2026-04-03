@@ -50,6 +50,16 @@
       <avoids>Raw SQL queries, direct database connections without connection pooling</avoids>
     </file>
   </contextual_instructions>
+  <audit_requirements>
+    <file path="com.example.database.DatabaseConnector">
+      <vulnerability_check>SQL Injection</vulnerability_check>
+      <vulnerability_check>Thread Safety issues</vulnerability_check>
+    </file>
+  </audit_requirements>
+
+<rule>
+  If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
+</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

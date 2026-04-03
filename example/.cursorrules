@@ -29,3 +29,9 @@
   * Focus: Maintain transactional integrity. All database operations must use proper transaction management.
   * Avoid: Raw SQL queries, direct database connections without connection pooling
 
+## 🛡️ MANDATORY SECURITY AUDITS
+When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
+
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
+
