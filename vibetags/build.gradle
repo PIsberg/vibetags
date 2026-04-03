@@ -1,0 +1,20 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.vibetags'
+version = '1.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks.withType(JavaCompile) {
+    // Disable annotation processing when compiling the processor itself
+    options.compilerArgs += ['-proc:none']
+}
