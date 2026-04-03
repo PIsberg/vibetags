@@ -12,6 +12,8 @@ This is a sample e-commerce application that shows how VibeTags annotations cont
 
 When compiled, the VibeTags annotation processor automatically generates AI configuration files for multiple platforms.
 
+> **Note:** For an overview of the VibeTags project, installation instructions, and quick start guide, see the [main README](../README.md).
+
 ## 📁 Project Structure
 
 ```
@@ -40,7 +42,7 @@ example/
 ### Prerequisites
 
 - **Java 11 or higher** installed
-- **Maven 3.6+** installed
+- **Maven 3.6+** or **Gradle 7.0+** installed
 - **VibeTags library** built and installed locally (see below)
 
 ### Step 1: Install VibeTags Library
@@ -49,22 +51,35 @@ Before using this example project, you need to build and install the VibeTags li
 
 ```bash
 # Navigate to the vibetags library directory
-cd vibetags
+cd ../vibetags
 
-# Build and install to local Maven repository
+# Build and install to local Maven repository (Maven)
 mvn clean install
+
+# OR using Gradle
+gradle clean build publishToMavenLocal
 ```
 
 This creates the `com.vibetags:vibetags-processor:1.0.0-SNAPSHOT` artifact in your local Maven repository.
 
 ### Step 2: Build the Example Project
 
+**Using Maven:**
 ```bash
 # Navigate to this example directory
 cd example
 
 # Build the project
 mvn clean compile
+```
+
+**Using Gradle:**
+```bash
+# Navigate to this example directory
+cd example
+
+# Build the project
+gradle clean build
 ```
 
 ### Step 3: Check Generated AI Guardrail Files
@@ -78,8 +93,14 @@ After compilation, you'll find these files automatically generated in the projec
 
 ### Step 4: Run the Application
 
+**Using Maven:**
 ```bash
 mvn exec:java -Dexec.mainClass="com.example.MainApplication"
+```
+
+**Using Gradle:**
+```bash
+gradle runApp
 ```
 
 Or run directly from your IDE.
@@ -298,9 +319,9 @@ public class SecurityConfig {
 
 ## 🔧 Advanced Configuration
 
-### Using with Gradle
+### Gradle Configuration
 
-If you prefer Gradle over Maven, add this to your `build.gradle`:
+This project includes a complete `build.gradle` file. The key configuration is:
 
 ```groovy
 dependencies {
@@ -311,6 +332,11 @@ dependencies {
 compileJava {
     options.annotationProcessorPath = configurations.annotationProcessor
 }
+```
+
+The project also includes a `runApp` task for easy execution:
+```bash
+gradle runApp
 ```
 
 ### Excluding Annotations from Processing

@@ -1,0 +1,39 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.vibetags.example'
+version = '1.0.0'
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    // VibeTags Annotation Processor
+    compileOnly 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
+    annotationProcessor 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
+}
+
+compileJava {
+    options.annotationProcessorPath = configurations.annotationProcessor
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.example.MainApplication'
+        )
+    }
+}
+
+// Optional: Run the application
+task runApp(type: JavaExec) {
+    group = 'application'
+    description = 'Run the VibeTags example application'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.MainApplication'
+}
