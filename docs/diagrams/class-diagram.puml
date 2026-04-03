@@ -1,5 +1,7 @@
-@startuml VibeTags Class Diagram
+@startuml
 title VibeTags - Class Architecture
+
+allowmixing
 
 skinparam class {
     BackgroundColor White
@@ -11,20 +13,20 @@ skinparam stereotypeCBackgroundColor #E8E8E8
 
 ' Package: Annotations
 package "com.vibetags.annotations" {
-    
+
     annotation AILocked {
         + String reason()
     }
-    
+
     annotation AIContext {
         + String focus()
         + String avoids()
     }
-    
+
     annotation AIDraft {
         + String instructions()
     }
-    
+
     annotation AIAudit {
         + String[] checkFor()
     }
@@ -32,12 +34,12 @@ package "com.vibetags.annotations" {
 
 ' Package: Processor
 package "com.vibetags.processor" {
-    
+
     class AIGuardrailProcessor {
         - writeFile(path: String, content: String)
         + process(annotations: Set<TypeElement>, roundEnv: RoundEnvironment) : boolean
     }
-    
+
     note top of AIGuardrailProcessor
         @SupportedAnnotationTypes("com.vibetags.annotations.*")
         @SupportedSourceVersion(RELEASE_11)
@@ -47,7 +49,7 @@ package "com.vibetags.processor" {
 
 ' Package: Consumer
 package "Consumer Project (example)" {
-    
+
     class "Java Source Files" as ConsumerSource {
         - PaymentProcessor.java
         - SecurityConfig.java
@@ -55,7 +57,7 @@ package "Consumer Project (example)" {
         - OrderService.java
         - etc.
     }
-    
+
     class "javac Compiler" as Javac {
         + Annotation Processing Enabled
         + Discovers processor via SPI
@@ -64,21 +66,21 @@ package "Consumer Project (example)" {
 
 ' Package: Generated Output
 package "Generated AI Config Files" {
-    
-    artifact ".cursorrules" as CursorRules
-    artifact "CLAUDE.md" as ClaudeMd
-    artifact ".aiexclude" as AiExclude
-    artifact "chatgpt_instructions.md" as ChatGptMd
-    artifact "gemini_instructions.md" as GeminiMd
+
+    component ".cursorrules" as CursorRules
+    component "CLAUDE.md" as ClaudeMd
+    component ".aiexclude" as AiExclude
+    component "chatgpt_instructions.md" as ChatGptMd
+    component "gemini_instructions.md" as GeminiMd
 }
 
 ' Package: AI Platforms
 package "AI Platforms" {
-    
-    [Cursor IDE] as Cursor
-    [Claude AI] as Claude
-    [Gemini AI] as Gemini
-    [ChatGPT] as ChatGPT
+
+    component "Cursor IDE" as Cursor
+    component "Claude AI" as Claude
+    component "Gemini AI" as Gemini
+    component "ChatGPT" as ChatGPT
 }
 
 ' Relationships

@@ -50,7 +50,6 @@ vibetags/
 
 - **Java 11 or higher**
 - **Maven 3.6+** or **Gradle 7.0+**
-- **Node.js 18+** (for the web UI)
 
 ### Option 1: Using Maven
 
@@ -79,15 +78,6 @@ cd ../example
 gradle clean build
 
 # Step 3: Check generated AI guardrail files
-```
-
-### Run the Web UI (Optional)
-
-The web UI provides a visual interface for working with AI assistants:
-
-```bash
-npm install
-npm run dev
 ```
 
 ## 📖 How It Works
@@ -261,9 +251,6 @@ The core annotation processor library. Contains the Java annotations (@AILocked,
 
 ### example/
 A practical e-commerce application demonstrating real-world usage of VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, and enforce continuous security auditing for critical database infrastructure.
-
-### Web UI (Root)
-A React-based web interface for interacting with AI assistants and managing your VibeTags configuration.
 
 ## 📝 License
 
