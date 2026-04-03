@@ -34,6 +34,16 @@ jobs:
           cd example
           mvn clean compile -B
       
+      - name: Run Unit Tests (VibeTags Library)
+        run: |
+          cd vibetags
+          mvn test -B
+      
+      - name: Run Integration Tests (requires compiled example)
+        run: |
+          cd vibetags
+          mvn test -Drun.integration.tests=true -B
+      
       - name: Verify Generated AI Config Files
         run: |
           cd example
@@ -60,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '11', '17', '21' ]
+        java: [ '17', '21' ]
     
     steps:
       - uses: actions/checkout@v4
@@ -83,6 +93,16 @@ jobs:
           cd example
           gradle wrapper || echo "Wrapper generation skipped"
           gradle clean build --no-daemon
+      
+      - name: Run Unit Tests (VibeTags Library)
+        run: |
+          cd vibetags
+          gradle test --no-daemon
+      
+      - name: Run Integration Tests (requires compiled example)
+        run: |
+          cd vibetags
+          gradle test -Drun.integration.tests=true --no-daemon
       
       - name: Verify Generated AI Config Files
         run: |

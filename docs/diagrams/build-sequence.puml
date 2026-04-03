@@ -1,0 +1,125 @@
+@startuml VibeTags Build Sequence
+title VibeTags - Build-Time Processing Sequence
+
+actor Developer
+participant "Build Tool\n(Maven/Gradle)" as Build
+participant "javac Compiler" as Javac
+participant "AIGuardrailProcessor" as Processor
+participant "RoundEnvironment" as RoundEnv
+participant "File System" as FS
+database "AI Config Files" as Output
+
+== Compilation Phase ==
+
+Developer -> Build: mvn clean compile
+Build -> Build: Resolve vibetags-processor dependency
+Build -> Javac: Invoke Java compiler
+Javac -> Javac: Scan source files for annotations
+
+note over Javac
+    Discovers processor via SPI:
+    META-INF/services/javax.annotation.processing.Processor
+    -> com.vibetags.processor.AIGuardrailProcessor
+end note
+
+== Annotation Processing Round ==
+
+Javac -> Processor: process(annotations, roundEnv)
+activate Processor
+
+Processor -> Processor: Check if annotations empty
+alt annotations.isEmpty()
+    Processor --> Javac: return false (no processing)
+else annotations present
+    Processor -> Processor: Determine output path\nPaths.get("").toAbsolutePath()
+    
+    == Pass 1: Process @AILocked ==
+    Processor -> RoundEnv: getElementsAnnotatedWith(AILocked)
+    RoundEnv --> Processor: List of @AILocked elements
+    
+    loop For each @AILocked element
+        Processor -> Processor: Extract className + reason
+        Processor -> Processor: Append to cursorRules builder
+        Processor -> Processor: Append to claudeMd builder
+        Processor -> Processor: Append to aiExclude builder
+        Processor -> Processor: Append to chatGpt builder
+    end
+    
+    == Pass 2: Process @AIContext ==
+    Processor -> RoundEnv: getElementsAnnotatedWith(AIContext)
+    RoundEnv --> Processor: List of @AIContext elements
+    
+    loop For each @AIContext element
+        Processor -> Processor: Extract className + focus + avoids
+        Processor -> Processor: Append to cursorRules builder
+        Processor -> Processor: Append to claudeMd builder
+        Processor -> Processor: Append to chatGpt builder
+    end
+    
+    == Pass 3: Process @AIAudit ==
+    Processor -> RoundEnv: getElementsAnnotatedWith(AIAudit)
+    RoundEnv --> Processor: List of @AIAudit elements
+    
+    loop For each @AIAudit element
+        Processor -> Processor: Extract className + checkFor[]
+        
+        alt checkFor is empty
+            Processor -> Processor: Skip this element
+        else checkFor has values
+            Processor -> Processor: Append to cursorAudit builder
+            Processor -> Processor: Append to claudeAudit builder
+            Processor -> Processor: Append to geminiMd builder
+            Processor -> Processor: Append to chatGptAudit builder
+        end
+    end
+    
+    == Finalize Output ==
+    Processor -> Processor: Merge audit sections\nif hasAuditAnnotations
+    
+    Processor -> FS: Write .cursorrules
+    FS --> Processor: File written
+    
+    Processor -> FS: Write CLAUDE.md
+    FS --> Processor: File written
+    
+    Processor -> FS: Write .aiexclude
+    FS --> Processor: File written
+    
+    Processor -> FS: Write chatgpt_instructions.md
+    FS --> Processor: File written
+    
+    Processor -> FS: Write gemini_instructions.md
+    FS --> Processor: File written
+    
+    Processor --> Javac: return true (annotations claimed)
+end
+
+deactivate Processor
+
+== Compilation Complete ==
+
+Javac --> Build: Compilation successful
+Build --> Developer: Build complete
+
+note over Output
+    Generated Files:
+    - .cursorrules (Cursor)
+    - CLAUDE.md (Claude)
+    - .aiexclude (Gemini)
+    - chatgpt_instructions.md (ChatGPT)
+    - gemini_instructions.md (Gemini)
+end note
+
+== AI Tool Usage (Runtime) ==
+
+note over Developer, Output
+    Developer uses AI assistant to modify code
+end note
+
+Developer -> Cursor: Request code modification
+Cursor -> Cursor: Read .cursorrules
+Cursor -> Cursor: Check LOCKED FILES
+Cursor -> Cursor: Check MANDATORY SECURITY AUDITS
+Cursor --> Developer: AI response (follows guardrails)
+
+@enduml

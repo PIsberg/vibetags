@@ -1,0 +1,140 @@
+@startuml VibeTags Class Diagram
+title VibeTags - Class Architecture
+
+skinparam class {
+    BackgroundColor White
+    ArrowColor DarkGray
+    BorderColor DarkGray
+}
+
+skinparam stereotypeCBackgroundColor #E8E8E8
+
+' Package: Annotations
+package "com.vibetags.annotations" {
+    
+    annotation AILocked {
+        + String reason()
+    }
+    
+    annotation AIContext {
+        + String focus()
+        + String avoids()
+    }
+    
+    annotation AIDraft {
+        + String instructions()
+    }
+    
+    annotation AIAudit {
+        + String[] checkFor()
+    }
+}
+
+' Package: Processor
+package "com.vibetags.processor" {
+    
+    class AIGuardrailProcessor {
+        - writeFile(path: String, content: String)
+        + process(annotations: Set<TypeElement>, roundEnv: RoundEnvironment) : boolean
+    }
+    
+    note top of AIGuardrailProcessor
+        @SupportedAnnotationTypes("com.vibetags.annotations.*")
+        @SupportedSourceVersion(RELEASE_11)
+        Extends: AbstractProcessor
+    end note
+}
+
+' Package: Consumer
+package "Consumer Project (example)" {
+    
+    class "Java Source Files" as ConsumerSource {
+        - PaymentProcessor.java
+        - SecurityConfig.java
+        - DatabaseConnector.java
+        - OrderService.java
+        - etc.
+    }
+    
+    class "javac Compiler" as Javac {
+        + Annotation Processing Enabled
+        + Discovers processor via SPI
+    }
+}
+
+' Package: Generated Output
+package "Generated AI Config Files" {
+    
+    artifact ".cursorrules" as CursorRules
+    artifact "CLAUDE.md" as ClaudeMd
+    artifact ".aiexclude" as AiExclude
+    artifact "chatgpt_instructions.md" as ChatGptMd
+    artifact "gemini_instructions.md" as GeminiMd
+}
+
+' Package: AI Platforms
+package "AI Platforms" {
+    
+    [Cursor IDE] as Cursor
+    [Claude AI] as Claude
+    [Gemini AI] as Gemini
+    [ChatGPT] as ChatGPT
+}
+
+' Relationships
+AILocked ..> AIGuardrailProcessor : processed by
+AIContext ..> AIGuardrailProcessor : processed by
+AIDraft ..> AIGuardrailProcessor : processed by
+AIAudit ..> AIGuardrailProcessor : processed by
+
+ConsumerSource --> AILocked : uses
+ConsumerSource --> AIContext : uses
+ConsumerSource --> AIDraft : uses
+ConsumerSource --> AIAudit : uses
+
+Javac --> ConsumerSource : compiles
+Javac --> AIGuardrailProcessor : invokes
+
+AIGuardrailProcessor --> CursorRules : generates
+AIGuardrailProcessor --> ClaudeMd : generates
+AIGuardrailProcessor --> AiExclude : generates
+AIGuardrailProcessor --> ChatGptMd : generates
+AIGuardrailProcessor --> GeminiMd : generates
+
+CursorRules --> Cursor : consumed by
+ClaudeMd --> Claude : consumed by
+AiExclude --> Gemini : consumed by
+ChatGptMd --> ChatGPT : consumed by
+GeminiMd --> Gemini : consumed by
+
+note right of CursorRules
+    Markdown format
+    LOCKED FILES + CONTEXT RULES
+    + MANDATORY SECURITY AUDITS
+end note
+
+note right of ClaudeMd
+    XML format
+    <locked_files>
+    <contextual_instructions>
+    <audit_requirements>
+end note
+
+note right of AiExclude
+    Glob patterns
+    Binary blocklist for Gemini
+end note
+
+note right of ChatGptMd
+    Markdown format
+    Locked Files + Context Rules
+    + SECURITY GUARDRAILS
+end note
+
+note right of GeminiMd
+    Markdown format
+    CONTINUOUS AUDIT REQUIREMENTS
+    Senior Staff Engineer persona
+end note
+
+@enduml
