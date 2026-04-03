@@ -67,20 +67,20 @@ package "Consumer Project (example)" {
 ' Package: Generated Output
 package "Generated AI Config Files" {
 
-    component ".cursorrules" as CursorRules
-    component "CLAUDE.md" as ClaudeMd
-    component ".aiexclude" as AiExclude
-    component "chatgpt_instructions.md" as ChatGptMd
-    component "gemini_instructions.md" as GeminiMd
+    class ".cursorrules" as CursorRules
+    class "CLAUDE.md" as ClaudeMd
+    class ".aiexclude" as AiExclude
+    class "chatgpt_instructions.md" as ChatGptMd
+    class "gemini_instructions.md" as GeminiMd
 }
 
 ' Package: AI Platforms
 package "AI Platforms" {
 
-    component "Cursor IDE" as Cursor
-    component "Claude AI" as Claude
-    component "Gemini AI" as Gemini
-    component "ChatGPT" as ChatGPT
+    class "Cursor IDE" as Cursor
+    class "Claude AI" as Claude
+    class "Gemini AI" as Gemini
+    class "ChatGPT" as ChatGPT
 }
 
 ' Relationships

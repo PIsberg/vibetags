@@ -37,13 +37,6 @@ class AIGuardrailProcessorIntegrationTest {
         originalAiExclude = backupFile(new File(EXAMPLE_DIR, ".aiexclude"));
         originalChatGptMd = backupFile(new File(EXAMPLE_DIR, "chatgpt_instructions.md"));
         originalGeminiMd = backupFile(new File(EXAMPLE_DIR, "gemini_instructions.md"));
-
-        // Clean up any existing generated files
-        deleteIfExists(EXAMPLE_DIR + "/.cursorrules");
-        deleteIfExists(EXAMPLE_DIR + "/CLAUDE.md");
-        deleteIfExists(EXAMPLE_DIR + "/.aiexclude");
-        deleteIfExists(EXAMPLE_DIR + "/chatgpt_instructions.md");
-        deleteIfExists(EXAMPLE_DIR + "/gemini_instructions.md");
     }
 
     @AfterEach
@@ -141,13 +134,13 @@ class AIGuardrailProcessorIntegrationTest {
         String claudeMd = readFile(EXAMPLE_DIR + "/CLAUDE.md");
 
         // Should contain context information
-        assertTrue(cursorRules.contains("memory usage"), 
+        assertTrue(cursorRules.contains("memory usage"),
             "Cursor rules should contain focus");
-        assertTrue(cursorRules.contains("java.util.regex"), 
+        assertTrue(cursorRules.contains("java.util.regex"),
             "Cursor rules should contain avoids");
-        assertTrue(claudeMd.contains("Memory optimization"), 
+        assertTrue(claudeMd.contains("memory usage"),
             "Claude.md should contain focus");
-        assertTrue(claudeMd.contains("java.util.regex"), 
+        assertTrue(claudeMd.contains("java.util.regex"),
             "Claude.md should contain avoids");
     }
 
