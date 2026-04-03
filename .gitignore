@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 .qwen/
+vibetags/target
+example/target
