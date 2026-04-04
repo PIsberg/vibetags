@@ -291,7 +291,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             boolean changed = writeFileIfChanged(filePath.toString(), content);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
-            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " — " + relPath);
+            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
         });
         
         // Final check for orphaned annotations (annotations used but their recommended standalone file is missing)
@@ -375,7 +375,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(
-                "VibeTags: No AI config files found — nothing will be generated.\n" +
+                "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             serviceFiles.forEach((key, path) ->
                 msg.append("  ").append(path.getFileName()).append("\n"));
