@@ -54,7 +54,7 @@ gradle clean build    # Gradle
 `AIGuardrailProcessor.process()` runs during `javac` compilation of the **consumer** project (not the library itself — the library disables annotation processing with `-proc:none`):
 
 1. Collects all `@AILocked`, `@AIContext`, `@AIDraft`, `@AIAudit` elements from the round environment
-2. Accumulates content into five `StringBuilder`s (one per output format)
+2. Accumulates content into six `StringBuilder`s (one per output format)
 3. Calls `resolveActiveServices()` — only files that already exist on disk are regenerated (file presence = opt-in)
 4. Writes to `Paths.get("").toAbsolutePath()` (project root of the consumer)
 
@@ -78,6 +78,7 @@ To deactivate, delete the file — it will never come back.
 | `.aiexclude` | Gemini | Glob patterns |
 | `chatgpt_instructions.md` | ChatGPT | Markdown |
 | `gemini_instructions.md` | Gemini | Markdown |
+| `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 
 ### Annotations (all `RetentionPolicy.SOURCE`)
 

@@ -100,6 +100,7 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("CLAUDE.md"), "Note should list CLAUDE.md");
         assertTrue(note.contains(".cursorrules"), "Note should list .cursorrules");
         assertTrue(note.contains("gemini_instructions.md"), "Note should list gemini file");
+        assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
     }
 
     @Test
@@ -128,11 +129,12 @@ class AIGuardrailProcessorUnitTest {
     @Test
     void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
         for (Path p : AIGuardrailProcessor.buildServiceFileMap(tempDir).values()) {
+            Files.createDirectories(p.getParent());
             Files.createFile(p);
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini"), active,
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini", "copilot"), active,
             "All services should be active when all output files exist");
     }
 
