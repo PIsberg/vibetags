@@ -76,7 +76,7 @@ jobs:
           echo "All @AIAudit content verified ✓"
 
       - name: Upload coverage to Codecov
-        if: matrix.java == '21'
+        if: matrix.java == '17'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -150,3 +150,12 @@ jobs:
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "✓ Gemini audit requirements exist" || (echo "✗ Gemini audit requirements missing" && exit 1)
           grep -q "MANDATORY SECURITY AUDITS" AGENTS.md && echo "✓ Codex audit guardrails exist" || (echo "✗ Codex audit guardrails missing" && exit 1)
           echo "All @AIAudit content verified ✓"
+
+      - name: Upload coverage to Codecov
+        if: matrix.java == '17'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: vibetags/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: unittests-gradle
+          fail_ci_if_error: true
