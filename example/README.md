@@ -63,7 +63,7 @@ mvn clean install
 gradle clean build publishToMavenLocal
 ```
 
-This creates the `com.vibetags:vibetags-processor:1.0.0-SNAPSHOT` artifact in your local Maven repository.
+This creates the `se.deversity.vibetags:vibetags-processor:1.0.0-SNAPSHOT` artifact in your local Maven repository.
 
 ### Step 2: Build the Example Project
 
@@ -402,8 +402,8 @@ This project includes a complete `build.gradle` file. The key configuration is:
 
 ```groovy
 dependencies {
-    compileOnly 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
-    annotationProcessor 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
+    compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
 }
 
 compileJava {
@@ -466,7 +466,7 @@ The processor uses `Paths.get("")` which resolves to the directory where Maven/G
 **Symptom:** Compilation errors like "cannot find symbol @AILocked"
 
 **Solution:**
-1. Verify import statements: `import com.vibetags.annotations.AILocked;`
+1. Verify import statements: `import se.deversity.vibetags.annotations.AILocked;`
 2. Check VibeTags version matches in pom.xml
 3. Run `mvn dependency:tree` to verify dependency resolution
 

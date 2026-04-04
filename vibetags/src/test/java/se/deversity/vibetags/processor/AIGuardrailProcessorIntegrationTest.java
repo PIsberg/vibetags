@@ -1,4 +1,4 @@
-package com.vibetags.processor;
+package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

@@ -12,7 +12,7 @@ skinparam class {
 skinparam stereotypeCBackgroundColor #E8E8E8
 
 ' Package: Annotations
-package "com.vibetags.annotations" {
+package "se.deversity.vibetags.annotations" {
 
     annotation AILocked {
         + String reason()
@@ -33,7 +33,7 @@ package "com.vibetags.annotations" {
 }
 
 ' Package: Processor
-package "com.vibetags.processor" {
+package "se.deversity.vibetags.processor" {
 
     class AIGuardrailProcessor {
         - writeFile(path: String, content: String)
@@ -41,7 +41,7 @@ package "com.vibetags.processor" {
     }
 
     note top of AIGuardrailProcessor
-        @SupportedAnnotationTypes("com.vibetags.annotations.*")
+        @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
         @SupportedSourceVersion(RELEASE_11)
         Extends: AbstractProcessor
     end note

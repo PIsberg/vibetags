@@ -133,7 +133,7 @@ custom:
 
 ```xml
 <plugin>
-    <groupId>com.vibetags</groupId>
+    <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-maven-plugin</artifactId>
     <version>1.0.0</version>
     <configuration>
@@ -204,7 +204,7 @@ public class VibeTagsMojo extends AbstractMojo {
 
 ```kotlin
 plugins {
-    id("com.vibetags.generator") version "1.0.0"
+    id("se.deversity.vibetags.generator") version "1.0.0"
 }
 
 vibetags {
@@ -342,7 +342,7 @@ The annotation processor would remain available but marked as **legacy**:
 ```xml
 <!-- Still works, but delegates to core -->
 <dependency>
-    <groupId>com.vibetags</groupId>
+    <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
     <version>1.0.0</version>
     <scope>provided</scope>

@@ -1,6 +1,6 @@
 package com.example.utils;
 
-import com.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIContext;
 
 /**
  * High-performance string parsing utilities.

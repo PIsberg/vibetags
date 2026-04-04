@@ -1,4 +1,4 @@
-package com.vibetags.annotations;
+package se.deversity.vibetags.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.TYPE, ElementType.METHOD})
-public @interface AIDraft {
-    String instructions() default "Implement this method/class according to standard practices.";
+public @interface AIContext {
+    String focus() default "";
+    String avoids() default "";
 }

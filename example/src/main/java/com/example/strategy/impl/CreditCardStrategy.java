@@ -1,7 +1,7 @@
 package com.example.strategy.impl;
 
 import com.example.strategy.PaymentStrategy;
-import com.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIDraft;
 
 /**
  * Credit card payment implementation.

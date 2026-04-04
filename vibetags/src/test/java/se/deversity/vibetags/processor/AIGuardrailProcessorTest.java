@@ -1,4 +1,4 @@
-package com.vibetags.processor;
+package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class AIGuardrailProcessorTest {
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(supportedTypes);
         assertEquals(1, supportedTypes.value().length);
-        assertEquals("com.vibetags.annotations.*", supportedTypes.value()[0]);
+        assertEquals("se.deversity.vibetags.annotations.*", supportedTypes.value()[0]);
     }
 
     @Test
