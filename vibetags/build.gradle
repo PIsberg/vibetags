@@ -67,8 +67,8 @@ repositories {
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
-    testImplementation 'org.mockito:mockito-core:5.11.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -80,6 +80,7 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnitPlatform()
+    jvmArgs "-Dnet.bytebuddy.experimental=true"
     finalizedBy jacocoTestReport
 }
 
