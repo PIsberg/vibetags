@@ -33,7 +33,8 @@ class AIGuardrailProcessorTest {
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(supportedTypes);
         assertEquals(1, supportedTypes.value().length);
-        assertEquals("se.deversity.vibetags.annotations.*", supportedTypes.value()[0]);
+        assertEquals("*", supportedTypes.value()[0],
+            "Must use '*' so the processor runs even when all VibeTags annotations are removed");
     }
 
     @Test

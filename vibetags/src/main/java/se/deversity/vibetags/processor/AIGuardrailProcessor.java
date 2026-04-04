@@ -20,13 +20,19 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
+@SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 public class AIGuardrailProcessor extends AbstractProcessor {
 
+    // Ensures we process exactly once per compilation run.
+    // With @SupportedAnnotationTypes("*") the processor is called in every round,
+    // including rounds where no VibeTags annotations are present (e.g. all were removed).
+    private boolean processed = false;
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (annotations.isEmpty()) return false;
+        if (roundEnv.processingOver() || processed) return false;
+        processed = true;
 
         String rootPath = Paths.get("").toAbsolutePath().toString();
 
@@ -196,14 +202,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, Path> serviceFiles = buildServiceFileMap(root);
         Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
-        if (activeServices.contains("cursor"))    writeFile(rootPath + "/.cursorrules", cursorRules.toString());
-        if (activeServices.contains("claude"))    writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
-        if (activeServices.contains("aiexclude")) writeFile(rootPath + "/.aiexclude", aiExclude.toString());
-        if (activeServices.contains("chatgpt"))   writeFile(rootPath + "/chatgpt_instructions.md", chatGpt.toString());
-        if (activeServices.contains("gemini"))    writeFile(rootPath + "/gemini_instructions.md", geminiMd.toString());
-        if (activeServices.contains("copilot"))   writeFile(rootPath + "/.github/copilot-instructions.md", copilot.toString());
+        Map<String, String> contentByService = new LinkedHashMap<>();
+        if (activeServices.contains("cursor"))    contentByService.put("cursor",    cursorRules.toString());
+        if (activeServices.contains("claude"))    contentByService.put("claude",    claudeMd.toString());
+        if (activeServices.contains("aiexclude")) contentByService.put("aiexclude", aiExclude.toString());
+        if (activeServices.contains("chatgpt"))   contentByService.put("chatgpt",   chatGpt.toString());
+        if (activeServices.contains("gemini"))    contentByService.put("gemini",    geminiMd.toString());
+        if (activeServices.contains("copilot"))   contentByService.put("copilot",   copilot.toString());
 
-        return true;
+        Messager messager = processingEnv.getMessager();
+        contentByService.forEach((service, content) -> {
+            Path filePath = serviceFiles.get(service);
+            boolean changed = writeFileIfChanged(filePath.toString(), content);
+            String relPath = root.relativize(filePath).toString().replace('\\', '/');
+            String status = changed ? "updated" : "no changes";
+            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " — " + relPath);
+        });
+
+        return false; // do not claim annotations — other processors must still see them
     }
 
     /**
@@ -243,13 +259,30 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return active;
     }
 
-    private void writeFile(String path, String content) {
-        try (PrintWriter out = new PrintWriter(new FileWriter(path))) {
-            out.println(content);
+    /**
+     * Writes {@code content} to {@code path} only if the file's current content differs.
+     *
+     * @return {@code true} if the file was written (content changed or file was empty),
+     *         {@code false} if the existing content was already up-to-date.
+     */
+    boolean writeFileIfChanged(String path, String content) {
+        try {
+            Path filePath = Paths.get(path);
+            if (Files.exists(filePath)) {
+                String existing = Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8);
+                if (existing.strip().equals(content.strip())) {
+                    return false;
+                }
+            }
+            try (PrintWriter out = new PrintWriter(new FileWriter(path))) {
+                out.println(content);
+            }
+            return true;
         } catch (IOException e) {
             processingEnv.getMessager().printMessage(
                 javax.tools.Diagnostic.Kind.WARNING, "VibeTags: Failed to write AI rules file: " + path
             );
+            return false;
         }
     }
 }
