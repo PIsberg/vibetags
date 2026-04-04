@@ -73,6 +73,15 @@ jobs:
           grep -q "SECURITY GUARDRAILS" chatgpt_instructions.md && echo "✓ ChatGPT audit guardrails exist" || (echo "✗ ChatGPT audit guardrails missing" && exit 1)
           echo "All @AIAudit content verified ✓"
 
+      - name: Upload coverage to Codecov
+        if: matrix.java == '21'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: vibetags/target/site/jacoco/jacoco.xml
+          flags: unittests
+          fail_ci_if_error: true
+
   build-gradle:
     name: Gradle Build (JDK ${{ matrix.java }})
     runs-on: ubuntu-latest
