@@ -12,11 +12,16 @@
 - **processPayment(java.lang.String,double)**: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 
 ## Contextual Rules
-- **com.example.service.NotificationService**: Focus on Implement notification delivery with retry logic and error handling. Avoid Hard-coded credentials, synchronous blocking calls.
 - **com.example.security.SecurityConfig**: Focus on This class is READ-ONLY for AI assistants. Do not suggest modifications.. Avoid Any changes to encryption algorithms, key sizes, or validation logic.
-- **com.example.utils.StringParser**: Focus on Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid java.util.regex, String.split(), StringBuilder in loops.
-- **com.example.strategy.PaymentStrategy**: Focus on Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid Monolithic if-else chains, hard-coded payment logic, single class handling all payment types.
+- **com.example.service.NotificationService**: Focus on Implement notification delivery with retry logic and error handling. Avoid Hard-coded credentials, synchronous blocking calls.
 - **com.example.service.OrderService**: Focus on Maintain transactional integrity. All database operations must use proper transaction management.. Avoid Raw SQL queries, direct database connections without connection pooling.
+- **com.example.strategy.PaymentStrategy**: Focus on Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid Monolithic if-else chains, hard-coded payment logic, single class handling all payment types.
+- **com.example.utils.StringParser**: Focus on Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid java.util.regex, String.split(), StringBuilder in loops.
+
+## Ignored Files
+Do not reference or suggest changes to the following:
+
+- **com.example.internal.GeneratedMetadata**
 
 ### 🔎 SECURITY GUARDRAILS (ENFORCE STRICTLY)
 Before generating any final code snippets for the files below, you must run a simulated security audit on your own output. 

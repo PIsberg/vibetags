@@ -204,6 +204,51 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(content.contains("discard your draft and rewrite"));
     }
 
+    @Test
+    void testCursorRulesHasIgnoredElementsSection() throws IOException {
+        String content = readFile(".cursorrules");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain ignored elements section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata class");
+    }
+
+    @Test
+    void testClaudeMdHasIgnoredElements() throws IOException {
+        String content = readFile("CLAUDE.md");
+        assertTrue(content.contains("<ignored_elements>"),
+            "Should contain ignored_elements XML tag");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+        assertTrue(content.contains("Treat these as if they do not exist"),
+            "Should have ignore rule");
+    }
+
+    @Test
+    void testAiExcludeContainsIgnoredFile() throws IOException {
+        String content = readFile(".aiexclude");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should exclude GeneratedMetadata");
+    }
+
+    @Test
+    void testChatGptInstructionsHasIgnoredFiles() throws IOException {
+        String content = readFile("chatgpt_instructions.md");
+        assertTrue(content.contains("Ignored Files"),
+            "Should contain Ignored Files section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+    }
+
+    @Test
+    void testGeminiInstructionsHasIgnoredElements() throws IOException {
+        String content = readFile("gemini_instructions.md");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain IGNORED ELEMENTS section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+    }
+
     private boolean fileExists(String filename) {
         return new File(EXAMPLE_DIR, filename).exists();
     }

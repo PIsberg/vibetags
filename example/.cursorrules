@@ -13,21 +13,26 @@
 * `processPayment(java.lang.String,double)` - Reason: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 
 ## CONTEXTUAL RULES
-* `com.example.service.NotificationService`
-  * Focus: Implement notification delivery with retry logic and error handling
-  * Avoid: Hard-coded credentials, synchronous blocking calls
 * `com.example.security.SecurityConfig`
   * Focus: This class is READ-ONLY for AI assistants. Do not suggest modifications.
   * Avoid: Any changes to encryption algorithms, key sizes, or validation logic
-* `com.example.utils.StringParser`
-  * Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
-  * Avoid: java.util.regex, String.split(), StringBuilder in loops
-* `com.example.strategy.PaymentStrategy`
-  * Focus: Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.
-  * Avoid: Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
+* `com.example.service.NotificationService`
+  * Focus: Implement notification delivery with retry logic and error handling
+  * Avoid: Hard-coded credentials, synchronous blocking calls
 * `com.example.service.OrderService`
   * Focus: Maintain transactional integrity. All database operations must use proper transaction management.
   * Avoid: Raw SQL queries, direct database connections without connection pooling
+* `com.example.strategy.PaymentStrategy`
+  * Focus: Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.
+  * Avoid: Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
+* `com.example.utils.StringParser`
+  * Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
+  * Avoid: java.util.regex, String.split(), StringBuilder in loops
+
+## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)
+Do not reference, suggest changes to, or include the following in completions or answers.
+
+* `com.example.internal.GeneratedMetadata`
 
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.

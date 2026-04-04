@@ -104,6 +104,9 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIContext`** | TYPE, METHOD | `focus: String`, `avoids: String` | Guides AI behavior with positive/negative instructions |
 | **`@AIDraft`** | TYPE, METHOD | `instructions: String` | Marks incomplete code needing AI implementation |
 | **`@AIAudit`** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
+| **`@AIIgnore`** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely — treat as non-existent |
+
+**`@AIIgnore` vs `@AILocked`:** `@AILocked` prevents modification while keeping the element visible to AI. `@AIIgnore` removes the element from AI context completely — AI tools should not reference it, suggest changes to it, or include it in completions.
 
 ### Annotation Processor
 
@@ -123,11 +126,12 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 3. Initialize 5 StringBuilder accumulators (one per output file)
 4. Pass 1: Process @AILocked → append to all builders
 5. Pass 2: Process @AIContext → append to all builders
-6. Pass 3: Process @AIAudit → append audit sections to all builders
-7. Merge audit sections (if any @AIAudit annotations found)
-8. Resolve active services (see File-existence Opt-in below)
-9. Write only active service files to project root
-10. Return true (claim annotations)
+6. Pass 3: Process @AIIgnore → append ignore sections to all builders
+7. Pass 4: Process @AIAudit → append audit sections to all builders
+8. Merge ignore/audit sections (if any @AIIgnore/@AIAudit annotations found)
+9. Resolve active services (see File-existence Opt-in below)
+10. Write only active service files to project root
+11. Return true (claim annotations)
 ```
 
 **Output File Generation:**
@@ -230,7 +234,8 @@ vibetags/
 │   │   │   │   │   ├── AILocked.java
 │   │   │   │   │   ├── AIContext.java
 │   │   │   │   │   ├── AIDraft.java
-│   │   │   │   │   └── AIAudit.java
+│   │   │   │   │   ├── AIAudit.java
+│   │   │   │   │   └── AIIgnore.java
 │   │   │   │   └── processor/         # JSR 269 annotation processor
 │   │   │   │       └── AIGuardrailProcessor.java
 │   │   │   └── resources/META-INF/services/
@@ -243,6 +248,8 @@ vibetags/
 │   ├── src/main/java/com/example/
 │   │   ├── database/
 │   │   │   └── DatabaseConnector.java         # @AIAudit example
+│   │   ├── internal/
+│   │   │   └── GeneratedMetadata.java         # @AIIgnore example
 │   │   ├── payment/
 │   │   │   └── PaymentProcessor.java          # @AILocked example
 │   │   ├── security/
@@ -436,11 +443,12 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 17 | Verify annotation structure and defaults |
+| `AnnotationDefinitionsTest` | 21 | Verify annotation structure and defaults (includes @AIIgnore) |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration validation |
 | `AIGuardrailProcessorUnitTest` | 10 | Processor structure, inheritance, service opt-in logic, and warning emission |
-| `AnnotationProcessorEndToEndTest` | 13 | Generated file content validation |
-| `AIGuardrailProcessorIntegrationTest` | 9 | Full workflow end-to-end (conditional) |
+| `AIIgnoreProcessorUnitTest` | 7 | @AIIgnore annotation definition and service opt-in behaviour |
+| `AnnotationProcessorEndToEndTest` | 18 | Generated file content validation (includes @AIIgnore output) |
+| `AIGuardrailProcessorIntegrationTest` | 14 | Full workflow end-to-end (conditional, includes @AIIgnore) |
 
 ### Integration Tests
 

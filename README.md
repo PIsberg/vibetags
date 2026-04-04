@@ -26,6 +26,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods that need AI implementation with detailed instructions
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
+- **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 
 ### Supported AI Platforms
 
@@ -122,6 +123,12 @@ public boolean sendEmail(String to, String subject, String body) {
 @AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
 public class DatabaseConnector {
     // AI must audit any modifications for SQL injection and thread safety
+}
+
+// Exclude auto-generated code from AI context entirely
+@AIIgnore(reason = "Auto-generated at build time. Manual edits are overwritten on every build.")
+public class GeneratedMetadata {
+    // AI tools will not reference or suggest changes to this class
 }
 ```
 

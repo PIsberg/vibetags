@@ -29,27 +29,32 @@
     </file>
   </locked_files>
   <contextual_instructions>
-    <file path="com.example.service.NotificationService">
-      <focus>Implement notification delivery with retry logic and error handling</focus>
-      <avoids>Hard-coded credentials, synchronous blocking calls</avoids>
-    </file>
     <file path="com.example.security.SecurityConfig">
       <focus>This class is READ-ONLY for AI assistants. Do not suggest modifications.</focus>
       <avoids>Any changes to encryption algorithms, key sizes, or validation logic</avoids>
     </file>
-    <file path="com.example.utils.StringParser">
-      <focus>Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.</focus>
-      <avoids>java.util.regex, String.split(), StringBuilder in loops</avoids>
-    </file>
-    <file path="com.example.strategy.PaymentStrategy">
-      <focus>Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.</focus>
-      <avoids>Monolithic if-else chains, hard-coded payment logic, single class handling all payment types</avoids>
+    <file path="com.example.service.NotificationService">
+      <focus>Implement notification delivery with retry logic and error handling</focus>
+      <avoids>Hard-coded credentials, synchronous blocking calls</avoids>
     </file>
     <file path="com.example.service.OrderService">
       <focus>Maintain transactional integrity. All database operations must use proper transaction management.</focus>
       <avoids>Raw SQL queries, direct database connections without connection pooling</avoids>
     </file>
+    <file path="com.example.strategy.PaymentStrategy">
+      <focus>Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.</focus>
+      <avoids>Monolithic if-else chains, hard-coded payment logic, single class handling all payment types</avoids>
+    </file>
+    <file path="com.example.utils.StringParser">
+      <focus>Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.</focus>
+      <avoids>java.util.regex, String.split(), StringBuilder in loops</avoids>
+    </file>
   </contextual_instructions>
+  <ignored_elements>
+    <file path="com.example.internal.GeneratedMetadata"/>
+  </ignored_elements>
+
+<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
   <audit_requirements>
     <file path="com.example.database.DatabaseConnector">
       <vulnerability_check>SQL Injection</vulnerability_check>
