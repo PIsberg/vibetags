@@ -175,8 +175,12 @@ class AIGuardrailProcessorUnitTest {
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen", "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"), active,
-            "All services should be active when all output files exist");
+        Set<String> expected = Set.of(
+            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
+            "codex_config", "codex_rules", "qwen_settings", "qwen_refactor"
+        );
+        assertEquals(expected, active, "All services should be active when all output files exist");
     }
 
     // --- annotation removal ---
