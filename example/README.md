@@ -1,6 +1,6 @@
 # VibeTags Example Project
 
-A practical demonstration of **VibeTags** - Java annotations that act as AI guardrails for code generation tools like Cursor, Claude, Gemini, and ChatGPT.
+A practical demonstration of **VibeTags** - Java annotations that act as AI guardrails for code generation tools like Cursor, Claude, Gemini, and Codex CLI.
 
 ## 🎯 What This Example Demonstrates
 
@@ -92,7 +92,7 @@ After compilation, you'll find these files automatically generated in the projec
 - **`.cursorrules`** - Rules for Cursor AI
 - **`CLAUDE.md`** - Instructions for Claude
 - **`.aiexclude`** - Exclusion list for Gemini
-- **`chatgpt_instructions.md`** - Knowledge file for ChatGPT
+- **`AGENTS.md`** - Instructions for Codex CLI
 
 ### Step 4: Run the Application
 
@@ -214,7 +214,7 @@ public class CriticalComponent {
 
 **Gemini**: Receives continuous audit requirements formatted as Senior Staff Engineer instructions.
 
-**ChatGPT**: Gets a security guardrails checklist that AI must verify before generating code.
+**Codex CLI**: Receives continuous audit requirements formatted in the project-wide `AGENTS.md` file.
 
 ### 5. Mixed Usage - Fine-Grained Control
 
@@ -283,10 +283,10 @@ src/main/java/com/example/security/SecurityConfig.java
 
 **How it works:** Gemini literally cannot see or modify files listed in `.aiexclude`. This is a hard guardrail, not just a suggestion.
 
-### `chatgpt_instructions.md` (ChatGPT)
+### `AGENTS.md` (Codex CLI)
 
 ```markdown
-# AI Guardrails - ChatGPT Instructions
+# AI Guardrails - Codex Instructions
 
 ## Locked Files
 Do not modify these files under any circumstances:
@@ -297,7 +297,7 @@ When working with these files, follow these guidelines:
 - StringParser.java: Focus on memory optimization
 ```
 
-**How it works:** Upload this file to ChatGPT's Knowledge Base and add "Always review chatgpt_instructions.md before writing code" to Custom Instructions.
+**How it works:** Codex CLI automatically finds and reads `AGENTS.md` in your project root to orient itself.
 
 ### `gemini_instructions.md` (Gemini - NEW)
 
@@ -317,12 +317,13 @@ Critical Vulnerabilities to Prevent:
 
 When you use `@AIAudit` annotations, the processor generates platform-specific security audit requirements:
 
-**All 5 Generated Files Include:**
 1. **`.cursorrules`** - Mandatory security audits section
 2. **`CLAUDE.md`** - XML audit requirements with vulnerability checks
-3. **`.aiexclude`** - Binary blocklist (existing behavior)
-4. **`chatgpt_instructions.md`** - Security guardrails with audit checklist
-5. **`gemini_instructions.md`** - Continuous audit requirements (NEW)
+3. **`.aiexclude`** - Binary blocklist
+4. **`AGENTS.md`** - Security guardrails with audit instructions
+5. **`gemini_instructions.md`** - Continuous audit requirements
+6. **`.codex/config.toml`** - Tool settings (model, policy)
+7. **`.codex/rules/*.rules`** - Command permissions (Starlark)
 
 ## 🎓 Best Practices
 

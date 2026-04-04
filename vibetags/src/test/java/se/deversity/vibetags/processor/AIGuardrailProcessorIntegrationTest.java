@@ -24,7 +24,9 @@ class AIGuardrailProcessorIntegrationTest {
     private File originalCursorRules;
     private File originalClaudeMd;
     private File originalAiExclude;
-    private File originalChatGptMd;
+    private File originalCodexAgents;
+    private File originalCodexConfig;
+    private File originalCodexRules;
     private File originalGeminiMd;
     private File originalCopilotMd;
 
@@ -36,7 +38,9 @@ class AIGuardrailProcessorIntegrationTest {
         originalCursorRules = backupFile(new File(EXAMPLE_DIR, ".cursorrules"));
         originalClaudeMd = backupFile(new File(EXAMPLE_DIR, "CLAUDE.md"));
         originalAiExclude = backupFile(new File(EXAMPLE_DIR, ".aiexclude"));
-        originalChatGptMd = backupFile(new File(EXAMPLE_DIR, "chatgpt_instructions.md"));
+        originalCodexAgents = backupFile(new File(EXAMPLE_DIR, "AGENTS.md"));
+        originalCodexConfig = backupFile(new File(EXAMPLE_DIR, ".codex/config.toml"));
+        originalCodexRules = backupFile(new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules"));
         originalGeminiMd = backupFile(new File(EXAMPLE_DIR, "gemini_instructions.md"));
         originalCopilotMd = backupFile(new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
     }
@@ -47,7 +51,9 @@ class AIGuardrailProcessorIntegrationTest {
         restoreFile(originalCursorRules, new File(EXAMPLE_DIR, ".cursorrules"));
         restoreFile(originalClaudeMd, new File(EXAMPLE_DIR, "CLAUDE.md"));
         restoreFile(originalAiExclude, new File(EXAMPLE_DIR, ".aiexclude"));
-        restoreFile(originalChatGptMd, new File(EXAMPLE_DIR, "chatgpt_instructions.md"));
+        restoreFile(originalCodexAgents, new File(EXAMPLE_DIR, "AGENTS.md"));
+        restoreFile(originalCodexConfig, new File(EXAMPLE_DIR, ".codex/config.toml"));
+        restoreFile(originalCodexRules, new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules"));
         restoreFile(originalGeminiMd, new File(EXAMPLE_DIR, "gemini_instructions.md"));
         restoreFile(originalCopilotMd, new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
     }
@@ -93,11 +99,11 @@ class AIGuardrailProcessorIntegrationTest {
     }
 
     @Test
-    void testChatGptInstructionsContainsGuardrails() throws Exception {
-        String content = readFile(EXAMPLE_DIR + "/chatgpt_instructions.md");
+    void testCodexAgentsContainsAuditSection() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/AGENTS.md");
         
-        assertTrue(content.contains("SECURITY GUARDRAILS"), 
-            "Should contain security guardrails section");
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), 
+            "Should contain security audit section");
         assertTrue(content.contains("DatabaseConnector"), 
             "Should mention DatabaseConnector");
         assertTrue(content.contains("SQL Injection"), 
@@ -112,7 +118,9 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(new File(EXAMPLE_DIR, ".cursorrules").exists(), ".cursorrules should exist");
         assertTrue(new File(EXAMPLE_DIR, "CLAUDE.md").exists(), "CLAUDE.md should exist");
         assertTrue(new File(EXAMPLE_DIR, ".aiexclude").exists(), ".aiexclude should exist");
-        assertTrue(new File(EXAMPLE_DIR, "chatgpt_instructions.md").exists(), "chatgpt_instructions.md should exist");
+        assertTrue(new File(EXAMPLE_DIR, "AGENTS.md").exists(), "AGENTS.md should exist");
+        assertTrue(new File(EXAMPLE_DIR, ".codex/config.toml").exists(), ".codex/config.toml should exist");
+        assertTrue(new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules").exists(), ".codex/rules/vibetags.rules should exist");
         assertTrue(new File(EXAMPLE_DIR, "gemini_instructions.md").exists(), "gemini_instructions.md should exist");
         assertTrue(new File(EXAMPLE_DIR, ".github/copilot-instructions.md").exists(), ".github/copilot-instructions.md should exist");
     }
@@ -121,15 +129,15 @@ class AIGuardrailProcessorIntegrationTest {
     void testLockedFilesAppearInAllOutputs() throws Exception {
         String cursorRules = readFile(EXAMPLE_DIR + "/.cursorrules");
         String claudeMd = readFile(EXAMPLE_DIR + "/CLAUDE.md");
-        String chatGpt = readFile(EXAMPLE_DIR + "/chatgpt_instructions.md");
+        String codexAgents = readFile(EXAMPLE_DIR + "/AGENTS.md");
 
         // All should mention the locked class
         assertTrue(cursorRules.contains("PaymentProcessor"), 
             "Cursor rules should mention PaymentProcessor");
         assertTrue(claudeMd.contains("PaymentProcessor"), 
             "Claude.md should mention PaymentProcessor");
-        assertTrue(chatGpt.contains("PaymentProcessor"), 
-            "ChatGPT instructions should mention PaymentProcessor");
+        assertTrue(codexAgents.contains("PaymentProcessor"), 
+            "Codex AGENTS.md should mention PaymentProcessor");
     }
 
     @Test
@@ -149,13 +157,17 @@ class AIGuardrailProcessorIntegrationTest {
     }
 
     @Test
-    void testAuditChecklistFormatInChatGpt() throws Exception {
-        String content = readFile(EXAMPLE_DIR + "/chatgpt_instructions.md");
-        
-        // Should have numbered checklist
-        assertTrue(content.contains("1."));
-        assertTrue(content.contains("Is this code vulnerable to"));
-        assertTrue(content.contains("discard your draft and rewrite"));
+    void testCodexConfigHasCorrectSettings() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.codex/config.toml");
+        assertTrue(content.contains("model = \"o3-mini\""));
+        assertTrue(content.contains("approval_policy = \"on-request\""));
+    }
+
+    @Test
+    void testCodexRulesHasStarlarkContent() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.codex/rules/vibetags.rules");
+        assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
+        assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
     }
 
     @Test
@@ -164,7 +176,9 @@ class AIGuardrailProcessorIntegrationTest {
         assertFalse(readFile(EXAMPLE_DIR + "/.cursorrules").isEmpty());
         assertFalse(readFile(EXAMPLE_DIR + "/CLAUDE.md").isEmpty());
         assertFalse(readFile(EXAMPLE_DIR + "/.aiexclude").isEmpty());
-        assertFalse(readFile(EXAMPLE_DIR + "/chatgpt_instructions.md").isEmpty());
+        assertFalse(readFile(EXAMPLE_DIR + "/AGENTS.md").isEmpty());
+        assertFalse(readFile(EXAMPLE_DIR + "/.codex/config.toml").isEmpty());
+        assertFalse(readFile(EXAMPLE_DIR + "/.codex/rules/vibetags.rules").isEmpty());
         assertFalse(readFile(EXAMPLE_DIR + "/gemini_instructions.md").isEmpty());
     }
 
@@ -189,17 +203,10 @@ class AIGuardrailProcessorIntegrationTest {
     }
 
     @Test
-    void testAiExcludeContainsIgnoredFile() throws Exception {
-        String content = readFile(EXAMPLE_DIR + "/.aiexclude");
-        assertTrue(content.contains("GeneratedMetadata"),
-            "Should exclude GeneratedMetadata from AI context");
-    }
-
-    @Test
-    void testChatGptInstructionsContainsIgnoredFiles() throws Exception {
-        String content = readFile(EXAMPLE_DIR + "/chatgpt_instructions.md");
-        assertTrue(content.contains("Ignored Files"),
-            "Should contain Ignored Files section");
+    void testCodexAgentsContainsIgnoredFiles() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/AGENTS.md");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain IGNORED ELEMENTS section");
         assertTrue(content.contains("GeneratedMetadata"),
             "Should mention GeneratedMetadata");
     }
