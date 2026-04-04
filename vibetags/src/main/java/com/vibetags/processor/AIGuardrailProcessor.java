@@ -11,7 +11,11 @@ import javax.lang.model.element.TypeElement;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 @SupportedAnnotationTypes("com.vibetags.annotations.*")
@@ -128,14 +132,49 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
+        // Determine which services to generate for.
+        Path root = Paths.get(rootPath);
+        Map<String, Path> serviceFiles = buildServiceFileMap(root);
+        Set<String> activeServices = resolveActiveServices(serviceFiles);
+
         // Write files to the project root
-        writeFile(rootPath + "/.cursorrules", cursorRules.toString());
-        writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
-        writeFile(rootPath + "/.aiexclude", aiExclude.toString());
-        writeFile(rootPath + "/chatgpt_instructions.md", chatGpt.toString());
-        writeFile(rootPath + "/gemini_instructions.md", geminiMd.toString());
+        if (activeServices.contains("cursor"))    writeFile(rootPath + "/.cursorrules", cursorRules.toString());
+        if (activeServices.contains("claude"))    writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
+        if (activeServices.contains("aiexclude")) writeFile(rootPath + "/.aiexclude", aiExclude.toString());
+        if (activeServices.contains("chatgpt"))   writeFile(rootPath + "/chatgpt_instructions.md", chatGpt.toString());
+        if (activeServices.contains("gemini"))    writeFile(rootPath + "/gemini_instructions.md", geminiMd.toString());
 
         return true;
+    }
+
+    /**
+     * Returns the canonical map of service key → output file path for a given project root.
+     */
+    static Map<String, Path> buildServiceFileMap(Path root) {
+        Map<String, Path> map = new LinkedHashMap<>();
+        map.put("cursor",    root.resolve(".cursorrules"));
+        map.put("claude",    root.resolve("CLAUDE.md"));
+        map.put("aiexclude", root.resolve(".aiexclude"));
+        map.put("chatgpt",   root.resolve("chatgpt_instructions.md"));
+        map.put("gemini",    root.resolve("gemini_instructions.md"));
+        return map;
+    }
+
+    /**
+     * Resolves which services should have their files written.
+     * If none of the output files exist (first run), all services are active.
+     * Otherwise, only services whose output file already exists are active —
+     * deleted files are treated as an opt-out and won't be regenerated.
+     */
+    static Set<String> resolveActiveServices(Map<String, Path> serviceFiles) {
+        boolean anyExist = serviceFiles.values().stream().anyMatch(Files::exists);
+        if (!anyExist) {
+            return serviceFiles.keySet();
+        }
+        return serviceFiles.entrySet().stream()
+            .filter(e -> Files.exists(e.getValue()))
+            .map(Map.Entry::getKey)
+            .collect(java.util.stream.Collectors.toSet());
     }
 
     private void writeFile(String path, String content) {

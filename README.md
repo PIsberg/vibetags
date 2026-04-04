@@ -164,10 +164,31 @@ cd ../example && gradle clean build
 
 ## 🔧 Advanced Features
 
-- **Custom output directories** for generated files
-- **Selective annotation processing** (ignore certain annotation types)
+- **Selective service generation** — opt out of specific AI platforms with no config required
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
+
+### Opting Out of Specific AI Services
+
+By default, the first build generates config files for all supported platforms. On every subsequent build, only the files that exist on disk are regenerated — so deleting a file is a permanent opt-out.
+
+**Example: use only Claude and Cursor**
+
+```bash
+# After first build, remove the services you don't need:
+rm gemini_instructions.md .aiexclude chatgpt_instructions.md
+
+# From now on, only CLAUDE.md and .cursorrules are regenerated.
+```
+
+**Commit only what you use.** If you commit `.cursorrules` and `CLAUDE.md` but not the Gemini/ChatGPT files, every fresh clone of the repo will regenerate only those two.
+
+**To opt back in** to a service, create an empty file and rebuild:
+
+```bash
+touch chatgpt_instructions.md   # next build fills it with content
+mvn compile                     # or gradle build
+```
 
 ### 🛡️ @AIAudit - Continuous Security Auditing
 

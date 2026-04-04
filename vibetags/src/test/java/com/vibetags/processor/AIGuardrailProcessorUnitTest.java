@@ -1,10 +1,16 @@
 package com.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -66,5 +72,35 @@ class AIGuardrailProcessorUnitTest {
             processor instanceof javax.annotation.processing.AbstractProcessor,
             "Should extend AbstractProcessor"
         );
+    }
+
+    @Test
+    void testResolveActiveServices_noFilesExist_allServicesActive(@TempDir Path tempDir) {
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(serviceFiles);
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini"), active,
+            "First run: all services should be active when no output files exist");
+    }
+
+    @Test
+    void testResolveActiveServices_someFilesExist_onlyThoseAreActive(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        Files.createFile(tempDir.resolve(".cursorrules"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(serviceFiles);
+        assertEquals(Set.of("claude", "cursor"), active,
+            "Only services with existing files should be active");
+    }
+
+    @Test
+    void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
+        for (Path p : AIGuardrailProcessor.buildServiceFileMap(tempDir).values()) {
+            Files.createFile(p);
+        }
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(serviceFiles);
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini"), active,
+            "All services should be active when all output files exist");
     }
 }
