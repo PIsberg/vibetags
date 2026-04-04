@@ -21,6 +21,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * The core annotation processor for VibeTags.
+ * Scans for VibeTags annotations and generates AI platform-specific configuration files
+ * (Cursor, Claude, Gemini, Codex, Copilot) to act as guardrails for AI-assisted development.
+ */
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 public class AIGuardrailProcessor extends AbstractProcessor {

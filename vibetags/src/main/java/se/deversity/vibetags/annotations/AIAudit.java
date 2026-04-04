@@ -16,6 +16,8 @@ public @interface AIAudit {
     /**
      * List of specific vulnerability types to check for.
      * Examples: "SQL Injection", "Thread Safety issues", "XSS", "CSRF"
+     *
+     * @return an array of vulnerability types to check for
      */
     String[] checkFor() default {};
 }
