@@ -14,7 +14,7 @@ public class PaymentProcessor { }
 // META-INF/services/javax.annotation.processing.Processor
 
 // AIGuardrailProcessor runs during compilation
-// Generates: .cursorrules, CLAUDE.md, .aiexclude, chatgpt_instructions.md
+// Generates: .cursorrules, CLAUDE.md, .aiexclude, AGENTS.md
 // Output: Project root (via Paths.get(""))
 ```
 

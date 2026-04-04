@@ -1,0 +1,10 @@
+# VibeTags: Starlark Command Permissions
+
+prefix_rule("ls", "allow")
+prefix_rule("cat", "allow")
+prefix_rule("grep", "allow")
+prefix_rule("mvn", "prompt")
+prefix_rule("npm", "prompt")
+prefix_rule("git", "prompt")
+prefix_rule("rm", "prompt")
+

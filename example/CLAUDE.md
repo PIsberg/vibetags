@@ -50,6 +50,7 @@
       <avoids>java.util.regex, String.split(), StringBuilder in loops</avoids>
     </file>
   </contextual_instructions>
+
   <audit_requirements>
     <file path="com.example.database.DatabaseConnector">
       <vulnerability_check>SQL Injection</vulnerability_check>

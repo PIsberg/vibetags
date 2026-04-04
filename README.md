@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
 
 
-**VibeTags** is a Java annotation processor that acts as AI guardrails for code generation tools like Cursor, Claude, Gemini, and ChatGPT. It allows developers to control AI behavior through simple annotations, protecting critical code and guiding AI implementations.
+**VibeTags** is a Java annotation processor that acts as AI guardrails for code generation tools like Cursor, Claude, Gemini, and Codex CLI. It allows developers to control AI behavior through simple annotations, protecting critical code and guiding AI implementations.
 
 ## 🎯 What is VibeTags?
 
@@ -34,7 +34,7 @@ Generated configuration files work out-of-the-box with:
 - **Cursor** (`.cursorrules`)
 - **Claude** (`CLAUDE.md`)
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
-- **ChatGPT** (`chatgpt_instructions.md`)
+- **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`)
 
 ## 📁 Project Structure
@@ -72,7 +72,7 @@ cd ../example
 mvn clean compile
 
 # Step 3: Check generated AI guardrail files
-# You'll find .cursorrules, CLAUDE.md, .aiexclude, and chatgpt_instructions.md
+# You'll find .cursorrules, CLAUDE.md, .aiexclude, and AGENTS.md
 ```
 
 ### Option 2: Using Gradle
@@ -209,7 +209,7 @@ Create one or more of the following files in your project root to opt in:
   .cursorrules
   CLAUDE.md
   .aiexclude
-  chatgpt_instructions.md
+  AGENTS.md
   gemini_instructions.md
   .github/copilot-instructions.md
 ```
@@ -263,13 +263,11 @@ Critical Vulnerabilities to Prevent:
 - Thread Safety issues
 ```
 
-**ChatGPT (chatgpt_instructions.md):**
+**Codex CLI (AGENTS.md):**
 ```markdown
-### 🔎 SECURITY GUARDRAILS (ENFORCE STRICTLY)
-Target File: `com.example.database.DatabaseConnector`
-Audit Checklist:
-1. Is this code vulnerable to SQL Injection?
-2. Is this code vulnerable to Thread Safety issues?
+## 🛡️ MANDATORY SECURITY AUDITS
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
 ```
 
 #### Common Vulnerability Checks

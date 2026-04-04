@@ -25,7 +25,9 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(fileExists(".cursorrules"), ".cursorrules should exist");
         assertTrue(fileExists("CLAUDE.md"), "CLAUDE.md should exist");
         assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
-        assertTrue(fileExists("chatgpt_instructions.md"), "chatgpt_instructions.md should exist");
+        assertTrue(fileExists("AGENTS.md"), "AGENTS.md should exist");
+        assertTrue(fileExists(".codex/config.toml"), ".codex/config.toml should exist");
+        assertTrue(fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
         assertTrue(fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
     }
@@ -107,24 +109,18 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
-    void testChatGptInstructionsHasSecurityGuardrails() throws IOException {
-        String content = readFile("chatgpt_instructions.md");
+    void testCodexAgentsHasSecurityAudits() throws IOException {
+        String content = readFile("AGENTS.md");
         
-        // Should have project knowledge section
-        assertTrue(content.contains("Project Knowledge"));
-        
-        // Should have locked files
-        assertTrue(content.contains("Locked Files"));
-        
-        // Should have security guardrails from @AIAudit
-        assertTrue(content.contains("SECURITY GUARDRAILS"), 
-            "Should contain security guardrails section");
+        // Should have security audit section from @AIAudit
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), 
+            "Should contain mandatory security audits section");
         assertTrue(content.contains("DatabaseConnector"), 
-            "Should mention DatabaseConnector");
+            "Should mention DatabaseConnector class");
         assertTrue(content.contains("SQL Injection"), 
-            "Should mention SQL Injection");
+            "Should mention SQL Injection vulnerability");
         assertTrue(content.contains("Thread Safety"), 
-            "Should mention Thread Safety");
+            "Should mention Thread Safety vulnerability");
     }
 
     @Test
@@ -149,22 +145,21 @@ class AnnotationProcessorEndToEndTest {
         // PaymentProcessor should be in all files
         String cursorRules = readFile(".cursorrules");
         String claudeMd = readFile("CLAUDE.md");
-        String aiExclude = readFile(".aiexclude");
-        String chatGpt = readFile("chatgpt_instructions.md");
+        String codexAgents = readFile("AGENTS.md");
 
         assertTrue(cursorRules.contains("PaymentProcessor"), 
             "Cursor rules should mention PaymentProcessor");
         assertTrue(claudeMd.contains("PaymentProcessor"), 
             "Claude.md should mention PaymentProcessor");
-        assertTrue(chatGpt.contains("PaymentProcessor"), 
-            "ChatGPT should mention PaymentProcessor");
+        assertTrue(codexAgents.contains("PaymentProcessor"), 
+            "Codex AGENTS.md should mention PaymentProcessor");
     }
 
     @Test
     void testContextFilesHaveFocusAndAvoids() throws IOException {
         String cursorRules = readFile(".cursorrules");
         String claudeMd = readFile("CLAUDE.md");
-        String chatGpt = readFile("chatgpt_instructions.md");
+        String codexAgents = readFile("AGENTS.md");
 
         // StringParser should have context rules
         assertTrue(cursorRules.contains("StringParser"));
@@ -191,7 +186,9 @@ class AnnotationProcessorEndToEndTest {
         assertFalse(readFile(".cursorrules").isEmpty());
         assertFalse(readFile("CLAUDE.md").isEmpty());
         assertFalse(readFile(".aiexclude").isEmpty());
-        assertFalse(readFile("chatgpt_instructions.md").isEmpty());
+        assertFalse(readFile("AGENTS.md").isEmpty());
+        assertFalse(readFile(".codex/config.toml").isEmpty());
+        assertFalse(readFile(".codex/rules/vibetags.rules").isEmpty());
         assertFalse(readFile("gemini_instructions.md").isEmpty());
         assertFalse(readFile(".github/copilot-instructions.md").isEmpty());
     }
@@ -253,13 +250,17 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
-    void testAuditChecklistFormatInChatGpt() throws IOException {
-        String content = readFile("chatgpt_instructions.md");
-        
-        // Should have numbered checklist
-        assertTrue(content.contains("1."));
-        assertTrue(content.contains("Is this code vulnerable to"));
-        assertTrue(content.contains("discard your draft and rewrite"));
+    void testCodexConfigHasCorrectSettings() throws IOException {
+        String content = readFile(".codex/config.toml");
+        assertTrue(content.contains("model = \"o3-mini\""));
+        assertTrue(content.contains("approval_policy = \"on-request\""));
+    }
+
+    @Test
+    void testCodexRulesHasStarlarkContent() throws IOException {
+        String content = readFile(".codex/rules/vibetags.rules");
+        assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
+        assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
     }
 
     @Test
@@ -290,10 +291,10 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
-    void testChatGptInstructionsHasIgnoredFiles() throws IOException {
-        String content = readFile("chatgpt_instructions.md");
-        assertTrue(content.contains("Ignored Files"),
-            "Should contain Ignored Files section");
+    void testCodexAgentsHasIgnoredFiles() throws IOException {
+        String content = readFile("AGENTS.md");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain Ignored Elements section");
         assertTrue(content.contains("GeneratedMetadata"),
             "Should mention GeneratedMetadata");
     }

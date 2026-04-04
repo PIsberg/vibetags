@@ -141,7 +141,9 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `.cursorrules` | Markdown | Cursor IDE | Locked files, context rules, security audits |
 | `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<contextual_instructions>`, `<audit_requirements>` |
 | `.aiexclude` | Glob patterns | Gemini | Binary blocklist of locked files |
-| `chatgpt_instructions.md` | Markdown | ChatGPT | Locked files, context rules, security guardrails |
+| `AGENTS.md` | Markdown | Codex CLI | Locked files, context rules, security guardrails |
+| `.codex/config.toml` | TOML | Codex CLI | Model and tool configuration |
+| `.codex/rules/*.rules` | Starlark | Codex CLI | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 
 ### Generated Output Files
@@ -265,7 +267,11 @@ vibetags/
 │   ├── .cursorrules                   # Generated: Cursor rules
 │   ├── CLAUDE.md                      # Generated: Claude guardrails
 │   ├── .aiexclude                     # Generated: Gemini blocklist
-│   ├── chatgpt_instructions.md        # Generated: ChatGPT instructions
+│   ├── AGENTS.md                      # Generated: Codex instructions
+│   ├── .codex/                        # Generated: Codex configuration
+│   │   ├── config.toml                # Codex tool settings
+│   │   └── rules/                     # Codex command rules
+│   │       └── vibetags.rules         # Starlark command permissions
 │   ├── gemini_instructions.md         # Generated: Gemini audit requirements
 │   ├── pom.xml                        # Maven build config
 │   └── build.gradle                   # Gradle build config
@@ -539,11 +545,13 @@ cd vibetags && gradle test
 
 **Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` should be pasted into Custom Instructions.
 
-### ChatGPT
+### Codex CLI
 
-**File:** `chatgpt_instructions.md`
+**File:** `AGENTS.md` (and `.codex/` directory)
 
-**Behavior:** Upload to Project Knowledge base. Add "Always review chatgpt_instructions.md before writing code" to Custom Instructions.
+**Aesthetics:** Optimized for the Codex CLI's context window.
+
+**Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root. The `.codex/config.toml` defines tool behavior, and `vibetags.rules` defines security-conscious command permissions using Starlark.
 
 ---
 

@@ -1,0 +1,4 @@
+[project]
+model = "o3-mini"
+approval_policy = "on-request"
+

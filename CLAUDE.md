@@ -76,7 +76,8 @@ To deactivate, delete the file — it will never come back.
 | `.cursorrules` | Cursor IDE | Markdown |
 | `CLAUDE.md` | Claude | XML + Markdown |
 | `.aiexclude` | Gemini | Glob patterns |
-| `chatgpt_instructions.md` | ChatGPT | Markdown |
+| `AGENTS.md` | Codex CLI | Markdown |
+| `.codex/` | Codex CLI | Config + Starlark |
 | `gemini_instructions.md` | Gemini | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 
