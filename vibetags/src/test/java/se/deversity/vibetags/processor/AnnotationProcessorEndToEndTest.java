@@ -30,6 +30,9 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
         assertTrue(fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
+        // .cursorignore and .copilotignore are opt-in, so they might not exist unless created
+        // But .aiexclude is now always generated
+        assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
     }
 
     @Test

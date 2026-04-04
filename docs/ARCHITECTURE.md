@@ -50,6 +50,58 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 │           │                                    │                   │
 │           ▼                                    ▼                   │
 │  ┌───────────────────────────────────────────────────────┐         │
+# VibeTags Architecture
+
+## Overview
+
+VibeTags is a Java annotation processor that generates AI platform-specific configuration files from Java source code annotations. It operates at **compile-time only**, with zero runtime overhead.
+
+```
+Developer Annotations → javac + Annotation Processor → AI Config Files
+```
+
+## Table of Contents
+
+- [System Architecture](#system-architecture)
+- [Component Diagram](#component-diagram)
+- [Build Sequence](#build-sequence)
+- [Core Components](#core-components)
+  - [Annotations](#annotations)
+  - [Annotation Processor](#annotation-processor)
+  - [Generated Output Files](#generated-output-files)
+- [Build Flow](#build-flow)
+- [Directory Structure](#directory-structure)
+- [Design Decisions](#design-decisions)
+- [Limitations](#limitations)
+- [Future Architecture](#future-architecture)
+
+---
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Developer Workspace                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────┐         ┌──────────────────────────────┐     │
+│  │  Java Source     │         │  VibeTags Library             │     │
+│  │  Files           │         │  ┌─────────────────────────┐  │     │
+│  │                  │         │  │  Annotations             │  │     │
+│  │  @AILocked       │         │  │  - AILocked.java         │  │     │
+│  │  @AIContext      │────────>│  │  - AIContext.java        │  │     │
+│  │  @AIDraft        │  uses   │  │  - AIDraft.java          │  │     │
+│  │  @AIAudit        │         │  │  - AIAudit.java          │  │     │
+│  └────────┬─────────┘         │  └─────────────────────────┘  │     │
+│           │                   │  ┌─────────────────────────┐  │     │
+│           │                   │  │  Annotation Processor     │  │     │
+│           │                   │  │  AIGuardrailProcessor     │  │     │
+│           │                   │  │  (JSR 269 compliant)      │  │     │
+│           │                   │  └─────────────────────────┘  │     │
+│           │                   └──────────────────────────────┘     │
+│           │                                    │                   │
+│           ▼                                    ▼                   │
+│  ┌───────────────────────────────────────────────────────┐         │
 │  │         javac Compiler (with annotation processing)    │         │
 │  └───────────────────────────────────────────────────────┘         │
 │                            │                                        │
@@ -57,8 +109,8 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 │  ┌───────────────────────────────────────────────────────┐         │
 │  │         Generated AI Configuration Files               │         │
 │  │  ┌─────────────┬──────────┬───────────┬──────────┐   │         │
-│  │  │.cursorrules │ CLAUDE.md│ .aiexclude│chatgpt   │   │         │
-│  │  │             │          │           │gemini    │   │         │
+│  │  │.cursorrules │ CLAUDE.md│ .aiexclude│AGENTS.md │   │         │
+│  │  │.cursorignore│          │           │          │   │         │
 │  │  └─────────────┴──────────┴───────────┴──────────┘   │         │
 │  └───────────────────────────────────────────────────────┘         │
 └─────────────────────────────────────────────────────────────────────┘
@@ -70,7 +122,8 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 │  • Cursor IDE   │                    │  Read config files    │
 │  • Claude       │                    │  Enforce guardrails   │
 │  • Gemini       │                    │  During code gen      │
-│  • ChatGPT      │                    │                       │
+│  • Codex CLI    │                    │                       │
+│  • Copilot      │                    │                       │
 └──────────────────┘                    └──────────────────────┘
 ```
 
@@ -145,6 +198,8 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `.codex/config.toml` | TOML | Codex CLI | Model and tool configuration |
 | `.codex/rules/*.rules` | Starlark | Codex CLI | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
+| `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
+| `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
 
 ### Generated Output Files
 
@@ -273,6 +328,8 @@ vibetags/
 │   │   └── rules/                     # Codex command rules
 │   │       └── vibetags.rules         # Starlark command permissions
 │   ├── gemini_instructions.md         # Generated: Gemini audit requirements
+│   ├── .cursorignore                  # Generated: Cursor exclusion list
+│   ├── .copilotignore                 # Generated: Copilot exclusion list
 │   ├── pom.xml                        # Maven build config
 │   └── build.gradle                   # Gradle build config
 │
@@ -346,7 +403,8 @@ vibetags/
 
 ### 6. File-existence Opt-in
 
-**Decision:** Only regenerate output files that already exist on disk. File presence is the opt-in signal. If no files are present, a NOTE is logged explaining what to create — nothing is generated automatically.
+**Decision:** Only regenerate platform-specific config files (like `.cursorrules` or `CLAUDE.md`) that already exist on disk. File presence is the opt-in signal. However, `.aiexclude` is now generated automatically for **all** projects as a universal standard.
+
 
 **Rationale:**
 - Explicit opt-in: the processor never decides which AI tools a project uses
@@ -531,7 +589,8 @@ cd vibetags && gradle test
 
 **File:** `.cursorrules`
 
-**Behavior:** Cursor reads this file automatically and injects it into every AI request. AI respects locked files and follows context rules.
+**Behavior:** Cursor reads `.cursorrules` for core instructions and respects the `.cursorignore` glob patterns for excluding entire files from its context window.
+
 
 ### Claude
 
@@ -543,7 +602,8 @@ cd vibetags && gradle test
 
 **Files:** `.aiexclude` + `gemini_instructions.md`
 
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` should be pasted into Custom Instructions.
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
+
 
 ### Codex CLI
 
@@ -552,6 +612,13 @@ cd vibetags && gradle test
 **Aesthetics:** Optimized for the Codex CLI's context window.
 
 **Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root. The `.codex/config.toml` defines tool behavior, and `vibetags.rules` defines security-conscious command permissions using Starlark.
+
+### GitHub Copilot
+
+**Files:** `.github/copilot-instructions.md` + `.copilotignore`
+
+**Behavior:** Copilot uses the instructions file to guide its completions and respects `.copilotignore` (standard glob format) to exclude specific files from being used as context.
+
 
 ---
 

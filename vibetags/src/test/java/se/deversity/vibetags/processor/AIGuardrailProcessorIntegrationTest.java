@@ -29,6 +29,8 @@ class AIGuardrailProcessorIntegrationTest {
     private File originalCodexRules;
     private File originalGeminiMd;
     private File originalCopilotMd;
+    private File originalCursorIgnore;
+    private File originalCopilotIgnore;
 
     private static final String EXAMPLE_DIR = "../example";
 
@@ -43,6 +45,8 @@ class AIGuardrailProcessorIntegrationTest {
         originalCodexRules = backupFile(new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules"));
         originalGeminiMd = backupFile(new File(EXAMPLE_DIR, "gemini_instructions.md"));
         originalCopilotMd = backupFile(new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
+        originalCursorIgnore = backupFile(new File(EXAMPLE_DIR, ".cursorignore"));
+        originalCopilotIgnore = backupFile(new File(EXAMPLE_DIR, ".copilotignore"));
     }
 
     @AfterEach
@@ -56,6 +60,8 @@ class AIGuardrailProcessorIntegrationTest {
         restoreFile(originalCodexRules, new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules"));
         restoreFile(originalGeminiMd, new File(EXAMPLE_DIR, "gemini_instructions.md"));
         restoreFile(originalCopilotMd, new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
+        restoreFile(originalCursorIgnore, new File(EXAMPLE_DIR, ".cursorignore"));
+        restoreFile(originalCopilotIgnore, new File(EXAMPLE_DIR, ".copilotignore"));
     }
 
     @Test

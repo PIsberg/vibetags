@@ -103,6 +103,8 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("AGENTS.md"), "Note should list codex file");
         assertTrue(note.contains("gemini_instructions.md"), "Note should list gemini file");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
+        assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
+        assertTrue(note.contains(".copilotignore"), "Note should list copilot ignore file");
     }
 
     @Test
@@ -136,7 +138,7 @@ class AIGuardrailProcessorUnitTest {
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot"), active,
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "cursor_ignore", "copilot_ignore"), active,
             "All services should be active when all output files exist");
     }
 
