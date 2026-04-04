@@ -199,9 +199,11 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `.codex/config.toml` | TOML | Codex CLI | Model and tool configuration |
 | `.codex/rules/*.rules` | Starlark | Codex CLI | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
-| `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
-| `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
-| `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
+| `QWEN.md`           | Markdown | Qwen   | Project context and rules |
+| `.cursorignore`     | Glob patterns | Cursor | Standalone exclusion list |
+| `.claudeignore`     | Glob patterns | Claude | Standalone exclusion list |
+| `.copilotignore`    | Glob patterns | Copilot | Standalone exclusion list |
+| `.qwenignore`       | Glob patterns | Qwen   | Standalone exclusion list |
 
 ### Generated Output Files
 
@@ -330,9 +332,14 @@ vibetags/
 │   │   └── rules/                     # Codex command rules
 │   │       └── vibetags.rules         # Starlark command permissions
 │   ├── gemini_instructions.md         # Generated: Gemini audit requirements
+│   ├── QWEN.md                        # Generated: Qwen project context
+│   ├── .qwen/                         # Generated: Qwen directory
+│   │   ├── settings.json              # Generated: Qwen model settings
+│   │   └── commands/                  # Generated: Qwen custom commands
 │   ├── .cursorignore                  # Generated: Cursor exclusion list
 │   ├── .claudeignore                  # Generated: Claude exclusion list
 │   ├── .copilotignore                 # Generated: Copilot exclusion list
+│   ├── .qwenignore                    # Generated: Qwen exclusion list
 │   ├── pom.xml                        # Maven build config
 │   └── build.gradle                   # Gradle build config
 │
@@ -430,6 +437,10 @@ vibetags/
 **Rationale:**
 - **Developer Feedback**: Provides immediate feedback during the build process without failing the compilation.
 - **Consistency**: Prevents contradictory instructions (like @AILocked + @AIDraft) from reaching the AI tools.
+
+**Supported Checks:**
+- `@AIIgnore`: Warns if `.cursorignore`, `.claudeignore`, `.copilotignore`, or `.qwenignore` are missing for active services.
+- `@AIIgnore` / `@AILocked`: Warns if `.aiexclude` is missing for active Gemini/Codex services.
 
 ---
 

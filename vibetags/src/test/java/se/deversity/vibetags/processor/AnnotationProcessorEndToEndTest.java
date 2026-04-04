@@ -30,8 +30,11 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
         assertTrue(fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
-        // .cursorignore and .copilotignore are opt-in, so they might not exist unless created
-        // But .aiexclude is now always generated
+        assertTrue(fileExists("QWEN.md"), "QWEN.md should exist");
+        assertTrue(fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
+        assertTrue(fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
+        // .cursorignore, .copilotignore, .claudeignore, .qwenignore are opt-in, so they might not exist unless created
+        // But .aiexclude is now always generated (if gemini/codex active in test context)
         assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
     }
 
@@ -330,10 +333,27 @@ class AnnotationProcessorEndToEndTest {
     @Test
     void testGeminiInstructionsHasIgnoredElements() throws IOException {
         String content = readFile("gemini_instructions.md");
-        assertTrue(content.contains("IGNORED ELEMENTS"),
+        assertTrue(content.contains("IGNORED ELEMENTS"), 
             "Should contain IGNORED ELEMENTS section");
-        assertTrue(content.contains("GeneratedMetadata"),
+        assertTrue(content.contains("GeneratedMetadata"), 
             "Should mention GeneratedMetadata");
+    }
+
+    @Test
+    void testQwenMdHasCorrectStructure() throws IOException {
+        String content = readFile("QWEN.md");
+        assertTrue(content.contains("PROJECT CONTEXT"), "Should have Qwen header");
+        assertTrue(content.contains("LOCKED FILES"), "Should have locked files section");
+        assertTrue(content.contains("CONTEXTUAL RULES"), "Should have contextual rules section");
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), "Should have audit section");
+        assertTrue(content.contains("IGNORED ELEMENTS"), "Should have ignored elements section");
+    }
+
+    @Test
+    void testQwenSettingsHasCorrectFormat() throws IOException {
+        String content = readFile(".qwen/settings.json");
+        assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should specify Qwen model");
+        assertTrue(content.contains("\"mcp\": {"), "Should have MCP settings");
     }
 
     private boolean fileExists(String filename) {
