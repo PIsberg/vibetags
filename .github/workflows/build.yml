@@ -59,7 +59,9 @@ jobs:
           test -f .cursorrules && echo "✓ .cursorrules exists" || (echo "✗ .cursorrules missing" && exit 1)
           test -f CLAUDE.md && echo "✓ CLAUDE.md exists" || (echo "✗ CLAUDE.md missing" && exit 1)
           test -f .aiexclude && echo "✓ .aiexclude exists" || (echo "✗ .aiexclude missing" && exit 1)
-          test -f chatgpt_instructions.md && echo "✓ chatgpt_instructions.md exists" || (echo "✗ chatgpt_instructions.md missing" && exit 1)
+          test -f AGENTS.md && echo "✓ AGENTS.md exists" || (echo "✗ AGENTS.md missing" && exit 1)
+          test -f .codex/config.toml && echo "✓ .codex/config.toml exists" || (echo "✗ .codex/config.toml missing" && exit 1)
+          test -f .codex/rules/vibetags.rules && echo "✓ .codex/rules/vibetags.rules exists" || (echo "✗ .codex/rules/vibetags.rules missing" && exit 1)
           test -f gemini_instructions.md && echo "✓ gemini_instructions.md exists" || (echo "✗ gemini_instructions.md missing" && exit 1)
           echo "All generated files present ✓"
       
@@ -70,7 +72,7 @@ jobs:
           grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "✓ Cursor audit section exists" || (echo "✗ Cursor audit section missing" && exit 1)
           grep -q "audit_requirements" CLAUDE.md && echo "✓ Claude audit requirements exist" || (echo "✗ Claude audit requirements missing" && exit 1)
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "✓ Gemini audit requirements exist" || (echo "✗ Gemini audit requirements missing" && exit 1)
-          grep -q "SECURITY GUARDRAILS" chatgpt_instructions.md && echo "✓ ChatGPT audit guardrails exist" || (echo "✗ ChatGPT audit guardrails missing" && exit 1)
+          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md && echo "✓ Codex audit guardrails exist" || (echo "✗ Codex audit guardrails missing" && exit 1)
           echo "All @AIAudit content verified ✓"
 
       - name: Upload coverage to Codecov
@@ -133,7 +135,9 @@ jobs:
           test -f .cursorrules && echo "✓ .cursorrules exists" || (echo "✗ .cursorrules missing" && exit 1)
           test -f CLAUDE.md && echo "✓ CLAUDE.md exists" || (echo "✗ CLAUDE.md missing" && exit 1)
           test -f .aiexclude && echo "✓ .aiexclude exists" || (echo "✗ .aiexclude missing" && exit 1)
-          test -f chatgpt_instructions.md && echo "✓ chatgpt_instructions.md exists" || (echo "✗ chatgpt_instructions.md missing" && exit 1)
+          test -f AGENTS.md && echo "✓ AGENTS.md exists" || (echo "✗ AGENTS.md missing" && exit 1)
+          test -f .codex/config.toml && echo "✓ .codex/config.toml exists" || (echo "✗ .codex/config.toml missing" && exit 1)
+          test -f .codex/rules/vibetags.rules && echo "✓ .codex/rules/vibetags.rules exists" || (echo "✗ .codex/rules/vibetags.rules missing" && exit 1)
           test -f gemini_instructions.md && echo "✓ gemini_instructions.md exists" || (echo "✗ gemini_instructions.md missing" && exit 1)
           echo "All generated files present ✓"
       
@@ -144,5 +148,5 @@ jobs:
           grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "✓ Cursor audit section exists" || (echo "✗ Cursor audit section missing" && exit 1)
           grep -q "audit_requirements" CLAUDE.md && echo "✓ Claude audit requirements exist" || (echo "✗ Claude audit requirements missing" && exit 1)
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "✓ Gemini audit requirements exist" || (echo "✗ Gemini audit requirements missing" && exit 1)
-          grep -q "SECURITY GUARDRAILS" chatgpt_instructions.md && echo "✓ ChatGPT audit guardrails exist" || (echo "✗ ChatGPT audit guardrails missing" && exit 1)
+          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md && echo "✓ Codex audit guardrails exist" || (echo "✗ Codex audit guardrails missing" && exit 1)
           echo "All @AIAudit content verified ✓"

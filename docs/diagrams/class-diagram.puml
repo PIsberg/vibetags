@@ -70,7 +70,7 @@ package "Generated AI Config Files" {
     class ".cursorrules" as CursorRules
     class "CLAUDE.md" as ClaudeMd
     class ".aiexclude" as AiExclude
-    class "chatgpt_instructions.md" as ChatGptMd
+    class "AGENTS.md" as AgentsMd
     class "gemini_instructions.md" as GeminiMd
 }
 
@@ -100,13 +100,13 @@ Javac --> AIGuardrailProcessor : invokes
 AIGuardrailProcessor --> CursorRules : generates
 AIGuardrailProcessor --> ClaudeMd : generates
 AIGuardrailProcessor --> AiExclude : generates
-AIGuardrailProcessor --> ChatGptMd : generates
+AIGuardrailProcessor --> AgentsMd : generates
 AIGuardrailProcessor --> GeminiMd : generates
 
 CursorRules --> Cursor : consumed by
 ClaudeMd --> Claude : consumed by
 AiExclude --> Gemini : consumed by
-ChatGptMd --> ChatGPT : consumed by
+AgentsMd --> ChatGPT : consumed by
 GeminiMd --> Gemini : consumed by
 
 note right of CursorRules
@@ -127,7 +127,7 @@ note right of AiExclude
     Binary blocklist for Gemini
 end note
 
-note right of ChatGptMd
+note right of AgentsMd
     Markdown format
     Locked Files + Context Rules
     + SECURITY GUARDRAILS

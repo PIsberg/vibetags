@@ -23,7 +23,8 @@ import java.util.Map;
  * - .cursorrules (for Cursor)
  * - CLAUDE.md (for Claude)
  * - .aiexclude (for Gemini)
- * - chatgpt_instructions.md (for ChatGPT)
+ * - AGENTS.md (for Codex CLI)
+ * - gemini_instructions.md (for Gemini)
  */
 public class MainApplication {
     
