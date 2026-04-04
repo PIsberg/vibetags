@@ -1,6 +1,6 @@
 package com.example.payment;
 
-import com.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AILocked;
 
 /**
  * Core payment processing interface.

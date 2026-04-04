@@ -1,6 +1,6 @@
 package com.example.database;
 
-import com.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIAudit;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

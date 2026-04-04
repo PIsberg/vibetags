@@ -4,9 +4,35 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.vibetags</groupId>
+    <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>VibeTags Processor</name>
+    <description>Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.</description>
+    <url>https://github.com/PIsberg/vibetags</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>PIsberg</id>
+            <name>Peter Isberg</name>
+            <url>https://github.com/PIsberg</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/PIsberg/vibetags.git</connection>
+        <developerConnection>scm:git:ssh://github.com/PIsberg/vibetags.git</developerConnection>
+        <url>https://github.com/PIsberg/vibetags/tree/main</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -59,6 +85,43 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Required for Maven Central publishing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <!-- GitHub Packages -->
+        <repository>
+            <id>github</id>
+            <name>GitHub PIsberg Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/PIsberg/vibetags</url>
+        </repository>
+    </distributionManagement>
+
 </project>

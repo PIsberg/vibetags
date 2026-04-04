@@ -1,7 +1,7 @@
 package com.example.service;
 
-import com.vibetags.annotations.AIDraft;
-import com.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIContext;
 
 /**
  * User notification service.

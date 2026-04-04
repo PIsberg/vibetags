@@ -1,4 +1,4 @@
-package com.vibetags.annotations;
+package se.deversity.vibetags.annotations;
 
 import org.junit.jupiter.api.Test;
 

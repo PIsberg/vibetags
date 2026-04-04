@@ -4,19 +4,62 @@ plugins {
     id 'jacoco'
 }
 
+group = 'se.deversity.vibetags'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    withSourcesJar()
+    withJavadocJar()
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'com.vibetags'
+            groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-processor'
             version = '1.0.0-SNAPSHOT'
             from components.java
+
+            pom {
+                name = 'VibeTags Processor'
+                description = 'Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.'
+                url = 'https://github.com/PIsberg/vibetags'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'PIsberg'
+                        name = 'Peter Isberg'
+                        url = 'https://github.com/PIsberg'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/PIsberg/vibetags.git'
+                    developerConnection = 'scm:git:ssh://github.com/PIsberg/vibetags.git'
+                    url = 'https://github.com/PIsberg/vibetags/tree/main'
+                }
+            }
+        }
+    }
+
+    repositories {
+        // GitHub Packages
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/PIsberg/vibetags')
+            credentials {
+                username = System.getenv('GITHUB_ACTOR')
+                password = System.getenv('GITHUB_TOKEN')
+            }
         }
     }
 }
-
-group = 'com.vibetags'
-version = '1.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -25,11 +68,6 @@ repositories {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks.withType(JavaCompile) {

@@ -1,8 +1,8 @@
-package com.vibetags.processor;
+package se.deversity.vibetags.processor;
 
-import com.vibetags.annotations.AIContext;
-import com.vibetags.annotations.AIAudit;
-import com.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AILocked;
 
 import javax.annotation.processing.*;
 import javax.tools.Diagnostic;
@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-@SupportedAnnotationTypes("com.vibetags.annotations.*")
+@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 public class AIGuardrailProcessor extends AbstractProcessor {
 

@@ -1,7 +1,7 @@
 package com.example.strategy;
 
-import com.vibetags.annotations.AIContext;
-import com.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIDraft;
 
 /**
  * Payment strategy pattern implementation.

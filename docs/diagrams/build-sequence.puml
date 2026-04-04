@@ -19,7 +19,7 @@ Javac -> Javac: Scan source files for annotations
 note over Javac
     Discovers processor via SPI:
     META-INF/services/javax.annotation.processing.Processor
-    -> com.vibetags.processor.AIGuardrailProcessor
+    -> se.deversity.vibetags.processor.AIGuardrailProcessor
 end note
 
 == Annotation Processing Round ==

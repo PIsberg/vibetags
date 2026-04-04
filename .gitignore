@@ -9,3 +9,5 @@ coverage/
 .qwen/
 vibetags/target
 example/target
+.idea/
+**/.gradle/

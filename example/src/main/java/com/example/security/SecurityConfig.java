@@ -1,7 +1,7 @@
 package com.example.security;
 
-import com.vibetags.annotations.AILocked;
-import com.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIContext;
 
 /**
  * Security configuration manager.

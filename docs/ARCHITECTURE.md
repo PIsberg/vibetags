@@ -107,13 +107,13 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 
 ### Annotation Processor
 
-**Class:** `com.vibetags.processor.AIGuardrailProcessor`
+**Class:** `se.deversity.vibetags.processor.AIGuardrailProcessor`
 
 **Key Characteristics:**
 - Extends `javax.annotation.processing.AbstractProcessor` (JSR 269)
 - Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
 - Supports Java 11+ source versions
-- Processes all `com.vibetags.annotations.*` annotations (wildcard matching)
+- Processes all `se.deversity.vibetags.annotations.*` annotations (wildcard matching)
 
 **Processing Logic:**
 
@@ -324,7 +324,7 @@ vibetags/
 
 ### 5. Wildcard Annotation Matching
 
-**Decision:** `@SupportedAnnotationTypes("com.vibetags.annotations.*")`
+**Decision:** `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")`
 
 **Rationale:**
 - Automatically picks up new annotations without code changes
@@ -472,7 +472,7 @@ GitHub Actions workflow tests:
 
 | Dependency | Scope | Purpose |
 |---|---|---|
-| `com.vibetags:vibetags-processor` | provided / compileOnly | Annotations + processor |
+| `se.deversity.vibetags:vibetags-processor` | provided / compileOnly | Annotations + processor |
 
 **Note:** Annotations have zero runtime footprint — they are completely stripped during compilation.
 
