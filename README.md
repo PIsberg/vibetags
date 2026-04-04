@@ -168,27 +168,36 @@ cd ../example && gradle clean build
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
 
-### Opting Out of Specific AI Services
+### Choosing Which AI Services to Support
 
-By default, the first build generates config files for all supported platforms. On every subsequent build, only the files that exist on disk are regenerated — so deleting a file is a permanent opt-out.
+VibeTags only regenerates config files that already exist on disk — their presence is your opt-in. Nothing is generated automatically, so you always stay in control of which AI tools your project supports.
 
-**Example: use only Claude and Cursor**
-
-```bash
-# After first build, remove the services you don't need:
-rm gemini_instructions.md .aiexclude chatgpt_instructions.md
-
-# From now on, only CLAUDE.md and .cursorrules are regenerated.
-```
-
-**Commit only what you use.** If you commit `.cursorrules` and `CLAUDE.md` but not the Gemini/ChatGPT files, every fresh clone of the repo will regenerate only those two.
-
-**To opt back in** to a service, create an empty file and rebuild:
+**Getting started:** create empty placeholder files for the services you use, then compile:
 
 ```bash
-touch chatgpt_instructions.md   # next build fills it with content
-mvn compile                     # or gradle build
+touch CLAUDE.md .cursorrules   # opt in to Claude and Cursor
+mvn compile                    # VibeTags fills them with content
 ```
+
+**Removing a service:** delete its file — it will never come back.
+
+```bash
+rm gemini_instructions.md .aiexclude   # permanently opt out of Gemini
+```
+
+**If no files are present**, VibeTags logs a NOTE during compilation listing exactly which files you can create:
+
+```
+[NOTE] VibeTags: No AI config files found — nothing will be generated.
+Create one or more of the following files in your project root to opt in:
+  .cursorrules
+  CLAUDE.md
+  .aiexclude
+  chatgpt_instructions.md
+  gemini_instructions.md
+```
+
+**Teams:** commit only the files you want. Fresh clones will regenerate only the committed set.
 
 ### 🛡️ @AIAudit - Continuous Security Auditing
 

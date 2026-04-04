@@ -5,6 +5,7 @@ import com.vibetags.annotations.AIAudit;
 import com.vibetags.annotations.AILocked;
 
 import javax.annotation.processing.*;
+import javax.tools.Diagnostic;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -132,12 +133,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
-        // Determine which services to generate for.
+        // Only regenerate files that already exist — presence on disk is the opt-in signal.
+        // If none exist, warn and list what the user can create to opt in.
         Path root = Paths.get(rootPath);
         Map<String, Path> serviceFiles = buildServiceFileMap(root);
-        Set<String> activeServices = resolveActiveServices(serviceFiles);
+        Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
-        // Write files to the project root
         if (activeServices.contains("cursor"))    writeFile(rootPath + "/.cursorrules", cursorRules.toString());
         if (activeServices.contains("claude"))    writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
         if (activeServices.contains("aiexclude")) writeFile(rootPath + "/.aiexclude", aiExclude.toString());
@@ -162,19 +163,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /**
      * Resolves which services should have their files written.
-     * If none of the output files exist (first run), all services are active.
-     * Otherwise, only services whose output file already exists are active —
-     * deleted files are treated as an opt-out and won't be regenerated.
+     * Only files that already exist on disk are regenerated — their presence is the opt-in signal.
+     * If none of the output files exist, a NOTE is logged listing what the user can create to opt in.
      */
-    static Set<String> resolveActiveServices(Map<String, Path> serviceFiles) {
-        boolean anyExist = serviceFiles.values().stream().anyMatch(Files::exists);
-        if (!anyExist) {
-            return serviceFiles.keySet();
-        }
-        return serviceFiles.entrySet().stream()
+    static Set<String> resolveActiveServices(Messager messager, Map<String, Path> serviceFiles) {
+        Set<String> active = serviceFiles.entrySet().stream()
             .filter(e -> Files.exists(e.getValue()))
             .map(Map.Entry::getKey)
             .collect(java.util.stream.Collectors.toSet());
+
+        if (active.isEmpty()) {
+            StringBuilder msg = new StringBuilder(
+                "VibeTags: No AI config files found — nothing will be generated.\n" +
+                "Create one or more of the following files in your project root to opt in:\n");
+            serviceFiles.forEach((key, path) ->
+                msg.append("  ").append(path.getFileName()).append("\n"));
+            messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
+        }
+
+        return active;
     }
 
     private void writeFile(String path, String content) {

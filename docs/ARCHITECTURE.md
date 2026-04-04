@@ -333,33 +333,34 @@ vibetags/
 
 ### 6. File-existence Opt-in
 
-**Decision:** On subsequent builds, only regenerate output files that already exist on disk. First run generates all five.
+**Decision:** Only regenerate output files that already exist on disk. File presence is the opt-in signal. If no files are present, a NOTE is logged explaining what to create — nothing is generated automatically.
 
 **Rationale:**
-- Zero configuration required — no new files, no build tool changes
-- Opt-out by deleting a file once; it stays gone across all future builds
+- Explicit opt-in: the processor never decides which AI tools a project uses
+- Zero configuration required — no new config files, no build tool changes
 - Teams control which services are active by committing only the files they want
-- Fresh clones naturally inherit the committed set of services
+- Fresh clones with no committed config files get a clear actionable message rather than unwanted files
 
 **Behavior:**
 
 | State | Action |
 |---|---|
-| No output files exist (first run) | Generate all 5 files |
+| No output files exist | Emit NOTE listing files to create; generate nothing |
 | Some output files exist | Regenerate only the existing ones |
 | All output files exist | Regenerate all 5 files |
 
+**To opt in to a service:**
+```bash
+touch CLAUDE.md .cursorrules   # Presence is enough; next build fills them with content
+mvn compile
+```
+
 **To opt out of a service:**
 ```bash
-rm gemini_instructions.md .aiexclude   # Gemini files will never be regenerated
+rm gemini_instructions.md .aiexclude   # Deleted files are never regenerated
 ```
 
-**To opt back in:**
-```bash
-touch gemini_instructions.md .aiexclude   # Presence is enough; next build fills them
-```
-
-**Implementation:** `buildServiceFileMap()` + `resolveActiveServices()` static helpers in `AIGuardrailProcessor`.
+**Implementation:** `buildServiceFileMap()` + `resolveActiveServices(Messager, Map)` static helpers in `AIGuardrailProcessor`.
 
 ---
 
@@ -437,7 +438,7 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 |---|---|---|
 | `AnnotationDefinitionsTest` | 17 | Verify annotation structure and defaults |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration validation |
-| `AIGuardrailProcessorUnitTest` | 8 | Processor structure, inheritance, and service opt-in logic |
+| `AIGuardrailProcessorUnitTest` | 10 | Processor structure, inheritance, service opt-in logic, and warning emission |
 | `AnnotationProcessorEndToEndTest` | 13 | Generated file content validation |
 | `AIGuardrailProcessorIntegrationTest` | 9 | Full workflow end-to-end (conditional) |
 
