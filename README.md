@@ -2,6 +2,7 @@
 # VibeTags - AI Guardrails for Java Development
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
 
 **VibeTags** is a Java annotation processor that acts as AI guardrails for code generation tools like Cursor, Claude, Gemini, and ChatGPT. It allows developers to control AI behavior through simple annotations, protecting critical code and guiding AI implementations.
 
