@@ -164,6 +164,51 @@ class AIGuardrailProcessorIntegrationTest {
         assertFalse(readFile(EXAMPLE_DIR + "/gemini_instructions.md").isEmpty());
     }
 
+    @Test
+    void testCursorRulesContainsIgnoredElementsSection() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.cursorrules");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain ignored elements section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata class");
+    }
+
+    @Test
+    void testClaudeMdContainsIgnoredElements() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/CLAUDE.md");
+        assertTrue(content.contains("<ignored_elements>"),
+            "Should contain <ignored_elements> XML tag");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+        assertTrue(content.contains("Treat these as if they do not exist"),
+            "Should have ignore rule");
+    }
+
+    @Test
+    void testAiExcludeContainsIgnoredFile() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.aiexclude");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should exclude GeneratedMetadata from AI context");
+    }
+
+    @Test
+    void testChatGptInstructionsContainsIgnoredFiles() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/chatgpt_instructions.md");
+        assertTrue(content.contains("Ignored Files"),
+            "Should contain Ignored Files section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+    }
+
+    @Test
+    void testGeminiInstructionsContainsIgnoredElements() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/gemini_instructions.md");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
+            "Should contain IGNORED ELEMENTS section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+    }
+
     private File backupFile(File file) throws IOException {
         if (file.exists()) {
             File backup = File.createTempFile(file.getName() + ".backup", ".tmp");

@@ -155,6 +155,38 @@ class AnnotationDefinitionsTest {
         assertNull(audit); // Expected: null because SOURCE retention
     }
 
+    @Test
+    void testAIIgnoreAnnotationRetention() {
+        Retention retention = AIIgnore.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAIIgnoreAnnotationTargets() {
+        Target target = AIIgnore.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAIIgnoreDefaultValue() throws NoSuchMethodException {
+        Method reasonMethod = AIIgnore.class.getDeclaredMethod("reason");
+        assertNotNull(reasonMethod.getDefaultValue());
+        assertEquals("Excluded from AI context.", reasonMethod.getDefaultValue());
+    }
+
+    @Test
+    @AIIgnore(reason = "Test reason")
+    void testAIIgnoreCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAIIgnoreCanBeUsedOnMethods");
+        AIIgnore ignore = method.getAnnotation(AIIgnore.class);
+        assertNull(ignore); // Expected: null because SOURCE retention
+    }
+
     @AILocked
     static class TestLockedClass {
     }
@@ -167,6 +199,10 @@ class AnnotationDefinitionsTest {
     static class TestAuditClass {
     }
 
+    @AIIgnore(reason = "Auto-generated code")
+    static class TestIgnoreClass {
+    }
+
     @Test
     void testAnnotationsCanBeAppliedToClasses() {
         // These tests verify annotations can be applied to class declarations
@@ -175,10 +211,12 @@ class AnnotationDefinitionsTest {
             Class<?> lockedClass = TestLockedClass.class;
             Class<?> contextClass = TestContextClass.class;
             Class<?> auditClass = TestAuditClass.class;
-            
+            Class<?> ignoreClass = TestIgnoreClass.class;
+
             assertNotNull(lockedClass);
             assertNotNull(contextClass);
             assertNotNull(auditClass);
+            assertNotNull(ignoreClass);
         });
     }
 }
