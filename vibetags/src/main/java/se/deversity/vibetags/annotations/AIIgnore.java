@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  *
  * <p>Differs from {@link AILocked}: {@code @AILocked} prevents modification
  * while keeping the element visible; {@code @AIIgnore} removes the element
- * from AI context completely — treat it as if it does not exist.
+ * from AI context completely - treat it as if it does not exist.
  *
  * <p>Common use cases:
  * <ul>
@@ -26,6 +26,7 @@ import java.lang.annotation.Target;
 public @interface AIIgnore {
     /**
      * Optional explanation for why this element is excluded from AI context.
+     * @return the reason for exclusion
      */
     String reason() default "Excluded from AI context.";
 }

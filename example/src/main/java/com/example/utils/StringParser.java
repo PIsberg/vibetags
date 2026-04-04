@@ -1,6 +1,7 @@
 package com.example.utils;
 
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIAudit;
 
 /**
  * High-performance string parsing utilities.
@@ -12,6 +13,7 @@ import se.deversity.vibetags.annotations.AIContext;
     focus = "Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.",
     avoids = "java.util.regex, String.split(), StringBuilder in loops"
 )
+@AIAudit(checkFor = {})
 public class StringParser {
     
     /**
