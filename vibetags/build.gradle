@@ -1,5 +1,17 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = 'com.vibetags'
+            artifactId = 'vibetags-processor'
+            version = '1.0.0-SNAPSHOT'
+            from components.java
+        }
+    }
 }
 
 group = 'com.vibetags'
