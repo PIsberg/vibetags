@@ -50,11 +50,6 @@
       <avoids>java.util.regex, String.split(), StringBuilder in loops</avoids>
     </file>
   </contextual_instructions>
-  <ignored_elements>
-    <file path="com.example.internal.GeneratedMetadata"/>
-  </ignored_elements>
-
-<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
   <audit_requirements>
     <file path="com.example.database.DatabaseConnector">
       <vulnerability_check>SQL Injection</vulnerability_check>
@@ -65,6 +60,11 @@
 <rule>
   If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
 </rule>
+  <ignored_elements>
+    <file path="com.example.internal.GeneratedMetadata"/>
+  </ignored_elements>
+
+<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

@@ -47,7 +47,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         StringBuilder cursorIgnore = new StringBuilder("\n## \uD83D\uDEAB IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)\nDo not reference, suggest changes to, or include the following in completions or answers.\n\n");
         StringBuilder claudeIgnore = new StringBuilder("  <ignored_elements>\n");
         StringBuilder chatGptIgnore = new StringBuilder("\n## Ignored Files\nDo not reference or suggest changes to the following:\n\n");
-        StringBuilder geminiIgnore = new StringBuilder("\n## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
+        StringBuilder geminiIgnore = new StringBuilder("## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
         StringBuilder copilotIgnore = new StringBuilder("\n## Ignored Elements\nDo not reference or suggest changes to the following:\n\n");
         
         // Audit sections for each platform
@@ -123,19 +123,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotIgnore.append("- `").append(className).append("`\n");
         }
 
-        if (hasIgnoreAnnotations) {
-            cursorRules.append(cursorIgnore);
-
-            claudeIgnore.append("  </ignored_elements>\n");
-            claudeMd.append(claudeIgnore);
-            claudeMd.append("\n<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>\n");
-
-            chatGpt.append(chatGptIgnore);
-
-            geminiMd.append(geminiIgnore);
-
-            copilot.append(copilotIgnore);
-        }
 
         // Process @AIAudit
         boolean hasAuditAnnotations = false;
@@ -191,6 +178,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             chatGpt.append(chatGptAudit);
 
             copilot.append(copilotAudit);
+        }
+
+        if (hasIgnoreAnnotations) {
+            cursorRules.append(cursorIgnore);
+
+            claudeIgnore.append("  </ignored_elements>\n");
+            claudeMd.append(claudeIgnore);
+            claudeMd.append("\n<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>\n");
+
+            chatGpt.append(chatGptIgnore);
+
+            geminiMd.append(geminiIgnore);
+
+            copilot.append(copilotIgnore);
         }
         
         claudeMd.append("</project_guardrails>\n");
