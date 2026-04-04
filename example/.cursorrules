@@ -29,14 +29,14 @@
   * Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
   * Avoid: java.util.regex, String.split(), StringBuilder in loops
 
-## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)
-Do not reference, suggest changes to, or include the following in completions or answers.
-
-* `com.example.internal.GeneratedMetadata`
-
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
 
 * `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
+
+## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)
+Do not reference, suggest changes to, or include the following in completions or answers.
+
+* `com.example.internal.GeneratedMetadata`
 

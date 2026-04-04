@@ -31,14 +31,14 @@ Do not suggest changes to the following files:
   - Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
   - Avoid: java.util.regex, String.split(), StringBuilder in loops
 
-## Ignored Elements
-Do not reference or suggest changes to the following:
-
-- `com.example.internal.GeneratedMetadata`
-
 ## Security Audit Requirements
 Before suggesting changes to the following files, audit for the listed vulnerabilities:
 
 - `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
+
+## Ignored Elements
+Do not reference or suggest changes to the following:
+
+- `com.example.internal.GeneratedMetadata`
 
