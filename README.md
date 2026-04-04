@@ -17,7 +17,8 @@
 VibeTags provides Java annotations that serve as instructions for AI code generation tools. When your project is compiled, the VibeTags annotation processor automatically generates platform-specific configuration files that enforce your rules across different AI platforms.
 
 
-![vibetags-infographics-v1](https://github.com/user-attachments/assets/964376dd-a8e2-4e45-9909-630641d7c82a)
+![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1)
+
 
 
 ### Key Features
@@ -31,13 +32,11 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 ### Supported AI Platforms
 
 Generated configuration files work out-of-the-box with:
-- **Cursor** (`.cursorrules`)
-- **Claude** (`CLAUDE.md`)
-- **Gemini** (`.aiexclude` + `gemini_instructions.md`)
+- **Cursor** (`.cursorrules`. `.cursorignore`)
+- **Claude** (`CLAUDE.md`, `.claudeignore`)
+- **Gemini** (`.aiexclude`,  `gemini_instructions.md`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
-- **Cursor** (`.cursorignore`)
-- **Claude** (`.claudeignore`)
 - **Gemini/Codex** (`.aiexclude`)
 
 ## 📁 Project Structure
