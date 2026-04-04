@@ -59,6 +59,35 @@ class AIGuardrailProcessorUnitTest {
     }
 
     @Test
+    void testCheckOrphanedAnnotations_emitsWarnings() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        
+        Set<String> active = Set.of("cursor", "claude");
+        processor.checkOrphanedAnnotations(messager, active, false, true, false);
+        
+        assertEquals(2, warnings.size(), "Should have 2 warnings (cursor and claude ignore missing)");
+        assertTrue(warnings.get(0).contains(".cursorignore"));
+        assertTrue(warnings.get(1).contains(".claudeignore"));
+    }
+
+    @Test
+    void testCheckOrphanedAnnotations_geminiAIExclude_emitsWarnings() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        
+        Set<String> active = Set.of("gemini");
+        processor.checkOrphanedAnnotations(messager, active, true, true, false);
+        
+        // Should have 2 warnings for @AIIgnore and @AILocked about .aiexclude
+        assertEquals(2, warnings.size(), "Should have 2 warnings (gemini ignore and locked missing .aiexclude)");
+        assertTrue(warnings.get(0).contains(".aiexclude"));
+        assertTrue(warnings.get(1).contains(".aiexclude"));
+    }
+
+    @Test
     void testWriteFileHandlesNullContent() {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // This test ensures the writeFile method handles edge cases
@@ -138,7 +167,7 @@ class AIGuardrailProcessorUnitTest {
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "cursor_ignore", "copilot_ignore"), active,
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "cursor_ignore", "claude_ignore", "copilot_ignore"), active,
             "All services should be active when all output files exist");
     }
 
