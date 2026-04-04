@@ -35,6 +35,7 @@ Generated configuration files work out-of-the-box with:
 - **Claude** (`CLAUDE.md`)
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
 - **ChatGPT** (`chatgpt_instructions.md`)
+- **GitHub Copilot** (`.github/copilot-instructions.md`)
 
 ## 📁 Project Structure
 
@@ -190,6 +191,7 @@ VibeTags only regenerates config files that already exist on disk — their pres
 
 ```bash
 touch CLAUDE.md .cursorrules   # opt in to Claude and Cursor
+mkdir -p .github && touch .github/copilot-instructions.md   # opt in to GitHub Copilot
 mvn compile                    # VibeTags fills them with content
 ```
 
@@ -209,6 +211,7 @@ Create one or more of the following files in your project root to opt in:
   .aiexclude
   chatgpt_instructions.md
   gemini_instructions.md
+  .github/copilot-instructions.md
 ```
 
 **Teams:** commit only the files you want. Fresh clones will regenerate only the committed set.

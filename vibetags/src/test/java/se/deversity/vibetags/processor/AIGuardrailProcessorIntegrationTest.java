@@ -26,6 +26,7 @@ class AIGuardrailProcessorIntegrationTest {
     private File originalAiExclude;
     private File originalChatGptMd;
     private File originalGeminiMd;
+    private File originalCopilotMd;
 
     private static final String EXAMPLE_DIR = "../example";
 
@@ -37,6 +38,7 @@ class AIGuardrailProcessorIntegrationTest {
         originalAiExclude = backupFile(new File(EXAMPLE_DIR, ".aiexclude"));
         originalChatGptMd = backupFile(new File(EXAMPLE_DIR, "chatgpt_instructions.md"));
         originalGeminiMd = backupFile(new File(EXAMPLE_DIR, "gemini_instructions.md"));
+        originalCopilotMd = backupFile(new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
     }
 
     @AfterEach
@@ -47,6 +49,7 @@ class AIGuardrailProcessorIntegrationTest {
         restoreFile(originalAiExclude, new File(EXAMPLE_DIR, ".aiexclude"));
         restoreFile(originalChatGptMd, new File(EXAMPLE_DIR, "chatgpt_instructions.md"));
         restoreFile(originalGeminiMd, new File(EXAMPLE_DIR, "gemini_instructions.md"));
+        restoreFile(originalCopilotMd, new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
     }
 
     @Test
@@ -111,6 +114,7 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(new File(EXAMPLE_DIR, ".aiexclude").exists(), ".aiexclude should exist");
         assertTrue(new File(EXAMPLE_DIR, "chatgpt_instructions.md").exists(), "chatgpt_instructions.md should exist");
         assertTrue(new File(EXAMPLE_DIR, "gemini_instructions.md").exists(), "gemini_instructions.md should exist");
+        assertTrue(new File(EXAMPLE_DIR, ".github/copilot-instructions.md").exists(), ".github/copilot-instructions.md should exist");
     }
 
     @Test
@@ -205,6 +209,46 @@ class AIGuardrailProcessorIntegrationTest {
         String content = readFile(EXAMPLE_DIR + "/gemini_instructions.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain IGNORED ELEMENTS section");
+        assertTrue(content.contains("GeneratedMetadata"),
+            "Should mention GeneratedMetadata");
+    }
+
+    @Test
+    void testCopilotInstructionsContainsLockedFiles() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.github/copilot-instructions.md");
+        assertTrue(content.contains("PaymentProcessor"),
+            "Should mention PaymentProcessor");
+        assertTrue(content.contains("Locked Files"),
+            "Should contain locked files section");
+    }
+
+    @Test
+    void testCopilotInstructionsContainsContextualGuidelines() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.github/copilot-instructions.md");
+        assertTrue(content.contains("memory usage"),
+            "Should mention focus from @AIContext");
+        assertTrue(content.contains("java.util.regex"),
+            "Should mention avoids from @AIContext");
+    }
+
+    @Test
+    void testCopilotInstructionsContainsSecurityAuditRequirements() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.github/copilot-instructions.md");
+        assertTrue(content.contains("Security Audit Requirements"),
+            "Should contain security audit section");
+        assertTrue(content.contains("DatabaseConnector"),
+            "Should mention DatabaseConnector");
+        assertTrue(content.contains("SQL Injection"),
+            "Should mention SQL Injection");
+        assertTrue(content.contains("Thread Safety"),
+            "Should mention Thread Safety");
+    }
+
+    @Test
+    void testCopilotInstructionsContainsIgnoredElements() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.github/copilot-instructions.md");
+        assertTrue(content.contains("Ignored Elements"),
+            "Should contain ignored elements section");
         assertTrue(content.contains("GeneratedMetadata"),
             "Should mention GeneratedMetadata");
     }

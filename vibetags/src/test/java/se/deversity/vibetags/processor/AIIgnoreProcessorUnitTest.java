@@ -102,6 +102,17 @@ class AIIgnoreProcessorUnitTest {
             "cursor service must be active when .cursorrules exists");
     }
 
+    @Test
+    void testIgnoreOutputIsWrittenWhenCopilotInstructionsExists(@TempDir Path tempDir) throws IOException {
+        Files.createDirectories(tempDir.resolve(".github"));
+        Files.createFile(tempDir.resolve(".github/copilot-instructions.md"));
+        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Set<String> active =
+            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertTrue(active.contains("copilot"),
+            "copilot service must be active when .github/copilot-instructions.md exists");
+    }
+
     // --- helper ---
 
     private static Messager noopMessager() {
