@@ -37,7 +37,8 @@ Generated configuration files work out-of-the-box with:
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **Cursor** (`.cursorignore`)
-- **Unified Ignore** (`.aiexclude`)
+- **Claude** (`.claudeignore`)
+- **Gemini/Codex** (`.aiexclude`)
 
 ## 📁 Project Structure
 
@@ -74,8 +75,7 @@ cd ../example
 mvn clean compile
 
 # Step 3: Check generated AI guardrail files
-# You'll find .cursorrules, CLAUDE.md, .aiexclude, and AGENTS.md
-# .aiexclude is now generated automatically for all projects!
+# (Note: Files are only updated if they ALREADY exist on disk)
 ```
 
 ### Option 2: Using Gradle
@@ -186,17 +186,25 @@ cd ../example && gradle clean build
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
 
-### Choosing Which AI Services to Support
+### Choosing Which AI Services to Support (Opt-in Model)
 
-VibeTags only regenerates platform-specific config files (like `.cursorrules` or `CLAUDE.md`) that already exist on disk — their presence is your opt-in. However, `.aiexclude` is now considered a **universal standard** and is generated automatically for all projects using VibeTags.
+VibeTags operates on a **Strict Opt-in Model**. It **never** creates new configuration files on its own. Instead, it only populates or updates files that **already exist** in your project root. 
+
+> [!IMPORTANT]
+> **File Presence = Opt-in**. The existence of a specific file (like `CLAUDE.md`) is the signal VibeTags uses to determine which AI service you are using. If the file doesn't exist, VibeTags will not generate content for that service.
+
+**How to enable a service:** 
+Create an empty placeholder file for the service you want to support, then compile your project.
 
 **Getting started:** create empty placeholder files for the services you use, then compile:
 
 ```bash
-touch CLAUDE.md .cursorrules .cursorignore   # opt in to Claude and Cursor
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore   # opt in to GitHub Copilot
-mvn compile                    # VibeTags fills them with content
-                               # (.aiexclude is created automatically)
+touch .cursorrules .cursorignore             # Enable Cursor support
+touch CLAUDE.md .claudeignore                # Enable Claude support
+touch .aiexclude gemini_instructions.md      # Enable Gemini/Codex support
+mkdir -p .github && touch .github/copilot-instructions.md .copilotignore # Enable Copilot
+
+mvn compile                                  # VibeTags populates accurately
 ```
 
 **Removing a service:** delete its file — it will never come back.
@@ -218,7 +226,15 @@ Create one or more of the following files in your project root to opt in:
   .copilotignore
 ```
 
-**Teams:** commit only the files you want. Fresh clones will regenerate only the committed set.
+**Teams:** Only commit the config files for the AI tools your team actually uses.
+
+### ⚠️ Orphaned Annotation Warnings
+
+If you use a VibeTags annotation (like `@AIIgnore`) but haven't created the recommended standalone file for an active service, the compiler will issue a **WARNING** to guide you:
+
+`[WARNING] VibeTags: @AIIgnore used but .cursorignore is missing for Cursor support. Consider creating it.`
+
+This helps you ensure your guardrails are correctly positioned without VibeTags forcing files into your project.
 
 ### 🛡️ @AIAudit - Continuous Security Auditing
 

@@ -199,6 +199,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `.codex/rules/*.rules` | Starlark | Codex CLI | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 | `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
+| `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
 
 ### Generated Output Files
@@ -329,6 +330,7 @@ vibetags/
 │   │       └── vibetags.rules         # Starlark command permissions
 │   ├── gemini_instructions.md         # Generated: Gemini audit requirements
 │   ├── .cursorignore                  # Generated: Cursor exclusion list
+│   ├── .claudeignore                  # Generated: Claude exclusion list
 │   ├── .copilotignore                 # Generated: Copilot exclusion list
 │   ├── pom.xml                        # Maven build config
 │   └── build.gradle                   # Gradle build config
@@ -401,37 +403,29 @@ vibetags/
 - Single processor handles all VibeTags annotations
 - Easy to extend with new annotation types
 
-### 6. File-existence Opt-in
+### 6. Service Resolution (Opt-in Logic)
 
-**Decision:** Only regenerate platform-specific config files (like `.cursorrules` or `CLAUDE.md`) that already exist on disk. File presence is the opt-in signal. However, `.aiexclude` is now generated automatically for **all** projects as a universal standard.
-
+**Decision:** The annotation processor uses the presence of specific files on disk to determine which AI services are active.
 
 **Rationale:**
-- Explicit opt-in: the processor never decides which AI tools a project uses
-- Zero configuration required — no new config files, no build tool changes
-- Teams control which services are active by committing only the files they want
-- Fresh clones with no committed config files get a clear actionable message rather than unwanted files
-
-**Behavior:**
-
-| State | Action |
-|---|---|
-| No output files exist | Emit NOTE listing files to create; generate nothing |
-| Some output files exist | Regenerate only the existing ones |
-| All output files exist | Regenerate all 5 files |
-
-**To opt in to a service:**
-```bash
-touch CLAUDE.md .cursorrules   # Presence is enough; next build fills them with content
-mvn compile
-```
-
-**To opt out of a service:**
-```bash
-rm gemini_instructions.md .aiexclude   # Deleted files are never regenerated
-```
+- **Manual Control**: Developers decide which AI tools they support by creating the corresponding files.
+- **No Clutter**: VibeTags will never spam the project root with files for AI tools that aren't being used.
+- **Zero Configuration**: No complex XML/JSON config is needed to enable/disable services; `touch` or `rm` is sufficient.
 
 **Implementation:** `buildServiceFileMap()` + `resolveActiveServices(Messager, Map)` static helpers in `AIGuardrailProcessor`.
+
+### 7. Orphaned Annotation Warnings
+
+**Decision:** Emit a WARNING if an annotation is used but its recommended standalone "home" is missing for an active service.
+
+**Rationale:**
+- Guides users toward the most efficient configuration
+- Prevents silent "unhomed" annotations (e.g., @AIIgnore used but no ignore file created)
+- Encourages best practices for standalone file usage without forcing file creation (respecting opt-in)
+
+**Supported Checks:**
+- `@AIIgnore`: Warns if `.cursorignore`, `.claudeignore`, or `.copilotignore` are missing for active services.
+- `@AIIgnore` / `@AILocked`: Warns if `.aiexclude` is missing for active Gemini/Codex services.
 
 ---
 
