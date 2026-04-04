@@ -75,7 +75,7 @@ class AIIgnoreProcessorUnitTest {
 
     @Test
     void testIgnoreOutputIsGatedByServiceFilePresence(@TempDir Path tempDir) throws IOException {
-        // When no service files exist the active set is empty — @AIIgnore output is never written
+        // When no service files exist the active set is empty - @AIIgnore output is never written
         java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
             AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
