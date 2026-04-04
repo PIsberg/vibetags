@@ -16,7 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * Full end-to-end output validation (generated file content) is covered by
  * AnnotationProcessorEndToEndTest. These tests focus on the processor's
- * structural behaviour and the opt-in mechanism as it relates to @AIIgnore.
+ * structural behaviour and the opt-in mechanism as it relates to @AIIgnore,
+ * including both platform-specific instruction files and standalone ignore files.
  */
 class AIIgnoreProcessorUnitTest {
 
@@ -111,6 +112,26 @@ class AIIgnoreProcessorUnitTest {
             AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("copilot"),
             "copilot service must be active when .github/copilot-instructions.md exists");
+    }
+
+    @Test
+    void testIgnoreOutputIsWrittenWhenCursorIgnoreExists(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve(".cursorignore"));
+        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Set<String> active =
+            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertTrue(active.contains("cursor_ignore"),
+            "cursor_ignore service must be active when .cursorignore exists");
+    }
+
+    @Test
+    void testIgnoreOutputIsWrittenWhenCopilotIgnoreExists(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve(".copilotignore"));
+        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Set<String> active =
+            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertTrue(active.contains("copilot_ignore"),
+            "copilot_ignore service must be active when .copilotignore exists");
     }
 
     // --- helper ---

@@ -35,7 +35,9 @@ Generated configuration files work out-of-the-box with:
 - **Claude** (`CLAUDE.md`)
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
-- **GitHub Copilot** (`.github/copilot-instructions.md`)
+- **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **Cursor** (`.cursorignore`)
+- **Unified Ignore** (`.aiexclude`)
 
 ## 📁 Project Structure
 
@@ -73,6 +75,7 @@ mvn clean compile
 
 # Step 3: Check generated AI guardrail files
 # You'll find .cursorrules, CLAUDE.md, .aiexclude, and AGENTS.md
+# .aiexclude is now generated automatically for all projects!
 ```
 
 ### Option 2: Using Gradle
@@ -185,20 +188,21 @@ cd ../example && gradle clean build
 
 ### Choosing Which AI Services to Support
 
-VibeTags only regenerates config files that already exist on disk — their presence is your opt-in. Nothing is generated automatically, so you always stay in control of which AI tools your project supports.
+VibeTags only regenerates platform-specific config files (like `.cursorrules` or `CLAUDE.md`) that already exist on disk — their presence is your opt-in. However, `.aiexclude` is now considered a **universal standard** and is generated automatically for all projects using VibeTags.
 
 **Getting started:** create empty placeholder files for the services you use, then compile:
 
 ```bash
-touch CLAUDE.md .cursorrules   # opt in to Claude and Cursor
-mkdir -p .github && touch .github/copilot-instructions.md   # opt in to GitHub Copilot
+touch CLAUDE.md .cursorrules .cursorignore   # opt in to Claude and Cursor
+mkdir -p .github && touch .github/copilot-instructions.md .copilotignore   # opt in to GitHub Copilot
 mvn compile                    # VibeTags fills them with content
+                               # (.aiexclude is created automatically)
 ```
 
 **Removing a service:** delete its file — it will never come back.
 
 ```bash
-rm gemini_instructions.md .aiexclude   # permanently opt out of Gemini
+rm gemini_instructions.md   # permanently opt out of Gemini instructions
 ```
 
 **If no files are present**, VibeTags logs a NOTE during compilation listing exactly which files you can create:
@@ -208,10 +212,10 @@ rm gemini_instructions.md .aiexclude   # permanently opt out of Gemini
 Create one or more of the following files in your project root to opt in:
   .cursorrules
   CLAUDE.md
-  .aiexclude
-  AGENTS.md
   gemini_instructions.md
   .github/copilot-instructions.md
+  .cursorignore
+  .copilotignore
 ```
 
 **Teams:** commit only the files you want. Fresh clones will regenerate only the committed set.
