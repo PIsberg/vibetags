@@ -100,6 +100,7 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("No AI config files found"), "Note should explain the situation");
         assertTrue(note.contains("CLAUDE.md"), "Note should list CLAUDE.md");
         assertTrue(note.contains(".cursorrules"), "Note should list .cursorrules");
+        assertTrue(note.contains("AGENTS.md"), "Note should list codex file");
         assertTrue(note.contains("gemini_instructions.md"), "Note should list gemini file");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
     }
@@ -135,7 +136,7 @@ class AIGuardrailProcessorUnitTest {
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini", "copilot"), active,
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot"), active,
             "All services should be active when all output files exist");
     }
 
