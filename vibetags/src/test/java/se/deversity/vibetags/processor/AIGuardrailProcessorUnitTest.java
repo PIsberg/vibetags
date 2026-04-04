@@ -39,8 +39,9 @@ class AIGuardrailProcessorUnitTest {
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(annotation);
         assertArrayEquals(
-            new String[]{"se.deversity.vibetags.annotations.*"},
-            annotation.value()
+            new String[]{"*"},
+            annotation.value(),
+            "Must use '*' so the processor runs even when all VibeTags annotations are removed"
         );
     }
 
@@ -136,6 +137,111 @@ class AIGuardrailProcessorUnitTest {
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
         assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini", "copilot"), active,
             "All services should be active when all output files exist");
+    }
+
+    // --- annotation removal ---
+
+    @Test
+    void testPartialAnnotationRemoval_updatesFile(@TempDir Path tempDir) throws IOException {
+        // Simulate a file produced by a previous compile that had @AILocked on two classes
+        Path file = tempDir.resolve(".cursorrules");
+        String previousContent =
+            "# AUTO-GENERATED AI RULES\n" +
+            "## LOCKED FILES (DO NOT EDIT)\n" +
+            "* `com.example.PaymentProcessor` - Reason: legacy\n" +
+            "* `com.example.OrderService` - Reason: stable\n";
+        Files.writeString(file, previousContent);
+
+        // After removing @AILocked from OrderService, the processor generates content without it
+        String newContent =
+            "# AUTO-GENERATED AI RULES\n" +
+            "## LOCKED FILES (DO NOT EDIT)\n" +
+            "* `com.example.PaymentProcessor` - Reason: legacy\n";
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), newContent);
+
+        assertTrue(changed, "File must be updated when an annotation is removed");
+        assertFalse(Files.readString(file).contains("OrderService"),
+            "Removed annotation entry must no longer appear in the file");
+        assertTrue(Files.readString(file).contains("PaymentProcessor"),
+            "Remaining annotation entry must still be present");
+    }
+
+    @Test
+    void testAllAnnotationsRemoved_fileUpdatedToHeaderOnly(@TempDir Path tempDir) throws IOException {
+        // Simulate a file produced by a previous compile that had @AILocked entries
+        Path file = tempDir.resolve(".cursorrules");
+        String previousContent =
+            "# AUTO-GENERATED AI RULES\n" +
+            "## LOCKED FILES (DO NOT EDIT)\n" +
+            "* `com.example.PaymentProcessor` - Reason: legacy\n";
+        Files.writeString(file, previousContent);
+
+        // After removing ALL VibeTags annotations, the processor generates header-only content
+        String headerOnlyContent = "# AUTO-GENERATED AI RULES\n## LOCKED FILES (DO NOT EDIT)\n";
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), headerOnlyContent);
+
+        assertTrue(changed, "File must be updated when all annotations are removed");
+        assertFalse(Files.readString(file).contains("PaymentProcessor"),
+            "Stale annotation entry must be cleared from the file");
+    }
+
+    // --- writeFileIfChanged ---
+
+    @Test
+    void testWriteFileIfChanged_emptyFile_writesAndReturnsTrue(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        Files.createFile(file);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+
+        assertTrue(changed, "Should return true when file was empty");
+        assertTrue(Files.readString(file).contains("new content"));
+    }
+
+    @Test
+    void testWriteFileIfChanged_sameContent_returnsFalseAndDoesNotWrite(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        Files.writeString(file, "same content");
+        long before = Files.getLastModifiedTime(file).toMillis();
+
+        // Small sleep to ensure mtime would differ if written
+        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "same content");
+
+        assertFalse(changed, "Should return false when content is identical");
+        assertEquals(before, Files.getLastModifiedTime(file).toMillis(),
+            "File should not have been rewritten");
+    }
+
+    @Test
+    void testWriteFileIfChanged_differentContent_writesAndReturnsTrue(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        Files.writeString(file, "old content");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+
+        assertTrue(changed, "Should return true when content differs");
+        assertTrue(Files.readString(file).contains("new content"));
+    }
+
+    @Test
+    void testWriteFileIfChanged_stripsWhitespaceForComparison(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        // File has trailing newline (as written by PrintWriter.println)
+        Files.writeString(file, "content\n");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "content");
+
+        assertFalse(changed, "Trailing whitespace difference should not trigger a rewrite");
     }
 
     // --- helpers ---
