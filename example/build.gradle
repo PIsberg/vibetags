@@ -4,8 +4,11 @@ plugins {
 
 group = 'com.vibetags.example'
 version = '1.0.0'
-sourceCompatibility = '11'
-targetCompatibility = '11'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
 repositories {
     mavenLocal()
@@ -16,6 +19,10 @@ dependencies {
     // VibeTags Annotation Processor
     compileOnly 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
     annotationProcessor 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
 compileJava {

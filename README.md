@@ -164,10 +164,40 @@ cd ../example && gradle clean build
 
 ## 🔧 Advanced Features
 
-- **Custom output directories** for generated files
-- **Selective annotation processing** (ignore certain annotation types)
+- **Selective service generation** — opt out of specific AI platforms with no config required
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
+
+### Choosing Which AI Services to Support
+
+VibeTags only regenerates config files that already exist on disk — their presence is your opt-in. Nothing is generated automatically, so you always stay in control of which AI tools your project supports.
+
+**Getting started:** create empty placeholder files for the services you use, then compile:
+
+```bash
+touch CLAUDE.md .cursorrules   # opt in to Claude and Cursor
+mvn compile                    # VibeTags fills them with content
+```
+
+**Removing a service:** delete its file — it will never come back.
+
+```bash
+rm gemini_instructions.md .aiexclude   # permanently opt out of Gemini
+```
+
+**If no files are present**, VibeTags logs a NOTE during compilation listing exactly which files you can create:
+
+```
+[NOTE] VibeTags: No AI config files found — nothing will be generated.
+Create one or more of the following files in your project root to opt in:
+  .cursorrules
+  CLAUDE.md
+  .aiexclude
+  chatgpt_instructions.md
+  gemini_instructions.md
+```
+
+**Teams:** commit only the files you want. Fresh clones will regenerate only the committed set.
 
 ### 🛡️ @AIAudit - Continuous Security Auditing
 

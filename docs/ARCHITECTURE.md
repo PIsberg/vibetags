@@ -125,8 +125,9 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 5. Pass 2: Process @AIContext → append to all builders
 6. Pass 3: Process @AIAudit → append audit sections to all builders
 7. Merge audit sections (if any @AIAudit annotations found)
-8. Write all 5 files to project root
-9. Return true (claim annotations)
+8. Resolve active services (see File-existence Opt-in below)
+9. Write only active service files to project root
+10. Return true (claim annotations)
 ```
 
 **Output File Generation:**
@@ -330,6 +331,37 @@ vibetags/
 - Single processor handles all VibeTags annotations
 - Easy to extend with new annotation types
 
+### 6. File-existence Opt-in
+
+**Decision:** Only regenerate output files that already exist on disk. File presence is the opt-in signal. If no files are present, a NOTE is logged explaining what to create — nothing is generated automatically.
+
+**Rationale:**
+- Explicit opt-in: the processor never decides which AI tools a project uses
+- Zero configuration required — no new config files, no build tool changes
+- Teams control which services are active by committing only the files they want
+- Fresh clones with no committed config files get a clear actionable message rather than unwanted files
+
+**Behavior:**
+
+| State | Action |
+|---|---|
+| No output files exist | Emit NOTE listing files to create; generate nothing |
+| Some output files exist | Regenerate only the existing ones |
+| All output files exist | Regenerate all 5 files |
+
+**To opt in to a service:**
+```bash
+touch CLAUDE.md .cursorrules   # Presence is enough; next build fills them with content
+mvn compile
+```
+
+**To opt out of a service:**
+```bash
+rm gemini_instructions.md .aiexclude   # Deleted files are never regenerated
+```
+
+**Implementation:** `buildServiceFileMap()` + `resolveActiveServices(Messager, Map)` static helpers in `AIGuardrailProcessor`.
+
 ---
 
 ## Limitations
@@ -406,7 +438,7 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 |---|---|---|
 | `AnnotationDefinitionsTest` | 17 | Verify annotation structure and defaults |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration validation |
-| `AIGuardrailProcessorUnitTest` | 5 | Processor structure and inheritance |
+| `AIGuardrailProcessorUnitTest` | 10 | Processor structure, inheritance, service opt-in logic, and warning emission |
 | `AnnotationProcessorEndToEndTest` | 13 | Generated file content validation |
 | `AIGuardrailProcessorIntegrationTest` | 9 | Full workflow end-to-end (conditional) |
 

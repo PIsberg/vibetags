@@ -1,10 +1,20 @@
 package com.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import javax.tools.Diagnostic;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -66,5 +76,85 @@ class AIGuardrailProcessorUnitTest {
             processor instanceof javax.annotation.processing.AbstractProcessor,
             "Should extend AbstractProcessor"
         );
+    }
+
+    @Test
+    void testResolveActiveServices_noFilesExist_returnsEmpty(@TempDir Path tempDir) {
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertTrue(active.isEmpty(),
+            "No output files present → nothing should be generated");
+    }
+
+    @Test
+    void testResolveActiveServices_noFilesExist_emitsNote(@TempDir Path tempDir) {
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+
+        assertEquals(1, notes.size(), "Exactly one NOTE should be emitted");
+        String note = notes.get(0);
+        assertTrue(note.contains("No AI config files found"), "Note should explain the situation");
+        assertTrue(note.contains("CLAUDE.md"), "Note should list CLAUDE.md");
+        assertTrue(note.contains(".cursorrules"), "Note should list .cursorrules");
+        assertTrue(note.contains("gemini_instructions.md"), "Note should list gemini file");
+    }
+
+    @Test
+    void testResolveActiveServices_someFilesExist_onlyThoseAreActive(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        Files.createFile(tempDir.resolve(".cursorrules"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertEquals(Set.of("claude", "cursor"), active,
+            "Only services with existing files should be active");
+    }
+
+    @Test
+    void testResolveActiveServices_someFilesExist_doesNotWarn(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+
+        assertTrue(notes.isEmpty(), "No warning should be emitted when at least one file exists");
+    }
+
+    @Test
+    void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
+        for (Path p : AIGuardrailProcessor.buildServiceFileMap(tempDir).values()) {
+            Files.createFile(p);
+        }
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "chatgpt", "gemini"), active,
+            "All services should be active when all output files exist");
+    }
+
+    // --- helpers ---
+
+    private static Messager noopMessager() {
+        return new Messager() {
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e) {}
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e, javax.lang.model.element.AnnotationMirror a) {}
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) {}
+        };
+    }
+
+    private static Messager capturingMessager(Diagnostic.Kind capture, List<String> sink) {
+        return new Messager() {
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
+                if (kind == capture) sink.add(msg.toString());
+            }
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e) { printMessage(kind, msg); }
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e, javax.lang.model.element.AnnotationMirror a) { printMessage(kind, msg); }
+            public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) { printMessage(kind, msg); }
+        };
     }
 }

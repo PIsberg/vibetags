@@ -5,13 +5,18 @@ import com.vibetags.annotations.AIAudit;
 import com.vibetags.annotations.AILocked;
 
 import javax.annotation.processing.*;
+import javax.tools.Diagnostic;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 @SupportedAnnotationTypes("com.vibetags.annotations.*")
@@ -128,14 +133,55 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
-        // Write files to the project root
-        writeFile(rootPath + "/.cursorrules", cursorRules.toString());
-        writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
-        writeFile(rootPath + "/.aiexclude", aiExclude.toString());
-        writeFile(rootPath + "/chatgpt_instructions.md", chatGpt.toString());
-        writeFile(rootPath + "/gemini_instructions.md", geminiMd.toString());
+        // Only regenerate files that already exist — presence on disk is the opt-in signal.
+        // If none exist, warn and list what the user can create to opt in.
+        Path root = Paths.get(rootPath);
+        Map<String, Path> serviceFiles = buildServiceFileMap(root);
+        Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
+
+        if (activeServices.contains("cursor"))    writeFile(rootPath + "/.cursorrules", cursorRules.toString());
+        if (activeServices.contains("claude"))    writeFile(rootPath + "/CLAUDE.md", claudeMd.toString());
+        if (activeServices.contains("aiexclude")) writeFile(rootPath + "/.aiexclude", aiExclude.toString());
+        if (activeServices.contains("chatgpt"))   writeFile(rootPath + "/chatgpt_instructions.md", chatGpt.toString());
+        if (activeServices.contains("gemini"))    writeFile(rootPath + "/gemini_instructions.md", geminiMd.toString());
 
         return true;
+    }
+
+    /**
+     * Returns the canonical map of service key → output file path for a given project root.
+     */
+    static Map<String, Path> buildServiceFileMap(Path root) {
+        Map<String, Path> map = new LinkedHashMap<>();
+        map.put("cursor",    root.resolve(".cursorrules"));
+        map.put("claude",    root.resolve("CLAUDE.md"));
+        map.put("aiexclude", root.resolve(".aiexclude"));
+        map.put("chatgpt",   root.resolve("chatgpt_instructions.md"));
+        map.put("gemini",    root.resolve("gemini_instructions.md"));
+        return map;
+    }
+
+    /**
+     * Resolves which services should have their files written.
+     * Only files that already exist on disk are regenerated — their presence is the opt-in signal.
+     * If none of the output files exist, a NOTE is logged listing what the user can create to opt in.
+     */
+    static Set<String> resolveActiveServices(Messager messager, Map<String, Path> serviceFiles) {
+        Set<String> active = serviceFiles.entrySet().stream()
+            .filter(e -> Files.exists(e.getValue()))
+            .map(Map.Entry::getKey)
+            .collect(java.util.stream.Collectors.toSet());
+
+        if (active.isEmpty()) {
+            StringBuilder msg = new StringBuilder(
+                "VibeTags: No AI config files found — nothing will be generated.\n" +
+                "Create one or more of the following files in your project root to opt in:\n");
+            serviceFiles.forEach((key, path) ->
+                msg.append("  ").append(path.getFileName()).append("\n"));
+            messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
+        }
+
+        return active;
     }
 
     private void writeFile(String path, String content) {
