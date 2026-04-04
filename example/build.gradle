@@ -21,6 +21,10 @@ dependencies {
     annotationProcessor 'com.vibetags:vibetags-processor:1.0.0-SNAPSHOT'
 }
 
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
 compileJava {
     options.annotationProcessorPath = configurations.annotationProcessor
 }

@@ -34,6 +34,7 @@ java {
 tasks.withType(JavaCompile) {
     // Disable annotation processing when compiling the processor itself
     options.compilerArgs += ['-proc:none']
+    options.encoding = 'UTF-8'
 }
 
 test {
