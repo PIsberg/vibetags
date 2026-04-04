@@ -64,12 +64,13 @@ class AIGuardrailProcessorUnitTest {
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         
-        Set<String> active = Set.of("cursor", "claude");
+        Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
         
-        assertEquals(2, warnings.size(), "Should have 2 warnings (cursor and claude ignore missing)");
+        assertEquals(3, warnings.size(), "Should have 3 warnings (cursor, claude, and qwen ignore missing)");
         assertTrue(warnings.get(0).contains(".cursorignore"));
         assertTrue(warnings.get(1).contains(".claudeignore"));
+        assertTrue(warnings.get(2).contains(".qwenignore"));
     }
 
     @Test
@@ -167,7 +168,7 @@ class AIGuardrailProcessorUnitTest {
         }
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
-        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "cursor_ignore", "claude_ignore", "copilot_ignore"), active,
+        assertEquals(Set.of("cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen", "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"), active,
             "All services should be active when all output files exist");
     }
 

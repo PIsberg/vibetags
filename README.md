@@ -38,6 +38,7 @@ Generated configuration files work out-of-the-box with:
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **Cursor** (`.cursorignore`)
 - **Claude** (`.claudeignore`)
+- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwenignore`)
 - **Gemini/Codex** (`.aiexclude`)
 
 ## 📁 Project Structure
@@ -201,6 +202,7 @@ Create an empty placeholder file for the service you want to support, then compi
 ```bash
 touch .cursorrules .cursorignore             # Enable Cursor support
 touch CLAUDE.md .claudeignore                # Enable Claude support
+touch QWEN.md .qwenignore                   # Enable Qwen support
 touch .aiexclude gemini_instructions.md      # Enable Gemini/Codex support
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore # Enable Copilot
 
@@ -223,7 +225,9 @@ Create one or more of the following files in your project root to opt in:
   gemini_instructions.md
   .github/copilot-instructions.md
   .cursorignore
+  .claudeignore
   .copilotignore
+  .qwenignore
 ```
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
@@ -233,6 +237,8 @@ Create one or more of the following files in your project root to opt in:
 If you use a VibeTags annotation (like `@AIIgnore`) but haven't created the recommended standalone file for an active service, the compiler will issue a **WARNING** to guide you:
 
 `[WARNING] VibeTags: @AIIgnore used but .cursorignore is missing for Cursor support. Consider creating it.`
+
+`[WARNING] VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.`
 
 This helps you ensure your guardrails are correctly positioned without VibeTags forcing files into your project.
 
