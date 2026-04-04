@@ -24,7 +24,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
-- **✏️ @AIDraft** - Mark methods that need AI implementation with detailed instructions
+- **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 
@@ -185,6 +185,8 @@ cd ../example && gradle clean build
 - **Selective service generation** — opt out of specific AI platforms with no config required
 - **Mixed annotation usage** for fine-grained control
 - **Platform-specific configurations** generated automatically
+- **Version Stamping** — every generated file includes a VibeTags version header for easy traceability
+- **Compile-time Validation** — proactive warnings for contradictory or empty annotations
 
 ### Choosing Which AI Services to Support (Opt-in Model)
 
@@ -300,6 +302,39 @@ Critical Vulnerabilities to Prevent:
 - Path Traversal
 - Insecure Deserialization
 - Authentication Bypass
+
+### ✏️ @AIDraft - Requesting AI Implementations
+
+The `@AIDraft` annotation allows you to mark specific classes or methods as drafts that require implementation. This surfaces actionable instructions directly to AI assistants in their respective configuration formats.
+
+#### Example Usage
+
+```java
+@AIDraft(instructions = "Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.")
+public class NotificationService {
+    public void sendNotification(String userId, String message) {
+        // AI will implement this based on instructions above
+    }
+}
+```
+
+#### Generated Output (Cursor .cursorrules)
+```markdown
+## 📝 IMPLEMENTATION TASKS (TODO)
+* `com.example.NotificationService` - Task: Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.
+```
+
+### ⚠️ Smart Validation Warnings
+
+VibeTags performs smart validation during compilation to ensure your guardrails are consistent. If it detects a contradiction or a missing configuration, it will issue a `WARNING` but will not break your build.
+
+#### Contradictory Annotations
+If you use both `@AIDraft` (implement this) and `@AILocked` (do not touch this) on the same element, VibeTags will warn you:
+`[WARNING] VibeTags: com.example.MyClass is annotated with both @AIDraft and @AILocked. This is contradictory.`
+
+#### Empty Audits
+If you use `@AIAudit` without providing any items to check for, VibeTags will warn you:
+`[WARNING] VibeTags: @AIAudit on com.example.MyClass has no 'checkFor' items list. It will be ignored.`
 
 ## 🤝 Contributing
 

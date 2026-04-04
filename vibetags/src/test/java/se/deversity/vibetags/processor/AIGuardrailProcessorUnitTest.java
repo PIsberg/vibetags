@@ -16,6 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.mockito.Mockito.*;
+import javax.lang.model.element.Element;
+import javax.annotation.processing.RoundEnvironment;
+import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AILocked;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -277,6 +284,50 @@ class AIGuardrailProcessorUnitTest {
     }
 
     // --- helpers ---
+
+    @Test
+    void testValidateAnnotations_contradictionWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.TestClass");
+        
+        Set<Element> elements = Set.of(element);
+        doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        
+        // Mock presence of both annotations
+        when(element.getAnnotation(AILocked.class)).thenReturn(mock(AILocked.class));
+        when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
+        
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.validateAnnotations(messager, roundEnv);
+        
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("is annotated with both @AIDraft and @AILocked"));
+    }
+
+    @Test
+    void testValidateAnnotations_emptyAuditWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.TestClass");
+        
+        Set<Element> elements = Set.of(element);
+        doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        
+        AIAudit audit = mock(AIAudit.class);
+        when(audit.checkFor()).thenReturn(new String[0]);
+        when(element.getAnnotation(AIAudit.class)).thenReturn(audit);
+        
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.validateAnnotations(messager, roundEnv);
+        
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("has no 'checkFor' items list"));
+    }
 
     private static Messager noopMessager() {
         return new Messager() {

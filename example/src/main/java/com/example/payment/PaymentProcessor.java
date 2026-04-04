@@ -1,6 +1,7 @@
 package com.example.payment;
 
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIDraft;
 
 /**
  * Core payment processing interface.
@@ -9,6 +10,7 @@ import se.deversity.vibetags.annotations.AILocked;
  * Any changes will break production payment processing.
  */
 @AILocked(reason = "Tied to legacy database schema v2.3. Changes will break production payment processing. Contact the payments team before modifying.")
+@AIDraft(instructions = "Implement support for new crypto payments without breaking legacy flow.")
 public interface PaymentProcessor {
     
     /**
