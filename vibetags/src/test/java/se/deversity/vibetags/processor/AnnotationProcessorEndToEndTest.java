@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -374,14 +375,15 @@ class AnnotationProcessorEndToEndTest {
     }
 
     private boolean fileExists(String filename) {
-        return new File(EXAMPLE_DIR, filename).exists();
+        Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
+        return Files.exists(p);
     }
 
     private String readFile(String filename) throws IOException {
-        File file = new File(EXAMPLE_DIR, filename);
-        if (!file.exists()) {
+        Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
+        if (!Files.exists(p)) {
             return "";
         }
-        return Files.readString(file.toPath(), StandardCharsets.UTF_8);
+        return Files.readString(p, StandardCharsets.UTF_8);
     }
 }

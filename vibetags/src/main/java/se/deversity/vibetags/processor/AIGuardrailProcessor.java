@@ -399,12 +399,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Resolves which services should have their files written.
-     * Only files that already exist on disk are regenerated — their presence is the opt-in signal.
-     * If none of the output files exist, a NOTE is logged listing what the user can create to opt in.
+     * Resolves which primary services should have their files written.
+     * Only "signal" files (like QWEN.md or .cursorrules) are checked — their presence acts as the opt-in.
      */
-    static Set<String> resolveActiveServices(Messager messager, Map<String, Path> serviceFiles) {
-        Set<String> active = serviceFiles.entrySet().stream()
+    static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
+        // Only these primary files define an "active" service
+        Set<String> optInKeys = Set.of(
+            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"
+        );
+
+        Set<String> active = allServiceFiles.entrySet().stream()
+            .filter(e -> optInKeys.contains(e.getKey()))
             .filter(e -> Files.exists(e.getValue()))
             .map(Map.Entry::getKey)
             .collect(java.util.stream.Collectors.toSet());
@@ -413,8 +419,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             StringBuilder msg = new StringBuilder(
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
-            serviceFiles.forEach((key, path) ->
-                msg.append("  ").append(path.getFileName()).append("\n"));
+            allServiceFiles.entrySet().stream()
+                .filter(e -> optInKeys.contains(e.getKey()))
+                .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
             messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
         }
 
