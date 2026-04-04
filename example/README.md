@@ -353,7 +353,6 @@ When you use `@AIAudit` annotations, the processor generates platform-specific s
 8. **`QWEN.md`** - Project context and security rules
 9. **`.qwen/settings.json`** - Model and tool configuration
 10. **`.qwen/commands/`** - Automated slash command generation
-
 ### 5. Smart Validation Warnings (NEW)
 
 VibeTags now proactively warns you about annotation misuse during compilation:
