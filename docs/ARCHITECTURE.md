@@ -68,6 +68,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - `@AIDraft` - Requests AI implementation (instructions: String)
 - `@AIAudit` - Triggers security audits (checkFor: String[])
 - `@AIIgnore` - Excludes from AI context (reason: String)
+- `@AIPrivacy` - Marks PII-handling elements; AI must never log or expose their values (reason: String)
 
 **Processor** (`se.deversity.vibetags.processor`):
 - `AIGuardrailProcessor` - Extends `AbstractProcessor` (JSR 269)
@@ -193,6 +194,27 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
 }
 ```
 
+**@AIPrivacy Processing:**
+```java
+for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
+    AIPrivacy privacy = element.getAnnotation(AIPrivacy.class);
+    String elementPath = element.toString();
+    String reason = privacy.reason();
+
+    // Claude: XML pii_guardrails block
+    claudePrivacy.append("    <element path=\"").append(elementPath).append("\">\n");
+    claudePrivacy.append("      <reason>").append(reason).append("</reason>\n");
+    claudePrivacy.append("    </element>\n");
+
+    // Cursor / Codex / Copilot / Gemini / Qwen: Markdown list
+    cursorPrivacy.append("* `").append(elementPath).append("` — ").append(reason).append("\n");
+}
+
+// After the loop, if hasPrivacyAnnotations == true, finalize PII sections for all platforms
+// Claude gets <pii_guardrails> XML + <rule> about never logging values
+// Others get a "## 🔐 PII GUARDRAILS" Markdown section
+```
+
 ---
 
 ## Platform Output Formats
@@ -289,12 +311,16 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AILocked`** | TYPE, METHOD, FIELD | `reason: String` | Protects critical code from AI modifications |
 | **`@AIContext`** | TYPE, METHOD | `focus: String`, `avoids: String` | Guides AI behavior with positive/negative instructions |
 | **`@AIDraft`** | TYPE, METHOD | `instructions: String` | Marks incomplete code needing AI implementation |
-| **@AIAudit** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
-| **@AIIgnore** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely |
+| **`@AIAudit`** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
+| **`@AIIgnore`** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely |
+| **`@AIPrivacy`** | TYPE, METHOD, FIELD | `reason: String` | Marks PII-handling elements; AI must never log or expose their values |
 
-**@AIIgnore vs @AILocked:**
+**@AIIgnore vs @AILocked vs @AIPrivacy:**
 - `@AILocked` prevents modification while keeping element visible to AI
 - `@AIIgnore` removes element from AI context completely — AI should not reference it
+- `@AIPrivacy` keeps element visible to AI but enforces strict confidentiality — values must never appear in logs, suggestions, test fixtures, or external API calls
+
+**Note:** Using `@AIPrivacy` together with `@AIIgnore` on the same element is redundant and triggers a compiler WARNING. `@AIIgnore` already hides the element from AI entirely.
 
 ### Annotation Processor
 
@@ -310,7 +336,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 
 ```
 1. Early exit if no annotations found or already processed
-2. Validate annotations (contradictions, empty audits)
+2. Validate annotations (contradictions, empty audits, redundant @AIPrivacy+@AIIgnore)
 3. Determine output directory (current working directory)
 4. Initialize builders with VibeTags Version Header
 5. Pass 1: Process @AILocked → append to all builders
@@ -318,10 +344,11 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 7. Pass 3: Process @AIIgnore → append ignore sections + write glob patterns
 8. Pass 4: Process @AIAudit → append audit sections
 9. Pass 5: Process @AIDraft → append implementation tasks
-10. Resolve active services (file-existence opt-in)
-11. Write only active service files using write-if-changed
-12. Check orphaned annotations (warn if missing recommended files)
-13. Return false (do not claim annotations)
+10. Pass 6: Process @AIPrivacy → append PII guardrail sections to all builders
+11. Resolve active services (file-existence opt-in)
+12. Write only active service files using write-if-changed
+13. Check orphaned annotations (warn if missing recommended files)
+14. Return false (do not claim annotations)
 ```
 
 **Output File Generation:**
@@ -440,18 +467,21 @@ vibetags/
 │   │   │   │   │   ├── AIContext.java
 │   │   │   │   │   ├── AIDraft.java
 │   │   │   │   │   ├── AIAudit.java
-│   │   │   │   │   └── AIIgnore.java
+│   │   │   │   │   ├── AIIgnore.java
+│   │   │   │   │   └── AIPrivacy.java
 │   │   │   │   └── processor/         # JSR 269 annotation processor
 │   │   │   │       └── AIGuardrailProcessor.java
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
 │   │   └── test/                      # Unit + integration tests
 │   │       ├── annotations/
-│   │       │   └── AnnotationDefinitionsTest.java (21 tests)
+│   │       │   └── AnnotationDefinitionsTest.java (25 tests)
 │   │       └── processor/
 │   │           ├── AIGuardrailProcessorTest.java (3 tests)
 │   │           ├── AIGuardrailProcessorUnitTest.java (20 tests)
+│   │           ├── AIGuardrailProcessorProcessTest.java (25 tests)
 │   │           ├── AIIgnoreProcessorUnitTest.java (11 tests)
+│   │           ├── AIPrivacyProcessorTest.java (15 tests)
 │   │           ├── QwenProcessorUnitTest.java (15 tests)
 │   │           ├── AnnotationProcessorEndToEndTest.java (28 tests)
 │   │           └── QwenEndToEndTest.java (19 tests)
@@ -607,11 +637,13 @@ boolean writeFileIfChanged(String filePath, String content) {
 **Supported Checks:**
 - `@AIDraft + @AILocked`: Warns about contradictory annotations
 - Empty `@AIAudit`: Warns if no checkFor items
+- `@AIPrivacy + @AIIgnore`: Warns that `@AIPrivacy` is redundant — `@AIIgnore` already hides the element from AI
 - Orphaned annotations: Warns if recommended files missing
 
 **Example:**
 ```
 [WARNING] VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.
+[WARNING] VibeTags: myField is annotated with both @AIPrivacy and @AIIgnore. @AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.
 ```
 
 ---
@@ -622,16 +654,18 @@ boolean writeFileIfChanged(String filePath, String content) {
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 21 | Verify annotation structure, retention policies, targets, defaults |
+| `AnnotationDefinitionsTest` | 25 | Verify annotation structure, retention policies, targets, defaults (includes @AIPrivacy) |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
 | `AIGuardrailProcessorUnitTest` | 20 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations |
+| `AIGuardrailProcessorProcessTest` | 25 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed |
 | `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
+| `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
 | `AnnotationProcessorEndToEndTest` | 28 | End-to-end: compile example, verify all generated files exist and contain expected content |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `AIGuardrailProcessorIntegrationTest` | 20 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
 
-**Total: 137 tests (117 active + 20 conditional)**
+**Total: 181 tests (161 active + 20 conditional)**
 
 ### Test Patterns
 
