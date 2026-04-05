@@ -31,6 +31,9 @@ class AIGuardrailProcessorIntegrationTest {
     private File originalCopilotMd;
     private File originalCursorIgnore;
     private File originalCopilotIgnore;
+    private File originalQwenMd;
+    private File originalQwenSettings;
+    private File originalQwenIgnore;
 
     private static final String EXAMPLE_DIR = "../example";
 
@@ -47,6 +50,9 @@ class AIGuardrailProcessorIntegrationTest {
         originalCopilotMd = backupFile(new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
         originalCursorIgnore = backupFile(new File(EXAMPLE_DIR, ".cursorignore"));
         originalCopilotIgnore = backupFile(new File(EXAMPLE_DIR, ".copilotignore"));
+        originalQwenMd = backupFile(new File(EXAMPLE_DIR, "QWEN.md"));
+        originalQwenSettings = backupFile(new File(EXAMPLE_DIR, ".qwen/settings.json"));
+        originalQwenIgnore = backupFile(new File(EXAMPLE_DIR, ".qwenignore"));
     }
 
     @AfterEach
@@ -62,6 +68,9 @@ class AIGuardrailProcessorIntegrationTest {
         restoreFile(originalCopilotMd, new File(EXAMPLE_DIR, ".github/copilot-instructions.md"));
         restoreFile(originalCursorIgnore, new File(EXAMPLE_DIR, ".cursorignore"));
         restoreFile(originalCopilotIgnore, new File(EXAMPLE_DIR, ".copilotignore"));
+        restoreFile(originalQwenMd, new File(EXAMPLE_DIR, "QWEN.md"));
+        restoreFile(originalQwenSettings, new File(EXAMPLE_DIR, ".qwen/settings.json"));
+        restoreFile(originalQwenIgnore, new File(EXAMPLE_DIR, ".qwenignore"));
     }
 
     @Test
@@ -129,6 +138,8 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(new File(EXAMPLE_DIR, ".codex/rules/vibetags.rules").exists(), ".codex/rules/vibetags.rules should exist");
         assertTrue(new File(EXAMPLE_DIR, "gemini_instructions.md").exists(), "gemini_instructions.md should exist");
         assertTrue(new File(EXAMPLE_DIR, ".github/copilot-instructions.md").exists(), ".github/copilot-instructions.md should exist");
+        assertTrue(new File(EXAMPLE_DIR, "QWEN.md").exists(), "QWEN.md should exist");
+        assertTrue(new File(EXAMPLE_DIR, ".qwen/settings.json").exists(), ".qwen/settings.json should exist");
     }
 
     @Test
@@ -260,10 +271,26 @@ class AIGuardrailProcessorIntegrationTest {
     @Test
     void testCopilotInstructionsContainsIgnoredElements() throws Exception {
         String content = readFile(EXAMPLE_DIR + "/.github/copilot-instructions.md");
-        assertTrue(content.contains("Ignored Elements"),
+        assertTrue(content.contains("Ignored Elements"), 
             "Should contain ignored elements section");
-        assertTrue(content.contains("GeneratedMetadata"),
+        assertTrue(content.contains("GeneratedMetadata"), 
             "Should mention GeneratedMetadata");
+    }
+
+    @Test
+    void testQwenMdContainsContext() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/QWEN.md");
+        
+        assertTrue(content.contains("PROJECT CONTEXT"), "Should have Qwen header");
+        assertTrue(content.contains("PaymentProcessor"), "Should mention PaymentProcessor");
+        assertTrue(content.contains("memory usage"), "Should contain focus");
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), "Should have audit section");
+    }
+
+    @Test
+    void testQwenSettingsHasDefaults() throws Exception {
+        String content = readFile(EXAMPLE_DIR + "/.qwen/settings.json");
+        assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should have default Qwen model");
     }
 
     private File backupFile(File file) throws IOException {
