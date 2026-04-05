@@ -1,5 +1,5 @@
 @startuml
-' VibeTags Data Flow Diagram - Activity Diagram
+' VibeTags Data Flow Diagram
 
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
@@ -20,73 +20,69 @@ if (Already processed?) then (yes)
   stop
 else (no)
   :Set processed = true;
+endif
 
-  partition "Validation Phase" {
-    :validateAnnotations();
-    if (Contradiction check) then (fail)
-      :WARNING: Contradictory annotations;
-    else (pass)
-    endif
-    if (Empty audit check) then (fail)
-      :WARNING: Empty audit ignored;
-    else (pass)
-    endif
-  }
-
-  partition "Service Resolution" {
-    :buildServiceFileMap(root);
-    note right
-      Maps 15+ service keys
-      to file paths:
-      "qwen" -> QWEN.md
-      "cursor" -> .cursorrules
-      "claude" -> CLAUDE.md
-      etc.
-    end note
-
-    :resolveActiveServices();
-    note right
-      Checks Files.exists()
-      Only active services
-      get generated
-    end note
-  }
-
-  partition "Content Generation" {
-    :Initialize StringBuilders;
-
-    :Process @AILocked;
-    note right: Extract className, reason
-    :Process @AIContext;
-    note right: Extract focus, avoids
-    :Process @AIIgnore;
-    note right: Write glob patterns
-    :Process @AIAudit;
-    note right: Security checks
-    :Process @AIDraft;
-    note right: Implementation tasks
-  }
-
-  partition "File Writing" {
-    if (Service active AND content changed?) then (yes)
-      :writeFileIfChanged();
-      :Print NOTE: updated;
-    else (no)
-      :Skip write;
-      :Print NOTE: no changes;
-    endif
-  }
-
-  :checkOrphanedAnnotations();
+partition "Validation Phase" {
+  :validateAnnotations();
   note right
-    Warns if annotations used
-    but recommended files missing
-    Example: @AIIgnore without .qwenignore
+    Checks for:
+    - Contradictory annotations
+    - Empty audit arrays
+  end note
+}
+
+partition "Service Resolution" {
+  :buildServiceFileMap(root);
+  note right
+    Maps 15+ service keys
+    to file paths:
+    "qwen" -> QWEN.md
+    "cursor" -> .cursorrules
+    "claude" -> CLAUDE.md
+    etc.
   end note
 
-  :Return false;
-  note right: Do not claim annotations
-endif
+  :resolveActiveServices();
+  note right
+    Checks Files.exists()
+    Only active services
+    get generated
+  end note
+}
+
+partition "Content Generation" {
+  :Initialize StringBuilders;
+  :Process @AILocked;
+  note right: Extract className, reason
+  :Process @AIContext;
+  note right: Extract focus, avoids
+  :Process @AIIgnore;
+  note right: Write glob patterns
+  :Process @AIAudit;
+  note right: Security checks
+  :Process @AIDraft;
+  note right: Implementation tasks
+}
+
+partition "File Writing" {
+  if (Service active AND content changed?) then (yes)
+    :writeFileIfChanged();
+    :Print NOTE: updated;
+  else (no)
+    :Skip write;
+    :Print NOTE: no changes;
+  endif
+}
+
+:checkOrphanedAnnotations();
+note right
+  Warns if annotations used
+  but recommended files missing
+  Example: @AIIgnore without .qwenignore
+end note
+
+:Return false;
+note right: Do not claim annotations
 
 stop
 

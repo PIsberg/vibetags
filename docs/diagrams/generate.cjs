@@ -6,7 +6,7 @@ const http = require('http');
 const diagramsDir = path.join(__dirname);
 const outputDir = path.join(__dirname);
 
-const files = ['class-diagram.puml', 'build-sequence.puml'];
+const files = ['class-diagram.puml', 'build-sequence.puml', 'data-flow.puml', 'platform-output.puml'];
 
 files.forEach(file => {
     const content = fs.readFileSync(path.join(diagramsDir, file), 'utf8');
