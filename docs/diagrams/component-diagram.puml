@@ -7,8 +7,10 @@ skinparam defaultFontName "Segoe UI"
 
 title VibeTags System Architecture - Component Diagram
 
+actor Developer
+
 package "Developer Project" {
-    
+
     [Java Source Files] as JavaSources
     note right of JavaSources
       @AILocked
@@ -17,7 +19,7 @@ package "Developer Project" {
       @AIAudit
       @AIIgnore
     end note
-    
+
     [vibetags-processor.jar] as VibetagsLib
     note bottom of VibetagsLib
       Annotations (SOURCE retention)
@@ -27,16 +29,16 @@ package "Developer Project" {
 }
 
 package "javac Compiler" {
-    
+
     [Annotation Processing] as AP
     [Java Compilation] as Compile
     [Bytecode Generation] as Bytecode
-    
+
     JavaSources --> AP : Source code with annotations
     VibetagsLib --> AP : Provides processor
     AP --> Compile : Processed annotations
     Compile --> Bytecode : Clean bytecode\n(no annotations)
-    
+
     note right of Bytecode
       Zero runtime overhead
       Annotations stripped
@@ -44,82 +46,80 @@ package "javac Compiler" {
 }
 
 package "File System Output" {
-    
-    component "Qwen Files" as Qwen {
+
+    component "Qwen Files" as QwenFiles {
         [QWEN.md]
         [.qwenignore]
         [.qwen/settings.json]
         [.qwen/commands/refactor.md]
     }
-    
-    component "Cursor Files" as Cursor {
+
+    component "Cursor Files" as CursorFiles {
         [.cursorrules]
         [.cursorignore]
     }
-    
-    component "Claude Files" as Claude {
+
+    component "Claude Files" as ClaudeFiles {
         [CLAUDE.md]
         [.claudeignore]
     }
-    
-    component "Gemini Files" as Gemini {
+
+    component "Gemini Files" as GeminiFiles {
         [gemini_instructions.md]
         [.aiexclude]
     }
-    
-    component "Codex Files" as Codex {
+
+    component "Codex Files" as CodexFiles {
         [AGENTS.md]
         [.codex/config.toml]
         [.codex/rules/vibetags.rules]
     }
-    
-    component "Copilot Files" as Copilot {
+
+    component "Copilot Files" as CopilotFiles {
         [.github/copilot-instructions.md]
         [.copilotignore]
     }
 }
 
-AP --> Qwen : Generate
-AP --> Cursor : Generate
-AP --> Claude : Generate
-AP --> Gemini : Generate
-AP --> Codex : Generate
-AP --> Copilot : Generate
+AP --> QwenFiles : Generate
+AP --> CursorFiles : Generate
+AP --> ClaudeFiles : Generate
+AP --> GeminiFiles : Generate
+AP --> CodexFiles : Generate
+AP --> CopilotFiles : Generate
 
 package "AI Platforms" {
-    
+
     [Qwen IDE] as QwenIDE
     [Cursor IDE] as CursorIDE
     [Claude Code] as ClaudeCode
     [Gemini Code Assist] as GeminiCode
     [Codex CLI] as CodexCLI
-    [GitHub Copilot] as Copilot
-    
-    Qwen --> QwenIDE : Read config
-    Cursor --> CursorIDE : Read config
-    Claude --> ClaudeCode : Read config
-    Gemini --> GeminiCode : Read config
-    Codex --> CodexCLI : Read config
-    Copilot --> Copilot : Read config
+    [GitHub Copilot] as GitHubCopilot
+
+    QwenFiles --> QwenIDE : Read config
+    CursorFiles --> CursorIDE : Read config
+    ClaudeFiles --> ClaudeCode : Read config
+    GeminiFiles --> GeminiCode : Read config
+    CodexFiles --> CodexCLI : Read config
+    CopilotFiles --> GitHubCopilot : Read config
 }
 
-package "Opt-in Mechanism" {
-    
-    note as OptInNote
-      File presence = Opt-in
-      
-      Create empty file → VibeTags populates
-      Delete file → VibeTags ignores
-      
-      No forced files on disk
-      Developer controls what exists
-    end note
-}
+note as OptInNote
+  **Opt-in Mechanism**
+  
+  File presence = Opt-in
+  
+  Create empty file -> VibeTags populates
+  Delete file -> VibeTags ignores
+  
+  No forced files on disk
+  Developer controls what exists
+end note
 
-[Build System\nMaven/Gradle] as Build
-
-Developer -> Build: mvn compile
-Build --> javac Compiler : Invoke
-Bytecode --> Build : Compiled classes
+Developer --> JavaSources : Annotates
+Developer --> MavenGradle : mvn compile
+MavenGradle --> AP : Invokes compiler via SPI
+Bytecode --> MavenGradle : Compiled classes
 
 @enduml
