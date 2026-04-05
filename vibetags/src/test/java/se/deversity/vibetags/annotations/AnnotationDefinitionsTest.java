@@ -8,6 +8,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 
+import se.deversity.vibetags.annotations.AIPrivacy;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -203,6 +205,10 @@ class AnnotationDefinitionsTest {
     static class TestIgnoreClass {
     }
 
+    @AIPrivacy(reason = "Test PII field")
+    static class TestPrivacyClass {
+    }
+
     @Test
     void testAnnotationsCanBeAppliedToClasses() {
         // These tests verify annotations can be applied to class declarations
@@ -212,11 +218,47 @@ class AnnotationDefinitionsTest {
             Class<?> contextClass = TestContextClass.class;
             Class<?> auditClass = TestAuditClass.class;
             Class<?> ignoreClass = TestIgnoreClass.class;
+            Class<?> privacyClass = TestPrivacyClass.class;
 
             assertNotNull(lockedClass);
             assertNotNull(contextClass);
             assertNotNull(auditClass);
             assertNotNull(ignoreClass);
+            assertNotNull(privacyClass);
         });
+    }
+
+    @Test
+    void testAIPrivacyAnnotationRetention() {
+        Retention retention = AIPrivacy.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAIPrivacyAnnotationTargets() {
+        Target target = AIPrivacy.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAIPrivacyDefaultValue() throws NoSuchMethodException {
+        Method reasonMethod = AIPrivacy.class.getDeclaredMethod("reason");
+        assertNotNull(reasonMethod.getDefaultValue());
+        String defaultReason = (String) reasonMethod.getDefaultValue();
+        assertFalse(defaultReason.isBlank(), "default reason must not be blank");
+        assertTrue(defaultReason.contains("PII"), "default reason should mention PII");
+    }
+
+    @Test
+    @AIPrivacy(reason = "Test reason")
+    void testAIPrivacyCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAIPrivacyCanBeUsedOnMethods");
+        AIPrivacy privacy = method.getAnnotation(AIPrivacy.class);
+        assertNull(privacy); // Expected: null because SOURCE retention
     }
 }

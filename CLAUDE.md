@@ -53,7 +53,7 @@ gradle clean build    # Gradle
 
 `AIGuardrailProcessor.process()` runs during `javac` compilation of the **consumer** project (not the library itself — the library disables annotation processing with `-proc:none`):
 
-1. Collects all `@AILocked`, `@AIContext`, `@AIDraft`, `@AIAudit` elements from the round environment
+1. Collects all `@AILocked`, `@AIContext`, `@AIDraft`, `@AIAudit`, `@AIIgnore`, `@AIPrivacy` elements from the round environment
 2. Accumulates content into six `StringBuilder`s (one per output format)
 3. Calls `resolveActiveServices()` — only files that already exist on disk are regenerated (file presence = opt-in)
 4. Writes to `Paths.get("").toAbsolutePath()` (project root of the consumer)
@@ -90,8 +90,11 @@ To deactivate, delete the file — it will never come back.
 | `@AIDraft` | TYPE, METHOD | `instructions: String` |
 | `@AIAudit` | TYPE, METHOD | `checkFor: String[]` |
 | `@AIIgnore` | TYPE, METHOD, FIELD | `reason: String` |
+| `@AIPrivacy` | TYPE, METHOD, FIELD | `reason: String` |
 
 `@AIIgnore` differs from `@AILocked`: locked code is visible but immutable; ignored code is excluded from AI context entirely (treat as non-existent). Common uses: auto-generated files, deprecated scaffolding.
+
+`@AIPrivacy` marks elements that handle PII (Personally Identifiable Information). Unlike `@AIIgnore`, the element remains visible for code assistance — the AI is instructed to never include its runtime values in logs, console output, external API suggestions, test fixtures, or mock data. Use it for fields/methods subject to GDPR, HIPAA, PCI-DSS, or similar data-protection rules. Using `@AIPrivacy` together with `@AIIgnore` on the same element triggers a compile-time warning (redundant).
 
 ### SPI registration
 
@@ -105,6 +108,8 @@ The processor is discovered via `META-INF/services/javax.annotation.processing.P
 | `AIGuardrailProcessorTest` | `vibetags/src/test` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | `vibetags/src/test` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `vibetags/src/test` | `@AIIgnore` annotation definition and opt-in behaviour |
+| `AIPrivacyProcessorTest` | `vibetags/src/test` | `@AIPrivacy` annotation definition, validation, and per-platform output |
+| `AIGuardrailProcessorProcessTest` | `vibetags/src/test` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
 | `AnnotationProcessorEndToEndTest` | `vibetags/src/test` | Generated file content |
 | `AIGuardrailProcessorIntegrationTest` | `vibetags/src/test` | Full workflow (requires `-Drun.integration.tests=true`) |
 

@@ -3,6 +3,7 @@ package com.example.service;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIPrivacy;
 
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,7 @@ public class OrderService {
     /**
      * DRAFT: Order confirmation generation.
      */
+    @AIPrivacy(reason = "Output contains customer shipping address and contact details (PII)")
     @AIDraft(instructions = "Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.")
     public String generateOrderConfirmation(String orderId) {
         // @AIDraft: Implement confirmation generation

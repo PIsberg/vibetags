@@ -41,3 +41,16 @@ The following elements must be completely excluded from AI's memory and context:
 
 * `com.example.internal.GeneratedMetadata`
 
+## 🔒 PII / PRIVACY GUARDRAILS
+The following elements handle PII. Never include their runtime values in logs,
+console output, external API calls, test fixtures, or mock data.
+
+* `username` — Database credential - never log or include in error messages
+* `password` — Database credential - never log or include in error messages
+* `sendEmail(java.lang.String,java.lang.String,java.lang.String)` — Email address is PII under GDPR - never log the recipient address
+* `sendSMS(java.lang.String,java.lang.String)` — Phone number is PII - never log the destination number
+* `generateOrderConfirmation(java.lang.String)` — Output contains customer shipping address and contact details (PII)
+* `cardNumber` — PCI-DSS cardholder data - never log or expose in suggestions
+* `expiryDate` — PCI-DSS cardholder data - never log or expose in suggestions
+* `cvv` — PCI-DSS security code - never log or expose in suggestions
+

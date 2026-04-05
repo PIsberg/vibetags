@@ -2,6 +2,7 @@ package com.example.service;
 
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIPrivacy;
 
 /**
  * User notification service.
@@ -18,6 +19,7 @@ public class NotificationService {
     /**
      * Send an email notification.
      */
+    @AIPrivacy(reason = "Email address is PII under GDPR - never log the recipient address")
     @AIDraft(instructions = "Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).")
     public boolean sendEmail(String to, String subject, String body) {
         // @AIDraft: Implement this
@@ -27,6 +29,7 @@ public class NotificationService {
     /**
      * Send an SMS notification.
      */
+    @AIPrivacy(reason = "Phone number is PII - never log the destination number")
     @AIDraft(instructions = "Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).")
     public boolean sendSMS(String phoneNumber, String message) {
         // @AIDraft: Implement this
