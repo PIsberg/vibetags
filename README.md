@@ -31,15 +31,12 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 ### Supported AI Platforms
 
 Generated configuration files work out-of-the-box with:
-- **Cursor** (`.cursorrules`)
-- **Claude** (`CLAUDE.md`)
+- **Cursor** (`.cursorrules`, `.cursorignore`)
+- **Claude** (`CLAUDE.md`, `.claudeignore`)
+- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
-- **Cursor** (`.cursorignore`)
-- **Claude** (`.claudeignore`)
-- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwenignore`)
-- **Gemini/Codex** (`.aiexclude`)
 
 ## 📁 Project Structure
 
@@ -234,6 +231,45 @@ Create one or more of the following files in your project root to opt in:
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
 
+### 🤖 Qwen Configuration
+
+VibeTags generates comprehensive Qwen configuration files:
+
+**QWEN.md** - Main project context file:
+```markdown
+# PROJECT CONTEXT
+## LOCKED FILES (DO NOT EDIT)
+* `com.example.PaymentProcessor` — Reason here
+
+## CONTEXTUAL RULES
+* `com.example.StringParser`
+  * Focus: Optimize for memory usage
+  * Avoid: java.util.regex, String.split()
+
+## 🛡️ MANDATORY SECURITY AUDITS
+* `com.example.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety
+
+## IGNORED ELEMENTS
+* `com.example.GeneratedMetadata`
+```
+
+**.qwen/settings.json** - Qwen model configuration:
+```json
+{
+  "project": {
+    "model": "qwen3-coder-plus",
+    "mcp": {
+      "enabled": true
+    }
+  }
+}
+```
+
+**.qwen/commands/refactor.md** - Custom `/refactor` command for code refactoring
+
+**.qwenignore** - Glob patterns for files to exclude from Qwen's context
+
 ### ⚠️ Orphaned Annotation Warnings
 
 If you use a VibeTags annotation (like `@AIIgnore`) but haven't created the recommended standalone file for an active service, the compiler will issue a **WARNING** to guide you:
@@ -241,6 +277,8 @@ If you use a VibeTags annotation (like `@AIIgnore`) but haven't created the reco
 `[WARNING] VibeTags: @AIIgnore used but .cursorignore is missing for Cursor support. Consider creating it.`
 
 `[WARNING] VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.`
+
+`[WARNING] VibeTags: @AILocked used but .qwenignore is missing for Qwen support. Consider creating it.`
 
 This helps you ensure your guardrails are correctly positioned without VibeTags forcing files into your project.
 
@@ -294,6 +332,15 @@ Critical Vulnerabilities to Prevent:
 **Codex CLI (AGENTS.md):**
 ```markdown
 ## 🛡️ MANDATORY SECURITY AUDITS
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
+```
+
+**Qwen (QWEN.md):**
+```markdown
+## 🛡️ MANDATORY SECURITY AUDITS
+When proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.
+
 * `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
 ```

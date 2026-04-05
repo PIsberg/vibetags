@@ -21,9 +21,6 @@ class AnnotationProcessorEndToEndTest {
     private static final String EXAMPLE_DIR;
     
     static {
-        // Find example dir relative to working directory
-        // In Maven, working dir is usually vibetags/vibetags/
-        // In IDE/Root, working dir is usually vibetags/
         File standard = new File("../example");
         File rootRelative = new File("example");
         
@@ -32,7 +29,6 @@ class AnnotationProcessorEndToEndTest {
         } else if (rootRelative.exists() && rootRelative.isDirectory()) {
             EXAMPLE_DIR = "example";
         } else {
-            // Fallback for CI or other environments
             EXAMPLE_DIR = "example"; 
         }
     }
