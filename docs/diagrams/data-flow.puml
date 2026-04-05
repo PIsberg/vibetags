@@ -1,10 +1,14 @@
 @startuml
-' VibeTags Data Flow Diagram
+' VibeTags Data Flow Diagram - Activity Diagram
 
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
+skinparam activity {
+  BackgroundColor #E8F4FD
+  BorderColor #2196F3
+}
 
-title VibeTags Processing Flow - Detailed Data Flow
+title VibeTags Processing Flow - Data Flow
 
 start
 
@@ -16,111 +20,73 @@ if (Already processed?) then (yes)
   stop
 else (no)
   :Set processed = true;
-  
-  == Validation Phase ==
-  :validateAnnotations();
-  if (@AIDraft + @AILocked\non same element?) then (yes)
-    :WARNING: Contradictory annotations;
-  endif
-  if (@AIAudit with empty checkFor?) then (yes)
-    :WARNING: Empty audit will be ignored;
-  endif
-  
-  == Service Resolution ==
-  :buildServiceFileMap(root);
-  note right
-    Returns Map<String, Path>:
-    "qwen" → QWEN.md
-    "qwen_ignore" → .qwenignore
-    "qwen_settings" → .qwen/settings.json
-    "qwen_refactor" → .qwen/commands/refactor.md
-    "cursor" → .cursorrules
-    ... (15 total services)
-  end note
-  
-  :resolveActiveServices();
-  note right
-    Checks Files.exists() for each service
-    Only active services get generated
-    File presence = opt-in signal
-  end note
-  
-  == Content Accumulation ==
-  :Initialize StringBuilder per platform;
-  
-  partition "@AILocked Processing" {
-    :Iterate @AILocked annotated elements;
-    :Extract: className, reason;
-    :Append to cursorRules, claudeMd,\nqwenMd, codexAgents, etc.;
-  }
-  
-  partition "@AIContext Processing" {
-    :Iterate @AIContext annotated elements;
-    :Extract: className, focus, avoids;
-    :Append contextual rules to all platforms;
-  }
-  
-  partition "@AIIgnore Processing" {
-    :Iterate @AIIgnore annotated elements;
-    :Extract: className;
-    :Append to ignore sections;
-    :Write glob patterns to *.ignore files;
-    note right
-      **/ClassName.java
-      Platform-specific exclusion lists
-    end note
-  }
-  
-  partition "@AIAudit Processing" {
-    :Iterate @AIAudit annotated elements;
-    :Extract: className, checkFor[];
-    :Append security audit requirements;
-    note right
-      Platform-specific formats:
-      - Markdown (Cursor, Qwen, Codex)
-      - XML (Claude)
-      - Markdown + Persona (Gemini)
-    end note
-  }
-  
-  partition "@AIDraft Processing" {
-    :Iterate @AIDraft annotated elements;
-    :Extract: className, instructions;
-    :Append implementation tasks;
-  }
-  
-  == Platform-Specific Finalization ==
-  :Finalize Claude XML structure;
-  :Add <rule> elements to Claude;
-  :Close Qwen sections;
-  
-  == File Writing ==
-  if (Service active?) then (yes)
-    if (Content changed?) then (yes)
-      :writeFileIfChanged(filePath, content);
-      :Write UTF-8 encoded file;
-      :Print NOTE: "updated - <file>";
-    else (no)
-      :Skip write (no changes);
-      :Print NOTE: "no changes - <file>";
+
+  partition "Validation Phase" {
+    :validateAnnotations();
+    if (Contradiction check) then (fail)
+      :WARNING: Contradictory annotations;
+    else (pass)
     endif
-  else (no)
-    :Skip service (not opted in);
-  endif
-  
-  == Orphaned Annotation Check ==
+    if (Empty audit check) then (fail)
+      :WARNING: Empty audit ignored;
+    else (pass)
+    endif
+  }
+
+  partition "Service Resolution" {
+    :buildServiceFileMap(root);
+    note right
+      Maps 15+ service keys
+      to file paths:
+      "qwen" -> QWEN.md
+      "cursor" -> .cursorrules
+      "claude" -> CLAUDE.md
+      etc.
+    end note
+
+    :resolveActiveServices();
+    note right
+      Checks Files.exists()
+      Only active services
+      get generated
+    end note
+  }
+
+  partition "Content Generation" {
+    :Initialize StringBuilders;
+
+    :Process @AILocked;
+    note right: Extract className, reason
+    :Process @AIContext;
+    note right: Extract focus, avoids
+    :Process @AIIgnore;
+    note right: Write glob patterns
+    :Process @AIAudit;
+    note right: Security checks
+    :Process @AIDraft;
+    note right: Implementation tasks
+  }
+
+  partition "File Writing" {
+    if (Service active AND content changed?) then (yes)
+      :writeFileIfChanged();
+      :Print NOTE: updated;
+    else (no)
+      :Skip write;
+      :Print NOTE: no changes;
+    endif
+  }
+
   :checkOrphanedAnnotations();
   note right
-    If @AIIgnore used but .qwenignore missing
-    → WARNING for Qwen support
-    If @AILocked used but .aiexclude missing
-    → WARNING for Gemini/Codex support
+    Warns if annotations used
+    but recommended files missing
+    Example: @AIIgnore without .qwenignore
   end note
 
+  :Return false;
+  note right: Do not claim annotations
 endif
-
-:Return false (do not claim annotations);
-note right: Other processors must still see them
 
 stop
 
