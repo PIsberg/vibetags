@@ -1,0 +1,126 @@
+@startuml
+' VibeTags Platform Output Formats
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam wrapWidth 300
+
+title VibeTags - AI Platform Output Format Comparison
+
+package "Same Annotation Input" as Input {
+    
+    component @AILocked(reason = "Critical payment logic")\non PaymentProcessor as Locked
+    
+    component @AIContext(\n  focus = "Memory optimization",\n  avoids = "java.util.regex"\n) on StringParser as Context
+    
+    component @AIAudit(checkFor = {\n  "SQL Injection",\n  "Thread Safety"\n}) on DatabaseConnector as Audit
+    
+    component @AIIgnore on GeneratedMetadata as Ignore
+}
+
+package "Platform-Specific Outputs" as Outputs {
+    
+    component "Qwen (QWEN.md)" as QwenOutput {
+      # PROJECT CONTEXT
+      
+      ## LOCKED FILES (DO NOT EDIT)
+      * `PaymentProcessor` — Critical payment logic
+      
+      ## CONTEXTUAL RULES
+      * `StringParser`
+        * Focus: Memory optimization
+        * Avoid: java.util.regex
+      
+      ## 🛡️ MANDATORY SECURITY AUDITS
+      * `DatabaseConnector`
+        - Required Checks: SQL Injection, Thread Safety
+      
+      ## IGNORED ELEMENTS
+      * `GeneratedMetadata`
+    }
+    
+    component "Claude (CLAUDE.md)" as ClaudeOutput {
+      <project_guardrails>
+        <locked_files>
+          <file path="PaymentProcessor">
+            <reason>Critical payment logic</reason>
+          </file>
+        </locked_files>
+        <contextual_instructions>
+          <file path="StringParser">
+            <focus>Memory optimization</focus>
+            <avoids>java.util.regex</avoids>
+          </file>
+        </contextual_instructions>
+        <audit_requirements>
+          <file path="DatabaseConnector">
+            <vulnerability_check>SQL Injection</vulnerability_check>
+            <vulnerability_check>Thread Safety</vulnerability_check>
+          </file>
+        </audit_requirements>
+        <ignored_elements>
+          <file path="GeneratedMetadata"/>
+        </ignored_elements>
+      </project_guardrails>
+      <rule>Never propose edits to locked files.</rule>
+    }
+    
+    component "Cursor (.cursorrules)" as CursorOutput {
+      # AUTO-GENERATED AI RULES
+      
+      ## LOCKED FILES (DO NOT EDIT)
+      * `PaymentProcessor` - Reason: Critical payment logic
+      
+      ## CONTEXTUAL RULES
+      * `StringParser`
+        * Focus: Memory optimization
+        * Avoid: java.util.regex
+      
+      ## 🛡️ MANDATORY SECURITY AUDITS
+      * `DatabaseConnector`
+        - Required Checks: SQL Injection, Thread Safety
+      
+      ## 🚫 IGNORED ELEMENTS
+      * `GeneratedMetadata`
+    }
+}
+
+Locked --> QwenOutput : Generates
+Locked --> ClaudeOutput : Generates
+Locked --> CursorOutput : Generates
+
+Context --> QwenOutput : Generates
+Context --> ClaudeOutput : Generates
+Context --> CursorOutput : Generates
+
+Audit --> QwenOutput : Generates
+Audit --> ClaudeOutput : Generates
+Audit --> CursorOutput : Generates
+
+Ignore --> QwenOutput : Generates
+Ignore --> ClaudeOutput : Generates
+Ignore --> CursorOutput : Generates
+
+note as FormatNote
+  Key Differences:
+  
+  **Qwen**: Clean Markdown with emoji headers
+  - Simple bullet format
+  - Security audits with explicit checks
+  - IGNORED ELEMENTS section
+  
+  **Claude**: XML-based structure
+  - Strict XML tags for parsing
+  - <rule> elements for enforcement
+  - Nested hierarchical format
+  
+  **Cursor**: Markdown with emoji
+  - Similar to Qwen but different header style
+  - Uses 🛡️ and 🚫 emoji
+  - Standalone ignore file (.cursorignore)
+  
+  All platforms receive the SAME annotation data
+  but formatted for each platform's strengths
+end note
+
+@enduml

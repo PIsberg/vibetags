@@ -1,142 +1,136 @@
 @startuml
-title VibeTags - Class Architecture
+' VibeTags Class Diagram - Technical Architecture
 
-allowmixing
-
+skinparam backgroundColor #FFFFFF
 skinparam class {
-    BackgroundColor White
-    ArrowColor DarkGray
-    BorderColor DarkGray
+    BackgroundColor #E8F4FD
+    BorderColor #2196F3
+    ArrowColor #1565C0
 }
+skinparam stereotypeCBackgroundColor #BBDEFB
+skinparam packageStyle rectangle
 
-skinparam stereotypeCBackgroundColor #E8E8E8
+title VibeTags Architecture - Class Diagram
 
-' Package: Annotations
-package "se.deversity.vibetags.annotations" {
-
-    annotation AILocked {
+package "se.deversity.vibetags.annotations" <<Annotations>> {
+    
+    interface AILocked <<annotation>> {
         + String reason()
     }
-
-    annotation AIContext {
+    
+    interface AIContext <<annotation>> {
         + String focus()
         + String avoids()
     }
-
-    annotation AIDraft {
+    
+    interface AIDraft <<annotation>> {
         + String instructions()
     }
-
-    annotation AIAudit {
+    
+    interface AIAudit <<annotation>> {
         + String[] checkFor()
     }
+    
+    interface AIIgnore <<annotation>> {
+        + String reason()
+    }
 }
 
-' Package: Processor
-package "se.deversity.vibetags.processor" {
-
+package "se.deversity.vibetags.processor" <<Processor>> {
+    
     class AIGuardrailProcessor {
-        - writeFile(path: String, content: String)
-        + process(annotations: Set<TypeElement>, roundEnv: RoundEnvironment) : boolean
-    }
-
-    note top of AIGuardrailProcessor
-        @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
-        @SupportedSourceVersion(RELEASE_11)
-        Extends: AbstractProcessor
-    end note
-}
-
-' Package: Consumer
-package "Consumer Project (example)" {
-
-    class "Java Source Files" as ConsumerSource {
-        - PaymentProcessor.java
-        - SecurityConfig.java
-        - DatabaseConnector.java
-        - OrderService.java
-        - etc.
-    }
-
-    class "javac Compiler" as Javac {
-        + Annotation Processing Enabled
-        + Discovers processor via SPI
+        - String VERSION
+        - String GITHUB_URL
+        - boolean processed
+        
+        + process(annotations, roundEnv) : boolean
+        + validateAnnotations(messager, roundEnv) : void
+        + checkOrphanedAnnotations(messager, active, hasLocked, hasIgnore, hasAudit) : void
+        + writeFileIfChanged(filePath, content) : boolean
+        
+        + {static} buildServiceFileMap(root) : Map<String, Path>
+        + {static} resolveActiveServices(messager, allServiceFiles) : Set<String>
     }
 }
 
-' Package: Generated Output
-package "Generated AI Config Files" {
-
-    class ".cursorrules" as CursorRules
-    class "CLAUDE.md" as ClaudeMd
-    class ".aiexclude" as AiExclude
-    class "AGENTS.md" as AgentsMd
-    class "gemini_instructions.md" as GeminiMd
+package "javax.annotation.processing" <<JDK>> {
+    
+    abstract class AbstractProcessor {
+        + getSupportedAnnotationTypes() : Set<String>
+        + getSupportedSourceVersion() : SourceVersion
+        + process(annotations, roundEnv) : boolean
+    }
+    
+    interface Messager {
+        + printMessage(kind, msg) : void
+    }
+    
+    interface RoundEnvironment {
+        + getElementsAnnotatedWith(annotation) : Set<Element>
+        + processingOver() : boolean
+    }
 }
 
-' Package: AI Platforms
-package "AI Platforms" {
-
-    class "Cursor IDE" as Cursor
-    class "Claude AI" as Claude
-    class "Gemini AI" as Gemini
-    class "ChatGPT" as ChatGPT
+package "java.nio.file" <<JDK>> {
+    class Path
+    class Files
 }
 
 ' Relationships
+AbstractProcessor <|-- AIGuardrailProcessor : extends
+
+AIGuardrailProcessor --> Messager : uses
+AIGuardrailProcessor --> RoundEnvironment : uses
+AIGuardrailProcessor --> Path : uses
+AIGuardrailProcessor --> Files : uses
+
 AILocked ..> AIGuardrailProcessor : processed by
 AIContext ..> AIGuardrailProcessor : processed by
 AIDraft ..> AIGuardrailProcessor : processed by
 AIAudit ..> AIGuardrailProcessor : processed by
+AIIgnore ..> AIGuardrailProcessor : processed by
 
-ConsumerSource --> AILocked : uses
-ConsumerSource --> AIContext : uses
-ConsumerSource --> AIDraft : uses
-ConsumerSource --> AIAudit : uses
-
-Javac --> ConsumerSource : compiles
-Javac --> AIGuardrailProcessor : invokes
-
-AIGuardrailProcessor --> CursorRules : generates
-AIGuardrailProcessor --> ClaudeMd : generates
-AIGuardrailProcessor --> AiExclude : generates
-AIGuardrailProcessor --> AgentsMd : generates
-AIGuardrailProcessor --> GeminiMd : generates
-
-CursorRules --> Cursor : consumed by
-ClaudeMd --> Claude : consumed by
-AiExclude --> Gemini : consumed by
-AgentsMd --> ChatGPT : consumed by
-GeminiMd --> Gemini : consumed by
-
-note right of CursorRules
-    Markdown format
-    LOCKED FILES + CONTEXT RULES
-    + MANDATORY SECURITY AUDITS
+note right of AILocked
+  Retention: SOURCE
+  Target: TYPE, METHOD, FIELD
+  Purpose: Prevent AI modifications
 end note
 
-note right of ClaudeMd
-    XML format
-    <locked_files>
-    <contextual_instructions>
-    <audit_requirements>
+note right of AIContext
+  Retention: SOURCE
+  Target: TYPE, METHOD
+  Purpose: Guide AI behavior
 end note
 
-note right of AiExclude
-    Glob patterns
-    Binary blocklist for Gemini
+note right of AIDraft
+  Retention: SOURCE
+  Target: TYPE, METHOD
+  Purpose: Request AI implementation
 end note
 
-note right of AgentsMd
-    Markdown format
-    Locked Files + Context Rules
-    + SECURITY GUARDRAILS
+note right of AIAudit
+  Retention: SOURCE
+  Target: TYPE, METHOD
+  Purpose: Trigger security audits
 end note
 
-note right of GeminiMd
-    Markdown format
-    CONTINUOUS AUDIT REQUIREMENTS
-    Senior Staff Engineer persona
+note right of AIIgnore
+  Retention: SOURCE
+  Target: TYPE, METHOD, FIELD
+  Purpose: Exclude from AI context
+end note
+
+note bottom of AIGuardrailProcessor
+  @SupportedAnnotationTypes("*")
+  @SupportedSourceVersion(RELEASE_11)
+  
+  Generates files for:
+  - Cursor (.cursorrules, .cursorignore)
+  - Claude (CLAUDE.md, .claudeignore)
+  - Qwen (QWEN.md, .qwen/*)
+  - Gemini (gemini_instructions.md)
+  - Codex (AGENTS.md, .codex/*)
+  - Copilot (.github/copilot-instructions.md)
 end note
 
 @enduml

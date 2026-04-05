@@ -1,18 +1,30 @@
-# VibeTags Architecture
+# VibeTags Architecture - Technical Deep Dive
 
 ## Overview
 
-VibeTags is a Java annotation processor that generates AI platform-specific configuration files from Java source code annotations. It operates at **compile-time only**, with zero runtime overhead.
+VibeTags is a **Java annotation processor** (JSR 269 compliant) that generates AI platform-specific configuration files from Java source code annotations. It operates at **compile-time only**, with zero runtime overhead.
 
 ```
 Developer Annotations → javac + Annotation Processor → AI Config Files
 ```
 
+### Key Technical Characteristics
+
+- **Compile-time only**: Uses `@Retention(RetentionPolicy.SOURCE)` - annotations stripped from bytecode
+- **Zero runtime dependency**: No VibeTags classes in production artifacts
+- **File-existence opt-in**: Only generates files that already exist on disk
+- **Write-if-changed**: Only updates files when content actually differs
+- **Multi-platform**: Generates configs for 6+ AI platforms simultaneously
+- **Version stamped**: Every file includes VibeTags version + GitHub URL
+
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
 - [Component Diagram](#component-diagram)
+- [Class Diagram](#class-diagram)
 - [Build Sequence](#build-sequence)
+- [Data Flow](#data-flow)
+- [Platform Output Formats](#platform-output-formats)
 - [Core Components](#core-components)
   - [Annotations](#annotations)
   - [Annotation Processor](#annotation-processor)
@@ -20,6 +32,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - [Build Flow](#build-flow)
 - [Directory Structure](#directory-structure)
 - [Design Decisions](#design-decisions)
+- [Testing Strategy](#testing-strategy)
 - [Limitations](#limitations)
 - [Future Architecture](#future-architecture)
 
@@ -27,113 +40,39 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Developer Workspace                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────────┐         ┌──────────────────────────────┐     │
-│  │  Java Source     │         │  VibeTags Library             │     │
-│  │  Files           │         │  ┌─────────────────────────┐  │     │
-│  │                  │         │  │  Annotations             │  │     │
-│  │  @AILocked       │         │  │  - AILocked.java         │  │     │
-│  │  @AIContext      │────────>│  │  - AIContext.java        │  │     │
-│  │  @AIDraft        │  uses   │  │  - AIDraft.java          │  │     │
-│  │  @AIAudit        │         │  │  - AIAudit.java          │  │     │
-│  └────────┬─────────┘         │  └─────────────────────────┘  │     │
-│           │                   │  ┌─────────────────────────┐  │     │
-│           │                   │  │  Annotation Processor     │  │     │
-│           │                   │  │  AIGuardrailProcessor     │  │     │
-│           │                   │  │  (JSR 269 compliant)      │  │     │
-│           │                   │  └─────────────────────────┘  │     │
-│           │                   └──────────────────────────────┘     │
-│           │                                    │                   │
-│           ▼                                    ▼                   │
-│  ┌───────────────────────────────────────────────────────┐         │
-# VibeTags Architecture
+### Component Diagram
 
-## Overview
+![Component Diagram](diagrams/component-diagram.png)
 
-VibeTags is a Java annotation processor that generates AI platform-specific configuration files from Java source code annotations. It operates at **compile-time only**, with zero runtime overhead.
+*Figure 1: High-level system architecture showing component interactions*
 
-```
-Developer Annotations → javac + Annotation Processor → AI Config Files
-```
+**Technical Flow:**
+1. Developer annotates Java source code with VibeTags annotations
+2. Build system (Maven/Gradle) invokes `javac` compiler
+3. `javac` discovers `AIGuardrailProcessor` via SPI (`META-INF/services/`)
+4. Processor scans annotations during compilation
+5. Processor generates platform-specific config files to project root
+6. Compiled bytecode contains zero VibeTags artifacts
 
-## Table of Contents
-
-- [System Architecture](#system-architecture)
-- [Component Diagram](#component-diagram)
-- [Build Sequence](#build-sequence)
-- [Core Components](#core-components)
-  - [Annotations](#annotations)
-  - [Annotation Processor](#annotation-processor)
-  - [Generated Output Files](#generated-output-files)
-- [Build Flow](#build-flow)
-- [Directory Structure](#directory-structure)
-- [Design Decisions](#design-decisions)
-- [Limitations](#limitations)
-- [Future Architecture](#future-architecture)
-
----
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Developer Workspace                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────────┐         ┌──────────────────────────────┐     │
-│  │  Java Source     │         │  VibeTags Library             │     │
-│  │  Files           │         │  ┌─────────────────────────┐  │     │
-│  │                  │         │  │  Annotations             │  │     │
-│  │  @AILocked       │         │  │  - AILocked.java         │  │     │
-│  │  @AIContext      │────────>│  │  - AIContext.java        │  │     │
-│  │  @AIDraft        │  uses   │  │  - AIDraft.java          │  │     │
-│  │  @AIAudit        │         │  │  - AIAudit.java          │  │     │
-│  └────────┬─────────┘         │  └─────────────────────────┘  │     │
-│           │                   │  ┌─────────────────────────┐  │     │
-│           │                   │  │  Annotation Processor     │  │     │
-│           │                   │  │  AIGuardrailProcessor     │  │     │
-│           │                   │  │  (JSR 269 compliant)      │  │     │
-│           │                   │  └─────────────────────────┘  │     │
-│           │                   └──────────────────────────────┘     │
-│           │                                    │                   │
-│           ▼                                    ▼                   │
-│  ┌───────────────────────────────────────────────────────┐         │
-│  │         javac Compiler (with annotation processing)    │         │
-│  └───────────────────────────────────────────────────────┘         │
-│                            │                                        │
-│                            ▼                                        │
-│  ┌───────────────────────────────────────────────────────┐         │
-│  │         Generated AI Configuration Files               │         │
-│  │  ┌─────────────┬──────────┬───────────┬──────────┐   │         │
-│  │  │.cursorrules │ CLAUDE.md│ .aiexclude│AGENTS.md │   │         │
-│  │  │.cursorignore│          │           │          │   │         │
-│  │  └─────────────┴──────────┴───────────┴──────────┘   │         │
-│  └───────────────────────────────────────────────────────┘         │
-└─────────────────────────────────────────────────────────────────────┘
-         │                                        │
-         ▼                                        ▼
-┌──────────────────┐                    ┌──────────────────────┐
-│  AI Platforms    │                    │  AI Assistants        │
-│                  │                    │                       │
-│  • Cursor IDE   │                    │  Read config files    │
-│  • Claude       │                    │  Enforce guardrails   │
-│  • Gemini       │                    │  During code gen      │
-│  • Codex CLI    │                    │                       │
-│  • Copilot      │                    │                       │
-└──────────────────┘                    └──────────────────────┘
-```
-
----
-
-## Component Diagram
+### Class Diagram
 
 ![Class Diagram](diagrams/class-diagram.png)
 
-*Figure 1: Class architecture showing annotations, processor, and generated outputs*
+*Figure 2: Class architecture showing annotation definitions and processor*
+
+**Key Components:**
+
+**Annotations** (`se.deversity.vibetags.annotations`):
+- `@AILocked` - Prevents AI modifications (reason: String)
+- `@AIContext` - Guides AI behavior (focus: String, avoids: String)
+- `@AIDraft` - Requests AI implementation (instructions: String)
+- `@AIAudit` - Triggers security audits (checkFor: String[])
+- `@AIIgnore` - Excludes from AI context (reason: String)
+
+**Processor** (`se.deversity.vibetags.processor`):
+- `AIGuardrailProcessor` - Extends `AbstractProcessor` (JSR 269)
+- `@SupportedAnnotationTypes("*")` - Processes all annotations
+- `@SupportedSourceVersion(RELEASE_11)` - Java 11+ support
 
 ---
 
@@ -141,118 +80,183 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 
 ![Build Sequence](diagrams/build-sequence.png)
 
-*Figure 2: Sequence diagram of annotation processing during compilation*
+*Figure 3: Sequence diagram of annotation processing during compilation*
+
+### Processing Phases
+
+**Phase 1: Initialization**
+```java
+if (roundEnv.processingOver() || processed) return false;
+processed = true;
+```
+- Ensures single execution per compilation run
+- Returns false to allow other processors to see annotations
+
+**Phase 2: Validation**
+```java
+validateAnnotations(processingEnv.getMessager(), roundEnv);
+```
+- Checks for contradictory annotations (@AIDraft + @AILocked on same element)
+- Warns about empty @AIAudit (no checkFor items)
+- Emits compiler warnings via `Messager`
+
+**Phase 3: Service Resolution**
+```java
+Map<String, Path> serviceFiles = buildServiceFileMap(root);
+Set<String> activeServices = resolveActiveServices(messager, serviceFiles);
+```
+- Maps 15+ service keys to file paths
+- Checks file existence (file presence = opt-in)
+- Only active services get generated
+
+**Phase 4: Content Generation**
+- Iterates each annotation type
+- Accumulates platform-specific content in StringBuilders
+- Formats output per platform conventions (Markdown, XML, TOML, JSON)
+
+**Phase 5: File Writing**
+```java
+boolean changed = writeFileIfChanged(filePath, content);
+```
+- Strips whitespace for comparison
+- Only writes if content differs
+- Emits NOTE: "updated" or "no changes"
+
+**Phase 6: Orphaned Annotation Check**
+```java
+checkOrphanedAnnotations(messager, activeServices, ...);
+```
+- Warns if annotations used but recommended files missing
+- Example: @AIIgnore used but .qwenignore missing
 
 ---
 
-## Core Components
+## Data Flow
 
-### Annotations
+![Data Flow](diagrams/data-flow.png)
 
-All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at compile time and are stripped from the final bytecode.
+*Figure 4: Detailed data flow through the annotation processor*
 
-| Annotation | Targets | Attributes | Purpose |
-|---|---|---|---|
-| **`@AILocked`** | TYPE, METHOD, FIELD | `reason: String` | Protects critical code from AI modifications |
-| **`@AIContext`** | TYPE, METHOD | `focus: String`, `avoids: String` | Guides AI behavior with positive/negative instructions |
-| **`@AIDraft`** | TYPE, METHOD | `instructions: String` | Marks incomplete code needing AI implementation |
-| **`@AIAudit`** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
-| **`@AIIgnore`** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely — treat as non-existent |
+### Annotation Processing Details
 
-**`@AIIgnore` vs `@AILocked`:** `@AILocked` prevents modification while keeping the element visible to AI. `@AIIgnore` removes the element from AI context completely — AI tools should not reference it, suggest changes to it, or include it in completions.
-
-### Annotation Processor
-
-**Class:** `se.deversity.vibetags.processor.AIGuardrailProcessor`
-
-**Key Characteristics:**
-- Extends `javax.annotation.processing.AbstractProcessor` (JSR 269)
-- Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
-- Supports Java 11+ source versions
-- Processes all `se.deversity.vibetags.annotations.*` annotations (wildcard matching)
-
-**Processing Logic:**
-
-```
-1. Early exit if no annotations found
-2. Determine output directory (current working directory)
-3. Initialize builders with VibeTags Version Header (v1.0.0-SNAPSHOT)
-4. Standard Validation: Check for @AIDraft/@AILocked contradictions and empty @AIAudit
-5. Pass 1: Process @AILocked → append to all builders
-6. Pass 2: Process @AIContext → append to all builders
-7. Pass 3: Process @AIIgnore → append ignore sections to all builders
-8. Pass 4: Process @AIAudit → append audit sections to all builders
-9. Pass 5: Process @AIDraft → append implementation task sections to all builders
-10. Resolve active services (see File-existence Opt-in below)
-11. Write only active service files to project root using UTF-8 encoding
-12. Return true (claim annotations)
-```
-
-**Output File Generation:**
-
-| File | Format | Platform | Content |
-|---|---|---|---|
-| `.cursorrules` | Markdown | Cursor IDE | Locked files, context rules, security audits |
-| `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<contextual_instructions>`, `<audit_requirements>` |
-| `.aiexclude` | Glob patterns | Gemini | Binary blocklist of locked files |
-| `AGENTS.md` | Markdown | Codex CLI | Locked files, context rules, security guardrails |
-| `.codex/config.toml` | TOML | Codex CLI | Model and tool configuration |
-| `.codex/rules/*.rules` | Starlark | Codex CLI | Command permissions |
-| `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
-| `QWEN.md`           | Markdown | Qwen   | Project context, locked files, contextual rules, security audits, ignored elements |
-| `.qwen/settings.json` | JSON | Qwen   | Model configuration (qwen3-coder-plus), MCP settings |
-| `.qwen/commands/refactor.md` | Markdown | Qwen   | Custom `/refactor` command for code refactoring |
-| `.cursorignore`     | Glob patterns | Cursor | Standalone exclusion list |
-| `.claudeignore`     | Glob patterns | Claude | Standalone exclusion list |
-| `.copilotignore`    | Glob patterns | Copilot | Standalone exclusion list |
-| `.qwenignore`       | Glob patterns | Qwen   | Standalone exclusion list |
-
-### Generated Output Files
-
-#### Example: @AIAudit Output
-
-**Source:**
+**@AILocked Processing:**
 ```java
-@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
-public class DatabaseConnector { }
+for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
+    AILocked locked = element.getAnnotation(AILocked.class);
+    String className = element.toString();
+    String reason = locked.reason();
+    
+    // Append to all platforms
+    cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
+    qwenMd.append("* `").append(className).append("` — ").append(reason).append("\n");
+    // ... other platforms
+}
 ```
 
-**Generated in `.cursorrules`:**
+**@AIContext Processing:**
+```java
+for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
+    AIContext context = element.getAnnotation(AIContext.class);
+    String className = element.toString();
+    
+    // Platform-specific formatting
+    cursorRules.append("* `").append(className).append("`\n")
+               .append("  * Focus: ").append(context.focus())
+               .append("\n  * Avoid: ").append(context.avoids()).append("\n");
+}
+```
+
+**@AIIgnore Processing:**
+```java
+for (Element element : roundEnv.getElementsAnnotatedWith(AIIgnore.class)) {
+    String className = element.toString();
+    
+    // Write to ignore sections
+    qwenIgnore.append("* `").append(className).append("`\n");
+    
+    // Write glob patterns to standalone ignore files
+    String globPattern = "**/"+ element.getSimpleName() + ".java\n";
+    qwenIgnoreFile.append(globPattern);
+}
+```
+
+**@AIAudit Processing:**
+```java
+for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
+    AIAudit audit = element.getAnnotation(AIAudit.class);
+    String className = element.toString();
+    String[] checkFor = audit.checkFor();
+    
+    // Platform-specific audit format
+    qwenAudit.append("* `").append(className).append("`\n");
+    qwenAudit.append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
+}
+```
+
+---
+
+## Platform Output Formats
+
+![Platform Outputs](diagrams/platform-output.png)
+
+*Figure 5: Same annotation data formatted for different AI platforms*
+
+### Platform-Specific Format Examples
+
+**Qwen (QWEN.md)** - Clean Markdown:
 ```markdown
+# PROJECT CONTEXT
+# Generated by VibeTags v1.0.0-SNAPSHOT | https://github.com/PIsberg/vibetags
+
+## LOCKED FILES (DO NOT EDIT)
+* `com.example.PaymentProcessor` — Critical payment logic
+
+## CONTEXTUAL RULES
+* `com.example.StringParser`
+  * Focus: Memory optimization
+  * Avoid: java.util.regex
+
 ## 🛡️ MANDATORY SECURITY AUDITS
-* `com.example.database.DatabaseConnector`
-  - Required Checks: SQL Injection, Thread Safety issues
+* `com.example.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety
+
+## IGNORED ELEMENTS
+* `com.example.GeneratedMetadata`
 ```
 
-**Generated in `CLAUDE.md`:**
+**Claude (CLAUDE.md)** - XML Structure:
 ```xml
-<audit_requirements>
-  <file path="com.example.database.DatabaseConnector">
-    <vulnerability_check>SQL Injection</vulnerability_check>
-    <vulnerability_check>Thread Safety issues</vulnerability_check>
-  </file>
-</audit_requirements>
+<!-- Generated by VibeTags v1.0.0-SNAPSHOT | https://github.com/PIsberg/vibetags -->
+<project_guardrails>
+  <locked_files>
+    <file path="com.example.PaymentProcessor">
+      <reason>Critical payment logic</reason>
+    </file>
+  </locked_files>
+  <audit_requirements>
+    <file path="com.example.DatabaseConnector">
+      <vulnerability_check>SQL Injection</vulnerability_check>
+      <vulnerability_check>Thread Safety</vulnerability_check>
+    </file>
+  </audit_requirements>
+</project_guardrails>
+<rule>Never propose edits to locked files.</rule>
 ```
 
-**Generated in `gemini_instructions.md`:**
+**Cursor (.cursorrules)** - Markdown with Emoji:
 ```markdown
-# CONTINUOUS AUDIT REQUIREMENTS
-File: `com.example.database.DatabaseConnector`
-Critical Vulnerabilities to Prevent:
-- SQL Injection
-- Thread Safety issues
-```
+# AUTO-GENERATED AI RULES
+# Generated by VibeTags v1.0.0-SNAPSHOT | https://github.com/PIsberg/vibetags
 
-**Generated in `QWEN.md`:**
-```markdown
+## LOCKED FILES (DO NOT EDIT)
+* `com.example.PaymentProcessor` - Reason: Critical payment logic
+
 ## 🛡️ MANDATORY SECURITY AUDITS
-When proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.
-
-* `com.example.database.DatabaseConnector`
-  - Required Checks: SQL Injection, Thread Safety issues
+* `com.example.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety
 ```
 
-**Generated in `.qwen/settings.json`:**
+**.qwen/settings.json** - JSON Configuration:
 ```json
 {
   "project": {
@@ -264,11 +268,117 @@ When proposing edits or writing code for the following files, you MUST perform a
 }
 ```
 
-**Generated in `.qwenignore`:**
+**.qwenignore** - Glob Patterns:
 ```
 # AUTO-GENERATED BY VIBETAGS
+# Generated by VibeTags v1.0.0-SNAPSHOT | https://github.com/PIsberg/vibetags
 # Qwen-specific exclusion list.
 **/GeneratedMetadata.java
+```
+
+---
+
+## Core Components
+
+### Annotations
+
+All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at compile time and are stripped from final bytecode.
+
+| Annotation | Targets | Attributes | Purpose |
+|---|---|---|---|
+| **`@AILocked`** | TYPE, METHOD, FIELD | `reason: String` | Protects critical code from AI modifications |
+| **`@AIContext`** | TYPE, METHOD | `focus: String`, `avoids: String` | Guides AI behavior with positive/negative instructions |
+| **`@AIDraft`** | TYPE, METHOD | `instructions: String` | Marks incomplete code needing AI implementation |
+| **@AIAudit** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
+| **@AIIgnore** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely |
+
+**@AIIgnore vs @AILocked:**
+- `@AILocked` prevents modification while keeping element visible to AI
+- `@AIIgnore` removes element from AI context completely — AI should not reference it
+
+### Annotation Processor
+
+**Class:** `se.deversity.vibetags.processor.AIGuardrailProcessor`
+
+**Key Characteristics:**
+- Extends `javax.annotation.processing.AbstractProcessor` (JSR 269)
+- Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
+- Supports Java 11+ source versions
+- Uses `@SupportedAnnotationTypes("*")` to process all annotations
+
+**Processing Logic:**
+
+```
+1. Early exit if no annotations found or already processed
+2. Validate annotations (contradictions, empty audits)
+3. Determine output directory (current working directory)
+4. Initialize builders with VibeTags Version Header
+5. Pass 1: Process @AILocked → append to all builders
+6. Pass 2: Process @AIContext → append to all builders
+7. Pass 3: Process @AIIgnore → append ignore sections + write glob patterns
+8. Pass 4: Process @AIAudit → append audit sections
+9. Pass 5: Process @AIDraft → append implementation tasks
+10. Resolve active services (file-existence opt-in)
+11. Write only active service files using write-if-changed
+12. Check orphaned annotations (warn if missing recommended files)
+13. Return false (do not claim annotations)
+```
+
+**Output File Generation:**
+
+| File | Format | Platform | Content |
+|---|---|---|---|
+| `QWEN.md` | Markdown | Qwen | Project context, locked files, rules, audits, ignored elements |
+| `.qwen/settings.json` | JSON | Qwen | Model config (qwen3-coder-plus), MCP settings |
+| `.qwen/commands/refactor.md` | Markdown | Qwen | Custom `/refactor` command |
+| `.qwenignore` | Glob patterns | Qwen | Standalone exclusion list |
+| `.cursorrules` | Markdown | Cursor | Locked files, context rules, security audits |
+| `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
+| `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<audit_requirements>`, `<rule>` elements |
+| `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
+| `.aiexclude` | Glob patterns | Gemini/Codex | Binary blocklist of locked files |
+| `AGENTS.md` | Markdown | Codex | Locked files, context rules, security guardrails |
+| `.codex/config.toml` | TOML | Codex | Model and tool configuration |
+| `.codex/rules/vibetags.rules` | Starlark | Codex | Command permissions |
+| `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
+| `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
+| `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
+
+### Generated Output Files
+
+#### Example: @AIAudit Output
+
+**Source:**
+```java
+@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues"})
+public class DatabaseConnector { }
+```
+
+**Generated in QWEN.md:**
+```markdown
+## 🛡️ MANDATORY SECURITY AUDITS
+When proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.
+
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
+```
+
+**Generated in CLAUDE.md:**
+```xml
+<audit_requirements>
+  <file path="com.example.database.DatabaseConnector">
+    <vulnerability_check>SQL Injection</vulnerability_check>
+    <vulnerability_check>Thread Safety issues</vulnerability_check>
+  </file>
+</audit_requirements>
+<rule>If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed vulnerabilities.</rule>
+```
+
+**Generated in .cursorrules:**
+```markdown
+## 🛡️ MANDATORY SECURITY AUDITS
+* `com.example.database.DatabaseConnector`
+  - Required Checks: SQL Injection, Thread Safety issues
 ```
 
 ---
@@ -288,7 +398,11 @@ Compile Java sources
     ↓
 AIGuardrailProcessor.process() executes
     ↓
-Generate 5 AI config files at project root
+Validate annotations
+    ↓
+Resolve active services (file-existence opt-in)
+    ↓
+Generate 15+ AI config files at project root
     ↓
 Compilation complete
 ```
@@ -306,7 +420,7 @@ Compile Java sources
     ↓
 AIGuardrailProcessor.process() executes
     ↓
-Generate 5 AI config files at project root
+Generate AI config files
     ↓
 Build complete
 ```
@@ -320,7 +434,7 @@ vibetags/
 ├── vibetags/                          # Core annotation processor library
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/com/vibetags/
+│   │   │   ├── java/se/deversity/vibetags/
 │   │   │   │   ├── annotations/       # Annotation definitions (SOURCE retention)
 │   │   │   │   │   ├── AILocked.java
 │   │   │   │   │   ├── AIContext.java
@@ -332,6 +446,15 @@ vibetags/
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
 │   │   └── test/                      # Unit + integration tests
+│   │       ├── annotations/
+│   │       │   └── AnnotationDefinitionsTest.java (21 tests)
+│   │       └── processor/
+│   │           ├── AIGuardrailProcessorTest.java (3 tests)
+│   │           ├── AIGuardrailProcessorUnitTest.java (20 tests)
+│   │           ├── AIIgnoreProcessorUnitTest.java (11 tests)
+│   │           ├── QwenProcessorUnitTest.java (15 tests)
+│   │           ├── AnnotationProcessorEndToEndTest.java (28 tests)
+│   │           └── QwenEndToEndTest.java (19 tests)
 │   ├── pom.xml                        # Maven build config
 │   └── build.gradle                   # Gradle build config
 │
@@ -345,46 +468,34 @@ vibetags/
 │   │   │   └── PaymentProcessor.java          # @AILocked example
 │   │   ├── security/
 │   │   │   └── SecurityConfig.java            # @AILocked + @AIContext
-│   │   ├── service/
-│   │   │   ├── NotificationService.java       # @AIContext + @AIDraft
-│   │   │   └── OrderService.java              # Mixed annotations
-│   │   ├── strategy/
-│   │   │   ├── PaymentStrategy.java           # @AIContext
-│   │   │   └── impl/CreditCardStrategy.java   # @AIDraft
-│   │   └── utils/
-│   │       └── StringParser.java              # @AIContext
-│   ├── .cursorrules                   # Generated: Cursor rules
-│   ├── CLAUDE.md                      # Generated: Claude guardrails
-│   ├── .aiexclude                     # Generated: Gemini blocklist
-│   ├── AGENTS.md                      # Generated: Codex instructions
-│   ├── .codex/                        # Generated: Codex configuration
-│   │   ├── config.toml                # Codex tool settings
-│   │   └── rules/                     # Codex command rules
-│   │       └── vibetags.rules         # Starlark command permissions
-│   ├── gemini_instructions.md         # Generated: Gemini audit requirements
+│   │   └── ...                                # More examples
 │   ├── QWEN.md                        # Generated: Qwen project context
 │   ├── .qwen/                         # Generated: Qwen directory
 │   │   ├── settings.json              # Generated: Qwen model settings
-│   │   └── commands/                  # Generated: Qwen custom commands
-│   ├── .cursorignore                  # Generated: Cursor exclusion list
-│   ├── .claudeignore                  # Generated: Claude exclusion list
-│   ├── .copilotignore                 # Generated: Copilot exclusion list
+│   │   └── commands/
+│   │       └── refactor.md            # Generated: Qwen custom command
 │   ├── .qwenignore                    # Generated: Qwen exclusion list
-│   ├── pom.xml                        # Maven build config
-│   └── build.gradle                   # Gradle build config
+│   ├── .cursorrules                   # Generated: Cursor rules
+│   ├── CLAUDE.md                      # Generated: Claude guardrails
+│   └── ...                            # Other AI config files
 │
 ├── docs/                              # Documentation
 │   ├── ARCHITECTURE.md                # This file
-│   ├── CONCEPT_PLUGIN.md              # Future plugin architecture
-│   └── diagrams/                      # PlantUML source + images
+│   └── diagrams/                      # PlantUML source + PNG images
 │       ├── class-diagram.puml
 │       ├── class-diagram.png
 │       ├── build-sequence.puml
-│       └── build-sequence.png
+│       ├── build-sequence.png
+│       ├── component-diagram.puml
+│       ├── component-diagram.png
+│       ├── data-flow.puml
+│       ├── data-flow.png
+│       ├── platform-output.puml
+│       └── platform-output.png
 │
-├── src/                               # Web UI (React + Vite)
-├── package.json
-└── README.md
+├── .gitignore
+├── README.md
+└── package.json
 ```
 
 ---
@@ -403,7 +514,7 @@ vibetags/
 
 ### 2. Single Processor, Multiple Outputs
 
-**Decision:** One processor generates all 5 output files in a single pass
+**Decision:** One processor generates all 15+ output files in a single pass
 
 **Rationale:**
 - Single source of truth for annotation data
@@ -411,18 +522,54 @@ vibetags/
 - No duplication of parsing logic
 - Atomic generation (all or nothing)
 
-### 3. Working Directory Output
+### 3. File-existence Opt-in Model
 
-**Decision:** Output files written to `Paths.get("").toAbsolutePath()`
+**Decision:** The annotation processor uses the presence of specific files on disk to determine which AI services are active.
+
+**Implementation:**
+```java
+static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
+    Set<String> optInKeys = Set.of(
+        "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+        "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"
+    );
+    
+    return allServiceFiles.entrySet().stream()
+        .filter(e -> optInKeys.contains(e.getKey()))
+        .filter(e -> Files.exists(e.getValue()))
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toSet());
+}
+```
 
 **Rationale:**
-- Works for standard Maven/Gradle builds from project root
-- No configuration required
-- Files land where developers expect them
+- **Manual Control**: Developers decide which AI tools they support
+- **No Clutter**: VibeTags never creates files for unused AI tools
+- **Zero Configuration**: No complex config needed — `touch` or `rm` is sufficient
 
-**Trade-off:** Can break in IDE builds or subdirectory builds (see [Limitations](#limitations))
+### 4. Write-if-Changed Logic
 
-### 4. StringBuilder Accumulation
+**Decision:** Only write files when content actually differs
+
+**Implementation:**
+```java
+boolean writeFileIfChanged(String filePath, String content) {
+    String existing = Files.exists(path) ? Files.readString(path) : "";
+    if (stripWhitespace(existing).equals(stripWhitespace(content))) {
+        return false; // No changes
+    }
+    Files.writeString(path, content, StandardCharsets.UTF_8);
+    return true;
+}
+```
+
+**Rationale:**
+- Prevents unnecessary file system writes
+- Avoids triggering file watchers
+- Preserves file modification timestamps
+- Git-friendly (no false-positive changes)
+
+### 5. StringBuilder Accumulation
 
 **Decision:** Build entire file content in memory before writing
 
@@ -432,45 +579,93 @@ vibetags/
 - Files are small (< 10KB typically)
 - Atomic write (write succeeds or fails completely)
 
-### 5. Wildcard Annotation Matching
+### 6. Wildcard Annotation Matching
 
-**Decision:** `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")`
+**Decision:** `@SupportedAnnotationTypes("*")`
 
 **Rationale:**
 - Automatically picks up new annotations without code changes
 - Single processor handles all VibeTags annotations
 - Easy to extend with new annotation types
 
-### 6. Service Resolution (Opt-in Logic)
+### 7. Version Stamping
 
-**Decision:** The annotation processor uses the presence of specific files on disk to determine which AI services are active.
-
-**Rationale:**
-- **Manual Control**: Developers decide which AI tools they support by creating the corresponding files.
-- **No Clutter**: VibeTags will never spam the project root with files for AI tools that aren't being used.
-- **Zero Configuration**: No complex XML/JSON config is needed to enable/disable services; `touch` or `rm` is sufficient.
-
-**Implementation:** `buildServiceFileMap()` + `resolveActiveServices(Messager, Map)` static helpers in `AIGuardrailProcessor`.
-
-### 8. Version Stamping
-
-**Decision:** Every generated configuration file begins with a version header (e.g., `# Generated by VibeTags v1.0.0-SNAPSHOT`).
+**Decision:** Every generated file includes version header:
+```
+# Generated by VibeTags v1.0.0-SNAPSHOT | https://github.com/PIsberg/vibetags
+```
 
 **Rationale:**
-- **Traceability**: Helps developers identify which version of the processor produced a specific file.
-- **Debugging**: Simplifies troubleshooting by confirming if a project is using an outdated processor version.
+- **Traceability**: Identifies processor version
+- **Debugging**: Simplifies troubleshooting
+- **Attribution**: Links back to source repository
 
-### 9. Smart Validation Layer
+### 8. Smart Validation Layer
 
-**Decision:** The processor performs lightweight validation before file generation and emits compiler WARNINGs for invalid usage.
-
-**Rationale:**
-- **Developer Feedback**: Provides immediate feedback during the build process without failing the compilation.
-- **Consistency**: Prevents contradictory instructions (like @AILocked + @AIDraft) from reaching the AI tools.
+**Decision:** Processor performs lightweight validation and emits compiler WARNINGs
 
 **Supported Checks:**
-- `@AIIgnore`: Warns if `.cursorignore`, `.claudeignore`, `.copilotignore`, or `.qwenignore` are missing for active services.
-- `@AIIgnore` / `@AILocked`: Warns if `.aiexclude` is missing for active Gemini/Codex services.
+- `@AIDraft + @AILocked`: Warns about contradictory annotations
+- Empty `@AIAudit`: Warns if no checkFor items
+- Orphaned annotations: Warns if recommended files missing
+
+**Example:**
+```
+[WARNING] VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.
+```
+
+---
+
+## Testing Strategy
+
+### Unit Tests (vibetags/)
+
+| Test Class | Tests | Purpose |
+|---|---|---|
+| `AnnotationDefinitionsTest` | 21 | Verify annotation structure, retention policies, targets, defaults |
+| `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
+| `AIGuardrailProcessorUnitTest` | 20 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations |
+| `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
+| `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
+| `AnnotationProcessorEndToEndTest` | 28 | End-to-end: compile example, verify all generated files exist and contain expected content |
+| `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
+| `AIGuardrailProcessorIntegrationTest` | 20 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
+
+**Total: 137 tests (117 active + 20 conditional)**
+
+### Test Patterns
+
+**Mockito Mocking:**
+```java
+Messager messager = mock(Messager.class);
+RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+Element element = mock(Element.class);
+```
+
+**Capturing Messager:**
+```java
+List<String> warnings = new ArrayList<>();
+Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+// Assert warnings contain expected messages
+```
+
+**Temp Directories:**
+```java
+@Test
+void testResolveActiveServices(@TempDir Path tempDir) throws IOException {
+    Files.createFile(tempDir.resolve("QWEN.md"));
+    // Test with isolated file system
+}
+```
+
+### CI/CD
+
+GitHub Actions workflow tests:
+- **Maven builds:** JDK 11, 17, 21
+- **Gradle builds:** JDK 17, 21 (Gradle requires 17+)
+- Verifies generated file existence
+- Validates content in all outputs
+- Code coverage via Codecov
 
 ---
 
@@ -507,11 +702,11 @@ vibetags/
 
 ### 4. Limited Validation Logic
 
-**Problem:** While basic validation for contradictions and empty arrays is implemented, it does not cover all edge cases.
+**Problem:** Basic validation only (contradictions, empty arrays)
 
 **Impact:**
-- Complex contradictory logic might still slip through.
-- No enforcement of cross-file consistency beyond basic checks.
+- Complex contradictory logic might slip through
+- No enforcement of cross-file consistency beyond basic checks
 
 ---
 
@@ -535,36 +730,7 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 - **Language-agnostic** support for comment-based annotations
 - **Incremental build support** with file change detection
 - **Customizable templates** for output formats
-- **Validation and warnings** for annotation misuse
-
----
-
-## Testing Strategy
-
-### Unit Tests (vibetags/)
-
-| Test Class | Tests | Purpose |
-|---|---|---|
-| `AnnotationDefinitionsTest` | 21 | Verify annotation structure and defaults (includes @AIIgnore) |
-| `AIGuardrailProcessorTest` | 3 | Processor configuration validation |
-| `AIGuardrailProcessorUnitTest` | 10 | Processor structure, inheritance, service opt-in logic, and warning emission |
-| `AIIgnoreProcessorUnitTest` | 7 | @AIIgnore annotation definition and service opt-in behaviour |
-| `AnnotationProcessorEndToEndTest` | 18 | Generated file content validation (includes @AIIgnore output) |
-| `AIGuardrailProcessorIntegrationTest` | 14 | Full workflow end-to-end (conditional, includes @AIIgnore) |
-
-### Integration Tests
-
-Run with: `mvn test -Drun.integration.tests=true`
-
-Tests require the example project to be compiled first.
-
-### CI/CD
-
-GitHub Actions workflow tests:
-- **Maven builds:** JDK 11, 17, 21
-- **Gradle builds:** JDK 17, 21 (Gradle requires 17+)
-- Verifies generated file existence
-- Validates @AIAudit content in all outputs
+- **Enhanced validation** for annotation misuse
 
 ---
 
@@ -577,6 +743,7 @@ GitHub Actions workflow tests:
 | `javax.annotation.processing.*` | JDK (compile) | JSR 269 API |
 | `javax.lang.model.*` | JDK (compile) | Language model API |
 | `org.junit.jupiter` | test | Unit testing |
+| `org.mockito` | test | Mocking framework |
 
 ### example
 
@@ -584,7 +751,7 @@ GitHub Actions workflow tests:
 |---|---|---|
 | `se.deversity.vibetags:vibetags-processor` | provided / compileOnly | Annotations + processor |
 
-**Note:** Annotations have zero runtime footprint — they are completely stripped during compilation.
+**Note:** Annotations have zero runtime footprint — completely stripped during compilation.
 
 ---
 
@@ -622,40 +789,6 @@ cd vibetags && gradle test
 ---
 
 ## AI Platform Integration
-
-### Cursor
-
-**File:** `.cursorrules`
-
-**Behavior:** Cursor reads `.cursorrules` for core instructions and respects the `.cursorignore` glob patterns for excluding entire files from its context window.
-
-
-### Claude
-
-**File:** `CLAUDE.md`
-
-**Behavior:** Claude treats this as foundational context. XML tags appeal to Claude's parsing strengths. Enforces `<rule>` elements strictly.
-
-### Gemini
-
-**Files:** `.aiexclude` + `gemini_instructions.md`
-
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
-
-
-### Codex CLI
-
-**File:** `AGENTS.md` (and `.codex/` directory)
-
-**Aesthetics:** Optimized for the Codex CLI's context window.
-
-**Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root. The `.codex/config.toml` defines tool behavior, and `vibetags.rules` defines security-conscious command permissions using Starlark.
-
-### GitHub Copilot
-
-**Files:** `.github/copilot-instructions.md` + `.copilotignore`
-
-**Behavior:** Copilot uses the instructions file to guide its completions and respects `.copilotignore` (standard glob format) to exclude specific files from being used as context.
 
 ### Qwen
 
@@ -698,12 +831,35 @@ cd vibetags && gradle test
 
 **.qwenignore:** Standard glob patterns to exclude files from Qwen's context window.
 
-**Key Features:**
-- Comprehensive project context in a single markdown file
-- Security audit requirements with explicit vulnerability checks
-- Custom commands for specialized workflows (e.g., `/refactor`)
-- Model configuration with MCP support
-- Standalone ignore file using glob patterns
+### Cursor
+
+**Files:** `.cursorrules` + `.cursorignore`
+
+**Behavior:** Cursor reads `.cursorrules` for core instructions and respects the `.cursorignore` glob patterns for excluding entire files from its context window.
+
+### Claude
+
+**Files:** `CLAUDE.md` + `.claudeignore`
+
+**Behavior:** Claude treats `CLAUDE.md` as foundational context. XML tags appeal to Claude's parsing strengths. Enforces `<rule>` elements strictly.
+
+### Gemini
+
+**Files:** `.aiexclude` + `gemini_instructions.md`
+
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
+
+### Codex CLI
+
+**Files:** `AGENTS.md` + `.codex/config.toml` + `.codex/rules/vibetags.rules`
+
+**Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root. The `.codex/config.toml` defines tool behavior, and `vibetags.rules` defines security-conscious command permissions using Starlark.
+
+### GitHub Copilot
+
+**Files:** `.github/copilot-instructions.md` + `.copilotignore`
+
+**Behavior:** Copilot uses the instructions file to guide its completions and respects `.copilotignore` (standard glob format) to exclude specific files from being used as context.
 
 ---
 
