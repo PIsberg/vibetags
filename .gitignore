@@ -11,3 +11,5 @@ vibetags/target
 example/target
 .idea/
 **/.gradle/
+docs/diagrams/plantuml.jar
+docs/diagrams/encode_plantuml.py
