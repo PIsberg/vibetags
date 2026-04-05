@@ -10,6 +10,7 @@ This is a sample e-commerce application that shows how VibeTags annotations cont
 - **`@AIContext`** - Guides AI on how to work with specific classes (focus/avoid instructions)
 - **`@AIDraft`** - Marks methods that need AI implementation with detailed instructions
 - **`@AIAudit`** - Tags critical infrastructure for continuous AI security auditing
+- **`@AIPrivacy`** - Marks PII-handling fields and methods; AI must never log or expose their values
 
 When compiled, the VibeTags annotation processor automatically generates AI configuration files for multiple platforms.
 
@@ -28,16 +29,16 @@ example/
     ├── security/
     │   └── SecurityConfig.java                # @AILocked + @AIContext example
     ├── service/
-    │   ├── NotificationService.java           # @AIDraft example (AI should implement)
-    │   └── OrderService.java                  # Mixed annotations example
+    │   ├── NotificationService.java           # @AIDraft + @AIPrivacy example (AI implements, PII phone/email)
+    │   └── OrderService.java                  # Mixed annotations example (@AILocked, @AIDraft, @AIPrivacy)
     ├── strategy/
     │   ├── PaymentStrategy.java               # @AIContext enforcing design pattern
     │   └── impl/
-    │       └── CreditCardStrategy.java        # @AIDraft implementation example
+    │       └── CreditCardStrategy.java        # @AIDraft + @AIPrivacy example (PCI-DSS card fields)
     ├── utils/
     │   └── StringParser.java                  # @AIContext optimization hints
     └── database/
-        └── DatabaseConnector.java             # @AIAudit example (security auditing)
+        └── DatabaseConnector.java             # @AIAudit + @AIPrivacy example (security auditing, PII credentials)
 ├── QWEN.md                                    # Generated: Qwen project context
 ├── .qwen/                                     # Generated: Qwen directory
 │   ├── settings.json                          # Generated: Qwen model settings
@@ -243,6 +244,72 @@ public class OrderService {
         // AI should implement this
     }
 }
+```
+
+### 6. `@AIPrivacy` - Protect PII Fields and Methods
+
+Mark fields or methods that handle Personally Identifiable Information (PII). AI tools will never include the runtime values of these elements in logs, code suggestions, test fixtures, mock data, or external API calls.
+
+```java
+public class DatabaseConnector {
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
+    private final String username;
+
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
+    private final String password;
+}
+```
+
+```java
+public class NotificationService {
+    @AIPrivacy(reason = "Email address is PII under GDPR - never log the recipient address")
+    public boolean sendEmail(String to, String subject, String body) { ... }
+
+    @AIPrivacy(reason = "Phone number is PII - never log the destination number")
+    public boolean sendSMS(String phoneNumber, String message) { ... }
+}
+```
+
+**Real-world use cases:**
+- Database credentials and connection strings
+- Email addresses, phone numbers, full names (GDPR)
+- Credit card numbers, CVV, expiry dates (PCI-DSS)
+- Government IDs, health records (HIPAA)
+- Authentication tokens, session keys
+
+#### How AI Platforms Handle @AIPrivacy
+
+**Claude (CLAUDE.md)** — XML `<pii_guardrails>` block with a strict `<rule>`:
+```xml
+<pii_guardrails>
+  <element path="username">
+    <reason>Database credential - never log or include in error messages</reason>
+  </element>
+</pii_guardrails>
+<rule>
+  Never include runtime values of elements listed in <pii_guardrails> in logs, console output,
+  external API calls, test fixtures, mock data, or code suggestions. Treat their values as
+  strictly confidential.
+</rule>
+```
+
+**Cursor / Codex / Copilot / Gemini / Qwen** — Markdown `## 🔐 PII GUARDRAILS` section:
+```markdown
+## 🔐 PII GUARDRAILS
+NEVER include runtime values of the following elements in logs, console output,
+external API calls, test fixtures, mock data, or code suggestions.
+
+* `username` — Database credential - never log or include in error messages
+* `password` — Database credential - never log or include in error messages
+```
+
+#### Smart Validation — Redundant @AIPrivacy
+
+If you apply `@AIPrivacy` to an element already marked with `@AIIgnore`, the compiler will warn you. `@AIIgnore` already hides the element from AI entirely, making `@AIPrivacy` redundant:
+
+```
+[WARNING] VibeTags: myField is annotated with both @AIPrivacy and @AIIgnore.
+@AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.
 ```
 
 ## 🛠️ Generated AI Configuration Files
@@ -519,6 +586,7 @@ The processor uses `Paths.get("")` which resolves to the directory where Maven/G
 | New features | `@AIDraft` | Unimplemented methods |
 | Framework code | `@AIContext` | Spring configs, DI setup |
 | Mixed concerns | All three | Service classes (see `OrderService.java`) |
+| PII fields / methods | `@AIPrivacy` | Credentials, email, phone, card data |
 
 ## 🎯 Next Steps
 

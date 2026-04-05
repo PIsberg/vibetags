@@ -28,6 +28,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
+- **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
 
 ### Supported AI Platforms
 
@@ -133,6 +134,15 @@ public class DatabaseConnector {
 public class GeneratedMetadata {
     // AI tools will not reference or suggest changes to this class
 }
+
+// Mark PII fields — AI must never log or expose these values
+public class DatabaseConnector {
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
+    private final String username;
+
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
+    private final String password;
+}
 ```
 
 ## 📚 Documentation
@@ -178,6 +188,7 @@ cd ../example && gradle clean build
 | Boilerplate code | Let AI implement standard patterns safely |
 | Team projects | Enforce consistent AI behavior across your team |
 | Complex algorithms | Protect code that took months to stabilize |
+| PII handling | Prevent AI from leaking personal data in logs or suggestions |
 
 ## 🔧 Advanced Features
 
@@ -389,6 +400,10 @@ If you use both `@AIDraft` (implement this) and `@AILocked` (do not touch this) 
 #### Empty Audits
 If you use `@AIAudit` without providing any items to check for, VibeTags will warn you:
 `[WARNING] VibeTags: @AIAudit on com.example.MyClass has no 'checkFor' items list. It will be ignored.`
+
+#### Redundant Privacy Annotations
+If you use `@AIPrivacy` on an element that is already annotated with `@AIIgnore`, VibeTags will warn you — `@AIIgnore` already excludes the element from AI context entirely, making `@AIPrivacy` redundant:
+`[WARNING] VibeTags: com.example.MyField is annotated with both @AIPrivacy and @AIIgnore. @AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.`
 
 ## 🤝 Contributing
 
