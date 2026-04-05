@@ -6,7 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
-.qwen/
+/.qwen/
 vibetags/target
 example/target
 .idea/

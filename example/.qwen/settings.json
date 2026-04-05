@@ -1,0 +1,9 @@
+{
+  "project": {
+    "model": "qwen3-coder-plus",
+    "mcp": {
+      "enabled": true
+    }
+  }
+}
+
