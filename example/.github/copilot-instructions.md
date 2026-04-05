@@ -62,3 +62,15 @@ Follow these instructions to implement the drafts:
 - `executePayment(double)`: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
 - `validatePaymentMethod()`: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
 
+## PII / Privacy Guardrails
+Never log, expose, or suggest code that outputs the runtime values of these elements:
+
+- `username` — Database credential - never log or include in error messages
+- `password` — Database credential - never log or include in error messages
+- `sendEmail(java.lang.String,java.lang.String,java.lang.String)` — Email address is PII under GDPR - never log the recipient address
+- `sendSMS(java.lang.String,java.lang.String)` — Phone number is PII - never log the destination number
+- `generateOrderConfirmation(java.lang.String)` — Output contains customer shipping address and contact details (PII)
+- `cardNumber` — PCI-DSS cardholder data - never log or expose in suggestions
+- `expiryDate` — PCI-DSS cardholder data - never log or expose in suggestions
+- `cvv` — PCI-DSS security code - never log or expose in suggestions
+

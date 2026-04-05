@@ -114,6 +114,36 @@
       <instructions>Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.</instructions>
     </task>
   </implementation_tasks>
+  <pii_guardrails>
+    <element path="username">
+      <reason>Database credential - never log or include in error messages</reason>
+    </element>
+    <element path="password">
+      <reason>Database credential - never log or include in error messages</reason>
+    </element>
+    <element path="sendEmail(java.lang.String,java.lang.String,java.lang.String)">
+      <reason>Email address is PII under GDPR - never log the recipient address</reason>
+    </element>
+    <element path="sendSMS(java.lang.String,java.lang.String)">
+      <reason>Phone number is PII - never log the destination number</reason>
+    </element>
+    <element path="generateOrderConfirmation(java.lang.String)">
+      <reason>Output contains customer shipping address and contact details (PII)</reason>
+    </element>
+    <element path="cardNumber">
+      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
+    </element>
+    <element path="expiryDate">
+      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
+    </element>
+    <element path="cvv">
+      <reason>PCI-DSS security code - never log or expose in suggestions</reason>
+    </element>
+  </pii_guardrails>
+
+<rule>
+  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.
+</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

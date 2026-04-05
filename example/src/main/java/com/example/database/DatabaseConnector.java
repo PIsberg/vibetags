@@ -1,6 +1,7 @@
 package com.example.database;
 
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIPrivacy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,7 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DatabaseConnector {
     
     private final String url;
+
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
     private final String username;
+
+    @AIPrivacy(reason = "Database credential - never log or include in error messages")
     private final String password;
     private Connection connection;
     
