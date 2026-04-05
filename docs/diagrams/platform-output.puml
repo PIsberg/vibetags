@@ -8,81 +8,68 @@ skinparam wrapWidth 300
 title VibeTags - AI Platform Output Format Comparison
 
 package "Same Annotation Input" as Input {
-    
-    component @AILocked(reason = "Critical payment logic")\non PaymentProcessor as Locked
-    
-    component @AIContext(\n  focus = "Memory optimization",\n  avoids = "java.util.regex"\n) on StringParser as Context
-    
-    component @AIAudit(checkFor = {\n  "SQL Injection",\n  "Thread Safety"\n}) on DatabaseConnector as Audit
-    
-    component @AIIgnore on GeneratedMetadata as Ignore
+
+    component "@AILocked(reason = \"Critical payment logic\")\non PaymentProcessor" as Locked
+
+    component "@AIContext(\n  focus = \"Memory optimization\",\n  avoids = \"java.util.regex\"\n) on StringParser" as Context
+
+    component "@AIAudit(checkFor = {\n  \"SQL Injection\",\n  \"Thread Safety\"\n}) on DatabaseConnector" as Audit
+
+    component "@AIIgnore on GeneratedMetadata" as Ignore
 }
 
 package "Platform-Specific Outputs" as Outputs {
-    
-    component "Qwen (QWEN.md)" as QwenOutput {
+
+    rectangle "Qwen (QWEN.md)" as QwenOutput
+    note right of QwenOutput
+      **QWEN.md Format:**
       # PROJECT CONTEXT
-      
       ## LOCKED FILES (DO NOT EDIT)
       * `PaymentProcessor` — Critical payment logic
-      
       ## CONTEXTUAL RULES
       * `StringParser`
         * Focus: Memory optimization
         * Avoid: java.util.regex
-      
       ## 🛡️ MANDATORY SECURITY AUDITS
       * `DatabaseConnector`
         - Required Checks: SQL Injection, Thread Safety
-      
       ## IGNORED ELEMENTS
       * `GeneratedMetadata`
-    }
-    
-    component "Claude (CLAUDE.md)" as ClaudeOutput {
+    end note
+
+    rectangle "Claude (CLAUDE.md)" as ClaudeOutput
+    note right of ClaudeOutput
+      **CLAUDE.md Format:**
       <project_guardrails>
         <locked_files>
           <file path="PaymentProcessor">
             <reason>Critical payment logic</reason>
           </file>
         </locked_files>
-        <contextual_instructions>
-          <file path="StringParser">
-            <focus>Memory optimization</focus>
-            <avoids>java.util.regex</avoids>
-          </file>
-        </contextual_instructions>
         <audit_requirements>
           <file path="DatabaseConnector">
             <vulnerability_check>SQL Injection</vulnerability_check>
-            <vulnerability_check>Thread Safety</vulnerability_check>
           </file>
         </audit_requirements>
-        <ignored_elements>
-          <file path="GeneratedMetadata"/>
-        </ignored_elements>
       </project_guardrails>
       <rule>Never propose edits to locked files.</rule>
-    }
-    
-    component "Cursor (.cursorrules)" as CursorOutput {
+    end note
+
+    rectangle "Cursor (.cursorrules)" as CursorOutput
+    note right of CursorOutput
+      **.cursorrules Format:**
       # AUTO-GENERATED AI RULES
-      
       ## LOCKED FILES (DO NOT EDIT)
       * `PaymentProcessor` - Reason: Critical payment logic
-      
       ## CONTEXTUAL RULES
       * `StringParser`
         * Focus: Memory optimization
-        * Avoid: java.util.regex
-      
       ## 🛡️ MANDATORY SECURITY AUDITS
       * `DatabaseConnector`
         - Required Checks: SQL Injection, Thread Safety
-      
       ## 🚫 IGNORED ELEMENTS
       * `GeneratedMetadata`
-    }
+    end note
 }
 
 Locked --> QwenOutput : Generates
