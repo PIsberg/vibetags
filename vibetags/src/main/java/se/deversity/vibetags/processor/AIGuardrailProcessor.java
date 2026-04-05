@@ -5,6 +5,7 @@ import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIPrivacy;
 
 import javax.annotation.processing.*;
 import javax.tools.Diagnostic;
@@ -227,6 +228,48 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
         }
         
+        // Process @AIPrivacy
+        boolean hasPrivacyAnnotations = false;
+        StringBuilder cursorPrivacy = new StringBuilder("\n## \uD83D\uDD12 PII / PRIVACY GUARDRAILS\n" +
+            "The following elements handle Personally Identifiable Information (PII).\n" +
+            "NEVER include their runtime values in logs, console output, external API calls,\n" +
+            "test fixtures, mock data, or code suggestions.\n\n");
+        StringBuilder claudePrivacy = new StringBuilder("  <pii_guardrails>\n");
+        StringBuilder codexPrivacy = new StringBuilder("\n## \uD83D\uDD12 PII / PRIVACY GUARDRAILS\n" +
+            "The following elements handle PII. Never include their runtime values in logs,\n" +
+            "console output, external API calls, test fixtures, or mock data.\n\n");
+        StringBuilder geminiPrivacy = new StringBuilder("## PII / PRIVACY GUARDRAILS\n" +
+            "The following elements handle Personally Identifiable Information (PII).\n" +
+            "Never include their runtime values in logs, console output, external API calls,\n" +
+            "test fixtures, mock data, or code suggestions.\n\n");
+        StringBuilder copilotPrivacy = new StringBuilder("\n## PII / Privacy Guardrails\n" +
+            "Never log, expose, or suggest code that outputs the runtime values of these elements:\n\n");
+        StringBuilder qwenPrivacy = new StringBuilder("\n## \uD83D\uDD12 PII / PRIVACY GUARDRAILS\n" +
+            "The following elements handle PII. Never include their runtime values in logs,\n" +
+            "console output, external API calls, test fixtures, or mock data.\n\n");
+
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
+            AIPrivacy privacy = element.getAnnotation(AIPrivacy.class);
+            String className = element.toString();
+            String reason = privacy.reason();
+
+            hasPrivacyAnnotations = true;
+
+            cursorPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
+
+            claudePrivacy.append("    <element path=\"").append(className).append("\">\n")
+                         .append("      <reason>").append(reason).append("</reason>\n")
+                         .append("    </element>\n");
+
+            codexPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
+
+            geminiPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
+
+            copilotPrivacy.append("- `").append(className).append("` — ").append(reason).append("\n");
+
+            qwenPrivacy.append("* `").append(className).append("` — ").append(reason).append("\n");
+        }
+
         // Finalize sections
         if (hasAuditAnnotations) {
             cursorRules.append(cursorAudit);
@@ -266,7 +309,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             copilot.append(copilotDraft);
         }
-        
+
+        if (hasPrivacyAnnotations) {
+            cursorRules.append(cursorPrivacy);
+
+            claudePrivacy.append("  </pii_guardrails>\n");
+            claudeMd.append(claudePrivacy);
+            claudeMd.append("\n<rule>\n  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.\n</rule>\n");
+
+            codexAgents.append(codexPrivacy);
+            geminiMd.append(geminiPrivacy);
+            copilot.append(copilotPrivacy);
+            qwenMd.append(qwenPrivacy);
+        }
+
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
@@ -335,17 +391,26 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Contradiction Check: AIDraft + AILocked
         for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
-                messager.printMessage(Diagnostic.Kind.WARNING, 
+                messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString() + " is annotated with both @AIDraft and @AILocked. This is contradictory.", element);
             }
         }
-        
+
         // Empty Audit Check
         for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
             AIAudit audit = element.getAnnotation(AIAudit.class);
             if (audit.checkFor().length == 0) {
-                messager.printMessage(Diagnostic.Kind.WARNING, 
+                messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: @AIAudit on " + element.toString() + " has no 'checkFor' items list. It will be ignored.", element);
+            }
+        }
+
+        // Redundancy Check: AIPrivacy + AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString() + " is annotated with both @AIPrivacy and @AIIgnore. "
+                    + "@AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.", element);
             }
         }
     }

@@ -22,6 +22,7 @@ import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIPrivacy;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -116,6 +117,7 @@ class AIGuardrailProcessorProcessTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.process(Set.of(), roundEnv);
 
@@ -144,6 +146,7 @@ class AIGuardrailProcessorProcessTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.process(Set.of(), roundEnv);
 
@@ -406,6 +409,7 @@ class AIGuardrailProcessorProcessTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -427,6 +431,7 @@ class AIGuardrailProcessorProcessTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -449,6 +454,7 @@ class AIGuardrailProcessorProcessTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -468,6 +474,7 @@ class AIGuardrailProcessorProcessTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         return roundEnv;
     }
 

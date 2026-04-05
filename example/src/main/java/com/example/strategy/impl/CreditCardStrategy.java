@@ -2,14 +2,20 @@ package com.example.strategy.impl;
 
 import com.example.strategy.PaymentStrategy;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIPrivacy;
 
 /**
  * Credit card payment implementation.
  */
 public class CreditCardStrategy implements PaymentStrategy {
     
+    @AIPrivacy(reason = "PCI-DSS cardholder data - never log or expose in suggestions")
     private String cardNumber;
+
+    @AIPrivacy(reason = "PCI-DSS cardholder data - never log or expose in suggestions")
     private String expiryDate;
+
+    @AIPrivacy(reason = "PCI-DSS security code - never log or expose in suggestions")
     private String cvv;
     
     public CreditCardStrategy(String cardNumber, String expiryDate, String cvv) {
