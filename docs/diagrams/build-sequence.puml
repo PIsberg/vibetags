@@ -1,133 +1,104 @@
-@startuml VibeTags Build Sequence
-title VibeTags - Build-Time Processing Sequence
+@startuml
+' VibeTags Build Sequence Diagram
+
+skinparam backgroundColor #FFFFFF
+skinparam sequence {
+    ArrowColor #1565C0
+    ActorBorderColor #1565C0
+    LifeLineBorderColor #2196F3
+    ParticipantBorderColor #2196F3
+}
+
+title VibeTags Build Sequence - Annotation Processing Flow
 
 actor Developer
-participant "Build Tool\n(Maven/Gradle)" as Build
-participant "javac Compiler" as Javac
+participant "javac\nCompiler" as Compiler
 participant "AIGuardrailProcessor" as Processor
-participant "RoundEnvironment" as RoundEnv
 participant "File System" as FS
-database "AI Config Files" as Output
+participant "AI Platform\nConfig Files" as AIFiles
+
+== Build Initiation ==
+Developer -> Compiler: mvn clean compile
+activate Compiler
+Compiler -> Compiler: Parse pom.xml\nResolve dependencies
+
+== Annotation Discovery ==
+Compiler -> Compiler: Discover AIGuardrailProcessor\nvia META-INF/services
+note right: SPI registration
 
 == Compilation Phase ==
-
-Developer -> Build: mvn clean compile
-Build -> Build: Resolve vibetags-processor dependency
-Build -> Javac: Invoke Java compiler
-Javac -> Javac: Scan source files for annotations
-
-note over Javac
-    Discovers processor via SPI:
-    META-INF/services/javax.annotation.processing.Processor
-    -> se.deversity.vibetags.processor.AIGuardrailProcessor
-end note
-
-== Annotation Processing Round ==
-
-Javac -> Processor: process(annotations, roundEnv)
+Compiler -> Compiler: Compile Java sources
+Compiler -> Processor: process(annotations, roundEnv)
 activate Processor
 
-Processor -> Processor: Check if annotations empty
-alt annotations.isEmpty()
-    Processor --> Javac: return false (no processing)
-else annotations present
-    Processor -> Processor: Determine output path\nPaths.get("").toAbsolutePath()
+== Processing Round ==
+Processor -> Processor: Check: processingOver() || processed
+alt Already processed or round over
+    Processor --> Compiler: return false (no changes)
+else First processing round
+    Processor -> Processor: Set processed = true
     
-    == Pass 1: Process @AILocked ==
-    Processor -> RoundEnv: getElementsAnnotatedWith(AILocked)
-    RoundEnv --> Processor: List of @AILocked elements
+    == Validation Phase ==
+    Processor -> Processor: validateAnnotations()
+    note right: Check for contradictions\n@AIDraft + @AILocked\nEmpty @AIAudit warnings
     
-    loop For each @AILocked element
-        Processor -> Processor: Extract className + reason
-        Processor -> Processor: Append to cursorRules builder
-        Processor -> Processor: Append to claudeMd builder
-        Processor -> Processor: Append to aiExclude builder
-        Processor -> Processor: Append to codex builder
+    == File Discovery Phase ==
+    Processor -> Processor: buildServiceFileMap(root)
+    note right: Map service keys\nto file paths
+    Processor -> Processor: resolveActiveServices()
+    note right: Check which files exist\n(file presence = opt-in)
+    
+    == Content Generation Phase ==
+    Processor -> Processor: Initialize StringBuilders\nfor each platform
+    
+    loop For each @AILocked
+        Processor -> Processor: Append to cursorRules
+        Processor -> Processor: Append to claudeMd
+        Processor -> Processor: Append to qwenMd
+        Processor -> Processor: Append to other platforms
     end
     
-    == Pass 2: Process @AIContext ==
-    Processor -> RoundEnv: getElementsAnnotatedWith(AIContext)
-    RoundEnv --> Processor: List of @AIContext elements
-    
-    loop For each @AIContext element
-        Processor -> Processor: Extract className + focus + avoids
-        Processor -> Processor: Append to cursorRules builder
-        Processor -> Processor: Append to claudeMd builder
-        Processor -> Processor: Append to codex builder
+    loop For each @AIContext
+        Processor -> Processor: Append focus/avoids\nto all platforms
     end
     
-    == Pass 3: Process @AIAudit ==
-    Processor -> RoundEnv: getElementsAnnotatedWith(AIAudit)
-    RoundEnv --> Processor: List of @AIAudit elements
+    loop For each @AIIgnore
+        Processor -> Processor: Append to ignore sections
+        Processor -> Processor: Write to .qwenignore\n.cursorignore, etc.
+    end
     
-    loop For each @AIAudit element
-        Processor -> Processor: Extract className + checkFor[]
-        
-        alt checkFor is empty
-            Processor -> Processor: Skip this element
-        else checkFor has values
-            Processor -> Processor: Append to cursorAudit builder
-            Processor -> Processor: Append to claudeAudit builder
-            Processor -> Processor: Append to geminiMd builder
-            Processor -> Processor: Append to codexAudit builder
+    loop For each @AIAudit
+        Processor -> Processor: Append security checks\nto all platforms
+    end
+    
+    loop For each @AIDraft
+        Processor -> Processor: Append implementation tasks\nto all platforms
+    end
+    
+    == File Writing Phase ==
+    loop For each active service
+        alt Content changed
+            Processor -> FS: writeFileIfChanged(filePath, content)
+            FS -> AIFiles: Write/update file
+            Processor -> Compiler: NOTE: "updated - <file>"
+        else Content unchanged
+            Processor -> Compiler: NOTE: "no changes - <file>"
         end
     end
     
-    == Finalize Output ==
-    Processor -> Processor: Merge audit sections\nif hasAuditAnnotations
+    == Orphaned Annotation Check ==
+    Processor -> Processor: checkOrphanedAnnotations()
+    note right: Warn if annotations used\nbut recommended files missing
     
-    Processor -> FS: Write .cursorrules
-    FS --> Processor: File written
-    
-    Processor -> FS: Write CLAUDE.md
-    FS --> Processor: File written
-    
-    Processor -> FS: Write .aiexclude
-    FS --> Processor: File written
-    
-    Processor -> FS: Write AGENTS.md
-    FS --> Processor: File written
-    
-    Processor -> FS: Write .codex/config.toml
-    FS --> Processor: File written
-    
-    Processor -> FS: Write .codex/rules/vibetags.rules
-    FS --> Processor: File written
-    
-    Processor -> FS: Write gemini_instructions.md
-    FS --> Processor: File written
-    
-    Processor --> Javac: return true (annotations claimed)
+    Processor --> Compiler: return false
 end
 
 deactivate Processor
+Compiler --> Developer: BUILD SUCCESS
+deactivate Compiler
 
-== Compilation Complete ==
-
-Javac --> Build: Compilation successful
-Build --> Developer: Build complete
-
-note over Output
-    Generated Files:
-    - .cursorrules (Cursor)
-    - CLAUDE.md (Claude)
-    - .aiexclude (Gemini)
-    - AGENTS.md (Codex CLI)
-    - .codex/config.toml (Codex)
-    - .codex/rules/*.rules (Codex)
-    - gemini_instructions.md (Gemini)
-end note
-
-== AI Tool Usage (Runtime) ==
-
-note over Developer, Output
-    Developer uses AI assistant to modify code
-end note
-
-Developer -> Cursor: Request code modification
-Cursor -> Cursor: Read .cursorrules
-Cursor -> Cursor: Check LOCKED FILES
-Cursor -> Cursor: Check MANDATORY SECURITY AUDITS
-Cursor --> Developer: AI response (follows guardrails)
+== Developer Uses AI Tools ==
+Developer -> AIFiles: Open QWEN.md, CLAUDE.md, etc.
+note right: AI platforms read\ngenerated config files\nto enforce guardrails
 
 @enduml
