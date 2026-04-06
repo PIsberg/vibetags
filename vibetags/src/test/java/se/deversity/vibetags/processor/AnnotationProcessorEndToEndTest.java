@@ -13,9 +13,11 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * End-to-end tests that verify the annotation processor works correctly
  * when the example project is compiled.
- * 
+ *
  * These tests assume the example project has been compiled with `mvn clean compile`.
+ * Run with: mvn test -Drun.integration.tests=true
  */
+@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
 class AnnotationProcessorEndToEndTest {
 
     private static final String EXAMPLE_DIR;
