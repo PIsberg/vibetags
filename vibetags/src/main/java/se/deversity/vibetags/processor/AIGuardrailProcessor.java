@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
  */
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
-@SupportedOptions({"vibetags.root", "vibetags.project"})
+@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
 public class AIGuardrailProcessor extends AbstractProcessor {
     
     static final String VERSION = "1.0.0-SNAPSHOT";
@@ -56,11 +56,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        String rootOverride = processingEnv.getOptions().get("vibetags.root");
+        Map<String, String> options = processingEnv.getOptions();
+        
+        String rootOverride = options.get("vibetags.root");
         Path root = Paths.get((rootOverride != null && !rootOverride.isBlank())
                 ? rootOverride
                 : Paths.get("").toAbsolutePath().toString());
-        log = VibeTagsLogger.forRoot(root);
+        
+        String logPath = options.get("vibetags.log.path");
+        String logLevel = options.get("vibetags.log.level");
+        log = VibeTagsLogger.forRoot(root, logPath, logLevel);
     }
 
     @Override

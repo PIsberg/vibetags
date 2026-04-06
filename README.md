@@ -247,6 +247,44 @@ The `load-tests` workflow job (see `.github/workflows/build.yml`) runs automatic
 - **Platform-specific configurations** generated automatically
 - **Version Stamping** — every generated file includes a VibeTags version header for easy traceability
 - **Compile-time Validation** — proactive warnings for contradictory or empty annotations
+- **Configurable Logging** — full control over log file path and level, including turning it off
+
+### Logging Configuration
+
+VibeTags uses a dedicated file-based logger to record its operations during compilation. By default, it writes to `vibetags.log` in the project root at `INFO` level.
+
+You can customize the log path and level using annotation processor options:
+
+| Option | Default | Description |
+|---|---|---|
+| `vibetags.log.path` | `vibetags.log` | Path to the log file. Relative paths are resolved against the project root. Absolute paths are used as-is. |
+| `vibetags.log.level` | `INFO` | Logback level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, or `OFF`. Set to `OFF` to disable file logging entirely. |
+
+#### Maven Configuration
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <compilerArgs>
+            <arg>-Avibetags.log.path=logs/vibetags.log</arg>
+            <arg>-Avibetags.log.level=DEBUG</arg>
+        </compilerArgs>
+    </configuration>
+</plugin>
+```
+
+#### Gradle Configuration
+
+```groovy
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+        '-Avibetags.log.path=logs/vibetags.log',
+        '-Avibetags.log.level=DEBUG'
+    ]
+}
+```
 
 ### Choosing Which AI Services to Support (Opt-in Model)
 
