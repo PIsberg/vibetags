@@ -50,9 +50,14 @@ vibetags/
 │   └── src/              # Library source code
 ├── example/              # Example e-commerce application
 │   ├── pom.xml           # Maven build configuration
-│   ├── build.gradle      # Gradle build configuration (NEW)
+│   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
+├── load-tests/           # Performance & safety test harness (standalone)
+│   ├── pom.xml           # Maven configuration (JMH + JUnit 5)
+│   └── src/
+│       ├── main/java/    # JMH benchmark classes + helpers
+│       └── test/java/    # Stress test + concurrent build test
 └── README.md             # This file
 ```
 
@@ -177,6 +182,50 @@ cd vibetags && gradle clean build publishToMavenLocal
 # Build example
 cd ../example && gradle clean build
 ```
+
+## ⚡ Performance & Load Tests
+
+The `load-tests/` subproject is a standalone Maven module that stress-tests and benchmarks `AIGuardrailProcessor`. It **must be run after** the processor is installed locally (`cd vibetags && mvn install -DskipTests`).
+
+### What's included
+
+| Test class | What it measures |
+|---|---|
+| `AnnotationVolumeStressTest` | Compiles N synthetic annotated classes (N = 10 → 10 000) in-process via `javax.tools.JavaCompiler` and reports wall-clock processor overhead vs. a `-proc:none` baseline, plus total output-file size. |
+| `ConcurrentBuildTest` | Runs N threads simultaneously against a **shared** project root to surface file-corruption risks from the lack of write locking in `writeFileIfChanged`. |
+| `ProcessorHotPathBenchmark` | JMH microbenchmarks for `writeFileIfChanged` (1 KB / 64 KB) and `buildServiceFileMap` / `resolveActiveServices`. |
+
+### Running
+
+```bash
+# Install the processor first
+cd vibetags && mvn install -DskipTests
+
+# Stress + concurrent tests (full sweep: N = 10, 100, 500, 1000, 5000, 10 000)
+cd load-tests && mvn test
+
+# CI-sized run — skip N > 500 to keep it fast
+cd load-tests && mvn test -Dstress.max.classes=500
+
+# Increase concurrent threads (default: 4)
+cd load-tests && mvn test -Dtest=ConcurrentBuildTest -Dload.test.threads=8
+
+# JMH microbenchmarks (~2 min, produces a fat-jar)
+cd load-tests && mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main
+
+# Run a specific JMH benchmark
+cd load-tests && mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main \
+    -Dexec.args="writeFileIfChanged -f 1 -wi 3 -i 5 -tu ms"
+```
+
+Results are written to `load-tests/target/stress-results.txt` and printed to stdout.
+
+> [!NOTE]
+> The stress test passes `-Avibetags.root=<tempDir>` to the compiler so each run writes into an isolated temporary directory, not the project root. This is the same compiler option used in production when a consumer project needs to override the output directory.
+
+### CI behaviour
+
+The `load-tests` workflow job (see `.github/workflows/build.yml`) runs automatically on every push and PR using JDK 21. It caps the sweep at N = 500 (`-Dstress.max.classes=500`) so the job finishes in under a minute. The `stress-results.txt` artefact is uploaded for inspection even if a step fails.
 
 ## 🎓 When to Use VibeTags
 

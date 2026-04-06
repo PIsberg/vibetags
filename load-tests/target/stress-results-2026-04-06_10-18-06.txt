@@ -1,0 +1,5 @@
+VibeTags Annotation-Volume Stress Test Results
+======================================================================
+Classes    ProcessorTime(ms)  BaselineTime(ms)   Overhead(ms)       OutputSize(B) 
+----------------------------------------------------------------------
+10         456                110                346                14920         
