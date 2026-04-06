@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: se.deversity.vibetags.loadtest.AnnotationVolumeStressTest
--------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 5, Time elapsed: 0.779 s -- in se.deversity.vibetags.loadtest.AnnotationVolumeStressTest
