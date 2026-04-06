@@ -39,6 +39,7 @@ Generated configuration files work out-of-the-box with:
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
 
 ## 📁 Project Structure
 
@@ -265,6 +266,7 @@ touch CLAUDE.md .claudeignore                # Enable Claude support
 touch QWEN.md .qwenignore                   # Enable Qwen support
 touch .aiexclude gemini_instructions.md      # Enable Gemini/Codex support
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore # Enable Copilot
+touch llms.txt llms-full.txt                 # Enable Windsurf Cascade / llms.txt standard
 
 mvn compile                                  # VibeTags populates accurately
 ```
@@ -330,6 +332,48 @@ VibeTags generates comprehensive Qwen configuration files:
 **.qwen/commands/refactor.md** - Custom `/refactor` command for code refactoring
 
 **.qwenignore** - Glob patterns for files to exclude from Qwen's context
+
+### 🌐 llms.txt Standard (Windsurf Cascade & LLM Agents)
+
+VibeTags generates two files following the [llms.txt standard](https://llmstxt.org/) — a format that lets AI agents quickly discover and consume project rules without parsing messy HTML or bloating the context window.
+
+| File | Role | Best for |
+|---|---|---|
+| `llms.txt` | **The Map** — concise directory, one bullet per rule | Windsurf Cascade, agents with limited context |
+| `llms-full.txt` | **The Book** — fully expanded reference with all details | Claude 4.6, Gemini 1.5 Pro, Windsurf Cascade with large context |
+
+Both files follow the standard hierarchy: `# ProjectName` (H1), `> summary blockquote`, informational text, and `## Section` resource groups.
+
+**Opt in** by creating the files:
+
+```bash
+touch llms.txt llms-full.txt
+mvn compile
+```
+
+**Sample `llms.txt` output:**
+
+```markdown
+# My Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below.
+
+## Locked Files
+- [PaymentProcessor](com.example.payment.PaymentProcessor): Tied to legacy database schema v2.3
+
+## Contextual Rules
+- [StringParser](com.example.utils.StringParser): Focus — Optimize for memory usage. Avoid — java.util.regex, String.split()
+
+## Security Audit Requirements
+- [DatabaseConnector](com.example.database.DatabaseConnector): check for SQL Injection, Thread Safety issues
+
+## Ignored Elements
+- [GeneratedMetadata](com.example.internal.GeneratedMetadata): excluded from AI context
+```
+
+**Setting the project name:** Pass `-Avibetags.project=MyProjectName` to the compiler (Maven: `<compilerArg>`, Gradle: `annotationProcessorArgs`) to set the `# H1` title in both files. Defaults to `"This Project"`.
 
 ### ⚠️ Orphaned Annotation Warnings
 
