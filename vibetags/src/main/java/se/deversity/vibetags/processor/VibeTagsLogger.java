@@ -161,7 +161,6 @@ public final class VibeTagsLogger {
         } catch (Exception e) {
             // Never let logging setup break the annotation processor
             System.err.println("VibeTags: Failed to initialize file logger: " + e.getMessage());
-            e.printStackTrace();
             return LoggerFactory.getLogger(LOGGER_NAME);
         }
     }

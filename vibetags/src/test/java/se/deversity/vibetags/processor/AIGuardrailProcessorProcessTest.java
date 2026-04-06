@@ -49,7 +49,7 @@ class AIGuardrailProcessorProcessTest {
 
         assertFalse(result);
         // Nothing should have been read from the round environment
-        verify(roundEnv, never()).getElementsAnnotatedWith(any(Class.class));
+        verify(roundEnv, never()).getElementsAnnotatedWith(any(java.lang.Class.class));
     }
 
     @Test
@@ -112,12 +112,12 @@ class AIGuardrailProcessorProcessTest {
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         when(roundEnv.processingOver()).thenReturn(false);
-        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.process(Set.of(), roundEnv);
 
@@ -141,12 +141,12 @@ class AIGuardrailProcessorProcessTest {
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         when(roundEnv.processingOver()).thenReturn(false);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
-        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.process(Set.of(), roundEnv);
 
@@ -410,9 +410,9 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -432,9 +432,9 @@ class AIGuardrailProcessorProcessTest {
         when(element.getAnnotation(AIDraft.class)).thenReturn(null); // no @AIDraft
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
-        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -455,9 +455,9 @@ class AIGuardrailProcessorProcessTest {
         when(element.getAnnotation(AIAudit.class)).thenReturn(audit);
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
@@ -567,12 +567,12 @@ class AIGuardrailProcessorProcessTest {
     private static RoundEnvironment emptyRoundEnv() {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         when(roundEnv.processingOver()).thenReturn(false);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
-        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         return roundEnv;
     }
 
