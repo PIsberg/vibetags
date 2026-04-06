@@ -525,12 +525,15 @@ class AIGuardrailProcessorProcessTest {
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         processor.init(env);
-        processor.process(Set.of(), emptyRoundEnv());
-
-        String content = Files.readString(tempDir.resolve("llms.txt"), java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(content.contains("## Locked Files"),      "llms.txt should have Locked Files section");
-        assertTrue(content.contains("## Contextual Rules"),  "llms.txt should have Contextual Rules section");
-        assertTrue(content.contains("> AI guardrail rules"), "llms.txt should have summary blockquote");
+        try {
+            processor.process(Set.of(), emptyRoundEnv());
+            String content = Files.readString(tempDir.resolve("llms.txt"), java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(content.contains("## Locked Files"),      "llms.txt should have Locked Files section");
+            assertTrue(content.contains("## Contextual Rules"),  "llms.txt should have Contextual Rules section");
+            assertTrue(content.contains("> AI guardrail rules"), "llms.txt should have summary blockquote");
+        } finally {
+            VibeTagsLogger.shutdown(); // release file handle so @TempDir can be deleted
+        }
     }
 
     @Test
@@ -546,12 +549,15 @@ class AIGuardrailProcessorProcessTest {
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         processor.init(env);
-        processor.process(Set.of(), emptyRoundEnv());
-
-        String content = Files.readString(tempDir.resolve("llms-full.txt"), java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(content.contains("## Locked Files (Do Not Edit)"), "llms-full.txt should have expanded Locked Files header");
-        assertTrue(content.contains("## Contextual Rules"),            "llms-full.txt should have Contextual Rules section");
-        assertTrue(content.contains("> Complete AI guardrail"),        "llms-full.txt should have full summary blockquote");
+        try {
+            processor.process(Set.of(), emptyRoundEnv());
+            String content = Files.readString(tempDir.resolve("llms-full.txt"), java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(content.contains("## Locked Files (Do Not Edit)"), "llms-full.txt should have expanded Locked Files header");
+            assertTrue(content.contains("## Contextual Rules"),            "llms-full.txt should have Contextual Rules section");
+            assertTrue(content.contains("> Complete AI guardrail"),        "llms-full.txt should have full summary blockquote");
+        } finally {
+            VibeTagsLogger.shutdown(); // release file handle so @TempDir can be deleted
+        }
     }
 
     // -----------------------------------------------------------------------
