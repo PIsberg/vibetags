@@ -40,7 +40,7 @@ jobs:
       - name: Build Example Project (Maven)
         run: |
           cd example
-          mvn clean compile -B
+          mvn clean compile -B -Dvibetags.log.path=../vibetags.log
       
       - name: Run Unit Tests (VibeTags Library)
         run: |
@@ -155,7 +155,7 @@ jobs:
         run: |
           cd example
           gradle wrapper || echo "Wrapper generation skipped"
-          gradle clean build --no-daemon
+          gradle clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
       
       - name: Run Unit Tests (VibeTags Library)
         run: |

@@ -575,28 +575,39 @@ class AnnotationProcessorEndToEndTest {
         return Files.exists(p);
     }
 
+    private Path findFile(String filename) {
+        Path[] candidates = {
+            Path.of("..", filename).toAbsolutePath().normalize(),
+            Path.of(filename).toAbsolutePath().normalize(),
+            Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize()
+        };
+        for (Path p : candidates) {
+            if (Files.exists(p)) return p;
+        }
+        return null;
+    }
+
     private String readFile(String filename) throws IOException {
-        Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
-        
         // Retry logic for CI environments (max 3 retries, 500ms delay)
+        Path p = null;
         int retries = 3;
-        while (retries > 0 && !Files.exists(p)) {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Interrupted while waiting for file: " + p, e);
+        while (retries >= 0) {
+            p = findFile(filename);
+            if (p != null) break;
+
+            if (retries > 0) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while waiting for file: " + filename, e);
+                }
             }
             retries--;
         }
 
-        if (!Files.exists(p)) {
-            System.err.println("VibeTags Test ERROR: log file missing at " + p.toAbsolutePath());
-            System.err.println("VibeTags Test ERROR: Contents of " + Path.of(EXAMPLE_DIR).toAbsolutePath().normalize() + ":");
-            try (var stream = Files.list(Path.of(EXAMPLE_DIR))) {
-                stream.forEach(file -> System.err.println("  " + file.getFileName() + (Files.isDirectory(file) ? "/" : "")));
-            } catch (Exception ignore) {}
-            throw new IOException("Missing log file at: " + p.toAbsolutePath() + " (after retries)");
+        if (p == null) {
+            throw new IOException("Missing log file: " + filename + " (after retries in ../, ./, or " + EXAMPLE_DIR + ")");
         }
         return Files.readString(p, StandardCharsets.UTF_8);
     }

@@ -28,6 +28,9 @@ tasks.withType(JavaCompile) {
 compileJava {
     options.annotationProcessorPath = configurations.annotationProcessor
     options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
+    if (project.hasProperty('compilerArgs')) {
+        options.compilerArgs.addAll(project.getProperty('compilerArgs').split(' '))
+    }
 }
 
 jar {
