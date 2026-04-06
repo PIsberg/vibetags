@@ -50,6 +50,8 @@ class AnnotationProcessorEndToEndTest {
         // .cursorignore, .copilotignore, .claudeignore, .qwenignore are opt-in, so they might not exist unless created
         // But .aiexclude is now always generated (if gemini/codex active in test context)
         assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
+        assertTrue(fileExists("llms.txt"), "llms.txt should exist");
+        assertTrue(fileExists("llms-full.txt"), "llms-full.txt should exist");
     }
 
     @Test
@@ -368,6 +370,193 @@ class AnnotationProcessorEndToEndTest {
         String content = readFile(".qwen/settings.json");
         assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should specify Qwen model");
         assertTrue(content.contains("\"mcp\": {"), "Should have MCP settings");
+    }
+
+    // -----------------------------------------------------------------------
+    // llms.txt tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testLlmsTxtHasCorrectStructure() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("## Locked Files"),
+            "llms.txt should have a Locked Files section");
+        assertTrue(content.contains("## Contextual Rules"),
+            "llms.txt should have a Contextual Rules section");
+        assertTrue(content.contains("## Security Audit Requirements"),
+            "llms.txt should have a Security Audit Requirements section");
+        assertTrue(content.contains("## Ignored Elements"),
+            "llms.txt should have an Ignored Elements section");
+        assertTrue(content.contains("## Implementation Tasks"),
+            "llms.txt should have an Implementation Tasks section");
+        assertTrue(content.contains("## PII / Privacy Guardrails"),
+            "llms.txt should have a PII / Privacy Guardrails section");
+    }
+
+    @Test
+    void testLlmsTxtHasSummaryBlockquote() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("> AI guardrail rules generated from source annotations by VibeTags."),
+            "llms.txt should contain a summary blockquote");
+    }
+
+    @Test
+    void testLlmsTxtHasLockedFilesAsLinks() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("[PaymentProcessor]"),
+            "llms.txt should list PaymentProcessor as a link");
+        assertTrue(content.contains("[SecurityConfig]"),
+            "llms.txt should list SecurityConfig as a link");
+    }
+
+    @Test
+    void testLlmsTxtHasAuditEntries() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("[DatabaseConnector]"),
+            "llms.txt should reference DatabaseConnector in audit section");
+        assertTrue(content.contains("SQL Injection"),
+            "llms.txt should mention SQL Injection");
+        assertTrue(content.contains("Thread Safety"),
+            "llms.txt should mention Thread Safety");
+    }
+
+    @Test
+    void testLlmsTxtHasIgnoredElements() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("[GeneratedMetadata]"),
+            "llms.txt should reference GeneratedMetadata in ignored elements");
+        assertTrue(content.contains("excluded from AI context"),
+            "llms.txt should state elements are excluded from AI context");
+    }
+
+    @Test
+    void testLlmsTxtHasPrivacyEntries() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("## PII / Privacy Guardrails"),
+            "llms.txt should have a PII section");
+    }
+
+    @Test
+    void testLlmsTxtHasImplementationTaskLinks() throws IOException {
+        String content = readFile("llms.txt");
+
+        assertTrue(content.contains("[NotificationService]") || content.contains("NotificationService"),
+            "llms.txt should reference NotificationService draft tasks");
+    }
+
+    // -----------------------------------------------------------------------
+    // llms-full.txt tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testLlmsFullTxtHasCorrectStructure() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("## Locked Files (Do Not Edit)"),
+            "llms-full.txt should have expanded Locked Files header");
+        assertTrue(content.contains("## Contextual Rules"),
+            "llms-full.txt should have Contextual Rules section");
+        assertTrue(content.contains("## Mandatory Security Audit Requirements"),
+            "llms-full.txt should have Mandatory Security Audit Requirements");
+        assertTrue(content.contains("## Ignored Elements"),
+            "llms-full.txt should have Ignored Elements section");
+        assertTrue(content.contains("## Implementation Tasks"),
+            "llms-full.txt should have Implementation Tasks section");
+        assertTrue(content.contains("## PII / Privacy Guardrails"),
+            "llms-full.txt should have PII / Privacy Guardrails section");
+    }
+
+    @Test
+    void testLlmsFullTxtHasSummaryBlockquote() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("> Complete AI guardrail configuration generated from source annotations by VibeTags"),
+            "llms-full.txt should contain a summary blockquote mentioning VibeTags");
+        assertTrue(content.contains("Windsurf") || content.contains("Claude 4.6") || content.contains("Gemini"),
+            "llms-full.txt should mention large-context LLMs");
+    }
+
+    @Test
+    void testLlmsFullTxtHasVersionStamp() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("v1.0.0-SNAPSHOT"),
+            "llms-full.txt should contain the version stamp");
+    }
+
+    @Test
+    void testLlmsFullTxtHasLockedFilesWithReasons() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("PaymentProcessor"),
+            "llms-full.txt should mention PaymentProcessor");
+        assertTrue(content.contains("**Reason**"),
+            "llms-full.txt should use bold Reason labels");
+        assertTrue(content.contains("SecurityConfig"),
+            "llms-full.txt should mention SecurityConfig");
+    }
+
+    @Test
+    void testLlmsFullTxtHasAuditRequirements() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("DatabaseConnector"),
+            "llms-full.txt should mention DatabaseConnector");
+        assertTrue(content.contains("**Required Checks**"),
+            "llms-full.txt should use bold Required Checks labels");
+        assertTrue(content.contains("SQL Injection"),
+            "llms-full.txt should list SQL Injection");
+        assertTrue(content.contains("Thread Safety"),
+            "llms-full.txt should list Thread Safety");
+    }
+
+    @Test
+    void testLlmsFullTxtHasIgnoredElementsWithDetail() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("GeneratedMetadata"),
+            "llms-full.txt should mention GeneratedMetadata in ignored elements");
+        assertTrue(content.contains("Treat them as non-existent"),
+            "llms-full.txt should explain the ignore semantics");
+    }
+
+    @Test
+    void testLlmsFullTxtHasContextualRulesWithFocusAndAvoid() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("**Focus**"),
+            "llms-full.txt should use bold Focus labels");
+        assertTrue(content.contains("**Avoid**"),
+            "llms-full.txt should use bold Avoid labels");
+        assertTrue(content.contains("memory usage"),
+            "llms-full.txt should contain StringParser focus");
+    }
+
+    @Test
+    void testLlmsFullTxtHasDraftInstructions() throws IOException {
+        String content = readFile("llms-full.txt");
+
+        assertTrue(content.contains("**Instructions**"),
+            "llms-full.txt should use bold Instructions labels");
+        assertTrue(content.contains("NotificationService"),
+            "llms-full.txt should mention NotificationService");
+    }
+
+    @Test
+    void testLlmsTxtAppearInAllLockedOutputs() throws IOException {
+        String llmsTxt = readFile("llms.txt");
+        String llmsFullTxt = readFile("llms-full.txt");
+
+        assertTrue(llmsTxt.contains("PaymentProcessor"),
+            "llms.txt should mention PaymentProcessor");
+        assertTrue(llmsFullTxt.contains("PaymentProcessor"),
+            "llms-full.txt should mention PaymentProcessor");
     }
 
     private boolean fileExists(String filename) {

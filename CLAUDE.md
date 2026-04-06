@@ -54,7 +54,7 @@ gradle clean build    # Gradle
 `AIGuardrailProcessor.process()` runs during `javac` compilation of the **consumer** project (not the library itself — the library disables annotation processing with `-proc:none`):
 
 1. Collects all `@AILocked`, `@AIContext`, `@AIDraft`, `@AIAudit`, `@AIIgnore`, `@AIPrivacy` elements from the round environment
-2. Accumulates content into six `StringBuilder`s (one per output format)
+2. Accumulates content into `StringBuilder`s (one per output format)
 3. Calls `resolveActiveServices()` — only files that already exist on disk are regenerated (file presence = opt-in)
 4. Writes to `Paths.get("").toAbsolutePath()` (project root of the consumer)
 
@@ -80,6 +80,19 @@ To deactivate, delete the file — it will never come back.
 | `.codex/` | Codex CLI | Config + Starlark |
 | `gemini_instructions.md` | Gemini | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
+| `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
+| `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
+
+#### llms.txt vs llms-full.txt
+
+VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:
+
+- **`llms.txt`** — The Map: A concise directory listing all guardrail rules with links to the annotated class. Intended for LLM agents (e.g., Windsurf Cascade) to quickly understand the project's AI interaction rules without bloating the context window.
+- **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
+
+Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
+
+The optional `vibetags.project` processor option sets the `# H1` project name in both files (defaults to `"This Project"`).
 
 ### Annotations (all `RetentionPolicy.SOURCE`)
 

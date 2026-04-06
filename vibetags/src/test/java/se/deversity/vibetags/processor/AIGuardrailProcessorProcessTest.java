@@ -280,7 +280,8 @@ class AIGuardrailProcessorProcessTest {
         Set<String> expectedKeys = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-            "codex_config", "codex_rules", "qwen_settings", "qwen_refactor"
+            "codex_config", "codex_rules", "qwen_settings", "qwen_refactor",
+            "llms", "llms_full"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");
@@ -317,6 +318,8 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(root.resolve(".codex/rules/vibetags.rules"),       map.get("codex_rules"));
         assertEquals(root.resolve(".qwen/settings.json"),               map.get("qwen_settings"));
         assertEquals(root.resolve(".qwen/commands/refactor.md"),        map.get("qwen_refactor"));
+        assertEquals(root.resolve("llms.txt"),                          map.get("llms"));
+        assertEquals(root.resolve("llms-full.txt"),                     map.get("llms_full"));
     }
 
     // -----------------------------------------------------------------------
@@ -460,6 +463,95 @@ class AIGuardrailProcessorProcessTest {
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIAudit has non-empty checkFor list");
+    }
+
+    // -----------------------------------------------------------------------
+    // llms.txt / llms-full.txt — opt-in and content tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    void buildServiceFileMap_llmsPathsAreCorrect() {
+        Path root = Path.of("/proj");
+        Map<String, Path> map = AIGuardrailProcessor.buildServiceFileMap(root);
+
+        assertEquals(root.resolve("llms.txt"),      map.get("llms"),      "llms should resolve to llms.txt");
+        assertEquals(root.resolve("llms-full.txt"), map.get("llms_full"), "llms_full should resolve to llms-full.txt");
+    }
+
+    @Test
+    void resolveActiveServices_llmsTxtPresent_activatesLlms(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("llms.txt"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertTrue(active.contains("llms"), "llms should be active when llms.txt exists");
+        assertFalse(active.contains("llms_full"), "llms_full should not be active without llms-full.txt");
+    }
+
+    @Test
+    void resolveActiveServices_llmsFullTxtPresent_activatesLlmsFull(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("llms-full.txt"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertFalse(active.contains("llms"), "llms should not be active without llms.txt");
+        assertTrue(active.contains("llms_full"), "llms_full should be active when llms-full.txt exists");
+    }
+
+    @Test
+    void resolveActiveServices_bothLlmsFilesPresent_activatesBoth(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("llms.txt"));
+        Files.createFile(tempDir.resolve("llms-full.txt"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertTrue(active.contains("llms"),      "llms should be active when llms.txt exists");
+        assertTrue(active.contains("llms_full"), "llms_full should be active when llms-full.txt exists");
+    }
+
+    @Test
+    void process_llmsTxtOptIn_writesLlmsTxtWithCorrectFormat(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("llms.txt"));
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        Map<String, String> options = Map.of("vibetags.root", tempDir.toString());
+        when(env.getOptions()).thenReturn(options);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+        processor.process(Set.of(), emptyRoundEnv());
+
+        String content = Files.readString(tempDir.resolve("llms.txt"), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(content.contains("## Locked Files"),      "llms.txt should have Locked Files section");
+        assertTrue(content.contains("## Contextual Rules"),  "llms.txt should have Contextual Rules section");
+        assertTrue(content.contains("> AI guardrail rules"), "llms.txt should have summary blockquote");
+    }
+
+    @Test
+    void process_llmsFullTxtOptIn_writesLlmsFullTxtWithCorrectFormat(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("llms-full.txt"));
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        Map<String, String> options = Map.of("vibetags.root", tempDir.toString());
+        when(env.getOptions()).thenReturn(options);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+        processor.process(Set.of(), emptyRoundEnv());
+
+        String content = Files.readString(tempDir.resolve("llms-full.txt"), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(content.contains("## Locked Files (Do Not Edit)"), "llms-full.txt should have expanded Locked Files header");
+        assertTrue(content.contains("## Contextual Rules"),            "llms-full.txt should have Contextual Rules section");
+        assertTrue(content.contains("> Complete AI guardrail"),        "llms-full.txt should have full summary blockquote");
     }
 
     // -----------------------------------------------------------------------

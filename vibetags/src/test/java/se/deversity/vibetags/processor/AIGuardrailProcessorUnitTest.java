@@ -177,7 +177,8 @@ class AIGuardrailProcessorUnitTest {
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
         Set<String> expected = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
-            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"
+            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
+            "llms", "llms_full"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }
