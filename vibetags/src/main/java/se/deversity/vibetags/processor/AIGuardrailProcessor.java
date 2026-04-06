@@ -39,6 +39,10 @@ import java.util.stream.Collectors;
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
 public class AIGuardrailProcessor extends AbstractProcessor {
     
+    /** Public constructor for the service loader. */
+    public AIGuardrailProcessor() {}
+
+    
     static final String VERSION = "1.0.0-SNAPSHOT";
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
 
@@ -606,6 +610,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /**
      * Returns the canonical map of service key → output file path for a given project root.
+     *
+     * @param root the project root directory
+     * @return a map of logical service names to their expected file paths
      */
     public static Map<String, Path> buildServiceFileMap(Path root) {
         Map<String, Path> map = new LinkedHashMap<>();
@@ -632,6 +639,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /**
      * Resolves which primary services should have their files written.
      * Only "signal" files (like QWEN.md or .cursorrules) are checked — their presence acts as the opt-in.
+     *
+     * @param messager        the compiler messager for printing notes
+     * @param allServiceFiles the map of all possible service files
+     * @return the set of active service keys based on existing files
      */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
         // Only these primary files define an "active" service
@@ -663,6 +674,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /**
      * Writes {@code content} to {@code path} only if the file's current content differs.
      *
+     * @param path    the destination file path
+     * @param content the content to write
      * @return {@code true} if the file was written (content changed or file was empty),
      *         {@code false} if the existing content was already up-to-date.
      */

@@ -17,7 +17,7 @@ import java.nio.file.Paths;
  * Configures a file-based SLF4J/Logback logger that appends to a log file in the consumer
  * project's root directory.
  *
- * <h3>Configuration via annotation-processor options</h3>
+ * <h2>Configuration via annotation-processor options</h2>
  * <pre>
  * Option                  Default              Description
  * ──────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ import java.nio.file.Paths;
  *                                              logging entirely.
  * </pre>
  *
- * <h3>Maven example</h3>
+ * <h2>Maven example</h2>
  * <pre>{@code
  * <plugin>
  *   <artifactId>maven-compiler-plugin</artifactId>
