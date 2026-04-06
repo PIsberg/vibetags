@@ -69,7 +69,7 @@ When writing or modifying the following files, perform a security audit for the 
 The following elements must be completely excluded from AI context. Treat them as non-existent.
 
 ### com.example.internal.GeneratedMetadata
-- Excluded from AI context entirely — treat as non-existent
+- Excluded from AI context entirely - treat as non-existent
 
 
 ## Implementation Tasks
@@ -109,16 +109,16 @@ The following elements are in draft mode and need implementation.
 - **Instructions**: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
 
 ### executePayment(double)
-- **Instructions**: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
-
-### validatePaymentMethod()
-- **Instructions**: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
-
-### executePayment(double)
 - **Instructions**: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
 
 ### validatePaymentMethod()
 - **Instructions**: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
+
+### executePayment(double)
+- **Instructions**: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
+
+### validatePaymentMethod()
+- **Instructions**: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
 
 
 ## PII / Privacy Guardrails

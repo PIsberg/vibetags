@@ -576,12 +576,14 @@ class AnnotationProcessorEndToEndTest {
 
     private Path findFile(String filename) {
         Path[] candidates = {
+            Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize(),
             Path.of("..", filename).toAbsolutePath().normalize(),
-            Path.of(filename).toAbsolutePath().normalize(),
-            Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize()
+            Path.of(filename).toAbsolutePath().normalize()
         };
         for (Path p : candidates) {
-            if (Files.exists(p)) return p;
+            if (Files.exists(p)) {
+                return p;
+            }
         }
         return null;
     }

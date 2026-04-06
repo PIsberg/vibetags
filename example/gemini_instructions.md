@@ -4,7 +4,7 @@
 ## CONTINUOUS AUDIT REQUIREMENTS
 You are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:
 
-File: `com.example.database.DatabaseConnector`
+File: `com.example.database.DatabaseConnector` 
 Critical Vulnerabilities to Prevent: 
 - SQL Injection
 - Thread Safety issues
@@ -12,7 +12,7 @@ Critical Vulnerabilities to Prevent:
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI context and completions:
 
-- `com.example.internal.GeneratedMetadata`
+- `com.example.internal.GeneratedMetadata` 
 ## IMPLEMENTATION TASKS
 The following elements are drafts that need implementation:
 
@@ -27,10 +27,10 @@ The following elements are drafts that need implementation:
 - `updateOrderStatus(java.lang.String,java.lang.String)`: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
 - `searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)`: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
 - `generateOrderConfirmation(java.lang.String)`: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
-- `executePayment(double)`: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
-- `validatePaymentMethod()`: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
 - `executePayment(double)`: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
 - `validatePaymentMethod()`: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
+- `executePayment(double)`: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
+- `validatePaymentMethod()`: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
 ## PII / PRIVACY GUARDRAILS
 The following elements handle Personally Identifiable Information (PII).
 Never include their runtime values in logs, console output, external API calls,
