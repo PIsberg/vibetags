@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: vibetags/target/site/jacoco/jacoco.xml
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: vibetags/build/reports/jacoco/test/jacocoTestReport.xml
