@@ -123,6 +123,7 @@ public final class VibeTagsLogger {
     public static Logger forRoot(Path projectRoot, String logPath, String level) {
         // Resolve the effective log file path
         Path logFile = resolveLogFile(projectRoot, logPath);
+        System.out.println("VibeTags: Target log file=" + logFile.toAbsolutePath());
 
         // Handle OFF level — return no-op immediately, release any previous handle
         if ("OFF".equalsIgnoreCase(level)) {

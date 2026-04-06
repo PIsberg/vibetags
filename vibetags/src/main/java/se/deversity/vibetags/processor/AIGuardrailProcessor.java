@@ -66,6 +66,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Path root = Paths.get((rootOverride != null && !rootOverride.isBlank())
                 ? rootOverride
                 : Paths.get("").toAbsolutePath().toString());
+                
+        // Diagnostic output for CI debugging
+        System.out.println("VibeTags: Processor init starting.");
+        System.out.println("VibeTags: rootOverride=" + rootOverride);
+        System.out.println("VibeTags: Effective projectRoot=" + root.toAbsolutePath());
         
         String logPath = options.get("vibetags.log.path");
         String logLevel = options.get("vibetags.log.level");
