@@ -591,6 +591,11 @@ class AnnotationProcessorEndToEndTest {
         }
 
         if (!Files.exists(p)) {
+            System.err.println("VibeTags Test ERROR: log file missing at " + p.toAbsolutePath());
+            System.err.println("VibeTags Test ERROR: Contents of " + Path.of(EXAMPLE_DIR).toAbsolutePath().normalize() + ":");
+            try (var stream = Files.list(Path.of(EXAMPLE_DIR))) {
+                stream.forEach(file -> System.err.println("  " + file.getFileName() + (Files.isDirectory(file) ? "/" : "")));
+            } catch (Exception ignore) {}
             throw new IOException("Missing log file at: " + p.toAbsolutePath() + " (after retries)");
         }
         return Files.readString(p, StandardCharsets.UTF_8);
