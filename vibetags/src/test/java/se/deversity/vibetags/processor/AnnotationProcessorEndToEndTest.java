@@ -296,7 +296,7 @@ class AnnotationProcessorEndToEndTest {
     void testVersionStampInLogFile() throws IOException {
         // Version is no longer embedded in generated AI files — it lives in vibetags.log only
         String logContent = readFile("vibetags.log");
-        assertTrue(logContent.contains("v1.0.0-SNAPSHOT"),
+        assertTrue(logContent.contains(AIGuardrailProcessor.VERSION),
             "vibetags.log should contain the VibeTags version");
         assertTrue(logContent.contains("github.com/PIsberg/vibetags"),
             "vibetags.log should contain the GitHub URL");
