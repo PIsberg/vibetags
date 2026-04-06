@@ -295,8 +295,6 @@ class AnnotationProcessorEndToEndTest {
     @Test
     void testVersionStampInLogFile() throws IOException {
         // Version is no longer embedded in generated AI files — it lives in vibetags.log only
-        System.out.println("VibeTags Test: Current working directory=" + System.getProperty("user.dir"));
-        System.out.println("VibeTags Test: Resolved EXAMPLE_DIR=" + EXAMPLE_DIR);
         String logContent = readFile("vibetags.log");
         assertTrue(logContent.contains(AIGuardrailProcessor.VERSION),
             "vibetags.log should contain the VibeTags version");
@@ -579,8 +577,21 @@ class AnnotationProcessorEndToEndTest {
 
     private String readFile(String filename) throws IOException {
         Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
+        
+        // Retry logic for CI environments (max 3 retries, 500ms delay)
+        int retries = 3;
+        while (retries > 0 && !Files.exists(p)) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for file: " + p, e);
+            }
+            retries--;
+        }
+
         if (!Files.exists(p)) {
-            throw new IOException("Missing log file at: " + p.toAbsolutePath());
+            throw new IOException("Missing log file at: " + p.toAbsolutePath() + " (after retries)");
         }
         return Files.readString(p, StandardCharsets.UTF_8);
     }

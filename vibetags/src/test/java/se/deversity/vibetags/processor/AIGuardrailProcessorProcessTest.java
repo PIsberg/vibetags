@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 /**
  * Tests for the process() method and remaining uncovered branches in AIGuardrailProcessor.
  */
+@SuppressWarnings("unchecked")
 class AIGuardrailProcessorProcessTest {
 
     // -----------------------------------------------------------------------
