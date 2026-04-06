@@ -170,9 +170,9 @@ class QwenEndToEndTest {
         String content = readFile("QWEN.md");
 
         // Locked files should have reasons
-        assertTrue(content.contains("PaymentProcessor") && content.contains("—"),
-            "PaymentProcessor should have a reason (em-dash separator)");
-        assertTrue(content.contains("SecurityConfig") && content.contains("—"),
+        assertTrue(content.contains("PaymentProcessor") && content.contains(" - "),
+            "PaymentProcessor should have a reason (hyphen separator)");
+        assertTrue(content.contains("SecurityConfig") && content.contains(" - "),
             "SecurityConfig should have a reason");
     }
 

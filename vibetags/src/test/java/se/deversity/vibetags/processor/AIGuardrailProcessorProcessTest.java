@@ -60,15 +60,24 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         processor.init(mockEnv(messager));
 
-        RoundEnvironment roundEnv = emptyRoundEnv();
+        // First call with processingOver=true triggers generateFiles()
+        RoundEnvironment roundEnv1 = mock(RoundEnvironment.class);
+        when(roundEnv1.processingOver()).thenReturn(true);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(roundEnv1).getElementsAnnotatedWith(AIPrivacy.class);
 
-        // First call should process and emit at least one NOTE
-        processor.process(Set.of(), roundEnv);
+        processor.process(Set.of(), roundEnv1);
         int notesAfterFirst = notes.size();
         assertTrue(notesAfterFirst > 0, "First call should produce at least one NOTE");
 
         // Second call must be a no-op — no additional messages
-        processor.process(Set.of(), roundEnv);
+        RoundEnvironment roundEnv2 = mock(RoundEnvironment.class);
+        when(roundEnv2.processingOver()).thenReturn(true);
+        processor.process(Set.of(), roundEnv2);
         assertEquals(notesAfterFirst, notes.size(),
             "Second call must not produce any additional messages (idempotency guard)");
     }
@@ -91,7 +100,16 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         processor.init(mockEnv(messager));
 
-        processor.process(Set.of(), emptyRoundEnv());
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        when(roundEnv.processingOver()).thenReturn(true);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+
+        processor.process(Set.of(), roundEnv);
 
         assertTrue(notes.stream().anyMatch(n -> n.contains("No AI config files found")),
             "Should emit a NOTE when no signal files are present");
@@ -528,6 +546,7 @@ class AIGuardrailProcessorProcessTest {
         processor.init(env);
         try {
             processor.process(Set.of(), emptyRoundEnv());
+            triggerGeneration(processor);
             String content = Files.readString(tempDir.resolve("llms.txt"), java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(content.contains("## Locked Files"),      "llms.txt should have Locked Files section");
             assertTrue(content.contains("## Contextual Rules"),  "llms.txt should have Contextual Rules section");
@@ -552,6 +571,7 @@ class AIGuardrailProcessorProcessTest {
         processor.init(env);
         try {
             processor.process(Set.of(), emptyRoundEnv());
+            triggerGeneration(processor);
             String content = Files.readString(tempDir.resolve("llms-full.txt"), java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(content.contains("## Locked Files (Do Not Edit)"), "llms-full.txt should have expanded Locked Files header");
             assertTrue(content.contains("## Contextual Rules"),            "llms-full.txt should have Contextual Rules section");
@@ -577,9 +597,23 @@ class AIGuardrailProcessorProcessTest {
         return roundEnv;
     }
 
+    /** Calls process() with processingOver=true to trigger file generation. */
+    private static void triggerGeneration(AIGuardrailProcessor processor) {
+        RoundEnvironment genEnv = mock(RoundEnvironment.class);
+        when(genEnv.processingOver()).thenReturn(true);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(java.util.Set.of()).when(genEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        processor.process(Set.of(), genEnv);
+    }
+
     private static ProcessingEnvironment mockEnv(Messager messager) {
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
+        when(env.getOptions()).thenReturn(Map.of());
         return env;
     }
 
