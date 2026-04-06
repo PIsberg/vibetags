@@ -571,8 +571,7 @@ class AnnotationProcessorEndToEndTest {
     }
 
     private boolean fileExists(String filename) {
-        Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
-        return Files.exists(p);
+        return findFileWithRetry(filename) != null;
     }
 
     private Path findFile(String filename) {
@@ -587,8 +586,7 @@ class AnnotationProcessorEndToEndTest {
         return null;
     }
 
-    private String readFile(String filename) throws IOException {
-        // Retry logic for CI environments (max 3 retries, 500ms delay)
+    private Path findFileWithRetry(String filename) {
         Path p = null;
         int retries = 3;
         while (retries >= 0) {
@@ -600,14 +598,18 @@ class AnnotationProcessorEndToEndTest {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new IOException("Interrupted while waiting for file: " + filename, e);
+                    return null;
                 }
             }
             retries--;
         }
+        return p;
+    }
 
+    private String readFile(String filename) throws IOException {
+        Path p = findFileWithRetry(filename);
         if (p == null) {
-            throw new IOException("Missing log file: " + filename + " (after retries in ../, ./, or " + EXAMPLE_DIR + ")");
+            throw new IOException("Missing file: " + filename + " (after retries in ../, ./, or " + EXAMPLE_DIR + ")");
         }
         return Files.readString(p, StandardCharsets.UTF_8);
     }
