@@ -131,6 +131,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.email", "GDPR personal email"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor(".cursorrules");
             assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
@@ -149,6 +150,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.ssn", "SSN - PII"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor("CLAUDE.md");
             assertTrue(content.contains("<pii_guardrails>"),
@@ -169,6 +171,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of("AGENTS.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Patient.dob", "HIPAA date of birth"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor("AGENTS.md");
             assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
@@ -185,6 +188,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of("gemini_instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Order.cardNumber", "PCI-DSS card data"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor("gemini_instructions.md");
             assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
@@ -199,6 +203,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.address", "Home address PII"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor("copilot-instructions.md");
             assertTrue(content.contains("PII / Privacy Guardrails"),
@@ -213,6 +218,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of("QWEN.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Employee.salary", "Salary - confidential"));
+            triggerGeneration(processor);
 
             String content = processor.contentFor("QWEN.md");
             assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
@@ -227,6 +233,7 @@ class AIPrivacyProcessorTest {
         withCwdSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), emptyRoundEnv());
+            triggerGeneration(processor);
 
             String content = processor.contentFor(".cursorrules");
             assertFalse(content.contains("PII / PRIVACY GUARDRAILS"),
@@ -251,6 +258,7 @@ class AIPrivacyProcessorTest {
 
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
 
             String content = processor.contentFor(".cursorrules");
             assertTrue(content.contains("com.example.User.email"), "Must list first element");
@@ -279,6 +287,7 @@ class AIPrivacyProcessorTest {
 
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
 
             String content = processor.contentFor(".cursorrules");
             assertTrue(content.contains("Contains PII"),
@@ -321,6 +330,7 @@ class AIPrivacyProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
+        when(env.getOptions()).thenReturn(java.util.Map.of());
         processor.init(env);
         return processor;
     }
@@ -391,6 +401,19 @@ class AIPrivacyProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
         return roundEnv;
+    }
+
+    /** Calls process() with processingOver=true to trigger file generation. */
+    private static void triggerGeneration(AIGuardrailProcessor processor) {
+        RoundEnvironment genEnv = mock(RoundEnvironment.class);
+        when(genEnv.processingOver()).thenReturn(true);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AIContext.class);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(genEnv).getElementsAnnotatedWith(AIDraft.class);
+        processor.process(Set.of(), genEnv);
     }
 
     private static Name nameOf(String value) {

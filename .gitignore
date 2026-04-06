@@ -13,3 +13,4 @@ example/target
 **/.gradle/
 docs/diagrams/plantuml.jar
 docs/diagrams/encode_plantuml.py
+load-tests/target/

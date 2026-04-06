@@ -14,7 +14,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Zero runtime dependency**: No VibeTags classes in production artifacts
 - **File-existence opt-in**: Only generates files that already exist on disk
 - **Write-if-changed**: Only updates files when content actually differs
-- **Multi-platform**: Generates configs for 6+ AI platforms simultaneously
+- **Multi-platform**: Generates configs for 7+ AI platforms simultaneously (including Windsurf via llms.txt)
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
 ## Table of Contents
@@ -106,7 +106,7 @@ validateAnnotations(processingEnv.getMessager(), roundEnv);
 Map<String, Path> serviceFiles = buildServiceFileMap(root);
 Set<String> activeServices = resolveActiveServices(messager, serviceFiles);
 ```
-- Maps 15+ service keys to file paths
+- Maps 17+ service keys to file paths
 - Checks file existence (file presence = opt-in)
 - Only active services get generated
 
@@ -370,6 +370,8 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
+| `llms.txt` | Markdown | Windsurf Cascade, all LLM agents | Concise map/directory (llms.txt standard) |
+| `llms-full.txt` | Markdown | Windsurf Cascade, large-context LLMs | Full expanded reference book (llms.txt standard) |
 
 ### Generated Output Files
 
@@ -507,6 +509,8 @@ vibetags/
 │   ├── .qwenignore                    # Generated: Qwen exclusion list
 │   ├── .cursorrules                   # Generated: Cursor rules
 │   ├── CLAUDE.md                      # Generated: Claude guardrails
+│   ├── llms.txt                       # Generated: llms.txt standard (concise map)
+│   ├── llms-full.txt                  # Generated: llms.txt standard (full reference)
 │   └── ...                            # Other AI config files
 │
 ├── docs/                              # Documentation
@@ -561,9 +565,10 @@ vibetags/
 static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
     Set<String> optInKeys = Set.of(
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
-        "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore"
+        "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
+        "llms", "llms_full"
     );
-    
+
     return allServiceFiles.entrySet().stream()
         .filter(e -> optInKeys.contains(e.getKey()))
         .filter(e -> Files.exists(e.getValue()))
@@ -657,15 +662,15 @@ boolean writeFileIfChanged(String filePath, String content) {
 | `AnnotationDefinitionsTest` | 25 | Verify annotation structure, retention policies, targets, defaults (includes @AIPrivacy) |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
 | `AIGuardrailProcessorUnitTest` | 20 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations |
-| `AIGuardrailProcessorProcessTest` | 25 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed |
+| `AIGuardrailProcessorProcessTest` | 31 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, llms.txt opt-in |
 | `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
 | `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `AnnotationProcessorEndToEndTest` | 28 | End-to-end: compile example, verify all generated files exist and contain expected content |
+| `AnnotationProcessorEndToEndTest` | 44 | End-to-end: compile example, verify all generated files exist and contain expected content, including llms.txt and llms-full.txt |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `AIGuardrailProcessorIntegrationTest` | 20 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
 
-**Total: 181 tests (161 active + 20 conditional)**
+**Total: 203 tests (183 active + 20 conditional)**
 
 ### Test Patterns
 
@@ -894,6 +899,53 @@ cd vibetags && gradle test
 **Files:** `.github/copilot-instructions.md` + `.copilotignore`
 
 **Behavior:** Copilot uses the instructions file to guide its completions and respects `.copilotignore` (standard glob format) to exclude specific files from being used as context.
+
+### Windsurf Cascade & LLM Agents (llms.txt Standard)
+
+**Files:** `llms.txt` + `llms-full.txt`
+
+**Standard:** [llms.txt](https://llmstxt.org/) — a Markdown-based format analogous to `robots.txt` but for content rather than crawling rules. Instead of parsing HTML, LLM agents read a clean Markdown file that tells them what the project contains and where to look.
+
+**Behavior:**
+- `llms.txt` is the **map**: agents read it first to understand the project's guardrail structure, then decide what to fetch. Concise bullet links (`[SimpleClassName](FQN): detail`) keep the context window lean.
+- `llms-full.txt` is the **book**: large-context models (Claude 4.6, Gemini 1.5 Pro, Windsurf Cascade) load the entire file in one shot to search across all rules at once.
+
+**Format hierarchy (both files):**
+
+```markdown
+# ProjectName                        ← H1, required (set via vibetags.project option)
+
+> Summary blockquote                 ← optional, brief description
+
+Informational paragraph.             ← optional, key details for the LLM
+
+## Locked Files                      ← H2 section
+- [ClassName](FQN): reason
+
+## Contextual Rules
+- [ClassName](FQN): Focus — ... Avoid — ...
+
+## Security Audit Requirements
+- [ClassName](FQN): check for vulnerability1, vulnerability2
+
+## Ignored Elements
+- [ClassName](FQN): excluded from AI context
+
+## Implementation Tasks
+- [ClassName](FQN): instructions
+
+## PII / Privacy Guardrails
+- [ClassName](FQN): reason
+```
+
+**`llms-full.txt` expands each entry into `###` sub-sections with bold labels:**
+
+```markdown
+### com.example.database.DatabaseConnector
+- **Required Checks**: SQL Injection, Thread Safety issues
+```
+
+**Project name option:** Pass `-Avibetags.project=MyProject` (Maven `<compilerArg>`, Gradle `annotationProcessorArgs`) to set the `# H1` title. Defaults to `"This Project"`.
 
 ---
 
