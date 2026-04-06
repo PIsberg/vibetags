@@ -585,7 +585,7 @@ class AnnotationProcessorEndToEndTest {
     private String readFile(String filename) throws IOException {
         Path p = Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize();
         if (!Files.exists(p)) {
-            return "";
+            throw new IOException("Missing log file at: " + p.toAbsolutePath());
         }
         return Files.readString(p, StandardCharsets.UTF_8);
     }
