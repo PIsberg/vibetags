@@ -1,9 +1,0 @@
-{
-  "name": "vibetags",
-  "private": true,
-  "version": "0.0.0",
-  "description": "AI Guardrails for Java Development - placeholder package.json",
-  "scripts": {
-    "echo": "echo 'This is a Java/Maven/Gradle project. No Node.js build steps required.'"
-  }
-}
