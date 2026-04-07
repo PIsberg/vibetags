@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * End-to-end tests specifically for Qwen-generated files.
  * These tests verify that Qwen-specific output files are correctly generated
  * when the example project is compiled.
+ *
+ * Run with: mvn test -Drun.integration.tests=true
  */
+@EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
 class QwenEndToEndTest {
 
     private static final String EXAMPLE_DIR;
