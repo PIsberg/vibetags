@@ -16,15 +16,43 @@ This document describes how to publish a new version of VibeTags to Maven Centra
 
 #### 2. Claim Your Namespace (groupId)
 
-After registering, you must claim the namespace under which you will publish artifacts:
+After registering, you must claim the namespace under which you will publish artifacts. The namespace is your `groupId` (e.g., `se.deversity`).
 
-1. Navigate to **Namespaces** → **Add Namespace** in the Central Portal.
-2. Choose a verification method:
-   - **DNS verification** — for custom domains (e.g., `com.yourcompany`). Add a TXT record to your DNS.
-   - **Code hosting verification** — for GitHub/GitLab repositories (e.g., `io.github.username`). Create a specific file in your repository to prove ownership.
-3. Once verified, the namespace is bound to your account and you can publish under it.
+**Supported groupId patterns:**
 
-> For VibeTags, the namespace is `se.deversity`.
+| Pattern type | Examples | Notes |
+|---|---|---|
+| **Domain-based (reversed)** | `com.example`, `org.springframework`, `com.my-domain`, `sub.example.com` | Must prove domain ownership |
+| **Code hosting-based** | `io.github.username`, `io.gitlab.username`, `io.bitbucket.username` | Personal usernames auto-granted; orgs need verification |
+
+**Registration steps:**
+
+1. Log in to [central.sonatype.com](https://central.sonatype.com).
+2. Click your username (top-right) → **View Namespaces** → **Add Namespace**.
+3. Enter your chosen namespace (e.g., `se.deversity`) and click **Submit**. Status will be `Unverified`.
+4. Choose a verification method:
+
+   **Option A: DNS verification** (for domain-based namespaces like `se.deversity` → `deversity.se`):
+   - Go to your DNS registrar/hosting provider (e.g., AWS Route 53, Cloudflare, GoDaddy).
+   - Add a **TXT record** to the **root domain** (e.g., `deversity.se`, *not* `se.deversity.com`).
+     - **Name/Host:** `@` (or bare domain)
+     - **Value:** Copy the **Verification Key** from the Portal (use the clipboard icon)
+   - Wait for DNS propagation (can take minutes to hours).
+   - Back in the Portal, click **Verify Namespace** → **Confirm**.
+   - Refresh the dashboard to check for `Verified` status.
+
+   > **Warning:** Do not click "Verify" until the TXT record has fully propagated. Premature verification causes `NXDOMAIN` caching that delays retries.
+
+   **Option B: Code hosting verification** (for `io.github.username` style):
+   - Create a new **public** repository on GitHub/GitLab/Gitee/Bitbucket.
+   - **Repository name** must exactly match the Portal-assigned **Verification Key**.
+   - Expected path: `github.com/<username>/<verification-key>`.
+   - In the Portal, click **Verify Namespace** → **Confirm**.
+   - The repository can be deleted after verification succeeds.
+
+5. Once verified, the namespace status changes to `Verified` and publishing is immediately enabled.
+
+> For VibeTags, the namespace is `se.deversity`. This requires DNS verification on the `deversity.se` domain.
 
 #### 3. Generate a Portal User Token
 
