@@ -44,7 +44,15 @@
                         <arg>-Avibetags.root=${project.basedir}</arg>
                         <arg>-Avibetags.log.path=${vibetags.log.path}</arg>
                     </compilerArgs>
-                    <!-- Annotation processing is enabled automatically via SPI -->
+                    <!-- Explicit processor path required for Java 23+ where implicit classpath
+                         discovery is disabled by default (see javac release 23 notes). -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>se.deversity.vibetags</groupId>
+                            <artifactId>vibetags-processor</artifactId>
+                            <version>${vibetags.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

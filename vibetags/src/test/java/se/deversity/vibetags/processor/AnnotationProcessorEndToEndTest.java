@@ -1,195 +1,168 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * End-to-end tests that verify the annotation processor works correctly
- * when the example project is compiled.
- *
- * These tests assume the example project has been compiled with `mvn clean compile`.
- * Run with: mvn test -Drun.integration.tests=true
+ * End-to-end tests that verify the annotation processor generates correct output files.
+ * Self-contained: compiles annotated test sources into a {@code @TempDir} via
+ * {@link ProcessorTestHarness} — no dependency on the example project.
  */
-@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = "run.integration.tests", matches = "true")
 class AnnotationProcessorEndToEndTest {
 
-    private static final String EXAMPLE_DIR;
-    
-    static {
-        File standard = new File("../example");
-        File rootRelative = new File("example");
-        
-        if (standard.exists() && standard.isDirectory()) {
-            EXAMPLE_DIR = "../example";
-        } else if (rootRelative.exists() && rootRelative.isDirectory()) {
-            EXAMPLE_DIR = "example";
-        } else {
-            EXAMPLE_DIR = "example"; 
-        }
+    @TempDir
+    static Path tempDir;
+
+    private static ProcessorTestHarness harness;
+
+    @BeforeAll
+    static void setUp() throws IOException {
+        harness = ProcessorTestHarness.withExampleSources(tempDir);
+    }
+
+    @AfterAll
+    static void tearDown() {
+        VibeTagsLogger.shutdown();
     }
 
     @Test
     void testAllGeneratedFilesExist() {
-        // These files should exist after compilation
-        assertTrue(fileExists(".cursorrules"), ".cursorrules should exist");
-        assertTrue(fileExists("CLAUDE.md"), "CLAUDE.md should exist");
-        assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
-        assertTrue(fileExists("AGENTS.md"), "AGENTS.md should exist");
-        assertTrue(fileExists(".codex/config.toml"), ".codex/config.toml should exist");
-        assertTrue(fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
-        assertTrue(fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
-        assertTrue(fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
-        assertTrue(fileExists("QWEN.md"), "QWEN.md should exist");
-        assertTrue(fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
-        assertTrue(fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
-        // .cursorignore, .copilotignore, .claudeignore, .qwenignore are opt-in, so they might not exist unless created
-        // But .aiexclude is now always generated (if gemini/codex active in test context)
-        assertTrue(fileExists(".aiexclude"), ".aiexclude should exist");
-        assertTrue(fileExists("llms.txt"), "llms.txt should exist");
-        assertTrue(fileExists("llms-full.txt"), "llms-full.txt should exist");
+        assertTrue(harness.fileExists(".cursorrules"), ".cursorrules should exist");
+        assertTrue(harness.fileExists("CLAUDE.md"), "CLAUDE.md should exist");
+        assertTrue(harness.fileExists(".aiexclude"), ".aiexclude should exist");
+        assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
+        assertTrue(harness.fileExists(".codex/config.toml"), ".codex/config.toml should exist");
+        assertTrue(harness.fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
+        assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
+        assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
+        assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
+        assertTrue(harness.fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
+        assertTrue(harness.fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
+        assertTrue(harness.fileExists(".aiexclude"), ".aiexclude should exist");
+        assertTrue(harness.fileExists("llms.txt"), "llms.txt should exist");
+        assertTrue(harness.fileExists("llms-full.txt"), "llms-full.txt should exist");
     }
 
     @Test
     void testCursorRulesHasCorrectStructure() throws IOException {
-        String content = readFile(".cursorrules");
-        
-        // Should have header
+        String content = harness.readFile(".cursorrules");
+
         assertTrue(content.contains("AUTO-GENERATED AI RULES"));
         assertTrue(content.contains("Generated by VibeTags |"));
         assertTrue(content.contains("Do not edit manually"));
-        
-        // Should have locked files section
         assertTrue(content.contains("LOCKED FILES"));
-        
-        // Should have contextual rules section
         assertTrue(content.contains("CONTEXTUAL RULES"));
     }
 
     @Test
     void testCursorRulesHasMandatorySecurityAudits() throws IOException {
-        String content = readFile(".cursorrules");
-        
-        // Should have security audit section from @AIAudit
-        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), 
+        String content = harness.readFile(".cursorrules");
+
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"),
             "Should contain mandatory security audits section");
-        assertTrue(content.contains("DatabaseConnector"), 
+        assertTrue(content.contains("DatabaseConnector"),
             "Should mention DatabaseConnector class");
-        assertTrue(content.contains("SQL Injection"), 
+        assertTrue(content.contains("SQL Injection"),
             "Should mention SQL Injection vulnerability");
-        assertTrue(content.contains("Thread Safety"), 
+        assertTrue(content.contains("Thread Safety"),
             "Should mention Thread Safety vulnerability");
     }
 
     @Test
     void testClaudeMdHasCorrectXmlStructure() throws IOException {
-        String content = readFile("CLAUDE.md");
-        
-        // Should have root element
+        String content = harness.readFile("CLAUDE.md");
+
         assertTrue(content.contains("<project_guardrails>"));
         assertTrue(content.contains("</project_guardrails>"));
-        
-        // Should have locked files section
         assertTrue(content.contains("<locked_files>"));
         assertTrue(content.contains("</locked_files>"));
-        
-        // Should have contextual instructions
         assertTrue(content.contains("<contextual_instructions>"));
         assertTrue(content.contains("</contextual_instructions>"));
     }
 
     @Test
     void testClaudeMdHasAuditRequirements() throws IOException {
-        String content = readFile("CLAUDE.md");
-        
-        // Should have audit requirements from @AIAudit
-        assertTrue(content.contains("<audit_requirements>"), 
+        String content = harness.readFile("CLAUDE.md");
+
+        assertTrue(content.contains("<audit_requirements>"),
             "Should contain audit requirements section");
-        assertTrue(content.contains("DatabaseConnector"), 
+        assertTrue(content.contains("DatabaseConnector"),
             "Should mention DatabaseConnector");
-        assertTrue(content.contains("<vulnerability_check>SQL Injection</vulnerability_check>"), 
+        assertTrue(content.contains("<vulnerability_check>SQL Injection</vulnerability_check>"),
             "Should have SQL Injection check");
-        assertTrue(content.contains("<vulnerability_check>Thread Safety issues</vulnerability_check>"), 
+        assertTrue(content.contains("<vulnerability_check>Thread Safety issues</vulnerability_check>"),
             "Should have Thread Safety check");
-        assertTrue(content.contains("<rule>"), 
+        assertTrue(content.contains("<rule>"),
             "Should have rule element");
     }
 
     @Test
     void testAiExcludeHasCorrectFormat() throws IOException {
-        String content = readFile(".aiexclude");
-        
-        // Should have header
+        String content = harness.readFile(".aiexclude");
+
         assertTrue(content.contains("AUTO-GENERATED BY VIBETAGS"));
-        
-        // Should have glob patterns
         assertTrue(content.contains("**/"));
         assertTrue(content.contains(".java"));
     }
 
     @Test
     void testCodexAgentsHasSecurityAudits() throws IOException {
-        String content = readFile("AGENTS.md");
-        
-        // Should have security audit section from @AIAudit
-        assertTrue(content.contains("MANDATORY SECURITY AUDITS"), 
+        String content = harness.readFile("AGENTS.md");
+
+        assertTrue(content.contains("MANDATORY SECURITY AUDITS"),
             "Should contain mandatory security audits section");
-        assertTrue(content.contains("DatabaseConnector"), 
+        assertTrue(content.contains("DatabaseConnector"),
             "Should mention DatabaseConnector class");
-        assertTrue(content.contains("SQL Injection"), 
+        assertTrue(content.contains("SQL Injection"),
             "Should mention SQL Injection vulnerability");
-        assertTrue(content.contains("Thread Safety"), 
+        assertTrue(content.contains("Thread Safety"),
             "Should mention Thread Safety vulnerability");
     }
 
     @Test
     void testGeminiInstructionsHasContinuousAudit() throws IOException {
-        String content = readFile("gemini_instructions.md");
-        
-        // Should have continuous audit requirements
-        assertTrue(content.contains("CONTINUOUS AUDIT REQUIREMENTS"), 
+        String content = harness.readFile("gemini_instructions.md");
+
+        assertTrue(content.contains("CONTINUOUS AUDIT REQUIREMENTS"),
             "Should contain continuous audit requirements header");
-        assertTrue(content.contains("Senior Staff Engineer"), 
+        assertTrue(content.contains("Senior Staff Engineer"),
             "Should have Senior Staff Engineer persona");
-        assertTrue(content.contains("DatabaseConnector"), 
+        assertTrue(content.contains("DatabaseConnector"),
             "Should mention DatabaseConnector");
-        assertTrue(content.contains("SQL Injection"), 
+        assertTrue(content.contains("SQL Injection"),
             "Should mention SQL Injection");
-        assertTrue(content.contains("Thread Safety"), 
+        assertTrue(content.contains("Thread Safety"),
             "Should mention Thread Safety");
     }
 
     @Test
     void testLockedFilesAppearInAllOutputs() throws IOException {
-        // PaymentProcessor should be in all files
-        String cursorRules = readFile(".cursorrules");
-        String claudeMd = readFile("CLAUDE.md");
-        String codexAgents = readFile("AGENTS.md");
+        String cursorRules = harness.readFile(".cursorrules");
+        String claudeMd = harness.readFile("CLAUDE.md");
+        String codexAgents = harness.readFile("AGENTS.md");
 
-        assertTrue(cursorRules.contains("PaymentProcessor"), 
+        assertTrue(cursorRules.contains("PaymentProcessor"),
             "Cursor rules should mention PaymentProcessor");
-        assertTrue(claudeMd.contains("PaymentProcessor"), 
+        assertTrue(claudeMd.contains("PaymentProcessor"),
             "Claude.md should mention PaymentProcessor");
-        assertTrue(codexAgents.contains("PaymentProcessor"), 
+        assertTrue(codexAgents.contains("PaymentProcessor"),
             "Codex AGENTS.md should mention PaymentProcessor");
     }
 
     @Test
     void testContextFilesHaveFocusAndAvoids() throws IOException {
-        String cursorRules = readFile(".cursorrules");
-        String claudeMd = readFile("CLAUDE.md");
-        String codexAgents = readFile("AGENTS.md");
+        String cursorRules = harness.readFile(".cursorrules");
+        String claudeMd = harness.readFile("CLAUDE.md");
 
-        // StringParser should have context rules
         assertTrue(cursorRules.contains("StringParser"));
         assertTrue(cursorRules.contains("memory usage"));
-        
         assertTrue(claudeMd.contains("StringParser"));
         assertTrue(claudeMd.contains("<focus>"));
         assertTrue(claudeMd.contains("<avoids>"));
@@ -197,30 +170,28 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testSecurityConfigHasBothLockedAndContext() throws IOException {
-        String cursorRules = readFile(".cursorrules");
-        String claudeMd = readFile("CLAUDE.md");
+        String cursorRules = harness.readFile(".cursorrules");
+        String claudeMd = harness.readFile("CLAUDE.md");
 
-        // SecurityConfig should appear in both sections
         assertTrue(cursorRules.contains("SecurityConfig"));
         assertTrue(claudeMd.contains("SecurityConfig"));
     }
 
     @Test
     void testFileContentIsNotEmpty() throws IOException {
-        // All generated files should have content
-        assertFalse(readFile(".cursorrules").isEmpty());
-        assertFalse(readFile("CLAUDE.md").isEmpty());
-        assertFalse(readFile(".aiexclude").isEmpty());
-        assertFalse(readFile("AGENTS.md").isEmpty());
-        assertFalse(readFile(".codex/config.toml").isEmpty());
-        assertFalse(readFile(".codex/rules/vibetags.rules").isEmpty());
-        assertFalse(readFile("gemini_instructions.md").isEmpty());
-        assertFalse(readFile(".github/copilot-instructions.md").isEmpty());
+        assertFalse(harness.readFile(".cursorrules").isEmpty());
+        assertFalse(harness.readFile("CLAUDE.md").isEmpty());
+        assertFalse(harness.readFile(".aiexclude").isEmpty());
+        assertFalse(harness.readFile("AGENTS.md").isEmpty());
+        assertFalse(harness.readFile(".codex/config.toml").isEmpty());
+        assertFalse(harness.readFile(".codex/rules/vibetags.rules").isEmpty());
+        assertFalse(harness.readFile("gemini_instructions.md").isEmpty());
+        assertFalse(harness.readFile(".github/copilot-instructions.md").isEmpty());
     }
 
     @Test
     void testCopilotInstructionsHasCorrectStructure() throws IOException {
-        String content = readFile(".github/copilot-instructions.md");
+        String content = harness.readFile(".github/copilot-instructions.md");
 
         assertTrue(content.contains("GitHub Copilot Instructions"),
             "Should have Copilot header");
@@ -234,7 +205,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCopilotInstructionsHasLockedFiles() throws IOException {
-        String content = readFile(".github/copilot-instructions.md");
+        String content = harness.readFile(".github/copilot-instructions.md");
 
         assertTrue(content.contains("PaymentProcessor"),
             "Should mention PaymentProcessor");
@@ -242,7 +213,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCopilotInstructionsHasContextualGuidelines() throws IOException {
-        String content = readFile(".github/copilot-instructions.md");
+        String content = harness.readFile(".github/copilot-instructions.md");
 
         assertTrue(content.contains("memory usage"),
             "Should mention focus from @AIContext");
@@ -252,7 +223,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCopilotInstructionsHasSecurityAuditRequirements() throws IOException {
-        String content = readFile(".github/copilot-instructions.md");
+        String content = harness.readFile(".github/copilot-instructions.md");
 
         assertTrue(content.contains("Security Audit Requirements"),
             "Should have security audit section");
@@ -266,7 +237,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCopilotInstructionsHasIgnoredElements() throws IOException {
-        String content = readFile(".github/copilot-instructions.md");
+        String content = harness.readFile(".github/copilot-instructions.md");
 
         assertTrue(content.contains("Ignored Elements"),
             "Should have ignored elements section");
@@ -276,28 +247,27 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCodexConfigHasCorrectSettings() throws IOException {
-        String content = readFile(".codex/config.toml");
+        String content = harness.readFile(".codex/config.toml");
         assertTrue(content.contains("model = \"o3-mini\""));
         assertTrue(content.contains("approval_policy = \"on-request\""));
     }
 
     @Test
     void testAIDraftImplementationTasksExist() throws IOException {
-        String cursorRules = readFile(".cursorrules");
-        String claudeMd = readFile("CLAUDE.md");
-        
+        String cursorRules = harness.readFile(".cursorrules");
+        String claudeMd = harness.readFile("CLAUDE.md");
+
         assertTrue(cursorRules.contains("IMPLEMENTATION TASKS"), "Should have implementation tasks section");
         assertTrue(cursorRules.contains("NotificationService"), "Should mention NotificationService (Draft)");
         assertTrue(cursorRules.contains("Implement email sending"), "Should have instructions");
-        
+
         assertTrue(claudeMd.contains("<implementation_tasks>"), "Should have implementation tasks XML");
         assertTrue(claudeMd.contains("NotificationService"), "Should mention NotificationService");
     }
 
     @Test
     void testVersionStampInLogFile() throws IOException {
-        // Version is no longer embedded in generated AI files — it lives in vibetags.log only
-        String logContent = readFile("vibetags.log");
+        String logContent = harness.readFile("vibetags.log");
         assertTrue(logContent.contains(AIGuardrailProcessor.VERSION),
             "vibetags.log should contain the VibeTags version");
         assertTrue(logContent.contains("github.com/PIsberg/vibetags"),
@@ -306,26 +276,25 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAttributionHeaderInAllFiles() throws IOException {
-        // Every generated file still carries the VibeTags attribution (without version)
         String attribution = "Generated by VibeTags |";
-        assertTrue(readFile(".cursorrules").contains(attribution));
-        assertTrue(readFile("CLAUDE.md").contains(attribution));
-        assertTrue(readFile(".aiexclude").contains(attribution));
-        assertTrue(readFile("AGENTS.md").contains(attribution));
-        assertTrue(readFile("gemini_instructions.md").contains(attribution));
-        assertTrue(readFile(".github/copilot-instructions.md").contains(attribution));
+        assertTrue(harness.readFile(".cursorrules").contains(attribution));
+        assertTrue(harness.readFile("CLAUDE.md").contains(attribution));
+        assertTrue(harness.readFile(".aiexclude").contains(attribution));
+        assertTrue(harness.readFile("AGENTS.md").contains(attribution));
+        assertTrue(harness.readFile("gemini_instructions.md").contains(attribution));
+        assertTrue(harness.readFile(".github/copilot-instructions.md").contains(attribution));
     }
 
     @Test
     void testCodexRulesHasStarlarkContent() throws IOException {
-        String content = readFile(".codex/rules/vibetags.rules");
+        String content = harness.readFile(".codex/rules/vibetags.rules");
         assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
         assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
     }
 
     @Test
     void testCursorRulesHasIgnoredElementsSection() throws IOException {
-        String content = readFile(".cursorrules");
+        String content = harness.readFile(".cursorrules");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain ignored elements section");
         assertTrue(content.contains("GeneratedMetadata"),
@@ -334,7 +303,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testClaudeMdHasIgnoredElements() throws IOException {
-        String content = readFile("CLAUDE.md");
+        String content = harness.readFile("CLAUDE.md");
         assertTrue(content.contains("<ignored_elements>"),
             "Should contain ignored_elements XML tag");
         assertTrue(content.contains("GeneratedMetadata"),
@@ -345,14 +314,14 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAiExcludeContainsIgnoredFile() throws IOException {
-        String content = readFile(".aiexclude");
+        String content = harness.readFile(".aiexclude");
         assertTrue(content.contains("GeneratedMetadata"),
             "Should exclude GeneratedMetadata");
     }
 
     @Test
     void testCodexAgentsHasIgnoredFiles() throws IOException {
-        String content = readFile("AGENTS.md");
+        String content = harness.readFile("AGENTS.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain Ignored Elements section");
         assertTrue(content.contains("GeneratedMetadata"),
@@ -361,16 +330,16 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testGeminiInstructionsHasIgnoredElements() throws IOException {
-        String content = readFile("gemini_instructions.md");
-        assertTrue(content.contains("IGNORED ELEMENTS"), 
+        String content = harness.readFile("gemini_instructions.md");
+        assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain IGNORED ELEMENTS section");
-        assertTrue(content.contains("GeneratedMetadata"), 
+        assertTrue(content.contains("GeneratedMetadata"),
             "Should mention GeneratedMetadata");
     }
 
     @Test
     void testQwenMdHasCorrectStructure() throws IOException {
-        String content = readFile("QWEN.md");
+        String content = harness.readFile("QWEN.md");
         assertTrue(content.contains("PROJECT CONTEXT"), "Should have Qwen header");
         assertTrue(content.contains("LOCKED FILES"), "Should have locked files section");
         assertTrue(content.contains("CONTEXTUAL RULES"), "Should have contextual rules section");
@@ -380,7 +349,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testQwenSettingsHasCorrectFormat() throws IOException {
-        String content = readFile(".qwen/settings.json");
+        String content = harness.readFile(".qwen/settings.json");
         assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should specify Qwen model");
         assertTrue(content.contains("\"mcp\": {"), "Should have MCP settings");
     }
@@ -391,7 +360,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasCorrectStructure() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("## Locked Files"),
             "llms.txt should have a Locked Files section");
@@ -409,7 +378,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasSummaryBlockquote() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("> AI guardrail rules generated from source annotations by VibeTags."),
             "llms.txt should contain a summary blockquote");
@@ -417,7 +386,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasLockedFilesAsLinks() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("[PaymentProcessor]"),
             "llms.txt should list PaymentProcessor as a link");
@@ -427,7 +396,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasAuditEntries() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("[DatabaseConnector]"),
             "llms.txt should reference DatabaseConnector in audit section");
@@ -439,7 +408,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasIgnoredElements() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("[GeneratedMetadata]"),
             "llms.txt should reference GeneratedMetadata in ignored elements");
@@ -449,7 +418,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasPrivacyEntries() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("## PII / Privacy Guardrails"),
             "llms.txt should have a PII section");
@@ -457,7 +426,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtHasImplementationTaskLinks() throws IOException {
-        String content = readFile("llms.txt");
+        String content = harness.readFile("llms.txt");
 
         assertTrue(content.contains("[NotificationService]") || content.contains("NotificationService"),
             "llms.txt should reference NotificationService draft tasks");
@@ -469,7 +438,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasCorrectStructure() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("## Locked Files (Do Not Edit)"),
             "llms-full.txt should have expanded Locked Files header");
@@ -487,7 +456,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasSummaryBlockquote() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("> Complete AI guardrail configuration generated from source annotations by VibeTags"),
             "llms-full.txt should contain a summary blockquote mentioning VibeTags");
@@ -497,15 +466,14 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasNoVersionStamp() throws IOException {
-        // Version belongs in the log file, not in generated AI files
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
         assertFalse(content.contains("v1.0.0-SNAPSHOT"),
             "llms-full.txt should NOT embed the version — check vibetags.log instead");
     }
 
     @Test
     void testLlmsFullTxtHasLockedFilesWithReasons() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("PaymentProcessor"),
             "llms-full.txt should mention PaymentProcessor");
@@ -517,7 +485,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasAuditRequirements() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("DatabaseConnector"),
             "llms-full.txt should mention DatabaseConnector");
@@ -531,7 +499,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasIgnoredElementsWithDetail() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("GeneratedMetadata"),
             "llms-full.txt should mention GeneratedMetadata in ignored elements");
@@ -541,7 +509,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasContextualRulesWithFocusAndAvoid() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("**Focus**"),
             "llms-full.txt should use bold Focus labels");
@@ -553,7 +521,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsFullTxtHasDraftInstructions() throws IOException {
-        String content = readFile("llms-full.txt");
+        String content = harness.readFile("llms-full.txt");
 
         assertTrue(content.contains("**Instructions**"),
             "llms-full.txt should use bold Instructions labels");
@@ -563,58 +531,12 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testLlmsTxtAppearInAllLockedOutputs() throws IOException {
-        String llmsTxt = readFile("llms.txt");
-        String llmsFullTxt = readFile("llms-full.txt");
+        String llmsTxt = harness.readFile("llms.txt");
+        String llmsFullTxt = harness.readFile("llms-full.txt");
 
         assertTrue(llmsTxt.contains("PaymentProcessor"),
             "llms.txt should mention PaymentProcessor");
         assertTrue(llmsFullTxt.contains("PaymentProcessor"),
             "llms-full.txt should mention PaymentProcessor");
-    }
-
-    private boolean fileExists(String filename) {
-        return findFileWithRetry(filename) != null;
-    }
-
-    private Path findFile(String filename) {
-        Path[] candidates = {
-            Path.of(EXAMPLE_DIR, filename).toAbsolutePath().normalize(),
-            Path.of("..", filename).toAbsolutePath().normalize(),
-            Path.of(filename).toAbsolutePath().normalize()
-        };
-        for (Path p : candidates) {
-            if (Files.exists(p)) {
-                return p;
-            }
-        }
-        return null;
-    }
-
-    private Path findFileWithRetry(String filename) {
-        Path p = null;
-        int retries = 3;
-        while (retries >= 0) {
-            p = findFile(filename);
-            if (p != null) break;
-
-            if (retries > 0) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return null;
-                }
-            }
-            retries--;
-        }
-        return p;
-    }
-
-    private String readFile(String filename) throws IOException {
-        Path p = findFileWithRetry(filename);
-        if (p == null) {
-            throw new IOException("Missing file: " + filename + " (after retries in ../, ./, or " + EXAMPLE_DIR + ")");
-        }
-        return Files.readString(p, StandardCharsets.UTF_8);
     }
 }
