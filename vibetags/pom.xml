@@ -204,18 +204,6 @@
                 </plugins>
             </build>
         </profile>
-
-        <!-- GitHub Packages publishing profile (overrides distributionManagement for -P github) -->
-        <profile>
-            <id>github</id>
-            <distributionManagement>
-                <repository>
-                    <id>github</id>
-                    <name>GitHub PIsberg Apache Maven Packages</name>
-                    <url>https://maven.pkg.github.com/PIsberg/vibetags</url>
-                </repository>
-            </distributionManagement>
-        </profile>
     </profiles>
 
 </project>
