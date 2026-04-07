@@ -2,6 +2,7 @@
 # VibeTags - AI Guardrails for Java Development
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
 [![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Java 17 | 21 | 25 | 26](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
@@ -68,6 +69,26 @@ vibetags/
 
 - **Java 11 or higher**
 - **Maven 3.6+** or **Gradle 7.0+**
+
+### Installation
+
+Add VibeTags as a compile-time dependency. The annotation processor is automatically discovered via SPI.
+
+**Maven:**
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-processor</artifactId>
+    <version>0.5.0</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+**Gradle:**
+```groovy
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.0'
+```
 
 ### Option 1: Using Maven
 
