@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.5.0</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Processor</name>
@@ -112,7 +112,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Required for Maven Central publishing -->
+            <!-- Required for Maven Central publishing: sources JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -126,6 +126,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Required for Maven Central publishing: javadoc JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -139,16 +140,74 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Sonatype Central Publishing Plugin (publishes to Maven Central) -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish>
+                    <waitUntil>published</waitUntil>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <distributionManagement>
-        <!-- GitHub Packages -->
+        <!-- Sonatype Central Portal (Maven Central) -->
+        <snapshotRepository>
+            <id>central</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </snapshotRepository>
         <repository>
-            <id>github</id>
-            <name>GitHub PIsberg Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/PIsberg/vibetags</url>
+            <id>central</id>
+            <url>https://central.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
+
+    <profiles>
+        <!-- GPG signing: only active during publishing (CI or explicit local deploy) -->
+        <profile>
+            <id>sign-artifacts</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.8</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- GitHub Packages publishing profile (overrides distributionManagement for -P github) -->
+        <profile>
+            <id>github</id>
+            <distributionManagement>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub PIsberg Apache Maven Packages</name>
+                    <url>https://maven.pkg.github.com/PIsberg/vibetags</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
 
 </project>

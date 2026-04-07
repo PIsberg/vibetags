@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'se.deversity.vibetags'
-version = '1.0.0-SNAPSHOT'
+version = '0.5.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -19,7 +19,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-processor'
-            version = '1.0.0-SNAPSHOT'
+            version = '0.5.0'
             from components.java
 
             pom {
@@ -56,6 +56,17 @@ publishing {
             credentials {
                 username = System.getenv('GITHUB_ACTOR')
                 password = System.getenv('GITHUB_TOKEN')
+            }
+        }
+        // Sonatype OSSRH (Maven Central)
+        maven {
+            name = 'OSSRH'
+            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = System.getenv('OSSRH_USERNAME')
+                password = System.getenv('OSSRH_PASSWORD')
             }
         }
     }
