@@ -59,21 +59,19 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-          server-id: ossrh
-          server-username: OSSRH_USERNAME
-          server-password: OSSRH_PASSWORD
+          server-id: central
+          server-username: CENTRAL_TOKEN_USERNAME
+          server-password: CENTRAL_TOKEN_PASSWORD
 
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          # List imported keys for verification
           gpg --list-keys --keyid-format LONG
         env:
           GPG_TTY: /dev/tty
 
-      - name: Build and deploy to Maven Central
-        run: cd vibetags && mvn clean deploy -P release -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+      - name: Build, sign, and deploy to Maven Central
+        run: cd vibetags && mvn clean deploy -P sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-          MAVEN_OPTS: "-Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }}"
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
