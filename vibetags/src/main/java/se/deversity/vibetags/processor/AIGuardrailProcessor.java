@@ -685,10 +685,34 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
     }
 
+    /**
+     * Walks up the element hierarchy to find the nearest TypeElement (class/interface)
+     * or PackageElement. This ensures granular rules are consolidated at the file or package level.
+     */
+    private Element getOwningElement(Element e) {
+        Element current = e;
+        while (current != null) {
+            if (current instanceof TypeElement || current.getKind().equals(javax.lang.model.element.ElementKind.PACKAGE)) {
+                return current;
+            }
+            current = current.getEnclosingElement();
+        }
+        return e;
+    }
+
     private void appendToGranular(Element element, String title, String content) {
-        StringBuilder sb = elementRules.computeIfAbsent(element, k -> new StringBuilder());
+        Element owner = getOwningElement(element);
+        StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
         if (sb.length() > 0) sb.append("\n");
-        sb.append("## ").append(title).append("\n").append(content).append("\n");
+        
+        // Add a sub-header if the annotation is on a member (method/field) of the owning class
+        if (!owner.equals(element)) {
+            sb.append("### Rules for ").append(element.getKind().toString().toLowerCase())
+              .append(" ").append(element.getSimpleName()).append("\n");
+        } else {
+            sb.append("## ").append(title).append("\n");
+        }
+        sb.append(content).append("\n");
     }
 
     /**
