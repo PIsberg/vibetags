@@ -575,6 +575,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String fileMsg = "VibeTags: " + status + " - " + relPath;
             getSafeMessager().printMessage(Diagnostic.Kind.NOTE, fileMsg);
             System.out.println(fileMsg);
+            if (service.equals("aider_conventions")) {
+                System.out.println("VibeTags: [SUMMARY] CONVENTIONS.md content length: " + content.length());
+            }
             if (log != null) {
                 if (changed) log.info("{} — updated", relPath);
                 else         log.info("{} — no changes", relPath);
@@ -783,11 +786,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             "cursor_granular", "roo_granular", "trae_granular"
         );
 
-        Set<String> active = allServiceFiles.entrySet().stream()
-            .filter(e -> optInKeys.contains(e.getKey()))
-            .filter(e -> Files.exists(e.getValue()))
-            .map(Map.Entry::getKey)
-            .collect(java.util.stream.Collectors.toSet());
+        Set<String> active = new java.util.HashSet<>();
+        
+        System.out.println("VibeTags: Scanning for activation files in: " + allServiceFiles.values().iterator().next().getParent());
+        
+        allServiceFiles.forEach((key, path) -> {
+            if (!optInKeys.contains(key)) return;
+            
+            boolean exists = Files.exists(path);
+            if (exists) {
+                active.add(key);
+                System.out.println("VibeTags: [ACTIVE] " + key + " -> " + path.getFileName());
+            } else {
+                // Special case: quiet unless it's a primary file
+                if (key.contains("aider") || key.equals("cursor") || key.equals("qwen")) {
+                   System.out.println("VibeTags: [INACTIVE] " + key + " (file " + path.getFileName() + " not found)");
+                }
+            }
+        });
 
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(
