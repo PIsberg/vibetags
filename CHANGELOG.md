@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-04-15
+
+### Added
+- **Granular AI Rules**: Support for Cursor (`.cursor/rules/*.mdc`), Roo Code (`.roo/rules/*.md`), and Trae (`.trae/rules/*.md`).
+- **Aider Integration**: Support for project-wide `CONVENTIONS.md` and `.aiderignore` exclusion patterns.
+- **Automatic Scoping**: Granular rules now include auto-generated `globs` (e.g., `**/MyClass.java`) to ensure AI tools only apply rules where relevant.
+- **Orphaned File Cleanup**: Processor now automatically deletes generated VibeTags files in granular directories if the source annotations are removed.
+- **YAML Front-Matter Safety**: VibeTags markers now correctly place themselves *after* YAML metadata in `.mdc` and `.md` rule files to preserve IDE compatibility.
+
+### Fixed
+- **Windows File System Compatibility**: Sanitized rule filenames by replacing invalid characters (`<`, `>`) with hyphens to prevent `InvalidPathException`.
+- **JDK 25 / Gradle Stability**: Fixed `NullPointerException` and assertion failures in unit tests triggered by specific JDK/build environments.
+- **Unicode Preservation**: Ensured UTF-8 encoding is strictly followed for all generated AI configuration files.
+- **Marker Duplicate Prevention**: Resolved logic errors that could cause VibeTags marker sections to be duplicated on repeated compiles.
+
+### Changed
+- Refactored `AIGuardrailProcessor` into a cleaner, round-aware stateful architecture.
+- Optimized file build map resolution for faster compile-time performance.
+
 ## [0.5.0] - 2026-04-07
 
 ### Added
@@ -29,5 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/PIsberg/vibetags/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/PIsberg/vibetags/releases/tag/v0.5.0
