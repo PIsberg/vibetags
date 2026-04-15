@@ -112,6 +112,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Messager messager = getSafeMessager();
         String rootMsg = "VibeTags: [DEBUG] Root resolved: " + this.root;
         String dirMsg  = "VibeTags: [DEBUG] user.dir:      " + System.getProperty("user.dir");
+        messager.printMessage(Diagnostic.Kind.NOTE, rootMsg);
+        messager.printMessage(Diagnostic.Kind.NOTE, dirMsg);
         messager.printMessage(Diagnostic.Kind.ERROR, rootMsg);
         messager.printMessage(Diagnostic.Kind.ERROR, dirMsg);
         System.err.println(rootMsg);
@@ -564,6 +566,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         Messager messager = getSafeMessager();
         String genMsg = "VibeTags: [DEBUG] Generating (v" + VERSION + ") for: " + String.join(", ", contentByService.keySet());
+        messager.printMessage(Diagnostic.Kind.NOTE, genMsg);
         messager.printMessage(Diagnostic.Kind.ERROR, genMsg);
         System.err.println(genMsg);
         
@@ -579,6 +582,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
             String fileMsg = "VibeTags: [DEBUG] " + status + " - " + relPath;
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE, fileMsg);
             getSafeMessager().printMessage(Diagnostic.Kind.ERROR, fileMsg);
             System.err.println(fileMsg);
             if (log != null) {
@@ -809,6 +813,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             allServiceFiles.entrySet().stream()
                 .filter(e -> optInKeys.contains(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
+            messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
             messager.printMessage(javax.tools.Diagnostic.Kind.ERROR, msg.toString());
             System.err.println(msg.toString());
         }
