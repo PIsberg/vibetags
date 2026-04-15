@@ -44,7 +44,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     public AIGuardrailProcessor() {}
 
     
-    static final String VERSION = "0.5.1";
+    static final String VERSION = "0.5.2-DEBUG";
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
 
     /** Header written into every generated file — no version so bumping the dep never creates spurious diffs. */
@@ -110,12 +110,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 : Paths.get("").toAbsolutePath().toString()).toAbsolutePath().normalize();
         
         Messager messager = getSafeMessager();
-        String rootMsg = "VibeTags: Root path resolved to: " + this.root;
-        String dirMsg = "VibeTags: user.dir is: " + System.getProperty("user.dir");
-        messager.printMessage(Diagnostic.Kind.NOTE, rootMsg);
-        messager.printMessage(Diagnostic.Kind.NOTE, dirMsg);
-        System.out.println(rootMsg);
-        System.out.println(dirMsg);
+        String rootMsg = "VibeTags: [DEBUG] Root resolved: " + this.root;
+        String dirMsg  = "VibeTags: [DEBUG] user.dir:      " + System.getProperty("user.dir");
+        messager.printMessage(Diagnostic.Kind.ERROR, rootMsg);
+        messager.printMessage(Diagnostic.Kind.ERROR, dirMsg);
+        System.err.println(rootMsg);
+        System.err.println(dirMsg);
         
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
         
@@ -563,17 +563,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (activeServices.contains("aider_ignore"))      contentByService.put("aider_ignore",      aiderIgnore.toString());
 
         Messager messager = getSafeMessager();
-        String genMsg = "VibeTags: Generating files (v" + VERSION + ") for " + contentByService.size() + " active services: " + String.join(", ", contentByService.keySet());
-        messager.printMessage(Diagnostic.Kind.NOTE, genMsg);
-        System.out.println(genMsg);
+        String genMsg = "VibeTags: [DEBUG] Generating (v" + VERSION + ") for: " + String.join(", ", contentByService.keySet());
+        messager.printMessage(Diagnostic.Kind.ERROR, genMsg);
+        System.err.println(genMsg);
+        
+        if (!activeServices.contains("aider_conventions")) {
+            String msg = "VibeTags: [DEBUG] aider_conventions NOT in activeServices. resolveActiveServices status for CONVENTIONS.md: check logic follows...";
+            messager.printMessage(Diagnostic.Kind.ERROR, msg);
+            System.err.println(msg);
+        }
+
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
             boolean changed = writeFileIfChanged(filePath.toString(), content);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
-            String fileMsg = "VibeTags: " + status + " - " + relPath;
-            getSafeMessager().printMessage(Diagnostic.Kind.NOTE, fileMsg);
-            System.out.println(fileMsg);
+            String fileMsg = "VibeTags: [DEBUG] " + status + " - " + relPath;
+            getSafeMessager().printMessage(Diagnostic.Kind.ERROR, fileMsg);
+            System.err.println(fileMsg);
             if (log != null) {
                 if (changed) log.info("{} — updated", relPath);
                 else         log.info("{} — no changes", relPath);
@@ -786,20 +793,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             .filter(e -> optInKeys.contains(e.getKey()))
             .filter(e -> {
                 Path p = e.getValue();
-                return Files.exists(p);
+                boolean exists = Files.exists(p);
+                String trace = "VibeTags: [DEBUG] Checking " + e.getKey() + " -> " + p.toAbsolutePath() + " [exists=" + exists + "]";
+                messager.printMessage(Diagnostic.Kind.ERROR, trace);
+                System.err.println(trace);
+                return exists;
             })
             .map(Map.Entry::getKey)
             .collect(java.util.stream.Collectors.toSet());
 
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(
-                "VibeTags: No AI config files found - nothing will be generated.\n" +
+                "VibeTags: [DEBUG] No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             allServiceFiles.entrySet().stream()
                 .filter(e -> optInKeys.contains(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
-            messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
-            System.out.println(msg.toString());
+            messager.printMessage(javax.tools.Diagnostic.Kind.ERROR, msg.toString());
+            System.err.println(msg.toString());
         }
 
         return active;
@@ -898,8 +909,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         return false;
                     }
                     Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
-                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-                    System.out.println("VibeTags: Updated " + fileName);
+                    getSafeMessager().printMessage(Diagnostic.Kind.ERROR, "VibeTags: [DEBUG] Updated " + fileName + " (len=" + finalContent.length() + ")");
+                    System.err.println("VibeTags: [DEBUG] Updated " + fileName);
                     return true;
                 } else if (!existing.isEmpty() && existing.contains(GENERATED_HEADER.trim())) {
                     // Legacy VibeTags file found (no markers but has header): upgrade to markers
@@ -908,8 +919,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         return false;
                     }
                     Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
-                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
-                    System.out.println("VibeTags: Updated legacy file " + fileName);
+                    getSafeMessager().printMessage(Diagnostic.Kind.ERROR, "VibeTags: [DEBUG] Updated legacy " + fileName + " (len=" + finalContent.length() + ")");
+                    System.err.println("VibeTags: [DEBUG] Updated legacy file " + fileName);
                     return true;
                 } else {
                     // Section missing or file is not a VibeTags file: append to the end
@@ -918,8 +929,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
                     Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
                     String action = existing.isEmpty() ? "wrote" : "appended";
-                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
-                    System.out.println("VibeTags: " + action + " " + fileName);
+                    getSafeMessager().printMessage(Diagnostic.Kind.ERROR, "VibeTags: [DEBUG] " + action + " " + fileName + " (len=" + updated.length() + ")");
+                    System.err.println("VibeTags: [DEBUG] " + action + " " + fileName);
                     return true;
                 }
             } else {
@@ -928,8 +939,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     return false;
                 }
                 Files.writeString(filePath, content, java.nio.charset.StandardCharsets.UTF_8);
-                getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-                System.out.println("VibeTags: Updated " + fileName);
+                getSafeMessager().printMessage(Diagnostic.Kind.ERROR, "VibeTags: [DEBUG] Updated " + fileName + " (len=" + content.length() + ")");
+                System.err.println("VibeTags: [DEBUG] Updated " + fileName);
                 return true;
             }
         } catch (IOException e) {
