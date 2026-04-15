@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-04-16
+
+### Fixed
+- **Aider `CONVENTIONS.md` generation**: Resolved an issue where the file could end up empty after a reset-and-compile cycle, and stabilized the processor's handling of the Aider conventions output.
+- **Gradle release coordinates**: `vibetags/build.gradle` was still publishing `0.5.1`, which prevented Gradle consumers (including the example project in CI) from resolving `0.5.2`.
+- **Version drift**: Aligned `load-tests/pom.xml` (`processor.version`) and `README.md` install snippets to `0.5.2`.
+
 ## [0.5.1] - 2026-04-15
 
 ### Added
@@ -48,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/PIsberg/vibetags/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/PIsberg/vibetags/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/PIsberg/vibetags/releases/tag/v0.5.0
