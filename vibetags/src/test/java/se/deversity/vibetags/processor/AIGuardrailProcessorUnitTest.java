@@ -169,16 +169,27 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
-        for (Path p : AIGuardrailProcessor.buildServiceFileMap(tempDir).values()) {
-            Files.createDirectories(p.getParent());
-            Files.createFile(p);
-        }
+        AIGuardrailProcessor.buildServiceFileMap(tempDir).forEach((key, p) -> {
+            try {
+                if (key.endsWith("_granular")) {
+                    Files.createDirectories(p);
+                    // Add a signal file so isNotEmpty check passes
+                    Files.createFile(p.resolve(".vibetags"));
+                } else {
+                    Files.createDirectories(p.getParent());
+                    Files.createFile(p);
+                }
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        });
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
         Set<String> expected = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-            "llms", "llms_full"
+            "llms", "llms_full", "aider_conventions", "aider_ignore",
+            "cursor_granular", "roo_granular", "trae_granular"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }

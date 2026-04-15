@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # Reset all AI config files to empty (preserves files so processor opt-in stays active).
 # Use this before a clean compile to verify the processor regenerates all content.
-set -euo pipefail
+set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -23,6 +23,8 @@ AI_FILES=(
   ".codex/rules/vibetags.rules"
   ".qwen/settings.json"
   ".qwen/commands/refactor.md"
+  "CONVENTIONS.md"
+  ".aiderignore"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
@@ -33,4 +35,13 @@ for f in "${AI_FILES[@]}"; do
     echo "  cleared: $f"
   fi
 done
-echo "Done. All present AI config files cleared."
+
+# Cleanup granular rules in directories
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules"; do
+  if [ -d "$SCRIPT_DIR/$dir" ]; then
+    echo "  cleaning granular rules in: $dir"
+    find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +
+  fi
+done
+
+echo "Done. All present AI config files cleared and granular rules removed."

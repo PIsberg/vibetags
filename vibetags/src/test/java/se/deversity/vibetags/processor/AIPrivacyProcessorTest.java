@@ -6,6 +6,7 @@ import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import javax.tools.Diagnostic;
 import java.nio.file.Files;
@@ -367,6 +368,7 @@ class AIPrivacyProcessorTest {
     private static Element privacyElement(String qualifiedName, String reason) {
         Element element = mock(Element.class);
         when(element.toString()).thenReturn(qualifiedName);
+        when(element.getKind()).thenReturn(ElementKind.CLASS);
         String simpleName = qualifiedName.contains(".")
             ? qualifiedName.substring(qualifiedName.lastIndexOf('.') + 1)
             : qualifiedName;

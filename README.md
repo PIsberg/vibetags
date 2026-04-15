@@ -34,7 +34,10 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 ### Supported AI Platforms
 
 Generated configuration files work out-of-the-box with:
-- **Cursor** (`.cursorrules`, `.cursorignore`)
+- **Cursor** (Traditional `.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
+- **Trae** (Granular `.trae/rules/*.md`)
+- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+- **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
 - **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Gemini** (`.aiexclude` + `gemini_instructions.md`)
@@ -269,6 +272,8 @@ The `load-tests` workflow job (see `.github/workflows/build.yml`) runs automatic
 - **Version Stamping** — every generated file includes a VibeTags version header for easy traceability
 - **Compile-time Validation** — proactive warnings for contradictory or empty annotations
 - **Configurable Logging** — full control over log file path and level, including turning it off
+- **Granular Rules Support** — automatic generation of `.mdc` and `.md` files with YAML front-matter for precise AI scoping
+- **Expanded Tool Support** — built-in support for Aider, Roo Code, and Trae
 
 ### Logging Configuration
 
@@ -321,6 +326,10 @@ Create an empty placeholder file for the service you want to support, then compi
 
 ```bash
 touch .cursorrules .cursorignore             # Enable Cursor support
+mkdir -p .cursor/rules                       # Enable Cursor Granular Rules
+mkdir -p .trae/rules                         # Enable Trae Granular Rules
+mkdir -p .roo/rules                           # Enable Roo Code Rules
+touch CONVENTIONS.md .aiderignore            # Enable Aider support
 touch CLAUDE.md .claudeignore                # Enable Claude support
 touch QWEN.md .qwenignore                   # Enable Qwen support
 touch .aiexclude gemini_instructions.md      # Enable Gemini/Codex support
@@ -352,6 +361,21 @@ Create one or more of the following files in your project root to opt in:
 ```
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
+
+### 🧩 Granular Rules (Cursor, Trae, Roo Code)
+
+For modern AI IDEs like **Cursor** and **Trae**, VibeTags supports a granular rule system. Instead of one giant configuration file, VibeTags generates specific files for each annotated element.
+
+- **Scoping**: Each rule is automatically scoped via `globs`. A rule for `OrderService` will only apply when the AI is working on `OrderService.java`.
+- **Triggers**: Uses YAML front-matter (`.mdc` for Cursor, `.md` for Trae) to help the AI understand exactly when to apply each rule.
+- **Cleanup**: VibeTags automatically cleans up "orphaned" rule files in these directories if you remove the corresponding annotations from your source code.
+
+**Enable this mode** by creating the target directories:
+```bash
+mkdir -p .cursor/rules
+mkdir -p .trae/rules
+mkdir -p .roo/rules
+```
 
 ### 🤖 Qwen Configuration
 

@@ -1,0 +1,9 @@
+<!-- VIBETAGS-START -->
+# Rules for PaymentProcessor
+
+## Locked Status
+- **Reason**: Tied to legacy database schema v2.3. Changes will break production payment processing. Contact the payments team before modifying.
+
+## Implementation Tasks
+- **Instruction**: Implement support for new crypto payments without breaking legacy flow.
+<!-- VIBETAGS-END -->

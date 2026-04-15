@@ -1,0 +1,6 @@
+<!-- VIBETAGS-START -->
+# Rules for calculateDiscount
+
+## Implementation Tasks
+- **Instruction**: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
+<!-- VIBETAGS-END -->

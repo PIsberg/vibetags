@@ -60,6 +60,11 @@ class ProcessorTestHarness {
         touch(".codex/rules/vibetags.rules");
         touch(".qwen/settings.json");
         touch(".qwen/commands/refactor.md");
+        touch("CONVENTIONS.md");
+        touch(".aiderignore");
+        touch(".cursor/rules/.vibetags"); // Create a hidden file to signal directory existence
+        touch(".trae/rules/.vibetags");
+        touch(".roo/rules/.vibetags");
     }
 
     private void touch(String relative) throws IOException {
