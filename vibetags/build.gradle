@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'se.deversity.vibetags'
-version = '0.5.0'
+version = '0.5.2'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -19,7 +19,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-processor'
-            version = '0.5.0'
+            version = '0.5.2'
             from components.java
 
             pom {

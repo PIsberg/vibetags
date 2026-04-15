@@ -273,6 +273,7 @@ class AIPrivacyProcessorTest {
             Element element = mock(Element.class);
             when(element.toString()).thenReturn("com.example.Profile.birthDate");
             when(element.getSimpleName()).thenReturn(nameOf("birthDate"));
+            when(element.getKind()).thenReturn(ElementKind.FIELD);
             AIPrivacy privacy = mock(AIPrivacy.class);
             when(privacy.reason()).thenReturn("Contains PII - never log, expose, or include values in suggestions.");
             when(element.getAnnotation(AIPrivacy.class)).thenReturn(privacy);
