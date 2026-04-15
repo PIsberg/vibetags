@@ -341,6 +341,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIAudit
         for (Element element : auditElements) {
             AIAudit audit = element.getAnnotation(AIAudit.class);
+            if (audit == null) continue;
             String className = element.toString();
             String[] checkFor = audit.checkFor();
             if (checkFor.length == 0) continue;
@@ -386,6 +387,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIDraft
         for (Element element : draftElements) {
             AIDraft draft = element.getAnnotation(AIDraft.class);
+            if (draft == null) continue;
             String className = element.toString();
             String instructions = draft.instructions();
             
@@ -429,6 +431,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIPrivacy
         for (Element element : privacyElements) {
             AIPrivacy privacy = element.getAnnotation(AIPrivacy.class);
+            if (privacy == null) continue;
             String className = element.toString();
             String reason = privacy.reason();
 
