@@ -13,6 +13,7 @@ import javax.annotation.processing.*;
 import javax.tools.Diagnostic;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -692,7 +693,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private Element getOwningElement(Element e) {
         Element current = e;
         while (current != null) {
-            if (current instanceof TypeElement || current.getKind().equals(javax.lang.model.element.ElementKind.PACKAGE)) {
+            ElementKind kind = current.getKind();
+            if (current instanceof TypeElement || (kind != null && kind.equals(javax.lang.model.element.ElementKind.PACKAGE))) {
                 return current;
             }
             current = current.getEnclosingElement();
@@ -707,7 +709,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         
         // Add a sub-header if the annotation is on a member (method/field) of the owning class
         if (!owner.equals(element)) {
-            sb.append("### Rules for ").append(element.getKind().toString().toLowerCase())
+            ElementKind kind = element.getKind();
+            String kindStr = (kind != null) ? kind.toString().toLowerCase() : "element";
+            sb.append("### Rules for ").append(kindStr)
               .append(" ").append(element.getSimpleName()).append("\n");
         } else {
             sb.append("## ").append(title).append("\n");
