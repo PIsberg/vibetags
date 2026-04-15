@@ -581,7 +581,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();
-            String glob = element.getKind().name().equals("PACKAGE")
+            String glob = javax.lang.model.element.ElementKind.PACKAGE.equals(element.getKind())
                 ? "**/"+ simpleName + "/**/*.java"
                 : "**/"+ simpleName + ".java";
 

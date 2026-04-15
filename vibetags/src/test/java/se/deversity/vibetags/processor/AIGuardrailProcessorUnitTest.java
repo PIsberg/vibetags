@@ -178,7 +178,8 @@ class AIGuardrailProcessorUnitTest {
         Set<String> expected = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-            "llms", "llms_full"
+            "llms", "llms_full", "aider_conventions", "aider_ignore",
+            "cursor_granular", "roo_granular", "trae_granular"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }
