@@ -14,3 +14,4 @@ example/target
 docs/diagrams/plantuml.jar
 docs/diagrams/encode_plantuml.py
 load-tests/target/
+.grok/
