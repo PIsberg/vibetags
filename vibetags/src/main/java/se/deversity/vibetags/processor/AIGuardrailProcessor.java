@@ -109,6 +109,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 ? rootOverride
                 : Paths.get("").toAbsolutePath().toString()).toAbsolutePath().normalize();
         
+        Messager messager = getSafeMessager();
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root path resolved to: " + this.root);
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir is: " + System.getProperty("user.dir"));
+        
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
         
         String logPath = options.get("vibetags.log.path");
@@ -182,8 +186,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (roundEnv.processingOver()) {
-            if (!processed) {
+        if (processed || roundEnv.processingOver()) {
+            if (roundEnv.processingOver() && !processed) {
                 generateFiles();
                 processed = true;
             }
@@ -554,13 +558,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (activeServices.contains("aider_conventions")) contentByService.put("aider_conventions", aiderConventions.toString());
         if (activeServices.contains("aider_ignore"))      contentByService.put("aider_ignore",      aiderIgnore.toString());
 
-        Messager messager = processingEnv.getMessager();
+        Messager messager = getSafeMessager();
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Generating files for " + contentByService.size() + " active services: " + String.join(", ", contentByService.keySet()));
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
             boolean changed = writeFileIfChanged(filePath.toString(), content);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
-            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
             if (log != null) {
                 if (changed) log.info("{} — updated", relPath);
                 else         log.info("{} — no changes", relPath);
@@ -808,6 +813,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return new String[]{MARKER_START_HASH, MARKER_END_HASH};
     }
 
+    /** Returns the messager from processingEnv, or a no-op messager if processingEnv is null (common in unit tests). */
+    private Messager getSafeMessager() {
+        if (processingEnv != null) return processingEnv.getMessager();
+        return new Messager() {
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {}
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a) {}
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) {}
+        };
+    }
+
     /**
      * Writes {@code content} to {@code path} only if the file's current content differs.
      *
@@ -817,91 +833,94 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *         {@code false} if the existing content was already up-to-date.
      */
     public boolean writeFileIfChanged(String path, String content) {
+        Messager messager = getSafeMessager();
         try {
             Path filePath = Paths.get(path);
-            String fileName = filePath.getFileName().toString();
-            String[] markers = getMarkersFor(fileName);
-
-            // Special handling for YAML front-matter: markers MUST come after it
-            String frontMatter = "";
-            String body = content;
-            if (content.startsWith("---")) {
-                int secondTriple = content.indexOf("---", 3);
-                if (secondTriple != -1) {
-                    frontMatter = content.substring(0, secondTriple + 3).trim();
-                    body = content.substring(secondTriple + 3).trim();
-                }
-            }
-
-            // Wrap body in markers if supported
-            String wrappedBody = (markers != null)
-                ? markers[0] + "\n" + body.trim() + "\n" + markers[1]
-                : body;
-
-            String finalContent = frontMatter.isEmpty() ? wrappedBody : frontMatter + "\n\n" + wrappedBody;
-
-            if (Files.exists(filePath)) {
-                String existing = Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8);
-
-                if (markers != null) {
-                    int startIdx = existing.indexOf(markers[0]);
-                    int endIdx = existing.indexOf(markers[1]);
-
-                    if (startIdx != -1 && endIdx != -1 && startIdx < endIdx) {
-                        // Section exists: replace it
-                        String before = existing.substring(0, startIdx).stripTrailing();
-                        String after = existing.substring(endIdx + markers[1].length()).stripLeading();
-
-                        StringBuilder sb = new StringBuilder();
-                        if (!before.isEmpty()) sb.append(before).append("\n\n");
-                        sb.append(wrappedBody);
-                        if (!after.isEmpty()) sb.append("\n\n").append(after);
-                        String updated = sb.toString();
-
-                        if (existing.strip().equals(updated.strip())) {
-                            return false;
-                        }
-                        Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
-                        return true;
-                    } else if (existing.contains(GENERATED_HEADER.trim())) {
-                        // Legacy VibeTags file found (no markers but has header): upgrade to markers
-                        if (existing.strip().equals(finalContent.strip())) {
-                            return false;
-                        }
-                        Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
-                        return true;
-                    } else {
-                        // Section missing and not a legacy VibeTags file: append to the end
-                        // If file is empty, don't add extra leading newlines
-                        String updated = existing.isEmpty()
-                            ? wrappedBody + "\n"
-                            : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
-                        Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
-                        return true;
-                    }
-                } else {
-                    // Markers not supported (JSON/TOML): standard overwrite-if-changed logic
-                    if (existing.strip().equals(content.strip())) {
-                        return false;
-                    }
-                }
-            }
-
-            // File doesn't exist or doesn't support markers: create with final content
             Path parent = filePath.getParent();
             if (parent != null && !Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
-            try (PrintWriter out = new PrintWriter(new FileWriter(path, java.nio.charset.StandardCharsets.UTF_8))) {
-                out.println(finalContent.trim());
+
+            String fileName = filePath.getFileName().toString();
+            String[] markers = getMarkersFor(fileName);
+            boolean supportsMarkers = (markers != null);
+
+            String existing = Files.exists(filePath) 
+                ? Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8) 
+                : "";
+
+            if (supportsMarkers) {
+                String markerStart = markers[0];
+                String markerEnd = markers[1];
+                
+                // Special handling for YAML front-matter: markers MUST come after it
+                String frontMatter = "";
+                String body = content;
+                if (content.startsWith("---")) {
+                    int secondTriple = content.indexOf("---", 3);
+                    if (secondTriple != -1) {
+                        frontMatter = content.substring(0, secondTriple + 3).trim();
+                        body = content.substring(secondTriple + 3).trim();
+                    }
+                }
+                
+                String wrappedBody = markerStart + "\n" + body.trim() + "\n" + markerEnd;
+
+                if (existing.contains(markerStart)) {
+                    // Update existing section
+                    int start = existing.indexOf(markerStart);
+                    int end = existing.indexOf(markerEnd);
+                    if (end == -1) {
+                        messager.printMessage(Diagnostic.Kind.WARNING, "VibeTags: malformed markers in " + path + " (no end marker). Overwriting completely.");
+                        Files.writeString(filePath, (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n", java.nio.charset.StandardCharsets.UTF_8);
+                        return true;
+                    }
+                    end += markerEnd.length();
+                    String before = existing.substring(0, start).stripTrailing();
+                    String after = existing.substring(end).stripLeading();
+                    
+                    StringBuilder sb = new StringBuilder();
+                    if (!before.isEmpty()) sb.append(before).append("\n\n");
+                    sb.append(wrappedBody);
+                    if (!after.isEmpty()) sb.append("\n\n").append(after);
+                    String finalContent = sb.toString().trim() + "\n";
+
+                    if (existing.strip().equals(finalContent.strip())) {
+                        return false;
+                    }
+                    Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated " + fileName);
+                    return true;
+                } else if (!existing.isEmpty() && existing.contains(GENERATED_HEADER.trim())) {
+                    // Legacy VibeTags file found (no markers but has header): upgrade to markers
+                    String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
+                    if (existing.strip().equals(finalContent.strip())) {
+                        return false;
+                    }
+                    Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated legacy file " + fileName);
+                    return true;
+                } else {
+                    // Section missing or file is not a VibeTags file: append to the end
+                    String updated = existing.isEmpty()
+                        ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
+                        : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
+                    Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
+                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: wrote " + fileName + (existing.isEmpty() ? " (new)" : " (appended)"));
+                    return true;
+                }
+            } else {
+                // Non-markdown file: complete overwrite if changed
+                if (existing.strip().equals(content.strip())) {
+                    return false;
+                }
+                Files.writeString(filePath, content, java.nio.charset.StandardCharsets.UTF_8);
+                messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated " + fileName);
+                return true;
             }
-            return true;
         } catch (IOException e) {
-            processingEnv.getMessager().printMessage(
-                javax.tools.Diagnostic.Kind.WARNING, "VibeTags: Failed to write AI rules file: " + path
-            );
+            getSafeMessager().printMessage(Diagnostic.Kind.WARNING, "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
             return false;
         }
     }
-
 }
