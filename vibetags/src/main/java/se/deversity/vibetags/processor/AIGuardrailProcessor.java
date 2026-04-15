@@ -110,8 +110,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 : Paths.get("").toAbsolutePath().toString()).toAbsolutePath().normalize();
         
         Messager messager = getSafeMessager();
-        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root path resolved to: " + this.root);
-        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir is: " + System.getProperty("user.dir"));
+        String rootMsg = "VibeTags: Root path resolved to: " + this.root;
+        String dirMsg = "VibeTags: user.dir is: " + System.getProperty("user.dir");
+        messager.printMessage(Diagnostic.Kind.NOTE, rootMsg);
+        messager.printMessage(Diagnostic.Kind.NOTE, dirMsg);
+        System.out.println(rootMsg);
+        System.out.println(dirMsg);
         
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
         
@@ -559,13 +563,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (activeServices.contains("aider_ignore"))      contentByService.put("aider_ignore",      aiderIgnore.toString());
 
         Messager messager = getSafeMessager();
-        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Generating files for " + contentByService.size() + " active services: " + String.join(", ", contentByService.keySet()));
+        String genMsg = "VibeTags: Generating files (v" + VERSION + ") for " + contentByService.size() + " active services: " + String.join(", ", contentByService.keySet());
+        messager.printMessage(Diagnostic.Kind.NOTE, genMsg);
+        System.out.println(genMsg);
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
             boolean changed = writeFileIfChanged(filePath.toString(), content);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
-            getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
+            String fileMsg = "VibeTags: " + status + " - " + relPath;
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE, fileMsg);
+            System.out.println(fileMsg);
             if (log != null) {
                 if (changed) log.info("{} — updated", relPath);
                 else         log.info("{} — no changes", relPath);
@@ -791,6 +799,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 .filter(e -> optInKeys.contains(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
             messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
+            System.out.println(msg.toString());
         }
 
         return active;
@@ -889,7 +898,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         return false;
                     }
                     Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
-                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated " + fileName);
+                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+                    System.out.println("VibeTags: Updated " + fileName);
                     return true;
                 } else if (!existing.isEmpty() && existing.contains(GENERATED_HEADER.trim())) {
                     // Legacy VibeTags file found (no markers but has header): upgrade to markers
@@ -898,7 +908,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         return false;
                     }
                     Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
-                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated legacy file " + fileName);
+                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
+                    System.out.println("VibeTags: Updated legacy file " + fileName);
                     return true;
                 } else {
                     // Section missing or file is not a VibeTags file: append to the end
@@ -906,7 +917,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                         : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
                     Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
-                    messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: wrote " + fileName + (existing.isEmpty() ? " (new)" : " (appended)"));
+                    String action = existing.isEmpty() ? "wrote" : "appended";
+                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
+                    System.out.println("VibeTags: " + action + " " + fileName);
                     return true;
                 }
             } else {
@@ -915,7 +928,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     return false;
                 }
                 Files.writeString(filePath, content, java.nio.charset.StandardCharsets.UTF_8);
-                messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: updated " + fileName);
+                getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+                System.out.println("VibeTags: Updated " + fileName);
                 return true;
             }
         } catch (IOException e) {
