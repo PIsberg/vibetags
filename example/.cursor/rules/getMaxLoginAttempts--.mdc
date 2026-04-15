@@ -1,0 +1,12 @@
+---
+description: "AI rules for getMaxLoginAttempts()"
+globs: ["**/getMaxLoginAttempts.java"]
+alwaysApply: false
+---
+
+<!-- VIBETAGS-START -->
+# Rules for getMaxLoginAttempts
+
+## Locked Status
+- **Reason**: Max login attempts set by security team to prevent brute force
+<!-- VIBETAGS-END -->

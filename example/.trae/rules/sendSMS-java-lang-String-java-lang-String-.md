@@ -1,0 +1,16 @@
+---
+alwaysApply: false
+globs: ["**/sendSMS.java"]
+description: "AI rules for sendSMS(java.lang.String,java.lang.String)"
+---
+
+<!-- VIBETAGS-START -->
+# Rules for sendSMS
+
+## Implementation Tasks
+- **Instruction**: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
+
+## PII / Privacy Guardrails
+- **Rule**: Never log or expose runtime values of this element.
+- **Reason**: Phone number is PII - never log the destination number
+<!-- VIBETAGS-END -->

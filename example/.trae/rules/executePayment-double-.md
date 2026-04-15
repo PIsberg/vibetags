@@ -1,0 +1,12 @@
+---
+alwaysApply: false
+globs: ["**/executePayment.java"]
+description: "AI rules for executePayment(double)"
+---
+
+<!-- VIBETAGS-START -->
+# Rules for executePayment
+
+## Implementation Tasks
+- **Instruction**: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
+<!-- VIBETAGS-END -->
