@@ -19,4 +19,8 @@
 ## Context & Focus
 - **Focus**: This class is READ-ONLY for AI assistants. Do not suggest modifications.
 - **Avoid**: Any changes to encryption algorithms, key sizes, or validation logic
+
+## Core Functionality
+- **Sensitivity**: Critical
+- **Note**: This is a security manager. Any single-line change can compromise the entire project.
 <!-- VIBETAGS-END -->

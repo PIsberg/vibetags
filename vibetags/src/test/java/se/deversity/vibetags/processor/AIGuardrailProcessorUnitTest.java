@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
@@ -22,6 +23,10 @@ import javax.annotation.processing.RoundEnvironment;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIIgnore;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -447,6 +452,58 @@ class AIGuardrailProcessorUnitTest {
         
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("has no 'checkFor' items list"));
+    }
+
+    @Test
+    void testValidateAnnotations_privacyIgnoreRedundancyWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.PrivacyClass");
+        
+        Set<Element> elements = Set.of(element);
+        doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+        
+        when(element.getAnnotation(AIPrivacy.class)).thenReturn(mock(AIPrivacy.class));
+        when(element.getAnnotation(AIIgnore.class)).thenReturn(mock(AIIgnore.class));
+        
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.validateAnnotations(messager, roundEnv);
+        
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("is annotated with both @AIPrivacy and @AIIgnore"));
+    }
+
+    @Test
+    void testNewTagsProcessAggregation() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        ProcessingEnvironment processingEnv = mock(ProcessingEnvironment.class);
+        Map<String, String> options = Map.of();
+        when(processingEnv.getOptions()).thenReturn(options);
+        when(processingEnv.getMessager()).thenReturn(noopMessager());
+        processor.init(processingEnv);
+        
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        
+        Element coreElement = mock(Element.class);
+        Element perfElement = mock(Element.class);
+        
+        doReturn(Set.of(coreElement)).when(roundEnv).getElementsAnnotatedWith(AICore.class);
+        doReturn(Set.of(perfElement)).when(roundEnv).getElementsAnnotatedWith(AIPerformance.class);
+        
+        // Also need to return empty sets for other annotations to avoid NullPointerException or issues
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AIContext.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+
+        boolean result = processor.process(Set.of(), roundEnv);
+        
+        // process should return false as it allows other processors to see the annotations
+        assertFalse(result);
     }
 
     private static Messager noopMessager() {
