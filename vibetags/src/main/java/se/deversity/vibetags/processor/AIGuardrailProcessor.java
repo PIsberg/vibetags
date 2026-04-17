@@ -45,7 +45,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     public AIGuardrailProcessor() {}
 
     
-    static final String VERSION = "0.5.2";
+    static final String VERSION = "0.5.3";
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
 
     /** Header written into every generated file — no version so bumping the dep never creates spurious diffs. */

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-04-17
+
+### Fixed
+- **Granular directory path resolution**: Removed spurious trailing slash from `.cursor/rules/`, `.roo/rules/`, and `.trae/rules/` paths in `buildServiceFileMap`, which prevented directory opt-in detection on some file systems.
+
+### Changed
+- `cleanupGranularDirectory` is now package-private to allow direct unit testing without going through a full compilation round.
+
+### Tests
+- Added `testPackageKind_GranularRules`: verifies that a `PACKAGE`-kind element annotated with `@AILocked` produces a correctly-scoped `.mdc` file (glob `**/pkg/**/*.java`) in the Cursor granular rules directory.
+- Added `testCleanupGranularDirectory_NonExistent` and `testCleanupGranularDirectory_IOException`: cover the early-return guard and file-as-directory edge case in `cleanupGranularDirectory`.
+- Added `testWriteFileIfChanged_IOException`: exercises the read-only file path through `writeFileIfChanged`.
+- Added `testMessager_MiscellaneousOverloads`: covers the three extra `printMessage` overloads on the inner `Messager` proxy.
+- Added `testOptions_ComplexPaths`: verifies `init()` accepts a custom root path, project name, and log path without crashing.
+- Added `forRootInvalidLevel_fallbacksToInfo` and `forRootPathIsDirectory_triggersCatchAndReturnsStandardLogger` to `VibeTagsLoggerUnitTest` for logger error-handling branches.
+- Added `@AfterEach VibeTagsLogger.shutdown()` teardown to prevent logger state leaking between tests.
+
 ## [0.5.2] - 2026-04-16
 
 ### Fixed
@@ -55,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/PIsberg/vibetags/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/PIsberg/vibetags/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/PIsberg/vibetags/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/PIsberg/vibetags/releases/tag/v0.5.0
