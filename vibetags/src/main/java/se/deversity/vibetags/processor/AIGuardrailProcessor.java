@@ -894,8 +894,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     int start = existing.indexOf(markerStart);
                     int end = existing.indexOf(markerEnd);
                     if (end == -1) {
-                        messager.printMessage(Diagnostic.Kind.WARNING, "VibeTags: malformed markers in " + path + " (no end marker). Overwriting completely.");
-                        Files.writeString(filePath, (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n", java.nio.charset.StandardCharsets.UTF_8);
+                        messager.printMessage(Diagnostic.Kind.WARNING, "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
+                        String before = existing.substring(0, start).stripTrailing();
+                        String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
+                        if (existing.strip().equals(finalContent.strip())) {
+                            return false;
+                        }
+                        writeContentWithBackup(filePath, finalContent);
                         return true;
                     }
                     end += markerEnd.length();
@@ -911,7 +916,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (existing.strip().equals(finalContent.strip())) {
                         return false;
                     }
-                    Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+                    writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
                     System.out.println("VibeTags: Updated " + fileName);
                     return true;
@@ -921,7 +926,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (existing.strip().equals(finalContent.strip())) {
                         return false;
                     }
-                    Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+                    writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
                     System.out.println("VibeTags: Updated legacy file " + fileName);
                     return true;
@@ -930,7 +935,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     String updated = existing.isEmpty()
                         ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                         : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
-                    Files.writeString(filePath, updated, java.nio.charset.StandardCharsets.UTF_8);
+                    if (existing.strip().equals(updated.strip())) {
+                        return false;
+                    }
+                    writeContentWithBackup(filePath, updated);
                     String action = existing.isEmpty() ? "wrote" : "appended";
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
                     System.out.println("VibeTags: " + action + " " + fileName);
@@ -941,7 +949,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 if (existing.strip().equals(content.strip())) {
                     return false;
                 }
-                Files.writeString(filePath, content, java.nio.charset.StandardCharsets.UTF_8);
+                writeContentWithBackup(filePath, content);
                 getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
                 System.out.println("VibeTags: Updated " + fileName);
                 return true;
@@ -950,5 +958,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             getSafeMessager().printMessage(Diagnostic.Kind.WARNING, "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
             return false;
         }
+    }
+
+    private void writeContentWithBackup(Path filePath, String finalContent) throws IOException {
+        if (Files.exists(filePath)) {
+            Path backupPath = Paths.get(filePath.toString() + ".bak");
+            Files.copy(filePath, backupPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+        Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
     }
 }
