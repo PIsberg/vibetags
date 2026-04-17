@@ -36,7 +36,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>5.10.2</junit.version>
         <jmh.version>1.37</jmh.version>
-        <processor.version>0.5.2</processor.version>
+        <processor.version>0.5.3</processor.version>
     </properties>
 
     <dependencies>
