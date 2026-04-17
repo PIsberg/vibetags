@@ -25,6 +25,8 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 ### Key Features
 
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
+- **🧠 @AICore** - Mark well-tested core logic that is sensitive to changes (modifications require extreme caution)
+- **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
@@ -173,6 +175,18 @@ public class DatabaseConnector {
     @AIPrivacy(reason = "Database credential - never log or include in error messages")
     private final String password;
 }
+
+// Mark sensitive core logic
+@AICore(sensitivity = "Critical", note = "Core transaction routing logic. Do NOT refactor without user approval.")
+public class TransactionRouter {
+    // AI will treat this as highly sensitive
+}
+
+// Enforce performance constraints
+@AIPerformance(constraint = "Must maintain O(log n) time complexity for search operations")
+public class BinarySearchTree {
+    // AI will avoid suboptimal complexity implementations
+}
 ```
 
 ## 📚 Documentation
@@ -257,8 +271,9 @@ The `load-tests` workflow job (see `.github/workflows/build.yml`) runs automatic
 | Scenario | Use Case |
 |----------|----------|
 | Legacy systems | Protect integrations that work and can't be changed |
+| Core Logic | Protect stable, well-tested core functionality from regressions |
+| Performance-critical | Guide AI toward specific optimization strategies and complexity constraints |
 | Compliance code | PCI-DSS, HIPAA, and other regulated code |
-| Performance-critical | Guide AI toward specific optimization strategies |
 | Boilerplate code | Let AI implement standard patterns safely |
 | Team projects | Enforce consistent AI behavior across your team |
 | Complex algorithms | Protect code that took months to stabilize |
