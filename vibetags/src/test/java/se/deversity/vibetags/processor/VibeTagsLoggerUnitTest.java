@@ -97,14 +97,38 @@ class VibeTagsLoggerUnitTest {
         assertDoesNotThrow(VibeTagsLogger::shutdown);
     }
 
-    // --- resolveLogFile: blank logPath (covers isBlank branch) ---
-
     @Test
     void forRootBlankLogPath_usesDefault() {
         Logger logger = VibeTagsLogger.forRoot(tempDir, "   ", "INFO");
 
+        assertNotSame(NOPLogger.NOP_LOGGER, logger);
+        assertTrue(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)));
+    }
+
+    // --- resolveLogFile: invalid level fallback ---
+
+    @Test
+    void forRootInvalidLevel_fallbacksToInfo() {
+        // "INVALID" is not a standard Level string, should fallback to INFO
+        Logger logger = VibeTagsLogger.forRoot(tempDir, null, "INVALID_LEVEL_NAME_123");
         assertNotNull(logger);
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
         assertTrue(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)));
+    }
+
+    // --- Error handling: catch block in forRoot ---
+
+    @Test
+    void forRootPathIsDirectory_triggersCatchAndReturnsStandardLogger() throws Exception {
+        Path dirPath = tempDir.resolve("not-a-file");
+        Files.createDirectories(dirPath);
+
+        // Attempting to set a directory as the log file path should cause start() to fail or throw
+        // which will be caught in the try-catch block
+        Logger logger = VibeTagsLogger.forRoot(tempDir, "not-a-file", "INFO");
+
+        assertNotNull(logger);
+        // Should fallback to a standard SLF4J logger (not necessarily the NOP logger)
+        assertNotSame(NOPLogger.NOP_LOGGER, logger);
     }
 }

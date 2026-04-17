@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor;
 
+import javax.lang.model.element.ElementKind;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +28,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIIgnore;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,6 +38,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests the processor logic without full compilation.
  */
 class AIGuardrailProcessorUnitTest {
+
+    @AfterEach
+    void tearDown() {
+        VibeTagsLogger.shutdown();
+    }
 
     @Test
     void testProcessorInstantiation() {
@@ -504,6 +512,123 @@ class AIGuardrailProcessorUnitTest {
         
         // process should return false as it allows other processors to see the annotations
         assertFalse(result);
+    }
+
+    @Test
+    void testWriteFileIfChanged_IOException(@TempDir Path tempDir) throws IOException {
+        Path dirPath = tempDir.resolve("some_dir");
+        Files.createDirectories(dirPath);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // Writing to a directory path should trigger an IOException (or equivalent) in some environments,
+        // but to be sure we can make the file read-only if it already exists as a file.
+        Path filePath = tempDir.resolve("readonly.txt");
+        Files.createFile(filePath);
+        if (!filePath.toFile().setReadOnly()) {
+           // Fallback for systems where setReadOnly doesn't work as expected
+        }
+
+        // Even if it doesn't throw, we are testing the robustness of the processor.
+        // The current implementation catches nothing specifically in writeFileIfChanged except what's handled by NIO.
+        // However, writeFileIfChanged uses FileWriter which is tested.
+        assertDoesNotThrow(() -> processor.writeFileIfChanged(dirPath.toString(), "content"));
+    }
+
+    @Test
+    void testCleanupGranularDirectory_NonExistent(@TempDir Path tempDir) {
+        Path missing = tempDir.resolve("missing_dir");
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // Should not throw when directory doesn't exist
+        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(missing, ".md"));
+    }
+
+    @Test
+    void testCleanupGranularDirectory_IOException(@TempDir Path tempDir) throws IOException {
+        Path fileAsDir = tempDir.resolve("file_as_dir");
+        Files.createFile(fileAsDir);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // Passing a file where a directory is expected for listing should handle errors gracefully
+        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(fileAsDir, ".md"));
+    }
+
+    @Test
+    void testMessager_MiscellaneousOverloads() {
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        
+        // These are mostly to cover the proxy calls in the anonymous messager class
+        messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class));
+        messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class));
+        messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class), mock(javax.lang.model.element.AnnotationValue.class));
+        
+        assertEquals(3, notes.size());
+    }
+
+    @Test
+    void testOptions_ComplexPaths(@TempDir Path tempDir) throws IOException {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        ProcessingEnvironment processingEnv = mock(ProcessingEnvironment.class);
+        
+        Path rootPath = tempDir.resolve("my-root").toAbsolutePath();
+        Files.createDirectories(rootPath);
+        
+        Map<String, String> options = Map.of(
+            "vibetags.root", rootPath.toString(),
+            "vibetags.project", "My Special Project",
+            "vibetags.log.path", "custom.log"
+        );
+        when(processingEnv.getOptions()).thenReturn(options);
+        when(processingEnv.getMessager()).thenReturn(noopMessager());
+        
+        processor.init(processingEnv);
+        
+        // Internal state is hard to check, but we verify it doesn't crash
+        assertNotNull(processor);
+    }
+
+    @Test
+    void testPackageKind_GranularRules(@TempDir Path tempDir) throws IOException {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        ProcessingEnvironment pe = mock(ProcessingEnvironment.class);
+        // Opt-in for granular rules
+        Path granularDir = tempDir.resolve(".cursor/rules");
+        Files.createDirectories(granularDir);
+
+        when(pe.getOptions()).thenReturn(Map.of("vibetags.root", tempDir.toString()));
+        when(pe.getMessager()).thenReturn(noopMessager());
+        processor.init(pe);
+
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        Element element = mock(Element.class);
+        when(element.getKind()).thenReturn(ElementKind.PACKAGE);
+        when(element.toString()).thenReturn("com.example.pkg");
+        when(element.getSimpleName()).thenReturn(mock(javax.lang.model.element.Name.class));
+        when(element.getSimpleName().toString()).thenReturn("pkg");
+        
+        AILocked locked = mock(AILocked.class);
+        when(locked.reason()).thenReturn("pkg locked");
+        when(element.getAnnotation(AILocked.class)).thenReturn(locked);
+        
+        doReturn(Set.of(element)).when(re).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIContext.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AICore.class);
+        doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIPerformance.class);
+
+        processor.process(Set.of(), re);
+        
+        // Final round
+        when(re.processingOver()).thenReturn(true);
+        processor.process(Set.of(), re);
+        
+        // Check if package-specific glob is generated: "**/pkg/**/*.java"
+        Path mdcFile = granularDir.resolve("com-example-pkg.mdc");
+        assertTrue(Files.exists(mdcFile), "Granular rule file should exist for package");
+        String content = Files.readString(mdcFile);
+        assertTrue(content.contains("**/pkg/**/*.java"), "Package glob should be recursive");
     }
 
     private static Messager noopMessager() {
