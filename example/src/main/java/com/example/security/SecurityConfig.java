@@ -2,6 +2,7 @@ package com.example.security;
 
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AICore;
 
 /**
  * Security configuration manager.
@@ -9,6 +10,7 @@ import se.deversity.vibetags.annotations.AIContext;
  * This class handles critical security settings and must never be modified
  * without explicit approval from the security team.
  */
+@AICore(sensitivity = "Critical", note = "This is a security manager. Any single-line change can compromise the entire project.")
 @AILocked(reason = "CRITICAL: Security configuration managed by DevOps team. Any changes require security review and approval ticket SEC-XXXX")
 @AIContext(
     focus = "This class is READ-ONLY for AI assistants. Do not suggest modifications.",

@@ -143,12 +143,4 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### PRIVACY/PII: cvv
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS security code - never log or expose in suggestions
-
-#### CORE FUNCTIONALITY: com.example.security.SecurityConfig
-- **Sensitivity**: Critical
-- **Note**: This is a security manager. Any single-line change can compromise the entire project.
-
-#### PERFORMANCE CONSTRAINTS: com.example.payment.PaymentProcessor
-- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
-- **Constraint**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
 <!-- VIBETAGS-END -->
