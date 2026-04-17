@@ -62,6 +62,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** SLF4J logger backed by a Logback FileAppender writing to {@code vibetags.log} in the project root. */
     private Logger log = null;
 
+    private boolean anyAnnotationsFound = false;
     private Path root;
     private String projectName;
 
@@ -141,6 +142,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.coreElements.clear();
         this.performanceElements.clear();
         this.elementRules.clear();
+        this.anyAnnotationsFound = false;
 
         initBuilders();
     }
@@ -223,6 +225,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         coreElements.addAll(roundEnv.getElementsAnnotatedWith(AICore.class));
         performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
 
+        if (!lockedElements.isEmpty() || !contextElements.isEmpty() || !ignoreElements.isEmpty() ||
+            !auditElements.isEmpty() || !draftElements.isEmpty() || !privacyElements.isEmpty() ||
+            !coreElements.isEmpty() || !performanceElements.isEmpty()) {
+            anyAnnotationsFound = true;
+        }
+
         // Validation in each round for early feedback
         validateAnnotations(processingEnv.getMessager(), roundEnv);
 
@@ -252,6 +260,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md");
         if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md");
 
+        // Per-platform section builders for Gemini (assembled in the finalize section below)
+        StringBuilder geminiLocked = new StringBuilder();
+        StringBuilder geminiContext = new StringBuilder();
+
         // Process @AILocked
         for (Element element : lockedElements) {
             AILocked locked = element.getAnnotation(AILocked.class);
@@ -266,6 +278,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             codexAgents.append("- **").append(className).append("**: ").append(reason).append("\n");
             copilot.append("- `").append(className).append("` - ").append(reason).append("\n");
             qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
+            geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
 
             llmsTxt.append("- [").append(element.getSimpleName()).append("](").append(className).append("): ").append(reason).append("\n");
             llmsFullTxt.append("### ").append(className).append("\n")
@@ -314,6 +327,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                             .append("- **Focus**: ").append(context.focus()).append("\n")
                             .append("- **Avoid**: ").append(context.avoids()).append("\n\n");
             appendToGranular(element, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
+            geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus())
+                         .append(". Avoid - ").append(context.avoids()).append("\n");
         }
         claudeMd.append("  </contextual_instructions>\n");
 
@@ -355,8 +370,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Builders for audit sections
         StringBuilder cursorAudit = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.\n\n");
         StringBuilder claudeAudit = new StringBuilder("\n  <audit_requirements>\n");
-        StringBuilder geminiMd = new StringBuilder("# GEMINI AI INSTRUCTIONS\n" + GENERATED_HEADER + "\n## CONTINUOUS AUDIT REQUIREMENTS\n" +
-            "You are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:\n\n");
+        // geminiMd assembled lazily from geminiLocked/geminiContext/geminiAudit in the finalize section
+        StringBuilder geminiMd = new StringBuilder("# GEMINI AI INSTRUCTIONS\n" + GENERATED_HEADER + "\n");
+        StringBuilder geminiAudit = new StringBuilder();
         StringBuilder codexAudit = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.\n\n");
         StringBuilder copilotAudit = new StringBuilder("\n## Security Audit Requirements\nBefore suggesting changes to the following files, audit for the listed vulnerabilities:\n\n");
         StringBuilder qwenAudit = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.\n\n");
@@ -376,12 +392,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 claudeAudit.append("      <vulnerability_check>").append(vulnerability).append("</vulnerability_check>\n");
             }
             claudeAudit.append("    </file>\n");
-            geminiMd.append("File: `").append(className).append("` ")
-                    .append("\nCritical Vulnerabilities to Prevent: ");
+            geminiAudit.append("File: `").append(className).append("` ")
+                       .append("\nCritical Vulnerabilities to Prevent: ");
             for (String vulnerability : checkFor) {
-                geminiMd.append("\n- ").append(vulnerability);
+                geminiAudit.append("\n- ").append(vulnerability);
             }
-            geminiMd.append("\n\n");
+            geminiAudit.append("\n\n");
             codexAudit.append("* `").append(className).append("` \n")
                       .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
             copilotAudit.append("- `").append(className).append("` \n")
@@ -516,6 +532,23 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             appendToGranular(element, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
         }
 
+        // Assemble Gemini content from per-annotation section builders
+        if (!lockedElements.isEmpty()) {
+            geminiMd.append("\n## LOCKED FILES (DO NOT MODIFY)\n")
+                    .append("Do not suggest modifications to the following files:\n\n")
+                    .append(geminiLocked);
+        }
+        if (!contextElements.isEmpty()) {
+            geminiMd.append("\n## CONTEXTUAL RULES\n")
+                    .append("Apply the following context when assisting with these files:\n\n")
+                    .append(geminiContext);
+        }
+        if (!auditElements.isEmpty()) {
+            geminiMd.append("\n## CONTINUOUS AUDIT REQUIREMENTS\n")
+                    .append("You are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:\n\n")
+                    .append(geminiAudit);
+        }
+
         // Finalize sections
         if (!auditElements.isEmpty()) {
             cursorRules.append(cursorAudit);
@@ -630,7 +663,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
-            boolean changed = writeFileIfChanged(filePath.toString(), content);
+            boolean isIgnoreFile = service.endsWith("_ignore") || service.equals("aider_ignore") || service.equals("aiexclude");
+            boolean changed = writeFileIfChanged(filePath.toString(), content, anyAnnotationsFound || isIgnoreFile);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
             String fileMsg = "VibeTags: " + status + " - " + relPath;
@@ -663,7 +697,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     "# Rules for " + simpleName + "\n\n" +
                     rulesContent;
                 Path path = serviceFiles.get("cursor_granular").resolve(qName + ".mdc");
-                writeFileIfChanged(path.toString(), mdc);
+                writeFileIfChanged(path.toString(), mdc, true);
             }
 
             if (activeServices.contains("trae_granular")) {
@@ -675,13 +709,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     "# Rules for " + simpleName + "\n\n" +
                     rulesContent;
                 Path path = serviceFiles.get("trae_granular").resolve(qName + ".md");
-                writeFileIfChanged(path.toString(), md);
+                writeFileIfChanged(path.toString(), md, true);
             }
 
             if (activeServices.contains("roo_granular")) {
                 String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
                 Path path = serviceFiles.get("roo_granular").resolve(qName + ".md");
-                writeFileIfChanged(path.toString(), md);
+                writeFileIfChanged(path.toString(), md, true);
             }
         });
         
@@ -950,10 +984,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *
      * @param path    the destination file path
      * @param content the content to write
+     * @param hasNewRules true if the current run found annotations, false otherwise
      * @return {@code true} if the file was written (content changed or file was empty),
      *         {@code false} if the existing content was already up-to-date.
      */
-    public boolean writeFileIfChanged(String path, String content) {
+    public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         Messager messager = getSafeMessager();
         try {
             Path filePath = Paths.get(path);
@@ -993,7 +1028,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     int end = existing.indexOf(markerEnd);
                     if (end == -1) {
                         messager.printMessage(Diagnostic.Kind.WARNING, "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
-                        String before = existing.substring(0, start).stripTrailing();
+                        String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
                         String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
                         if (existing.strip().equals(finalContent.strip())) {
                             return false;
@@ -1002,7 +1037,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         return true;
                     }
                     end += markerEnd.length();
-                    String before = existing.substring(0, start).stripTrailing();
+                    // Strip legacy VibeTags block from 'before' (written without markers by older versions)
+                    String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
                     String after = existing.substring(end).stripLeading();
                     
                     StringBuilder sb = new StringBuilder();
@@ -1014,6 +1050,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (existing.strip().equals(finalContent.strip())) {
                         return false;
                     }
+
+                    if (!hasNewRules && !existing.isEmpty()) {
+                        skipUpdateMsg(fileName, messager);
+                        return false;
+                    }
+
                     writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
                     System.out.println("VibeTags: Updated " + fileName);
@@ -1024,6 +1066,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (existing.strip().equals(finalContent.strip())) {
                         return false;
                     }
+
+                    if (!hasNewRules && !existing.isEmpty()) {
+                        skipUpdateMsg(fileName, messager);
+                        return false;
+                    }
+
                     writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
                     System.out.println("VibeTags: Updated legacy file " + fileName);
@@ -1036,6 +1084,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (existing.strip().equals(updated.strip())) {
                         return false;
                     }
+
+                    if (!hasNewRules && !existing.isEmpty()) {
+                        skipUpdateMsg(fileName, messager);
+                        return false;
+                    }
+
                     writeContentWithBackup(filePath, updated);
                     String action = existing.isEmpty() ? "wrote" : "appended";
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
@@ -1047,6 +1101,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 if (existing.strip().equals(content.strip())) {
                     return false;
                 }
+                
+                // Smart skip for multi-module preservation
+                if (!hasNewRules && !existing.isEmpty()) {
+                    skipUpdateMsg(fileName, messager);
+                    return false;
+                }
+
                 writeContentWithBackup(filePath, content);
                 getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
                 System.out.println("VibeTags: Updated " + fileName);
@@ -1058,11 +1119,75 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
     }
 
+    private void skipUpdateMsg(String fileName, Messager messager) {
+        String msg = "VibeTags: Skipping update of " + fileName + " (no annotations found in this module, preserving existing rules)";
+        messager.printMessage(Diagnostic.Kind.NOTE, msg);
+        System.out.println(msg);
+        if (log != null) log.info("Skipping update of {} — no annotations found", fileName);
+    }
+
     private void writeContentWithBackup(Path filePath, String finalContent) throws IOException {
         if (Files.exists(filePath)) {
             Path backupPath = Paths.get(filePath.toString() + ".bak");
             Files.copy(filePath, backupPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
         Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Strips a legacy VibeTags block (written without markers by older versions) from the given
+     * {@code before} string, preserving any genuine human content that follows it.
+     *
+     * <p>Detection: the block starts with the VibeTags generated header (commented or bare).
+     * For XML-structured files (CLAUDE.md): the block ends at the last {@code </rule>} or
+     * {@code </project_guardrails>} tag within the first 2 000 characters.
+     * For all other files (cursor rules, ignore lists, etc.): the entire {@code rest} is treated
+     * as legacy since those files are fully VibeTags-managed.
+     */
+    String stripLegacyVibeTagsBlock(String before) {
+        if (before == null || before.isEmpty()) return before;
+
+        String commentedHeader = "<!-- " + GENERATED_HEADER.trim() + " -->";
+        int legacyStart = before.indexOf(commentedHeader);
+        if (legacyStart == -1) legacyStart = before.indexOf(GENERATED_HEADER.trim());
+        if (legacyStart == -1) return before;
+
+        String rawPrefix = before.substring(0, legacyStart).stripTrailing();
+        String rest = before.substring(legacyStart);
+
+        // Determine whether the prefix contains genuine human content.
+        // Lines that are only hash-comments, bullets, blank, or HTML-comments are boilerplate.
+        boolean hasHumanPrefix = !rawPrefix.isEmpty()
+            && rawPrefix.lines().anyMatch(l -> {
+                String t = l.trim();
+                return !t.isEmpty() && !t.startsWith("#") && !t.startsWith("*")
+                    && !t.startsWith("-") && !t.startsWith("<!--");
+            });
+        String prefix = hasHumanPrefix ? rawPrefix : "";
+
+        // For XML-structured files (.md), find the last VibeTags closing tag within 2 000 chars
+        // to avoid false positives deep inside human content.
+        String searchWindow = rest.length() > 2000 ? rest.substring(0, 2000) : rest;
+        int blockEnd = -1;
+        for (String closer : new String[]{"</rule>", "</project_guardrails>"}) {
+            int idx = searchWindow.lastIndexOf(closer);
+            if (idx >= 0) blockEnd = Math.max(blockEnd, idx + closer.length());
+        }
+
+        String humanContent;
+        if (blockEnd > 0) {
+            int nlAfter = rest.indexOf("\n", blockEnd);
+            humanContent = nlAfter >= 0 ? rest.substring(nlAfter + 1).stripLeading() : "";
+        } else {
+            // No XML closers: for fully auto-generated files the rest is all legacy;
+            // for mixed human-content files try a double-newline separation.
+            humanContent = hasHumanPrefix
+                ? (rest.contains("\n\n") ? rest.substring(rest.indexOf("\n\n") + 2).stripLeading() : "")
+                : "";
+        }
+
+        if (prefix.isEmpty()) return humanContent;
+        if (humanContent.isEmpty()) return prefix;
+        return prefix + "\n\n" + humanContent;
     }
 }

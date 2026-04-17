@@ -352,7 +352,7 @@ class AIGuardrailProcessorProcessTest {
         assertFalse(Files.exists(newFile), "Precondition: file must not exist");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(newFile.toString(), "hello world");
+        boolean changed = processor.writeFileIfChanged(newFile.toString(), "hello world", true);
 
         assertTrue(changed, "Should return true when creating a new file");
         assertTrue(Files.exists(newFile), "File should now exist");
@@ -365,7 +365,7 @@ class AIGuardrailProcessorProcessTest {
         assertFalse(Files.exists(nested.getParent()), "Precondition: parent dir must not exist");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(nested.toString(), "nested content");
+        boolean changed = processor.writeFileIfChanged(nested.toString(), "nested content", true);
 
         assertTrue(changed);
         assertTrue(Files.exists(nested), "Nested file should be created");
@@ -384,7 +384,7 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         processor.init(mockEnv(messager));
 
-        boolean result = processor.writeFileIfChanged(impossiblePath.toString(), "content");
+        boolean result = processor.writeFileIfChanged(impossiblePath.toString(), "content", true);
 
         assertFalse(result, "Should return false when write fails");
         assertTrue(warnings.stream().anyMatch(w -> w.contains("Failed to write AI rules file")),
@@ -397,7 +397,7 @@ class AIGuardrailProcessorProcessTest {
         String content = "# 🛡️ Security\nFocus: performance\nAvoid: java.util.regex\n";
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.writeFileIfChanged(file.toString(), content);
+        processor.writeFileIfChanged(file.toString(), content, true);
 
         String written = Files.readString(file, java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(written.contains("🛡️"), "Unicode content must be preserved");
@@ -410,13 +410,13 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         // First write
-        assertTrue(processor.writeFileIfChanged(file.toString(), "v1"));
+        assertTrue(processor.writeFileIfChanged(file.toString(), "v1", true));
         // Same content — no rewrite
-        assertFalse(processor.writeFileIfChanged(file.toString(), "v1"));
+        assertFalse(processor.writeFileIfChanged(file.toString(), "v1", true));
         // Different content — rewrite
-        assertTrue(processor.writeFileIfChanged(file.toString(), "v2"));
+        assertTrue(processor.writeFileIfChanged(file.toString(), "v2", true));
         // Same again — no rewrite
-        assertFalse(processor.writeFileIfChanged(file.toString(), "v2"));
+        assertFalse(processor.writeFileIfChanged(file.toString(), "v2", true));
     }
 
     // -----------------------------------------------------------------------

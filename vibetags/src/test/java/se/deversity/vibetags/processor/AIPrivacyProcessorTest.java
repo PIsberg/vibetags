@@ -310,7 +310,7 @@ class AIPrivacyProcessorTest {
         final java.util.Map<String, String> captured = new java.util.LinkedHashMap<>();
 
         @Override
-        public boolean writeFileIfChanged(String path, String content) {
+        public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
             // Key by filename for easy lookup in assertions
             String key = java.nio.file.Paths.get(path).getFileName().toString();
             captured.put(key, content);

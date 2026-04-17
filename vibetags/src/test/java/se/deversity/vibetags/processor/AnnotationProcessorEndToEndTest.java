@@ -143,6 +143,26 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
+    void testGeminiInstructionsHasLockedFiles() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+
+        assertTrue(content.contains("LOCKED FILES"),
+            "gemini_instructions.md should contain a LOCKED FILES section");
+        assertTrue(content.contains("PaymentProcessor"),
+            "gemini_instructions.md should mention @AILocked PaymentProcessor");
+    }
+
+    @Test
+    void testGeminiInstructionsHasContextRules() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+
+        assertTrue(content.contains("CONTEXTUAL RULES"),
+            "gemini_instructions.md should contain a CONTEXTUAL RULES section");
+        assertTrue(content.contains("StringParser"),
+            "gemini_instructions.md should mention @AIContext StringParser");
+    }
+
+    @Test
     void testLockedFilesAppearInAllOutputs() throws IOException {
         String cursorRules = harness.readFile(".cursorrules");
         String claudeMd = harness.readFile("CLAUDE.md");
