@@ -746,7 +746,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (log != null) log.warn(message);
     }
 
-    private void cleanupGranularDirectory(Path dir, String extension) {
+    void cleanupGranularDirectory(Path dir, String extension) {
         if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return;
         try (java.util.stream.Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
@@ -861,9 +861,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         map.put("llms_full",      root.resolve("llms-full.txt"));
         map.put("aider_conventions", root.resolve("CONVENTIONS.md"));
         map.put("aider_ignore",      root.resolve(".aiderignore"));
-        map.put("cursor_granular",   root.resolve(".cursor/rules/"));
-        map.put("roo_granular",      root.resolve(".roo/rules/"));
-        map.put("trae_granular",     root.resolve(".trae/rules/"));
+        map.put("cursor_granular",   root.resolve(".cursor/rules"));
+        map.put("roo_granular",      root.resolve(".roo/rules"));
+        map.put("trae_granular",     root.resolve(".trae/rules"));
         return map;
     }
 
