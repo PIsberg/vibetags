@@ -692,9 +692,46 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                   .filter(p -> p.toString().endsWith(extension))
                   .forEach(p -> {
                       try {
-                          String content = Files.readString(p);
-                          if (content.contains(MARKER_START_MD) || content.contains(MARKER_START_HASH)) {
-                              Files.delete(p);
+                          String content = Files.readString(p, java.nio.charset.StandardCharsets.UTF_8);
+                          boolean updated = false;
+
+                          if (content.contains(MARKER_START_MD)) {
+                              int start = content.indexOf(MARKER_START_MD);
+                              int end = content.indexOf(MARKER_END_MD);
+                              if (end != -1) {
+                                  String before = content.substring(0, start).stripTrailing();
+                                  String after = content.substring(end + MARKER_END_MD.length()).stripLeading();
+                                  content = (!before.isEmpty() ? before + "\n\n" : "") + after;
+                                  updated = true;
+                              }
+                          } else if (content.contains(MARKER_START_HASH)) {
+                              int start = content.indexOf(MARKER_START_HASH);
+                              int end = content.indexOf(MARKER_END_HASH);
+                              if (end != -1) {
+                                  String before = content.substring(0, start).stripTrailing();
+                                  String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();
+                                  content = (!before.isEmpty() ? before + "\n\n" : "") + after;
+                                  updated = true;
+                              }
+                          }
+
+                          if (updated) {
+                              content = content.trim();
+                              boolean isEmptyOrBoilerplate = content.isEmpty();
+                              if (!isEmptyOrBoilerplate && content.startsWith("---")) {
+                                  int secondTriple = content.indexOf("---", 3);
+                                  if (secondTriple != -1) {
+                                      String afterFrontMatter = content.substring(secondTriple + 3).trim();
+                                      isEmptyOrBoilerplate = afterFrontMatter.isEmpty();
+                                  }
+                              }
+
+                              if (isEmptyOrBoilerplate) {
+                                  Files.delete(p);
+                              } else {
+                                  // Retain the file with manual edits, but scrubbed of the orphaned VibeTags section
+                                  Files.writeString(p, content + "\n", java.nio.charset.StandardCharsets.UTF_8);
+                              }
                           }
                       } catch (IOException ignored) {}
                   });
