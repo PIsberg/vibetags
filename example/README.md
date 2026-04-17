@@ -7,6 +7,8 @@ A practical demonstration of **VibeTags** - Java annotations that act as AI guar
 This is a sample e-commerce application that shows how VibeTags annotations control AI behavior:
 
 - **`@AILocked`** - Protects critical code from AI modifications
+- **`@AICore`** - Marks well-tested core logic as highly sensitive (extreme caution)
+- **`@AIPerformance`** - Sets strict complexity constraints for hot-path code
 - **`@AIContext`** - Guides AI on how to work with specific classes (focus/avoid instructions)
 - **`@AIDraft`** - Marks methods that need AI implementation with detailed instructions
 - **`@AIAudit`** - Tags critical infrastructure for continuous AI security auditing
@@ -310,6 +312,30 @@ If you apply `@AIPrivacy` to an element already marked with `@AIIgnore`, the com
 ```
 [WARNING] VibeTags: myField is annotated with both @AIPrivacy and @AIIgnore.
 @AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.
+```
+
+```
+
+### 7. `@AICore` - Mark Sensitive Core Logic
+
+Use to inform AI that a component is well-tested core functionality where changes could have a high impact:
+
+```java
+@AICore(sensitivity = "Critical", note = "Core billing engine. Any change requires 100% test coverage and manual QA.")
+public class BillingEngine {
+    // AI will treat this with extreme caution
+}
+```
+
+### 8. `@AIPerformance` - Enforce Performance Constraints
+
+Set strict time or space complexity requirements for performance-critical code:
+
+```java
+@AIPerformance(constraint = "Time complexity must be O(n log n). Space complexity must be O(1).")
+public class EfficientSorter {
+    // AI will avoid O(n^2) or other suboptimal implementations
+}
 ```
 
 ## 🛠️ Generated AI Configuration Files
@@ -616,13 +642,14 @@ The processor uses `Paths.get("")` which resolves to the directory where Maven/G
 
 | Scenario | Annotation | Example |
 |----------|-----------|---------|
-| Legacy code that works | `@AILocked` | Database schemas, compliance code |
+| Legacy code | `@AILocked` | Database schemas, compliance code |
+| Core logic | `@AICore` | Billing engines, transaction routers |
+| Performance-critical | `@AIPerformance` | Search algorithms, hot-path parsers |
 | Performance-critical | `@AIContext` | Algorithms, data structures |
 | Boilerplate code | `@AIDraft` | CRUD operations, DTOs |
 | Security code | `@AILocked` | Auth, encryption, validation |
 | New features | `@AIDraft` | Unimplemented methods |
 | Framework code | `@AIContext` | Spring configs, DI setup |
-| Mixed concerns | All three | Service classes (see `OrderService.java`) |
 | PII fields / methods | `@AIPrivacy` | Credentials, email, phone, card data |
 
 ## 🎯 Next Steps

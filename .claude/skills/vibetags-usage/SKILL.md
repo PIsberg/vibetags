@@ -1,6 +1,6 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy annotations, or wants to control how AI tools interact with Java code.
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance annotations, or wants to control how AI tools interact with Java code.
 version: 1.0.0
 ---
 
@@ -158,6 +158,37 @@ Using `@AIPrivacy` together with `@AIIgnore` on the same element produces a comp
 
 ---
 
+### `@AICore` — Mark sensitive core logic
+
+Use on: **class, method, field**
+
+```java
+@AICore(
+    sensitivity = "Critical", 
+    note = "Core transaction engine. Well-tested. Changes require user approval."
+)
+public class TransactionEngine { ... }
+```
+
+Use `sensitivity` (default "High") to indicate impact level, and `note` to provide specific warnings.
+
+---
+
+### `@AIPerformance` — Enforce complexity constraints
+
+Use on: **class, method, field**
+
+```java
+@AIPerformance(
+    constraint = "Must maintain O(1) time complexity. No heap allocations."
+)
+public class FastBuffer { ... }
+```
+
+Informs AI that logic is on a hot-path and suboptimal complexity is unacceptable.
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -165,7 +196,9 @@ Using `@AIPrivacy` together with `@AIIgnore` on the same element produces a comp
 | `@AIContext` + `@AIAudit` | Guide implementation AND enforce security checks |
 | `@AIDraft` + `@AIContext` | Request implementation with style constraints |
 | `@AIPrivacy` (field) + `@AIContext` (class) | Class-level guidance with PII fields protected |
+| `@AICore` + `@AIPerformance` | Hot-path core logic with strict complexity rules |
 | `@AILocked` + `@AIDraft` | **Warning**: contradictory — don't combine |
+| `@AICore` + `@AIDraft` | **Warning**: contradictory — don't combine |
 | `@AIIgnore` + `@AIPrivacy` | **Warning**: redundant — `@AIIgnore` already excludes |
 
 ---
