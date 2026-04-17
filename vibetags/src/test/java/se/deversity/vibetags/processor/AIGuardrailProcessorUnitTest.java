@@ -299,6 +299,51 @@ class AIGuardrailProcessorUnitTest {
     }
 
     @Test
+    void testWriteFileIfChanged_createsBackup_whenFileModified(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        Files.writeString(file, "<!-- VIBETAGS-START -->\nold content\n<!-- VIBETAGS-END -->");
+        Path backupFile = tempDir.resolve("test.md.bak");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+
+        assertTrue(changed);
+        assertTrue(Files.exists(backupFile), "Backup file should be created");
+        assertTrue(Files.readString(backupFile).contains("old content"), "Backup should contain original content");
+    }
+
+    @Test
+    void testWriteFileIfChanged_doesNotCreateBackup_whenContentIdentical(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        String content = "<!-- VIBETAGS-START -->\nsame content\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(file, content);
+        Path backupFile = tempDir.resolve("test.md.bak");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "same content");
+
+        assertFalse(changed);
+        assertFalse(Files.exists(backupFile), "Backup file should not be created if no changes were made");
+    }
+
+    @Test
+    void testWriteFileIfChanged_preservesContentBeforeMissingEndMarker(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("test.md");
+        Files.writeString(file, "Before start marker\n<!-- VIBETAGS-START -->\nold content missing end marker");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+
+        assertTrue(changed);
+        String content = Files.readString(file);
+        assertTrue(content.contains("Before start marker"));
+        assertTrue(content.contains("<!-- VIBETAGS-START -->"));
+        assertTrue(content.contains("new content"));
+        assertTrue(content.contains("<!-- VIBETAGS-END -->"));
+        assertFalse(content.contains("old content missing end marker")); // this is inside/after the start marker and gets replaced.
+    }
+
+    @Test
     void testWriteFileIfChanged_stripsWhitespaceForComparison(@TempDir Path tempDir) throws IOException {
         Path file = tempDir.resolve("test.md");
         // File has markers and content as it would be written by the processor
