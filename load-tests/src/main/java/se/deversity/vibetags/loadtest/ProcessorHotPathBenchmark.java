@@ -124,7 +124,7 @@ public class ProcessorHotPathBenchmark {
      */
     @Benchmark
     public boolean writeFileIfChanged_noChange() {
-        return processor.writeFileIfChanged(unchangedFile.toString(), unchangedContent);
+        return processor.writeFileIfChanged(unchangedFile.toString(), unchangedContent, true);
     }
 
     /**
@@ -135,7 +135,7 @@ public class ProcessorHotPathBenchmark {
     public boolean writeFileIfChanged_smallWrite() throws IOException {
         // Ensure the file has different content before each call
         Files.writeString(smallFile, "x", StandardCharsets.UTF_8);
-        return processor.writeFileIfChanged(smallFile.toString(), smallContent);
+        return processor.writeFileIfChanged(smallFile.toString(), smallContent, true);
     }
 
     /**
@@ -145,7 +145,7 @@ public class ProcessorHotPathBenchmark {
     @Benchmark
     public boolean writeFileIfChanged_largeWrite() throws IOException {
         Files.writeString(largeFile, "x", StandardCharsets.UTF_8);
-        return processor.writeFileIfChanged(largeFile.toString(), largeContent);
+        return processor.writeFileIfChanged(largeFile.toString(), largeContent, true);
     }
 
     // -------------------------------------------------------------------------
