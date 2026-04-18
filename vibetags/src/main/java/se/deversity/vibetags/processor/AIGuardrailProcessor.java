@@ -422,6 +422,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         StringBuilder codexDraft = new StringBuilder("\n## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
         StringBuilder geminiDraft = new StringBuilder("## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
         StringBuilder copilotDraft = new StringBuilder("\n## Implementation Tasks\nFollow these instructions to implement the drafts:\n\n");
+        StringBuilder qwenDraft = new StringBuilder("\n## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
 
         // Process @AIDraft
         for (Element element : draftElements) {
@@ -429,7 +430,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (draft == null) continue;
             String className = element.toString();
             String instructions = draft.instructions();
-            
+
             cursorDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
             claudeDraft.append("    <task path=\"").append(className).append("\">\n")
                        .append("      <instructions>").append(instructions).append("</instructions>\n")
@@ -437,6 +438,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             codexDraft.append("- **").append(className).append("**: ").append(instructions).append("\n");
             geminiDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
             copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
+            qwenDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
 
             llmsTxtDraft.append("- [").append(element.getSimpleName()).append("](").append(className)
                         .append("): ").append(instructions).append("\n");
@@ -494,6 +496,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             appendToGranular(element, "PII / Privacy Guardrails", "- **Rule**: Never log or expose runtime values of this element.\n- **Reason**: " + reason);
         }
 
+        // Platform-specific builders for @AICore
+        StringBuilder cursorCore = new StringBuilder("\n## \uD83E\uDDE0 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\n" +
+            "The following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder claudeCore = new StringBuilder("  <core_elements>\n");
+        StringBuilder codexCore  = new StringBuilder("\n## \uD83E\uDDE0 CORE FUNCTIONALITY\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder copilotCore = new StringBuilder("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
+        StringBuilder qwenCore   = new StringBuilder("\n## \uD83E\uDDE0 CORE FUNCTIONALITY\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder geminiCore = new StringBuilder();
+
+        // Platform-specific builders for @AIPerformance
+        StringBuilder cursorPerf = new StringBuilder("\n## \u26A1 PERFORMANCE CONSTRAINTS (HOT PATH)\n" +
+            "The following elements are on a hot path. Never introduce O(n\u00B2) complexity. Always reason about time/space before proposing changes.\n\n");
+        StringBuilder claudePerf = new StringBuilder("  <performance_constraints>\n");
+        StringBuilder codexPerf  = new StringBuilder("\n## \u26A1 PERFORMANCE CONSTRAINTS\nHot-path elements — never introduce O(n\u00B2) or worse. Always reason about complexity before proposing changes.\n\n");
+        StringBuilder copilotPerf = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
+        StringBuilder qwenPerf   = new StringBuilder("\n## \u26A1 PERFORMANCE CONSTRAINTS\nHot-path elements — O(n\u00B2) complexity is forbidden. Reason about complexity before proposing changes.\n\n");
+        StringBuilder geminiPerf = new StringBuilder();
+
         // Process @AICore
         for (Element element : coreElements) {
             AICore core = element.getAnnotation(AICore.class);
@@ -501,6 +521,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = element.toString();
             String sensitivity = core.sensitivity();
             String note = core.note();
+
+            cursorCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
+                      .append(". Note: ").append(note).append("\n");
+            claudeCore.append("    <element path=\"").append(className).append("\">\n")
+                      .append("      <sensitivity>").append(sensitivity).append("</sensitivity>\n")
+                      .append("      <note>").append(note).append("</note>\n")
+                      .append("    </element>\n");
+            codexCore.append("- **").append(className).append("** (sensitivity: ").append(sensitivity)
+                     .append("): ").append(note).append("\n");
+            copilotCore.append("- `").append(className).append("` — sensitivity: ").append(sensitivity)
+                       .append(". ").append(note).append("\n");
+            qwenCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
+                    .append(". Note: ").append(note).append("\n");
+            geminiCore.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity)
+                      .append(". Note: ").append(note).append("\n");
 
             llmsTxtCore.append("- [").append(element.getSimpleName()).append("](").append(className)
                        .append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
@@ -520,6 +555,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (perf == null) continue;
             String className = element.toString();
             String constraint = perf.constraint();
+
+            cursorPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
+            claudePerf.append("    <element path=\"").append(className).append("\">\n")
+                      .append("      <constraint>").append(constraint).append("</constraint>\n")
+                      .append("    </element>\n");
+            codexPerf.append("- **").append(className).append("**: ").append(constraint).append("\n");
+            copilotPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
+            qwenPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
+            geminiPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
 
             llmsTxtPerformance.append("- [").append(element.getSimpleName()).append("](").append(className)
                               .append("): ").append(constraint).append("\n");
@@ -578,6 +622,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             codexAgents.append(codexDraft);
             geminiMd.append(geminiDraft);
             copilot.append(copilotDraft);
+            qwenMd.append(qwenDraft);
         }
 
         if (!privacyElements.isEmpty()) {
@@ -589,6 +634,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             geminiMd.append(geminiPrivacy);
             copilot.append(copilotPrivacy);
             qwenMd.append(qwenPrivacy);
+        }
+
+        if (!coreElements.isEmpty()) {
+            cursorRules.append(cursorCore);
+            claudeCore.append("  </core_elements>\n");
+            claudeMd.append(claudeCore);
+            claudeMd.append("\n<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>\n");
+            codexAgents.append(codexCore);
+            copilot.append(copilotCore);
+            qwenMd.append(qwenCore);
+            geminiMd.append("\n## CORE FUNCTIONALITY (EXTREME CAUTION)\n")
+                    .append("The following elements are well-tested core components. Make changes with extreme caution:\n\n")
+                    .append(geminiCore);
+        }
+
+        if (!performanceElements.isEmpty()) {
+            cursorRules.append(cursorPerf);
+            claudePerf.append("  </performance_constraints>\n");
+            claudeMd.append(claudePerf);
+            claudeMd.append("\n<rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n\u00B2) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>\n");
+            codexAgents.append(codexPerf);
+            copilot.append(copilotPerf);
+            qwenMd.append(qwenPerf);
+            geminiMd.append("\n## PERFORMANCE CONSTRAINTS (HOT PATH)\n")
+                    .append("Never introduce O(n\u00B2) complexity into these elements. Always reason about complexity before proposing changes:\n\n")
+                    .append(geminiPerf);
         }
 
         claudeMd.append("</project_guardrails>\n");
