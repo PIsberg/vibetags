@@ -143,6 +143,26 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
+    void testGeminiInstructionsHasLockedFiles() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+
+        assertTrue(content.contains("LOCKED FILES"),
+            "gemini_instructions.md should contain a LOCKED FILES section");
+        assertTrue(content.contains("PaymentProcessor"),
+            "gemini_instructions.md should mention @AILocked PaymentProcessor");
+    }
+
+    @Test
+    void testGeminiInstructionsHasContextRules() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+
+        assertTrue(content.contains("CONTEXTUAL RULES"),
+            "gemini_instructions.md should contain a CONTEXTUAL RULES section");
+        assertTrue(content.contains("StringParser"),
+            "gemini_instructions.md should mention @AIContext StringParser");
+    }
+
+    @Test
     void testLockedFilesAppearInAllOutputs() throws IOException {
         String cursorRules = harness.readFile(".cursorrules");
         String claudeMd = harness.readFile("CLAUDE.md");
@@ -538,5 +558,110 @@ class AnnotationProcessorEndToEndTest {
             "llms.txt should mention PaymentProcessor");
         assertTrue(llmsFullTxt.contains("PaymentProcessor"),
             "llms-full.txt should mention PaymentProcessor");
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIDraft — Qwen coverage (was missing)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testQwenGetsDraftInstructions() throws IOException {
+        String content = harness.readFile("QWEN.md");
+        assertTrue(content.contains("NotificationService"),
+            "QWEN.md must include @AIDraft NotificationService");
+        assertTrue(content.contains("IMPLEMENTATION TASKS"),
+            "QWEN.md must have an IMPLEMENTATION TASKS section");
+    }
+
+    // -----------------------------------------------------------------------
+    // @AICore — all platform coverage (was missing from all platform files)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAICoreAppearsInCursorRules() throws IOException {
+        String content = harness.readFile(".cursorrules");
+        assertTrue(content.contains("CriticalService"), ".cursorrules must mention @AICore CriticalService");
+        assertTrue(content.contains("CORE FUNCTIONALITY"), ".cursorrules must have a CORE FUNCTIONALITY section");
+    }
+
+    @Test
+    void testAICoreAppearsInClaudeMd() throws IOException {
+        String content = harness.readFile("CLAUDE.md");
+        assertTrue(content.contains("CriticalService"), "CLAUDE.md must mention @AICore CriticalService");
+        assertTrue(content.contains("core_elements"), "CLAUDE.md must have <core_elements> XML block");
+    }
+
+    @Test
+    void testAICoreAppearsInGemini() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+        assertTrue(content.contains("CriticalService"), "gemini must mention @AICore CriticalService");
+        assertTrue(content.contains("CORE FUNCTIONALITY"), "gemini must have CORE FUNCTIONALITY section");
+    }
+
+    @Test
+    void testAICoreAppearsInQwen() throws IOException {
+        String content = harness.readFile("QWEN.md");
+        assertTrue(content.contains("CriticalService"), "QWEN.md must mention @AICore CriticalService");
+        assertTrue(content.contains("CORE FUNCTIONALITY"), "QWEN.md must have a CORE FUNCTIONALITY section");
+    }
+
+    @Test
+    void testAICoreAppearsInCodex() throws IOException {
+        String content = harness.readFile("AGENTS.md");
+        assertTrue(content.contains("CriticalService"), "AGENTS.md must mention @AICore CriticalService");
+        assertTrue(content.contains("CORE FUNCTIONALITY"), "AGENTS.md must have a CORE FUNCTIONALITY section");
+    }
+
+    @Test
+    void testAICoreAppearsInCopilot() throws IOException {
+        String content = harness.readFile(".github/copilot-instructions.md");
+        assertTrue(content.contains("CriticalService"), "copilot-instructions must mention @AICore CriticalService");
+        assertTrue(content.contains("Core Functionality"), "copilot-instructions must have Core Functionality section");
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIPerformance — all platform coverage (was missing from all platform files)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAIPerformanceAppearsInCursorRules() throws IOException {
+        String content = harness.readFile(".cursorrules");
+        assertTrue(content.contains("HotPathRouter"), ".cursorrules must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), ".cursorrules must have PERFORMANCE CONSTRAINTS section");
+    }
+
+    @Test
+    void testAIPerformanceAppearsInClaudeMd() throws IOException {
+        String content = harness.readFile("CLAUDE.md");
+        assertTrue(content.contains("HotPathRouter"), "CLAUDE.md must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("performance_constraints"), "CLAUDE.md must have <performance_constraints> XML block");
+    }
+
+    @Test
+    void testAIPerformanceAppearsInGemini() throws IOException {
+        String content = harness.readFile("gemini_instructions.md");
+        assertTrue(content.contains("HotPathRouter"), "gemini must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), "gemini must have PERFORMANCE CONSTRAINTS section");
+    }
+
+    @Test
+    void testAIPerformanceAppearsInQwen() throws IOException {
+        String content = harness.readFile("QWEN.md");
+        assertTrue(content.contains("HotPathRouter"), "QWEN.md must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), "QWEN.md must have PERFORMANCE CONSTRAINTS section");
+    }
+
+    @Test
+    void testAIPerformanceAppearsInCodex() throws IOException {
+        String content = harness.readFile("AGENTS.md");
+        assertTrue(content.contains("HotPathRouter"), "AGENTS.md must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), "AGENTS.md must have PERFORMANCE CONSTRAINTS section");
+    }
+
+    @Test
+    void testAIPerformanceAppearsInCopilot() throws IOException {
+        String content = harness.readFile(".github/copilot-instructions.md");
+        assertTrue(content.contains("HotPathRouter"), "copilot-instructions must mention @AIPerformance HotPathRouter");
+        assertTrue(content.contains("Performance Constraints"), "copilot-instructions must have Performance Constraints section");
     }
 }

@@ -229,7 +229,7 @@ class AIGuardrailProcessorUnitTest {
             "* `com.example.PaymentProcessor` - Reason: legacy\n";
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), newContent);
+        boolean changed = processor.writeFileIfChanged(file.toString(), newContent, true);
 
         assertTrue(changed, "File must be updated when an annotation is removed");
         String finalContent = Files.readString(file);
@@ -256,7 +256,7 @@ class AIGuardrailProcessorUnitTest {
         String headerOnlyContent = "# AUTO-GENERATED AI RULES\n## LOCKED FILES (DO NOT EDIT)\n";
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), headerOnlyContent);
+        boolean changed = processor.writeFileIfChanged(file.toString(), headerOnlyContent, true);
 
         assertTrue(changed, "File must be updated when all annotations are removed");
         assertFalse(Files.readString(file).contains("PaymentProcessor"),
@@ -271,7 +271,7 @@ class AIGuardrailProcessorUnitTest {
         Files.createFile(file);
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content", true);
 
         assertTrue(changed, "Should return true when file was empty");
         String content = Files.readString(file);
@@ -292,7 +292,7 @@ class AIGuardrailProcessorUnitTest {
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // Passing "same content" should result in the same markedContent being compared
-        boolean changed = processor.writeFileIfChanged(file.toString(), "same content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "same content", true);
 
         assertFalse(changed, "Should return false when content (with markers) is identical");
         assertEquals(before, Files.getLastModifiedTime(file).toMillis(),
@@ -305,7 +305,7 @@ class AIGuardrailProcessorUnitTest {
         Files.writeString(file, "<!-- VIBETAGS-START -->\nold content\n<!-- VIBETAGS-END -->");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content", true);
 
         assertTrue(changed, "Should return true when content differs");
         assertTrue(Files.readString(file).contains("new content"));
@@ -318,7 +318,7 @@ class AIGuardrailProcessorUnitTest {
         Path backupFile = tempDir.resolve("test.md.bak");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content", true);
 
         assertTrue(changed);
         assertTrue(Files.exists(backupFile), "Backup file should be created");
@@ -333,7 +333,7 @@ class AIGuardrailProcessorUnitTest {
         Path backupFile = tempDir.resolve("test.md.bak");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "same content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "same content", true);
 
         assertFalse(changed);
         assertFalse(Files.exists(backupFile), "Backup file should not be created if no changes were made");
@@ -345,7 +345,7 @@ class AIGuardrailProcessorUnitTest {
         Files.writeString(file, "Before start marker\n<!-- VIBETAGS-START -->\nold content missing end marker");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "new content");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "new content", true);
 
         assertTrue(changed);
         String content = Files.readString(file);
@@ -365,7 +365,7 @@ class AIGuardrailProcessorUnitTest {
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // Passing "content " with trailing space should still return false if the wrapped result matches
-        boolean changed = processor.writeFileIfChanged(file.toString(), "content ");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "content ", true);
 
         assertFalse(changed, "Whitespace difference should not trigger a rewrite");
     }
@@ -376,7 +376,7 @@ class AIGuardrailProcessorUnitTest {
         Files.writeString(file, "# Manual Rule\n");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.writeFileIfChanged(file.toString(), "vibetags rule");
+        processor.writeFileIfChanged(file.toString(), "vibetags rule", true);
 
         String content = Files.readString(file);
         assertTrue(content.contains("# Manual Rule"));
@@ -392,7 +392,7 @@ class AIGuardrailProcessorUnitTest {
         Files.writeString(file, "# Manual Rule\n\n# VIBETAGS-START\nold rule\n# VIBETAGS-END\n\n# More Manual");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.writeFileIfChanged(file.toString(), "new rule");
+        processor.writeFileIfChanged(file.toString(), "new rule", true);
 
         String content = Files.readString(file);
         assertTrue(content.contains("# Manual Rule"));
@@ -408,12 +408,121 @@ class AIGuardrailProcessorUnitTest {
         Files.writeString(file, "{\"key\":\"old\"}");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(file.toString(), "{\"key\":\"new\"}");
+        boolean changed = processor.writeFileIfChanged(file.toString(), "{\"key\":\"new\"}", true);
 
         assertTrue(changed);
         String content = Files.readString(file);
         assertEquals("{\"key\":\"new\"}", content.trim());
         assertFalse(content.contains("VIBETAGS"), "JSON should not have markers");
+    }
+
+    // -----------------------------------------------------------------------
+    // stripLegacyVibeTagsBlock
+    // -----------------------------------------------------------------------
+
+    @Test
+    void stripLegacy_returnsNullSafeForEmpty() {
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        assertEquals("", p.stripLegacyVibeTagsBlock(""));
+        assertNull(p.stripLegacyVibeTagsBlock(null));
+    }
+
+    @Test
+    void stripLegacy_noVibeTagsHeader_unchanged() {
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        String input = "# My custom heading\n\nSome human content.";
+        assertEquals(input, p.stripLegacyVibeTagsBlock(input));
+    }
+
+    @Test
+    void stripLegacy_claudeMdLegacyBlock_keepsHumanContent() {
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        // Simulate CLAUDE.md before field: legacy VibeTags block + human content
+        String legacy =
+            "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
+            "<project_guardrails>\n" +
+            "  <locked_files>\n" +
+            "  </locked_files>\n" +
+            "  <contextual_instructions>\n" +
+            "  </contextual_instructions>\n" +
+            "</project_guardrails>\n\n" +
+            "<rule>Never propose edits to files listed in <locked_files>.</rule>\n\n";
+        String human = "# CLAUDE.md\n\nThis file provides guidance.\n";
+
+        String result = p.stripLegacyVibeTagsBlock(legacy + human);
+
+        assertFalse(result.contains("<project_guardrails>"), "Legacy XML block should be stripped");
+        assertFalse(result.contains("<rule>"), "Legacy rule element should be stripped");
+        assertTrue(result.contains("# CLAUDE.md"), "Human heading must be preserved");
+        assertTrue(result.contains("This file provides guidance"), "Human content must be preserved");
+    }
+
+    @Test
+    void stripLegacy_fullyAutoGeneratedFile_stripsAll() {
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        // Simulate .cursorrules entirely generated by old VibeTags (no human content)
+        String before =
+            "# AUTO-GENERATED AI RULES\n" +
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n" +
+            "# Do not edit manually.\n\n" +
+            "## LOCKED FILES (DO NOT EDIT)\n" +
+            "* `com.example.Foo` - Reason: legacy\n";
+
+        String result = p.stripLegacyVibeTagsBlock(before);
+
+        assertEquals("", result, "Fully auto-generated content should be stripped entirely");
+    }
+
+    @Test
+    void writeFileIfChanged_stripsLegacyBlockWhenUpdatingMarkedSection(@TempDir Path tempDir) throws IOException {
+        // Simulate CLAUDE.md that has both legacy (no-marker) content at top
+        // and a properly-marked VibeTags section at bottom.
+        String legacy =
+            "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
+            "<project_guardrails><locked_files></locked_files></project_guardrails>\n" +
+            "<rule>Never propose edits to files listed in <locked_files>.</rule>\n\n";
+        String human = "# CLAUDE.md\n\nHuman guidance here.\n";
+        String markedSection =
+            "<!-- VIBETAGS-START -->\n" +
+            "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
+            "<project_guardrails><locked_files><file path=\"Foo\"><reason>old</reason></file></locked_files></project_guardrails>\n" +
+            "<rule>Never propose edits to files listed in <locked_files>.</rule>\n" +
+            "<!-- VIBETAGS-END -->\n";
+
+        Path file = tempDir.resolve("CLAUDE.md");
+        Files.writeString(file, legacy + human + markedSection);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.writeFileIfChanged(file.toString(), "new generated content", true);
+
+        String result = Files.readString(file);
+        // Legacy block at top must be gone
+        assertFalse(result.startsWith("<!-- # Generated"), "Legacy block must be removed from top");
+        // Human content must survive
+        assertTrue(result.contains("# CLAUDE.md"), "Human content heading must be preserved");
+        assertTrue(result.contains("Human guidance here"), "Human prose must be preserved");
+        // Marked section must be updated
+        assertTrue(result.contains("<!-- VIBETAGS-START -->"), "Markers must still be present");
+        assertTrue(result.contains("new generated content"), "New content must be written");
+    }
+
+    @Test
+    void writeFileIfChanged_skipsUpdate_whenNoAnnotationsAndFileHasContent(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("gemini_instructions.md");
+        String existingContent =
+            "<!-- VIBETAGS-START -->\n" +
+            "# GEMINI AI INSTRUCTIONS\n\n" +
+            "## CONTINUOUS AUDIT REQUIREMENTS\n\n" +
+            "File: `com.example.Foo` \nCritical Vulnerabilities to Prevent: \n- SQL Injection\n" +
+            "<!-- VIBETAGS-END -->\n";
+        Files.writeString(file, existingContent);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // hasNewRules=false simulates a test-compile phase with no annotations
+        boolean changed = processor.writeFileIfChanged(file.toString(), "# GEMINI AI INSTRUCTIONS\n\n", false);
+
+        assertFalse(changed, "Must not overwrite existing content when hasNewRules=false");
+        assertEquals(existingContent, Files.readString(file), "File content must be unchanged");
     }
 
     // --- helpers ---
@@ -531,7 +640,7 @@ class AIGuardrailProcessorUnitTest {
         // Even if it doesn't throw, we are testing the robustness of the processor.
         // The current implementation catches nothing specifically in writeFileIfChanged except what's handled by NIO.
         // However, writeFileIfChanged uses FileWriter which is tested.
-        assertDoesNotThrow(() -> processor.writeFileIfChanged(dirPath.toString(), "content"));
+        assertDoesNotThrow(() -> processor.writeFileIfChanged(dirPath.toString(), "content", true));
     }
 
     @Test

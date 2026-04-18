@@ -185,6 +185,18 @@ class ProcessorTestHarness {
             "    private String email;\n" +
             "}\n");
 
+        h.addSource("com.example.core.CriticalService",
+            "package com.example.core;\n" +
+            "import se.deversity.vibetags.annotations.AICore;\n" +
+            "@AICore(sensitivity = \"high\", note = \"payment processing core — battle-tested\")\n" +
+            "public class CriticalService {}\n");
+
+        h.addSource("com.example.perf.HotPathRouter",
+            "package com.example.perf;\n" +
+            "import se.deversity.vibetags.annotations.AIPerformance;\n" +
+            "@AIPerformance(constraint = \"O(1) per invocation — no allocations on the hot path\")\n" +
+            "public class HotPathRouter {}\n");
+
         h.compile();
         return h;
     }
