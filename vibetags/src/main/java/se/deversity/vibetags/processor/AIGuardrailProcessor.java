@@ -254,9 +254,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Signal directories for granular rules
         Map<String, Path> serviceFiles = buildServiceFileMap(root);
         Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
-        if (activeServices.contains("cursor_granular")) cleanupGranularDirectory(serviceFiles.get("cursor_granular"), ".mdc");
-        if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md");
-        if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md");
 
         // Per-platform section builders for Gemini (assembled in the finalize section below)
         StringBuilder geminiLocked = new StringBuilder();
@@ -743,9 +740,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         });
 
-        // Granular Rules Writing
+        // Granular Rules Writing — track written qNames so cleanup only removes true orphans
+        Set<String> writtenQNames = new java.util.HashSet<>();
         elementRules.forEach((element, builder) -> {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+            writtenQNames.add(qName);
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();
             String glob = javax.lang.model.element.ElementKind.PACKAGE.equals(element.getKind())
@@ -782,7 +781,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 writeFileIfChanged(path.toString(), md, true);
             }
         });
-        
+
+        // Cleanup orphaned granular files (classes that lost their annotations),
+        // skipping files we just wrote to avoid a delete-then-recreate cycle.
+        if (activeServices.contains("cursor_granular")) cleanupGranularDirectory(serviceFiles.get("cursor_granular"), ".mdc", writtenQNames);
+        if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md", writtenQNames);
+        if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md", writtenQNames);
+
         checkOrphanedAnnotations(messager, activeServices, 
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(), 
@@ -845,10 +850,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     void cleanupGranularDirectory(Path dir, String extension) {
+        cleanupGranularDirectory(dir, extension, java.util.Collections.emptySet());
+    }
+
+    void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
         if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return;
         try (java.util.stream.Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(extension))
+                  .filter(p -> {
+                      String name = p.getFileName().toString();
+                      int dot = name.lastIndexOf('.');
+                      return !excludeQNames.contains(dot >= 0 ? name.substring(0, dot) : name);
+                  })
                   .forEach(p -> {
                       try {
                           String content = Files.readString(p, java.nio.charset.StandardCharsets.UTF_8);
