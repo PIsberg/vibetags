@@ -122,8 +122,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String dirMsg  = "VibeTags: user.dir:      " + System.getProperty("user.dir");
         messager.printMessage(Diagnostic.Kind.NOTE, rootMsg);
         messager.printMessage(Diagnostic.Kind.NOTE, dirMsg);
-        System.out.println(rootMsg);
-        System.out.println(dirMsg);
         
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
         
@@ -256,9 +254,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Signal directories for granular rules
         Map<String, Path> serviceFiles = buildServiceFileMap(root);
         Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
-        if (activeServices.contains("cursor_granular")) cleanupGranularDirectory(serviceFiles.get("cursor_granular"), ".mdc");
-        if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md");
-        if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md");
 
         // Per-platform section builders for Gemini (assembled in the finalize section below)
         StringBuilder geminiLocked = new StringBuilder();
@@ -267,7 +262,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AILocked
         for (Element element : lockedElements) {
             AILocked locked = element.getAnnotation(AILocked.class);
-            String className = element.toString();
+            String className = elementPath(element);
             String reason = locked.reason();
 
             cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
@@ -280,7 +275,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
             geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
 
-            llmsTxt.append("- [").append(element.getSimpleName()).append("](").append(className).append("): ").append(reason).append("\n");
+            llmsTxt.append("- [").append(elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
             llmsFullTxt.append("### ").append(className).append("\n")
                        .append("- **Reason**: ").append(reason).append("\n\n");
 
@@ -299,7 +294,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIContext
         for (Element element : contextElements) {
             AIContext context = element.getAnnotation(AIContext.class);
-            String className = element.toString();
+            String className = elementPath(element);
 
             cursorRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus())
                        .append("\n  * Avoid: ").append(context.avoids()).append("\n");
@@ -316,7 +311,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                   .append("  * Focus: ").append(context.focus()).append("\n")
                   .append("  * Avoid: ").append(context.avoids()).append("\n");
 
-            llmsTxtContext.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtContext.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): Focus - ").append(context.focus())
                           .append(". Avoid - ").append(context.avoids()).append("\n");
             llmsFullTxtContext.append("### ").append(className).append("\n")
@@ -341,7 +336,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Process @AIIgnore
         for (Element element : ignoreElements) {
-            String className = element.toString();
+            String className = elementPath(element);
             cursorIgnore.append("* `").append(className).append("` \n");
             claudeIgnore.append("    <file path=\"").append(className).append("\"/>\n");
             aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
@@ -356,7 +351,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenIgnoreFile.append(globPattern);
             qwenIgnore.append("* `").append(className).append("` \n");
 
-            llmsTxtIgnore.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtIgnore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                          .append("): excluded from AI context\n");
             llmsFullTxtIgnore.append("### ").append(className).append("\n")
                              .append("- Excluded from AI context entirely - treat as non-existent\n\n");
@@ -381,7 +376,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : auditElements) {
             AIAudit audit = element.getAnnotation(AIAudit.class);
             if (audit == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String[] checkFor = audit.checkFor();
             if (checkFor.length == 0) continue;
 
@@ -405,7 +400,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenAudit.append("* `").append(className).append("` \n")
                      .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
 
-            llmsTxtAudit.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtAudit.append("- [").append(elementDisplayName(element)).append("](").append(className)
                         .append("): check for ").append(String.join(", ", checkFor)).append("\n");
             llmsFullTxtAudit.append("### ").append(className).append("\n")
                             .append("- **Required Checks**: ").append(String.join(", ", checkFor)).append("\n\n");
@@ -428,7 +423,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : draftElements) {
             AIDraft draft = element.getAnnotation(AIDraft.class);
             if (draft == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String instructions = draft.instructions();
 
             cursorDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
@@ -440,7 +435,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
             qwenDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
 
-            llmsTxtDraft.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtDraft.append("- [").append(elementDisplayName(element)).append("](").append(className)
                         .append("): ").append(instructions).append("\n");
             llmsFullTxtDraft.append("### ").append(className).append("\n")
                             .append("- **Instructions**: ").append(instructions).append("\n\n");
@@ -473,7 +468,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : privacyElements) {
             AIPrivacy privacy = element.getAnnotation(AIPrivacy.class);
             if (privacy == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String reason = privacy.reason();
 
             cursorPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
@@ -485,7 +480,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotPrivacy.append("- `").append(className).append("` - ").append(reason).append("\n");
             qwenPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
 
-            llmsTxtPrivacy.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtPrivacy.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): ").append(reason).append("\n");
             llmsFullTxtPrivacy.append("### ").append(className).append("\n")
                               .append("- **Reason**: ").append(reason).append("\n\n");
@@ -518,7 +513,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : coreElements) {
             AICore core = element.getAnnotation(AICore.class);
             if (core == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String sensitivity = core.sensitivity();
             String note = core.note();
 
@@ -537,7 +532,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             geminiCore.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity)
                       .append(". Note: ").append(note).append("\n");
 
-            llmsTxtCore.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtCore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                        .append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
             llmsFullTxtCore.append("### ").append(className).append("\n")
                            .append("- **Sensitivity**: ").append(sensitivity).append("\n")
@@ -553,7 +548,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : performanceElements) {
             AIPerformance perf = element.getAnnotation(AIPerformance.class);
             if (perf == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String constraint = perf.constraint();
 
             cursorPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
@@ -565,7 +560,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
             geminiPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
 
-            llmsTxtPerformance.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtPerformance.append("- [").append(elementDisplayName(element)).append("](").append(className)
                               .append("): ").append(constraint).append("\n");
             llmsFullTxtPerformance.append("### ").append(className).append("\n")
                                   .append("- **Constraint**: ").append(constraint).append("\n\n");
@@ -730,7 +725,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Messager messager = getSafeMessager();
         String genMsg = "VibeTags: Generating files (v" + VERSION + ") for " + contentByService.size() + " active services: " + String.join(", ", contentByService.keySet());
         messager.printMessage(Diagnostic.Kind.NOTE, genMsg);
-        System.out.println(genMsg);
 
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
@@ -740,19 +734,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String status = changed ? "updated" : "no changes";
             String fileMsg = "VibeTags: " + status + " - " + relPath;
             getSafeMessager().printMessage(Diagnostic.Kind.NOTE, fileMsg);
-            System.out.println(fileMsg);
-            if (service.equals("aider_conventions")) {
-                System.out.println("VibeTags: [SUMMARY] CONVENTIONS.md content length: " + content.length());
-            }
             if (log != null) {
                 if (changed) log.info("{} — updated", relPath);
                 else         log.info("{} — no changes", relPath);
             }
         });
 
-        // Granular Rules Writing
+        // Granular Rules Writing — track written qNames so cleanup only removes true orphans
+        Set<String> writtenQNames = new java.util.HashSet<>();
         elementRules.forEach((element, builder) -> {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+            writtenQNames.add(qName);
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();
             String glob = javax.lang.model.element.ElementKind.PACKAGE.equals(element.getKind())
@@ -789,7 +781,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 writeFileIfChanged(path.toString(), md, true);
             }
         });
-        
+
+        // Cleanup orphaned granular files (classes that lost their annotations),
+        // skipping files we just wrote to avoid a delete-then-recreate cycle.
+        if (activeServices.contains("cursor_granular")) cleanupGranularDirectory(serviceFiles.get("cursor_granular"), ".mdc", writtenQNames);
+        if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md", writtenQNames);
+        if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md", writtenQNames);
+
         checkOrphanedAnnotations(messager, activeServices, 
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(), 
@@ -852,10 +850,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     void cleanupGranularDirectory(Path dir, String extension) {
+        cleanupGranularDirectory(dir, extension, java.util.Collections.emptySet());
+    }
+
+    void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
         if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return;
         try (java.util.stream.Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(extension))
+                  .filter(p -> {
+                      String name = p.getFileName().toString();
+                      int dot = name.lastIndexOf('.');
+                      return !excludeQNames.contains(dot >= 0 ? name.substring(0, dot) : name);
+                  })
                   .forEach(p -> {
                       try {
                           String content = Files.readString(p, java.nio.charset.StandardCharsets.UTF_8);
@@ -920,6 +927,38 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             current = current.getEnclosingElement();
         }
         return e;
+    }
+
+    /**
+     * Returns a fully-qualified path for an element.
+     * For FIELD, METHOD, and CONSTRUCTOR elements, prepends the enclosing type's FQN.
+     * Falls back to element.toString() if no enclosing element is present (e.g. in tests).
+     */
+    private String elementPath(Element element) {
+        ElementKind kind = element.getKind();
+        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+            Element enclosing = element.getEnclosingElement();
+            if (enclosing != null) {
+                return enclosing.toString() + "." + element.toString();
+            }
+        }
+        return element.toString();
+    }
+
+    /**
+     * Returns a short display name for llms.txt link text.
+     * For FIELD/METHOD/CONSTRUCTOR: "EnclosingSimpleName.memberSimpleName(params)" format.
+     * For TYPE elements: just the simple name.
+     */
+    private String elementDisplayName(Element element) {
+        ElementKind kind = element.getKind();
+        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+            Element enclosing = element.getEnclosingElement();
+            if (enclosing != null) {
+                return enclosing.getSimpleName() + "." + element.toString();
+            }
+        }
+        return element.getSimpleName().toString();
     }
 
     private void appendToGranular(Element element, String title, String content) {
@@ -990,21 +1029,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         );
 
         Set<String> active = new java.util.HashSet<>();
-        
-        System.out.println("VibeTags: Scanning for activation files in: " + allServiceFiles.values().iterator().next().getParent());
-        
+
         allServiceFiles.forEach((key, path) -> {
             if (!optInKeys.contains(key)) return;
-            
-            boolean exists = Files.exists(path);
-            if (exists) {
+            if (Files.exists(path)) {
                 active.add(key);
-                System.out.println("VibeTags: [ACTIVE] " + key + " -> " + path.getFileName());
-            } else {
-                // Special case: quiet unless it's a primary file
-                if (key.contains("aider") || key.equals("cursor") || key.equals("qwen")) {
-                   System.out.println("VibeTags: [INACTIVE] " + key + " (file " + path.getFileName() + " not found)");
-                }
             }
         });
 
@@ -1016,7 +1045,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 .filter(e -> optInKeys.contains(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
             messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
-            System.out.println(msg.toString());
         }
 
         return active;
@@ -1129,7 +1157,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
                     writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-                    System.out.println("VibeTags: Updated " + fileName);
                     return true;
                 } else if (!existing.isEmpty() && existing.contains(GENERATED_HEADER.trim())) {
                     // Legacy VibeTags file found (no markers but has header): upgrade to markers
@@ -1145,7 +1172,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
                     writeContentWithBackup(filePath, finalContent);
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
-                    System.out.println("VibeTags: Updated legacy file " + fileName);
                     return true;
                 } else {
                     // Section missing or file is not a VibeTags file: append to the end
@@ -1164,7 +1190,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     writeContentWithBackup(filePath, updated);
                     String action = existing.isEmpty() ? "wrote" : "appended";
                     getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
-                    System.out.println("VibeTags: " + action + " " + fileName);
                     return true;
                 }
             } else {
@@ -1172,7 +1197,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 if (existing.strip().equals(content.strip())) {
                     return false;
                 }
-                
+
                 // Smart skip for multi-module preservation
                 if (!hasNewRules && !existing.isEmpty()) {
                     skipUpdateMsg(fileName, messager);
@@ -1181,7 +1206,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
                 writeContentWithBackup(filePath, content);
                 getSafeMessager().printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-                System.out.println("VibeTags: Updated " + fileName);
                 return true;
             }
         } catch (IOException e) {
@@ -1193,7 +1217,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private void skipUpdateMsg(String fileName, Messager messager) {
         String msg = "VibeTags: Skipping update of " + fileName + " (no annotations found in this module, preserving existing rules)";
         messager.printMessage(Diagnostic.Kind.NOTE, msg);
-        System.out.println(msg);
         if (log != null) log.info("Skipping update of {} — no annotations found", fileName);
     }
 

@@ -148,4 +148,19 @@ Never include runtime values of the following elements in logs, console output, 
 
 ### cvv
 - **Reason**: PCI-DSS security code - never log or expose in suggestions
+
+
+## 🧠 Core Functionality
+The following elements are well-tested core functionality. Make changes with extreme caution.
+
+### com.example.security.SecurityConfig
+- **Sensitivity**: Critical
+- **Note**: This is a security manager. Any single-line change can compromise the entire project.
+
+
+## ⚡ Performance Constraints
+The following elements are on a hot-path and have strict time/space complexity constraints.
+
+### com.example.payment.PaymentProcessor
+- **Constraint**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
 <!-- VIBETAGS-END -->
