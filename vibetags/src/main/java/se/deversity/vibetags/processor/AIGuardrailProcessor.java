@@ -262,7 +262,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AILocked
         for (Element element : lockedElements) {
             AILocked locked = element.getAnnotation(AILocked.class);
-            String className = element.toString();
+            String className = elementPath(element);
             String reason = locked.reason();
 
             cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
@@ -275,7 +275,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
             geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
 
-            llmsTxt.append("- [").append(element.getSimpleName()).append("](").append(className).append("): ").append(reason).append("\n");
+            llmsTxt.append("- [").append(elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
             llmsFullTxt.append("### ").append(className).append("\n")
                        .append("- **Reason**: ").append(reason).append("\n\n");
 
@@ -294,7 +294,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIContext
         for (Element element : contextElements) {
             AIContext context = element.getAnnotation(AIContext.class);
-            String className = element.toString();
+            String className = elementPath(element);
 
             cursorRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus())
                        .append("\n  * Avoid: ").append(context.avoids()).append("\n");
@@ -311,7 +311,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                   .append("  * Focus: ").append(context.focus()).append("\n")
                   .append("  * Avoid: ").append(context.avoids()).append("\n");
 
-            llmsTxtContext.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtContext.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): Focus - ").append(context.focus())
                           .append(". Avoid - ").append(context.avoids()).append("\n");
             llmsFullTxtContext.append("### ").append(className).append("\n")
@@ -336,7 +336,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Process @AIIgnore
         for (Element element : ignoreElements) {
-            String className = element.toString();
+            String className = elementPath(element);
             cursorIgnore.append("* `").append(className).append("` \n");
             claudeIgnore.append("    <file path=\"").append(className).append("\"/>\n");
             aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
@@ -351,7 +351,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenIgnoreFile.append(globPattern);
             qwenIgnore.append("* `").append(className).append("` \n");
 
-            llmsTxtIgnore.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtIgnore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                          .append("): excluded from AI context\n");
             llmsFullTxtIgnore.append("### ").append(className).append("\n")
                              .append("- Excluded from AI context entirely - treat as non-existent\n\n");
@@ -376,7 +376,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : auditElements) {
             AIAudit audit = element.getAnnotation(AIAudit.class);
             if (audit == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String[] checkFor = audit.checkFor();
             if (checkFor.length == 0) continue;
 
@@ -400,7 +400,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenAudit.append("* `").append(className).append("` \n")
                      .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
 
-            llmsTxtAudit.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtAudit.append("- [").append(elementDisplayName(element)).append("](").append(className)
                         .append("): check for ").append(String.join(", ", checkFor)).append("\n");
             llmsFullTxtAudit.append("### ").append(className).append("\n")
                             .append("- **Required Checks**: ").append(String.join(", ", checkFor)).append("\n\n");
@@ -423,7 +423,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : draftElements) {
             AIDraft draft = element.getAnnotation(AIDraft.class);
             if (draft == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String instructions = draft.instructions();
 
             cursorDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
@@ -435,7 +435,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
             qwenDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
 
-            llmsTxtDraft.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtDraft.append("- [").append(elementDisplayName(element)).append("](").append(className)
                         .append("): ").append(instructions).append("\n");
             llmsFullTxtDraft.append("### ").append(className).append("\n")
                             .append("- **Instructions**: ").append(instructions).append("\n\n");
@@ -468,7 +468,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : privacyElements) {
             AIPrivacy privacy = element.getAnnotation(AIPrivacy.class);
             if (privacy == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String reason = privacy.reason();
 
             cursorPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
@@ -480,7 +480,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             copilotPrivacy.append("- `").append(className).append("` - ").append(reason).append("\n");
             qwenPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
 
-            llmsTxtPrivacy.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtPrivacy.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): ").append(reason).append("\n");
             llmsFullTxtPrivacy.append("### ").append(className).append("\n")
                               .append("- **Reason**: ").append(reason).append("\n\n");
@@ -513,7 +513,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : coreElements) {
             AICore core = element.getAnnotation(AICore.class);
             if (core == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String sensitivity = core.sensitivity();
             String note = core.note();
 
@@ -532,7 +532,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             geminiCore.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity)
                       .append(". Note: ").append(note).append("\n");
 
-            llmsTxtCore.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtCore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                        .append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
             llmsFullTxtCore.append("### ").append(className).append("\n")
                            .append("- **Sensitivity**: ").append(sensitivity).append("\n")
@@ -548,7 +548,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Element element : performanceElements) {
             AIPerformance perf = element.getAnnotation(AIPerformance.class);
             if (perf == null) continue;
-            String className = element.toString();
+            String className = elementPath(element);
             String constraint = perf.constraint();
 
             cursorPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
@@ -560,7 +560,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             qwenPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
             geminiPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
 
-            llmsTxtPerformance.append("- [").append(element.getSimpleName()).append("](").append(className)
+            llmsTxtPerformance.append("- [").append(elementDisplayName(element)).append("](").append(className)
                               .append("): ").append(constraint).append("\n");
             llmsFullTxtPerformance.append("### ").append(className).append("\n")
                                   .append("- **Constraint**: ").append(constraint).append("\n\n");
@@ -927,6 +927,38 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             current = current.getEnclosingElement();
         }
         return e;
+    }
+
+    /**
+     * Returns a fully-qualified path for an element.
+     * For FIELD, METHOD, and CONSTRUCTOR elements, prepends the enclosing type's FQN.
+     * Falls back to element.toString() if no enclosing element is present (e.g. in tests).
+     */
+    private String elementPath(Element element) {
+        ElementKind kind = element.getKind();
+        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+            Element enclosing = element.getEnclosingElement();
+            if (enclosing != null) {
+                return enclosing.toString() + "." + element.toString();
+            }
+        }
+        return element.toString();
+    }
+
+    /**
+     * Returns a short display name for llms.txt link text.
+     * For FIELD/METHOD/CONSTRUCTOR: "EnclosingSimpleName.memberSimpleName(params)" format.
+     * For TYPE elements: just the simple name.
+     */
+    private String elementDisplayName(Element element) {
+        ElementKind kind = element.getKind();
+        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+            Element enclosing = element.getEnclosingElement();
+            if (enclosing != null) {
+                return enclosing.getSimpleName() + "." + element.toString();
+            }
+        }
+        return element.getSimpleName().toString();
     }
 
     private void appendToGranular(Element element, String title, String content) {
