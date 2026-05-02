@@ -84,15 +84,15 @@ Add VibeTags as a compile-time dependency. The annotation processor is automatic
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.5.4</version>
+    <version>0.5.5</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.4'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.4'
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.5'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.5'
 ```
 
 ### Option 1: Using Maven
