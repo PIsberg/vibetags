@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.5.5</version>
+    <version>0.6.0</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Processor</name>

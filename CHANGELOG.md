@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - Unreleased
+
 ## [0.5.5] - 2026-05-02
 
 ### Security
@@ -88,7 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.6.0
 [0.5.5]: https://github.com/PIsberg/vibetags/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/PIsberg/vibetags/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/PIsberg/vibetags/compare/v0.5.2...v0.5.3
