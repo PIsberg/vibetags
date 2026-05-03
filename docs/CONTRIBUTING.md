@@ -91,19 +91,23 @@ chore: update dependency versions
 
 ```
 vibetags/                          # Root
-├── vibetags/                      # Core annotation processor library
-│   ├── src/main/java/
-│   │   ├── annotations/           # @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy
-│   │   └── processor/             # AIGuardrailProcessor, VibeTagsLogger
-│   └── src/test/java/             # Unit, integration, and end-to-end tests
+├── vibetags-annotations/          # Published as se.deversity.vibetags:vibetags-annotations
+│   └── src/main/java/
+│       └── annotations/           # @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance
+├── vibetags/                      # Published as se.deversity.vibetags:vibetags-processor
+│   ├── src/main/java/processor/   # AIGuardrailProcessor, VibeTagsLogger
+│   └── src/test/java/             # Unit, integration, and end-to-end tests (depends on vibetags-annotations)
+├── vibetags-bom/                  # Published as se.deversity.vibetags:vibetags-bom (pom-only)
 ├── example/                       # Example e-commerce application
-│   └── src/main/java/             # Demonstrates real-world annotation usage
+│   └── src/main/java/             # Demonstrates real-world annotation usage; consumes via the BOM
 ├── load-tests/                    # Stress test and benchmark harness
 │   └── src/
 │       ├── main/java/             # JMH benchmarks
 │       └── test/java/             # Stress + concurrency tests
 └── .github/workflows/             # CI/CD pipelines
 ```
+
+**Build order:** `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example` (or `load-tests`). The processor depends on the annotations module at compile time.
 
 ## Adding a New Annotation
 

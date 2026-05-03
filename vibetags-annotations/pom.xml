@@ -5,12 +5,31 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>se.deversity.vibetags</groupId>
-    <artifactId>vibetags-processor</artifactId>
+    <artifactId>vibetags-annotations</artifactId>
     <version>0.6.0</version>
     <packaging>jar</packaging>
 
-    <name>VibeTags Processor</name>
-    <description>Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.</description>
+    <name>VibeTags Annotations</name>
+    <description>
+        VibeTags annotation classes (@AILocked, @AIContext, @AIDraft, @AIAudit,
+        @AIIgnore, @AIPrivacy, @AICore, @AIPerformance). Zero third-party dependencies.
+        All annotations use RetentionPolicy.SOURCE so they leave no trace in the
+        consumer's compiled bytecode — this jar exists purely to give javac the
+        symbols it needs at compile time.
+
+        Pair this with vibetags-processor on the annotation-processor classpath:
+
+        Maven:
+            &lt;dependency&gt;
+                &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
+                &lt;artifactId&gt;vibetags-annotations&lt;/artifactId&gt;
+                &lt;version&gt;0.6.0&lt;/version&gt;
+            &lt;/dependency&gt;
+
+        Gradle:
+            compileOnly 'se.deversity.vibetags:vibetags-annotations:0.6.0'
+            annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.6.0'
+    </description>
     <url>https://github.com/PIsberg/vibetags</url>
 
     <licenses>
@@ -38,52 +57,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>6.0.3</junit.version>
     </properties>
-
-    <dependencies>
-        <!-- Annotation classes the processor scans for. Compile-scope so consumers
-             that depend on vibetags-processor still get the annotations transitively
-             (backwards compatible with 0.5.x); the recommended setup is to declare
-             vibetags-annotations explicitly on compile and vibetags-processor only
-             on the annotation-processor path. -->
-        <dependency>
-            <groupId>se.deversity.vibetags</groupId>
-            <artifactId>vibetags-annotations</artifactId>
-            <version>0.6.0</version>
-        </dependency>
-
-        <!-- Logging: SLF4J API + Logback file appender for vibetags.log -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.17</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.5.32</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>5.23.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.23.0</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
@@ -92,38 +66,10 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.15.0</version>
                 <configuration>
-                    <!-- Disable annotation processing for the processor itself -->
+                    <!-- Annotation processing makes no sense for an annotation-only artifact. -->
                     <compilerArgument>-proc:none</compilerArgument>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.5</version>
-                <configuration>
-                    <argLine>${argLine} -Dnet.bytebuddy.experimental=true</argLine>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.14</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Required for Maven Central publishing: sources JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -137,7 +83,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Required for Maven Central publishing: javadoc JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -155,7 +100,6 @@
     </build>
 
     <distributionManagement>
-        <!-- Sonatype Central Portal (Maven Central) -->
         <snapshotRepository>
             <id>central</id>
             <url>https://central.sonatype.com/repository/maven-snapshots/</url>
@@ -167,7 +111,6 @@
     </distributionManagement>
 
     <profiles>
-        <!-- Central Portal publishing (Maven Central) -->
         <profile>
             <id>central-publish</id>
             <build>
@@ -187,7 +130,6 @@
             </build>
         </profile>
 
-        <!-- GPG signing: only active during publishing (CI or explicit local deploy) -->
         <profile>
             <id>sign-artifacts</id>
             <build>

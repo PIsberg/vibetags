@@ -60,6 +60,10 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
+├── vibetags-annotations/ # The 8 @interface classes (zero deps, RetentionPolicy.SOURCE)
+│   ├── pom.xml
+│   ├── build.gradle
+│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -89,30 +93,14 @@ vibetags/
 
 ### Installation
 
-Add VibeTags as a compile-time dependency. The annotation processor is automatically discovered via SPI.
+VibeTags ships as **two artifacts**:
 
-**Maven:**
-```xml
-<dependency>
-    <groupId>se.deversity.vibetags</groupId>
-    <artifactId>vibetags-processor</artifactId>
-    <version>0.5.6</version>
-    <scope>provided</scope>
-</dependency>
-```
+- **`vibetags-annotations`** — eight `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
+- **`vibetags-processor`** — the `javac` annotation processor (depends on slf4j/logback for `vibetags.log`). Goes on the annotation-processor path only — keeping it off `compileClasspath` is what stops slf4j/logback from leaking into consumer code.
 
-**Gradle:**
-```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.6'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.6'
-```
+The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in one place; pinning each version explicitly is also supported.
 
-#### Optional: import the BOM instead of pinning each version
-
-If you (or your platform) already manage versions through BOMs, import `vibetags-bom`
-once and drop the explicit `<version>` from each `vibetags-*` dependency. This makes
-`0.5.6` the single source of truth — bumping the BOM version rolls every VibeTags
-artifact in lockstep.
+#### Recommended: import the BOM
 
 **Maven:**
 ```xml
@@ -121,7 +109,7 @@ artifact in lockstep.
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.5.6</version>
+            <version>0.6.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -131,26 +119,62 @@ artifact in lockstep.
 <dependencies>
     <dependency>
         <groupId>se.deversity.vibetags</groupId>
-        <artifactId>vibetags-processor</artifactId>
-        <scope>provided</scope>
+        <artifactId>vibetags-annotations</artifactId>
     </dependency>
 </dependencies>
+
+<!-- Processor only on the AP path, not as a regular dependency -->
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>se.deversity.vibetags</groupId>
+                        <artifactId>vibetags-processor</artifactId>
+                        <version>0.6.0</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 ```
 
-> **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour
-> `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)).
-> Reuse the BOM version property there. See `example/pom.xml` for the pattern.
+> **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `example/pom.xml`.
 
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.5.6')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.5.6')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.6.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.6.0')
 
-    compileOnly 'se.deversity.vibetags:vibetags-processor'
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
 }
 ```
+
+#### Alternative: pin versions directly (no BOM)
+
+**Maven:**
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-annotations</artifactId>
+    <version>0.6.0</version>
+</dependency>
+<!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
+```
+
+**Gradle:**
+```groovy
+compileOnly 'se.deversity.vibetags:vibetags-annotations:0.6.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.6.0'
+```
+
+> **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
 
 ### Option 1: Using Maven
 
