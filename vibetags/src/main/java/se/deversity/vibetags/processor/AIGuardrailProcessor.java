@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -62,18 +63,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Lazily constructed file writer; recreated on init() with the live messager + log. */
     private GuardrailFileWriter fileWriter = new GuardrailFileWriter(GENERATED_HEADER, null, null);
 
-    private boolean anyAnnotationsFound = false;
     private Path root;
     private String projectName;
 
-    private final Set<Element> lockedElements  = new java.util.LinkedHashSet<>();
-    private final Set<Element> contextElements = new java.util.LinkedHashSet<>();
-    private final Set<Element> ignoreElements  = new java.util.LinkedHashSet<>();
-    private final Set<Element> auditElements   = new java.util.LinkedHashSet<>();
-    private final Set<Element> draftElements   = new java.util.LinkedHashSet<>();
-    private final Set<Element> privacyElements = new java.util.LinkedHashSet<>();
-    private final Set<Element> coreElements    = new java.util.LinkedHashSet<>();
-    private final Set<Element> performanceElements = new java.util.LinkedHashSet<>();
+    private final AnnotationCollector collector = new AnnotationCollector();
+    private final Set<Element> lockedElements      = collector.locked();
+    private final Set<Element> contextElements     = collector.context();
+    private final Set<Element> ignoreElements      = collector.ignore();
+    private final Set<Element> auditElements       = collector.audit();
+    private final Set<Element> draftElements       = collector.draft();
+    private final Set<Element> privacyElements     = collector.privacy();
+    private final Set<Element> coreElements        = collector.core();
+    private final Set<Element> performanceElements = collector.performance();
 
     // Builders for various AI platforms
     private StringBuilder cursorRules;
@@ -133,16 +134,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Reset state for potential reuse (especially in tests)
         this.processed = false;
-        this.lockedElements.clear();
-        this.contextElements.clear();
-        this.ignoreElements.clear();
-        this.auditElements.clear();
-        this.draftElements.clear();
-        this.privacyElements.clear();
-        this.coreElements.clear();
-        this.performanceElements.clear();
+        collector.reset();
         this.elementRules.clear();
-        this.anyAnnotationsFound = false;
 
         initBuilders();
     }
@@ -215,21 +208,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return false;
         }
 
-        // Aggregate elements from the current round
-        lockedElements.addAll(roundEnv.getElementsAnnotatedWith(AILocked.class));
-        contextElements.addAll(roundEnv.getElementsAnnotatedWith(AIContext.class));
-        ignoreElements.addAll(roundEnv.getElementsAnnotatedWith(AIIgnore.class));
-        auditElements.addAll(roundEnv.getElementsAnnotatedWith(AIAudit.class));
-        draftElements.addAll(roundEnv.getElementsAnnotatedWith(AIDraft.class));
-        privacyElements.addAll(roundEnv.getElementsAnnotatedWith(AIPrivacy.class));
-        coreElements.addAll(roundEnv.getElementsAnnotatedWith(AICore.class));
-        performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
-
-        if (!lockedElements.isEmpty() || !contextElements.isEmpty() || !ignoreElements.isEmpty() ||
-            !auditElements.isEmpty() || !draftElements.isEmpty() || !privacyElements.isEmpty() ||
-            !coreElements.isEmpty() || !performanceElements.isEmpty()) {
-            anyAnnotationsFound = true;
-        }
+        collector.collect(roundEnv);
 
         // Validation in each round for early feedback
         validateAnnotations(processingEnv.getMessager(), roundEnv);
@@ -759,7 +738,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
             boolean isIgnoreFile = service.endsWith("_ignore") || service.equals("aider_ignore") || service.equals("aiexclude");
-            boolean changed = writeFileIfChanged(filePath.toString(), content, anyAnnotationsFound || isIgnoreFile);
+            boolean changed = writeFileIfChanged(filePath.toString(), content, collector.anyAnnotationsFound() || isIgnoreFile);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
             String fileMsg = "VibeTags: " + status + " - " + relPath;
