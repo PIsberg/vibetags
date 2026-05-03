@@ -162,9 +162,10 @@ Update the version in all build files:
 | `vibetags/pom.xml` | `<version>` |
 | `vibetags/build.gradle` | `version` |
 | `vibetags/build.gradle` (publication) | `version` in `mavenJava` |
-| `example/pom.xml` | `<vibetags.version>` |
-| `example/build.gradle` | dependency version |
-| `README.md` | dependency snippet version |
+| `vibetags-bom/pom.xml` | `<version>` and `<vibetags.version>` |
+| `example/pom.xml` | `<vibetags.bom.version>` |
+| `example/build.gradle` | `platform(...)` version (both lines) |
+| `README.md` | dependency snippets and BOM snippet versions |
 
 **Version rules:**
 - Use a release version (e.g., `1.0.0`, not `1.0.0-SNAPSHOT`) for Maven Central.
@@ -210,7 +211,7 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 Creating a release triggers the [Publish workflow](.github/workflows/publish.yml), which runs two parallel jobs:
 
 1. **Publish to GitHub Packages** — deploys the artifact to `maven.pkg.github.com/PIsberg/vibetags` using the `-P github` profile.
-2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`).
+2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys both `vibetags-processor` and `vibetags-bom` to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`).
 
 Monitor the workflow run under the **Actions** tab. Both jobs must succeed.
 

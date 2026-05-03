@@ -39,8 +39,14 @@ jobs:
         env:
           GPG_TTY: /dev/tty
 
-      - name: Build, sign, and deploy to Maven Central
+      - name: Build, sign, and deploy processor to Maven Central
         run: cd vibetags && mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
+      - name: Sign and deploy BOM to Maven Central
+        run: cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}

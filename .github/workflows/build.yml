@@ -36,7 +36,12 @@ jobs:
         run: |
           cd vibetags
           mvn clean install -B
-      
+
+      - name: Install VibeTags BOM (Maven)
+        run: |
+          cd vibetags-bom
+          mvn install -B
+
       - name: Reset AI Config Files (Maven)
         run: |
           cd example
@@ -176,7 +181,12 @@ jobs:
           cd vibetags
           gradle wrapper || echo "Wrapper generation skipped"
           gradle clean build publishToMavenLocal --no-daemon
-      
+
+      - name: Install VibeTags BOM (Maven, consumed by Gradle via mavenLocal)
+        run: |
+          cd vibetags-bom
+          mvn install -B
+
       - name: Reset AI Config Files (Gradle)
         run: |
           cd example
