@@ -1100,8 +1100,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String[] markers = getMarkersFor(fileName);
             boolean supportsMarkers = (markers != null);
 
-            String existing = Files.exists(filePath) 
-                ? Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8) 
+            // Cheap pre-check: if the on-disk size can't possibly match the new content
+            // (allowing for trim-whitespace tolerance), the non-marker overwrite branch
+            // can skip the full file read entirely.
+            boolean fileExists = Files.exists(filePath);
+            long existingSize = fileExists ? Files.size(filePath) : 0L;
+            int contentByteLen = content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            boolean nonMarkerSizeMismatch = !supportsMarkers && fileExists
+                && Math.abs(existingSize - contentByteLen) > 64;
+
+            String existing = (fileExists && !nonMarkerSizeMismatch)
+                ? Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8)
                 : "";
 
             if (supportsMarkers) {
@@ -1194,12 +1203,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 }
             } else {
                 // Non-markdown file: complete overwrite if changed
-                if (existing.strip().equals(content.strip())) {
+                if (!nonMarkerSizeMismatch && existing.strip().equals(content.strip())) {
                     return false;
                 }
 
                 // Smart skip for multi-module preservation
-                if (!hasNewRules && !existing.isEmpty()) {
+                if (!hasNewRules && fileExists && existingSize > 0) {
                     skipUpdateMsg(fileName, messager);
                     return false;
                 }
