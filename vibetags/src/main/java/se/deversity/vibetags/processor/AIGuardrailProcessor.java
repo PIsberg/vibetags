@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
+import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
@@ -16,7 +17,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,6 +52,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Lazily constructed file writer; recreated on init() with the live messager + log. */
     private GuardrailFileWriter fileWriter = new GuardrailFileWriter(GENERATED_HEADER, null, null);
+
+    /** Granular rules writer; recreated on init() to share the live fileWriter. */
+    private GranularRulesWriter granularWriter = new GranularRulesWriter(fileWriter);
 
     private Path root;
     private String projectName;
@@ -90,6 +93,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log);
+        this.granularWriter = new GranularRulesWriter(this.fileWriter);
 
         // Reset for potential reuse (tests reuse the processor instance via init).
         this.processed = false;
@@ -146,62 +150,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (log != null) log.info("{} — {}", relPath, status);
         });
 
-        // Per-class granular rule files (Cursor / Trae / Roo).
-        Set<String> writtenQNames = writeGranularRules(serviceFiles, activeServices);
-
-        // Cleanup any orphaned granular files (skipping what we just wrote).
-        if (activeServices.contains("cursor_granular")) cleanupGranularDirectory(serviceFiles.get("cursor_granular"), ".mdc", writtenQNames);
-        if (activeServices.contains("trae_granular"))   cleanupGranularDirectory(serviceFiles.get("trae_granular"), ".md", writtenQNames);
-        if (activeServices.contains("roo_granular"))    cleanupGranularDirectory(serviceFiles.get("roo_granular"), ".md", writtenQNames);
+        // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans.
+        Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices);
+        granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
         checkOrphanedAnnotations(messager, activeServices,
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(),
             !auditElements.isEmpty());
-    }
-
-    private Set<String> writeGranularRules(Map<String, Path> serviceFiles, Set<String> activeServices) {
-        Set<String> writtenQNames = new LinkedHashSet<>();
-        boolean cursorGranular = activeServices.contains("cursor_granular");
-        boolean traeGranular   = activeServices.contains("trae_granular");
-        boolean rooGranular    = activeServices.contains("roo_granular");
-        if (!cursorGranular && !traeGranular && !rooGranular) return writtenQNames;
-
-        elementRules.forEach((element, builder) -> {
-            String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
-            writtenQNames.add(qName);
-            String simpleName = element.getSimpleName().toString();
-            String rulesContent = builder.toString().trim();
-            String glob = ElementKind.PACKAGE.equals(element.getKind())
-                ? "**/" + simpleName + "/**/*.java"
-                : "**/" + simpleName + ".java";
-
-            if (cursorGranular) {
-                String mdc = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                writeFileIfChanged(serviceFiles.get("cursor_granular").resolve(qName + ".mdc").toString(), mdc, true);
-            }
-            if (traeGranular) {
-                String md = "---\n"
-                    + "alwaysApply: false\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                writeFileIfChanged(serviceFiles.get("trae_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (rooGranular) {
-                String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
-                writeFileIfChanged(serviceFiles.get("roo_granular").resolve(qName + ".md").toString(), md, true);
-            }
-        });
-        return writtenQNames;
     }
 
     private void logSummary(Set<String> activeServices) {
