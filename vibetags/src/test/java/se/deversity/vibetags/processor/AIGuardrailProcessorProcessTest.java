@@ -19,9 +19,11 @@ import java.util.Set;
 
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1166,6 +1168,17 @@ class AIGuardrailProcessorProcessTest {
         when(prvAnno.reason()).thenReturn("PII");
         when(prv.getAnnotation(AIPrivacy.class)).thenReturn(prvAnno);
 
+        Element core = mockClassElement("com.example.Core", "Core");
+        AICore coreAnno = mock(AICore.class);
+        when(coreAnno.sensitivity()).thenReturn("Critical");
+        when(coreAnno.note()).thenReturn("hot path");
+        when(core.getAnnotation(AICore.class)).thenReturn(coreAnno);
+
+        Element perf = mockClassElement("com.example.Perf", "Perf");
+        AIPerformance perfAnno = mock(AIPerformance.class);
+        when(perfAnno.constraint()).thenReturn("O(1)");
+        when(perf.getAnnotation(AIPerformance.class)).thenReturn(perfAnno);
+
         // Round 1: accumulate all element types
         RoundEnvironment round1 = mock(RoundEnvironment.class);
         when(round1.processingOver()).thenReturn(false);
@@ -1175,6 +1188,8 @@ class AIGuardrailProcessorProcessTest {
         doReturn(Set.of(aud)).when(round1).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of(drf)).when(round1).getElementsAnnotatedWith(AIDraft.class);
         doReturn(Set.of(prv)).when(round1).getElementsAnnotatedWith(AIPrivacy.class);
+        doReturn(Set.of(core)).when(round1).getElementsAnnotatedWith(AICore.class);
+        doReturn(Set.of(perf)).when(round1).getElementsAnnotatedWith(AIPerformance.class);
         processor.process(Set.of(), round1);
 
         // Round 2: trigger generateFiles with no platforms active
@@ -1288,6 +1303,43 @@ class AIGuardrailProcessorProcessTest {
         boolean changed = processor.writeFileIfChanged(config.toString(), "model = \"o3-mini\"", true);
 
         assertFalse(changed, "Trim-only diff (within 64-byte tolerance) should be a no-op");
+    }
+
+    /**
+     * Non-marker file (JSON) that does NOT exist yet — covers the
+     * {@code fileExists=false} path through the size-mismatch pre-check
+     * (the second short-circuit operand evaluating false).
+     */
+    @Test
+    void writeFileIfChanged_nonMarkerFreshFile_writesWithoutPriorContent(@TempDir Path tempDir) throws IOException {
+        Path settings = tempDir.resolve(".qwen/settings.json");
+        // Parent doesn't exist either — exercises the createDirectories path
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(settings.toString(), "{\"fresh\": true}", true);
+
+        assertTrue(changed, "Should create the JSON file when it doesn't exist yet");
+        assertEquals("{\"fresh\": true}", Files.readString(settings).strip());
+    }
+
+    /**
+     * Cleanup encounters an MD-marker file with start marker but NO end
+     * marker — covers the {@code if (end != -1)} false branch in the MD
+     * marker arm of cleanupGranularDirectory.
+     */
+    @Test
+    void cleanupGranularDirectory_mdMarkerNoEndMarker_fileNotModified(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("Broken.mdc");
+        String initial = "<!-- VIBETAGS-START -->\norphan body with no end marker\n";
+        Files.writeString(file, initial);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".mdc", Set.of());
+
+        assertTrue(Files.exists(file), "File without end marker must survive cleanup");
+        assertEquals(initial, Files.readString(file), "Content must be unchanged when end marker is absent");
     }
 
     /** Mocks a TYPE-kind Element with a given FQN and simple name. */
