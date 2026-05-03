@@ -1221,11 +1221,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     private void writeContentWithBackup(Path filePath, String finalContent) throws IOException {
-        if (Files.exists(filePath)) {
-            Path backupPath = Paths.get(filePath.toString() + ".bak");
-            Files.copy(filePath, backupPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Path tmp = Paths.get(filePath.toString() + ".vibetags-tmp");
+        Files.writeString(tmp, finalContent, java.nio.charset.StandardCharsets.UTF_8);
+        try {
+            Files.move(tmp, filePath,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+            Files.move(tmp, filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
-        Files.writeString(filePath, finalContent, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     /**

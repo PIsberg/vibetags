@@ -312,31 +312,31 @@ class AIGuardrailProcessorUnitTest {
     }
 
     @Test
-    void testWriteFileIfChanged_createsBackup_whenFileModified(@TempDir Path tempDir) throws IOException {
+    void testWriteFileIfChanged_writesAtomically_whenFileModified(@TempDir Path tempDir) throws IOException {
         Path file = tempDir.resolve("test.md");
         Files.writeString(file, "<!-- VIBETAGS-START -->\nold content\n<!-- VIBETAGS-END -->");
-        Path backupFile = tempDir.resolve("test.md.bak");
+        Path tmpFile = tempDir.resolve("test.md.vibetags-tmp");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         boolean changed = processor.writeFileIfChanged(file.toString(), "new content", true);
 
         assertTrue(changed);
-        assertTrue(Files.exists(backupFile), "Backup file should be created");
-        assertTrue(Files.readString(backupFile).contains("old content"), "Backup should contain original content");
+        assertTrue(Files.readString(file).contains("new content"));
+        assertFalse(Files.exists(tmpFile), "Temp file must be moved into place, not left behind");
     }
 
     @Test
-    void testWriteFileIfChanged_doesNotCreateBackup_whenContentIdentical(@TempDir Path tempDir) throws IOException {
+    void testWriteFileIfChanged_leavesNoTempFile_whenContentIdentical(@TempDir Path tempDir) throws IOException {
         Path file = tempDir.resolve("test.md");
         String content = "<!-- VIBETAGS-START -->\nsame content\n<!-- VIBETAGS-END -->\n";
         Files.writeString(file, content);
-        Path backupFile = tempDir.resolve("test.md.bak");
+        Path tmpFile = tempDir.resolve("test.md.vibetags-tmp");
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         boolean changed = processor.writeFileIfChanged(file.toString(), "same content", true);
 
         assertFalse(changed);
-        assertFalse(Files.exists(backupFile), "Backup file should not be created if no changes were made");
+        assertFalse(Files.exists(tmpFile), "No temp file should be created when no write happens");
     }
 
     @Test
