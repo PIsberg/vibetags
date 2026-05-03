@@ -85,11 +85,23 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
-- `AIGuardrailProcessor` - Extends `AbstractProcessor` (JSR 269)
-- `VibeTagsLogger` - SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
-- `@SupportedAnnotationTypes("*")` - Processes all annotations
-- `@SupportedSourceVersion(RELEASE_11)` - Java 11+ support
+- `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
+- `VibeTagsLogger` — SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
+- `@SupportedAnnotationTypes("*")` — processes all annotations
+- `@SupportedSourceVersion(RELEASE_11)` — Java 11+ support
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
+
+**Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
+- `AnnotationCollector` — owns the eight `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
+- `AnnotationValidator` — emits the three compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`)
+- `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
+- `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
+- `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
+- `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs eight `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O.
+- `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files
+- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo and orchestrates orphan cleanup via the file writer
+
+This split (introduced in 0.6.0) keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
 
 ---
 
@@ -364,35 +376,35 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
 - Supports Java 11+ source versions
 - Uses `@SupportedAnnotationTypes("*")` to process all annotations
+- **Thin orchestrator** (~230 lines): all the actual work lives in `internal/*` helpers
 
 **Processing Logic:**
 
 ```
-Accumulation phase (runs on every round before processingOver()):
-1. Accumulate elements: @AILocked, @AIContext, @AIIgnore, @AIAudit,
-   @AIDraft, @AIPrivacy, @AICore, @AIPerformance — into LinkedHashSets
-2. Validate annotations each round (early feedback):
+Accumulation phase (every round, until processingOver() == true):
+1. AnnotationCollector.collect(roundEnv) — drains the round into the eight
+   LinkedHashSet<Element> accumulators (one per annotation type)
+2. AnnotationValidator.validate(messager, roundEnv) — three compile-time checks:
    - @AIDraft + @AILocked contradiction
-   - Empty @AIAudit checkFor array
+   - Empty @AIAudit.checkFor
    - Redundant @AIPrivacy + @AIIgnore
-3. Return false (do not claim annotations)
+3. process() returns false so other processors still see the annotations
 
-Generation phase (runs once when processingOver() == true):
-4. Determine output directory (vibetags.root option or JVM cwd)
-5. Initialize builders with VibeTags header
-6. Pass 1: Process @AILocked → locked_files sections
-7. Pass 2: Process @AIContext → contextual_instructions sections
-8. Pass 3: Process @AIIgnore → ignored_elements + glob patterns
-9. Pass 4: Process @AIAudit → audit_requirements sections
-10. Pass 5: Process @AIDraft → implementation_tasks sections
-11. Pass 6: Process @AIPrivacy → pii_guardrails sections
-12. Pass 7: Process @AICore → core_elements sections
-13. Pass 8: Process @AIPerformance → performance_constraints sections
-14. Resolve active services (file-existence opt-in)
-15. Write only active service files using marker-based write-if-changed
-16. Write per-class granular rule files (.cursor/rules/, .trae/rules/, .roo/rules/)
-17. Clean up orphaned granular files
-18. Check orphaned annotations (warn if missing recommended files)
+Generation phase (once, on the round where processingOver() == true):
+4. ServiceRegistry.buildServiceFileMap(root) → service-key → file-path map
+5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
+6. GuardrailContentBuilder.build() runs all eight per-annotation appenders
+   (Locked / Context / Ignore / Audit / Draft / Privacy / Core / Performance)
+   in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final
+   service-key → content map. The builder owns every per-platform StringBuilder
+   and performs no I/O.
+7. GuardrailFileWriter.writeFileIfChanged(...) for each active service —
+   marker-aware updates, YAML front-matter preservation, atomic writes
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo
+9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files
+   (skipping the names just written, to avoid delete-then-recreate cycles)
+10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without
+    the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
 ```
 
 **Output File Generation:**
@@ -530,11 +542,20 @@ vibetags/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/se/deversity/vibetags/processor/
-│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 annotation processor
-│   │   │   │   └── VibeTagsLogger.java           # SLF4J/Logback file logger
+│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
+│   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
+│   │   │   │   └── internal/                     # Single-responsibility helpers
+│   │   │   │       ├── AnnotationCollector.java       # 8 LinkedHashSets per round
+│   │   │   │       ├── AnnotationValidator.java       # Compile-time consistency warnings
+│   │   │   │       ├── OrphanWarner.java              # "annotation used but ignore-file missing"
+│   │   │   │       ├── ServiceRegistry.java           # Service map + file-existence opt-in
+│   │   │   │       ├── ElementNaming.java             # elementPath / displayName helpers
+│   │   │   │       ├── GuardrailContentBuilder.java   # Per-platform StringBuilders + 8 appenders
+│   │   │   │       ├── GuardrailFileWriter.java       # Marker-aware atomic writes + legacy migration
+│   │   │   │       └── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
-│   │   └── test/                      # Unit + integration tests (317 tests total)
+│   │   └── test/                      # Unit + integration tests (336 tests total)
 │   │       └── processor/
 │   │           ├── AnnotationDefinitionsTest.java
 │   │           ├── AIGuardrailProcessorTest.java
@@ -542,6 +563,9 @@ vibetags/
 │   │           ├── AIGuardrailProcessorProcessTest.java
 │   │           ├── AIIgnoreProcessorUnitTest.java
 │   │           ├── AIPrivacyProcessorTest.java
+│   │           ├── CleanupGranularDirectoryTest.java        # 0.6.0: orphan-removal coverage
+│   │           ├── WriteFileFrontMatterTest.java            # 0.6.0: YAML front-matter coverage
+│   │           ├── StripLegacyVibeTagsBlockEdgeCasesTest.java # 0.6.0: legacy migration edges
 │   │           ├── QwenProcessorUnitTest.java
 │   │           ├── AnnotationProcessorEndToEndTest.java
 │   │           └── QwenEndToEndTest.java
@@ -616,6 +640,8 @@ vibetags/
 - Consistent content across all platforms
 - No duplication of parsing logic
 - Atomic generation (all or nothing)
+
+**Internal split (since 0.6.0):** the single SPI entry point (`AIGuardrailProcessor`) is now a thin orchestrator. The actual work is divided across eight focused helpers in `internal/`: a collector for accumulation, a validator and an orphan warner for compile-time warnings, a registry for service↔file mapping and the file-existence opt-in, a builder for per-platform string assembly, and two writers (one general, one granular) for atomic file I/O. This keeps each class testable in isolation while preserving the "one processor, single pass" property externally.
 
 ### 3. File-existence Opt-in Model
 
@@ -720,19 +746,24 @@ boolean writeFileIfChanged(String filePath, String content) {
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 35 | Verify annotation structure, retention policies, targets, defaults — all 8 annotations including @AICore and @AIPerformance |
+| `AnnotationDefinitionsTest` | 34 | Verify annotation structure, retention policies, targets, defaults — all 8 annotations including @AICore and @AIPerformance |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
-| `AIGuardrailProcessorUnitTest` | 20 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations |
-| `AIGuardrailProcessorProcessTest` | 45 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in, stripLegacyVibeTagsBlock |
+| `AIGuardrailProcessorUnitTest` | 40 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations, stripLegacyVibeTagsBlock basics |
+| `AIGuardrailProcessorProcessTest` | 64 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in |
 | `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
 | `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
+| `CleanupGranularDirectoryTest` | 8 | (0.6.0) Orphan removal: marker stripping, boilerplate-only deletion, human-content preservation, excludeQNames, YAML front-matter |
+| `WriteFileFrontMatterTest` | 4 | (0.6.0) Markers placed AFTER YAML front-matter on .mdc files; hash-marker fallback for .aiderignore-style files |
+| `StripLegacyVibeTagsBlockEdgeCasesTest` | 7 | (0.6.0) XML-closer detection edge cases: both `</rule>` and `</project_guardrails>`, multi-paragraph human content, bare-header detection |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `AnnotationProcessorEndToEndTest` | 62 | End-to-end: compile example, verify all generated files and content — all 8 annotation types, all platforms, llms.txt/full Core and Performance sections, Aider files |
+| `AnnotationProcessorEndToEndTest` | 71 | End-to-end snapshot net: compile example, verify all generated files and content across all 8 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
-| `MultiModuleStabilityTest` | varies | Multi-module safety: no-annotation module preserves sibling module content |
-| `VibeTagsLoggerUnitTest` | varies | File logging: log level filtering, file rotation, shutdown |
-| `AIGuardrailProcessorIntegrationTest` | 20 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
+| `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
+| `VibeTagsLoggerUnitTest` | 10 | File logging: log level filtering, file rotation, shutdown |
+| `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
+
+**Total: 336 tests** (was 317 in 0.5.x — the 19 new tests were added before the 0.6.0 internal split to pin behaviour the extraction could otherwise have broken silently).
 
 ### Test Patterns
 
@@ -1025,4 +1056,4 @@ Informational paragraph.             ← optional, key details for the LLM
 
 ---
 
-*Last updated: May 2026*
+*Last updated: 2026-05-03 — internal split into focused helper classes (see `processor/internal/`).*
