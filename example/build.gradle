@@ -17,8 +17,8 @@ repositories {
 
 dependencies {
     // VibeTags Annotation Processor
-    compileOnly 'se.deversity.vibetags:vibetags-processor:0.6.0'
-    annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.6.0'
+    compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.6'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.6'
 }
 
 tasks.withType(JavaCompile) {

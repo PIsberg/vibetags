@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - Unreleased
+## [0.5.6] - 2026-05-03
+
+### Performance
+- **`writeFileIfChanged` no longer keeps a `.bak` copy**: Replaced the per-write `Files.copy(file, file.bak)` with a write-tmp + atomic-move pattern. Same crash safety, half the I/O, no leftover `.bak` files cluttering project roots.
+- **Cheap size pre-check before `Files.readString`**: For non-marker overwrite files (`.cursorrules`, `.aiexclude`, ignore files, etc.), if the on-disk size differs from the new content's UTF-8 byte length by more than a 64-byte tolerance, the full file read is skipped — we already know the contents differ.
+- **Collapsed `Files.exists` + `Files.readString`**: Replaced the `exists ? readString : ""` pattern with a single try/catch on `NoSuchFileException`. Halves the stat syscalls on the hot path.
+- **Dropped redundant `Files.exists(parent)`**: `Files.createDirectories` is documented as a no-op for existing directories; the surrounding existence check was a wasted syscall.
+- **Single `indexOf` instead of `contains` + `indexOf`**: Marker scans in `writeFileIfChanged` and `cleanupGranularDirectory` previously walked the haystack twice. Cache the `indexOf` result and check `>= 0`.
+- **Per-element platform appends gated on `activeServices`**: `generateFiles` previously appended to all ~12 platform builders (Cursor, Claude, Codex, Copilot, Qwen, Gemini, Aider, Roo, Trae, llms.txt, llms-full.txt) for every annotated element regardless of which opt-in files were present. Single-platform projects (the common case) now build only the platform whose file actually exists.
+
+Headline result on the load-test sweep (same machine, same JDK, same N=1000 cap):
+
+| N | 0.5.5 overhead (ms) | 0.5.6 overhead (ms) | Δ |
+|---:|---:|---:|---:|
+| 10 | 750 | 432 | −42% |
+| 500 | 1859 | 283 | **−85%** |
+| 1000 | 1209 | 211 | **−83%** |
+
+Output sizes are byte-identical at every N, so the work product is preserved.
+
+### Fixed
+- Synced the internal `AIGuardrailProcessor.VERSION` constant (had been stale at `0.5.4` across 0.5.5).
 
 ## [0.5.5] - 2026-05-02
 
@@ -90,8 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.6.0
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/PIsberg/vibetags/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/PIsberg/vibetags/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/PIsberg/vibetags/compare/v0.5.2...v0.5.3
