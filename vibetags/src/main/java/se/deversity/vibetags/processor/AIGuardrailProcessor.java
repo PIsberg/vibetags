@@ -9,6 +9,7 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.*;
@@ -973,76 +974,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         sb.append(content).append("\n");
     }
 
-    /**
-     * Returns the canonical map of service key → output file path for a given project root.
-     *
-     * @param root the project root directory
-     * @return a map of logical service names to their expected file paths
-     */
     public static Map<String, Path> buildServiceFileMap(Path root) {
-        Map<String, Path> map = new LinkedHashMap<>();
-        map.put("cursor",    root.resolve(".cursorrules"));
-        map.put("claude",    root.resolve("CLAUDE.md"));
-        map.put("aiexclude", root.resolve(".aiexclude"));
-        map.put("codex",     root.resolve("AGENTS.md"));
-        map.put("gemini",    root.resolve("gemini_instructions.md"));
-        map.put("copilot",   root.resolve(".github/copilot-instructions.md"));
-        map.put("qwen",      root.resolve("QWEN.md"));
-        map.put("cursor_ignore",  root.resolve(".cursorignore"));
-        map.put("claude_ignore",  root.resolve(".claudeignore"));
-        map.put("copilot_ignore", root.resolve(".copilotignore"));
-        map.put("qwen_ignore",    root.resolve(".qwenignore"));
-        map.put("codex_config",   root.resolve(".codex/config.toml"));
-        map.put("codex_rules",    root.resolve(".codex/rules/vibetags.rules"));
-        map.put("qwen_settings",  root.resolve(".qwen/settings.json"));
-        map.put("qwen_refactor",  root.resolve(".qwen/commands/refactor.md"));
-        map.put("llms",           root.resolve("llms.txt"));
-        map.put("llms_full",      root.resolve("llms-full.txt"));
-        map.put("aider_conventions", root.resolve("CONVENTIONS.md"));
-        map.put("aider_ignore",      root.resolve(".aiderignore"));
-        map.put("cursor_granular",   root.resolve(".cursor/rules"));
-        map.put("roo_granular",      root.resolve(".roo/rules"));
-        map.put("trae_granular",     root.resolve(".trae/rules"));
-        return map;
+        return ServiceRegistry.buildServiceFileMap(root);
     }
 
-    /**
-     * Resolves which primary services should have their files written.
-     * Only "signal" files (like QWEN.md or .cursorrules) are checked — their presence acts as the opt-in.
-     *
-     * @param messager        the compiler messager for printing notes
-     * @param allServiceFiles the map of all possible service files
-     * @return the set of active service keys based on existing files
-     */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
-        // Only these primary files define an "active" service
-        Set<String> optInKeys = Set.of(
-            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
-            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-            "llms", "llms_full", "aider_conventions", "aider_ignore",
-            "cursor_granular", "roo_granular", "trae_granular"
-        );
-
-        Set<String> active = new java.util.HashSet<>();
-
-        allServiceFiles.forEach((key, path) -> {
-            if (!optInKeys.contains(key)) return;
-            if (Files.exists(path)) {
-                active.add(key);
-            }
-        });
-
-        if (active.isEmpty()) {
-            StringBuilder msg = new StringBuilder(
-                "VibeTags: No AI config files found - nothing will be generated.\n" +
-                "Create one or more of the following files in your project root to opt in:\n");
-            allServiceFiles.entrySet().stream()
-                .filter(e -> optInKeys.contains(e.getKey()))
-                .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
-            messager.printMessage(javax.tools.Diagnostic.Kind.NOTE, msg.toString());
-        }
-
-        return active;
+        return ServiceRegistry.resolveActiveServices(messager, allServiceFiles);
     }
 
     /**
