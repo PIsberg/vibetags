@@ -61,10 +61,14 @@ vibetags/
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
 ├── load-tests/           # Performance & safety test harness (standalone)
+│   ├── README.md         # How to run, what to measure, baseline comparison guide
 │   ├── pom.xml           # Maven configuration (JMH + JUnit 5)
-│   └── src/
-│       ├── main/java/    # JMH benchmark classes + helpers
-│       └── test/java/    # Stress test + concurrent build test
+│   ├── src/
+│   │   ├── main/java/    # JMH benchmark classes + helpers
+│   │   └── test/java/    # Stress test + concurrent build test
+│   └── results/          # Frozen per-release baselines (env, stress, concurrent, jmh.json) + _plots/
+├── tools/
+│   └── plot-results.py   # Renders comparison PNGs from load-tests/results/
 ├── docs/                 # Architecture documentation and diagrams
 │   ├── ARCHITECTURE.md   # Technical deep-dive into the processor internals
 │   └── diagrams/         # PlantUML source files and rendered PNGs
@@ -201,6 +205,7 @@ public class BinarySearchTree {
 |---|---|
 | **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 8 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
+| **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
 
 ## 🛠️ Building Both Projects
@@ -268,6 +273,10 @@ Results are written to `load-tests/target/stress-results.txt` and printed to std
 ### CI behaviour
 
 The `load-tests` workflow job (see `.github/workflows/build.yml`) runs automatically on every push and PR using JDK 21. It caps the sweep at N = 500 (`-Dstress.max.classes=500`) so the job finishes in under a minute. The `stress-results.txt` artefact is uploaded for inspection even if a step fails.
+
+### Baselines & comparison
+
+Per-release baselines (env metadata, stress-sweep table, concurrent-build report, and JMH JSON) are committed under `load-tests/results/<version>/`. Run `python tools/plot-results.py` to regenerate the comparison PNGs in `load-tests/results/_plots/`. See [`load-tests/README.md`](load-tests/README.md) for the full capture procedure, what each metric means, and which dimensions are worth tracking for a compile-time annotation processor — actual numbers live with the baselines, not here.
 
 ## 🎓 When to Use VibeTags
 
