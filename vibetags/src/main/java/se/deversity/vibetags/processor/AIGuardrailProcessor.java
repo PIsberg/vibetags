@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.processor.internal.ElementNaming;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.*;
@@ -943,52 +944,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
     }
 
-    /**
-     * Walks up the element hierarchy to find the nearest TypeElement (class/interface)
-     * or PackageElement. This ensures granular rules are consolidated at the file or package level.
-     */
     private Element getOwningElement(Element e) {
-        Element current = e;
-        while (current != null) {
-            ElementKind kind = current.getKind();
-            if (current instanceof TypeElement || (kind != null && kind.equals(javax.lang.model.element.ElementKind.PACKAGE))) {
-                return current;
-            }
-            current = current.getEnclosingElement();
-        }
-        return e;
+        return ElementNaming.owningElement(e);
     }
 
-    /**
-     * Returns a fully-qualified path for an element.
-     * For FIELD, METHOD, and CONSTRUCTOR elements, prepends the enclosing type's FQN.
-     * Falls back to element.toString() if no enclosing element is present (e.g. in tests).
-     */
     private String elementPath(Element element) {
-        ElementKind kind = element.getKind();
-        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
-            Element enclosing = element.getEnclosingElement();
-            if (enclosing != null) {
-                return enclosing.toString() + "." + element.toString();
-            }
-        }
-        return element.toString();
+        return ElementNaming.elementPath(element);
     }
 
-    /**
-     * Returns a short display name for llms.txt link text.
-     * For FIELD/METHOD/CONSTRUCTOR: "EnclosingSimpleName.memberSimpleName(params)" format.
-     * For TYPE elements: just the simple name.
-     */
     private String elementDisplayName(Element element) {
-        ElementKind kind = element.getKind();
-        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
-            Element enclosing = element.getEnclosingElement();
-            if (enclosing != null) {
-                return enclosing.getSimpleName() + "." + element.toString();
-            }
-        }
-        return element.getSimpleName().toString();
+        return ElementNaming.elementDisplayName(element);
     }
 
     private void appendToGranular(Element element, String title, String content) {
