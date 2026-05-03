@@ -159,9 +159,10 @@ Update the version in all build files:
 
 | File | Field |
 |---|---|
-| `vibetags/pom.xml` | `<version>` |
-| `vibetags/build.gradle` | `version` |
-| `vibetags/build.gradle` (publication) | `version` in `mavenJava` |
+| `vibetags-annotations/pom.xml` | `<version>`, plus the snippet version in `<description>` |
+| `vibetags-annotations/build.gradle` | `version` (and the duplicate inside `mavenJava` publication) |
+| `vibetags/pom.xml` | `<version>`, plus the `<dependency>` on `vibetags-annotations` |
+| `vibetags/build.gradle` | `version` (and the duplicate inside `mavenJava`), plus the `api 'vibetags-annotations:...'` line |
 | `vibetags/src/main/java/se/deversity/vibetags/processor/AIGuardrailProcessor.java` | `static final String VERSION` |
 | `vibetags-bom/pom.xml` | `<version>`, `<vibetags.version>`, and the snippet versions in `<description>` |
 | `example/pom.xml` | `<vibetags.bom.version>` |
@@ -215,7 +216,7 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 Creating a release triggers the [Publish workflow](.github/workflows/publish.yml), which runs two parallel jobs:
 
 1. **Publish to GitHub Packages** — deploys the artifact to `maven.pkg.github.com/PIsberg/vibetags` using the `-P github` profile.
-2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys both `vibetags-processor` and `vibetags-bom` to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`).
+2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys all three artifacts (`vibetags-annotations`, `vibetags-processor`, `vibetags-bom`) to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`). Order matters: annotations must be deployed before the processor (which depends on them).
 
 Monitor the workflow run under the **Actions** tab. Both jobs must succeed.
 

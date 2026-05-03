@@ -29,22 +29,24 @@ Matrix over **JDK 17, 21, 25, 26** (Temurin distribution, Maven dependency cache
 1. **Harden runner** — egress audit.
 2. **Checkout**.
 3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
-4. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it.
-5. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `example/pom.xml` imports the BOM via `<dependencyManagement>` to resolve the `vibetags-processor` version, and the BOM has to be resolvable before step 7 runs.
-6. **Reset AI Config Files** — `cd example && bash reset-ai-files.sh`. Truncates every generated AI config file in `example/` to zero bytes and removes all granular rule files under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
-7. **Build Example Project** — `cd example && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.
-8. **Run Unit Tests (VibeTags Library)** — `cd vibetags && mvn test -B`. The `mvn install` in step 4 already ran them; this re-runs them on their own to surface failures without the install ceremony.
-9. **Run Integration Tests** — `cd vibetags && mvn test -Drun.integration.tests=true -B`. These tests assume the example project has been compiled in step 7 and inspect its generated output.
-10. **Verify Generated AI Config Files** — checks that 17 specific files under `example/` exist and are non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, and granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`.
-11. **Verify @AIAudit Content** — greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
-12. **Upload coverage to Codecov** — only on the JDK 17 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
+4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`.
+5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it.
+6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `example/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 8 runs.
+7. **Reset AI Config Files** — `cd example && bash reset-ai-files.sh`. Truncates every generated AI config file in `example/` to zero bytes and removes all granular rule files under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
+8. **Build Example Project** — `cd example && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.
+9. **Run Unit Tests (VibeTags Library)** — `cd vibetags && mvn test -B`. The `mvn install` in step 5 already ran them; this re-runs them on their own to surface failures without the install ceremony.
+10. **Run Integration Tests** — `cd vibetags && mvn test -Drun.integration.tests=true -B`. These tests assume the example project has been compiled in step 8 and inspect its generated output.
+11. **Verify Generated AI Config Files** — checks that 17 specific files under `example/` exist and are non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, and granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`.
+12. **Verify @AIAudit Content** — greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
+13. **Upload coverage to Codecov** — only on the JDK 17 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
 
 ### Job: `load-tests`
 
 Single JDK 21 leg, `needs: build-maven`. Steps:
 
 1. **Harden runner**, **checkout**, **set up JDK 21** (Maven cache).
-2. **Install VibeTags processor** — `cd vibetags && mvn install -DskipTests -B`.
+2. **Install VibeTags annotations** — `cd vibetags-annotations && mvn install -B`.
+3. **Install VibeTags processor** — `cd vibetags && mvn install -DskipTests -B`.
 3. **Run stress tests** — `cd load-tests && mvn test -B -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest" -Dstress.max.classes=500`. Two scenarios: scaling annotation volume up to 500 classes, and concurrent builds.
 4. **Upload stress-test results** — `if: always()`, so artifacts upload even on failure. Glob `load-tests/target/stress-results-*.txt`, retained as `stress-results-${{ github.run_id }}`.
 
@@ -55,7 +57,8 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 17, 21, 25, 26**. Dif
 - Uses Gradle dependency cache.
 - `gradle wrapper || echo "Wrapper generation skipped"` runs before each build to generate a wrapper if missing — the `||` swallows the error if a wrapper already exists.
 - Library build: `gradle clean build publishToMavenLocal --no-daemon`.
-- BOM install: `cd vibetags-bom && mvn install -B`. The BOM is Maven-only; Gradle reads it from `mavenLocal()` when resolving `platform('se.deversity.vibetags:vibetags-bom:...')` in `example/build.gradle`. This step runs between the library build and the example build.
+- Annotations build: `cd vibetags-annotations && gradle clean build publishToMavenLocal --no-daemon`. Runs first because the processor depends on it.
+- BOM install: `cd vibetags-bom && mvn install -B`. The BOM is Maven-only; Gradle reads it from `mavenLocal()` when resolving `platform('se.deversity.vibetags:vibetags-bom:...')` in `example/build.gradle`. This step runs after the library build and before the example build.
 - Example build: `gradle clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon`.
 - Tests use `gradle test --no-daemon` and `gradle test -Drun.integration.tests=true --no-daemon`.
 - Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml` and uploads under flag `unittests-gradle`.
@@ -99,8 +102,9 @@ Triggered when a GitHub Release is created.
 - Job: `publish-maven-central`, JDK 21.
 - Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy step.
 - **Import GPG key** — pipes `secrets.GPG_PRIVATE_KEY` into `gpg --batch --import`, then prints key fingerprints.
+- **Sign and deploy annotations** — `cd vibetags-annotations && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Runs first; the processor depends on `vibetags-annotations` so it must be in Central before the processor jar that references it is published.
 - **Build, sign, and deploy processor** — `cd vibetags && mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Tests are skipped here because they ran on every push that led to the tagged commit; this step only signs and uploads.
-- **Sign and deploy BOM** — `cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Same Sonatype Central + GPG profiles as the processor pom; publishes `se.deversity.vibetags:vibetags-bom:<version>` (pom-only) so consumers can import it. Runs after the processor deploy in the same job.
+- **Sign and deploy BOM** — `cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Same Sonatype Central + GPG profiles as the processor pom; publishes `se.deversity.vibetags:vibetags-bom:<version>` (pom-only) so consumers can import it. Runs after annotations and processor have been deployed.
 
 Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN_USERNAME`, `CENTRAL_TOKEN_PASSWORD`. CI also references `CODECOV_TOKEN` from `build.yml`.
 
@@ -111,8 +115,8 @@ Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN
 The non-obvious part of `build.yml` is that the example project is the test fixture for the processor:
 
 1. The library's own unit tests are pure JUnit and don't run `javac` — they assert classes, methods, and parsing logic in isolation.
-2. The integration tests (gated on `-Drun.integration.tests=true`) read the files generated under `example/` after step 7.
-3. `reset-ai-files.sh` is what makes step 7 a meaningful test: without it, the verification steps would pass even if the processor wrote nothing, because the files would still hold content from a previous run.
+2. The integration tests (gated on `-Drun.integration.tests=true`) read the files generated under `example/` after step 8.
+3. `reset-ai-files.sh` is what makes step 8 a meaningful test: without it, the verification steps would pass even if the processor wrote nothing, because the files would still hold content from a previous run.
 4. The `@AIAudit` grep step exists because "file is non-empty" is too weak — a partially broken processor can still emit headers and frontmatter.
 
 Both Maven and Gradle paths run the same verification, so any platform-specific output difference (e.g. a Gradle-only file path bug) is caught.

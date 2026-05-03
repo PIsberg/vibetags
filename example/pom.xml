@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- BOM is the single source of truth for vibetags-* versions. Bumping this one
              value rolls the processor and any future vibetags-* artifact in lockstep. -->
-        <vibetags.bom.version>0.5.7</vibetags.bom.version>
+        <vibetags.bom.version>0.6.0</vibetags.bom.version>
         <vibetags.log.path>vibetags.log</vibetags.log.path>
     </properties>
 
@@ -36,11 +36,12 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Version is supplied by the imported BOM; do not re-declare it here. -->
+        <!-- Annotations only on the compile classpath. The processor itself lives on
+             the annotation-processor path (configured below) so its slf4j/logback
+             baggage does not leak into compileClasspath. Versions come from the BOM. -->
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
-            <artifactId>vibetags-processor</artifactId>
-            <scope>provided</scope>
+            <artifactId>vibetags-annotations</artifactId>
         </dependency>
     </dependencies>
 

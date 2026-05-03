@@ -64,6 +64,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install VibeTags annotations
+        run: cd vibetags-annotations && mvn install -B -q
+
       - name: Build VibeTags library
         run: cd vibetags && mvn clean install -B -q
 

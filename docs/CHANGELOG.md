@@ -7,21 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.7] - 2026-05-03
+## [0.6.0] - 2026-05-03
+
+This release splits VibeTags into two artifacts and introduces a BOM that manages them together. Existing 0.5.x consumers continue to work unchanged; new projects should adopt the split pattern below.
 
 ### Added
-- **`vibetags-bom`** — new pom-only artifact (`se.deversity.vibetags:vibetags-bom:0.5.7`) for managing `vibetags-*` versions in one place. Drop the explicit `<version>` from each `vibetags-*` dependency and bump only the BOM. Future-proofs against a multi-artifact split (e.g. a separate `vibetags-annotations`).
+- **`vibetags-annotations`** — the 8 `@interface` classes (`@AILocked`, `@AIContext`, `@AIDraft`, `@AIAudit`, `@AIIgnore`, `@AIPrivacy`, `@AICore`, `@AIPerformance`) extracted into their own zero-dependency artifact. Goes on the consumer's compile classpath — keeps `slf4j` / `logback` (the processor's internal logging deps) off `compileClasspath` where they don't belong.
+- **`vibetags-bom`** — pom-only artifact (`se.deversity.vibetags:vibetags-bom:0.6.0`) that manages both `vibetags-annotations` and `vibetags-processor`. Bump the BOM, both versions roll in lockstep.
 
 ### Changed
-- The bundled `example/` project now consumes the BOM via `<dependencyManagement> / <scope>import</scope>` (Maven) and `platform(...)` (Gradle). **Existing setups that pin `vibetags-processor` directly continue to work unchanged** — the BOM is opt-in.
-- CI installs the BOM (`cd vibetags-bom && mvn install -B`) before building the example, in `build-maven`, `build-gradle`, and CodeQL jobs. The publish workflow now deploys both `vibetags-processor` and `vibetags-bom` to Maven Central in the same run.
+- **`vibetags-processor`** is now the processor jar only — it depends on `vibetags-annotations` so existing single-coordinate setups (`<dependency>vibetags-processor</dependency>`) still resolve the annotations transitively.
+- The bundled `example/` project now uses the recommended split layout: `vibetags-annotations` on compile, `vibetags-processor` only via `<annotationProcessorPaths>` (Maven) / `annotationProcessor` configuration (Gradle), both versions sourced from the BOM.
+- CI now installs `vibetags-annotations` → `vibetags-processor` → `vibetags-bom` in order across `build-maven`, `build-gradle`, and the CodeQL job. The publish workflow deploys all three artifacts to Maven Central in the same release run.
 
 ### Why this is *somewhat* breaking
-The processor JAR's API is unchanged, so consumers who copy the README's "pin a version" snippet are unaffected. The soft break is for anyone copying the bundled `example/` project: it no longer carries an explicit `<vibetags.version>` property — the version comes from the BOM. If you cloned `example/` as a starter and have local edits keyed off `<vibetags.version>`, rename to `<vibetags.bom.version>` (or pin directly, dropping the BOM import).
+The processor jar's API surface (annotation classes, processor SPI registration) is byte-compatible with 0.5.x — anything that worked before still works. The soft breaks:
+- Anyone unzipping `vibetags-processor.jar` to find an annotation `.class` file will no longer find it there; the annotations now live in `vibetags-annotations.jar`. Standard Maven/Gradle resolution handles this transparently via the transitive dependency.
+- The bundled `example/` project no longer keeps annotations on the processor coordinate. If you cloned `example/` as a starter, switch to: `vibetags-annotations` as a regular dependency + `vibetags-processor` on the AP path. The pin-the-old-coordinate path still works for one or two more releases as a transitional convenience.
 
-### Migration: using the BOM (optional)
+### Migration
 
-**Maven** — import the BOM in `<dependencyManagement>`, then drop the version from each `vibetags-*` dependency:
+**Maven (recommended layout):**
 
 ```xml
 <dependencyManagement>
@@ -29,7 +35,7 @@ The processor JAR's API is unchanged, so consumers who copy the README's "pin a 
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.5.7</version>
+            <version>0.6.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -39,22 +45,39 @@ The processor JAR's API is unchanged, so consumers who copy the README's "pin a 
 <dependencies>
     <dependency>
         <groupId>se.deversity.vibetags</groupId>
-        <artifactId>vibetags-processor</artifactId>
-        <scope>provided</scope>
+        <artifactId>vibetags-annotations</artifactId>
     </dependency>
 </dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>se.deversity.vibetags</groupId>
+                        <artifactId>vibetags-processor</artifactId>
+                        <version>0.6.0</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 ```
 
-> **Caveat for annotation-processor users:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` ([MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there. See `example/pom.xml` for the pattern.
+> `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` ([MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there. See `example/pom.xml`.
 
-**Gradle** — apply the BOM to both `implementation` and `annotationProcessor`:
+**Gradle (recommended layout):**
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.5.7')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.5.7')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.6.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.6.0')
 
-    compileOnly 'se.deversity.vibetags:vibetags-processor'
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
 }
 ```
@@ -171,8 +194,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.5.7...HEAD
-[0.5.7]: https://github.com/PIsberg/vibetags/compare/v0.5.6...v0.5.7
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/PIsberg/vibetags/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/PIsberg/vibetags/compare/v0.5.3...v0.5.4

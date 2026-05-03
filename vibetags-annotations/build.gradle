@@ -1,7 +1,6 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'jacoco'
 }
 
 group = 'se.deversity.vibetags'
@@ -18,13 +17,13 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
-            artifactId = 'vibetags-processor'
+            artifactId = 'vibetags-annotations'
             version = '0.6.0'
             from components.java
 
             pom {
-                name = 'VibeTags Processor'
-                description = 'Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.'
+                name = 'VibeTags Annotations'
+                description = 'VibeTags annotation classes (RetentionPolicy.SOURCE, zero dependencies). Pair with vibetags-processor.'
                 url = 'https://github.com/PIsberg/vibetags'
                 licenses {
                     license {
@@ -49,7 +48,6 @@ publishing {
     }
 
     repositories {
-        // GitHub Packages
         maven {
             name = 'GitHubPackages'
             url = uri('https://maven.pkg.github.com/PIsberg/vibetags')
@@ -58,7 +56,6 @@ publishing {
                 password = System.getenv('GITHUB_TOKEN')
             }
         }
-        // Sonatype OSSRH (Maven Central)
         maven {
             name = 'OSSRH'
             def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
@@ -76,36 +73,7 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    // Annotation classes the processor scans for; backwards-compatible transitive
-    // dep so existing consumers still get the annotations via vibetags-processor.
-    api 'se.deversity.vibetags:vibetags-annotations:0.6.0'
-
-    // Logging: SLF4J API + Logback file appender for vibetags.log
-    implementation 'org.slf4j:slf4j-api:2.0.16'
-    implementation 'ch.qos.logback:logback-classic:1.5.12'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
-    testImplementation 'org.mockito:mockito-core:5.14.2'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
 tasks.withType(JavaCompile) {
-    // Disable annotation processing when compiling the processor itself
     options.compilerArgs += ['-proc:none']
     options.encoding = 'UTF-8'
-}
-
-test {
-    useJUnitPlatform()
-    jvmArgs "-Dnet.bytebuddy.experimental=true"
-    finalizedBy jacocoTestReport
-}
-
-jacocoTestReport {
-    dependsOn test
-    reports {
-        xml.required = true
-    }
 }

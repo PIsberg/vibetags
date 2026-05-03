@@ -32,6 +32,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      - name: Install VibeTags Annotations (Maven)
+        run: |
+          cd vibetags-annotations
+          mvn install -B
+
       - name: Build VibeTags Library (Maven)
         run: |
           cd vibetags
@@ -135,6 +140,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install VibeTags annotations
+        run: |
+          cd vibetags-annotations
+          mvn install -B
+
       - name: Install VibeTags processor
         run: |
           cd vibetags
@@ -176,6 +186,12 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       
+      - name: Publish VibeTags Annotations (Gradle)
+        run: |
+          cd vibetags-annotations
+          gradle wrapper || echo "Wrapper generation skipped"
+          gradle clean build publishToMavenLocal --no-daemon
+
       - name: Build VibeTags Library (Gradle)
         run: |
           cd vibetags
