@@ -65,6 +65,12 @@ vibetags/
 │   └── src/
 │       ├── main/java/    # JMH benchmark classes + helpers
 │       └── test/java/    # Stress test + concurrent build test
+├── docs/                 # Architecture documentation and diagrams
+│   ├── ARCHITECTURE.md   # Technical deep-dive into the processor internals
+│   └── diagrams/         # PlantUML source files and rendered PNGs
+├── .claude/
+│   └── skills/
+│       └── vibetags-usage/ # Claude Code skill — annotation reference and usage guide
 └── README.md             # This file
 ```
 
@@ -191,14 +197,11 @@ public class BinarySearchTree {
 
 ## 📚 Documentation
 
-For detailed usage examples, best practices, and advanced configuration, see the **[Example Project README](example/README.md)**.
-
-Key topics covered:
-- Detailed annotation usage examples
-- Generated AI configuration file formats
-- Best practices for writing effective annotations
-- Integration with CI/CD pipelines
-- Troubleshooting common issues
+| Resource | What it covers |
+|---|---|
+| **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 8 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
+| **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
 
 ## 🛠️ Building Both Projects
 
@@ -607,10 +610,16 @@ VibeTags is designed to evolve based on community needs. Future extensions could
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains the Java annotations (@AILocked, @AIContext, @AIDraft, @AIAudit) and the annotation processor that generates AI configuration files.
+The core annotation processor library. Contains all 8 Java annotations and the annotation processor that generates AI configuration files at compile time.
 
-### example/
-A practical e-commerce application demonstrating real-world usage of VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, and enforce continuous security auditing for critical database infrastructure.
+### [example/](example/README.md)
+A practical e-commerce application demonstrating real-world usage of all 8 VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
+
+### [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+Technical reference for the annotation processor internals. Read this before contributing or if you need to understand why a particular file is (or is not) being generated.
+
+### [.claude/skills/vibetags-usage/SKILL.md](.claude/skills/vibetags-usage/SKILL.md)
+A Claude Code skill that gives your AI assistant a full working knowledge of VibeTags — annotation semantics, valid combinations, processor configuration, and troubleshooting. Activate it in Claude Code with `/vibetags-usage`.
 
 ## 📝 License
 
