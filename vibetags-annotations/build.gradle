@@ -70,6 +70,9 @@ publishing {
 }
 
 repositories {
+    // No dependencies today, but mirrors vibetags/build.gradle so a future contributor
+    // adding a vibetags-* dep here doesn't trip on the un-released version.
+    mavenLocal()
     mavenCentral()
 }
 

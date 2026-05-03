@@ -73,6 +73,10 @@ publishing {
 }
 
 repositories {
+    // mavenLocal first: the CI step that builds vibetags-annotations publishes it
+    // to ~/.m2/repository before this module is built, so that's where Gradle finds
+    // the un-released version. mavenCentral handles released versions of everything else.
+    mavenLocal()
     mavenCentral()
 }
 
