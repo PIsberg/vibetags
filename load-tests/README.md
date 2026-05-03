@@ -55,7 +55,7 @@ What we deliberately do **not** track:
 
 ## Comparing results between versions / builds
 
-The harness already writes machine-readable output; the missing piece is a stable workflow for storing and diffing it.
+The harness already writes machine-readable output and CI already uploads it (see [§5](#5-what-ci-already-does--and-what-it-doesnt)); the missing piece is a stable workflow for storing baselines and diffing against them.
 
 ### 1. Capture results with version metadata
 
@@ -103,13 +103,26 @@ Three plots cover the questions that actually come up:
 
 A 30-line `tools/plot-results.py` reading the JSON/CSV from `results/*/` and emitting PNGs into `results/_plots/` is enough — no Grafana, no time-series DB. The repo is the database.
 
-### 5. CI gate (optional, but the obvious next step)
+### 5. What CI already does — and what it doesn't
 
-Once a baseline exists, the workflow that pays off is:
+The `load-tests` job in `.github/workflows/build.yml` (documented in [`docs/WORKFLOW.md`](../docs/WORKFLOW.md#job-load-tests)) already runs on every push/PR:
 
-1. PR build runs the load-tests with `stress.max.classes=1000` (caps wall-clock)
-2. Compare against `results/<latest-release>/` with a tolerance (e.g. ±15% on overhead, JMH CI-overlap for hot paths)
-3. Fail the job on regression, attach the new graphs as artifacts
+- JDK 21, `needs: build-maven`
+- `cd load-tests && mvn test -B -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest" -Dstress.max.classes=500` (the cap keeps the GitHub Actions leg fast)
+- Uploads `load-tests/target/stress-results-*.txt` as artifact `stress-results-${{ github.run_id }}` with `if: always()`, so the file is captured even on failure
+
+What CI does **not** do today:
+
+- Run the JMH microbenchmarks (warm-up + measurement is too slow for per-PR CI; run those locally before tagging a release)
+- Compare results against a stored baseline — every run produces a fresh artifact, but nothing fails the build if `Overhead(ms)` doubles between PRs
+
+### 6. Adding a regression gate (next step)
+
+Once `results/<release>/` baselines are committed, the missing piece is a comparison step in the existing `load-tests` job:
+
+1. After `Run annotation-volume stress test`, parse the new `stress-results-*.txt`
+2. Diff against `load-tests/results/<latest-release>/stress.csv` with a tolerance (e.g. ±15% on `Overhead(ms)`, JMH confidence-interval overlap for hot paths)
+3. Fail the job on regression; the existing artifact upload already preserves the evidence
 
 Tolerances need to be loose enough that GitHub Actions runner variance does not flip the gate red — that's the practical reason to keep a release-tagged baseline rather than comparing PR-to-PR.
 
