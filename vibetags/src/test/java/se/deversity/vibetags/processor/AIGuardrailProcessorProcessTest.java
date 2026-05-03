@@ -827,4 +827,283 @@ class AIGuardrailProcessorProcessTest {
             public void printMessage(Diagnostic.Kind kind, CharSequence msg, javax.lang.model.element.Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) { printMessage(kind, msg); }
         };
     }
+
+    // -----------------------------------------------------------------------
+    // cleanupGranularDirectory — hash-marker paths (uncovered in coverage)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void cleanupGranularDirectory_hashMarkerWithHumanContent_survivesStripped(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("SomeRule.txt");
+        // File with hash-comment markers and human content BEFORE them
+        Files.writeString(file, "# Human header\n\n# VIBETAGS-START\ngenerated content\n# VIBETAGS-END\n");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+
+        assertTrue(Files.exists(file), "File with human content before markers should survive");
+        String content = Files.readString(file);
+        assertFalse(content.contains("# VIBETAGS-START"), "Hash start marker should be stripped");
+        assertFalse(content.contains("generated content"), "Generated content should be removed");
+        assertTrue(content.contains("# Human header"), "Human content before markers must be preserved");
+    }
+
+    @Test
+    void cleanupGranularDirectory_hashMarkerOnlyVibeTags_deletesFile(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("OnlyVibeTags.txt");
+        // Only VibeTags content — should be deleted
+        Files.writeString(file, "# VIBETAGS-START\ngenerated\n# VIBETAGS-END\n");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+
+        assertFalse(Files.exists(file), "File with only VibeTags content should be deleted");
+    }
+
+    @Test
+    void cleanupGranularDirectory_hashMarkerWithFrontMatterOnly_deletesFile(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("FrontMatterOnly.txt");
+        // YAML front-matter + hash-comment VibeTags block; after stripping only front-matter remains
+        Files.writeString(file,
+            "---\ndescription: \"AI rules for Foo\"\nglobs: [\"**/Foo.java\"]\n---\n" +
+            "# VIBETAGS-START\nold rule\n# VIBETAGS-END\n");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+
+        assertFalse(Files.exists(file),
+            "File with only YAML front-matter after stripping hash markers should be deleted");
+    }
+
+    @Test
+    void cleanupGranularDirectory_hashMarkerNoEndMarker_fileNotModified(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("NoEnd.txt");
+        String initial = "# VIBETAGS-START\nno end marker here\n";
+        Files.writeString(file, initial);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+
+        assertTrue(Files.exists(file), "File without end marker should not be deleted");
+        assertEquals(initial, Files.readString(file), "File without end marker should be unmodified");
+    }
+
+    @Test
+    void cleanupGranularDirectory_fileWithNoMarkers_notModified(@TempDir Path tempDir) throws IOException {
+        Path rulesDir = tempDir.resolve("rules");
+        Files.createDirectories(rulesDir);
+        Path file = rulesDir.resolve("ManualRule.txt");
+        String content = "# Purely human-written rule\nNo VibeTags markers here.\n";
+        Files.writeString(file, content);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+
+        assertTrue(Files.exists(file), "File with no markers should survive");
+        assertEquals(content, Files.readString(file), "File content should be unchanged");
+    }
+
+    // -----------------------------------------------------------------------
+    // writeFileIfChanged — malformed markers and legacy-file paths
+    // -----------------------------------------------------------------------
+
+    @Test
+    void writeFileIfChanged_malformedMarkersNoEnd_emitsWarningAndWrites(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("broken.md");
+        // Start marker present but no end marker — malformed
+        Files.writeString(mdFile, "<!-- VIBETAGS-START -->\norphaned content with no end marker");
+
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(messager));
+
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "new content", true);
+
+        assertTrue(changed, "Should write when markers are malformed (start but no end)");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("malformed markers")),
+            "Should emit a WARNING about malformed markers");
+        assertTrue(Files.readString(mdFile).contains("new content"), "New content should be written");
+    }
+
+    @Test
+    void writeFileIfChanged_legacyFileWithGeneratedHeader_upgradesToMarkers(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("legacy.md");
+        // Legacy file: has the VibeTags generated-header line but no VIBETAGS-START/END markers
+        String legacyContent =
+            "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
+            "<project_guardrails>\n  <locked_files/>\n</project_guardrails>\n";
+        Files.writeString(mdFile, legacyContent);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "new content", true);
+
+        assertTrue(changed, "Should upgrade legacy file to marker format");
+        String written = Files.readString(mdFile);
+        assertTrue(written.contains("<!-- VIBETAGS-START -->"), "Should add start marker");
+        assertTrue(written.contains("<!-- VIBETAGS-END -->"), "Should add end marker");
+        assertTrue(written.contains("new content"), "Should contain new content");
+    }
+
+    @Test
+    void writeFileIfChanged_legacyFileWithHeader_hasNewRulesFalse_skips(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("legacy.md");
+        // Legacy file — no markers but has VibeTags header
+        Files.writeString(mdFile,
+            "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
+            "<project_guardrails/>\n");
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(messager));
+
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "different content", false);
+
+        assertFalse(changed, "Should skip when hasNewRules=false and file already has content");
+        assertTrue(notes.stream().anyMatch(n -> n.contains("Skipping update")),
+            "Should emit a skip NOTE for multi-module preservation");
+    }
+
+    @Test
+    void writeFileIfChanged_yamlFrontMatterInContent_markersPlacedAfterFrontMatter(@TempDir Path tempDir) throws IOException {
+        Path mdcFile = tempDir.resolve("rule.mdc");
+        // Content starts with YAML front-matter — markers must be placed AFTER the closing "---"
+        String contentWithFrontMatter =
+            "---\ndescription: \"AI rules for Foo\"\nglobs: [\"**/Foo.java\"]\nalwaysApply: false\n---\n" +
+            "# Rule Content\nDo not modify this class.";
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(mdcFile.toString(), contentWithFrontMatter, true);
+
+        assertTrue(changed, "Should create file with YAML front-matter content");
+        String written = Files.readString(mdcFile);
+        int frontMatterEnd = written.lastIndexOf("---", written.indexOf("<!-- VIBETAGS-START -->"));
+        int markerStart = written.indexOf("<!-- VIBETAGS-START -->");
+        assertTrue(frontMatterEnd > 0 && markerStart > frontMatterEnd,
+            "Markers must appear after the YAML front-matter block");
+        assertTrue(written.contains("Do not modify this class."), "Rule content should be preserved");
+    }
+
+    @Test
+    void writeFileIfChanged_sectionMissingHasNewRulesFalse_skips(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("notes.md");
+        // Existing file has human content but NO VibeTags markers and NO generated header
+        Files.writeString(mdFile, "# My notes\nSome human content here.\n");
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(messager));
+
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "new guardrail content", false);
+
+        assertFalse(changed, "Should skip when hasNewRules=false and existing non-marker file has content");
+        assertTrue(notes.stream().anyMatch(n -> n.contains("Skipping update")),
+            "Should emit skip NOTE for multi-module preservation");
+    }
+
+    @Test
+    void writeFileIfChanged_nonMarkdownHasNewRulesFalse_skips(@TempDir Path tempDir) throws IOException {
+        Path jsonFile = tempDir.resolve(".qwen/settings.json");
+        Files.createDirectories(jsonFile.getParent());
+        Files.writeString(jsonFile, "{\"existing\": true}");
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(messager));
+
+        boolean changed = processor.writeFileIfChanged(jsonFile.toString(), "{\"new\": true}", false);
+
+        assertFalse(changed, "Should skip JSON overwrite when hasNewRules=false");
+        assertTrue(notes.stream().anyMatch(n -> n.contains("Skipping update")),
+            "Should emit skip NOTE for JSON file multi-module preservation");
+    }
+
+    // -----------------------------------------------------------------------
+    // stripLegacyVibeTagsBlock — both prefix and humanContent non-empty
+    // -----------------------------------------------------------------------
+
+    @Test
+    void stripLegacyVibeTagsBlock_humanPrefixAndHumanSuffix_returnsBoth() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // Human content before the header, then VibeTags XML block, then more human content
+        String humanPrefix = "Human notes written by team."; // non-boilerplate (no #/-/*/<)
+        String vibetagsBlock =
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n" +
+            "<project_guardrails>\n" +
+            "  <locked_files/>\n" +
+            "</project_guardrails>\n" +
+            "<rule>keep locked</rule>\n";
+        String humanSuffix = "# Extra section after guardrails";
+        String input = humanPrefix + "\n\n" + vibetagsBlock + humanSuffix;
+
+        String result = processor.stripLegacyVibeTagsBlock(input);
+
+        assertTrue(result.contains("Human notes"), "Human prefix must be preserved");
+        assertTrue(result.contains("# Extra section"), "Human suffix must be preserved");
+        assertFalse(result.contains("<project_guardrails>"), "VibeTags XML block must be removed");
+    }
+
+    // -----------------------------------------------------------------------
+    // warn() — log != null branch (previously uncovered)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void warn_withNonNullLog_executesLogWarn(@TempDir Path tempDir) throws IOException {
+        // Signal file: claude is active, but .claudeignore is absent → warning fires
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        // log.level=OFF → log = NOPLogger (non-null, no-op) — covers the `if (log != null)` branch
+        Map<String, String> options = Map.of(
+            "vibetags.root", tempDir.toString(),
+            "vibetags.log.level", "OFF"
+        );
+        when(env.getOptions()).thenReturn(options);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+
+        // Round 1: accumulate one @AIIgnore element so hasIgnore=true in generateFiles()
+        Element ignoreElement = mock(Element.class);
+        when(ignoreElement.toString()).thenReturn("com.example.IgnoredClass");
+        when(ignoreElement.getSimpleName()).thenReturn(nameOf("IgnoredClass"));
+        when(ignoreElement.getKind()).thenReturn(javax.lang.model.element.ElementKind.CLASS);
+        AIIgnore ignoreAnnotation = mock(AIIgnore.class);
+        when(ignoreAnnotation.reason()).thenReturn("test reason");
+        when(ignoreElement.getAnnotation(AIIgnore.class)).thenReturn(ignoreAnnotation);
+
+        RoundEnvironment round1 = mock(RoundEnvironment.class);
+        when(round1.processingOver()).thenReturn(false);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIContext.class);
+        doReturn(Set.of(ignoreElement)).when(round1).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIPrivacy.class);
+        processor.process(Set.of(), round1);
+
+        // Round 2: trigger generateFiles() → checkOrphanedAnnotations() → warn() with log != null
+        try {
+            triggerGeneration(processor);
+        } finally {
+            VibeTagsLogger.shutdown();
+        }
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains(".claudeignore")),
+            "Should emit a WARNING about missing .claudeignore when @AIIgnore is used and claude is active");
+    }
 }
