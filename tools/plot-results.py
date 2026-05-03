@@ -38,9 +38,20 @@ def discover_versions(results_dir: Path) -> list[str]:
 
 
 def load_stress(version_dir: Path) -> list[tuple[int, int, int, int, int]]:
+    return _load_table(version_dir / "stress.txt")
+
+
+def load_memory(version_dir: Path) -> list[tuple[int, int, int, int, int]]:
+    """Reads memory.txt rows: (N, ProcessorAlloc_KB, BaselineAlloc_KB, OverheadAlloc_KB, PeakHeap_MB)."""
+    path = version_dir / "memory.txt"
+    if not path.exists():
+        return []
+    return _load_table(path)
+
+
+def _load_table(path: Path) -> list[tuple[int, int, int, int, int]]:
     rows = []
-    text = (version_dir / "stress.txt").read_text(encoding="utf-8")
-    for line in text.splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         m = STRESS_ROW.match(line)
         if m:
             rows.append(tuple(int(x) for x in m.groups()))
@@ -72,6 +83,49 @@ def plot_overhead_vs_n(versions: list[str], stress: dict[str, list], out_path: P
     ax.set_title("AnnotationVolumeStressTest — overhead = processorTime − baseline")
     ax.grid(True, which="both", linestyle="--", alpha=0.4)
     ax.axhline(0, color="black", linewidth=0.5)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+
+
+def plot_memory_overhead_vs_n(versions: list[str], memory: dict[str, list], out_path: Path) -> None:
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for version in versions:
+        rows = memory.get(version, [])
+        if not rows:
+            continue
+        ns = [r[0] for r in rows]
+        # OverheadAlloc(KB) → MB for readability; column index 3
+        overhead_mb = [r[3] / 1024 for r in rows]
+        ax.plot(ns, overhead_mb, marker="o", label=f"v{version}")
+    ax.set_xscale("log")
+    ax.set_xlabel("Annotated classes (N, log scale)")
+    ax.set_ylabel("Processor allocation overhead (MB)")
+    ax.set_title("MemoryVolumeStressTest — overhead = processorAlloc − baselineAlloc")
+    ax.grid(True, which="both", linestyle="--", alpha=0.4)
+    ax.axhline(0, color="black", linewidth=0.5)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+
+
+def plot_peak_heap_vs_n(versions: list[str], memory: dict[str, list], out_path: Path) -> None:
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for version in versions:
+        rows = memory.get(version, [])
+        if not rows:
+            continue
+        ns = [r[0] for r in rows]
+        # PeakHeap(MB); column index 4
+        peak = [r[4] for r in rows]
+        ax.plot(ns, peak, marker="s", linestyle="--", label=f"v{version}")
+    ax.set_xscale("log")
+    ax.set_xlabel("Annotated classes (N, log scale)")
+    ax.set_ylabel("Peak heap during processor run (MB)")
+    ax.set_title("MemoryVolumeStressTest — peak heap (noisy: GC-timing dependent)")
+    ax.grid(True, which="both", linestyle="--", alpha=0.4)
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
@@ -117,6 +171,7 @@ def main() -> None:
 
     stress = {v: load_stress(args.results / v) for v in versions}
     jmh = {v: load_jmh(args.results / v) for v in versions}
+    memory = {v: load_memory(args.results / v) for v in versions}
 
     all_benchmarks = sorted({b for v in versions for b in jmh[v]})
     write_benchmarks = [b for b in all_benchmarks if b.startswith("writeFileIfChanged")]
@@ -127,9 +182,16 @@ def main() -> None:
     plot_hotpath(versions, jmh, args.out / "writeFileIfChanged-detail.png",
                  write_benchmarks, "writeFileIfChanged variants (linear)", log_y=False)
 
-    print(f"Wrote {len(versions)} versions × 3 plots to {args.out}")
+    versions_with_memory = [v for v in versions if memory[v]]
+    if versions_with_memory:
+        plot_memory_overhead_vs_n(versions_with_memory, memory, args.out / "memory-overhead-vs-n.png")
+        plot_peak_heap_vs_n(versions_with_memory, memory, args.out / "memory-peak-heap-vs-n.png")
+
+    print(f"Wrote plots to {args.out}")
     for v in versions:
-        print(f"  v{v}: {len(stress[v])} stress rows, {len(jmh[v])} JMH benchmarks")
+        print(f"  v{v}: {len(stress[v])} stress rows, "
+              f"{len(jmh[v])} JMH benchmarks, "
+              f"{len(memory[v])} memory rows")
 
 
 if __name__ == "__main__":
