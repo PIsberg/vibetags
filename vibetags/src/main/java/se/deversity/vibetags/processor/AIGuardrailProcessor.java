@@ -255,6 +255,27 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, Path> serviceFiles = buildServiceFileMap(root);
         Set<String> activeServices = resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
+        // Cache active-service flags so per-element loops can skip building strings
+        // for platforms that won't have a file written. Per-element appends dominate
+        // generateFiles cost at high N, so this is the main load-test lever.
+        boolean cursorActive   = activeServices.contains("cursor");
+        boolean claudeActive   = activeServices.contains("claude");
+        boolean aiexcludeActive = activeServices.contains("aiexclude");
+        boolean codexActive    = activeServices.contains("codex");
+        boolean copilotActive  = activeServices.contains("copilot");
+        boolean qwenActive     = activeServices.contains("qwen");
+        boolean geminiActive   = activeServices.contains("gemini");
+        boolean llmsActive     = activeServices.contains("llms");
+        boolean llmsFullActive = activeServices.contains("llms_full");
+        boolean aiderConvActive   = activeServices.contains("aider_conventions");
+        boolean aiderIgnoreActive = activeServices.contains("aider_ignore");
+        boolean cursorIgnoreFileActive  = activeServices.contains("cursor_ignore");
+        boolean claudeIgnoreFileActive  = activeServices.contains("claude_ignore");
+        boolean copilotIgnoreFileActive = activeServices.contains("copilot_ignore");
+        boolean qwenIgnoreFileActive    = activeServices.contains("qwen_ignore");
+        boolean granularActive = activeServices.contains("cursor_granular")
+            || activeServices.contains("trae_granular") || activeServices.contains("roo_granular");
+
         // Per-platform section builders for Gemini (assembled in the finalize section below)
         StringBuilder geminiLocked = new StringBuilder();
         StringBuilder geminiContext = new StringBuilder();
@@ -265,24 +286,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = elementPath(element);
             String reason = locked.reason();
 
-            cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
-            claudeMd.append("    <file path=\"").append(className).append("\">\n")
+            if (cursorActive) cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
+            if (claudeActive) claudeMd.append("    <file path=\"").append(className).append("\">\n")
                     .append("      <reason>").append(reason).append("</reason>\n")
                     .append("    </file>\n");
-            aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
-            codexAgents.append("- **").append(className).append("**: ").append(reason).append("\n");
-            copilot.append("- `").append(className).append("` - ").append(reason).append("\n");
-            qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
-            geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
+            if (aiexcludeActive) aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
+            if (codexActive) codexAgents.append("- **").append(className).append("**: ").append(reason).append("\n");
+            if (copilotActive) copilot.append("- `").append(className).append("` - ").append(reason).append("\n");
+            if (qwenActive) qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
+            if (geminiActive) geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
 
-            llmsTxt.append("- [").append(elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
-            llmsFullTxt.append("### ").append(className).append("\n")
+            if (llmsActive) llmsTxt.append("- [").append(elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
+            if (llmsFullActive) llmsFullTxt.append("### ").append(className).append("\n")
                        .append("- **Reason**: ").append(reason).append("\n\n");
 
-            aiderConventions.append("#### LOCKED: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### LOCKED: ").append(className).append("\n")
                             .append("- **Status**: Locked (Do Not Edit)\n")
                             .append("- **Reason**: ").append(reason).append("\n\n");
-            appendToGranular(element, "Locked Status", "- **Reason**: " + reason);
+            if (granularActive) appendToGranular(element, "Locked Status", "- **Reason**: " + reason);
         }
 
         claudeMd.append("  </locked_files>\n  <contextual_instructions>\n");
@@ -296,33 +317,33 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             AIContext context = element.getAnnotation(AIContext.class);
             String className = elementPath(element);
 
-            cursorRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus())
+            if (cursorActive) cursorRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus())
                        .append("\n  * Avoid: ").append(context.avoids()).append("\n");
-            claudeMd.append("    <file path=\"").append(className).append("\">\n")
+            if (claudeActive) claudeMd.append("    <file path=\"").append(className).append("\">\n")
                     .append("      <focus>").append(context.focus()).append("</focus>\n")
                     .append("      <avoids>").append(context.avoids()).append("</avoids>\n")
                     .append("    </file>\n");
-            codexAgents.append("- `").append(className).append("`: Focus on ").append(context.focus())
+            if (codexActive) codexAgents.append("- `").append(className).append("`: Focus on ").append(context.focus())
                        .append(". Avoid ").append(context.avoids()).append(".\n");
-            copilot.append("- `").append(className).append("` \n")
+            if (copilotActive) copilot.append("- `").append(className).append("` \n")
                    .append("  - Focus: ").append(context.focus()).append("\n")
                    .append("  - Avoid: ").append(context.avoids()).append("\n");
-            qwenMd.append("* `").append(className).append("` \n")
+            if (qwenActive) qwenMd.append("* `").append(className).append("` \n")
                   .append("  * Focus: ").append(context.focus()).append("\n")
                   .append("  * Avoid: ").append(context.avoids()).append("\n");
 
-            llmsTxtContext.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtContext.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): Focus - ").append(context.focus())
                           .append(". Avoid - ").append(context.avoids()).append("\n");
-            llmsFullTxtContext.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtContext.append("### ").append(className).append("\n")
                               .append("- **Focus**: ").append(context.focus()).append("\n")
                               .append("- **Avoid**: ").append(context.avoids()).append("\n\n");
 
-            aiderConventions.append("#### CONTEXT: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### CONTEXT: ").append(className).append("\n")
                             .append("- **Focus**: ").append(context.focus()).append("\n")
                             .append("- **Avoid**: ").append(context.avoids()).append("\n\n");
-            appendToGranular(element, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
-            geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus())
+            if (granularActive) appendToGranular(element, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
+            if (geminiActive) geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus())
                          .append(". Avoid - ").append(context.avoids()).append("\n");
         }
         claudeMd.append("  </contextual_instructions>\n");
@@ -337,29 +358,29 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Process @AIIgnore
         for (Element element : ignoreElements) {
             String className = elementPath(element);
-            cursorIgnore.append("* `").append(className).append("` \n");
-            claudeIgnore.append("    <file path=\"").append(className).append("\"/>\n");
-            aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
-            codexIgnore.append("- `").append(className).append("` \n");
-            geminiIgnore.append("- `").append(className).append("` \n");
-            copilotIgnore.append("- `").append(className).append("` \n");
+            if (cursorActive) cursorIgnore.append("* `").append(className).append("` \n");
+            if (claudeActive) claudeIgnore.append("    <file path=\"").append(className).append("\"/>\n");
+            if (aiexcludeActive) aiExclude.append("**/").append(element.getSimpleName()).append(".java\n");
+            if (codexActive) codexIgnore.append("- `").append(className).append("` \n");
+            if (geminiActive) geminiIgnore.append("- `").append(className).append("` \n");
+            if (copilotActive) copilotIgnore.append("- `").append(className).append("` \n");
 
             String globPattern = "**/"+ element.getSimpleName() + ".java\n";
-            cursorIgnoreFile.append(globPattern);
-            claudeIgnoreFile.append(globPattern);
-            copilotIgnoreFile.append(globPattern);
-            qwenIgnoreFile.append(globPattern);
-            qwenIgnore.append("* `").append(className).append("` \n");
+            if (cursorIgnoreFileActive)  cursorIgnoreFile.append(globPattern);
+            if (claudeIgnoreFileActive)  claudeIgnoreFile.append(globPattern);
+            if (copilotIgnoreFileActive) copilotIgnoreFile.append(globPattern);
+            if (qwenIgnoreFileActive)    qwenIgnoreFile.append(globPattern);
+            if (qwenActive) qwenIgnore.append("* `").append(className).append("` \n");
 
-            llmsTxtIgnore.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtIgnore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                          .append("): excluded from AI context\n");
-            llmsFullTxtIgnore.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtIgnore.append("### ").append(className).append("\n")
                              .append("- Excluded from AI context entirely - treat as non-existent\n\n");
 
-            aiderIgnore.append(globPattern);
-            aiderConventions.append("#### IGNORE: ").append(className).append("\n")
+            if (aiderIgnoreActive) aiderIgnore.append(globPattern);
+            if (aiderConvActive) aiderConventions.append("#### IGNORE: ").append(className).append("\n")
                             .append("- **Instruction**: This element is strictly excluded from AI context. Do not reference it.\n\n");
-            appendToGranular(element, "Exclusion Rule", "This element is strictly excluded from AI context. Do not reference it.");
+            if (granularActive) appendToGranular(element, "Exclusion Rule", "This element is strictly excluded from AI context. Do not reference it.");
         }
 
         // Builders for audit sections
@@ -379,35 +400,42 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = elementPath(element);
             String[] checkFor = audit.checkFor();
             if (checkFor.length == 0) continue;
+            String checkForJoined = String.join(", ", checkFor);
 
-            cursorAudit.append("* `").append(className).append("` \n");
-            cursorAudit.append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
-            claudeAudit.append("    <file path=\"").append(className).append("\">\n");
-            for (String vulnerability : checkFor) {
-                claudeAudit.append("      <vulnerability_check>").append(vulnerability).append("</vulnerability_check>\n");
+            if (cursorActive) {
+                cursorAudit.append("* `").append(className).append("` \n");
+                cursorAudit.append("  - Required Checks: ").append(checkForJoined).append("\n");
             }
-            claudeAudit.append("    </file>\n");
-            geminiAudit.append("File: `").append(className).append("` ")
-                       .append("\nCritical Vulnerabilities to Prevent: ");
-            for (String vulnerability : checkFor) {
-                geminiAudit.append("\n- ").append(vulnerability);
+            if (claudeActive) {
+                claudeAudit.append("    <file path=\"").append(className).append("\">\n");
+                for (String vulnerability : checkFor) {
+                    claudeAudit.append("      <vulnerability_check>").append(vulnerability).append("</vulnerability_check>\n");
+                }
+                claudeAudit.append("    </file>\n");
             }
-            geminiAudit.append("\n\n");
-            codexAudit.append("* `").append(className).append("` \n")
-                      .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
-            copilotAudit.append("- `").append(className).append("` \n")
-                        .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
-            qwenAudit.append("* `").append(className).append("` \n")
-                     .append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");
+            if (geminiActive) {
+                geminiAudit.append("File: `").append(className).append("` ")
+                           .append("\nCritical Vulnerabilities to Prevent: ");
+                for (String vulnerability : checkFor) {
+                    geminiAudit.append("\n- ").append(vulnerability);
+                }
+                geminiAudit.append("\n\n");
+            }
+            if (codexActive) codexAudit.append("* `").append(className).append("` \n")
+                      .append("  - Required Checks: ").append(checkForJoined).append("\n");
+            if (copilotActive) copilotAudit.append("- `").append(className).append("` \n")
+                        .append("  - Required Checks: ").append(checkForJoined).append("\n");
+            if (qwenActive) qwenAudit.append("* `").append(className).append("` \n")
+                     .append("  - Required Checks: ").append(checkForJoined).append("\n");
 
-            llmsTxtAudit.append("- [").append(elementDisplayName(element)).append("](").append(className)
-                        .append("): check for ").append(String.join(", ", checkFor)).append("\n");
-            llmsFullTxtAudit.append("### ").append(className).append("\n")
-                            .append("- **Required Checks**: ").append(String.join(", ", checkFor)).append("\n\n");
+            if (llmsActive) llmsTxtAudit.append("- [").append(elementDisplayName(element)).append("](").append(className)
+                        .append("): check for ").append(checkForJoined).append("\n");
+            if (llmsFullActive) llmsFullTxtAudit.append("### ").append(className).append("\n")
+                            .append("- **Required Checks**: ").append(checkForJoined).append("\n\n");
 
-            aiderConventions.append("#### SECURITY AUDIT: ").append(className).append("\n")
-                            .append("- **Required Checks**: ").append(String.join(", ", checkFor)).append("\n\n");
-            appendToGranular(element, "Security Audit Requirements", "When modifying this element, audit for:\n- " + String.join("\n- ", checkFor));
+            if (aiderConvActive) aiderConventions.append("#### SECURITY AUDIT: ").append(className).append("\n")
+                            .append("- **Required Checks**: ").append(checkForJoined).append("\n\n");
+            if (granularActive) appendToGranular(element, "Security Audit Requirements", "When modifying this element, audit for:\n- " + String.join("\n- ", checkFor));
         }
 
         // Builders for draft elements
@@ -426,23 +454,23 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = elementPath(element);
             String instructions = draft.instructions();
 
-            cursorDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
-            claudeDraft.append("    <task path=\"").append(className).append("\">\n")
+            if (cursorActive) cursorDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+            if (claudeActive) claudeDraft.append("    <task path=\"").append(className).append("\">\n")
                        .append("      <instructions>").append(instructions).append("</instructions>\n")
                        .append("    </task>\n");
-            codexDraft.append("- **").append(className).append("**: ").append(instructions).append("\n");
-            geminiDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
-            copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
-            qwenDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+            if (codexActive) codexDraft.append("- **").append(className).append("**: ").append(instructions).append("\n");
+            if (geminiActive) geminiDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
+            if (copilotActive) copilotDraft.append("- `").append(className).append("`: ").append(instructions).append("\n");
+            if (qwenActive) qwenDraft.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
 
-            llmsTxtDraft.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtDraft.append("- [").append(elementDisplayName(element)).append("](").append(className)
                         .append("): ").append(instructions).append("\n");
-            llmsFullTxtDraft.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtDraft.append("### ").append(className).append("\n")
                             .append("- **Instructions**: ").append(instructions).append("\n\n");
 
-            aiderConventions.append("#### DRAFT/TODO: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### DRAFT/TODO: ").append(className).append("\n")
                             .append("- **Instruction**: ").append(instructions).append("\n\n");
-            appendToGranular(element, "Implementation Tasks", "- **Instruction**: " + instructions);
+            if (granularActive) appendToGranular(element, "Implementation Tasks", "- **Instruction**: " + instructions);
         }
 
         // Builders for privacy elements
@@ -471,24 +499,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = elementPath(element);
             String reason = privacy.reason();
 
-            cursorPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
-            claudePrivacy.append("    <element path=\"").append(className).append("\">\n")
+            if (cursorActive) cursorPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
+            if (claudeActive) claudePrivacy.append("    <element path=\"").append(className).append("\">\n")
                          .append("      <reason>").append(reason).append("</reason>\n")
                          .append("    </element>\n");
-            codexPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
-            geminiPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
-            copilotPrivacy.append("- `").append(className).append("` - ").append(reason).append("\n");
-            qwenPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
+            if (codexActive) codexPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
+            if (geminiActive) geminiPrivacy.append("- `").append(className).append("`: ").append(reason).append("\n");
+            if (copilotActive) copilotPrivacy.append("- `").append(className).append("` - ").append(reason).append("\n");
+            if (qwenActive) qwenPrivacy.append("* `").append(className).append("` - ").append(reason).append("\n");
 
-            llmsTxtPrivacy.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtPrivacy.append("- [").append(elementDisplayName(element)).append("](").append(className)
                           .append("): ").append(reason).append("\n");
-            llmsFullTxtPrivacy.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtPrivacy.append("### ").append(className).append("\n")
                               .append("- **Reason**: ").append(reason).append("\n\n");
 
-            aiderConventions.append("#### PRIVACY/PII: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### PRIVACY/PII: ").append(className).append("\n")
                             .append("- **Safety Rule**: Never log or expose runtime values of this element.\n")
                             .append("- **Reason**: ").append(reason).append("\n\n");
-            appendToGranular(element, "PII / Privacy Guardrails", "- **Rule**: Never log or expose runtime values of this element.\n- **Reason**: " + reason);
+            if (granularActive) appendToGranular(element, "PII / Privacy Guardrails", "- **Rule**: Never log or expose runtime values of this element.\n- **Reason**: " + reason);
         }
 
         // Platform-specific builders for @AICore
@@ -517,31 +545,31 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String sensitivity = core.sensitivity();
             String note = core.note();
 
-            cursorCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
+            if (cursorActive) cursorCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
                       .append(". Note: ").append(note).append("\n");
-            claudeCore.append("    <element path=\"").append(className).append("\">\n")
+            if (claudeActive) claudeCore.append("    <element path=\"").append(className).append("\">\n")
                       .append("      <sensitivity>").append(sensitivity).append("</sensitivity>\n")
                       .append("      <note>").append(note).append("</note>\n")
                       .append("    </element>\n");
-            codexCore.append("- **").append(className).append("** (sensitivity: ").append(sensitivity)
+            if (codexActive) codexCore.append("- **").append(className).append("** (sensitivity: ").append(sensitivity)
                      .append("): ").append(note).append("\n");
-            copilotCore.append("- `").append(className).append("` — sensitivity: ").append(sensitivity)
+            if (copilotActive) copilotCore.append("- `").append(className).append("` — sensitivity: ").append(sensitivity)
                        .append(". ").append(note).append("\n");
-            qwenCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
+            if (qwenActive) qwenCore.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity)
                     .append(". Note: ").append(note).append("\n");
-            geminiCore.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity)
+            if (geminiActive) geminiCore.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity)
                       .append(". Note: ").append(note).append("\n");
 
-            llmsTxtCore.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtCore.append("- [").append(elementDisplayName(element)).append("](").append(className)
                        .append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
-            llmsFullTxtCore.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtCore.append("### ").append(className).append("\n")
                            .append("- **Sensitivity**: ").append(sensitivity).append("\n")
                            .append("- **Note**: ").append(note).append("\n\n");
 
-            aiderConventions.append("#### CORE FUNCTIONALITY: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### CORE FUNCTIONALITY: ").append(className).append("\n")
                             .append("- **Sensitivity**: ").append(sensitivity).append("\n")
                             .append("- **Note**: ").append(note).append("\n\n");
-            appendToGranular(element, "Core Functionality", "- **Sensitivity**: " + sensitivity + "\n- **Note**: " + note);
+            if (granularActive) appendToGranular(element, "Core Functionality", "- **Sensitivity**: " + sensitivity + "\n- **Note**: " + note);
         }
 
         // Process @AIPerformance
@@ -551,24 +579,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String className = elementPath(element);
             String constraint = perf.constraint();
 
-            cursorPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
-            claudePerf.append("    <element path=\"").append(className).append("\">\n")
+            if (cursorActive) cursorPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
+            if (claudeActive) claudePerf.append("    <element path=\"").append(className).append("\">\n")
                       .append("      <constraint>").append(constraint).append("</constraint>\n")
                       .append("    </element>\n");
-            codexPerf.append("- **").append(className).append("**: ").append(constraint).append("\n");
-            copilotPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
-            qwenPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
-            geminiPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
+            if (codexActive) codexPerf.append("- **").append(className).append("**: ").append(constraint).append("\n");
+            if (copilotActive) copilotPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
+            if (qwenActive) qwenPerf.append("* `").append(className).append("` - ").append(constraint).append("\n");
+            if (geminiActive) geminiPerf.append("- `").append(className).append("`: ").append(constraint).append("\n");
 
-            llmsTxtPerformance.append("- [").append(elementDisplayName(element)).append("](").append(className)
+            if (llmsActive) llmsTxtPerformance.append("- [").append(elementDisplayName(element)).append("](").append(className)
                               .append("): ").append(constraint).append("\n");
-            llmsFullTxtPerformance.append("### ").append(className).append("\n")
+            if (llmsFullActive) llmsFullTxtPerformance.append("### ").append(className).append("\n")
                                   .append("- **Constraint**: ").append(constraint).append("\n\n");
 
-            aiderConventions.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n")
+            if (aiderConvActive) aiderConventions.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n")
                             .append("- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n")
                             .append("- **Constraint**: ").append(constraint).append("\n\n");
-            appendToGranular(element, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
+            if (granularActive) appendToGranular(element, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
         }
 
         // Assemble Gemini content from per-annotation section builders
