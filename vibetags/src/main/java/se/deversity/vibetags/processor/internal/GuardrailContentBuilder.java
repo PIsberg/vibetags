@@ -1,0 +1,587 @@
+package se.deversity.vibetags.processor.internal;
+
+import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AIPrivacy;
+
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * Builds the content of every guardrail file from the annotations collected this round.
+ * Owns all per-platform {@link StringBuilder}s; produces a service-key → content map plus the
+ * per-element granular rule map (consumed by {@code GranularRulesWriter}).
+ *
+ * <p>The class has no IO: it neither reads nor writes files. Construct, call {@link #build},
+ * use the result.
+ */
+public final class GuardrailContentBuilder {
+
+    private final AnnotationCollector collector;
+    private final java.util.Set<String> activeServices;
+    private final String projectName;
+    private final String generatedHeader;
+
+    // Active-service flag cache (read once, used in tight per-element loops)
+    private final boolean cursorActive;
+    private final boolean claudeActive;
+    private final boolean aiexcludeActive;
+    private final boolean codexActive;
+    private final boolean copilotActive;
+    private final boolean qwenActive;
+    private final boolean geminiActive;
+    private final boolean llmsActive;
+    private final boolean llmsFullActive;
+    private final boolean aiderConvActive;
+    private final boolean aiderIgnoreActive;
+    private final boolean cursorIgnoreFileActive;
+    private final boolean claudeIgnoreFileActive;
+    private final boolean copilotIgnoreFileActive;
+    private final boolean qwenIgnoreFileActive;
+    private final boolean granularActive;
+
+    // Primary platform builders
+    private StringBuilder cursorRules;
+    private StringBuilder claudeMd;
+    private StringBuilder aiExclude;
+    private StringBuilder codexAgents;
+    private StringBuilder copilot;
+    private StringBuilder qwenMd;
+    private StringBuilder cursorIgnoreSection;
+    private StringBuilder cursorIgnoreFile;
+    private StringBuilder claudeIgnoreFile;
+    private StringBuilder copilotIgnoreFile;
+    private StringBuilder qwenIgnoreFile;
+    private StringBuilder aiderConventions;
+    private StringBuilder aiderIgnore;
+
+    // llms.txt / llms-full.txt main + per-section builders
+    private StringBuilder llmsTxt;
+    private StringBuilder llmsTxtContext;
+    private StringBuilder llmsTxtAudit;
+    private StringBuilder llmsTxtIgnore;
+    private StringBuilder llmsTxtDraft;
+    private StringBuilder llmsTxtPrivacy;
+    private StringBuilder llmsTxtCore;
+    private StringBuilder llmsTxtPerformance;
+    private StringBuilder llmsFullTxt;
+    private StringBuilder llmsFullTxtContext;
+    private StringBuilder llmsFullTxtAudit;
+    private StringBuilder llmsFullTxtIgnore;
+    private StringBuilder llmsFullTxtDraft;
+    private StringBuilder llmsFullTxtPrivacy;
+    private StringBuilder llmsFullTxtCore;
+    private StringBuilder llmsFullTxtPerformance;
+
+    // Per-element granular rule sections (one StringBuilder per owning class/package)
+    private final Map<Element, StringBuilder> elementRules = new LinkedHashMap<>();
+
+    public GuardrailContentBuilder(AnnotationCollector collector,
+                                   java.util.Set<String> activeServices,
+                                   String projectName,
+                                   String generatedHeader) {
+        this.collector = collector;
+        this.activeServices = activeServices;
+        this.projectName = projectName;
+        this.generatedHeader = generatedHeader;
+
+        this.cursorActive            = activeServices.contains("cursor");
+        this.claudeActive            = activeServices.contains("claude");
+        this.aiexcludeActive         = activeServices.contains("aiexclude");
+        this.codexActive             = activeServices.contains("codex");
+        this.copilotActive           = activeServices.contains("copilot");
+        this.qwenActive              = activeServices.contains("qwen");
+        this.geminiActive            = activeServices.contains("gemini");
+        this.llmsActive              = activeServices.contains("llms");
+        this.llmsFullActive          = activeServices.contains("llms_full");
+        this.aiderConvActive         = activeServices.contains("aider_conventions");
+        this.aiderIgnoreActive       = activeServices.contains("aider_ignore");
+        this.cursorIgnoreFileActive  = activeServices.contains("cursor_ignore");
+        this.claudeIgnoreFileActive  = activeServices.contains("claude_ignore");
+        this.copilotIgnoreFileActive = activeServices.contains("copilot_ignore");
+        this.qwenIgnoreFileActive    = activeServices.contains("qwen_ignore");
+        this.granularActive          = activeServices.contains("cursor_granular")
+                                    || activeServices.contains("trae_granular")
+                                    || activeServices.contains("roo_granular");
+    }
+
+    /** Result of {@link #build} — service-key → file content, plus per-element granular rule map. */
+    public static final class Result {
+        public final Map<String, String> contentByService;
+        public final Map<Element, StringBuilder> elementRules;
+
+        Result(Map<String, String> contentByService, Map<Element, StringBuilder> elementRules) {
+            this.contentByService = contentByService;
+            this.elementRules = elementRules;
+        }
+    }
+
+    public Result build() {
+        initBuilders();
+
+        // Per-platform Gemini section builders (assembled at the end)
+        StringBuilder geminiLocked = new StringBuilder();
+        StringBuilder geminiContext = new StringBuilder();
+
+        for (Element e : collector.locked())      appendLocked(e, geminiLocked);
+        appendContextHeaders();
+        for (Element e : collector.context())     appendContext(e, geminiContext);
+        claudeMd.append("  </contextual_instructions>\n");
+
+        StringBuilder claudeIgnoreSec = new StringBuilder("  <ignored_elements>\n");
+        StringBuilder codexIgnoreSec  = new StringBuilder("\n## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
+        StringBuilder geminiIgnoreSec = new StringBuilder("## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
+        StringBuilder copilotIgnoreSec = new StringBuilder("\n## Ignored Elements\nDo not reference or suggest changes to the following:\n\n");
+        StringBuilder qwenIgnoreSec   = new StringBuilder("\n## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI's memory and context:\n\n");
+        for (Element e : collector.ignore())
+            appendIgnore(e, claudeIgnoreSec, codexIgnoreSec, geminiIgnoreSec, copilotIgnoreSec, qwenIgnoreSec);
+
+        StringBuilder cursorAuditSec = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.\n\n");
+        StringBuilder claudeAuditSec = new StringBuilder("\n  <audit_requirements>\n");
+        StringBuilder geminiMd       = new StringBuilder("# GEMINI AI INSTRUCTIONS\n" + generatedHeader + "\n");
+        StringBuilder geminiAuditSec = new StringBuilder();
+        StringBuilder codexAuditSec  = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.\n\n");
+        StringBuilder copilotAuditSec = new StringBuilder("\n## Security Audit Requirements\nBefore suggesting changes to the following files, audit for the listed vulnerabilities:\n\n");
+        StringBuilder qwenAuditSec   = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.\n\n");
+        for (Element e : collector.audit())
+            appendAudit(e, cursorAuditSec, claudeAuditSec, geminiAuditSec, codexAuditSec, copilotAuditSec, qwenAuditSec);
+
+        StringBuilder cursorDraftSec = new StringBuilder("\n## 📝 IMPLEMENTATION TASKS (TODO)\nThe following elements are currently in DRAFT mode. Follow the instructions to implement them:\n\n");
+        StringBuilder claudeDraftSec = new StringBuilder("  <implementation_tasks>\n");
+        StringBuilder codexDraftSec  = new StringBuilder("\n## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
+        StringBuilder geminiDraftSec = new StringBuilder("## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
+        StringBuilder copilotDraftSec = new StringBuilder("\n## Implementation Tasks\nFollow these instructions to implement the drafts:\n\n");
+        StringBuilder qwenDraftSec   = new StringBuilder("\n## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
+        for (Element e : collector.draft())
+            appendDraft(e, cursorDraftSec, claudeDraftSec, codexDraftSec, geminiDraftSec, copilotDraftSec, qwenDraftSec);
+
+        StringBuilder cursorPrivacySec = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nThe following elements handle Personally Identifiable Information (PII).\nNEVER include their runtime values in logs, console output, external API calls,\ntest fixtures, mock data, or code suggestions.\n\n");
+        StringBuilder claudePrivacySec = new StringBuilder("  <pii_guardrails>\n");
+        StringBuilder codexPrivacySec  = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nThe following elements handle PII. Never include their runtime values in logs,\nconsole output, external API calls, test fixtures, or mock data.\n\n");
+        StringBuilder geminiPrivacySec = new StringBuilder("## PII / PRIVACY GUARDRAILS\nThe following elements handle Personally Identifiable Information (PII).\nNever include their runtime values in logs, console output, external API calls,\ntest fixtures, mock data, or code suggestions.\n\n");
+        StringBuilder copilotPrivacySec = new StringBuilder("\n## PII / Privacy Guardrails\nNever log, expose, or suggest code that outputs the runtime values of these elements:\n\n");
+        StringBuilder qwenPrivacySec   = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nThe following elements handle PII. Never include their runtime values in logs,\nconsole output, external API calls, test fixtures, or mock data.\n\n");
+        for (Element e : collector.privacy())
+            appendPrivacy(e, cursorPrivacySec, claudePrivacySec, codexPrivacySec, geminiPrivacySec, copilotPrivacySec, qwenPrivacySec);
+
+        StringBuilder cursorCoreSec = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder claudeCoreSec = new StringBuilder("  <core_elements>\n");
+        StringBuilder codexCoreSec  = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder copilotCoreSec = new StringBuilder("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
+        StringBuilder qwenCoreSec   = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        StringBuilder geminiCoreSec = new StringBuilder();
+        for (Element e : collector.core())
+            appendCore(e, cursorCoreSec, claudeCoreSec, codexCoreSec, copilotCoreSec, qwenCoreSec, geminiCoreSec);
+
+        StringBuilder cursorPerfSec = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nThe following elements are on a hot path. Never introduce O(n²) complexity. Always reason about time/space before proposing changes.\n\n");
+        StringBuilder claudePerfSec = new StringBuilder("  <performance_constraints>\n");
+        StringBuilder codexPerfSec  = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS\nHot-path elements — never introduce O(n²) or worse. Always reason about complexity before proposing changes.\n\n");
+        StringBuilder copilotPerfSec = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
+        StringBuilder qwenPerfSec   = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS\nHot-path elements — O(n²) complexity is forbidden. Reason about complexity before proposing changes.\n\n");
+        StringBuilder geminiPerfSec = new StringBuilder();
+        for (Element e : collector.performance())
+            appendPerformance(e, cursorPerfSec, claudePerfSec, codexPerfSec, copilotPerfSec, qwenPerfSec, geminiPerfSec);
+
+        // Gemini composition (locked + context + audit go before the rest)
+        if (!collector.locked().isEmpty()) {
+            geminiMd.append("\n## LOCKED FILES (DO NOT MODIFY)\nDo not suggest modifications to the following files:\n\n").append(geminiLocked);
+        }
+        if (!collector.context().isEmpty()) {
+            geminiMd.append("\n## CONTEXTUAL RULES\nApply the following context when assisting with these files:\n\n").append(geminiContext);
+        }
+        if (!collector.audit().isEmpty()) {
+            geminiMd.append("\n## CONTINUOUS AUDIT REQUIREMENTS\nYou are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:\n\n").append(geminiAuditSec);
+        }
+
+        // Append the per-section blocks to their primary platform builders, in original order
+        if (!collector.audit().isEmpty()) {
+            cursorRules.append(cursorAuditSec);
+            claudeAuditSec.append("  </audit_requirements>\n");
+            claudeMd.append(claudeAuditSec);
+            claudeMd.append("\n<rule>\n  If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.\n</rule>\n");
+            codexAgents.append(codexAuditSec);
+            copilot.append(copilotAuditSec);
+            qwenMd.append(qwenAuditSec);
+        }
+        if (!collector.ignore().isEmpty()) {
+            cursorRules.append(cursorIgnoreSection);
+            claudeIgnoreSec.append("  </ignored_elements>\n");
+            claudeMd.append(claudeIgnoreSec);
+            claudeMd.append("\n<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>\n");
+            codexAgents.append(codexIgnoreSec);
+            geminiMd.append(geminiIgnoreSec);
+            copilot.append(copilotIgnoreSec);
+            qwenMd.append(qwenIgnoreSec);
+        }
+        if (!collector.draft().isEmpty()) {
+            cursorRules.append(cursorDraftSec);
+            claudeDraftSec.append("  </implementation_tasks>\n");
+            claudeMd.append(claudeDraftSec);
+            codexAgents.append(codexDraftSec);
+            geminiMd.append(geminiDraftSec);
+            copilot.append(copilotDraftSec);
+            qwenMd.append(qwenDraftSec);
+        }
+        if (!collector.privacy().isEmpty()) {
+            cursorRules.append(cursorPrivacySec);
+            claudePrivacySec.append("  </pii_guardrails>\n");
+            claudeMd.append(claudePrivacySec);
+            claudeMd.append("\n<rule>\n  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.\n</rule>\n");
+            codexAgents.append(codexPrivacySec);
+            geminiMd.append(geminiPrivacySec);
+            copilot.append(copilotPrivacySec);
+            qwenMd.append(qwenPrivacySec);
+        }
+        if (!collector.core().isEmpty()) {
+            cursorRules.append(cursorCoreSec);
+            claudeCoreSec.append("  </core_elements>\n");
+            claudeMd.append(claudeCoreSec);
+            claudeMd.append("\n<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>\n");
+            codexAgents.append(codexCoreSec);
+            copilot.append(copilotCoreSec);
+            qwenMd.append(qwenCoreSec);
+            geminiMd.append("\n## CORE FUNCTIONALITY (EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution:\n\n").append(geminiCoreSec);
+        }
+        if (!collector.performance().isEmpty()) {
+            cursorRules.append(cursorPerfSec);
+            claudePerfSec.append("  </performance_constraints>\n");
+            claudeMd.append(claudePerfSec);
+            claudeMd.append("\n<rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>\n");
+            codexAgents.append(codexPerfSec);
+            copilot.append(copilotPerfSec);
+            qwenMd.append(qwenPerfSec);
+            geminiMd.append("\n## PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) complexity into these elements. Always reason about complexity before proposing changes:\n\n").append(geminiPerfSec);
+        }
+
+        claudeMd.append("</project_guardrails>\n");
+        claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
+
+        // llms.txt + llms-full.txt assembly
+        llmsTxt.append(llmsTxtContext);
+        llmsFullTxt.append(llmsFullTxtContext);
+        if (!collector.audit().isEmpty())       { llmsTxt.append(llmsTxtAudit);       llmsFullTxt.append(llmsFullTxtAudit); }
+        if (!collector.ignore().isEmpty())      { llmsTxt.append(llmsTxtIgnore);      llmsFullTxt.append(llmsFullTxtIgnore); }
+        if (!collector.draft().isEmpty())       { llmsTxt.append(llmsTxtDraft);       llmsFullTxt.append(llmsFullTxtDraft); }
+        if (!collector.privacy().isEmpty())     { llmsTxt.append(llmsTxtPrivacy);     llmsFullTxt.append(llmsFullTxtPrivacy); }
+        if (!collector.core().isEmpty())        { llmsTxt.append(llmsTxtCore);        llmsFullTxt.append(llmsFullTxtCore); }
+        if (!collector.performance().isEmpty()) { llmsTxt.append(llmsTxtPerformance); llmsFullTxt.append(llmsFullTxtPerformance); }
+
+        return new Result(buildContentMap(geminiMd), elementRules);
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Per-annotation appenders
+    // -------------------------------------------------------------------------------------------
+
+    private void appendLocked(Element e, StringBuilder geminiLocked) {
+        AILocked locked = e.getAnnotation(AILocked.class);
+        String className = ElementNaming.elementPath(e);
+        String reason = locked.reason();
+
+        if (cursorActive)  cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
+        if (claudeActive)  claudeMd.append("    <file path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </file>\n");
+        if (aiexcludeActive) aiExclude.append("**/").append(e.getSimpleName()).append(".java\n");
+        if (codexActive)   codexAgents.append("- **").append(className).append("**: ").append(reason).append("\n");
+        if (copilotActive) copilot.append("- `").append(className).append("` - ").append(reason).append("\n");
+        if (qwenActive)    qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
+        if (geminiActive)  geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
+
+        if (llmsActive)     llmsTxt.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(reason).append("\n");
+        if (llmsFullActive) llmsFullTxt.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### LOCKED: ").append(className).append("\n- **Status**: Locked (Do Not Edit)\n- **Reason**: ").append(reason).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Locked Status", "- **Reason**: " + reason);
+    }
+
+    private void appendContextHeaders() {
+        claudeMd.append("  </locked_files>\n  <contextual_instructions>\n");
+        cursorRules.append("\n## CONTEXTUAL RULES\n");
+        codexAgents.append("\n## CONTEXTUAL RULES\n");
+        copilot.append("\n## Contextual Guidelines\n");
+        qwenMd.append("\n## CONTEXTUAL RULES\n");
+    }
+
+    private void appendContext(Element e, StringBuilder geminiContext) {
+        AIContext context = e.getAnnotation(AIContext.class);
+        String className = ElementNaming.elementPath(e);
+
+        if (cursorActive)  cursorRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus()).append("\n  * Avoid: ").append(context.avoids()).append("\n");
+        if (claudeActive)  claudeMd.append("    <file path=\"").append(className).append("\">\n      <focus>").append(context.focus()).append("</focus>\n      <avoids>").append(context.avoids()).append("</avoids>\n    </file>\n");
+        if (codexActive)   codexAgents.append("- `").append(className).append("`: Focus on ").append(context.focus()).append(". Avoid ").append(context.avoids()).append(".\n");
+        if (copilotActive) copilot.append("- `").append(className).append("` \n  - Focus: ").append(context.focus()).append("\n  - Avoid: ").append(context.avoids()).append("\n");
+        if (qwenActive)    qwenMd.append("* `").append(className).append("` \n  * Focus: ").append(context.focus()).append("\n  * Avoid: ").append(context.avoids()).append("\n");
+
+        if (llmsActive)     llmsTxtContext.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
+        if (llmsFullActive) llmsFullTxtContext.append("### ").append(className).append("\n- **Focus**: ").append(context.focus()).append("\n- **Avoid**: ").append(context.avoids()).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### CONTEXT: ").append(className).append("\n- **Focus**: ").append(context.focus()).append("\n- **Avoid**: ").append(context.avoids()).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
+        if (geminiActive)    geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
+    }
+
+    private void appendIgnore(Element e, StringBuilder claudeIgnoreSec, StringBuilder codexIgnoreSec,
+                              StringBuilder geminiIgnoreSec, StringBuilder copilotIgnoreSec,
+                              StringBuilder qwenIgnoreSec) {
+        String className = ElementNaming.elementPath(e);
+        if (cursorActive)    cursorIgnoreSection.append("* `").append(className).append("` \n");
+        if (claudeActive)    claudeIgnoreSec.append("    <file path=\"").append(className).append("\"/>\n");
+        if (aiexcludeActive) aiExclude.append("**/").append(e.getSimpleName()).append(".java\n");
+        if (codexActive)     codexIgnoreSec.append("- `").append(className).append("` \n");
+        if (geminiActive)    geminiIgnoreSec.append("- `").append(className).append("` \n");
+        if (copilotActive)   copilotIgnoreSec.append("- `").append(className).append("` \n");
+
+        String globPattern = "**/" + e.getSimpleName() + ".java\n";
+        if (cursorIgnoreFileActive)  cursorIgnoreFile.append(globPattern);
+        if (claudeIgnoreFileActive)  claudeIgnoreFile.append(globPattern);
+        if (copilotIgnoreFileActive) copilotIgnoreFile.append(globPattern);
+        if (qwenIgnoreFileActive)    qwenIgnoreFile.append(globPattern);
+        if (qwenActive) qwenIgnoreSec.append("* `").append(className).append("` \n");
+
+        if (llmsActive)     llmsTxtIgnore.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): excluded from AI context\n");
+        if (llmsFullActive) llmsFullTxtIgnore.append("### ").append(className).append("\n- Excluded from AI context entirely - treat as non-existent\n\n");
+
+        if (aiderIgnoreActive) aiderIgnore.append(globPattern);
+        if (aiderConvActive)   aiderConventions.append("#### IGNORE: ").append(className).append("\n- **Instruction**: This element is strictly excluded from AI context. Do not reference it.\n\n");
+        if (granularActive)    appendToGranular(e, "Exclusion Rule", "This element is strictly excluded from AI context. Do not reference it.");
+    }
+
+    private void appendAudit(Element e, StringBuilder cursorAuditSec, StringBuilder claudeAuditSec,
+                             StringBuilder geminiAuditSec, StringBuilder codexAuditSec,
+                             StringBuilder copilotAuditSec, StringBuilder qwenAuditSec) {
+        AIAudit audit = e.getAnnotation(AIAudit.class);
+        if (audit == null) return;
+        String[] checkFor = audit.checkFor();
+        if (checkFor.length == 0) return;
+        String className = ElementNaming.elementPath(e);
+        String checkForJoined = String.join(", ", checkFor);
+
+        if (cursorActive) {
+            cursorAuditSec.append("* `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
+        }
+        if (claudeActive) {
+            claudeAuditSec.append("    <file path=\"").append(className).append("\">\n");
+            for (String v : checkFor) claudeAuditSec.append("      <vulnerability_check>").append(v).append("</vulnerability_check>\n");
+            claudeAuditSec.append("    </file>\n");
+        }
+        if (geminiActive) {
+            geminiAuditSec.append("File: `").append(className).append("` \nCritical Vulnerabilities to Prevent: ");
+            for (String v : checkFor) geminiAuditSec.append("\n- ").append(v);
+            geminiAuditSec.append("\n\n");
+        }
+        if (codexActive)   codexAuditSec.append("* `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
+        if (copilotActive) copilotAuditSec.append("- `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
+        if (qwenActive)    qwenAuditSec.append("* `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
+
+        if (llmsActive)     llmsTxtAudit.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): check for ").append(checkForJoined).append("\n");
+        if (llmsFullActive) llmsFullTxtAudit.append("### ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### SECURITY AUDIT: ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Security Audit Requirements", "When modifying this element, audit for:\n- " + String.join("\n- ", checkFor));
+    }
+
+    private void appendDraft(Element e, StringBuilder cursorDraftSec, StringBuilder claudeDraftSec,
+                             StringBuilder codexDraftSec, StringBuilder geminiDraftSec,
+                             StringBuilder copilotDraftSec, StringBuilder qwenDraftSec) {
+        AIDraft draft = e.getAnnotation(AIDraft.class);
+        if (draft == null) return;
+        String className = ElementNaming.elementPath(e);
+        String instructions = draft.instructions();
+
+        if (cursorActive)  cursorDraftSec.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+        if (claudeActive)  claudeDraftSec.append("    <task path=\"").append(className).append("\">\n      <instructions>").append(instructions).append("</instructions>\n    </task>\n");
+        if (codexActive)   codexDraftSec.append("- **").append(className).append("**: ").append(instructions).append("\n");
+        if (geminiActive)  geminiDraftSec.append("- `").append(className).append("`: ").append(instructions).append("\n");
+        if (copilotActive) copilotDraftSec.append("- `").append(className).append("`: ").append(instructions).append("\n");
+        if (qwenActive)    qwenDraftSec.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+
+        if (llmsActive)     llmsTxtDraft.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(instructions).append("\n");
+        if (llmsFullActive) llmsFullTxtDraft.append("### ").append(className).append("\n- **Instructions**: ").append(instructions).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### DRAFT/TODO: ").append(className).append("\n- **Instruction**: ").append(instructions).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Implementation Tasks", "- **Instruction**: " + instructions);
+    }
+
+    private void appendPrivacy(Element e, StringBuilder cursorPrivacySec, StringBuilder claudePrivacySec,
+                               StringBuilder codexPrivacySec, StringBuilder geminiPrivacySec,
+                               StringBuilder copilotPrivacySec, StringBuilder qwenPrivacySec) {
+        AIPrivacy privacy = e.getAnnotation(AIPrivacy.class);
+        if (privacy == null) return;
+        String className = ElementNaming.elementPath(e);
+        String reason = privacy.reason();
+
+        if (cursorActive)  cursorPrivacySec.append("* `").append(className).append("` - ").append(reason).append("\n");
+        if (claudeActive)  claudePrivacySec.append("    <element path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </element>\n");
+        if (codexActive)   codexPrivacySec.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (geminiActive)  geminiPrivacySec.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (copilotActive) copilotPrivacySec.append("- `").append(className).append("` - ").append(reason).append("\n");
+        if (qwenActive)    qwenPrivacySec.append("* `").append(className).append("` - ").append(reason).append("\n");
+
+        if (llmsActive)     llmsTxtPrivacy.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(reason).append("\n");
+        if (llmsFullActive) llmsFullTxtPrivacy.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### PRIVACY/PII: ").append(className).append("\n- **Safety Rule**: Never log or expose runtime values of this element.\n- **Reason**: ").append(reason).append("\n\n");
+        if (granularActive)  appendToGranular(e, "PII / Privacy Guardrails", "- **Rule**: Never log or expose runtime values of this element.\n- **Reason**: " + reason);
+    }
+
+    private void appendCore(Element e, StringBuilder cursorCoreSec, StringBuilder claudeCoreSec,
+                            StringBuilder codexCoreSec, StringBuilder copilotCoreSec,
+                            StringBuilder qwenCoreSec, StringBuilder geminiCoreSec) {
+        AICore core = e.getAnnotation(AICore.class);
+        if (core == null) return;
+        String className = ElementNaming.elementPath(e);
+        String sensitivity = core.sensitivity();
+        String note = core.note();
+
+        if (cursorActive)  cursorCoreSec.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+        if (claudeActive)  claudeCoreSec.append("    <element path=\"").append(className).append("\">\n      <sensitivity>").append(sensitivity).append("</sensitivity>\n      <note>").append(note).append("</note>\n    </element>\n");
+        if (codexActive)   codexCoreSec.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
+        if (copilotActive) copilotCoreSec.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append("\n");
+        if (qwenActive)    qwenCoreSec.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+        if (geminiActive)  geminiCoreSec.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+
+        if (llmsActive)     llmsTxtCore.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+        if (llmsFullActive) llmsFullTxtCore.append("### ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### CORE FUNCTIONALITY: ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Core Functionality", "- **Sensitivity**: " + sensitivity + "\n- **Note**: " + note);
+    }
+
+    private void appendPerformance(Element e, StringBuilder cursorPerfSec, StringBuilder claudePerfSec,
+                                   StringBuilder codexPerfSec, StringBuilder copilotPerfSec,
+                                   StringBuilder qwenPerfSec, StringBuilder geminiPerfSec) {
+        AIPerformance perf = e.getAnnotation(AIPerformance.class);
+        if (perf == null) return;
+        String className = ElementNaming.elementPath(e);
+        String constraint = perf.constraint();
+
+        if (cursorActive)  cursorPerfSec.append("* `").append(className).append("` - ").append(constraint).append("\n");
+        if (claudeActive)  claudePerfSec.append("    <element path=\"").append(className).append("\">\n      <constraint>").append(constraint).append("</constraint>\n    </element>\n");
+        if (codexActive)   codexPerfSec.append("- **").append(className).append("**: ").append(constraint).append("\n");
+        if (copilotActive) copilotPerfSec.append("- `").append(className).append("`: ").append(constraint).append("\n");
+        if (qwenActive)    qwenPerfSec.append("* `").append(className).append("` - ").append(constraint).append("\n");
+        if (geminiActive)  geminiPerfSec.append("- `").append(className).append("`: ").append(constraint).append("\n");
+
+        if (llmsActive)     llmsTxtPerformance.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(constraint).append("\n");
+        if (llmsFullActive) llmsFullTxtPerformance.append("### ").append(className).append("\n- **Constraint**: ").append(constraint).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: ").append(constraint).append("\n\n");
+        if (granularActive)  appendToGranular(e, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
+    }
+
+    private void appendToGranular(Element element, String title, String content) {
+        Element owner = ElementNaming.owningElement(element);
+        StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
+        if (sb.length() > 0) sb.append("\n");
+
+        if (!owner.equals(element)) {
+            ElementKind kind = element.getKind();
+            String kindStr = (kind != null) ? kind.toString().toLowerCase() : "element";
+            sb.append("### Rules for ").append(kindStr).append(" ").append(element.getSimpleName()).append("\n");
+        } else {
+            sb.append("## ").append(title).append("\n");
+        }
+        sb.append(content).append("\n");
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Initialization + final assembly
+    // -------------------------------------------------------------------------------------------
+
+    private void initBuilders() {
+        cursorRules = new StringBuilder("# AUTO-GENERATED AI RULES\n" + generatedHeader + "# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
+        claudeMd = new StringBuilder("<!-- " + generatedHeader.trim() + " -->\n<project_guardrails>\n  <locked_files>\n");
+        aiExclude = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# The following files are strictly excluded from AI context.\n");
+        codexAgents = new StringBuilder("# AUTO-GENERATED AI RULES\n" + generatedHeader + "# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
+        copilot = new StringBuilder("# GitHub Copilot Instructions\n" + generatedHeader + "# AUTO-GENERATED BY VIBETAGS. Do not edit manually.\n\n## Locked Files — DO NOT MODIFY\nDo not suggest changes to the following files:\n\n");
+        qwenMd = new StringBuilder("# PROJECT CONTEXT\n" + generatedHeader + "# AUTO-GENERATED BY VIBETAGS\n\n## LOCKED FILES (DO NOT EDIT)\n");
+
+        llmsTxt = new StringBuilder("# " + projectName + "\n\n" +
+            "> AI guardrail rules generated from source annotations by VibeTags.\n\n" +
+            "AI tools reading this file should respect the guardrails defined below. " +
+            "These rules were extracted from Java source annotations at compile time " +
+            "and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, " +
+            "GitHub Copilot, and Gemini.\n\n" +
+            "## Locked Files\n");
+        llmsTxtContext  = new StringBuilder("\n## Contextual Rules\n");
+        llmsTxtAudit    = new StringBuilder("\n## Security Audit Requirements\n");
+        llmsTxtIgnore   = new StringBuilder("\n## Ignored Elements\n");
+        llmsTxtDraft    = new StringBuilder("\n## Implementation Tasks\n");
+        llmsTxtPrivacy  = new StringBuilder("\n## PII / Privacy Guardrails\n");
+        llmsTxtCore     = new StringBuilder("\n## 🧠 Core Functionality\n");
+        llmsTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\n");
+
+        llmsFullTxt = new StringBuilder("# " + projectName + " — AI Guardrail Rules\n" +
+            "> Complete AI guardrail configuration generated from source annotations by VibeTags.\n\n" +
+            "This document contains the full set of AI guardrail rules for this project. " +
+            "AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) " +
+            "may load this file directly instead of fetching individual documentation pages.\n\n" +
+            "## Locked Files (Do Not Edit)\n" +
+            "The following files are locked. AI tools MUST NOT propose modifications to them.\n\n");
+        llmsFullTxtContext     = new StringBuilder("\n## Contextual Rules\nThese files have specific context and focus areas for AI assistance.\n\n");
+        llmsFullTxtAudit       = new StringBuilder("\n## Mandatory Security Audit Requirements\nWhen writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.\n\n");
+        llmsFullTxtIgnore      = new StringBuilder("\n## Ignored Elements\nThe following elements must be completely excluded from AI context. Treat them as non-existent.\n\n");
+        llmsFullTxtDraft       = new StringBuilder("\n## Implementation Tasks\nThe following elements are in draft mode and need implementation.\n\n");
+        llmsFullTxtPrivacy     = new StringBuilder("\n## PII / Privacy Guardrails\nNever include runtime values of the following elements in logs, console output, external API calls, test fixtures, or mock data.\n\n");
+        llmsFullTxtCore        = new StringBuilder("\n## 🧠 Core Functionality\nThe following elements are well-tested core functionality. Make changes with extreme caution.\n\n");
+        llmsFullTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\nThe following elements are on a hot-path and have strict time/space complexity constraints.\n\n");
+
+        cursorIgnoreFile  = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Cursor-specific exclusion list.\n");
+        claudeIgnoreFile  = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Claude-specific exclusion list.\n");
+        copilotIgnoreFile = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Copilot-specific exclusion list.\n");
+        qwenIgnoreFile    = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Qwen-specific exclusion list.\n");
+
+        aiderConventions = new StringBuilder("# " + projectName + " CONVENTIONS\n" + generatedHeader + "# AUTO-GENERATED BY VIBETAGS\n\nThis file contains project-specific coding conventions and AI guardrails extracted from source annotations.\n\n");
+        aiderIgnore      = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Aider-specific exclusion list.\n");
+
+        cursorIgnoreSection = new StringBuilder("\n## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)\nDo not reference, suggest changes to, or include the following in completions or answers.\n\n");
+    }
+
+    private Map<String, String> buildContentMap(StringBuilder geminiMd) {
+        Map<String, String> contentByService = new LinkedHashMap<>();
+        if (activeServices.contains("cursor"))    contentByService.put("cursor",    cursorRules.toString());
+        if (activeServices.contains("qwen"))      contentByService.put("qwen",      qwenMd.toString());
+        if (activeServices.contains("claude"))    contentByService.put("claude",    claudeMd.toString());
+        if (activeServices.contains("gemini"))    contentByService.put("gemini",    geminiMd.toString());
+        if (activeServices.contains("codex"))     contentByService.put("codex",     codexAgents.toString());
+        if (activeServices.contains("copilot"))   contentByService.put("copilot",   copilot.toString());
+        if (activeServices.contains("llms"))      contentByService.put("llms",      llmsTxt.toString());
+        if (activeServices.contains("llms_full")) contentByService.put("llms_full", llmsFullTxt.toString());
+
+        if (activeServices.contains("aiexclude") && (activeServices.contains("gemini") || activeServices.contains("codex"))) {
+            contentByService.put("aiexclude", aiExclude.toString());
+        }
+
+        if (activeServices.contains("cursor_ignore"))  contentByService.put("cursor_ignore",  cursorIgnoreFile.toString());
+        if (activeServices.contains("claude_ignore"))  contentByService.put("claude_ignore",  claudeIgnoreFile.toString());
+        if (activeServices.contains("copilot_ignore")) contentByService.put("copilot_ignore", copilotIgnoreFile.toString());
+        if (activeServices.contains("qwen_ignore"))    contentByService.put("qwen_ignore",    qwenIgnoreFile.toString());
+
+        if (activeServices.contains("codex")) {
+            contentByService.put("codex_config", "# " + generatedHeader.trim() + "\n[project]\nmodel = \"o3-mini\"\napproval_policy = \"on-request\"\n");
+            contentByService.put("codex_rules",
+                "# " + generatedHeader.trim() + "\n# VibeTags: Starlark Command Permissions\n\n" +
+                "prefix_rule(\"ls\", \"allow\")\n" +
+                "prefix_rule(\"cat\", \"allow\")\n" +
+                "prefix_rule(\"grep\", \"allow\")\n" +
+                "prefix_rule(\"mvn\", \"prompt\")\n" +
+                "prefix_rule(\"npm\", \"prompt\")\n" +
+                "prefix_rule(\"git\", \"prompt\")\n" +
+                "prefix_rule(\"rm\", \"prompt\")\n");
+        }
+        if (activeServices.contains("qwen")) {
+            contentByService.put("qwen_settings", "{\n  \"project\": {\n    \"model\": \"qwen3-coder-plus\",\n    \"mcp\": {\n      \"enabled\": true\n    }\n  }\n}\n");
+            contentByService.put("qwen_refactor", "# /refactor command\n# AUTO-GENERATED BY VIBETAGS\n\nRefactor the current selection to improve maintainability and performance while strictly following the project's contextual rules in QWEN.md.\n");
+        }
+
+        if (activeServices.contains("aider_conventions")) contentByService.put("aider_conventions", aiderConventions.toString());
+        if (activeServices.contains("aider_ignore"))      contentByService.put("aider_ignore",      aiderIgnore.toString());
+
+        return contentByService;
+    }
+}
