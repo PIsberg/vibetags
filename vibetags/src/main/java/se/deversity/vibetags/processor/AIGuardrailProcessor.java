@@ -868,23 +868,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                           String content = Files.readString(p, java.nio.charset.StandardCharsets.UTF_8);
                           boolean updated = false;
 
-                          if (content.contains(MARKER_START_MD)) {
-                              int start = content.indexOf(MARKER_START_MD);
+                          int mdStart = content.indexOf(MARKER_START_MD);
+                          if (mdStart >= 0) {
                               int end = content.indexOf(MARKER_END_MD);
                               if (end != -1) {
-                                  String before = content.substring(0, start).stripTrailing();
+                                  String before = content.substring(0, mdStart).stripTrailing();
                                   String after = content.substring(end + MARKER_END_MD.length()).stripLeading();
                                   content = (!before.isEmpty() ? before + "\n\n" : "") + after;
                                   updated = true;
                               }
-                          } else if (content.contains(MARKER_START_HASH)) {
-                              int start = content.indexOf(MARKER_START_HASH);
-                              int end = content.indexOf(MARKER_END_HASH);
-                              if (end != -1) {
-                                  String before = content.substring(0, start).stripTrailing();
-                                  String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();
-                                  content = (!before.isEmpty() ? before + "\n\n" : "") + after;
-                                  updated = true;
+                          } else {
+                              int hashStart = content.indexOf(MARKER_START_HASH);
+                              if (hashStart >= 0) {
+                                  int end = content.indexOf(MARKER_END_HASH);
+                                  if (end != -1) {
+                                      String before = content.substring(0, hashStart).stripTrailing();
+                                      String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();
+                                      content = (!before.isEmpty() ? before + "\n\n" : "") + after;
+                                      updated = true;
+                                  }
                               }
                           }
 
@@ -1144,9 +1146,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 
                 String wrappedBody = markerStart + "\n" + body.trim() + "\n" + markerEnd;
 
-                if (existing.contains(markerStart)) {
+                int start = existing.indexOf(markerStart);
+                if (start >= 0) {
                     // Update existing section
-                    int start = existing.indexOf(markerStart);
                     int end = existing.indexOf(markerEnd);
                     if (end == -1) {
                         messager.printMessage(Diagnostic.Kind.WARNING, "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
