@@ -51,28 +51,79 @@ package "se.deversity.vibetags.annotations\n(vibetags-annotations.jar)" <<Annota
 
 package "se.deversity.vibetags.processor\n(vibetags-processor.jar)" <<Processor>> {
 
-    class AIGuardrailProcessor {
-        - String VERSION
-        - String GITHUB_URL
+    class AIGuardrailProcessor <<orchestrator>> {
         - boolean processed
         - Path root
         - String projectName
         - Logger log
+        - GuardrailFileWriter fileWriter
+        - GranularRulesWriter granularWriter
+        - AnnotationCollector collector
 
+        + init(processingEnv) : void
         + process(annotations, roundEnv) : boolean
-        + validateAnnotations(messager, roundEnv) : void
-        + checkOrphanedAnnotations(messager, active, ...) : void
-        + writeFileIfChanged(filePath, content, hasNewRules) : boolean
-        + stripLegacyVibeTagsBlock(before) : String
-        + cleanupGranularDirectory(dir, extension) : void
-
-        + {static} buildServiceFileMap(root) : Map<String, Path>
-        + {static} resolveActiveServices(messager, allServiceFiles) : Set<String>
+        - generateFiles() : void
     }
 
     class VibeTagsLogger {
         + {static} forRoot(root, logPath, logLevel) : Logger
         + {static} shutdown() : void
+    }
+
+    package "internal" <<Helpers>> {
+
+        class AnnotationCollector {
+            - Set<Element> lockedElements
+            - Set<Element> contextElements
+            - .. + 6 more annotation sets ..
+            - boolean anyAnnotationsFound
+
+            + collect(roundEnv) : boolean
+            + reset() : void
+            + locked() / context() / ... : Set<Element>
+        }
+
+        class AnnotationValidator <<utility>> {
+            + {static} validate(messager, roundEnv) : void
+        }
+
+        class OrphanWarner <<utility>> {
+            + {static} warnAboutOrphans(messager, log, active, ...) : void
+        }
+
+        class ServiceRegistry <<utility>> {
+            + {static} buildServiceFileMap(root) : Map<String, Path>
+            + {static} resolveActiveServices(messager, files) : Set<String>
+        }
+
+        class ElementNaming <<utility>> {
+            + {static} elementPath(element) : String
+            + {static} elementDisplayName(element) : String
+            + {static} owningElement(element) : Element
+        }
+
+        class GuardrailContentBuilder {
+            - AnnotationCollector collector
+            - Set<String> activeServices
+            - Map<Element, StringBuilder> elementRules
+            - .. per-platform StringBuilders ..
+
+            + build() : Result
+            - appendLocked(e, ...) / appendContext(e, ...) / .. (8 in total)
+        }
+
+        class GuardrailFileWriter {
+            + writeFileIfChanged(path, content, hasNewRules) : boolean
+            + stripLegacyVibeTagsBlock(before) : String
+            + cleanupGranularDirectory(dir, extension, exclude) : void
+        }
+
+        class GranularRulesWriter {
+            - GuardrailFileWriter fileWriter
+
+            + writeAll(elementRules, files, active) : Set<String>
+            + cleanupAll(files, active, written) : void
+        }
     }
 }
 
@@ -104,9 +155,22 @@ AbstractProcessor <|-- AIGuardrailProcessor : extends
 
 AIGuardrailProcessor --> Messager : uses
 AIGuardrailProcessor --> RoundEnvironment : uses
-AIGuardrailProcessor --> Path : uses
-AIGuardrailProcessor --> Files : uses
 AIGuardrailProcessor --> VibeTagsLogger : uses
+
+' Orchestrator → internal helpers
+AIGuardrailProcessor --> AnnotationCollector : owns
+AIGuardrailProcessor --> AnnotationValidator : delegates per-round validation
+AIGuardrailProcessor --> ServiceRegistry : resolves active services
+AIGuardrailProcessor --> GuardrailContentBuilder : builds per-platform content
+AIGuardrailProcessor --> GuardrailFileWriter : writes / cleans files
+AIGuardrailProcessor --> GranularRulesWriter : writes per-class .mdc/.md
+AIGuardrailProcessor --> OrphanWarner : end-of-round orphan check
+
+GuardrailContentBuilder --> AnnotationCollector : reads
+GuardrailContentBuilder --> ElementNaming : formats names
+GranularRulesWriter --> GuardrailFileWriter : composes
+GuardrailFileWriter --> Path : writes to
+GuardrailFileWriter --> Files : reads / writes
 
 AILocked ..> AIGuardrailProcessor : processed by
 AIContext ..> AIGuardrailProcessor : processed by
