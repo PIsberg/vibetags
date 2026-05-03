@@ -1106,4 +1106,196 @@ class AIGuardrailProcessorProcessTest {
         assertTrue(warnings.stream().anyMatch(w -> w.contains(".claudeignore")),
             "Should emit a WARNING about missing .claudeignore when @AIIgnore is used and claude is active");
     }
+
+    // -----------------------------------------------------------------------
+    // Per-platform gating in generateFiles — covers the `if (xActive)` false
+    // branches added by the activeServices optimisation. Existing E2E tests
+    // pre-create every opt-in file, so they only exercise the true branches.
+    // -----------------------------------------------------------------------
+
+    /**
+     * Annotations are present but NO opt-in files exist, so every
+     * {@code if (xActive)} guard in generateFiles evaluates to {@code false}.
+     * This single test covers the false-branch of every per-element platform
+     * append in one pass.
+     */
+    @Test
+    void generateFiles_annotationsPresentButNoOptInFiles_skipsAllPlatformAppends(@TempDir Path tempDir) throws IOException {
+        // No opt-in files created — every activeServices.contains(...) is false.
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        Map<String, String> options = Map.of(
+            "vibetags.root", tempDir.toString(),
+            "vibetags.log.level", "OFF"
+        );
+        when(env.getOptions()).thenReturn(options);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+
+        // Build one element annotated with each annotation type so every
+        // per-element loop body executes at least once.
+        Element locked  = mockClassElement("com.example.Locked",  "Locked");
+        AILocked lockedAnno = mock(AILocked.class);
+        when(lockedAnno.reason()).thenReturn("locked-reason");
+        when(locked.getAnnotation(AILocked.class)).thenReturn(lockedAnno);
+
+        Element ctx = mockClassElement("com.example.Ctx", "Ctx");
+        AIContext ctxAnno = mock(AIContext.class);
+        when(ctxAnno.focus()).thenReturn("focus");
+        when(ctxAnno.avoids()).thenReturn("avoid");
+        when(ctx.getAnnotation(AIContext.class)).thenReturn(ctxAnno);
+
+        Element ign = mockClassElement("com.example.Ign", "Ign");
+
+        Element aud = mockClassElement("com.example.Aud", "Aud");
+        AIAudit audAnno = mock(AIAudit.class);
+        when(audAnno.checkFor()).thenReturn(new String[]{"SQL Injection"});
+        when(aud.getAnnotation(AIAudit.class)).thenReturn(audAnno);
+
+        Element drf = mockClassElement("com.example.Drf", "Drf");
+        AIDraft drfAnno = mock(AIDraft.class);
+        when(drfAnno.instructions()).thenReturn("implement me");
+        when(drf.getAnnotation(AIDraft.class)).thenReturn(drfAnno);
+
+        Element prv = mockClassElement("com.example.Prv", "Prv");
+        AIPrivacy prvAnno = mock(AIPrivacy.class);
+        when(prvAnno.reason()).thenReturn("PII");
+        when(prv.getAnnotation(AIPrivacy.class)).thenReturn(prvAnno);
+
+        // Round 1: accumulate all element types
+        RoundEnvironment round1 = mock(RoundEnvironment.class);
+        when(round1.processingOver()).thenReturn(false);
+        doReturn(Set.of(locked)).when(round1).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of(ctx)).when(round1).getElementsAnnotatedWith(AIContext.class);
+        doReturn(Set.of(ign)).when(round1).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of(aud)).when(round1).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of(drf)).when(round1).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of(prv)).when(round1).getElementsAnnotatedWith(AIPrivacy.class);
+        processor.process(Set.of(), round1);
+
+        // Round 2: trigger generateFiles with no platforms active
+        try {
+            triggerGeneration(processor);
+        } finally {
+            VibeTagsLogger.shutdown();
+        }
+
+        // No platform files should have been written
+        assertFalse(Files.exists(tempDir.resolve(".cursorrules")));
+        assertFalse(Files.exists(tempDir.resolve("CLAUDE.md")));
+        assertFalse(Files.exists(tempDir.resolve("AGENTS.md")));
+        assertFalse(Files.exists(tempDir.resolve("QWEN.md")));
+        assertFalse(Files.exists(tempDir.resolve("gemini_instructions.md")));
+        assertFalse(Files.exists(tempDir.resolve("llms.txt")));
+        assertFalse(Files.exists(tempDir.resolve("CONVENTIONS.md")));
+        assertTrue(notes.stream().anyMatch(n -> n.contains("nothing will be generated")),
+            "Should emit the no-active-services NOTE");
+    }
+
+    /**
+     * Only ONE platform's opt-in file exists. Tests that the active
+     * platform's true-branch fires while every other platform's false-branch
+     * fires in the same generation pass — locks in the per-platform gating
+     * even when most platforms are inactive.
+     */
+    @Test
+    void generateFiles_onlyCursorOptedIn_writesCursorOnlyAndSkipsOthers(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve(".cursorrules"));
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        when(env.getOptions()).thenReturn(Map.of(
+            "vibetags.root", tempDir.toString(),
+            "vibetags.log.level", "OFF"
+        ));
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+
+        Element locked = mockClassElement("com.example.Locked", "Locked");
+        AILocked lockedAnno = mock(AILocked.class);
+        when(lockedAnno.reason()).thenReturn("locked-reason");
+        when(locked.getAnnotation(AILocked.class)).thenReturn(lockedAnno);
+
+        RoundEnvironment round1 = mock(RoundEnvironment.class);
+        when(round1.processingOver()).thenReturn(false);
+        doReturn(Set.of(locked)).when(round1).getElementsAnnotatedWith(AILocked.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIContext.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIIgnore.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIAudit.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIDraft.class);
+        doReturn(Set.of()).when(round1).getElementsAnnotatedWith(AIPrivacy.class);
+        processor.process(Set.of(), round1);
+
+        try {
+            triggerGeneration(processor);
+        } finally {
+            VibeTagsLogger.shutdown();
+        }
+
+        String cursorContent = Files.readString(tempDir.resolve(".cursorrules"));
+        assertTrue(cursorContent.contains("com.example.Locked"),
+            "Cursor (active) should contain the locked element");
+        // Every other platform's opt-in file is absent → not created
+        assertFalse(Files.exists(tempDir.resolve("CLAUDE.md")));
+        assertFalse(Files.exists(tempDir.resolve("AGENTS.md")));
+        assertFalse(Files.exists(tempDir.resolve("QWEN.md")));
+        assertFalse(Files.exists(tempDir.resolve("gemini_instructions.md")));
+        assertFalse(Files.exists(tempDir.resolve("llms.txt")));
+        assertFalse(Files.exists(tempDir.resolve("CONVENTIONS.md")));
+    }
+
+    // -----------------------------------------------------------------------
+    // writeFileIfChanged — non-marker size-mismatch fast path (opt 2)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Non-marker file (JSON/TOML) whose existing size differs from the new
+     * content by more than the 64-byte trim-tolerance. The size-mismatch
+     * fast-path skips the full file read and writes directly.
+     */
+    @Test
+    void writeFileIfChanged_nonMarkerSizeMismatch_writesWithoutFullRead(@TempDir Path tempDir) throws IOException {
+        Path settings = tempDir.resolve("settings.json");
+        // 1 KB of existing content; new content is short — sizes differ by far more than 64 bytes.
+        Files.writeString(settings, "{\"x\":\"" + "x".repeat(1024) + "\"}");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(settings.toString(), "{\"new\": true}", true);
+
+        assertTrue(changed, "Should overwrite when sizes mismatch by more than the trim tolerance");
+        assertEquals("{\"new\": true}", Files.readString(settings).strip());
+    }
+
+    /**
+     * Non-marker file whose existing content equals the new content modulo
+     * trailing whitespace (within the 64-byte tolerance). The fast path does
+     * NOT trigger, the read happens, and strip-equality returns true → no-op.
+     */
+    @Test
+    void writeFileIfChanged_nonMarkerSizeWithinTolerance_takesSlowPath(@TempDir Path tempDir) throws IOException {
+        Path config = tempDir.resolve("config.toml");
+        // Existing content differs from new content by trailing whitespace only.
+        Files.writeString(config, "model = \"o3-mini\"\n\n\n");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(config.toString(), "model = \"o3-mini\"", true);
+
+        assertFalse(changed, "Trim-only diff (within 64-byte tolerance) should be a no-op");
+    }
+
+    /** Mocks a TYPE-kind Element with a given FQN and simple name. */
+    private static Element mockClassElement(String fqn, String simpleName) {
+        Element e = mock(Element.class);
+        when(e.toString()).thenReturn(fqn);
+        when(e.getSimpleName()).thenReturn(nameOf(simpleName));
+        when(e.getKind()).thenReturn(javax.lang.model.element.ElementKind.CLASS);
+        return e;
+    }
 }

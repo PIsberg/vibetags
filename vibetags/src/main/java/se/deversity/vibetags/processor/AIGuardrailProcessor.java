@@ -1146,16 +1146,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             boolean nonMarkerSizeMismatch = !supportsMarkers && fileExists
                 && Math.abs(existingSize - contentByteLen) > 64;
 
-            String existing;
-            if (!fileExists || nonMarkerSizeMismatch) {
-                existing = "";
-            } else {
-                try {
-                    existing = Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8);
-                } catch (java.nio.file.NoSuchFileException nsfe) {
-                    existing = "";
-                }
-            }
+            String existing = (fileExists && !nonMarkerSizeMismatch)
+                ? Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8)
+                : "";
 
             if (supportsMarkers) {
                 String markerStart = markers[0];
