@@ -14,7 +14,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Zero runtime dependency**: No VibeTags classes in production artifacts
 - **File-existence opt-in**: Only generates files that already exist on disk
 - **Write-if-changed**: Only updates files when content actually differs
-- **Multi-platform**: Generates configs for 7+ AI platforms simultaneously (including Windsurf via llms.txt)
+- **Multi-platform**: Generates configs for 12+ AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, and more)
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
 ## Table of Contents
@@ -69,9 +69,12 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - `@AIAudit` - Triggers security audits (checkFor: String[])
 - `@AIIgnore` - Excludes from AI context (reason: String)
 - `@AIPrivacy` - Marks PII-handling elements; AI must never log or expose their values (reason: String)
+- `@AICore` - Marks sensitive core logic; AI must change with extreme caution (sensitivity: String, note: String)
+- `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
 
 **Processor** (`se.deversity.vibetags.processor`):
 - `AIGuardrailProcessor` - Extends `AbstractProcessor` (JSR 269)
+- `VibeTagsLogger` - SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
 - `@SupportedAnnotationTypes("*")` - Processes all annotations
 - `@SupportedSourceVersion(RELEASE_11)` - Java 11+ support
 
@@ -85,13 +88,26 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 
 ### Processing Phases
 
-**Phase 1: Initialization**
+**Phase 1: Element Accumulation (every round)**
 ```java
-if (roundEnv.processingOver() || processed) return false;
-processed = true;
+lockedElements.addAll(roundEnv.getElementsAnnotatedWith(AILocked.class));
+// ... repeat for all 8 annotation types
+validateAnnotations(processingEnv.getMessager(), roundEnv);
+return false; // do not claim annotations
 ```
-- Ensures single execution per compilation run
-- Returns false to allow other processors to see annotations
+- Accumulates annotated elements into `LinkedHashSet`s across all rounds
+- Validates annotations each round for early compiler feedback
+- Returns `false` so other processors still see the annotations
+
+**Phase 1b: Generation Trigger**
+```java
+if (roundEnv.processingOver() && !processed) {
+    generateFiles();
+    processed = true;
+}
+```
+- `generateFiles()` runs exactly once, on the final round when `processingOver()` is true
+- Idempotency guard (`processed` flag) prevents double-generation
 
 **Phase 2: Validation**
 ```java
@@ -314,11 +330,15 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIAudit`** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
 | **`@AIIgnore`** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely |
 | **`@AIPrivacy`** | TYPE, METHOD, FIELD | `reason: String` | Marks PII-handling elements; AI must never log or expose their values |
+| **`@AICore`** | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` | Marks well-tested core logic; AI must change with extreme caution |
+| **`@AIPerformance`** | TYPE, METHOD, FIELD | `constraint: String` | Hot-path constraint; AI must not introduce O(n²) or worse complexity |
 
-**@AIIgnore vs @AILocked vs @AIPrivacy:**
-- `@AILocked` prevents modification while keeping element visible to AI
-- `@AIIgnore` removes element from AI context completely — AI should not reference it
-- `@AIPrivacy` keeps element visible to AI but enforces strict confidentiality — values must never appear in logs, suggestions, test fixtures, or external API calls
+**Annotation semantics compared:**
+- `@AILocked` — visible to AI but must not be modified
+- `@AIIgnore` — removed from AI context completely; AI should not reference it
+- `@AIPrivacy` — visible to AI but runtime values are strictly confidential; never log, expose in suggestions, test fixtures, or external API calls
+- `@AICore` — visible, modifiable, but AI must treat changes with extreme caution and verify test coverage
+- `@AIPerformance` — visible, modifiable, but AI must never introduce O(n²) or worse complexity
 
 **Note:** Using `@AIPrivacy` together with `@AIIgnore` on the same element is redundant and triggers a compiler WARNING. `@AIIgnore` already hides the element from AI entirely.
 
@@ -335,20 +355,31 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 **Processing Logic:**
 
 ```
-1. Early exit if no annotations found or already processed
-2. Validate annotations (contradictions, empty audits, redundant @AIPrivacy+@AIIgnore)
-3. Determine output directory (current working directory)
-4. Initialize builders with VibeTags Version Header
-5. Pass 1: Process @AILocked → append to all builders
-6. Pass 2: Process @AIContext → append to all builders
-7. Pass 3: Process @AIIgnore → append ignore sections + write glob patterns
-8. Pass 4: Process @AIAudit → append audit sections
-9. Pass 5: Process @AIDraft → append implementation tasks
-10. Pass 6: Process @AIPrivacy → append PII guardrail sections to all builders
-11. Resolve active services (file-existence opt-in)
-12. Write only active service files using write-if-changed
-13. Check orphaned annotations (warn if missing recommended files)
-14. Return false (do not claim annotations)
+Accumulation phase (runs on every round before processingOver()):
+1. Accumulate elements: @AILocked, @AIContext, @AIIgnore, @AIAudit,
+   @AIDraft, @AIPrivacy, @AICore, @AIPerformance — into LinkedHashSets
+2. Validate annotations each round (early feedback):
+   - @AIDraft + @AILocked contradiction
+   - Empty @AIAudit checkFor array
+   - Redundant @AIPrivacy + @AIIgnore
+3. Return false (do not claim annotations)
+
+Generation phase (runs once when processingOver() == true):
+4. Determine output directory (vibetags.root option or JVM cwd)
+5. Initialize builders with VibeTags header
+6. Pass 1: Process @AILocked → locked_files sections
+7. Pass 2: Process @AIContext → contextual_instructions sections
+8. Pass 3: Process @AIIgnore → ignored_elements + glob patterns
+9. Pass 4: Process @AIAudit → audit_requirements sections
+10. Pass 5: Process @AIDraft → implementation_tasks sections
+11. Pass 6: Process @AIPrivacy → pii_guardrails sections
+12. Pass 7: Process @AICore → core_elements sections
+13. Pass 8: Process @AIPerformance → performance_constraints sections
+14. Resolve active services (file-existence opt-in)
+15. Write only active service files using marker-based write-if-changed
+16. Write per-class granular rule files (.cursor/rules/, .trae/rules/, .roo/rules/)
+17. Clean up orphaned granular files
+18. Check orphaned annotations (warn if missing recommended files)
 ```
 
 **Output File Generation:**
@@ -361,15 +392,20 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | `.qwenignore` | Glob patterns | Qwen | Standalone exclusion list |
 | `.cursorrules` | Markdown | Cursor | Locked files, context rules, security audits |
 | `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
+| `.cursor/rules/<Class>.mdc` | YAML front-matter + Markdown | Cursor | Per-class granular rules |
 | `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<audit_requirements>`, `<rule>` elements |
 | `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
-| `.aiexclude` | Glob patterns | Gemini/Codex | Binary blocklist of locked files |
+| `.aiexclude` | Glob patterns | Gemini/Codex | Binary blocklist of locked/ignored files |
 | `AGENTS.md` | Markdown | Codex | Locked files, context rules, security guardrails |
 | `.codex/config.toml` | TOML | Codex | Model and tool configuration |
 | `.codex/rules/vibetags.rules` | Starlark | Codex | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
+| `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |
+| `.aiderignore` | Glob patterns | Aider | Standalone exclusion list |
+| `.trae/rules/<Class>.md` | YAML front-matter + Markdown | Trae IDE | Per-class granular rules |
+| `.roo/rules/<Class>.md` | Markdown | Roo Code | Per-class granular rules |
 | `llms.txt` | Markdown | Windsurf Cascade, all LLM agents | Concise map/directory (llms.txt standard) |
 | `llms-full.txt` | Markdown | Windsurf Cascade, large-context LLMs | Full expanded reference book (llms.txt standard) |
 
@@ -659,18 +695,19 @@ boolean writeFileIfChanged(String filePath, String content) {
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 25 | Verify annotation structure, retention policies, targets, defaults (includes @AIPrivacy) |
+| `AnnotationDefinitionsTest` | 35 | Verify annotation structure, retention policies, targets, defaults — all 8 annotations including @AICore and @AIPerformance |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
 | `AIGuardrailProcessorUnitTest` | 20 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations |
-| `AIGuardrailProcessorProcessTest` | 31 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, llms.txt opt-in |
+| `AIGuardrailProcessorProcessTest` | 45 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in, stripLegacyVibeTagsBlock |
 | `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
 | `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `AnnotationProcessorEndToEndTest` | 44 | End-to-end: compile example, verify all generated files exist and contain expected content, including llms.txt and llms-full.txt |
+| `AnnotationProcessorEndToEndTest` | 62 | End-to-end: compile example, verify all generated files and content — all 8 annotation types, all platforms, llms.txt/full Core and Performance sections, Aider files |
+| `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
+| `MultiModuleStabilityTest` | varies | Multi-module safety: no-annotation module preserves sibling module content |
+| `VibeTagsLoggerUnitTest` | varies | File logging: log level filtering, file rotation, shutdown |
 | `AIGuardrailProcessorIntegrationTest` | 20 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
-
-**Total: 203 tests (183 active + 20 conditional)**
 
 ### Test Patterns
 
@@ -710,16 +747,15 @@ GitHub Actions workflow tests:
 
 ## Limitations
 
-### 1. Output Location Fragility
+### 1. Output Location Defaults to JVM Working Directory
 
-**Problem:** Uses `Paths.get("")` which resolves to JVM working directory
+**Default:** Uses `Paths.get("")` which resolves to the JVM working directory
 
-**Impact:**
-- Can write to wrong directory in IDE builds
-- Breaks if build invoked from subdirectory
-- No way to customize output location
+**Impact of default:**
+- Can write to wrong directory in IDE builds that don't set cwd to project root
+- Breaks if build is invoked from a subdirectory
 
-**Workaround:** Always build from project root directory
+**Resolution:** Pass `-Avibetags.root=<path>` via `<compilerArg>` in Maven or `annotationProcessorArgs` in Gradle to override the output directory explicitly. Most IDE integrations need this set.
 
 ### 2. No Incremental Build Awareness
 
@@ -949,4 +985,4 @@ Informational paragraph.             ← optional, key details for the LLM
 
 ---
 
-*Last updated: April 2026*
+*Last updated: May 2026*

@@ -583,6 +583,185 @@ class AIGuardrailProcessorProcessTest {
     }
 
     // -----------------------------------------------------------------------
+    // resolveActiveServices — Aider opt-in
+    // -----------------------------------------------------------------------
+
+    @Test
+    void resolveActiveServices_conventionsMdPresent_activatesAider(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CONVENTIONS.md"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertTrue(active.contains("aider_conventions"),
+            "aider_conventions should be active when CONVENTIONS.md exists");
+    }
+
+    @Test
+    void resolveActiveServices_aiderIgnorePresent_activatesAiderIgnore(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve(".aiderignore"));
+
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertTrue(active.contains("aider_ignore"),
+            "aider_ignore should be active when .aiderignore exists");
+    }
+
+    // -----------------------------------------------------------------------
+    // writeFileIfChanged — marker-based update paths
+    // -----------------------------------------------------------------------
+
+    @Test
+    void writeFileIfChanged_fileWithExistingMarkers_updatesSection(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("CLAUDE.md");
+        String initialContent = "# Human content\n\n<!-- VIBETAGS-START -->\nold rule\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(mdFile, initialContent);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "new rule content", true);
+
+        assertTrue(changed, "Should return true when marker section changes");
+        String written = Files.readString(mdFile);
+        assertTrue(written.contains("new rule content"), "New content should be inside markers");
+        assertFalse(written.contains("old rule"), "Old rule should be replaced");
+        assertTrue(written.contains("<!-- VIBETAGS-START -->"), "Markers should be preserved");
+        assertTrue(written.contains("# Human content"), "Human content before markers should be preserved");
+    }
+
+    @Test
+    void writeFileIfChanged_fileWithExistingMarkers_sameContent_returnsFalse(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("test.md");
+        String body = "the rule";
+        String markedContent = "<!-- VIBETAGS-START -->\n" + body + "\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(mdFile, markedContent);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), body, true);
+
+        assertFalse(changed, "Should return false when content has not changed");
+    }
+
+    @Test
+    void writeFileIfChanged_hashMarkerFile_updatesSection(@TempDir Path tempDir) throws IOException {
+        Path rulesFile = tempDir.resolve(".cursorrules");
+        String initial = "# Human header\n# VIBETAGS-START\nold content\n# VIBETAGS-END\n";
+        Files.writeString(rulesFile, initial);
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(rulesFile.toString(), "new content", true);
+
+        assertTrue(changed, "Should update hash-commented marker files");
+        String written = Files.readString(rulesFile);
+        assertTrue(written.contains("new content"));
+        assertFalse(written.contains("old content"));
+    }
+
+    @Test
+    void writeFileIfChanged_hasNewRulesFalse_existingNonEmptyFile_skips(@TempDir Path tempDir) throws IOException {
+        Path mdFile = tempDir.resolve("CLAUDE.md");
+        String existingMarked = "<!-- VIBETAGS-START -->\nexisting content\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(mdFile, existingMarked);
+
+        List<String> notes = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(messager));
+
+        boolean changed = processor.writeFileIfChanged(mdFile.toString(), "different content", false);
+
+        assertFalse(changed, "Should skip update when hasNewRules=false and file already has content");
+        assertTrue(notes.stream().anyMatch(n -> n.contains("Skipping update")),
+            "Should emit a skip NOTE for multi-module preservation");
+    }
+
+    @Test
+    void writeFileIfChanged_jsonFile_completeOverwrite(@TempDir Path tempDir) throws IOException {
+        Path jsonFile = tempDir.resolve(".qwen/settings.json");
+        Files.createDirectories(jsonFile.getParent());
+        Files.writeString(jsonFile, "{\"old\": true}");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(jsonFile.toString(), "{\"new\": true}", true);
+
+        assertTrue(changed, "JSON files should be completely overwritten");
+        assertEquals("{\"new\": true}", Files.readString(jsonFile).strip());
+    }
+
+    @Test
+    void writeFileIfChanged_tomlFile_completeOverwrite(@TempDir Path tempDir) throws IOException {
+        Path tomlFile = tempDir.resolve(".codex/config.toml");
+        Files.createDirectories(tomlFile.getParent());
+        Files.writeString(tomlFile, "model = \"old\"");
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        boolean changed = processor.writeFileIfChanged(tomlFile.toString(), "model = \"new\"", true);
+
+        assertTrue(changed, "TOML files should be completely overwritten");
+        assertEquals("model = \"new\"", Files.readString(tomlFile).strip());
+    }
+
+    // -----------------------------------------------------------------------
+    // stripLegacyVibeTagsBlock — unit coverage
+    // -----------------------------------------------------------------------
+
+    @Test
+    void stripLegacyVibeTagsBlock_nullInput_returnsNull() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        assertNull(processor.stripLegacyVibeTagsBlock(null));
+    }
+
+    @Test
+    void stripLegacyVibeTagsBlock_emptyInput_returnsEmpty() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        assertEquals("", processor.stripLegacyVibeTagsBlock(""));
+    }
+
+    @Test
+    void stripLegacyVibeTagsBlock_noVibatagsHeader_returnsUnchanged() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        String input = "# Some human content\nWith no VibeTags header";
+        assertEquals(input, processor.stripLegacyVibeTagsBlock(input));
+    }
+
+    @Test
+    void stripLegacyVibeTagsBlock_withBareHeader_stripsBlock() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // The bare (hash-comment) form of the header as written in non-.md files
+        String header = "# Generated by VibeTags | https://github.com/PIsberg/vibetags";
+        String input = header + "\n<project_guardrails>\n</rule>\n</project_guardrails>\n<rule>rule1</rule>";
+        String result = processor.stripLegacyVibeTagsBlock(input);
+        assertFalse(result.contains("<project_guardrails>"),
+            "Legacy VibeTags XML block should be stripped when bare header is present");
+    }
+
+    @Test
+    void stripLegacyVibeTagsBlock_withHtmlCommentHeader_stripsBlock() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        // The HTML-comment form as written into .md files:
+        // "<!-- # Generated by VibeTags | <url> -->"
+        String header = "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->";
+        String input = header + "\n<project_guardrails>\n</rule>\n</project_guardrails>\n<rule>rule1</rule>";
+        String result = processor.stripLegacyVibeTagsBlock(input);
+        assertFalse(result.contains("<project_guardrails>"),
+            "Legacy VibeTags XML block should be stripped when HTML-comment header is present");
+    }
+
+    @Test
+    void stripLegacyVibeTagsBlock_humanContentBefore_preserved() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        String humanContent = "## My Custom Section\nThis is important human content.";
+        String vibetagsBlock = "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n# AUTO-GENERATED";
+        String input = humanContent + "\n\n" + vibetagsBlock;
+
+        // The human content has no XML closer, so the whole rest is treated as legacy
+        // but human content before the header should be preserved since it has non-boilerplate content
+        String result = processor.stripLegacyVibeTagsBlock(input);
+        assertTrue(result.contains("My Custom Section"),
+            "Human content before VibeTags header must survive");
+    }
+
+    // -----------------------------------------------------------------------
     // helpers
     // -----------------------------------------------------------------------
 

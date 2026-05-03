@@ -8,25 +8,25 @@
     <file path="com.example.security.SecurityConfig">
       <reason>CRITICAL: Security configuration managed by DevOps team. Any changes require security review and approval ticket SEC-XXXX</reason>
     </file>
-    <file path="getEncryptionAlgorithm()">
+    <file path="com.example.security.SecurityConfig.getEncryptionAlgorithm()">
       <reason>Encryption algorithm tied to compliance requirements (PCI-DSS)</reason>
     </file>
-    <file path="getKeyRotationHours()">
+    <file path="com.example.security.SecurityConfig.getKeyRotationHours()">
       <reason>Key rotation period mandated by company policy</reason>
     </file>
-    <file path="getMaxLoginAttempts()">
+    <file path="com.example.security.SecurityConfig.getMaxLoginAttempts()">
       <reason>Max login attempts set by security team to prevent brute force</reason>
     </file>
-    <file path="validateToken(java.lang.String)">
+    <file path="com.example.security.SecurityConfig.validateToken(java.lang.String)">
       <reason>Token validation must match auth server exactly. Changes will break all client authentication</reason>
     </file>
-    <file path="validateOrder(java.util.Map<java.lang.String,java.lang.Object>)">
+    <file path="com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)">
       <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
     </file>
-    <file path="calculateTax(java.lang.String,double)">
+    <file path="com.example.service.OrderService.calculateTax(java.lang.String,double)">
       <reason>Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.</reason>
     </file>
-    <file path="processPayment(java.lang.String,double)">
+    <file path="com.example.service.OrderService.processPayment(java.lang.String,double)">
       <reason>Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.</reason>
     </file>
   </locked_files>
@@ -75,69 +75,69 @@
     <task path="com.example.payment.PaymentProcessor">
       <instructions>Implement support for new crypto payments without breaking legacy flow.</instructions>
     </task>
-    <task path="sendEmail(java.lang.String,java.lang.String,java.lang.String)">
+    <task path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
       <instructions>Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).</instructions>
     </task>
-    <task path="sendSMS(java.lang.String,java.lang.String)">
+    <task path="com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)">
       <instructions>Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).</instructions>
     </task>
-    <task path="sendPushNotification(java.lang.String,java.lang.String,java.lang.String)">
+    <task path="com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)">
       <instructions>Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.</instructions>
     </task>
-    <task path="queueNotification(java.lang.String,java.lang.String,java.lang.String,int)">
+    <task path="com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)">
       <instructions>Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).</instructions>
     </task>
-    <task path="getDeliveryStatus(java.lang.String)">
+    <task path="com.example.service.NotificationService.getDeliveryStatus(java.lang.String)">
       <instructions>Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.</instructions>
     </task>
-    <task path="calculateDiscount(java.lang.String,java.lang.String)">
+    <task path="com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)">
       <instructions>Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.</instructions>
     </task>
-    <task path="updateOrderStatus(java.lang.String,java.lang.String)">
+    <task path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
       <instructions>Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
     </task>
-    <task path="searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)">
+    <task path="com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)">
       <instructions>Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.</instructions>
     </task>
-    <task path="generateOrderConfirmation(java.lang.String)">
+    <task path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
       <instructions>Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.</instructions>
     </task>
-    <task path="executePayment(double)">
+    <task path="com.example.strategy.PaymentStrategy.executePayment(double)">
       <instructions>Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.</instructions>
     </task>
-    <task path="validatePaymentMethod()">
+    <task path="com.example.strategy.PaymentStrategy.validatePaymentMethod()">
       <instructions>Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.</instructions>
     </task>
-    <task path="executePayment(double)">
+    <task path="com.example.strategy.impl.CreditCardStrategy.executePayment(double)">
       <instructions>Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.</instructions>
     </task>
-    <task path="validatePaymentMethod()">
+    <task path="com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()">
       <instructions>Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.</instructions>
     </task>
   </implementation_tasks>
   <pii_guardrails>
-    <element path="username">
+    <element path="com.example.database.DatabaseConnector.username">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
-    <element path="password">
+    <element path="com.example.database.DatabaseConnector.password">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
-    <element path="sendEmail(java.lang.String,java.lang.String,java.lang.String)">
+    <element path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
       <reason>Email address is PII under GDPR - never log the recipient address</reason>
     </element>
-    <element path="sendSMS(java.lang.String,java.lang.String)">
+    <element path="com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)">
       <reason>Phone number is PII - never log the destination number</reason>
     </element>
-    <element path="generateOrderConfirmation(java.lang.String)">
+    <element path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
       <reason>Output contains customer shipping address and contact details (PII)</reason>
     </element>
-    <element path="cardNumber">
+    <element path="com.example.strategy.impl.CreditCardStrategy.cardNumber">
       <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
-    <element path="expiryDate">
+    <element path="com.example.strategy.impl.CreditCardStrategy.expiryDate">
       <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
-    <element path="cvv">
+    <element path="com.example.strategy.impl.CreditCardStrategy.cvv">
       <reason>PCI-DSS security code - never log or expose in suggestions</reason>
     </element>
   </pii_guardrails>
@@ -145,6 +145,21 @@
 <rule>
   Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.
 </rule>
+  <core_elements>
+    <element path="com.example.security.SecurityConfig">
+      <sensitivity>Critical</sensitivity>
+      <note>This is a security manager. Any single-line change can compromise the entire project.</note>
+    </element>
+  </core_elements>
+
+<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
+  <performance_constraints>
+    <element path="com.example.payment.PaymentProcessor">
+      <constraint>HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.</constraint>
+    </element>
+  </performance_constraints>
+
+<rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

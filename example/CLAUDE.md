@@ -35,6 +35,10 @@
       <focus>This class is READ-ONLY for AI assistants. Do not suggest modifications.</focus>
       <avoids>Any changes to encryption algorithms, key sizes, or validation logic</avoids>
     </file>
+    <file path="com.example.service.InventoryService">
+      <focus>Maintain inventory consistency across concurrent requests. All stock updates must be atomic.</focus>
+      <avoids>Non-atomic read-modify-write sequences, unsynchronized shared state</avoids>
+    </file>
     <file path="com.example.service.NotificationService">
       <focus>Implement notification delivery with retry logic and error handling</focus>
       <avoids>Hard-coded credentials, synchronous blocking calls</avoids>
@@ -122,6 +126,9 @@
     <element path="com.example.database.DatabaseConnector.password">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
+    <element path="com.example.service.InventoryService.customerId">
+      <reason>Customer identifiers linked to purchase history — PII under GDPR</reason>
+    </element>
     <element path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
       <reason>Email address is PII under GDPR - never log the recipient address</reason>
     </element>
@@ -150,12 +157,26 @@
       <sensitivity>Critical</sensitivity>
       <note>This is a security manager. Any single-line change can compromise the entire project.</note>
     </element>
+    <element path="com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)">
+      <sensitivity>Critical</sensitivity>
+      <note>Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.</note>
+    </element>
+    <element path="com.example.service.InventoryService.releaseReservation(java.lang.String)">
+      <sensitivity>High</sensitivity>
+      <note>Must be called as the exact inverse of reserveStock. Pair changes to both methods together.</note>
+    </element>
   </core_elements>
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
   <performance_constraints>
     <element path="com.example.payment.PaymentProcessor">
       <constraint>HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.</constraint>
+    </element>
+    <element path="com.example.service.InventoryService.getAvailableStock(java.lang.String)">
+      <constraint>O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
+    </element>
+    <element path="com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)">
+      <constraint>Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.</constraint>
     </element>
   </performance_constraints>
 

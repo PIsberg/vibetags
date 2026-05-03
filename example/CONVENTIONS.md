@@ -45,6 +45,10 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Focus**: This class is READ-ONLY for AI assistants. Do not suggest modifications.
 - **Avoid**: Any changes to encryption algorithms, key sizes, or validation logic
 
+#### CONTEXT: com.example.service.InventoryService
+- **Focus**: Maintain inventory consistency across concurrent requests. All stock updates must be atomic.
+- **Avoid**: Non-atomic read-modify-write sequences, unsynchronized shared state
+
 #### CONTEXT: com.example.service.NotificationService
 - **Focus**: Implement notification delivery with retry logic and error handling
 - **Avoid**: Hard-coded credentials, synchronous blocking calls
@@ -120,6 +124,10 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Database credential - never log or include in error messages
 
+#### PRIVACY/PII: com.example.service.InventoryService.customerId
+- **Safety Rule**: Never log or expose runtime values of this element.
+- **Reason**: Customer identifiers linked to purchase history — PII under GDPR
+
 #### PRIVACY/PII: com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Email address is PII under GDPR - never log the recipient address
@@ -148,7 +156,23 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Sensitivity**: Critical
 - **Note**: This is a security manager. Any single-line change can compromise the entire project.
 
+#### CORE FUNCTIONALITY: com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)
+- **Sensitivity**: Critical
+- **Note**: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+
+#### CORE FUNCTIONALITY: com.example.service.InventoryService.releaseReservation(java.lang.String)
+- **Sensitivity**: High
+- **Note**: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+
 #### PERFORMANCE CONSTRAINTS: com.example.payment.PaymentProcessor
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+
+#### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.getAvailableStock(java.lang.String)
+- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
+- **Constraint**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+
+#### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)
+- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
+- **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 <!-- VIBETAGS-END -->

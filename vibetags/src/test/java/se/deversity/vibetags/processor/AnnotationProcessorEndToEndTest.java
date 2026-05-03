@@ -664,4 +664,131 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(content.contains("HotPathRouter"), "copilot-instructions must mention @AIPerformance HotPathRouter");
         assertTrue(content.contains("Performance Constraints"), "copilot-instructions must have Performance Constraints section");
     }
+
+    // -----------------------------------------------------------------------
+    // @AICore — llms.txt / llms-full.txt coverage
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testLlmsTxtHasCoreSection() throws IOException {
+        String content = harness.readFile("llms.txt");
+        assertTrue(content.contains("## 🧠 Core Functionality"),
+            "llms.txt must have a Core Functionality section for @AICore elements");
+        assertTrue(content.contains("CriticalService"),
+            "llms.txt must list the @AICore CriticalService");
+    }
+
+    @Test
+    void testLlmsFullTxtHasCoreSection() throws IOException {
+        String content = harness.readFile("llms-full.txt");
+        assertTrue(content.contains("## 🧠 Core Functionality"),
+            "llms-full.txt must have a Core Functionality section");
+        assertTrue(content.contains("CriticalService"),
+            "llms-full.txt must list the @AICore CriticalService");
+        assertTrue(content.contains("**Sensitivity**"),
+            "llms-full.txt must use bold Sensitivity label for @AICore");
+        assertTrue(content.contains("**Note**"),
+            "llms-full.txt must use bold Note label for @AICore");
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIPerformance — llms.txt / llms-full.txt coverage
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testLlmsTxtHasPerformanceSection() throws IOException {
+        String content = harness.readFile("llms.txt");
+        assertTrue(content.contains("## ⚡ Performance Constraints"),
+            "llms.txt must have a Performance Constraints section for @AIPerformance elements");
+        assertTrue(content.contains("HotPathRouter"),
+            "llms.txt must list the @AIPerformance HotPathRouter");
+    }
+
+    @Test
+    void testLlmsFullTxtHasPerformanceSection() throws IOException {
+        String content = harness.readFile("llms-full.txt");
+        assertTrue(content.contains("## ⚡ Performance Constraints"),
+            "llms-full.txt must have a Performance Constraints section");
+        assertTrue(content.contains("HotPathRouter"),
+            "llms-full.txt must list the @AIPerformance HotPathRouter");
+        assertTrue(content.contains("**Constraint**"),
+            "llms-full.txt must use bold Constraint label for @AIPerformance");
+    }
+
+    // -----------------------------------------------------------------------
+    // Aider (CONVENTIONS.md / .aiderignore) coverage
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAiderFilesGenerated() {
+        assertTrue(harness.fileExists("CONVENTIONS.md"), "CONVENTIONS.md should be generated");
+        assertTrue(harness.fileExists(".aiderignore"), ".aiderignore should be generated");
+    }
+
+    @Test
+    void testAiderConventionsHasLockedContent() throws IOException {
+        String content = harness.readFile("CONVENTIONS.md");
+        assertTrue(content.contains("PaymentProcessor"),
+            "CONVENTIONS.md must include @AILocked PaymentProcessor");
+        assertTrue(content.contains("LOCKED"),
+            "CONVENTIONS.md must have a LOCKED section");
+    }
+
+    @Test
+    void testAiderConventionsHasCoreContent() throws IOException {
+        String content = harness.readFile("CONVENTIONS.md");
+        assertTrue(content.contains("CriticalService"),
+            "CONVENTIONS.md must include @AICore CriticalService");
+        assertTrue(content.contains("CORE FUNCTIONALITY"),
+            "CONVENTIONS.md must have a CORE FUNCTIONALITY section");
+        assertTrue(content.contains("**Sensitivity**"),
+            "CONVENTIONS.md must use bold Sensitivity label");
+    }
+
+    @Test
+    void testAiderConventionsHasPerformanceContent() throws IOException {
+        String content = harness.readFile("CONVENTIONS.md");
+        assertTrue(content.contains("HotPathRouter"),
+            "CONVENTIONS.md must include @AIPerformance HotPathRouter");
+        assertTrue(content.contains("PERFORMANCE CONSTRAINTS"),
+            "CONVENTIONS.md must have a PERFORMANCE CONSTRAINTS section");
+        assertTrue(content.contains("**Constraint**"),
+            "CONVENTIONS.md must use bold Constraint label");
+    }
+
+    @Test
+    void testAiderIgnoreHasIgnoredPattern() throws IOException {
+        String content = harness.readFile(".aiderignore");
+        assertTrue(content.contains("GeneratedMetadata"),
+            ".aiderignore must contain the @AIIgnore GeneratedMetadata glob pattern");
+        assertTrue(content.contains(".java"),
+            ".aiderignore patterns should be .java file globs");
+    }
+
+    @Test
+    void testAiderConventionsHasAuditContent() throws IOException {
+        String content = harness.readFile("CONVENTIONS.md");
+        assertTrue(content.contains("DatabaseConnector"),
+            "CONVENTIONS.md must include @AIAudit DatabaseConnector");
+        assertTrue(content.contains("SECURITY AUDIT"),
+            "CONVENTIONS.md must have a SECURITY AUDIT section");
+    }
+
+    // -----------------------------------------------------------------------
+    // Multi-round accumulation
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAllAnnotationTypesRepresentedInOutputs() throws IOException {
+        // Verify every annotation type contributed content to at least one output
+        String cursor = harness.readFile(".cursorrules");
+        assertTrue(cursor.contains("PaymentProcessor"),  "@AILocked must appear");
+        assertTrue(cursor.contains("memory usage"),      "@AIContext must appear");
+        assertTrue(cursor.contains("IMPLEMENTATION TASKS"), "@AIDraft must appear");
+        assertTrue(cursor.contains("SQL Injection"),     "@AIAudit must appear");
+        assertTrue(cursor.contains("GeneratedMetadata"), "@AIIgnore must appear");
+        assertTrue(cursor.contains("PII"),               "@AIPrivacy must appear");
+        assertTrue(cursor.contains("CORE FUNCTIONALITY"), "@AICore must appear");
+        assertTrue(cursor.contains("PERFORMANCE CONSTRAINTS"), "@AIPerformance must appear");
+    }
 }

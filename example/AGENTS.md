@@ -16,6 +16,7 @@
 
 ## CONTEXTUAL RULES
 - `com.example.security.SecurityConfig`: Focus on This class is READ-ONLY for AI assistants. Do not suggest modifications.. Avoid Any changes to encryption algorithms, key sizes, or validation logic.
+- `com.example.service.InventoryService`: Focus on Maintain inventory consistency across concurrent requests. All stock updates must be atomic.. Avoid Non-atomic read-modify-write sequences, unsynchronized shared state.
 - `com.example.service.NotificationService`: Focus on Implement notification delivery with retry logic and error handling. Avoid Hard-coded credentials, synchronous blocking calls.
 - `com.example.service.OrderService`: Focus on Maintain transactional integrity. All database operations must use proper transaction management.. Avoid Raw SQL queries, direct database connections without connection pooling.
 - `com.example.strategy.PaymentStrategy`: Focus on Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid Monolithic if-else chains, hard-coded payment logic, single class handling all payment types.
@@ -57,6 +58,7 @@ console output, external API calls, test fixtures, or mock data.
 
 - `com.example.database.DatabaseConnector.username`: Database credential - never log or include in error messages
 - `com.example.database.DatabaseConnector.password`: Database credential - never log or include in error messages
+- `com.example.service.InventoryService.customerId`: Customer identifiers linked to purchase history — PII under GDPR
 - `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)`: Email address is PII under GDPR - never log the recipient address
 - `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)`: Phone number is PII - never log the destination number
 - `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)`: Output contains customer shipping address and contact details (PII)
@@ -68,9 +70,13 @@ console output, external API calls, test fixtures, or mock data.
 The following elements are well-tested core components. Make changes with extreme caution.
 
 - **com.example.security.SecurityConfig** (sensitivity: Critical): This is a security manager. Any single-line change can compromise the entire project.
+- **com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)** (sensitivity: Critical): Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+- **com.example.service.InventoryService.releaseReservation(java.lang.String)** (sensitivity: High): Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
 
 ## ⚡ PERFORMANCE CONSTRAINTS
 Hot-path elements — never introduce O(n²) or worse. Always reason about complexity before proposing changes.
 
 - **com.example.payment.PaymentProcessor**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+- **com.example.service.InventoryService.getAvailableStock(java.lang.String)**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+- **com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 <!-- VIBETAGS-END -->

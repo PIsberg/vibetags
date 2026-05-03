@@ -20,6 +20,9 @@ Do not suggest changes to the following files:
 - `com.example.security.SecurityConfig` 
   - Focus: This class is READ-ONLY for AI assistants. Do not suggest modifications.
   - Avoid: Any changes to encryption algorithms, key sizes, or validation logic
+- `com.example.service.InventoryService` 
+  - Focus: Maintain inventory consistency across concurrent requests. All stock updates must be atomic.
+  - Avoid: Non-atomic read-modify-write sequences, unsynchronized shared state
 - `com.example.service.NotificationService` 
   - Focus: Implement notification delivery with retry logic and error handling
   - Avoid: Hard-coded credentials, synchronous blocking calls
@@ -68,6 +71,7 @@ Never log, expose, or suggest code that outputs the runtime values of these elem
 
 - `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 - `com.example.database.DatabaseConnector.password` - Database credential - never log or include in error messages
+- `com.example.service.InventoryService.customerId` - Customer identifiers linked to purchase history — PII under GDPR
 - `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
 - `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
 - `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
@@ -79,9 +83,13 @@ Never log, expose, or suggest code that outputs the runtime values of these elem
 The following elements are well-tested core components — change with extreme caution:
 
 - `com.example.security.SecurityConfig` — sensitivity: Critical. This is a security manager. Any single-line change can compromise the entire project.
+- `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` — sensitivity: Critical. Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+- `com.example.service.InventoryService.releaseReservation(java.lang.String)` — sensitivity: High. Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
 
 ## Performance Constraints
 The following elements are on a hot path — always reason about time and space complexity:
 
 - `com.example.payment.PaymentProcessor`: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+- `com.example.service.InventoryService.getAvailableStock(java.lang.String)`: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+- `com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)`: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 <!-- VIBETAGS-END -->

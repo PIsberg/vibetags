@@ -15,74 +15,135 @@ start
 :Java Compiler invokes\nAIGuardrailProcessor.process();
 note right: Triggered by @SupportedAnnotationTypes("*")
 
-if (Already processed?) then (yes)
-  :Return false;
-  stop
-else (no)
-  :Set processed = true;
+if (processingOver()?) then (yes — final round)
+  if (Already processed?) then (yes)
+    :Return false;
+    stop
+  else (no)
+    :generateFiles();
+    :Set processed = true;
+    :Return false;
+    stop
+  endif
+else (no — normal round)
+  if (Already processed?) then (yes)
+    :Return false;
+    stop
+  else (no)
+  endif
 endif
+
+partition "Element Accumulation (multi-round)" {
+  :Accumulate @AILocked elements;
+  :Accumulate @AIContext elements;
+  :Accumulate @AIIgnore elements;
+  :Accumulate @AIAudit elements;
+  :Accumulate @AIDraft elements;
+  :Accumulate @AIPrivacy elements;
+  :Accumulate @AICore elements;
+  :Accumulate @AIPerformance elements;
+  note right
+    LinkedHashSets preserve insertion order.
+    Multiple processing rounds collect all
+    annotations before generation runs.
+  end note
+}
 
 partition "Validation Phase" {
   :validateAnnotations();
   note right
     Checks for:
-    - Contradictory annotations
-    - Empty audit arrays
+    - @AIDraft + @AILocked contradiction
+    - Empty @AIAudit checkFor array
+    - @AIPrivacy + @AIIgnore redundancy
   end note
 }
-
-partition "Service Resolution" {
-  :buildServiceFileMap(root);
-  note right
-    Maps 15+ service keys
-    to file paths:
-    "qwen" -> QWEN.md
-    "cursor" -> .cursorrules
-    "claude" -> CLAUDE.md
-    etc.
-  end note
-
-  :resolveActiveServices();
-  note right
-    Checks Files.exists()
-    Only active services
-    get generated
-  end note
-}
-
-partition "Content Generation" {
-  :Initialize StringBuilders;
-  :Process @AILocked;
-  note right: Extract className, reason
-  :Process @AIContext;
-  note right: Extract focus, avoids
-  :Process @AIIgnore;
-  note right: Write glob patterns
-  :Process @AIAudit;
-  note right: Security checks
-  :Process @AIDraft;
-  note right: Implementation tasks
-}
-
-partition "File Writing" {
-  if (Service active AND content changed?) then (yes)
-    :writeFileIfChanged();
-    :Print NOTE: updated;
-  else (no)
-    :Skip write;
-    :Print NOTE: no changes;
-  endif
-}
-
-:checkOrphanedAnnotations();
-note right
-  Warns if annotations used
-  but recommended files missing
-  Example: @AIIgnore without .qwenignore
-end note
 
 :Return false;
-note right: Do not claim annotations
+note right: Do not claim annotations\nAllow other processors to see them
+
+' generateFiles() runs when processingOver == true
+' (shown as a separate flow for clarity)
+
+partition "generateFiles() — called once on final round" {
+
+  partition "Service Resolution" {
+    :buildServiceFileMap(root);
+    note right
+      Maps 22 service keys to file paths:
+      "qwen" -> QWEN.md
+      "cursor" -> .cursorrules
+      "claude" -> CLAUDE.md
+      "llms" -> llms.txt
+      "aider_conventions" -> CONVENTIONS.md
+      etc.
+    end note
+
+    :resolveActiveServices();
+    note right
+      Checks Files.exists() for each signal file.
+      Only signal files that already exist on disk
+      are written — file presence = opt-in.
+    end note
+  }
+
+  partition "Content Generation" {
+    :Initialize StringBuilders per platform;
+    :Process @AILocked → locked_files sections;
+    :Process @AIContext → contextual_instructions;
+    :Process @AIIgnore → ignore sections + glob patterns;
+    :Process @AIAudit → security audit sections;
+    :Process @AIDraft → implementation tasks;
+    :Process @AIPrivacy → PII guardrail sections;
+    :Process @AICore → core_elements sections;
+    :Process @AIPerformance → performance_constraints;
+    :Assemble final content per platform;
+  }
+
+  partition "File Writing" {
+    :For each active service:;
+    if (Supports markers?) then (yes — .md, .txt, rules)
+      if (Markers already in file?) then (yes)
+        :Update VIBETAGS-START...END section\nPreserve human content outside markers;
+      else (no)
+        if (Legacy VibeTags content?) then (yes)
+          :Migrate to marker format;
+        else (no)
+          :Append markers to file;
+        endif
+      endif
+    else (no — JSON/TOML)
+      :Complete overwrite;
+    endif
+
+    if (hasNewRules is false AND file is non-empty?) then (yes)
+      :Skip update\nPreserve sibling-module content;
+      note right: Multi-module safety
+    else (no)
+      if (Content changed?) then (yes)
+        :writeContentWithBackup();
+        :Print NOTE: updated;
+      else (no)
+        :Skip write;
+        :Print NOTE: no changes;
+      endif
+    endif
+  }
+
+  partition "Granular Rule Files" {
+    :Write .cursor/rules/<Class>.mdc;
+    :Write .trae/rules/<Class>.md;
+    :Write .roo/rules/<Class>.md;
+    :Cleanup orphaned granular files\n(classes that lost their annotations);
+  }
+
+  :checkOrphanedAnnotations();
+  note right
+    Warns if annotations used
+    but recommended files missing.
+    Example: @AIIgnore without .qwenignore
+  end note
+}
 
 stop
 

@@ -13,31 +13,31 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Status**: Locked (Do Not Edit)
 - **Reason**: CRITICAL: Security configuration managed by DevOps team. Any changes require security review and approval ticket SEC-XXXX
 
-#### LOCKED: getEncryptionAlgorithm()
+#### LOCKED: com.example.security.SecurityConfig.getEncryptionAlgorithm()
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Encryption algorithm tied to compliance requirements (PCI-DSS)
 
-#### LOCKED: getKeyRotationHours()
+#### LOCKED: com.example.security.SecurityConfig.getKeyRotationHours()
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Key rotation period mandated by company policy
 
-#### LOCKED: getMaxLoginAttempts()
+#### LOCKED: com.example.security.SecurityConfig.getMaxLoginAttempts()
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Max login attempts set by security team to prevent brute force
 
-#### LOCKED: validateToken(java.lang.String)
+#### LOCKED: com.example.security.SecurityConfig.validateToken(java.lang.String)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Token validation must match auth server exactly. Changes will break all client authentication
 
-#### LOCKED: validateOrder(java.util.Map<java.lang.String,java.lang.Object>)
+#### LOCKED: com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
-#### LOCKED: calculateTax(java.lang.String,double)
+#### LOCKED: com.example.service.OrderService.calculateTax(java.lang.String,double)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 
-#### LOCKED: processPayment(java.lang.String,double)
+#### LOCKED: com.example.service.OrderService.processPayment(java.lang.String,double)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 
@@ -73,74 +73,74 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### DRAFT/TODO: com.example.payment.PaymentProcessor
 - **Instruction**: Implement support for new crypto payments without breaking legacy flow.
 
-#### DRAFT/TODO: sendEmail(java.lang.String,java.lang.String,java.lang.String)
+#### DRAFT/TODO: com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
 - **Instruction**: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
 
-#### DRAFT/TODO: sendSMS(java.lang.String,java.lang.String)
+#### DRAFT/TODO: com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)
 - **Instruction**: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
 
-#### DRAFT/TODO: sendPushNotification(java.lang.String,java.lang.String,java.lang.String)
+#### DRAFT/TODO: com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)
 - **Instruction**: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
 
-#### DRAFT/TODO: queueNotification(java.lang.String,java.lang.String,java.lang.String,int)
+#### DRAFT/TODO: com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)
 - **Instruction**: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
 
-#### DRAFT/TODO: getDeliveryStatus(java.lang.String)
+#### DRAFT/TODO: com.example.service.NotificationService.getDeliveryStatus(java.lang.String)
 - **Instruction**: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
 
-#### DRAFT/TODO: calculateDiscount(java.lang.String,java.lang.String)
+#### DRAFT/TODO: com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)
 - **Instruction**: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
 
-#### DRAFT/TODO: updateOrderStatus(java.lang.String,java.lang.String)
+#### DRAFT/TODO: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
 - **Instruction**: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
 
-#### DRAFT/TODO: searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)
+#### DRAFT/TODO: com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)
 - **Instruction**: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
 
-#### DRAFT/TODO: generateOrderConfirmation(java.lang.String)
+#### DRAFT/TODO: com.example.service.OrderService.generateOrderConfirmation(java.lang.String)
 - **Instruction**: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
 
-#### DRAFT/TODO: executePayment(double)
+#### DRAFT/TODO: com.example.strategy.PaymentStrategy.executePayment(double)
 - **Instruction**: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
 
-#### DRAFT/TODO: validatePaymentMethod()
+#### DRAFT/TODO: com.example.strategy.PaymentStrategy.validatePaymentMethod()
 - **Instruction**: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
 
-#### DRAFT/TODO: executePayment(double)
+#### DRAFT/TODO: com.example.strategy.impl.CreditCardStrategy.executePayment(double)
 - **Instruction**: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
 
-#### DRAFT/TODO: validatePaymentMethod()
+#### DRAFT/TODO: com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()
 - **Instruction**: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
 
-#### PRIVACY/PII: username
+#### PRIVACY/PII: com.example.database.DatabaseConnector.username
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Database credential - never log or include in error messages
 
-#### PRIVACY/PII: password
+#### PRIVACY/PII: com.example.database.DatabaseConnector.password
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Database credential - never log or include in error messages
 
-#### PRIVACY/PII: sendEmail(java.lang.String,java.lang.String,java.lang.String)
+#### PRIVACY/PII: com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Email address is PII under GDPR - never log the recipient address
 
-#### PRIVACY/PII: sendSMS(java.lang.String,java.lang.String)
+#### PRIVACY/PII: com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Phone number is PII - never log the destination number
 
-#### PRIVACY/PII: generateOrderConfirmation(java.lang.String)
+#### PRIVACY/PII: com.example.service.OrderService.generateOrderConfirmation(java.lang.String)
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Output contains customer shipping address and contact details (PII)
 
-#### PRIVACY/PII: cardNumber
+#### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.cardNumber
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
-#### PRIVACY/PII: expiryDate
+#### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.expiryDate
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
-#### PRIVACY/PII: cvv
+#### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.cvv
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS security code - never log or expose in suggestions
 
