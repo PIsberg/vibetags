@@ -12,7 +12,7 @@ skinparam packageStyle rectangle
 
 title VibeTags Architecture - Class Diagram
 
-package "se.deversity.vibetags.annotations" <<Annotations>> {
+package "se.deversity.vibetags.annotations\n(vibetags-annotations.jar)" <<Annotations>> {
 
     interface AILocked <<annotation>> {
         + String reason()
@@ -49,7 +49,7 @@ package "se.deversity.vibetags.annotations" <<Annotations>> {
     }
 }
 
-package "se.deversity.vibetags.processor" <<Processor>> {
+package "se.deversity.vibetags.processor\n(vibetags-processor.jar)" <<Processor>> {
 
     class AIGuardrailProcessor {
         - String VERSION

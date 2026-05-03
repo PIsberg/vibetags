@@ -20,13 +20,23 @@ package "Developer Project" {
     @AICore      @AIPerformance
   end note
 
+  rectangle "vibetags-annotations.jar" as VibetagsAnnotationsJar
+  note bottom of VibetagsAnnotationsJar
+    8 @interface classes
+    SOURCE retention
+    Zero dependencies
+    On compile classpath
+  end note
+
   rectangle "vibetags-processor.jar" as VibetagsLib
   note bottom of VibetagsLib
-    Annotations (SOURCE retention)
     AIGuardrailProcessor (JSR 269)
     VibeTagsLogger (SLF4J/Logback)
     META-INF/services/ registration
+    On annotation-processor path only
   end note
+
+  VibetagsLib ..> VibetagsAnnotationsJar : depends on
 }
 
 package "javac Compiler" {
@@ -35,7 +45,8 @@ package "javac Compiler" {
   rectangle "Bytecode\nGeneration" as Bytecode
 
   JavaSources --> AP
-  VibetagsLib --> AP
+  VibetagsAnnotationsJar --> AP : provides @interface symbols
+  VibetagsLib --> AP : registers processor via SPI
   AP --> Compile
   Compile --> Bytecode
 

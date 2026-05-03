@@ -17,6 +17,18 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Multi-platform**: Generates configs for 12+ AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, and more)
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
+### Published Artifacts
+
+As of 0.6.0, VibeTags ships as three coordinates on Maven Central:
+
+| Artifact | Purpose | Goes on | Depends on |
+|---|---|---|---|
+| `se.deversity.vibetags:vibetags-annotations` | The 8 `@interface` classes | Consumer's compile classpath | nothing |
+| `se.deversity.vibetags:vibetags-processor` | `AIGuardrailProcessor` + `VibeTagsLogger` (slf4j/logback) | Annotation-processor path only | `vibetags-annotations` |
+| `se.deversity.vibetags:vibetags-bom` (pom-only) | Manages versions of the two jars above | `<dependencyManagement>` import / Gradle `platform(...)` | — |
+
+The split keeps `slf4j` / `logback` (the processor's internal logging deps) off the consumer's `compileClasspath`. Existing 0.5.x setups that pin only `vibetags-processor` continue to work — the processor declares `vibetags-annotations` as a regular compile dependency so the annotation classes are still resolved transitively. New projects should adopt the split layout shown in the README's Installation section.
+
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
@@ -62,7 +74,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 
 **Key Components:**
 
-**Annotations** (`se.deversity.vibetags.annotations`):
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations`:
 - `@AILocked` - Prevents AI modifications (reason: String)
 - `@AIContext` - Guides AI behavior (focus: String, avoids: String)
 - `@AIDraft` - Requests AI implementation (instructions: String)
@@ -72,11 +84,12 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - `@AICore` - Marks sensitive core logic; AI must change with extreme caution (sensitivity: String, note: String)
 - `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
 
-**Processor** (`se.deversity.vibetags.processor`):
+**Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` - Extends `AbstractProcessor` (JSR 269)
 - `VibeTagsLogger` - SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
 - `@SupportedAnnotationTypes("*")` - Processes all annotations
 - `@SupportedSourceVersion(RELEASE_11)` - Java 11+ support
+- Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 ---
 
@@ -455,7 +468,9 @@ When proposing edits or writing code for the following files, you MUST perform a
 ```
 mvn clean compile
     ↓
-Resolve vibetags-processor dependency (provided scope)
+Resolve vibetags-annotations on compile classpath
+   + vibetags-processor on annotationProcessorPaths
+   (versions supplied by vibetags-bom import)
     ↓
 javac discovers processor via META-INF/services/
     ↓
@@ -477,7 +492,9 @@ Compilation complete
 ```
 gradle clean build
     ↓
-Resolve vibetags-processor (compileOnly + annotationProcessor)
+Resolve vibetags-annotations (compileOnly)
+   + vibetags-processor (annotationProcessor)
+   (versions supplied by platform('vibetags-bom'))
     ↓
 javac with explicit annotation processor path
     ↓
@@ -496,35 +513,43 @@ Build complete
 
 ```
 vibetags/
-├── vibetags/                          # Core annotation processor library
+├── vibetags-annotations/              # Published as se.deversity.vibetags:vibetags-annotations
+│   ├── src/main/java/se/deversity/vibetags/annotations/
+│   │   ├── AILocked.java
+│   │   ├── AIContext.java
+│   │   ├── AIDraft.java
+│   │   ├── AIAudit.java
+│   │   ├── AIIgnore.java
+│   │   ├── AIPrivacy.java
+│   │   ├── AICore.java
+│   │   └── AIPerformance.java
+│   ├── pom.xml
+│   └── build.gradle
+│
+├── vibetags/                          # Published as se.deversity.vibetags:vibetags-processor
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/se/deversity/vibetags/
-│   │   │   │   ├── annotations/       # Annotation definitions (SOURCE retention)
-│   │   │   │   │   ├── AILocked.java
-│   │   │   │   │   ├── AIContext.java
-│   │   │   │   │   ├── AIDraft.java
-│   │   │   │   │   ├── AIAudit.java
-│   │   │   │   │   ├── AIIgnore.java
-│   │   │   │   │   └── AIPrivacy.java
-│   │   │   │   └── processor/         # JSR 269 annotation processor
-│   │   │   │       └── AIGuardrailProcessor.java
+│   │   │   ├── java/se/deversity/vibetags/processor/
+│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 annotation processor
+│   │   │   │   └── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
-│   │   └── test/                      # Unit + integration tests
-│   │       ├── annotations/
-│   │       │   └── AnnotationDefinitionsTest.java (25 tests)
+│   │   └── test/                      # Unit + integration tests (317 tests total)
 │   │       └── processor/
-│   │           ├── AIGuardrailProcessorTest.java (3 tests)
-│   │           ├── AIGuardrailProcessorUnitTest.java (20 tests)
-│   │           ├── AIGuardrailProcessorProcessTest.java (25 tests)
-│   │           ├── AIIgnoreProcessorUnitTest.java (11 tests)
-│   │           ├── AIPrivacyProcessorTest.java (15 tests)
-│   │           ├── QwenProcessorUnitTest.java (15 tests)
-│   │           ├── AnnotationProcessorEndToEndTest.java (28 tests)
-│   │           └── QwenEndToEndTest.java (19 tests)
-│   ├── pom.xml                        # Maven build config
+│   │           ├── AnnotationDefinitionsTest.java
+│   │           ├── AIGuardrailProcessorTest.java
+│   │           ├── AIGuardrailProcessorUnitTest.java
+│   │           ├── AIGuardrailProcessorProcessTest.java
+│   │           ├── AIIgnoreProcessorUnitTest.java
+│   │           ├── AIPrivacyProcessorTest.java
+│   │           ├── QwenProcessorUnitTest.java
+│   │           ├── AnnotationProcessorEndToEndTest.java
+│   │           └── QwenEndToEndTest.java
+│   ├── pom.xml                        # Maven build config (depends on vibetags-annotations)
 │   └── build.gradle                   # Gradle build config
+│
+├── vibetags-bom/                      # Published as se.deversity.vibetags:vibetags-bom (pom-only)
+│   └── pom.xml                        # <dependencyManagement> for vibetags-annotations + vibetags-processor
 │
 ├── example/                           # Demo e-commerce application
 │   ├── src/main/java/com/example/
@@ -811,22 +836,33 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 
 ## Dependencies
 
+### vibetags-annotations
+
+| Dependency | Scope | Purpose |
+|---|---|---|
+| (none) | — | Pure `@interface` declarations on top of `java.lang.annotation.*` |
+
 ### vibetags-processor
 
 | Dependency | Scope | Purpose |
 |---|---|---|
+| `se.deversity.vibetags:vibetags-annotations` | compile | Annotation classes referenced symbolically by the processor (`AILocked.class`, …) and surfaced transitively to legacy single-coordinate consumers |
+| `org.slf4j:slf4j-api` | compile | Processor-internal logging API |
+| `ch.qos.logback:logback-classic` | compile | File appender that writes `vibetags.log` |
 | `javax.annotation.processing.*` | JDK (compile) | JSR 269 API |
 | `javax.lang.model.*` | JDK (compile) | Language model API |
 | `org.junit.jupiter` | test | Unit testing |
 | `org.mockito` | test | Mocking framework |
 
-### example
+### example (recommended layout)
 
 | Dependency | Scope | Purpose |
 |---|---|---|
-| `se.deversity.vibetags:vibetags-processor` | provided / compileOnly | Annotations + processor |
+| `se.deversity.vibetags:vibetags-bom` | `<scope>import</scope>` / `platform(...)` | Manages the two versions below |
+| `se.deversity.vibetags:vibetags-annotations` | compile / `compileOnly` | Annotation symbols for `javac` |
+| `se.deversity.vibetags:vibetags-processor` | `<annotationProcessorPaths>` / `annotationProcessor` | Processor on the AP path only — keeps slf4j/logback off compileClasspath |
 
-**Note:** Annotations have zero runtime footprint — completely stripped during compilation.
+**Note:** Annotations have zero runtime footprint — completely stripped during compilation. The split exists purely to reduce the consumer's compile-time dependency surface.
 
 ---
 
@@ -835,14 +871,16 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 ### Maven
 
 ```bash
-# Build library
-cd vibetags && mvn clean install
+# Build library — order matters: annotations first, then processor, then BOM
+cd vibetags-annotations && mvn install
+cd ../vibetags && mvn clean install
+cd ../vibetags-bom && mvn install
 
 # Build example (generates AI config files)
-cd example && mvn clean compile
+cd ../example && mvn clean compile
 
 # Run tests
-cd vibetags && mvn test
+cd ../vibetags && mvn test
 
 # Run integration tests
 cd vibetags && mvn test -Drun.integration.tests=true
@@ -851,14 +889,16 @@ cd vibetags && mvn test -Drun.integration.tests=true
 ### Gradle
 
 ```bash
-# Build library
-cd vibetags && gradle clean build publishToMavenLocal
+# Build library — annotations first, then processor; BOM is Maven-only
+cd vibetags-annotations && gradle clean build publishToMavenLocal
+cd ../vibetags && gradle clean build publishToMavenLocal
+cd ../vibetags-bom && mvn install   # Gradle reads it from mavenLocal()
 
 # Build example (generates AI config files)
-cd example && gradle clean build
+cd ../example && gradle clean build
 
 # Run tests
-cd vibetags && gradle test
+cd ../vibetags && gradle test
 ```
 
 ---
