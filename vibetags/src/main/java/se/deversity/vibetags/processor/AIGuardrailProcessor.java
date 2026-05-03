@@ -8,7 +8,9 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import org.slf4j.Logger;
 
@@ -825,58 +827,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
-        // Contradiction Check: AIDraft + AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
-            if (element.getAnnotation(AIDraft.class) != null) {
-                messager.printMessage(Diagnostic.Kind.WARNING,
-                    "VibeTags: " + element.toString() + " is annotated with both @AIDraft and @AILocked. This is contradictory.", element);
-            }
-        }
-
-        // Empty Audit Check
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
-            AIAudit audit = element.getAnnotation(AIAudit.class);
-            if (audit.checkFor().length == 0) {
-                messager.printMessage(Diagnostic.Kind.WARNING,
-                    "VibeTags: @AIAudit on " + element.toString() + " has no 'checkFor' items list. It will be ignored.", element);
-            }
-        }
-
-        // Redundancy Check: AIPrivacy + AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
-            if (element.getAnnotation(AIIgnore.class) != null) {
-                messager.printMessage(Diagnostic.Kind.WARNING,
-                    "VibeTags: " + element.toString() + " is annotated with both @AIPrivacy and @AIIgnore. "
-                    + "@AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.", element);
-            }
-        }
+        AnnotationValidator.validate(messager, roundEnv);
     }
 
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
-        if (hasIgnore) {
-            warn(messager, active.contains("cursor") && !active.contains("cursor_ignore"),
-                "VibeTags: @AIIgnore used but .cursorignore is missing for Cursor support. Consider creating it.");
-            warn(messager, active.contains("claude") && !active.contains("claude_ignore"),
-                "VibeTags: @AIIgnore used but .claudeignore is missing for Claude support. Consider creating it.");
-            warn(messager, active.contains("copilot") && !active.contains("copilot_ignore"),
-                "VibeTags: @AIIgnore used but .copilotignore is missing for Copilot support. Consider creating it.");
-            warn(messager, active.contains("qwen") && !active.contains("qwen_ignore"),
-                "VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.");
-            warn(messager, (active.contains("gemini") || active.contains("codex")) && !active.contains("aiexclude"),
-                "VibeTags: @AIIgnore used but .aiexclude is missing for Gemini/Codex support. Consider creating it.");
-        }
-
-        if (hasLocked) {
-            warn(messager, (active.contains("gemini") || active.contains("codex")) && !active.contains("aiexclude"),
-                "VibeTags: @AILocked used but .aiexclude (hard guardrail) is missing for Gemini/Codex support. Consider creating it.");
-        }
-    }
-
-    /** Emits a compiler WARNING via {@code messager} and mirrors it to the log file when the condition is true. */
-    private void warn(Messager messager, boolean condition, String message) {
-        if (!condition) return;
-        messager.printMessage(Diagnostic.Kind.WARNING, message);
-        if (log != null) log.warn(message);
+        OrphanWarner.warnAboutOrphans(messager, log, active, hasLocked, hasIgnore, hasAudit);
     }
 
     void cleanupGranularDirectory(Path dir, String extension) {
