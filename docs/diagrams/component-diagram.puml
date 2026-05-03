@@ -14,17 +14,17 @@ package "Developer Project" {
   rectangle "Java Source Files" as JavaSources
   note right of JavaSources
     Annotations used:
-    @AILocked
-    @AIContext
-    @AIDraft
-    @AIAudit
-    @AIIgnore
+    @AILocked    @AIContext
+    @AIDraft     @AIAudit
+    @AIIgnore    @AIPrivacy
+    @AICore      @AIPerformance
   end note
 
   rectangle "vibetags-processor.jar" as VibetagsLib
   note bottom of VibetagsLib
     Annotations (SOURCE retention)
     AIGuardrailProcessor (JSR 269)
+    VibeTagsLogger (SLF4J/Logback)
     META-INF/services/ registration
   end note
 }
@@ -58,6 +58,7 @@ package "Generated AI Config Files" {
   note right of CursorFiles
     .cursorrules
     .cursorignore
+    .cursor/rules/<Class>.mdc
   end note
 
   rectangle "Claude Files" as ClaudeFiles
@@ -84,6 +85,25 @@ package "Generated AI Config Files" {
     .github/copilot-instructions.md
     .copilotignore
   end note
+
+  rectangle "Aider Files" as AiderFiles
+  note right of AiderFiles
+    CONVENTIONS.md
+    .aiderignore
+  end note
+
+  rectangle "Trae / Roo Files" as TraeRooFiles
+  note right of TraeRooFiles
+    .trae/rules/<Class>.md
+    .roo/rules/<Class>.md
+  end note
+
+  rectangle "LLM Agent Files" as LlmsFiles
+  note right of LlmsFiles
+    llms.txt (concise map)
+    llms-full.txt (full reference)
+    llms.txt standard (llmstxt.org)
+  end note
 }
 
 AP --> QwenFiles : Generate
@@ -92,6 +112,9 @@ AP --> ClaudeFiles : Generate
 AP --> GeminiFiles : Generate
 AP --> CodexFiles : Generate
 AP --> CopilotFiles : Generate
+AP --> AiderFiles : Generate
+AP --> TraeRooFiles : Generate
+AP --> LlmsFiles : Generate
 
 package "AI Platforms" {
   rectangle "Qwen IDE" as QwenIDE
@@ -100,6 +123,9 @@ package "AI Platforms" {
   rectangle "Gemini Code Assist" as GeminiCode
   rectangle "Codex CLI" as CodexCLI
   rectangle "GitHub Copilot" as GitHubCopilot
+  rectangle "Aider" as AiderTool
+  rectangle "Trae IDE / Roo Code" as TraeRoo
+  rectangle "Windsurf Cascade\n& LLM Agents" as WindsurfLLM
 
   QwenFiles --> QwenIDE : Read config
   CursorFiles --> CursorIDE : Read config
@@ -107,14 +133,22 @@ package "AI Platforms" {
   GeminiFiles --> GeminiCode : Read config
   CodexFiles --> CodexCLI : Read config
   CopilotFiles --> GitHubCopilot : Read config
+  AiderFiles --> AiderTool : Read config
+  TraeRooFiles --> TraeRoo : Read config
+  LlmsFiles --> WindsurfLLM : Read config
 }
 
 note as OptInNote
   **Opt-in Mechanism**
   File presence = Opt-in
-  Create empty file -> VibeTags populates
-  Delete file -> VibeTags ignores
+  Create empty file → VibeTags populates
+  Delete file → VibeTags ignores
   No forced files on disk
+
+  **Marker-based updates**
+  Content between VIBETAGS-START /
+  VIBETAGS-END is managed by VibeTags.
+  Human content outside markers survives.
 end note
 
 Developer --> JavaSources : Annotates

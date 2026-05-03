@@ -9,6 +9,8 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIPerformance;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -260,5 +262,97 @@ class AnnotationDefinitionsTest {
         Method method = getClass().getDeclaredMethod("testAIPrivacyCanBeUsedOnMethods");
         AIPrivacy privacy = method.getAnnotation(AIPrivacy.class);
         assertNull(privacy); // Expected: null because SOURCE retention
+    }
+
+    // -----------------------------------------------------------------------
+    // @AICore
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAICoreAnnotationRetention() {
+        Retention retention = AICore.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAICoreAnnotationTargets() {
+        Target target = AICore.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAICoreDefaultValues() throws NoSuchMethodException {
+        Method sensitivityMethod = AICore.class.getDeclaredMethod("sensitivity");
+        Method noteMethod = AICore.class.getDeclaredMethod("note");
+        assertEquals("High", sensitivityMethod.getDefaultValue());
+        assertNotNull(noteMethod.getDefaultValue());
+        assertFalse(((String) noteMethod.getDefaultValue()).isBlank(),
+            "default note must not be blank");
+    }
+
+    @Test
+    @AICore(sensitivity = "Critical", note = "Test core logic")
+    void testAICoreCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAICoreCanBeUsedOnMethods");
+        AICore core = method.getAnnotation(AICore.class);
+        assertNull(core); // Expected: null because SOURCE retention
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIPerformance
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAIPerformanceAnnotationRetention() {
+        Retention retention = AIPerformance.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAIPerformanceAnnotationTargets() {
+        Target target = AIPerformance.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAIPerformanceDefaultConstraint() throws NoSuchMethodException {
+        Method constraintMethod = AIPerformance.class.getDeclaredMethod("constraint");
+        assertNotNull(constraintMethod.getDefaultValue());
+        String defaultConstraint = (String) constraintMethod.getDefaultValue();
+        assertFalse(defaultConstraint.isBlank(), "default constraint must not be blank");
+        assertTrue(defaultConstraint.contains("complexity") || defaultConstraint.contains("Strict"),
+            "default constraint should mention complexity or strict requirements");
+    }
+
+    @Test
+    @AIPerformance(constraint = "O(1) required")
+    void testAIPerformanceCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAIPerformanceCanBeUsedOnMethods");
+        AIPerformance perf = method.getAnnotation(AIPerformance.class);
+        assertNull(perf); // Expected: null because SOURCE retention
+    }
+
+    @AICore(sensitivity = "High", note = "Core business logic")
+    static class TestCoreClass {}
+
+    @AIPerformance(constraint = "O(n) max")
+    static class TestPerformanceClass {}
+
+    @Test
+    void testAICoreAndPerformanceCanBeAppliedToClasses() {
+        assertDoesNotThrow(() -> {
+            assertNotNull(TestCoreClass.class);
+            assertNotNull(TestPerformanceClass.class);
+        });
     }
 }

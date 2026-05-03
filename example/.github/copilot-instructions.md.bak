@@ -8,13 +8,13 @@ Do not suggest changes to the following files:
 
 - `com.example.payment.PaymentProcessor` - Tied to legacy database schema v2.3. Changes will break production payment processing. Contact the payments team before modifying.
 - `com.example.security.SecurityConfig` - CRITICAL: Security configuration managed by DevOps team. Any changes require security review and approval ticket SEC-XXXX
-- `getEncryptionAlgorithm()` - Encryption algorithm tied to compliance requirements (PCI-DSS)
-- `getKeyRotationHours()` - Key rotation period mandated by company policy
-- `getMaxLoginAttempts()` - Max login attempts set by security team to prevent brute force
-- `validateToken(java.lang.String)` - Token validation must match auth server exactly. Changes will break all client authentication
-- `validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
-- `calculateTax(java.lang.String,double)` - Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
-- `processPayment(java.lang.String,double)` - Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+- `com.example.security.SecurityConfig.getEncryptionAlgorithm()` - Encryption algorithm tied to compliance requirements (PCI-DSS)
+- `com.example.security.SecurityConfig.getKeyRotationHours()` - Key rotation period mandated by company policy
+- `com.example.security.SecurityConfig.getMaxLoginAttempts()` - Max login attempts set by security team to prevent brute force
+- `com.example.security.SecurityConfig.validateToken(java.lang.String)` - Token validation must match auth server exactly. Changes will break all client authentication
+- `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
+- `com.example.service.OrderService.calculateTax(java.lang.String,double)` - Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
+- `com.example.service.OrderService.processPayment(java.lang.String,double)` - Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 
 ## Contextual Guidelines
 - `com.example.security.SecurityConfig` 
@@ -49,29 +49,39 @@ Follow these instructions to implement the drafts:
 
 - `com.example.NotificationService`: Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.
 - `com.example.payment.PaymentProcessor`: Implement support for new crypto payments without breaking legacy flow.
-- `sendEmail(java.lang.String,java.lang.String,java.lang.String)`: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
-- `sendSMS(java.lang.String,java.lang.String)`: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
-- `sendPushNotification(java.lang.String,java.lang.String,java.lang.String)`: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
-- `queueNotification(java.lang.String,java.lang.String,java.lang.String,int)`: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
-- `getDeliveryStatus(java.lang.String)`: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
-- `calculateDiscount(java.lang.String,java.lang.String)`: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
-- `updateOrderStatus(java.lang.String,java.lang.String)`: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
-- `searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)`: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
-- `generateOrderConfirmation(java.lang.String)`: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
-- `executePayment(double)`: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
-- `validatePaymentMethod()`: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
-- `executePayment(double)`: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
-- `validatePaymentMethod()`: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
+- `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)`: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
+- `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)`: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
+- `com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)`: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
+- `com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)`: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
+- `com.example.service.NotificationService.getDeliveryStatus(java.lang.String)`: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
+- `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)`: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
+- `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)`: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
+- `com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)`: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
+- `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)`: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
+- `com.example.strategy.PaymentStrategy.executePayment(double)`: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
+- `com.example.strategy.PaymentStrategy.validatePaymentMethod()`: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
+- `com.example.strategy.impl.CreditCardStrategy.executePayment(double)`: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
+- `com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()`: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
 
 ## PII / Privacy Guardrails
 Never log, expose, or suggest code that outputs the runtime values of these elements:
 
-- `username` - Database credential - never log or include in error messages
-- `password` - Database credential - never log or include in error messages
-- `sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
-- `sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
-- `generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
-- `cardNumber` - PCI-DSS cardholder data - never log or expose in suggestions
-- `expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
-- `cvv` - PCI-DSS security code - never log or expose in suggestions
+- `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
+- `com.example.database.DatabaseConnector.password` - Database credential - never log or include in error messages
+- `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
+- `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
+- `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
+- `com.example.strategy.impl.CreditCardStrategy.cardNumber` - PCI-DSS cardholder data - never log or expose in suggestions
+- `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
+- `com.example.strategy.impl.CreditCardStrategy.cvv` - PCI-DSS security code - never log or expose in suggestions
+
+## Core Functionality (Extreme Caution)
+The following elements are well-tested core components — change with extreme caution:
+
+- `com.example.security.SecurityConfig` — sensitivity: Critical. This is a security manager. Any single-line change can compromise the entire project.
+
+## Performance Constraints
+The following elements are on a hot path — always reason about time and space complexity:
+
+- `com.example.payment.PaymentProcessor`: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
 <!-- VIBETAGS-END -->

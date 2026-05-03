@@ -42,6 +42,10 @@ These files have specific context and focus areas for AI assistance.
 - **Focus**: This class is READ-ONLY for AI assistants. Do not suggest modifications.
 - **Avoid**: Any changes to encryption algorithms, key sizes, or validation logic
 
+### com.example.service.InventoryService
+- **Focus**: Maintain inventory consistency across concurrent requests. All stock updates must be atomic.
+- **Avoid**: Non-atomic read-modify-write sequences, unsynchronized shared state
+
 ### com.example.service.NotificationService
 - **Focus**: Implement notification delivery with retry logic and error handling
 - **Avoid**: Hard-coded credentials, synchronous blocking calls
@@ -131,6 +135,9 @@ Never include runtime values of the following elements in logs, console output, 
 ### com.example.database.DatabaseConnector.password
 - **Reason**: Database credential - never log or include in error messages
 
+### com.example.service.InventoryService.customerId
+- **Reason**: Customer identifiers linked to purchase history — PII under GDPR
+
 ### com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
 - **Reason**: Email address is PII under GDPR - never log the recipient address
 
@@ -157,10 +164,24 @@ The following elements are well-tested core functionality. Make changes with ext
 - **Sensitivity**: Critical
 - **Note**: This is a security manager. Any single-line change can compromise the entire project.
 
+### com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)
+- **Sensitivity**: Critical
+- **Note**: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+
+### com.example.service.InventoryService.releaseReservation(java.lang.String)
+- **Sensitivity**: High
+- **Note**: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+
 
 ## ⚡ Performance Constraints
 The following elements are on a hot-path and have strict time/space complexity constraints.
 
 ### com.example.payment.PaymentProcessor
 - **Constraint**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+
+### com.example.service.InventoryService.getAvailableStock(java.lang.String)
+- **Constraint**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+
+### com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)
+- **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 <!-- VIBETAGS-END -->

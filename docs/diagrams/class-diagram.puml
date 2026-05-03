@@ -13,58 +13,81 @@ skinparam packageStyle rectangle
 title VibeTags Architecture - Class Diagram
 
 package "se.deversity.vibetags.annotations" <<Annotations>> {
-    
+
     interface AILocked <<annotation>> {
         + String reason()
     }
-    
+
     interface AIContext <<annotation>> {
         + String focus()
         + String avoids()
     }
-    
+
     interface AIDraft <<annotation>> {
         + String instructions()
     }
-    
+
     interface AIAudit <<annotation>> {
         + String[] checkFor()
     }
-    
+
     interface AIIgnore <<annotation>> {
         + String reason()
+    }
+
+    interface AIPrivacy <<annotation>> {
+        + String reason()
+    }
+
+    interface AICore <<annotation>> {
+        + String sensitivity()
+        + String note()
+    }
+
+    interface AIPerformance <<annotation>> {
+        + String constraint()
     }
 }
 
 package "se.deversity.vibetags.processor" <<Processor>> {
-    
+
     class AIGuardrailProcessor {
         - String VERSION
         - String GITHUB_URL
         - boolean processed
-        
+        - Path root
+        - String projectName
+        - Logger log
+
         + process(annotations, roundEnv) : boolean
         + validateAnnotations(messager, roundEnv) : void
-        + checkOrphanedAnnotations(messager, active, hasLocked, hasIgnore, hasAudit) : void
-        + writeFileIfChanged(filePath, content) : boolean
-        
+        + checkOrphanedAnnotations(messager, active, ...) : void
+        + writeFileIfChanged(filePath, content, hasNewRules) : boolean
+        + stripLegacyVibeTagsBlock(before) : String
+        + cleanupGranularDirectory(dir, extension) : void
+
         + {static} buildServiceFileMap(root) : Map<String, Path>
         + {static} resolveActiveServices(messager, allServiceFiles) : Set<String>
+    }
+
+    class VibeTagsLogger {
+        + {static} forRoot(root, logPath, logLevel) : Logger
+        + {static} shutdown() : void
     }
 }
 
 package "javax.annotation.processing" <<JDK>> {
-    
+
     abstract class AbstractProcessor {
         + getSupportedAnnotationTypes() : Set<String>
         + getSupportedSourceVersion() : SourceVersion
         + process(annotations, roundEnv) : boolean
     }
-    
+
     interface Messager {
         + printMessage(kind, msg) : void
     }
-    
+
     interface RoundEnvironment {
         + getElementsAnnotatedWith(annotation) : Set<Element>
         + processingOver() : boolean
@@ -83,12 +106,16 @@ AIGuardrailProcessor --> Messager : uses
 AIGuardrailProcessor --> RoundEnvironment : uses
 AIGuardrailProcessor --> Path : uses
 AIGuardrailProcessor --> Files : uses
+AIGuardrailProcessor --> VibeTagsLogger : uses
 
 AILocked ..> AIGuardrailProcessor : processed by
 AIContext ..> AIGuardrailProcessor : processed by
 AIDraft ..> AIGuardrailProcessor : processed by
 AIAudit ..> AIGuardrailProcessor : processed by
 AIIgnore ..> AIGuardrailProcessor : processed by
+AIPrivacy ..> AIGuardrailProcessor : processed by
+AICore ..> AIGuardrailProcessor : processed by
+AIPerformance ..> AIGuardrailProcessor : processed by
 
 note right of AILocked
   Retention: SOURCE
@@ -120,17 +147,46 @@ note right of AIIgnore
   Purpose: Exclude from AI context
 end note
 
+note right of AIPrivacy
+  Retention: SOURCE
+  Target: TYPE, METHOD, FIELD
+  Purpose: PII guardrails — never log
+  or expose runtime values
+end note
+
+note right of AICore
+  Retention: SOURCE
+  Target: TYPE, METHOD, FIELD
+  Purpose: Mark sensitive core logic —
+  change with extreme caution
+end note
+
+note right of AIPerformance
+  Retention: SOURCE
+  Target: TYPE, METHOD, FIELD
+  Purpose: Hot-path constraint —
+  O(n²) complexity forbidden
+end note
+
 note bottom of AIGuardrailProcessor
   @SupportedAnnotationTypes("*")
   @SupportedSourceVersion(RELEASE_11)
-  
-  Generates files for:
-  - Cursor (.cursorrules, .cursorignore)
+
+  Generates files for 12+ platforms:
+  - Cursor (.cursorrules, .cursorignore, .cursor/rules/)
   - Claude (CLAUDE.md, .claudeignore)
   - Qwen (QWEN.md, .qwen/*)
-  - Gemini (gemini_instructions.md)
+  - Gemini (gemini_instructions.md, .aiexclude)
   - Codex (AGENTS.md, .codex/*)
   - Copilot (.github/copilot-instructions.md)
+  - Aider (CONVENTIONS.md, .aiderignore)
+  - Trae (.trae/rules/)
+  - Roo (.roo/rules/)
+  - Windsurf/LLM agents (llms.txt, llms-full.txt)
+
+  File-existence opt-in model:
+  Create signal file → VibeTags writes to it
+  Delete signal file → VibeTags ignores it
 end note
 
 @enduml

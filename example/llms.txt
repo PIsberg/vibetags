@@ -18,6 +18,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Contextual Rules
 - [SecurityConfig](com.example.security.SecurityConfig): Focus - This class is READ-ONLY for AI assistants. Do not suggest modifications.. Avoid - Any changes to encryption algorithms, key sizes, or validation logic
+- [InventoryService](com.example.service.InventoryService): Focus - Maintain inventory consistency across concurrent requests. All stock updates must be atomic.. Avoid - Non-atomic read-modify-write sequences, unsynchronized shared state
 - [NotificationService](com.example.service.NotificationService): Focus - Implement notification delivery with retry logic and error handling. Avoid - Hard-coded credentials, synchronous blocking calls
 - [OrderService](com.example.service.OrderService): Focus - Maintain transactional integrity. All database operations must use proper transaction management.. Avoid - Raw SQL queries, direct database connections without connection pooling
 - [PaymentStrategy](com.example.strategy.PaymentStrategy): Focus - Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid - Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
@@ -49,6 +50,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 ## PII / Privacy Guardrails
 - [DatabaseConnector.username](com.example.database.DatabaseConnector.username): Database credential - never log or include in error messages
 - [DatabaseConnector.password](com.example.database.DatabaseConnector.password): Database credential - never log or include in error messages
+- [InventoryService.customerId](com.example.service.InventoryService.customerId): Customer identifiers linked to purchase history — PII under GDPR
 - [NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)](com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)): Email address is PII under GDPR - never log the recipient address
 - [NotificationService.sendSMS(java.lang.String,java.lang.String)](com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)): Phone number is PII - never log the destination number
 - [OrderService.generateOrderConfirmation(java.lang.String)](com.example.service.OrderService.generateOrderConfirmation(java.lang.String)): Output contains customer shipping address and contact details (PII)
@@ -58,7 +60,11 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## 🧠 Core Functionality
 - [SecurityConfig](com.example.security.SecurityConfig): Sensitivity: Critical. Note: This is a security manager. Any single-line change can compromise the entire project.
+- [InventoryService.reserveStock(java.lang.String,int,java.lang.String)](com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)): Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+- [InventoryService.releaseReservation(java.lang.String)](com.example.service.InventoryService.releaseReservation(java.lang.String)): Sensitivity: High. Note: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
 
 ## ⚡ Performance Constraints
 - [PaymentProcessor](com.example.payment.PaymentProcessor): HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+- [InventoryService.getAvailableStock(java.lang.String)](com.example.service.InventoryService.getAvailableStock(java.lang.String)): O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+- [InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)](com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)): Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 <!-- VIBETAGS-END -->

@@ -14,6 +14,7 @@ title VibeTags Build Sequence - Annotation Processing Flow
 actor Developer
 participant "javac\nCompiler" as Compiler
 participant "AIGuardrailProcessor" as Processor
+participant "VibeTagsLogger" as Logger
 participant "File System" as FS
 participant "AI Platform\nConfig Files" as AIFiles
 
@@ -22,83 +23,112 @@ Developer -> Compiler: mvn clean compile
 activate Compiler
 Compiler -> Compiler: Parse pom.xml\nResolve dependencies
 
-== Annotation Discovery ==
+== Processor Initialisation ==
 Compiler -> Compiler: Discover AIGuardrailProcessor\nvia META-INF/services
 note right: SPI registration
 
-== Compilation Phase ==
-Compiler -> Compiler: Compile Java sources
-Compiler -> Processor: process(annotations, roundEnv)
+Compiler -> Processor: init(processingEnv)
 activate Processor
+Processor -> Processor: Resolve root directory\n(vibetags.root option or JVM cwd)
+Processor -> Logger: forRoot(root, logPath, logLevel)
+Processor -> Processor: Reset element sets\nand initialise StringBuilders
 
-== Processing Round ==
-Processor -> Processor: Check: processingOver() || processed
-alt Already processed or round over
-    Processor --> Compiler: return false (no changes)
-else First processing round
-    Processor -> Processor: Set processed = true
-    
-    == Validation Phase ==
-    Processor -> Processor: validateAnnotations()
-    note right: Check for contradictions\n@AIDraft + @AILocked\nEmpty @AIAudit warnings
-    
-    == File Discovery Phase ==
-    Processor -> Processor: buildServiceFileMap(root)
-    note right: Map service keys\nto file paths
-    Processor -> Processor: resolveActiveServices()
-    note right: Check which files exist\n(file presence = opt-in)
-    
-    == Content Generation Phase ==
-    Processor -> Processor: Initialize StringBuilders\nfor each platform
-    
-    loop For each @AILocked
-        Processor -> Processor: Append to cursorRules
-        Processor -> Processor: Append to claudeMd
-        Processor -> Processor: Append to qwenMd
-        Processor -> Processor: Append to other platforms
+== Processing Rounds (may be multiple) ==
+loop Each compilation round
+    Compiler -> Processor: process(annotations, roundEnv)
+
+    alt processingOver() == true AND not yet processed
+        Processor -> Processor: generateFiles()
+        note right: See "File Generation" section below
+        Processor -> Processor: Set processed = true
+        Processor --> Compiler: return false
+    else processingOver() == true AND already processed
+        Processor --> Compiler: return false (idempotency guard)
+    else Normal round — accumulate elements
+        Processor -> Processor: Accumulate @AILocked elements
+        Processor -> Processor: Accumulate @AIContext elements
+        Processor -> Processor: Accumulate @AIIgnore elements
+        Processor -> Processor: Accumulate @AIAudit elements
+        Processor -> Processor: Accumulate @AIDraft elements
+        Processor -> Processor: Accumulate @AIPrivacy elements
+        Processor -> Processor: Accumulate @AICore elements
+        Processor -> Processor: Accumulate @AIPerformance elements
+
+        == Validation Phase (each round) ==
+        Processor -> Processor: validateAnnotations()
+        note right
+            Checks:
+            - @AIDraft + @AILocked contradiction
+            - Empty @AIAudit checkFor array
+            - @AIPrivacy + @AIIgnore redundancy
+        end note
+        Processor --> Compiler: return false
     end
-    
-    loop For each @AIContext
-        Processor -> Processor: Append focus/avoids\nto all platforms
-    end
-    
-    loop For each @AIIgnore
-        Processor -> Processor: Append to ignore sections
-        Processor -> Processor: Write to .qwenignore\n.cursorignore, etc.
-    end
-    
-    loop For each @AIAudit
-        Processor -> Processor: Append security checks\nto all platforms
-    end
-    
-    loop For each @AIDraft
-        Processor -> Processor: Append implementation tasks\nto all platforms
-    end
-    
-    == File Writing Phase ==
-    loop For each active service
-        alt Content changed
-            Processor -> FS: writeFileIfChanged(filePath, content)
-            FS -> AIFiles: Write/update file
-            Processor -> Compiler: NOTE: "updated - <file>"
-        else Content unchanged
-            Processor -> Compiler: NOTE: "no changes - <file>"
-        end
-    end
-    
-    == Orphaned Annotation Check ==
-    Processor -> Processor: checkOrphanedAnnotations()
-    note right: Warn if annotations used\nbut recommended files missing
-    
-    Processor --> Compiler: return false
 end
+
+== File Generation (triggered on final round) ==
+Processor -> Processor: buildServiceFileMap(root)
+Processor -> FS: Files.exists() for each signal file
+FS --> Processor: Active service keys
+
+note over Processor
+  Content generation — per annotation type, per platform:
+  @AILocked  → locked_files / LOCKED FILES section
+  @AIContext → contextual_instructions / CONTEXTUAL RULES
+  @AIIgnore  → ignored_elements + glob patterns
+  @AIAudit   → audit_requirements / SECURITY AUDITS
+  @AIDraft   → implementation_tasks / TASKS
+  @AIPrivacy → pii_guardrails / PII GUARDRAILS
+  @AICore    → core_elements / CORE FUNCTIONALITY
+  @AIPerf    → performance_constraints / PERF CONSTRAINTS
+end note
+
+loop For each active service
+    alt Marker-based file (.md, rules, txt)
+        Processor -> FS: Read existing content
+        Processor -> Processor: Update VIBETAGS-START…END section\nPreserve human content outside markers
+    else JSON / TOML
+        Processor -> Processor: Complete overwrite
+    end
+
+    alt Content changed AND hasNewRules
+        Processor -> FS: writeContentWithBackup(filePath, content)
+        FS -> AIFiles: Write updated file
+        Processor -> Compiler: NOTE: "updated - <file>"
+        Processor -> Logger: info("{} — updated", relPath)
+    else hasNewRules == false AND non-empty file
+        Processor -> Compiler: NOTE: "Skipping update — multi-module"
+    else Content unchanged
+        Processor -> Compiler: NOTE: "no changes - <file>"
+    end
+end
+
+loop Per annotated class (granular rules)
+    Processor -> FS: Write .cursor/rules/<Class>.mdc
+    Processor -> FS: Write .trae/rules/<Class>.md
+    Processor -> FS: Write .roo/rules/<Class>.md
+end
+
+Processor -> FS: cleanupGranularDirectory()\nRemove orphaned rule files
+
+== Post-Generation ==
+Processor -> Processor: checkOrphanedAnnotations()
+note right
+    Warns if annotations used
+    but recommended files missing.
+    E.g.: @AIIgnore without .qwenignore
+end note
 
 deactivate Processor
 Compiler --> Developer: BUILD SUCCESS
 deactivate Compiler
 
 == Developer Uses AI Tools ==
-Developer -> AIFiles: Open QWEN.md, CLAUDE.md, etc.
-note right: AI platforms read\ngenerated config files\nto enforce guardrails
+Developer -> AIFiles: AI tool reads CLAUDE.md, llms.txt, etc.
+note right
+    AI platforms read generated config files
+    to enforce guardrails during coding sessions.
+    llms.txt is the entry point for LLM agents.
+end note
 
 @enduml
