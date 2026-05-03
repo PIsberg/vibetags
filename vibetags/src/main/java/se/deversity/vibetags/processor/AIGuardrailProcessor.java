@@ -1092,7 +1092,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         try {
             Path filePath = Paths.get(path);
             Path parent = filePath.getParent();
-            if (parent != null && !Files.exists(parent)) {
+            if (parent != null) {
                 Files.createDirectories(parent);
             }
 
