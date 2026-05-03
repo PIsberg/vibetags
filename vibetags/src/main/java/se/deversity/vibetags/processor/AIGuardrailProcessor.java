@@ -1103,15 +1103,29 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // Cheap pre-check: if the on-disk size can't possibly match the new content
             // (allowing for trim-whitespace tolerance), the non-marker overwrite branch
             // can skip the full file read entirely.
-            boolean fileExists = Files.exists(filePath);
-            long existingSize = fileExists ? Files.size(filePath) : 0L;
+            long existingSize;
+            boolean fileExists;
+            try {
+                existingSize = Files.size(filePath);
+                fileExists = true;
+            } catch (java.nio.file.NoSuchFileException nsfe) {
+                existingSize = 0L;
+                fileExists = false;
+            }
             int contentByteLen = content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
             boolean nonMarkerSizeMismatch = !supportsMarkers && fileExists
                 && Math.abs(existingSize - contentByteLen) > 64;
 
-            String existing = (fileExists && !nonMarkerSizeMismatch)
-                ? Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8)
-                : "";
+            String existing;
+            if (!fileExists || nonMarkerSizeMismatch) {
+                existing = "";
+            } else {
+                try {
+                    existing = Files.readString(filePath, java.nio.charset.StandardCharsets.UTF_8);
+                } catch (java.nio.file.NoSuchFileException nsfe) {
+                    existing = "";
+                }
+            }
 
             if (supportsMarkers) {
                 String markerStart = markers[0];
