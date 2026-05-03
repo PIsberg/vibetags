@@ -17,16 +17,29 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vibetags.version>0.5.6</vibetags.version>
+        <!-- BOM is the single source of truth for vibetags-* versions. Bumping this one
+             value rolls the processor and any future vibetags-* artifact in lockstep. -->
+        <vibetags.bom.version>0.5.6</vibetags.bom.version>
         <vibetags.log.path>vibetags.log</vibetags.log.path>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>se.deversity.vibetags</groupId>
+                <artifactId>vibetags-bom</artifactId>
+                <version>${vibetags.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <!-- VibeTags Annotation Processor -->
+        <!-- Version is supplied by the imported BOM; do not re-declare it here. -->
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-processor</artifactId>
-            <version>${vibetags.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -46,11 +59,15 @@
                     </compilerArgs>
                     <!-- Explicit processor path required for Java 23+ where implicit classpath
                          discovery is disabled by default (see javac release 23 notes). -->
+                    <!-- annotationProcessorPaths does not inherit versions from
+                         dependencyManagement (Maven plugin limitation, MCOMPILER-391),
+                         so the BOM-managed version is repeated here via the same
+                         property. Updating vibetags.bom.version above keeps them in sync. -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>se.deversity.vibetags</groupId>
                             <artifactId>vibetags-processor</artifactId>
-                            <version>${vibetags.version}</version>
+                            <version>${vibetags.bom.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

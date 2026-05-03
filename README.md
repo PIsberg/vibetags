@@ -60,6 +60,8 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
+├── vibetags-bom/         # Bill of Materials (versions only, no source)
+│   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
 │   ├── README.md         # How to run, what to measure, baseline comparison guide
 │   ├── pom.xml           # Maven configuration (JMH + JUnit 5)
@@ -103,6 +105,51 @@ Add VibeTags as a compile-time dependency. The annotation processor is automatic
 ```groovy
 compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.6'
 annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.6'
+```
+
+#### Optional: import the BOM instead of pinning each version
+
+If you (or your platform) already manage versions through BOMs, import `vibetags-bom`
+once and drop the explicit `<version>` from each `vibetags-*` dependency. This makes
+`0.5.6` the single source of truth — bumping the BOM version rolls every VibeTags
+artifact in lockstep.
+
+**Maven:**
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>se.deversity.vibetags</groupId>
+            <artifactId>vibetags-bom</artifactId>
+            <version>0.5.6</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-processor</artifactId>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+```
+
+> **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour
+> `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)).
+> Reuse the BOM version property there. See `example/pom.xml` for the pattern.
+
+**Gradle:**
+```groovy
+dependencies {
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.5.6')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.5.6')
+
+    compileOnly 'se.deversity.vibetags:vibetags-processor'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
 ```
 
 ### Option 1: Using Maven

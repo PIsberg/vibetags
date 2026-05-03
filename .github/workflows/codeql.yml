@@ -67,6 +67,9 @@ jobs:
       - name: Build VibeTags library
         run: cd vibetags && mvn clean install -B -q
 
+      - name: Install VibeTags BOM
+        run: cd vibetags-bom && mvn install -B -q
+
       - name: Build example project
         run: cd example && mvn clean compile -B -q
 
