@@ -1,10 +1,11 @@
 # VibeTags Load Tests
 
-Standalone benchmark harness for the `AIGuardrailProcessor`. Three test categories live here:
+Standalone benchmark harness for the `AIGuardrailProcessor`. Four test categories live here:
 
 | Category | Class | What it measures |
 |---|---|---|
 | Annotation-volume sweep | `AnnotationVolumeStressTest` | Wall-clock cost as N annotated classes grows from 10 → 10 000 |
+| Memory-volume sweep | `MemoryVolumeStressTest` | Per-thread allocated bytes and peak heap, same N sweep |
 | Hot-path microbenchmarks | `ProcessorHotPathBenchmark` (JMH) | Per-call cost of `writeFileIfChanged`, `buildServiceFileMap`, `resolveActiveServices` |
 | Concurrent-build safety | `ConcurrentBuildTest` | Behaviour under N threads writing to a shared project root |
 
@@ -43,7 +44,7 @@ VibeTags is a **compile-time** annotation processor with `RetentionPolicy.SOURCE
 |---|---|---|
 | **Wall-clock overhead per N classes** | Determines whether the processor scales linearly with project size. A super-linear curve means a real user with 10 000 annotated classes pays a disproportionate compile-time tax. | `processorTime - baselineTime` in `AnnotationVolumeStressTest` |
 | **Per-call latency on the hot path** | `writeFileIfChanged` runs once per generated file per round. `resolveActiveServices` runs once per compile. Sub-millisecond regressions here multiply across modules. | JMH `AverageTime` mode in `ProcessorHotPathBenchmark` |
-| **Allocation rate / peak heap during processing** | Annotation processors run inside `javac` — they share the compiler's heap. A processor that allocates `O(N²)` strings can OOM a multi-module Maven build long before it errors. | JMH `-prof gc` (allocations); `-Xlog:gc*` or `jcmd <pid> GC.heap_info` from a stress run |
+| **Allocation rate / peak heap during processing** | Annotation processors run inside `javac` — they share the compiler's heap. A processor that allocates `O(N²)` strings can OOM a multi-module Maven build long before it errors. | `OverheadAlloc(KB)` and `PeakHeap(MB)` columns in `MemoryVolumeStressTest`; JMH `-prof gc` for finer-grained per-call attribution |
 | **Generated output size vs. annotation count** | Linear is expected; anything else means duplicate emission or the marker block is being appended instead of replaced. | `OutputSize(B)` column in the stress report |
 | **No-change fast-path latency** | Incremental builds dominate developer wait time. If `writeFileIfChanged_noChange` is not the cheapest benchmark, the read-compare path has regressed. | `writeFileIfChanged_noChange` in JMH |
 | **CPU time vs. wall-clock under contention** | `ConcurrentBuildTest` exposes the absence of file-level locking. CPU staying flat while wall-clock balloons indicates lock contention or I/O serialization. | `ConcurrentBuildTest` + OS-level CPU sampling |
@@ -136,6 +137,7 @@ load-tests/
 │   ├── main/java/.../SyntheticClassGenerator.java
 │   ├── main/java/.../ProcessorHotPathBenchmark.java   (JMH)
 │   └── test/java/.../AnnotationVolumeStressTest.java
+│       test/java/.../MemoryVolumeStressTest.java
 │       test/java/.../ConcurrentBuildTest.java
 └── results/                                   ← suggested; gitignored except for tagged baselines
     ├── 0.6.0/
