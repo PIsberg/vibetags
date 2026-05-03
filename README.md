@@ -96,22 +96,22 @@ Add VibeTags as a compile-time dependency. The annotation processor is automatic
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.5.6</version>
+    <version>0.5.7</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.6'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.6'
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.7'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.7'
 ```
 
 #### Optional: import the BOM instead of pinning each version
 
 If you (or your platform) already manage versions through BOMs, import `vibetags-bom`
 once and drop the explicit `<version>` from each `vibetags-*` dependency. This makes
-`0.5.6` the single source of truth — bumping the BOM version rolls every VibeTags
+`0.5.7` the single source of truth — bumping the BOM version rolls every VibeTags
 artifact in lockstep.
 
 **Maven:**
@@ -121,7 +121,7 @@ artifact in lockstep.
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.5.6</version>
+            <version>0.5.7</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -144,8 +144,8 @@ artifact in lockstep.
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.5.6')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.5.6')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.5.7')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.5.7')
 
     compileOnly 'se.deversity.vibetags:vibetags-processor'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
