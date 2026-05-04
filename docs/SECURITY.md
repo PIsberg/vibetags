@@ -13,7 +13,7 @@ Only the latest minor release within the current major version receives security
 
 **Do not open a public issue** for security vulnerabilities.
 
-1. Email **peter.isberg@gmail.com** with:
+1. Email **isberg.peter@gmail.com** with:
    - A description of the vulnerability
    - Steps to reproduce
    - Impact assessment (if possible)
