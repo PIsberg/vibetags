@@ -9,6 +9,7 @@ This is a sample e-commerce application that shows how VibeTags annotations cont
 - **`@AILocked`** - Protects critical code from AI modifications
 - **`@AICore`** - Marks well-tested core logic as highly sensitive (extreme caution)
 - **`@AIPerformance`** - Sets strict complexity constraints for hot-path code
+- **`@AIContract`** - Freezes a public API signature (method name, parameter types, return type, checked exceptions) while still inviting AI to refactor the internal logic
 - **`@AIContext`** - Guides AI on how to work with specific classes (focus/avoid instructions)
 - **`@AIDraft`** - Marks methods that need AI implementation with detailed instructions
 - **`@AIAudit`** - Tags critical infrastructure for continuous AI security auditing
@@ -32,7 +33,9 @@ example/
     │   └── SecurityConfig.java                # @AILocked + @AIContext example
     ├── service/
     │   ├── NotificationService.java           # @AIDraft + @AIPrivacy example (AI implements, PII phone/email)
-    │   └── OrderService.java                  # Mixed annotations example (@AILocked, @AIDraft, @AIPrivacy)
+    │   ├── OrderService.java                  # Mixed annotations example (@AILocked, @AIDraft, @AIPrivacy)
+    │   ├── InventoryService.java              # @AICore + @AIPerformance example (well-tested core, hot-path)
+    │   └── PricingService.java                # @AIContract example (frozen API signatures, mutable internals)
     ├── strategy/
     │   ├── PaymentStrategy.java               # @AIContext enforcing design pattern
     │   └── impl/
@@ -337,6 +340,38 @@ public class EfficientSorter {
     // AI will avoid O(n^2) or other suboptimal implementations
 }
 ```
+
+### 9. `@AIContract` - Freeze a Public API Signature
+
+Use when a method's **public surface** is pinned by an external contract (OpenAPI/AsyncAPI, message schema, generated client, downstream service binding) but the **internal implementation** is free to change. AI is explicitly invited to refactor the body — it just must not alter:
+
+- the method name
+- parameter types or parameter order
+- the return type
+- the set of checked exceptions
+
+```java
+@AIContract(reason = "Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.")
+@AIPerformance(constraint = "Must complete in <5ms p99. Called on every cart update.")
+public double calculatePrice(String productId, int quantity, String customerId) {
+    // Internal pricing logic is freely modifiable — switch from rule engine to ML model,
+    // add caching, change data sources. Just don't rename the method or change parameter types.
+}
+```
+
+See `service/PricingService.java` for three real examples (OpenAPI-pinned method, async message contract, B2B JSON portal contract).
+
+**Real-world use cases:**
+- Methods exposed via an OpenAPI / AsyncAPI specification
+- Methods consumed by other services through generated clients
+- Methods serialized to JSON / Avro / Protobuf where field shapes are part of the wire format
+- Library / SDK public APIs with stable-version commitments
+
+**Difference from `@AILocked`:** `@AILocked` prohibits *all* changes (visible AND internal). `@AIContract` prohibits only signature changes — the body is fair game. Use `@AILocked` when the algorithm itself is sensitive; use `@AIContract` when only the API surface is.
+
+**Compile-time warnings:**
+- `@AIContract` + `@AIDraft` on the same element → contradictory (signature is frozen, but `@AIDraft` implies the element still needs implementing)
+- `@AIContract` + `@AILocked` on the same element → overlapping intent (`@AILocked` already prohibits all changes; if no internal changes are wanted either, use only `@AILocked`)
 
 ## 🛠️ Generated AI Configuration Files
 
@@ -651,6 +686,7 @@ The processor uses `Paths.get("")` which resolves to the directory where Maven/G
 | New features | `@AIDraft` | Unimplemented methods |
 | Framework code | `@AIContext` | Spring configs, DI setup |
 | PII fields / methods | `@AIPrivacy` | Credentials, email, phone, card data |
+| Contract-pinned public API | `@AIContract` | OpenAPI methods, message-schema bindings, JSON portal endpoints |
 
 ## 🎯 Next Steps
 
