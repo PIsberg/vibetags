@@ -47,6 +47,10 @@ if [ -f "$SCRIPT_DIR/.vibetags-cache" ]; then
   echo "  removed: .vibetags-cache"
 fi
 
+# Sweep any stale backup files left over from before 0.5.6's atomic-move switch.
+# The current writer never creates these, but old checkouts might.
+find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
+
 # Cleanup granular rules in directories
 for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
