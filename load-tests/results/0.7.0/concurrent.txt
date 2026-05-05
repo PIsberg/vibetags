@@ -1,0 +1,46 @@
+-------------------------------------------------------------------------------
+Test set: se.deversity.vibetags.loadtest.ConcurrentBuildTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.259 s <<< FAILURE! -- in se.deversity.vibetags.loadtest.ConcurrentBuildTest
+se.deversity.vibetags.loadtest.ConcurrentBuildTest.concurrentCompile_sharedRoot_filesRemainParseable(Path) -- Time elapsed: 0.257 s <<< ERROR!
+java.io.IOException: Failed to delete temp directory C:\Users\isber\AppData\Local\Temp\junit1312183246419565695. The following paths could not be deleted (see suppressed exceptions for details): <root>, shared-project, shared-project\vibetags.log
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.stream.SortedOps$RefSortingSink.end(SortedOps.java:395)
+	at java.base/java.util.stream.Sink$ChainedReference.end(Sink.java:261)
+	at java.base/java.util.stream.Sink$ChainedReference.end(Sink.java:261)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	Suppressed: java.nio.file.DirectoryNotEmptyException: C:\Users\isber\AppData\Local\Temp\junit1312183246419565695
+		at java.base/sun.nio.fs.WindowsFileSystemProvider.implDelete(WindowsFileSystemProvider.java:270)
+		at java.base/sun.nio.fs.AbstractFileSystemProvider.delete(AbstractFileSystemProvider.java:104)
+		at java.base/java.nio.file.Files.delete(Files.java:1152)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2803)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2857)
+		... 13 more
+	Suppressed: java.nio.file.DirectoryNotEmptyException: C:\Users\isber\AppData\Local\Temp\junit1312183246419565695\shared-project
+		at java.base/sun.nio.fs.WindowsFileSystemProvider.implDelete(WindowsFileSystemProvider.java:270)
+		at java.base/sun.nio.fs.AbstractFileSystemProvider.delete(AbstractFileSystemProvider.java:104)
+		at java.base/java.nio.file.Files.delete(Files.java:1152)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2803)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2857)
+		... 13 more
+	Suppressed: java.nio.file.FileSystemException: C:\Users\isber\AppData\Local\Temp\junit1312183246419565695\shared-project\vibetags.log: The process cannot access the file because it is being used by another process
+		at java.base/sun.nio.fs.WindowsException.translateToIOException(WindowsException.java:92)
+		at java.base/sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:103)
+		at java.base/sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:108)
+		at java.base/sun.nio.fs.WindowsFileSystemProvider.implDelete(WindowsFileSystemProvider.java:273)
+		at java.base/sun.nio.fs.AbstractFileSystemProvider.delete(AbstractFileSystemProvider.java:104)
+		at java.base/java.nio.file.Files.delete(Files.java:1152)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2786)
+		at java.base/java.nio.file.Files.walkFileTree(Files.java:2857)
+		... 13 more
+		Suppressed: java.nio.file.FileSystemException: C:\Users\isber\AppData\Local\Temp\junit1312183246419565695\shared-project\vibetags.log: The process cannot access the file because it is being used by another process
+			... 21 more
+
