@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 - **Per-output-file write cache.** Added a `.vibetags-cache` sidecar at the project root that records the SHA-256 of the last-written body, the file size, and the file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the read-and-compare path entirely. Real win for the "rebuild without changing annotated classes" case (most incremental builds). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+- **Streaming byte-compare for non-marker files.** When a non-marker output file (e.g. `.cursorignore`, `.aiderignore`, `.aiexclude`, ignore files) exists at the same byte length as the about-to-be-written content, `writeFileIfChanged` now stream-compares with early-exit on first byte mismatch instead of materialising the entire file as a `String` for `.equals()`. Avoids a multi-MB allocation for large ignore files and finds mismatches in the first kilobyte without reading the rest. Strip-tolerant compare is still used for ≤64-byte size differences.
 
 ## [0.7.0] - 2026-05-05
 

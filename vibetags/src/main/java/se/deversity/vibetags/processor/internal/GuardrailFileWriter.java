@@ -95,9 +95,31 @@ public final class GuardrailFileWriter {
                 existingSize = 0L;
                 fileExists = false;
             }
-            int contentByteLen = content.getBytes(StandardCharsets.UTF_8).length;
+            byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
+            int contentByteLen = contentBytes.length;
             boolean nonMarkerSizeMismatch = !supportsMarkers && fileExists
                 && Math.abs(existingSize - contentByteLen) > 64;
+
+            // Phase-2 streaming fast path: for non-marker files where the on-disk size matches
+            // the new content size exactly, stream-compare bytes with early-exit on first
+            // mismatch. Skips materialising the entire file as a String just to call .equals().
+            if (!supportsMarkers && fileExists && existingSize == contentByteLen) {
+                if (fileBytesEqual(filePath, contentBytes)) {
+                    // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
+                    // the cheap WriteCache fast path even on the very first build.
+                    if (writeCache != null) writeCache.recordWrite(filePath, content);
+                    return false;
+                }
+                // Sizes match but bytes differ — write directly. No need for readString or
+                // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
+                if (!hasNewRules && existingSize > 0) {
+                    skipUpdateMsg(fileName);
+                    return false;
+                }
+                writeAndCache(filePath, content, content);
+                messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+                return true;
+            }
 
             String existing = (fileExists && !nonMarkerSizeMismatch)
                 ? Files.readString(filePath, StandardCharsets.UTF_8)
@@ -356,6 +378,29 @@ public final class GuardrailFileWriter {
             }
         } catch (IOException ignored) {
             // Skip files we can't read
+        }
+    }
+
+    /**
+     * Streams {@code file} and compares byte-by-byte against {@code expected}. Returns true iff
+     * the file is exactly the same bytes. Early-exits on first mismatch.
+     *
+     * <p>The caller must already have established that {@code Files.size(file) == expected.length}
+     * — this method does not re-check.
+     */
+    public static boolean fileBytesEqual(Path file, byte[] expected) throws IOException {
+        try (java.io.InputStream in = Files.newInputStream(file)) {
+            byte[] buf = new byte[Math.min(8192, Math.max(1, expected.length))];
+            int idx = 0;
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                if (idx + n > expected.length) return false; // file longer than expected
+                for (int i = 0; i < n; i++) {
+                    if (buf[i] != expected[idx + i]) return false;
+                }
+                idx += n;
+            }
+            return idx == expected.length;
         }
     }
 
