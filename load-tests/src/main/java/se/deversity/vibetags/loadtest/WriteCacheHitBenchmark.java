@@ -75,6 +75,11 @@ public class WriteCacheHitBenchmark {
     private Path mediumNonMarkerFile;
     private String mediumBody;
 
+    // Large workload (1 MB body — what an llms-full.txt looks like on a big monorepo).
+    private Path largeMarkerFile;
+    private Path largeNonMarkerFile;
+    private String largeBody;
+
     @Setup(Level.Trial)
     public void setup() throws IOException {
         Path tempDir = Files.createTempDirectory("jmh-cache-hit-");
@@ -82,12 +87,16 @@ public class WriteCacheHitBenchmark {
 
         smallBody  = repeatAlpha(1024);
         mediumBody = repeatAlpha(12 * 1024);
+        largeBody  = repeatAlpha(1024 * 1024);
 
         smallMarkerFile     = tempDir.resolve("small.md");
         smallNonMarkerFile  = tempDir.resolve("small.cursorrules");
         mediumMarkerFile    = tempDir.resolve("medium.md");
         mediumNonMarkerFile = tempDir.resolve("medium.cursorrules");
-        for (Path p : new Path[]{smallMarkerFile, smallNonMarkerFile, mediumMarkerFile, mediumNonMarkerFile}) {
+        largeMarkerFile     = tempDir.resolve("large.md");
+        largeNonMarkerFile  = tempDir.resolve("large.cursorrules");
+        for (Path p : new Path[]{smallMarkerFile, smallNonMarkerFile, mediumMarkerFile, mediumNonMarkerFile,
+                                 largeMarkerFile, largeNonMarkerFile}) {
             Files.writeString(p, "", StandardCharsets.UTF_8);
         }
 
@@ -101,6 +110,8 @@ public class WriteCacheHitBenchmark {
         primeFile(smallNonMarkerFile,  smallBody);
         primeFile(mediumMarkerFile,    mediumBody);
         primeFile(mediumNonMarkerFile, mediumBody);
+        primeFile(largeMarkerFile,     largeBody);
+        primeFile(largeNonMarkerFile,  largeBody);
     }
 
     private static String repeatAlpha(int chars) {
@@ -163,5 +174,24 @@ public class WriteCacheHitBenchmark {
     @Benchmark @OperationsPerInvocation(BATCH)
     public void medium_nonMarker_noCache(Blackhole bh) {
         for (int i = 0; i < BATCH; i++) bh.consume(writerNoCache.writeFileIfChanged(mediumNonMarkerFile.toString(), mediumBody, true));
+    }
+
+    // ===== Large (1 MB — Files.readString cost dominates the no-cache path; cache wins clearly) =====
+
+    @Benchmark @OperationsPerInvocation(BATCH)
+    public void large_marker_cacheHit(Blackhole bh) {
+        for (int i = 0; i < BATCH; i++) bh.consume(writerWithCache.writeFileIfChanged(largeMarkerFile.toString(), largeBody, true));
+    }
+    @Benchmark @OperationsPerInvocation(BATCH)
+    public void large_marker_noCache(Blackhole bh) {
+        for (int i = 0; i < BATCH; i++) bh.consume(writerNoCache.writeFileIfChanged(largeMarkerFile.toString(), largeBody, true));
+    }
+    @Benchmark @OperationsPerInvocation(BATCH)
+    public void large_nonMarker_cacheHit(Blackhole bh) {
+        for (int i = 0; i < BATCH; i++) bh.consume(writerWithCache.writeFileIfChanged(largeNonMarkerFile.toString(), largeBody, true));
+    }
+    @Benchmark @OperationsPerInvocation(BATCH)
+    public void large_nonMarker_noCache(Blackhole bh) {
+        for (int i = 0; i < BATCH; i++) bh.consume(writerNoCache.writeFileIfChanged(largeNonMarkerFile.toString(), largeBody, true));
     }
 }

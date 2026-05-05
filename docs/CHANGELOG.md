@@ -13,11 +13,26 @@ A pure performance release. Three optimisations target the steady-state incremen
 
 ### Performance
 
-- **Per-output-file write cache (`.vibetags-cache`).** New sidecar at the project root recording a CRC32C fingerprint of the last-written body, file size, and file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the entire read-and-compare-and-write path. CRC32C uses the SSE-4.2 hardware instruction on x86 and is roughly an order of magnitude faster than SHA-256 for this fingerprint use; collision probability between two differently-generated VibeTags bodies is ~1 in 4 billion, and a collision could only cause us to skip writing identical content (never silently corrupt output, since size + mtime are also checked). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+- **Per-output-file write cache (`.vibetags-cache`).** New sidecar at the project root recording a 32-bit `String.hashCode()` fingerprint of the last-written body, file size, and file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the entire read-and-compare-and-write path. The fingerprint uses `String.hashCode()` (cached internally on the `String`, HotSpot-intrinsified on x86) rather than a heavier hash so the cache lookup never has to materialise the body's UTF-8 byte array — which is what makes the 10,000× allocation reduction at 1 MB body size possible. Collision probability for two non-adversarial VibeTags bodies is ~1 in 4 billion, and a collision could only cause us to skip writing identical content (never silently corrupt output, since size + mtime are also checked). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
 
-  **Where the cache helps and where it doesn't** (verified via the new `WriteCacheHitBenchmark`):
-  - On **warm-cache local SSD**, the cache is a wash on wall-clock — `Files.readAttributes` + CRC32C of a small body costs about the same as `Files.readString` + strip-equals on a warm OS page cache. The cache *does* eliminate the `String` allocation for the existing-content read (less GC pressure under load) and cuts the syscall count from 3 (open + read + close) to 1 (stat).
-  - On **cold caches, network filesystems, or genuinely large files**, the cache wins meaningfully: stat is a single round-trip; `readString` is multiple. The end-to-end test in `example/` shows the writes are correctly skipped — file mtimes stay identical across no-change rebuilds — which is the visible production benefit on any storage backend.
+  **Measured impact** (new `WriteCacheHitBenchmark` in `load-tests/`, JMH AverageTime + GC profiler, 100-call batches per measurement to amortise framework floor):
+
+  | Body size | File type | cache hit | no cache | wall-clock speedup | allocation reduction |
+  |---|---|---:|---:|---:|---:|
+  | 1 KB | `.md` (marker) | 16.4 µs | 208.5 µs | **13×** | **15×** |
+  | 1 KB | `.cursorrules` (non-marker) | 10.0 µs | 209.4 µs | **21×** | **14×** |
+  | 12 KB | `.md` | 18.1 µs | 262.7 µs | **15×** | **135×** |
+  | 12 KB | `.cursorrules` | 17.4 µs | 297.3 µs | **17×** | **128×** |
+  | 1 MB | `.md` | 18.6 µs | 3,405 µs | **183×** | **11,159×** |
+  | 1 MB | `.cursorrules` | 18.1 µs | 3,285 µs | **181×** | **10,595×** |
+
+  The cache hit path is essentially constant time (~16-19 µs) regardless of body size — it's bounded by one `Files.readAttributes` syscall plus an O(1) cached hashCode lookup. The no-cache path scales linearly with body size because it must `readString` the entire file on every call and pay the matching String + char[] + strip-copy allocations.
+
+  ![Wall-clock per writeFileIfChanged call](changelog-assets/0.7.1/cache-hit-time.png)
+
+  ![Allocation per writeFileIfChanged call](changelog-assets/0.7.1/cache-hit-alloc.png)
+
+  Full analysis (including the engineering story behind why we landed on `String.hashCode()` after rejecting SHA-256 and CRC32C): `load-tests/results/0.7.1/jmh-cache-hit-summary.md`.
 - **Streaming byte-compare for non-marker writes.** When a non-marker output file (`.cursorignore`, `.aiderignore`, `.aiexclude`, ignore-style files, `.json` / `.toml` configs) exists at exactly the new content's byte length, `writeFileIfChanged` now stream-compares with early-exit on first byte mismatch instead of materialising the full file as a `String` for `.equals()`. Avoids a multi-MB allocation on large ignore files and finds mismatches in the first kilobyte without reading the rest. The strip-tolerant `readString` path is still used for ≤64-byte size differences.
 - **Pre-sized per-platform `StringBuilder`s.** `GuardrailContentBuilder` now pre-allocates the nine main per-platform buffers (`cursorRules`, `claudeMd`, `codexAgents`, `copilot`, `qwenMd`, `windsurfRules`, `zedRules`, `llmsTxt`, `llmsFullTxt`) based on collected element count (~1500 chars per element, capped at 256 KB). Eliminates the log₂(N) `char[]` grow-and-copy passes that the eight per-annotation `appendXxx()` loops previously triggered.
 - **Halved syscall count on the cache hot-path.** `WriteCache.isUnchanged` now uses a single `Files.readAttributes(BasicFileAttributes.class)` call to read both size and mtime in one stat instead of two separate `Files.size()` + `Files.getLastModifiedTime()` calls. `WriteCache.recordWrite` reuses `body.getBytes(UTF_8).length` (the value just written) instead of issuing a redundant `Files.size()` syscall after the write. The cache write-side overhead drops from ~30 µs to ~10 µs on Windows.

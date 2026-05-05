@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -10,7 +9,6 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.zip.CRC32C;
 
 /**
  * Per-output-file content cache. Lets {@link GuardrailFileWriter} skip the
@@ -64,21 +62,20 @@ public final class WriteCache {
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
             if (attrs.size() != e.size) return false;
             if (attrs.lastModifiedTime().toMillis() != e.mtime) return false;
-            return e.hash.equals(crc32c(body));
+            return e.hash.equals(fingerprint(body));
         } catch (IOException ioe) {
             return false; // file gone or unreadable — let the writer regenerate
         }
     }
 
-    /** Records that {@code body} was written to {@code file}. Reads the file's mtime;
-     *  reuses the body's UTF-8 byte length (which is what was just written) instead of
-     *  re-stat-ing for size. */
+    /** Records that {@code body} was written to {@code file}. One {@code readAttributes} call
+     *  for both size and mtime; no per-call byte[] allocation. */
     public void recordWrite(Path file, String body) {
         loadIfNeeded();
         try {
-            long size = body.getBytes(StandardCharsets.UTF_8).length;
-            long mtime = Files.getLastModifiedTime(file).toMillis();
-            entries.put(file.toString(), new Entry(crc32c(body), size, mtime));
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+            entries.put(file.toString(),
+                new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
             dirty = true;
         } catch (IOException ignored) {
             // If we can't stat the file we just wrote, drop the cache entry rather than store stale data.
@@ -159,25 +156,29 @@ public final class WriteCache {
     }
 
     /**
-     * Computes a CRC32C fingerprint of the UTF-8 encoding of {@code s}, returned as 8 hex digits.
+     * Computes a fingerprint of {@code s} using {@link String#hashCode()}, returned as 8 hex digits.
      *
-     * <p>CRC32C is in the JDK ({@link CRC32C}, since 9) and uses the x86 SSE-4.2 CRC32
-     * instruction at ~1.5 GB/s — roughly an order of magnitude faster than {@code SHA-256}
-     * on this workload. We're using it as a non-adversarial fingerprint to answer "is this
-     * the same body we wrote last time?" — collision probability for two
-     * differently-generated VibeTags bodies is 2^-32 ≈ 1 in 4 billion, and a collision
-     * would only mean we incorrectly skipped writing identical content, never silently
-     * corrupted output (size + mtime are also checked first).
+     * <p>Why {@code String.hashCode()} and not a heavier hash:
+     * <ul>
+     *   <li>Same 32-bit collision space as CRC32C; for two non-adversarial VibeTags bodies the
+     *       collision probability is 2^-32 ≈ 1 in 4 billion, and a collision could only cause us
+     *       to skip writing identical content (never silently corrupt output, since size + mtime
+     *       are checked first).</li>
+     *   <li>{@link String} caches its {@code hashCode()} after first computation — subsequent calls
+     *       on the same String reference are O(1). When the same body String is asked about
+     *       multiple times in one compile, we pay O(N) once.</li>
+     *   <li>HotSpot intrinsifies {@code String.hashCode()} on x86 with vectorised instructions.</li>
+     *   <li>Crucially: <strong>no UTF-8 byte array materialisation per call</strong>. The previous
+     *       CRC32C implementation allocated a fresh {@code byte[s.length()*?]} on every cache
+     *       lookup, defeating the cache's purpose for large bodies.</li>
+     * </ul>
      */
-    private static String crc32c(String s) {
-        byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
-        CRC32C crc = new CRC32C();
-        crc.update(ByteBuffer.wrap(bytes));
-        long v = crc.getValue();
+    private static String fingerprint(String s) {
+        int h = s.hashCode();
         char[] out = new char[8];
         for (int i = 7; i >= 0; i--) {
-            out[i] = HEX[(int) (v & 0xF)];
-            v >>>= 4;
+            out[i] = HEX[h & 0xF];
+            h >>>= 4;
         }
         return new String(out);
     }
