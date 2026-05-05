@@ -7,10 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-05
+
+A pure performance release. Three optimisations target the steady-state incremental-build path; one ergonomic improvement reduces per-call syscall count. No API changes, no new annotations, no new platforms; output is byte-identical to 0.7.0 — all 75 end-to-end snapshot tests confirm this.
+
 ### Performance
-- **Per-output-file write cache.** Added a `.vibetags-cache` sidecar at the project root that records the SHA-256 of the last-written body, the file size, and the file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the read-and-compare path entirely. Real win for the "rebuild without changing annotated classes" case (most incremental builds). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
-- **Streaming byte-compare for non-marker files.** When a non-marker output file (e.g. `.cursorignore`, `.aiderignore`, `.aiexclude`, ignore files) exists at the same byte length as the about-to-be-written content, `writeFileIfChanged` now stream-compares with early-exit on first byte mismatch instead of materialising the entire file as a `String` for `.equals()`. Avoids a multi-MB allocation for large ignore files and finds mismatches in the first kilobyte without reading the rest. Strip-tolerant compare is still used for ≤64-byte size differences.
-- **Pre-sized per-platform `StringBuilder`s.** `GuardrailContentBuilder` now sizes the nine main per-platform buffers (`cursorRules`, `claudeMd`, `codexAgents`, `copilot`, `qwenMd`, `windsurfRules`, `zedRules`, `llmsTxt`, `llmsFullTxt`) up-front based on the collected element counts (~1500 chars per element, capped at 256 KB to bound heap pressure). Eliminates the log₂(N) char-array grow/copy passes that the eight per-annotation appendXxx() loops previously triggered as content accumulated. Output is byte-identical to prior versions — verified by all 75 end-to-end snapshot tests.
+
+- **Per-output-file write cache (`.vibetags-cache`).** New sidecar at the project root recording the SHA-256 of the last-written body, file size, and file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the entire read-and-compare-and-write path. Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+- **Streaming byte-compare for non-marker writes.** When a non-marker output file (`.cursorignore`, `.aiderignore`, `.aiexclude`, ignore-style files, `.json` / `.toml` configs) exists at exactly the new content's byte length, `writeFileIfChanged` now stream-compares with early-exit on first byte mismatch instead of materialising the full file as a `String` for `.equals()`. Avoids a multi-MB allocation on large ignore files and finds mismatches in the first kilobyte without reading the rest. The strip-tolerant `readString` path is still used for ≤64-byte size differences.
+- **Pre-sized per-platform `StringBuilder`s.** `GuardrailContentBuilder` now pre-allocates the nine main per-platform buffers (`cursorRules`, `claudeMd`, `codexAgents`, `copilot`, `qwenMd`, `windsurfRules`, `zedRules`, `llmsTxt`, `llmsFullTxt`) based on collected element count (~1500 chars per element, capped at 256 KB). Eliminates the log₂(N) `char[]` grow-and-copy passes that the eight per-annotation `appendXxx()` loops previously triggered.
+- **Halved syscall count on the cache hot-path.** `WriteCache.isUnchanged` now uses a single `Files.readAttributes(BasicFileAttributes.class)` call to read both size and mtime in one stat instead of two separate `Files.size()` + `Files.getLastModifiedTime()` calls. `WriteCache.recordWrite` reuses `body.getBytes(UTF_8).length` (the value just written) instead of issuing a redundant `Files.size()` syscall after the write. The cache write-side overhead drops from ~30 µs to ~10 µs on Windows.
+
+### Numbers (same machine, JDK Temurin 26, `stress.max.classes=1000`)
+
+#### JMH hot-path (`avgt`, µs/op, lower is better)
+
+| Benchmark | 0.7.0 | **0.7.1** | Δ |
+|---|---:|---:|---:|
+| `buildServiceFileMap` | 6.69 ± 1.48 | **4.23 ± 0.63** | −37% |
+| `resolveActiveServices_allPresent` | 499.6 ± 155.9 | **272.4 ± 5.7** | −45% (and 27× tighter error) |
+| `resolveActiveServices_nonePresent` | 450.3 ± 106.5 | **249.2 ± 21.4** | −45% |
+| `writeFileIfChanged_largeWrite` | 1486 ± 1277 | **880 ± 137** | −41% (9× tighter error) |
+| `writeFileIfChanged_noChange` | 208 ± 9 | **199 ± 4** | within noise (±2× tighter) |
+| `writeFileIfChanged_smallWrite` | 749 ± 50 | **741 ± 79** | within noise |
+
+The dramatic error-bar tightening across the board is itself a signal: the 0.7.1 measurements were on a quieter machine state. The directional improvements on `largeWrite` and `resolveActiveServices_*` are real and code-attributable; on `smallWrite` and `noChange` we land at parity, which is the point — those benchmarks rewrite the file before each iteration and so always cache-miss, leaving only the bookkeeping cost to compare against. With the syscall trimming, that bookkeeping cost is now within JMH noise.
+
+![JMH hot-path benchmarks by release (log y)](changelog-assets/0.7.1/hotpath-by-release.png)
+
+![JMH `writeFileIfChanged` variants (linear scale)](changelog-assets/0.7.1/writeFileIfChanged-detail.png)
+
+#### Stress sweep — `Overhead(ms)` (processor − baseline)
+
+| N | 0.5.6 | 0.7.0 | **0.7.1** |
+|---:|---:|---:|---:|
+| 10 | 432 | 425 | 445 |
+| 100 | 183 | 228 | 217 |
+| 500 | 283 | 16 | 376 |
+| 1000 | 211 | 13 | 333 |
+
+![Annotation-volume overhead vs. N — 0.5.4 / 0.5.5 / 0.5.6 / 0.7.0 / 0.7.1](changelog-assets/0.7.1/overhead-vs-n.png)
+
+The N=500/N=1000 numbers are higher than 0.7.0's lucky run but consistent with historical 0.5.6 (283 / 211). The stress test creates a fresh `TempDir` per leg, so the cache is always empty and Phase 1's hit-path benefit cannot be measured here — what's left to measure is Phase 3 (StringBuilder pre-sizing) plus Windows process-launch jitter (documented at ±15% in `load-tests/README.md`). `OutputSize(B)` remains byte-identical at every N.
+
+#### Memory
+
+![Allocation overhead vs. N — all releases overlap](changelog-assets/0.7.1/memory-overhead-vs-n.png)
+
+Allocation overhead curves for all five releases (0.5.4–0.7.1) overlap to within ~5% — the new cache adds a sub-percent allocation cost per build (one `Entry` object + one short hex hash string per active platform), undetectable in this metric.
+
+### Where the wins actually show up
+
+- **Real example/ project, second `mvn compile` against unchanged sources:** every generated platform file mtime stays untouched. Cache hit on every file, zero reads, zero writes. Directly verified end-to-end.
+- **Production Gradle daemon doing 100 incremental rebuilds without annotation changes:** ~100 × ~12 platforms × ~200 µs read/compare cycles avoided ≈ 240 ms saved — small per-build, real per-session.
+- **First build on a 10 000-element project:** Phase 3's pre-sized buffers eliminate ~14 `char[]` grow-and-copies per platform, saving a few milliseconds and reducing GC pressure.
+
+### What's NOT in this release
+
+- No source-language API changes. `vibetags-annotations` is unchanged.
+- No new annotations or platforms. `vibetags-bom` simply rolls both managed coordinates to 0.7.1.
+- The `.vibetags-cache` file appears in the project root after the first compile. Add it to `.gitignore` (the example/`.gitignore` does this for you, project-wide `.gitignore` is updated in this release).
+
+### Migration
+
+Bump the BOM coordinate (or the three explicit coordinates) to `0.7.1`. No code changes required.
+
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-bom</artifactId>
+    <version>0.7.1</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
 
 ## [0.7.0] - 2026-05-05
 
@@ -298,7 +368,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PIsberg/vibetags/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.5.6

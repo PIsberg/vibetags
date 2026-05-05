@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashMap;
@@ -59,21 +60,23 @@ public final class WriteCache {
         Entry e = entries.get(file.toString());
         if (e == null) return false;
         try {
-            long size = Files.size(file);
-            if (size != e.size) return false;
-            long mtime = Files.getLastModifiedTime(file).toMillis();
-            if (mtime != e.mtime) return false;
+            // Single stat for both size and mtime — half the syscalls of two getXxx() calls.
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+            if (attrs.size() != e.size) return false;
+            if (attrs.lastModifiedTime().toMillis() != e.mtime) return false;
             return e.hash.equals(sha256(body));
         } catch (IOException ioe) {
             return false; // file gone or unreadable — let the writer regenerate
         }
     }
 
-    /** Records that {@code body} was written to {@code file}. Reads the file's actual size+mtime. */
+    /** Records that {@code body} was written to {@code file}. Reads the file's mtime;
+     *  reuses the body's UTF-8 byte length (which is what was just written) instead of
+     *  re-stat-ing for size. */
     public void recordWrite(Path file, String body) {
         loadIfNeeded();
         try {
-            long size = Files.size(file);
+            long size = body.getBytes(StandardCharsets.UTF_8).length;
             long mtime = Files.getLastModifiedTime(file).toMillis();
             entries.put(file.toString(), new Entry(sha256(body), size, mtime));
             dirty = true;

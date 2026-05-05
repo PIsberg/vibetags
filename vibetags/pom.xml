@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.7.0</version>
+    <version>0.7.1</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Processor</name>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-annotations</artifactId>
-            <version>0.7.0</version>
+            <version>0.7.1</version>
         </dependency>
 
         <!-- Logging: SLF4J API + Logback file appender for vibetags.log -->
