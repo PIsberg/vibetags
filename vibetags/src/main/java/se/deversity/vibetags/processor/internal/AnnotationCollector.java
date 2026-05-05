@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
@@ -28,6 +29,7 @@ public final class AnnotationCollector {
     private final Set<Element> privacyElements     = new LinkedHashSet<>();
     private final Set<Element> coreElements        = new LinkedHashSet<>();
     private final Set<Element> performanceElements = new LinkedHashSet<>();
+    private final Set<Element> contractElements    = new LinkedHashSet<>();
 
     private boolean anyAnnotationsFound = false;
 
@@ -41,11 +43,13 @@ public final class AnnotationCollector {
         privacyElements.addAll(roundEnv.getElementsAnnotatedWith(AIPrivacy.class));
         coreElements.addAll(roundEnv.getElementsAnnotatedWith(AICore.class));
         performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
+        contractElements.addAll(roundEnv.getElementsAnnotatedWith(AIContract.class));
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
                      || !draftElements.isEmpty() || !privacyElements.isEmpty()
-                     || !coreElements.isEmpty() || !performanceElements.isEmpty();
+                     || !coreElements.isEmpty() || !performanceElements.isEmpty()
+                     || !contractElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -59,6 +63,7 @@ public final class AnnotationCollector {
         privacyElements.clear();
         coreElements.clear();
         performanceElements.clear();
+        contractElements.clear();
         anyAnnotationsFound = false;
     }
 
@@ -70,5 +75,6 @@ public final class AnnotationCollector {
     public Set<Element> privacy()     { return privacyElements; }
     public Set<Element> core()        { return coreElements; }
     public Set<Element> performance() { return performanceElements; }
+    public Set<Element> contract()    { return contractElements; }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

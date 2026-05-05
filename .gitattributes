@@ -1,0 +1,7 @@
+# Normalise line endings to LF in the repository.
+# Shell scripts and workflow files must stay LF on checkout so that bash
+# line-continuation sequences (\<LF>) are not broken by Windows CRLF.
+* text=auto
+*.sh text eol=lf
+.github/workflows/*.yml text eol=lf
+Makefile text eol=lf

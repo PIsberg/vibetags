@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
@@ -51,6 +52,30 @@ public final class AnnotationValidator {
                     "VibeTags: " + element.toString()
                         + " is annotated with both @AIPrivacy and @AIIgnore. "
                         + "@AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.",
+                    element);
+            }
+        }
+
+        // Contradiction: @AIContract + @AIDraft
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIContract.class)) {
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIContract and @AIDraft. "
+                        + "@AIContract freezes the signature, but @AIDraft implies the element is not yet implemented. "
+                        + "Remove one of the two annotations.",
+                    element);
+            }
+        }
+
+        // Overlap: @AIContract + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIContract.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIContract and @AILocked. "
+                        + "@AILocked prohibits all modifications; @AIContract permits internal-logic changes. "
+                        + "Consider using only @AILocked if no changes at all are intended.",
                     element);
             }
         }

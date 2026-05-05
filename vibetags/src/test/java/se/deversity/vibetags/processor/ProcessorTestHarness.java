@@ -208,6 +208,14 @@ class ProcessorTestHarness {
             "@AIPerformance(constraint = \"O(1) per invocation — no allocations on the hot path\")\n" +
             "public class HotPathRouter {}\n");
 
+        h.addSource("com.example.api.PaymentGateway",
+            "package com.example.api;\n" +
+            "import se.deversity.vibetags.annotations.AIContract;\n" +
+            "public interface PaymentGateway {\n" +
+            "    @AIContract(reason = \"External payment gateway API — breaking changes will violate SLA\")\n" +
+            "    double charge(String customerId, double amount);\n" +
+            "}\n");
+
         h.compile();
         return h;
     }

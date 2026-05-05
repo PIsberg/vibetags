@@ -8,6 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 
+import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
@@ -354,5 +355,52 @@ class AnnotationDefinitionsTest {
             assertNotNull(TestCoreClass.class);
             assertNotNull(TestPerformanceClass.class);
         });
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIContract
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAIContractAnnotationRetention() {
+        Retention retention = AIContract.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAIContractAnnotationTargets() {
+        Target target = AIContract.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAIContractDefaultReason() throws NoSuchMethodException {
+        Method reasonMethod = AIContract.class.getDeclaredMethod("reason");
+        String defaultReason = (String) reasonMethod.getDefaultValue();
+        assertNotNull(defaultReason);
+        assertFalse(defaultReason.isBlank(), "default reason must not be blank");
+        assertTrue(defaultReason.contains("signature") || defaultReason.contains("contractually"),
+            "default reason should mention signature or contract");
+    }
+
+    @Test
+    @AIContract(reason = "Test contract")
+    void testAIContractCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAIContractCanBeUsedOnMethods");
+        AIContract contract = method.getAnnotation(AIContract.class);
+        assertNull(contract); // Expected: null because SOURCE retention
+    }
+
+    @AIContract(reason = "Stable public API")
+    static class TestContractClass {}
+
+    @Test
+    void testAIContractCanBeAppliedToClass() {
+        assertDoesNotThrow(() -> assertNotNull(TestContractClass.class));
     }
 }

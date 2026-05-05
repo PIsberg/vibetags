@@ -83,6 +83,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AIPrivacy` - Marks PII-handling elements; AI must never log or expose their values (reason: String)
 - `@AICore` - Marks sensitive core logic; AI must change with extreme caution (sensitivity: String, note: String)
 - `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
+- `@AIContract` - Freezes the public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions (reason: String)
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -92,12 +93,12 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
-- `AnnotationCollector` — owns the eight `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
-- `AnnotationValidator` — emits the three compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`)
+- `AnnotationCollector` — owns the nine `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
+- `AnnotationValidator` — emits five compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
-- `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs eight `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O.
+- `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs nine `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O.
 - `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files
 - `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo and orchestrates orphan cleanup via the file writer
 
@@ -357,6 +358,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIPrivacy`** | TYPE, METHOD, FIELD | `reason: String` | Marks PII-handling elements; AI must never log or expose their values |
 | **`@AICore`** | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` | Marks well-tested core logic; AI must change with extreme caution |
 | **`@AIPerformance`** | TYPE, METHOD, FIELD | `constraint: String` | Hot-path constraint; AI must not introduce O(n²) or worse complexity |
+| **`@AIContract`** | TYPE, METHOD | `reason: String` | Freezes public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -364,8 +366,12 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIPrivacy` — visible to AI but runtime values are strictly confidential; never log, expose in suggestions, test fixtures, or external API calls
 - `@AICore` — visible, modifiable, but AI must treat changes with extreme caution and verify test coverage
 - `@AIPerformance` — visible, modifiable, but AI must never introduce O(n²) or worse complexity
+- `@AIContract` — visible, modifiable internally, but the public signature (name, param types/order, return type, checked exceptions) is immutable
 
-**Note:** Using `@AIPrivacy` together with `@AIIgnore` on the same element is redundant and triggers a compiler WARNING. `@AIIgnore` already hides the element from AI entirely.
+**Invalid combinations that trigger compiler WARNINGs:**
+- `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
+- `@AIContract` + `@AIDraft` — contradictory; a frozen signature that also needs drafting is logically inconsistent
+- `@AIContract` + `@AILocked` — overlapping; `@AILocked` already prohibits all modifications, making `@AIContract`'s "logic is changeable" carve-out meaningless
 
 ### Annotation Processor
 
@@ -382,19 +388,21 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 
 ```
 Accumulation phase (every round, until processingOver() == true):
-1. AnnotationCollector.collect(roundEnv) — drains the round into the eight
+1. AnnotationCollector.collect(roundEnv) — drains the round into the nine
    LinkedHashSet<Element> accumulators (one per annotation type)
-2. AnnotationValidator.validate(messager, roundEnv) — three compile-time checks:
+2. AnnotationValidator.validate(messager, roundEnv) — five compile-time checks:
    - @AIDraft + @AILocked contradiction
    - Empty @AIAudit.checkFor
    - Redundant @AIPrivacy + @AIIgnore
+   - @AIContract + @AIDraft contradiction (signature frozen but needs drafting)
+   - @AIContract + @AILocked overlap (both annotations on same element)
 3. process() returns false so other processors still see the annotations
 
 Generation phase (once, on the round where processingOver() == true):
 4. ServiceRegistry.buildServiceFileMap(root) → service-key → file-path map
 5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
-6. GuardrailContentBuilder.build() runs all eight per-annotation appenders
-   (Locked / Context / Ignore / Audit / Draft / Privacy / Core / Performance)
+6. GuardrailContentBuilder.build() runs all nine per-annotation appenders
+   (Locked / Context / Ignore / Audit / Draft / Privacy / Core / Performance / Contract)
    in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final
    service-key → content map. The builder owns every per-platform StringBuilder
    and performs no I/O.
@@ -534,7 +542,8 @@ vibetags/
 │   │   ├── AIIgnore.java
 │   │   ├── AIPrivacy.java
 │   │   ├── AICore.java
-│   │   └── AIPerformance.java
+│   │   ├── AIPerformance.java
+│   │   └── AIContract.java
 │   ├── pom.xml
 │   └── build.gradle
 │
@@ -730,6 +739,8 @@ boolean writeFileIfChanged(String filePath, String content) {
 - `@AIDraft + @AILocked`: Warns about contradictory annotations
 - Empty `@AIAudit`: Warns if no checkFor items
 - `@AIPrivacy + @AIIgnore`: Warns that `@AIPrivacy` is redundant — `@AIIgnore` already hides the element from AI
+- `@AIContract + @AIDraft`: Warns that the combination is contradictory — a frozen signature cannot also need drafting
+- `@AIContract + @AILocked`: Warns that the combination has overlapping intent — `@AILocked` already prohibits all modifications
 - Orphaned annotations: Warns if recommended files missing
 
 **Example:**
@@ -746,24 +757,25 @@ boolean writeFileIfChanged(String filePath, String content) {
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 34 | Verify annotation structure, retention policies, targets, defaults — all 8 annotations including @AICore and @AIPerformance |
+| `AnnotationDefinitionsTest` | 40 | Verify annotation structure, retention policies, targets, defaults — all 9 annotations including @AICore, @AIPerformance, and @AIContract |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
 | `AIGuardrailProcessorUnitTest` | 40 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations, stripLegacyVibeTagsBlock basics |
 | `AIGuardrailProcessorProcessTest` | 64 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in |
 | `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
 | `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
+| `AIContractProcessorTest` | 15 | @AIContract: annotation definition, @AIContract+@AIDraft and @AIContract+@AILocked validation warnings, per-platform content (Cursor, Claude, Codex, Gemini, Copilot, Qwen, llms.txt, Aider), no-op when absent |
 | `CleanupGranularDirectoryTest` | 8 | (0.6.0) Orphan removal: marker stripping, boilerplate-only deletion, human-content preservation, excludeQNames, YAML front-matter |
 | `WriteFileFrontMatterTest` | 4 | (0.6.0) Markers placed AFTER YAML front-matter on .mdc files; hash-marker fallback for .aiderignore-style files |
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | 7 | (0.6.0) XML-closer detection edge cases: both `</rule>` and `</project_guardrails>`, multi-paragraph human content, bare-header detection |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `AnnotationProcessorEndToEndTest` | 71 | End-to-end snapshot net: compile example, verify all generated files and content across all 8 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
+| `AnnotationProcessorEndToEndTest` | 79 | End-to-end snapshot net: compile example, verify all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
 | `VibeTagsLoggerUnitTest` | 10 | File logging: log level filtering, file rotation, shutdown |
 | `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
 
-**Total: 336 tests** (was 317 in 0.5.x — the 19 new tests were added before the 0.6.0 internal split to pin behaviour the extraction could otherwise have broken silently).
+**Total: ~410 tests** (374 at 0.6.0; `@AIContract` support added 36 new tests across `AnnotationDefinitionsTest`, `AnnotationProcessorEndToEndTest`, and the new `AIContractProcessorTest`).
 
 ### Test Patterns
 
@@ -1056,4 +1068,4 @@ Informational paragraph.             ← optional, key details for the LLM
 
 ---
 
-*Last updated: 2026-05-03 — internal split into focused helper classes (see `processor/internal/`).*
+*Last updated: 2026-05-05 — added `@AIContract` annotation (9th annotation type); see `processor/internal/` for the helper split introduced in 0.6.0.*

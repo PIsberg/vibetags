@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance annotations, or wants to control how AI tools interact with Java code.
-version: 1.1.0
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract annotations, or wants to control how AI tools interact with Java code.
+version: 1.2.0
 ---
 
 # VibeTags Usage Guide
@@ -38,12 +38,21 @@ touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
 mkdir -p .roo/rules                        # Roo Code (per-class rules)
-touch CONVENTIONS.md .aiderignore         # Aider
+touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md    # Gemini
 touch AGENTS.md                            # Codex CLI
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
+touch .windsurfrules                       # Windsurf IDE (traditional)
+mkdir -p .windsurf/rules                   # Windsurf IDE (granular per-class rules)
+touch .rules                               # Zed Editor
+mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody
+touch .supermavenignore                    # Supermaven
+mkdir -p .continue/rules                   # Continue (granular per-class rules)
+mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
+mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
+mkdir -p .ai/rules                         # Universal AI standard (granular)
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
@@ -193,6 +202,33 @@ Informs AI that logic is on a hot-path and suboptimal complexity is unacceptable
 
 ---
 
+### `@AIContract` — Freeze a public API signature
+
+Use on: **class, method**
+
+```java
+@AIContract(reason = "Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.")
+@AIPerformance(constraint = "Must complete in <5ms p99. Called on every cart update.")
+public double calculatePrice(String productId, int quantity, String customerId) {
+    // Internal logic may be freely changed
+}
+```
+
+Tells AI: the method name, parameter types, parameter order, return type, and checked exceptions are **frozen**. Internal logic may be refactored freely. Use when:
+
+- The method signature is pinned by an OpenAPI / AsyncAPI contract
+- Other services bind to it via generated clients or message schemas
+- Changing the signature requires a major-version bump and migration coordination
+
+Unlike `@AILocked` (which prohibits all changes), `@AIContract` explicitly invites AI to improve internal logic — it only protects the public surface.
+
+**Compile-time warnings:**
+
+- `@AIContract` + `@AIDraft` on the same element — contradictory (signature is frozen, but `@AIDraft` implies the element still needs implementing)
+- `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; consider using only `@AILocked` if no changes at all are intended)
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -201,26 +237,34 @@ Informs AI that logic is on a hot-path and suboptimal complexity is unacceptable
 | `@AIDraft` + `@AIContext` | Request implementation with style constraints |
 | `@AIPrivacy` (field) + `@AIContext` (class) | Class-level guidance with PII fields protected |
 | `@AICore` + `@AIPerformance` | Hot-path core logic with strict complexity rules |
+| `@AIContract` + `@AIPerformance` | Contract-frozen signature with performance budget |
+| `@AIContract` + `@AIContext` | Frozen signature with guidance on internal implementation |
 | `@AILocked` + `@AIDraft` | **Warning**: contradictory — don't combine |
 | `@AIIgnore` + `@AIPrivacy` | **Warning**: redundant — `@AIIgnore` already excludes |
+| `@AIContract` + `@AIDraft` | **Warning**: contradictory — frozen signature can't need drafting |
+| `@AIContract` + `@AILocked` | **Warning**: overlapping intent — consider using only `@AILocked` |
 
 ---
 
-## Granular Rules (Cursor, Trae, Roo Code)
+## Granular Rules
 
-When the granular rule directories exist, VibeTags generates **one rule file per annotated class** instead of a single monolithic config file.
+When the granular rule directories exist, VibeTags generates **one rule file per annotated class** instead of a single monolithic config file. Each rule file is automatically scoped to its class (e.g., `**/OrderService.java`). Orphaned files for classes that lose their annotations are cleaned up automatically.
 
-- **Cursor** (`.cursor/rules/*.mdc`) — YAML front-matter with `globs` scoping
-- **Trae** (`.trae/rules/*.md`) — YAML front-matter with `globs` scoping
-- **Roo Code** (`.roo/rules/*.md`) — plain Markdown
-
-Each rule file is automatically scoped to its class (e.g., `**/OrderService.java`). Orphaned files for classes that lose their annotations are cleaned up automatically after new files are written.
+| Directory | Platform | Format |
+|---|---|---|
+| `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
+| `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
+| `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
+| `.roo/rules/*.md` | Roo Code | Markdown |
+| `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
+| `.tabnine/guidelines/*.md` | Tabnine | Markdown |
+| `.amazonq/rules/*.md` | Amazon Q | Markdown |
+| `.ai/rules/*.md` | Universal AI standard | Markdown |
 
 Enable by creating the directories:
 ```bash
-mkdir -p .cursor/rules
-mkdir -p .trae/rules
-mkdir -p .roo/rules
+mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
+mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules
 ```
 
 ---
@@ -271,6 +315,8 @@ tasks.withType(JavaCompile) {
 | `[WARNING] @AIIgnore used but .cursorignore is missing` | Orphaned annotation | Create the missing file to fully support that platform |
 | `[WARNING] contradictory @AIDraft and @AILocked` | Both annotations on same element | Remove one of them |
 | `[WARNING] @AIAudit has no checkFor items` | Empty `checkFor` array | Add at least one vulnerability string |
+| `[WARNING] contradictory @AIContract and @AIDraft` | Both annotations on same element | Remove one — a frozen signature can't also need drafting |
+| `[WARNING] overlapping @AIContract and @AILocked` | Both annotations on same element | Use only `@AILocked` if no changes at all are intended |
 
 ---
 
@@ -281,12 +327,21 @@ tasks.withType(JavaCompile) {
 | `CLAUDE.md`, `.claudeignore` | Claude / Claude Code |
 | `.cursorrules`, `.cursorignore` | Cursor (traditional) |
 | `.cursor/rules/*.mdc` | Cursor (granular per-class rules) |
-| `.trae/rules/*.md` | Trae (granular per-class rules) |
+| `.windsurfrules` | Windsurf IDE (traditional) |
+| `.windsurf/rules/*.md` | Windsurf IDE (granular per-class rules) |
+| `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
 | `.roo/rules/*.md` | Roo Code |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `gemini_instructions.md`, `.aiexclude` | Gemini |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
+| `.rules` | Zed Editor |
+| `.cody/config.json`, `.codyignore` | Sourcegraph Cody |
+| `.supermavenignore` | Supermaven |
+| `.continue/rules/*.md` | Continue (granular per-class rules) |
+| `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
+| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules) |
+| `.ai/rules/*.md` | Universal AI standard (granular) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
