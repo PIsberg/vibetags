@@ -224,14 +224,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return fileWriter.stripLegacyVibeTagsBlock(before);
     }
 
-    /** Returns the messager from processingEnv, or a no-op messager if processingEnv is null (common in unit tests). */
+    /**
+     * Returns the messager from {@code processingEnv}. Both call sites run after
+     * {@link #init(javax.annotation.processing.ProcessingEnvironment)} has populated
+     * {@code processingEnv} via {@code super.init(...)}, so the field is non-null here.
+     */
     private Messager getSafeMessager() {
-        if (processingEnv != null) return processingEnv.getMessager();
-        return new Messager() {
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) {}
-        };
+        return processingEnv.getMessager();
     }
 }

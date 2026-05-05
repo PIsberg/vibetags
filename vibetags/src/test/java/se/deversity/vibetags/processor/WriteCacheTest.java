@@ -151,4 +151,82 @@ class WriteCacheTest {
         assertFalse(cache.isUnchanged(file, "hello"),
             "size change must invalidate the cache entry");
     }
+
+    @Test
+    void recordWrite_onMissingFile_dropsEntry(@TempDir Path tmp) throws IOException {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        Path neverExisted = tmp.resolve("does-not-exist.md");
+
+        // Pre-populate so the entry exists, then call recordWrite on a now-missing file.
+        Files.writeString(neverExisted, "hello");
+        cache.recordWrite(neverExisted, "hello");
+        assertEquals(1, cache.size());
+
+        Files.delete(neverExisted);
+        cache.recordWrite(neverExisted, "hello");
+        assertEquals(0, cache.size(),
+            "recordWrite must drop the entry when stat fails on the file we just attempted to write");
+    }
+
+    @Test
+    void corruptNumericRow_isSkipped(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        // Three valid tabs but bogus numeric fields — exercises the NumberFormatException catch.
+        Files.writeString(cachePath,
+            "# header\n/some/path\tabcd1234\tnot-a-number\talso-not-a-number\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        // Touching the cache forces loadIfNeeded; the corrupt row must be skipped silently.
+        assertFalse(cache.isUnchanged(tmp.resolve("foo.md"), "anything"));
+        assertEquals(0, cache.size(), "corrupt numeric row must be ignored");
+    }
+
+    @Test
+    void cachePathIsDirectory_loadFailsGracefully(@TempDir Path tmp) throws IOException {
+        // Create a directory where the cache file would live — readAllLines will throw IOException
+        // (not NoSuchFileException), exercising the outer catch in loadIfNeeded.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.createDirectory(cachePath);
+
+        WriteCache cache = new WriteCache(cachePath);
+        // size() forces loadIfNeeded; the IOException catch must clear the entries map without throwing.
+        assertEquals(0, cache.size());
+    }
+
+    @Test
+    void flush_swallowsIOException_whenParentIsFile(@TempDir Path tmp) throws IOException {
+        // Cache path's parent is a regular file → Files.createDirectories will fail with
+        // FileAlreadyExistsException (an IOException). flush() must swallow it silently.
+        Path blocker = tmp.resolve("blocker-file");
+        Files.writeString(blocker, "I am a regular file, not a directory");
+        Path cachePath = blocker.resolve("cache");
+
+        WriteCache cache = new WriteCache(cachePath);
+        Path file = tmp.resolve("foo.md");
+        Files.writeString(file, "hello");
+        cache.recordWrite(file, "hello"); // marks dirty=true
+
+        assertDoesNotThrow(cache::flush,
+            "flush must swallow IOException when the cache path is unwritable");
+        assertFalse(Files.exists(cachePath),
+            "cache file was not created — but flush did not throw");
+    }
+
+    @Test
+    void size_reflectsRecordedEntries(@TempDir Path tmp) throws IOException {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        assertEquals(0, cache.size(), "fresh cache reports zero entries");
+
+        Path a = tmp.resolve("a.md");
+        Path b = tmp.resolve("b.md");
+        Files.writeString(a, "a");
+        Files.writeString(b, "b");
+        cache.recordWrite(a, "a");
+        cache.recordWrite(b, "b");
+
+        assertEquals(2, cache.size(), "size reflects recorded entries");
+        cache.invalidate(a);
+        assertEquals(1, cache.size(), "size decrements after invalidate");
+    }
 }

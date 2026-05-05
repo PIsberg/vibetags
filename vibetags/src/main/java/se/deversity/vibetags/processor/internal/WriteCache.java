@@ -121,7 +121,7 @@ public final class WriteCache {
     }
 
     /** Visible for tests. */
-    int size() {
+    public int size() {
         loadIfNeeded();
         return entries.size();
     }

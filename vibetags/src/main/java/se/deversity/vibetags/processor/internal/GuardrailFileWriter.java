@@ -420,7 +420,8 @@ public final class GuardrailFileWriter {
         if (log != null) log.info("Skipping update of {} — no annotations found", fileName);
     }
 
-    private static Messager noopMessager() {
+    /** Visible for testing — verifies the all-overloads no-op contract. */
+    public static Messager noopMessager() {
         return new Messager() {
             @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
             @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {}
