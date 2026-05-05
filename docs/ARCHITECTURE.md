@@ -98,11 +98,12 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
-- `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs nine `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O.
-- `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files
-- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo and orchestrates orphan cleanup via the file writer
+- `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs nine `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O. Since 0.7.1: pre-allocates the nine main per-platform buffers based on collected element count (~1500 chars per element, capped at 256 KB) so the per-annotation appender loops don't trigger log₂(N) `char[]` grow/copy passes as content accumulates.
+- `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files. Since 0.7.1 also owns the cache-fast-path entry to `writeFileIfChanged` and a streaming byte-compare for non-marker files.
+- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / `.ai/rules` and orchestrates orphan cleanup via the file writer
+- `WriteCache` — per-output-file content cache backed by a `.vibetags-cache` sidecar at the project root; lets `GuardrailFileWriter` skip the read+compare path on no-change rebuilds. **Detailed below in [Design Decision 5](#5-write-cache-since-071).** _(since 0.7.1)_
 
-This split (introduced in 0.6.0) keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
+This split keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
 
 ---
 
@@ -159,11 +160,16 @@ Set<String> activeServices = resolveActiveServices(messager, serviceFiles);
 
 **Phase 5: File Writing**
 ```java
-boolean changed = writeFileIfChanged(filePath, content);
+boolean changed = fileWriter.writeFileIfChanged(filePath, content, hasNewRules);
 ```
-- Strips whitespace for comparison
-- Only writes if content differs
-- Emits NOTE: "updated" or "no changes"
+Three layered fast paths in front of the actual write, in order of cheapness:
+1. **Cache fast path** _(0.7.1)_ — if `WriteCache.isUnchanged(file, body)` is true (size + mtime + 32-bit fingerprint match what we recorded last build), return immediately. No file read, no compare, no write.
+2. **Streaming byte-compare fast path** _(0.7.1, non-marker files only)_ — when the on-disk byte length matches the new content's byte length exactly, stream-compare with early exit on first byte mismatch. Avoids materialising the entire file as a `String`.
+3. **Read-and-compare path** — `Files.readString` + strip-tolerant `.equals()`, the original logic. Used for marker files (`.md`, `.mdc`, `llms*.txt`) and non-marker files where the size already differs by ≤64 bytes (whitespace tolerance).
+
+After a successful write or a streaming-byte-equal hit, `WriteCache.recordWrite(...)` updates the cache entry. After all platform files are processed, `generateFiles()` calls `writeCache.flush()` once to persist the sidecar atomically.
+
+`Messager` emits NOTE: `"updated"` or `"no changes"` for each file.
 
 **Phase 6: Orphaned Annotation Check**
 ```java
@@ -407,12 +413,19 @@ Generation phase (once, on the round where processingOver() == true):
    service-key → content map. The builder owns every per-platform StringBuilder
    and performs no I/O.
 7. GuardrailFileWriter.writeFileIfChanged(...) for each active service —
-   marker-aware updates, YAML front-matter preservation, atomic writes
-8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo
+   three-layer fast path (WriteCache hit → streaming byte-compare →
+   readString + strip-equals); marker-aware updates, YAML front-matter
+   preservation, atomic tmp+move writes; on success records the new
+   fingerprint in WriteCache
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae /
+   Roo / Windsurf / Continue / Tabnine / Amazon Q / .ai/rules
 9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files
-   (skipping the names just written, to avoid delete-then-recreate cycles)
+   (skipping the names just written, to avoid delete-then-recreate cycles;
+   invalidates the WriteCache entry for any file it deletes or rewrites)
 10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without
     the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
+11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar
+    (no-op if no entries changed this build)
 ```
 
 **Output File Generation:**
@@ -559,12 +572,13 @@ vibetags/
 │   │   │   │       ├── OrphanWarner.java              # "annotation used but ignore-file missing"
 │   │   │   │       ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │       ├── ElementNaming.java             # elementPath / displayName helpers
-│   │   │   │       ├── GuardrailContentBuilder.java   # Per-platform StringBuilders + 8 appenders
-│   │   │   │       ├── GuardrailFileWriter.java       # Marker-aware atomic writes + legacy migration
-│   │   │   │       └── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
+│   │   │   │       ├── GuardrailContentBuilder.java   # Per-platform StringBuilders (pre-sized 0.7.1) + 8 appenders
+│   │   │   │       ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare
+│   │   │   │       ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
+│   │   │   │       └── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
-│   │   └── test/                      # Unit + integration tests (336 tests total)
+│   │   └── test/                      # Unit + integration tests (424 tests total)
 │   │       └── processor/
 │   │           ├── AnnotationDefinitionsTest.java
 │   │           ├── AIGuardrailProcessorTest.java
@@ -572,10 +586,18 @@ vibetags/
 │   │           ├── AIGuardrailProcessorProcessTest.java
 │   │           ├── AIIgnoreProcessorUnitTest.java
 │   │           ├── AIPrivacyProcessorTest.java
-│   │           ├── CleanupGranularDirectoryTest.java        # 0.6.0: orphan-removal coverage
-│   │           ├── WriteFileFrontMatterTest.java            # 0.6.0: YAML front-matter coverage
+│   │           ├── AIContractProcessorTest.java               # 0.7.0: @AIContract coverage
+│   │           ├── CleanupGranularDirectoryTest.java          # 0.6.0: orphan-removal coverage
+│   │           ├── WriteFileFrontMatterTest.java              # 0.6.0: YAML front-matter coverage
 │   │           ├── StripLegacyVibeTagsBlockEdgeCasesTest.java # 0.6.0: legacy migration edges
+│   │           ├── WriteCacheTest.java                        # 0.7.1: cache hit/miss/invalidation
+│   │           ├── WriteCacheProcessorIntegrationTest.java    # 0.7.1: cache E2E via processor
+│   │           ├── StreamingByteCompareTest.java              # 0.7.1: fileBytesEqual helper
+│   │           ├── GuardrailFileWriterCoverageTest.java       # 0.7.1: streaming + noopMessager
 │   │           ├── QwenProcessorUnitTest.java
+│   │           ├── NewPlatformsEndToEndTest.java
+│   │           ├── GranularRulesEndToEndTest.java
+│   │           ├── MultiModuleStabilityTest.java
 │   │           ├── AnnotationProcessorEndToEndTest.java
 │   │           └── QwenEndToEndTest.java
 │   ├── pom.xml                        # Maven build config (depends on vibetags-annotations)
@@ -680,16 +702,34 @@ static Set<String> resolveActiveServices(Messager messager, Map<String, Path> al
 
 ### 4. Write-if-Changed Logic
 
-**Decision:** Only write files when content actually differs
+**Decision:** Only write files when content actually differs.
 
-**Implementation:**
+**Implementation** (current, after 0.7.1 layered fast paths):
 ```java
-boolean writeFileIfChanged(String filePath, String content) {
-    String existing = Files.exists(path) ? Files.readString(path) : "";
-    if (stripWhitespace(existing).equals(stripWhitespace(content))) {
-        return false; // No changes
+boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
+    Path file = Paths.get(path);
+
+    // Fast path 1: WriteCache hit — size + mtime + 32-bit fingerprint match
+    if (writeCache != null && writeCache.isUnchanged(file, content)) {
+        return false;
     }
-    Files.writeString(path, content, StandardCharsets.UTF_8);
+
+    // Fast path 2 (non-marker files): streaming byte-compare with early exit
+    if (!supportsMarkers && fileExists && existingSize == contentByteLen) {
+        if (fileBytesEqual(file, contentBytes)) {
+            writeCache.recordWrite(file, content);
+            return false;
+        }
+        // sizes match but bytes differ → write directly, no readString needed
+    }
+
+    // Slow path: Files.readString + strip-tolerant equals (marker files,
+    // or non-marker files where size differs by ≤64 bytes)
+    String existing = Files.readString(file, UTF_8);
+    if (existing.strip().equals(finalContent.strip())) return false;
+
+    writeContentWithBackup(file, finalContent); // tmp + atomic-move
+    writeCache.recordWrite(file, content);
     return true;
 }
 ```
@@ -699,16 +739,66 @@ boolean writeFileIfChanged(String filePath, String content) {
 - Avoids triggering file watchers
 - Preserves file modification timestamps
 - Git-friendly (no false-positive changes)
+- Three-layer fast path means warm-cache no-change rebuilds skip nearly all I/O
 
-### 5. StringBuilder Accumulation
+### 5. Write Cache (since 0.7.1)
 
-**Decision:** Build entire file content in memory before writing
+**Decision:** Maintain a per-output-file content cache in `.vibetags-cache` at the project root, looked up before any read or write inside `writeFileIfChanged`.
+
+**What it stores** — one tab-separated row per generated file:
+```
+<absolute-path>\t<8-char-fingerprint>\t<size-bytes>\t<mtime-millis>
+```
+
+**The fingerprint is `String.hashCode()`**, not SHA-256 or CRC32C. Why:
+- 32-bit collision space matches CRC32; for two non-adversarial VibeTags bodies the collision probability is 2⁻³² ≈ 1 in 4 billion. Size and mtime are checked first as independent guards, so a hash collision can only cause us to skip writing identical content — never silently corrupt output.
+- Cached internally on the `String` after first computation → O(1) on subsequent lookups for the same reference.
+- HotSpot intrinsifies `String.hashCode()` on x86 with vectorised instructions for the first computation.
+- Crucially: **no UTF-8 byte array materialisation per call.** An earlier CRC32C-of-bytes design allocated a fresh `byte[s.length()]` per cache lookup — for a 1 MB body that's 1 MB of garbage per hit, defeating the cache's allocation-saving purpose.
+
+**Lookup** (`WriteCache.isUnchanged`) — single `Files.readAttributes(BasicFileAttributes.class)` for size + mtime, then fingerprint compare. ~10 µs per call on warm-cache local SSD; constant time regardless of body size.
+
+**Persistence** — loaded lazily on first lookup, written atomically once at the end of `generateFiles()` via tmp+move. Safe to delete (rebuilt on the next compile); gitignored.
+
+**Invalidation** — `mtime` change (user edited the file), `size` change, file deletion, or fingerprint mismatch all bypass the cache and fall through to the read-and-compare path. The granular-rules orphan cleanup explicitly invalidates the cache for any file it deletes or rewrites outside the marker block.
+
+**Measured impact** (`WriteCacheHitBenchmark` in `load-tests/`, JMH AverageTime + GC profiler, 100-call batches):
+
+| Body | File type | cache hit | no cache | wall-clock | allocation |
+|---|---|---:|---:|---:|---:|
+| 1 KB | `.md` | 16.4 µs | 208.5 µs | **13×** | **15×** |
+| 12 KB | `.md` | 18.1 µs | 262.7 µs | **15×** | **135×** |
+| 1 MB | `.md` | 18.6 µs | 3 405 µs | **183×** | **11 159×** |
+
+Cache-hit cost is bounded by the single stat syscall — flat curves regardless of body size. The no-cache path scales linearly with body size because it must `readString` the entire file.
+
+### 6. Streaming Byte-Compare for Non-Marker Files (since 0.7.1)
+
+**Decision:** When a non-marker output file exists at exactly the new content's byte length, stream-compare bytes with early exit on first mismatch instead of materialising the full file as a `String` for `.equals()`.
+
+**Where it applies** — `.cursorignore`, `.aiderignore`, `.aiexclude`, ignore-style files, `.json`/`.toml` configs. Marker files (`.md`, `.mdc`, `llms*.txt`) keep the `readString` path because they need the full string for marker-position parsing and front-matter handling.
+
+**Implementation** — `GuardrailFileWriter.fileBytesEqual(Path, byte[])` reads through an 8 KB buffered `InputStream` and compares byte-by-byte against the expected array. Caller has already verified `Files.size(file) == expected.length` — early return on size mismatch is the existing `nonMarkerSizeMismatch` check.
 
 **Rationale:**
-- Simple implementation
-- Easy to reason about
-- Files are small (< 10KB typically)
-- Atomic write (write succeeds or fails completely)
+- Avoids a multi-MB `String` allocation when the file matches.
+- Finds mismatches in the first kilobyte without reading the rest of the file.
+- Strip-tolerant `readString` path is still used for ≤64-byte size differences (handles trailing-whitespace drift).
+
+### 7. Pre-sized Per-Platform StringBuilders (since 0.7.1)
+
+**Decision:** `GuardrailContentBuilder` pre-allocates the nine main per-platform buffers based on the collected element count instead of relying on `StringBuilder`'s default 16-char capacity.
+
+**Implementation** — `mainBuilderHint()` returns `clamp(4096, 1500 × elementCount, 256·1024)`:
+- Floor of 4 KB so empty/small projects don't waste cycles on grows.
+- ~1500 chars per annotated element across all sections (Locked/Context/Audit/Draft/Privacy/Core/Performance/Contract/Ignore).
+- Cap of 256 KB so a hypothetical 10 000-element codebase doesn't pre-allocate megabytes per platform across the ~12 active platforms.
+
+**Affected buffers:** `cursorRules`, `claudeMd`, `codexAgents`, `copilot`, `qwenMd`, `windsurfRules`, `zedRules`, `llmsTxt` (sized larger because it aggregates), `llmsFullTxt` (same).
+
+**Rationale:**
+- Eliminates the log₂(N) `char[]` grow-and-copy passes that the eight per-annotation `appendXxx()` loops previously triggered as content accumulated.
+- Output is byte-identical to prior versions — verified by all 75 end-to-end snapshot tests on every release commit.
 
 ### 6. Wildcard Annotation Matching
 
@@ -767,15 +857,24 @@ boolean writeFileIfChanged(String filePath, String content) {
 | `CleanupGranularDirectoryTest` | 8 | (0.6.0) Orphan removal: marker stripping, boilerplate-only deletion, human-content preservation, excludeQNames, YAML front-matter |
 | `WriteFileFrontMatterTest` | 4 | (0.6.0) Markers placed AFTER YAML front-matter on .mdc files; hash-marker fallback for .aiderignore-style files |
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | 7 | (0.6.0) XML-closer detection edge cases: both `</rule>` and `</project_guardrails>`, multi-paragraph human content, bare-header detection |
+| `WriteCacheTest` | 15 | (0.7.1) `WriteCache`: hit, miss-on-different-body, mtime/size/delete invalidation, persistence across instances, corrupt-cache fallback, recordWrite-on-missing-file, flush-on-unwritable-parent |
+| `WriteCacheProcessorIntegrationTest` | 3 | (0.7.1) Cache E2E via processor: `.vibetags-cache` is created on first compile; second compile against unchanged sources keeps file mtimes stable; external edit invalidates the entry and triggers a rewrite that preserves user content above the marker block |
+| `StreamingByteCompareTest` | 8 | (0.7.1) `GuardrailFileWriter.fileBytesEqual`: exact match, first-/last-byte mismatch, empty file, 256 KB random, 64 KB with one bit flipped, multi-byte UTF-8, exact 8 KB buffer-boundary |
+| `GuardrailFileWriterCoverageTest` | 4 | (0.7.1) Streaming-cache hit records cache entry; size match + byte mismatch + `!hasNewRules` skips; same with `hasNewRules=true` writes; all four `noopMessager` overloads return silently |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `AnnotationProcessorEndToEndTest` | 79 | End-to-end snapshot net: compile example, verify all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
+| `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
+| `AnnotationProcessorEndToEndTest` | 75 | End-to-end snapshot net: compile example, verify all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
 | `VibeTagsLoggerUnitTest` | 10 | File logging: log level filtering, file rotation, shutdown |
 | `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
 
-**Total: ~410 tests** (374 at 0.6.0; `@AIContract` support added 36 new tests across `AnnotationDefinitionsTest`, `AnnotationProcessorEndToEndTest`, and the new `AIContractProcessorTest`).
+**Total: 424 tests** (410 after 0.7.0; 0.7.1 added 9 new tests for the cache + streaming compare + writer coverage gaps, and corrected the existing tally as `WriteCacheTest` grew from 10 → 15 during coverage hardening).
+
+**JMH benchmarks** (under `load-tests/`, not counted above):
+- `ProcessorHotPathBenchmark` — 6 benchmarks: `buildServiceFileMap`, `resolveActiveServices_{all,none}Present`, `writeFileIfChanged_{noChange,smallWrite,largeWrite}`. Run on every release-tagged baseline.
+- `WriteCacheHitBenchmark` _(0.7.1)_ — 8 benchmarks proving the cache: `(small=1KB, medium=12KB, large=1MB) × (marker .md, non-marker .cursorrules) × (cacheHit, noCache)` minus the four cache-hit cases at the same body size that are constant-time. Plots in `load-tests/results/_plots/cache-hit-{time,alloc}.png`.
 
 ### Test Patterns
 
@@ -825,14 +924,17 @@ GitHub Actions workflow tests:
 
 **Resolution:** Pass `-Avibetags.root=<path>` via `<compilerArg>` in Maven or `annotationProcessorArgs` in Gradle to override the output directory explicitly. Most IDE integrations need this set.
 
-### 2. No Incremental Build Awareness
+### 2. No Gradle Incremental-Annotation-Processing Registration
 
-**Problem:** Regenerates all files on every compilation
+**Problem:** Not registered as `META-INF/gradle/incremental.annotation.processors`. Gradle therefore treats VibeTags as a non-incremental processor and recompiles every annotated source on each round.
 
-**Impact:**
-- Unnecessary file I/O
-- Can interfere with build caching
-- No way to skip generation if annotations unchanged
+**What's already mitigated:** The `WriteCache` (since 0.7.1) avoids the file-write side of the cost — when no annotations changed, generated files are byte-stable and no I/O happens. See [Design Decision 5](#5-write-cache-since-071) above. The remaining gap is purely on the `javac`/Gradle side: input-source recompilation isn't yet skipped.
+
+**Why we haven't registered:**
+- VibeTags is structurally an aggregating processor (it needs to see the full picture across all rounds to compute orphan cleanup and shared platform files like `llms.txt`). Aggregating processors are supported by Gradle but the registration changes the contract: every modified source triggers a full processor rerun.
+- Combined with the cache, the practical wall-clock win over the current behaviour is small.
+
+**Workaround for now:** in Gradle, `gradle compileJava --no-daemon -PskipVibeTags=true` can be approximated by compiling without the annotation-processor path; the cache then preserves the existing files on the next regular build.
 
 ### 3. Hardcoded Output Formats
 
