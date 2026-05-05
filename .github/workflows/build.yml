@@ -70,18 +70,21 @@ jobs:
       - name: Verify Generated AI Config Files
         run: |
           cd example
-          echo "Checking generated files exist and contain content..."
+          echo “Checking generated files exist and contain content...”
           check() {
-            local f="$1"
-            test -f "$f" || (echo "âœ— $f missing" && exit 1)
-            test -s "$f" || (echo "âœ— $f is empty (processor did not write content)" && exit 1)
-            echo "âœ“ $f exists and has content"
+            local f=”$1”
+            test -f “$f” || (echo “âœ— $f missing” && exit 1)
+            test -s “$f” || (echo “âœ— $f is empty (processor did not write content)” && exit 1)
+            echo “âœ” $f exists and has content”
           }
           check .cursorrules
           check CLAUDE.md
           check .aiexclude
           check AGENTS.md
           check QWEN.md
+          check .qwenignore
+          check .qwen/settings.json
+          check .qwen/commands/refactor.md
           check gemini_instructions.md
           check .github/copilot-instructions.md
           check llms.txt
@@ -90,26 +93,36 @@ jobs:
           check .codex/rules/vibetags.rules
           check CONVENTIONS.md
           check .aiderignore
+          check .windsurfrules
+          check .rules
+          check .cody/config.json
+          check .codyignore
+          check .supermavenignore
           check .cursor/rules/com-example-payment-PaymentProcessor.mdc
           check .cursor/rules/com-example-database-DatabaseConnector.mdc
           check .trae/rules/com-example-payment-PaymentProcessor.md
           check .roo/rules/com-example-payment-PaymentProcessor.md
-          echo "All generated files present and non-empty âœ“"
+          check .windsurf/rules/com-example-payment-PaymentProcessor.md
+          check .continue/rules/com-example-payment-PaymentProcessor.md
+          check .tabnine/guidelines/com-example-payment-PaymentProcessor.md
+          check .amazonq/rules/com-example-payment-PaymentProcessor.md
+          check .ai/rules/com-example-payment-PaymentProcessor.md
+          echo “All generated files present and non-empty âœ””
 
       - name: Verify @AIAudit Content
         run: |
           cd example
-          echo "Checking @AIAudit content in generated files..."
-          grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "âœ“ Cursor audit section exists" || (echo "âœ— Cursor audit section missing" && exit 1)
-          grep -q "audit_requirements" CLAUDE.md && echo "âœ“ Claude audit requirements exist" || (echo "âœ— Claude audit requirements missing" && exit 1)
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "âœ“ Gemini audit requirements exist" || (echo "âœ— Gemini audit requirements missing" && exit 1)
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md && echo "âœ“ Codex audit guardrails exist" || (echo "âœ— Codex audit guardrails missing" && exit 1)
-          grep -q "MANDATORY SECURITY AUDITS" QWEN.md && echo "âœ“ Qwen audit guardrails exist" || (echo "âœ— Qwen audit guardrails missing" && exit 1)
-          grep -q "Security Audit Requirements" .github/copilot-instructions.md && echo "âœ“ Copilot audit requirements exist" || (echo "âœ— Copilot audit requirements missing" && exit 1)
-          grep -q "Security Audit Requirements" llms.txt && echo "âœ“ llms.txt audit section exists" || (echo "âœ— llms.txt audit section missing" && exit 1)
-          grep -q "Mandatory Security Audit Requirements" llms-full.txt && echo "âœ“ llms-full.txt audit section exists" || (echo "âœ— llms-full.txt audit section missing" && exit 1)
-          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md && echo "✓ Aider conventions audit section exists" || (echo "✗ Aider conventions audit section missing" && exit 1)
-          echo "All @AIAudit content verified âœ“"
+          echo “Checking @AIAudit content in generated files...”
+          grep -q “MANDATORY SECURITY AUDITS” .cursorrules && echo “âœ” Cursor audit section exists” || (echo “âœ— Cursor audit section missing” && exit 1)
+          grep -q “audit_requirements” CLAUDE.md && echo “âœ” Claude audit requirements exist” || (echo “âœ— Claude audit requirements missing” && exit 1)
+          grep -q “CONTINUOUS AUDIT REQUIREMENTS” gemini_instructions.md && echo “âœ” Gemini audit requirements exist” || (echo “âœ— Gemini audit requirements missing” && exit 1)
+          grep -q “MANDATORY SECURITY AUDITS” AGENTS.md && echo “âœ” Codex audit guardrails exist” || (echo “âœ— Codex audit guardrails missing” && exit 1)
+          grep -q “MANDATORY SECURITY AUDITS” QWEN.md && echo “âœ” Qwen audit guardrails exist” || (echo “âœ— Qwen audit guardrails missing” && exit 1)
+          grep -q “Security Audit Requirements” .github/copilot-instructions.md && echo “âœ” Copilot audit requirements exist” || (echo “âœ— Copilot audit requirements missing” && exit 1)
+          grep -q “Security Audit Requirements” llms.txt && echo “âœ” llms.txt audit section exists” || (echo “âœ— llms.txt audit section missing” && exit 1)
+          grep -q “Mandatory Security Audit Requirements” llms-full.txt && echo “âœ” llms-full.txt audit section exists” || (echo “âœ— llms-full.txt audit section missing” && exit 1)
+          grep -q “SECURITY AUDIT: com.example.database.DatabaseConnector” CONVENTIONS.md && echo “✓ Aider conventions audit section exists” || (echo “✗ Aider conventions audit section missing” && exit 1)
+          echo “All @AIAudit content verified âœ””
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'
@@ -227,18 +240,21 @@ jobs:
       - name: Verify Generated AI Config Files
         run: |
           cd example
-          echo "Checking generated files exist and contain content..."
+          echo “Checking generated files exist and contain content...”
           check() {
-            local f="$1"
-            test -f "$f" || (echo "âœ— $f missing" && exit 1)
-            test -s "$f" || (echo "âœ— $f is empty (processor did not write content)" && exit 1)
-            echo "âœ“ $f exists and has content"
+            local f=”$1”
+            test -f “$f” || (echo “âœ— $f missing” && exit 1)
+            test -s “$f” || (echo “âœ— $f is empty (processor did not write content)” && exit 1)
+            echo “âœ” $f exists and has content”
           }
           check .cursorrules
           check CLAUDE.md
           check .aiexclude
           check AGENTS.md
           check QWEN.md
+          check .qwenignore
+          check .qwen/settings.json
+          check .qwen/commands/refactor.md
           check gemini_instructions.md
           check .github/copilot-instructions.md
           check llms.txt
@@ -247,26 +263,36 @@ jobs:
           check .codex/rules/vibetags.rules
           check CONVENTIONS.md
           check .aiderignore
+          check .windsurfrules
+          check .rules
+          check .cody/config.json
+          check .codyignore
+          check .supermavenignore
           check .cursor/rules/com-example-payment-PaymentProcessor.mdc
           check .cursor/rules/com-example-database-DatabaseConnector.mdc
           check .trae/rules/com-example-payment-PaymentProcessor.md
           check .roo/rules/com-example-payment-PaymentProcessor.md
-          echo "All generated files present and non-empty âœ“"
+          check .windsurf/rules/com-example-payment-PaymentProcessor.md
+          check .continue/rules/com-example-payment-PaymentProcessor.md
+          check .tabnine/guidelines/com-example-payment-PaymentProcessor.md
+          check .amazonq/rules/com-example-payment-PaymentProcessor.md
+          check .ai/rules/com-example-payment-PaymentProcessor.md
+          echo “All generated files present and non-empty âœ””
 
       - name: Verify @AIAudit Content
         run: |
           cd example
-          echo "Checking @AIAudit content in generated files..."
-          grep -q "MANDATORY SECURITY AUDITS" .cursorrules && echo "âœ“ Cursor audit section exists" || (echo "âœ— Cursor audit section missing" && exit 1)
-          grep -q "audit_requirements" CLAUDE.md && echo "âœ“ Claude audit requirements exist" || (echo "âœ— Claude audit requirements missing" && exit 1)
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md && echo "âœ“ Gemini audit requirements exist" || (echo "âœ— Gemini audit requirements missing" && exit 1)
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md && echo "âœ“ Codex audit guardrails exist" || (echo "âœ— Codex audit guardrails missing" && exit 1)
-          grep -q "MANDATORY SECURITY AUDITS" QWEN.md && echo "âœ“ Qwen audit guardrails exist" || (echo "âœ— Qwen audit guardrails missing" && exit 1)
-          grep -q "Security Audit Requirements" .github/copilot-instructions.md && echo "âœ“ Copilot audit requirements exist" || (echo "âœ— Copilot audit requirements missing" && exit 1)
-          grep -q "Security Audit Requirements" llms.txt && echo "âœ“ llms.txt audit section exists" || (echo "âœ— llms.txt audit section missing" && exit 1)
-          grep -q "Mandatory Security Audit Requirements" llms-full.txt && echo "âœ“ llms-full.txt audit section exists" || (echo "âœ— llms-full.txt audit section missing" && exit 1)
-          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md && echo "✓ Aider conventions audit section exists" || (echo "✗ Aider conventions audit section missing" && exit 1)
-          echo "All @AIAudit content verified âœ“"
+          echo “Checking @AIAudit content in generated files...”
+          grep -q “MANDATORY SECURITY AUDITS” .cursorrules && echo “âœ” Cursor audit section exists” || (echo “âœ— Cursor audit section missing” && exit 1)
+          grep -q “audit_requirements” CLAUDE.md && echo “âœ” Claude audit requirements exist” || (echo “âœ— Claude audit requirements missing” && exit 1)
+          grep -q “CONTINUOUS AUDIT REQUIREMENTS” gemini_instructions.md && echo “âœ” Gemini audit requirements exist” || (echo “âœ— Gemini audit requirements missing” && exit 1)
+          grep -q “MANDATORY SECURITY AUDITS” AGENTS.md && echo “âœ” Codex audit guardrails exist” || (echo “âœ— Codex audit guardrails missing” && exit 1)
+          grep -q “MANDATORY SECURITY AUDITS” QWEN.md && echo “âœ” Qwen audit guardrails exist” || (echo “âœ— Qwen audit guardrails missing” && exit 1)
+          grep -q “Security Audit Requirements” .github/copilot-instructions.md && echo “âœ” Copilot audit requirements exist” || (echo “âœ— Copilot audit requirements missing” && exit 1)
+          grep -q “Security Audit Requirements” llms.txt && echo “âœ” llms.txt audit section exists” || (echo “âœ— llms.txt audit section missing” && exit 1)
+          grep -q “Mandatory Security Audit Requirements” llms-full.txt && echo “âœ” llms-full.txt audit section exists” || (echo “âœ— llms-full.txt audit section missing” && exit 1)
+          grep -q “SECURITY AUDIT: com.example.database.DatabaseConnector” CONVENTIONS.md && echo “✓ Aider conventions audit section exists” || (echo “✗ Aider conventions audit section missing” && exit 1)
+          echo “All @AIAudit content verified âœ””
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'

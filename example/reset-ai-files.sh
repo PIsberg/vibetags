@@ -11,6 +11,9 @@ AI_FILES=(
   ".aiexclude"
   "AGENTS.md"
   "QWEN.md"
+  ".qwenignore"
+  ".qwen/settings.json"
+  ".qwen/commands/refactor.md"
   "gemini_instructions.md"
   ".github/copilot-instructions.md"
   "llms.txt"
@@ -18,13 +21,15 @@ AI_FILES=(
   ".cursorignore"
   ".claudeignore"
   ".copilotignore"
-  ".qwenignore"
   ".codex/config.toml"
   ".codex/rules/vibetags.rules"
-  ".qwen/settings.json"
-  ".qwen/commands/refactor.md"
   "CONVENTIONS.md"
   ".aiderignore"
+  ".windsurfrules"
+  ".rules"
+  ".cody/config.json"
+  ".codyignore"
+  ".supermavenignore"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
@@ -37,7 +42,7 @@ for f in "${AI_FILES[@]}"; do
 done
 
 # Cleanup granular rules in directories
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +
