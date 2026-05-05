@@ -1,9 +1,9 @@
-# OSS-Fuzz Integration (template — currently unused)
+# OSS-Fuzz Integration
 
-This directory contains the artefacts that **[OSS-Fuzz](https://github.com/google/oss-fuzz)** — Google's continuous fuzzing service for open-source projects — would need to build and run a [Jazzer](https://github.com/CodeIntelligenceTesting/jazzer) fuzzer against `AIGuardrailProcessor`.
+This directory contains the artefacts that **[OSS-Fuzz](https://github.com/google/oss-fuzz)** — Google's continuous fuzzing service for open-source projects — needs to build and run a [Jazzer](https://github.com/CodeIntelligenceTesting/jazzer) fuzzer against `AIGuardrailProcessor`.
 
-> **Status (2026-05): not wired up.** The files were added in commit
-> [`b3a3edf`](https://github.com/PIsberg/vibetags/commit/b3a3edf) (2026-04-17, "feat(security): integrate OSS-Fuzz") as a starter template, but they were never submitted upstream to OSS-Fuzz, no CI workflow runs them, and the harness has fallen out of sync with the live processor API. See [Current state](#current-state--known-issues) below.
+> **Status (2026-05): compile-ready, not yet submitted upstream.** Files were added in commit
+> [`b3a3edf`](https://github.com/PIsberg/vibetags/commit/b3a3edf) (2026-04-17) as a starter template, sat unused for a few weeks, and were brought back into sync with the v0.7.1 processor API in this PR. CI does not currently run them, and the project has not been submitted to upstream OSS-Fuzz — see [What's left](#whats-left) below.
 
 ## What OSS-Fuzz is
 
@@ -16,65 +16,56 @@ OSS-Fuzz runs continuous coverage-guided fuzzing on accepted open-source project
 | `project.yaml` | OSS-Fuzz metadata: `language: jvm`, `fuzzing_engines: [libfuzzer]`, `sanitizers: [address]`, primary contact email. |
 | `Dockerfile` | Builds on `gcr.io/oss-fuzz-base/base-builder-jvm`, installs Maven, copies the repo into `$SRC/vibetags`, and stages the build script + fuzzer for OSS-Fuzz to compile. |
 | `build.sh` | Compiles the processor jar via Maven, then `javac`s every `*Fuzzer.java` against the Jazzer API, copies the resulting `.class` files to `$OUT`, and generates per-fuzzer launcher shell scripts. |
-| `VibeTagsFuzzer.java` | Jazzer harness. Targets the file-content merger inside `AIGuardrailProcessor.writeFileIfChanged` — the most complex string-parsing boundary (YAML front-matter, marker block detection, content merge). |
+| `VibeTagsFuzzer.java` | Jazzer harness. Targets the file-content merger inside `AIGuardrailProcessor.writeFileIfChanged` — the most complex string-parsing boundary in the processor (YAML front-matter detection, marker block parsing, content merge, legacy-block stripping). |
 
 ## What the harness exercises
 
-`VibeTagsFuzzer.fuzzerTestOneInput` takes a single `FuzzedDataProvider` and constructs three random inputs:
+`VibeTagsFuzzer.fuzzerTestOneInput` takes a single `FuzzedDataProvider` and constructs four random inputs:
 
 1. `fakeExistingContent` — up to 500 bytes; written to a temp file before the call. Simulates whatever might already be on disk: empty, valid VibeTags markers, malformed markers, legacy pre-marker headers, random binary, partial YAML front-matter, etc.
-2. `newContentPayload` — the rest of the fuzz input; passed to `writeFileIfChanged` as the new body to merge in.
-3. A random file extension drawn from `{".md", ".mdc", ".json", ""}`. This fans the harness across the three marker regimes the writer supports: HTML markers (`<!-- VIBETAGS-START -->` for `.md`/`.mdc`), no markers (full overwrite for `.json`/`.toml`), and hash markers (`# VIBETAGS-START` for everything else).
+2. `hasNewRules` — boolean, controls the multi-module preservation guard. Both branches need coverage; the fuzzer flips a coin per case.
+3. `newContentPayload` — the rest of the fuzz input; passed to `writeFileIfChanged` as the new body to merge in.
+4. A random file extension drawn from `{".md", ".mdc", ".json", ""}`. This fans the harness across the three marker regimes the writer supports:
+   - `.md` / `.mdc` → HTML markers (`<!-- VIBETAGS-START -->`)
+   - `.json` → no markers (full overwrite, plus the 0.7.1 streaming byte-compare fast path on size match)
+   - `""` (e.g. rules) → hash markers (`# VIBETAGS-START`)
 
 The point isn't to find functional bugs — `AnnotationProcessorEndToEndTest` and `WriteFileFrontMatterTest` cover those — but to discover **memory-safety**, **infinite-loop**, and **uncaught-exception** classes of bugs in the marker-parsing and content-merging code paths. A coverage-guided fuzzer can hit string boundaries (UTF-8 boundaries, marker-prefix-but-no-suffix, nested marker patterns, etc.) that hand-written tests don't.
 
-## Current state — known issues
-
-Every item below would need fixing before the `gcr.io/oss-fuzz-base/base-builder-jvm` build succeeds, let alone before submitting to OSS-Fuzz upstream:
-
-| # | Issue | Fix |
-|---|---|---|
-| 1 | `Dockerfile` line 9: `COPY oss-fuzz/se/deversity/vibetags/fuzz/VibeTagsFuzzer.java $SRC/` references a path that doesn't exist. The fuzzer file is directly in `oss-fuzz/`, not nested under `se/deversity/vibetags/fuzz/`. | Either move the fuzzer into the package path (and add a `package se.deversity.vibetags.fuzz;` declaration) or change the COPY to `oss-fuzz/VibeTagsFuzzer.java`. |
-| 2 | `VibeTagsFuzzer.java` line 37: calls `processor.writeFileIfChanged(tempFile.toString(), newContentPayload)` — 2 args. The live API has been 3-arg since pre-0.7.0 (`boolean hasNewRules` was added). The harness won't compile against the current jar. | Add a third argument — `data.consumeBoolean()` is the most fuzzer-friendly choice. |
-| 3 | `VibeTagsFuzzer.java` line 41: `Files.deleteIfExists(Path.of(tempFile.toString() + ".bak"))`. The writer hasn't created `.bak` files since 0.5.6 — the sidecar is now `.vibetags-tmp`. The line is a no-op (no harm, but stale). | Update the suffix, and also clean up `.vibetags-cache` if `WriteCache` writes a sidecar (it does in normal use, though it shouldn't here because no `WriteCache` is wired into the fuzzer's processor instance). |
-| 4 | `build.sh` lines 4 & 8: `cd vibetags && cd vibetags`. The first `cd` enters the repo root that OSS-Fuzz unpacks into `$SRC/vibetags`; the second `cd` enters the `vibetags/` subproject. Looks like a copy-paste artefact but happens to be correct given the OSS-Fuzz layout. | Add a comment explaining the two-step `cd` so it's not mistaken for a typo. |
-| 5 | The harness only fuzzes `writeFileIfChanged`. Equally interesting attack surfaces — `stripLegacyVibeTagsBlock`, `cleanupGranularDirectory` against malicious file paths, the marker-position parsing in `writeWithMarkers` — are not covered. | Add additional `*Fuzzer.java` files; `build.sh` already loops over every `*Fuzzer.java` it finds. |
-| 6 | No CI workflow runs the fuzzer or even verifies it still compiles against the live processor jar. | Either add a "smoke compile" step to `build.yml` (5-minute Jazzer build on a single fuzz case) or accept that the harness will rot until upstream submission. |
-
 ## Running locally (without OSS-Fuzz)
 
-You don't need OSS-Fuzz infrastructure to run a Jazzer fuzzer. Once issues #1 and #2 above are fixed:
+You don't need OSS-Fuzz infrastructure to run a Jazzer fuzzer:
 
 ```bash
 # 1. Install the processor locally
 cd vibetags-annotations && mvn install -DskipTests
 cd ../vibetags             && mvn install -DskipTests
 
-# 2. Get Jazzer (https://github.com/CodeIntelligenceTesting/jazzer/releases)
+# 2. Grab a Jazzer release (https://github.com/CodeIntelligenceTesting/jazzer/releases)
 JAZZER=~/jazzer-linux-x86_64
 
 # 3. Compile the fuzzer
 PROCESSOR_JAR=$(find ~/.m2/repository/se/deversity/vibetags/vibetags-processor -name "*.jar" | head -1)
-javac -cp $PROCESSOR_JAR:$JAZZER/jazzer_api_deploy.jar oss-fuzz/VibeTagsFuzzer.java
+javac -cp $PROCESSOR_JAR:$JAZZER/jazzer_api_deploy.jar oss-fuzz/VibeTagsFuzzer.java -d /tmp/fuzz
 
 # 4. Run a few thousand iterations
-$JAZZER/jazzer --cp=oss-fuzz:$PROCESSOR_JAR --target_class=VibeTagsFuzzer -runs=10000
+$JAZZER/jazzer --cp=/tmp/fuzz:$PROCESSOR_JAR --target_class=VibeTagsFuzzer -runs=10000
 ```
+
+A short smoke run (`-runs=10000`) takes about 30 seconds on a quiescent laptop and is enough to verify the harness is wired up correctly. Submit-grade campaigns are open-ended — OSS-Fuzz runs them indefinitely.
 
 ## Submitting to OSS-Fuzz upstream
 
-If/when this is revived, the path is:
+When ready, the path is:
 
-1. Fix all six items above.
-2. Open a PR to [`google/oss-fuzz`](https://github.com/google/oss-fuzz) creating `projects/vibetags/` with these four files (`project.yaml`, `Dockerfile`, `build.sh`, plus the fuzzer source).
-3. Once accepted, OSS-Fuzz reports findings to the contact in `project.yaml` (currently `pontus.isberg@deversity.se`) and creates issues on its own tracker that auto-disclose after 90 days.
+1. Open a PR to [`google/oss-fuzz`](https://github.com/google/oss-fuzz) creating `projects/vibetags/` with these four files (`project.yaml`, `Dockerfile`, `build.sh`, plus `VibeTagsFuzzer.java`).
+2. Once accepted, OSS-Fuzz reports findings to the contact in `project.yaml` (currently `pontus.isberg@deversity.se`) and creates issues on its own tracker that auto-disclose after 90 days.
 
-## Decision time
+## What's left
 
-This directory is currently neither documented in the main `README.md` nor wired to CI nor submitted to OSS-Fuzz — it sits as a half-finished template. Three reasonable paths forward:
+Two follow-ups still open, both genuinely optional:
 
-- **Revive** — fix items 1-2 (compile-correctness blockers), drop the rotted `.bak` cleanup, add a one-line CI smoke-compile, then submit upstream.
-- **Park** — leave the files; this README at least makes the intent legible to anyone who finds them.
-- **Remove** — `git rm -rf oss-fuzz/` if nobody plans to revisit. Lower maintenance surface.
+1. **Broaden the harness.** `VibeTagsFuzzer` only exercises `writeFileIfChanged`. Equally interesting attack surfaces — `stripLegacyVibeTagsBlock` against malformed XML, `cleanupGranularDirectory` against directory-traversal-like paths, the marker-position parsing in `writeWithMarkers` — are not covered. Adding `*Fuzzer.java` siblings is enough; `build.sh` already loops over every `*Fuzzer.java` it finds and emits a launcher.
+2. **CI smoke-compile.** Nothing currently verifies the harness still compiles against the live processor jar — a future API change can rot it again. A 30-second job in `build.yml` that runs the local recipe with `-runs=1` would catch this.
 
-For now this README parks the directory and documents it. Choose **Revive** or **Remove** when there's appetite to commit one way or the other.
+Neither blocks an upstream submission; both reduce the chance of the harness silently rotting again.

@@ -5,45 +5,57 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+/**
+ * Jazzer entry point. Targets the file-content merger inside
+ * {@link AIGuardrailProcessor#writeFileIfChanged(String, String, boolean)} —
+ * the most complex string-parsing boundary in the processor (YAML front-matter
+ * detection, marker block parsing, content merge, legacy-block stripping).
+ *
+ * <p>The fuzzer is in the default package on purpose: simpler classpath for
+ * Jazzer's {@code --target_class}.
+ */
 public class VibeTagsFuzzer {
     public static void fuzzerTestOneInput(FuzzedDataProvider data) {
         try {
-            // We fuzz the most complex string parsing boundary: the file content merger
-            // which deals with YAML front-matter, markers, and index finding.
-            
             AIGuardrailProcessor processor = new AIGuardrailProcessor();
-            
-            // Fuzzer controls the existing file context
+
+            // Fuzzer controls the existing file context (up to 500 bytes).
             String fakeExistingContent = data.consumeString(500);
-            
-            // Fuzzer controls what the newly generated block payload will be
+
+            // Third writeFileIfChanged arg controls the multi-module preservation guard.
+            // Both true and false hit different branches, so let the fuzzer pick.
+            boolean hasNewRules = data.consumeBoolean();
+
+            // Fuzzer controls what the newly generated block payload will be.
             String newContentPayload = data.consumeRemainingAsString();
-            
-            // Randomly choose file extension to test different marker logic
-            String ext = "";
+
+            // Randomly choose file extension to fan across the three marker regimes:
+            //   .md / .mdc       → HTML markers (`<!-- VIBETAGS-START -->`)
+            //   .json            → no markers (full overwrite, plus the 0.7.1
+            //                      streaming byte-compare fast path on size match)
+            //   "" (e.g. rules)  → hash markers (`# VIBETAGS-START`)
+            String ext;
             int extChoice = data.consumeInt(0, 3);
             if (extChoice == 0) ext = ".md";
             else if (extChoice == 1) ext = ".mdc";
             else if (extChoice == 2) ext = ".json";
             else ext = ""; // rules file (hash markers)
-            
+
             Path tempFile = Files.createTempFile("fuzz_", ext);
-            
+
             try {
-                // Write existing garbage (or structured) content controlled by fuzzer
                 Files.writeString(tempFile, fakeExistingContent);
-                
-                // Attack the writeFileIfChanged logic which parses markers and merges blocks
-                processor.writeFileIfChanged(tempFile.toString(), newContentPayload);
-                
+                processor.writeFileIfChanged(tempFile.toString(), newContentPayload, hasNewRules);
             } finally {
                 Files.deleteIfExists(tempFile);
-                Files.deleteIfExists(Path.of(tempFile.toString() + ".bak"));
+                // Atomic-write sidecar used by GuardrailFileWriter#writeContentWithBackup
+                // (renamed from `.bak` to `.vibetags-tmp` in 0.5.6).
+                Files.deleteIfExists(Path.of(tempFile.toString() + ".vibetags-tmp"));
             }
         } catch (IOException e) {
-            // IOExceptions are expected on invalid temp files or fuzzed filesystem paths
+            // Expected on invalid temp files or fuzzed filesystem paths.
         } catch (IllegalArgumentException e) {
-            // Expected on certain invalid Java arg invariants
+            // Expected on certain invalid Java arg invariants.
         }
     }
 }

@@ -1,9 +1,17 @@
 #!/bin/bash
-# OSS-Fuzz build script for VibeTags
+# OSS-Fuzz build script for VibeTags.
+#
+# Runs inside the gcr.io/oss-fuzz-base/base-builder-jvm container.
+# The two `cd vibetags` commands are intentional, not a typo:
+#   - First cd: enter the repo root that the Dockerfile copied to $SRC/vibetags.
+#   - Second cd: enter the vibetags/ subproject (the processor jar lives here;
+#     vibetags-annotations/, vibetags-bom/, example/, load-tests/ are siblings).
+set -eu
 
+# 1. Enter $SRC/vibetags (the repo root).
 cd vibetags
 
-# Build VibeTags Processor
+# 2. Build the VibeTags Processor jar.
 echo "Building VibeTags Processor..."
 cd vibetags
 mvn clean package -DskipTests
