@@ -43,9 +43,20 @@ mvn test
 # Skip slow stress tests in CI
 mvn test -Dstress.max.classes=100
 
-# Run JMH microbenchmarks (~2 min)
-cd load-tests && mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main
+# Run all JMH microbenchmarks with GC profiler (~3 min)
+cd load-tests
+mvn package -DskipTests
+java -jar target/benchmarks.jar -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc
+
+# Run only the cache-hit benchmark (since 0.7.1 — proves the WriteCache value)
+java -jar target/benchmarks.jar WriteCacheHitBenchmark -wi 3 -i 5 -f 1 \
+     -tu us -bm avgt -prof gc
 ```
+
+See [`load-tests/README.md`](../load-tests/README.md) and
+[`load-tests/results/README.md`](../load-tests/results/README.md) for the full
+benchmark catalogue, baseline-capture procedure, and committed release-tagged
+results.
 
 ## How to Contribute
 
