@@ -165,6 +165,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AIPrivacy` | TYPE, METHOD, FIELD | `reason: String` |
 | `@AICore` | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` |
 | `@AIPerformance` | TYPE, METHOD | `constraint: String` |
+| `@AIContract` | TYPE, METHOD | `reason: String` |
 
 **Annotation semantics:**
 
@@ -173,12 +174,15 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIPrivacy` — element handles PII; AI must never include its runtime values in logs, test fixtures, mock data, or API suggestions (GDPR/HIPAA/PCI-DSS use cases)
 - `@AICore` — marks well-tested, sensitive core logic (e.g., months to stabilize); AI is instructed to treat changes with extreme care
 - `@AIPerformance` — enforces strict time/space complexity on hot-path code; AI must not introduce O(n²) or worse solutions
+- `@AIContract` — freezes the public signature (method name, parameter types, parameter order, return type, checked exceptions); AI may change internal logic but must not alter the visible API surface
 
 **Compile-time validation warnings:**
 
 - `@AIDraft` + `@AILocked` on the same element — contradictory (locked but needs drafting)
 - `@AIAudit` with empty `checkFor[]` — no-op; nothing to audit
 - `@AIPrivacy` + `@AIIgnore` on the same element — redundant; ignore already excludes
+- `@AIContract` + `@AIDraft` on the same element — contradictory (signature frozen but needs drafting)
+- `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; `@AIContract` is redundant)
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 
@@ -196,11 +200,12 @@ All tests live in `vibetags/src/test`.
 
 | Class | Coverage |
 |---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults |
+| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 9 annotations) |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
 | `AIPrivacyProcessorTest` | `@AIPrivacy` annotation definition, validation, and per-platform output |
+| `AIContractProcessorTest` | `@AIContract` annotation definition, validation (contradictory/overlap combinations), and per-platform output |
 | `AIGuardrailProcessorProcessTest` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
 | `AnnotationProcessorEndToEndTest` | Generated file content |
 | `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |

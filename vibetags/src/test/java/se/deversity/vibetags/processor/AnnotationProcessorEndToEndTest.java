@@ -790,5 +790,48 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(cursor.contains("PII"),               "@AIPrivacy must appear");
         assertTrue(cursor.contains("CORE FUNCTIONALITY"), "@AICore must appear");
         assertTrue(cursor.contains("PERFORMANCE CONSTRAINTS"), "@AIPerformance must appear");
+        assertTrue(cursor.contains("CONTRACT-FROZEN SIGNATURES"), "@AIContract must appear");
+    }
+
+    // -----------------------------------------------------------------------
+    // @AIContract
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testCursorRulesHasContractSection() throws IOException {
+        String content = harness.readFile(".cursorrules");
+        assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
+            ".cursorrules must contain contract-frozen section");
+        assertTrue(content.contains("PaymentGateway") || content.contains("charge"),
+            ".cursorrules must mention the @AIContract annotated element");
+        assertTrue(content.contains("payment gateway API"),
+            ".cursorrules must include the @AIContract reason");
+    }
+
+    @Test
+    void testClaudeMdHasContractSignatures() throws IOException {
+        String content = harness.readFile("CLAUDE.md");
+        assertTrue(content.contains("<contract_signatures>"),
+            "CLAUDE.md must contain <contract_signatures> block");
+        assertTrue(content.contains("</contract_signatures>"),
+            "CLAUDE.md must close <contract_signatures> block");
+        assertTrue(content.contains("payment gateway API"),
+            "CLAUDE.md must include the @AIContract reason");
+    }
+
+    @Test
+    void testLlmsTxtHasContractSection() throws IOException {
+        String content = harness.readFile("llms.txt");
+        assertTrue(content.contains("Contract-Frozen Signatures"),
+            "llms.txt must contain Contract-Frozen Signatures section");
+    }
+
+    @Test
+    void testLlmsFullTxtHasContractSection() throws IOException {
+        String content = harness.readFile("llms-full.txt");
+        assertTrue(content.contains("Contract-Frozen Signatures"),
+            "llms-full.txt must contain Contract-Frozen Signatures section");
+        assertTrue(content.contains("payment gateway API"),
+            "llms-full.txt must include the @AIContract reason");
     }
 }

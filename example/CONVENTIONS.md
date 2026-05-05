@@ -57,6 +57,10 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Focus**: Maintain transactional integrity. All database operations must use proper transaction management.
 - **Avoid**: Raw SQL queries, direct database connections without connection pooling
 
+#### CONTEXT: com.example.service.PricingService
+- **Focus**: Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.
+- **Avoid**: Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
+
 #### CONTEXT: com.example.strategy.PaymentStrategy
 - **Focus**: Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.
 - **Avoid**: Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
@@ -175,4 +179,20 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+
+#### PERFORMANCE CONSTRAINTS: com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
+- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
+- **Constraint**: Must complete in <5ms p99. Called on every cart update.
+
+#### CONTRACT: com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
+- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
+- **Reason**: Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
+
+#### CONTRACT: com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)
+- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
+- **Reason**: Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
+
+#### CONTRACT: com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)
+- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
+- **Reason**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
 <!-- VIBETAGS-END -->

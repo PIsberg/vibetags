@@ -47,6 +47,10 @@
       <focus>Maintain transactional integrity. All database operations must use proper transaction management.</focus>
       <avoids>Raw SQL queries, direct database connections without connection pooling</avoids>
     </file>
+    <file path="com.example.service.PricingService">
+      <focus>Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.</focus>
+      <avoids>Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility</avoids>
+    </file>
     <file path="com.example.strategy.PaymentStrategy">
       <focus>Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.</focus>
       <avoids>Monolithic if-else chains, hard-coded payment logic, single class handling all payment types</avoids>
@@ -178,9 +182,25 @@
     <element path="com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)">
       <constraint>Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.</constraint>
     </element>
+    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
+      <constraint>Must complete in <5ms p99. Called on every cart update.</constraint>
+    </element>
   </performance_constraints>
 
 <rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>
+  <contract_signatures>
+    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
+      <reason>Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.</reason>
+    </element>
+    <element path="com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)">
+      <reason>Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.</reason>
+    </element>
+    <element path="com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)">
+      <reason>B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.</reason>
+    </element>
+  </contract_signatures>
+
+<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

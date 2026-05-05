@@ -32,6 +32,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 - **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
+- **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 
 ### Supported AI Platforms
 
@@ -74,10 +75,10 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
-├── vibetags-annotations/ # The 8 @interface classes (zero deps, RetentionPolicy.SOURCE)
+├── vibetags-annotations/ # The 9 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance
+│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -281,6 +282,14 @@ public class TransactionRouter {
 @AIPerformance(constraint = "Must maintain O(log n) time complexity for search operations")
 public class BinarySearchTree {
     // AI will avoid suboptimal complexity implementations
+}
+
+// Freeze the public API signature — internal logic may change freely
+public class PricingService {
+    @AIContract(reason = "Signature locked by OpenAPI v2 contract shared with checkout-service and mobile-app")
+    public double calculatePrice(String productId, int quantity, String customerId) {
+        // AI can replace this entire implementation — just never touch the signature
+    }
 }
 ```
 
@@ -713,6 +722,88 @@ If you use `@AIAudit` without providing any items to check for, VibeTags will wa
 #### Redundant Privacy Annotations
 If you use `@AIPrivacy` on an element that is already annotated with `@AIIgnore`, VibeTags will warn you — `@AIIgnore` already excludes the element from AI context entirely, making `@AIPrivacy` redundant:
 `[WARNING] VibeTags: com.example.MyField is annotated with both @AIPrivacy and @AIIgnore. @AIIgnore already excludes the element from AI context; @AIPrivacy is redundant.`
+
+#### Contradictory Contract Annotations
+If you use `@AIContract` (signature frozen but logic can change) alongside `@AIDraft` (please implement this), VibeTags will warn you:
+`[WARNING] VibeTags: com.example.PaymentGateway.charge is annotated with both @AIContract and @AIDraft. @AIContract freezes the signature, but @AIDraft implies the element is not yet implemented. Remove one of the two annotations.`
+
+If you use `@AIContract` alongside `@AILocked` (no changes at all), VibeTags will warn about the overlapping intent:
+`[WARNING] VibeTags: com.example.LegacyApi.process is annotated with both @AIContract and @AILocked. @AILocked prohibits all modifications; @AIContract permits internal-logic changes. Consider using only @AILocked if no changes at all are intended.`
+
+### 📜 @AIContract - Freezing Public API Signatures
+
+The `@AIContract` annotation draws a hard line between **interface** and **implementation**. It tells AI assistants: *"You're welcome to change what happens inside this method — replace the algorithm, swap the data source, optimize the logic — but you must leave the method name, parameter types, parameter order, return type, and checked exceptions exactly as they are."*
+
+#### Why it's needed
+
+AI assistants often try to be helpful in ways that introduce breaking changes. When asked to optimize `calculateTax(double amount, String zipCode)`, an AI might decide `BigDecimal` is more appropriate than `double` and change the signature. For isolated private methods that's fine. For a method that's part of a public API contract shared with three other microservices, it's a deployment incident.
+
+#### Rules of Engagement
+
+When an element is annotated with `@AIContract`, the AI is instructed to respect:
+
+1. **Signature Freeze** — method name, parameter types, parameter order, and return type are off-limits
+2. **Exception Integrity** — no new checked exceptions that weren't already declared
+3. **Behavioral Consistency** — if the contract says "returns a sorted list", the AI can change the sorting algorithm but cannot return an unsorted `Set`
+
+#### Example Usage
+
+```java
+public class PricingService {
+
+    /**
+     * Signature pinned by OpenAPI v2 contract shared with checkout-service and mobile-app.
+     * Internal pricing algorithm can be freely replaced (rule engine, ML model, lookup table).
+     */
+    @AIContract(reason = "Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature.")
+    @AIPerformance(constraint = "Must complete in <5ms p99. Called on every cart update.")
+    public double calculatePrice(String productId, int quantity, String customerId) {
+        return 0.0; // AI can implement/optimize this freely
+    }
+}
+```
+
+**What the AI is ALLOWED to do:**
+```java
+// ✅ Internal logic replaced entirely — signature identical
+public double calculatePrice(String productId, int quantity, String customerId) {
+    PriceRule rule = ruleEngine.evaluate(productId, customerId);
+    return rule.apply(quantity);
+}
+```
+
+**What the AI is FORBIDDEN from doing:**
+```java
+// ❌ Changed double → BigDecimal and String → ProductId
+public BigDecimal calculatePrice(ProductId productId, int quantity, CustomerId customerId) { ... }
+```
+
+#### Generated Output by Platform
+
+**Cursor (.cursorrules):**
+```markdown
+## 🔐 CONTRACT-FROZEN SIGNATURES
+The following elements have contract-frozen public signatures. You MAY change internal implementation logic, but MUST NOT modify method names, parameter types, parameter order, return types, or checked exceptions.
+
+* `com.example.PricingService.calculatePrice` - Signature locked by OpenAPI v2 contract.
+```
+
+**Claude (CLAUDE.md):**
+```xml
+<contract_signatures>
+  <element path="com.example.PricingService.calculatePrice">
+    <reason>Signature locked by OpenAPI v2 contract.</reason>
+  </element>
+</contract_signatures>
+<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
+```
+
+#### Best Use Cases
+
+- **Public APIs / SDKs** — where external users depend on your method signatures
+- **Microservice contracts** — where signatures are shared via OpenAPI specs or Protobuf definitions
+- **Legacy bridges** — where modern code talks to older systems that expect exact data shapes
+- **Framework-wired methods** — where Spring, Dagger, or another framework locates methods by exact signature
 
 ## 🤝 Contributing
 

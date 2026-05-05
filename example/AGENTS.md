@@ -19,6 +19,7 @@
 - `com.example.service.InventoryService`: Focus on Maintain inventory consistency across concurrent requests. All stock updates must be atomic.. Avoid Non-atomic read-modify-write sequences, unsynchronized shared state.
 - `com.example.service.NotificationService`: Focus on Implement notification delivery with retry logic and error handling. Avoid Hard-coded credentials, synchronous blocking calls.
 - `com.example.service.OrderService`: Focus on Maintain transactional integrity. All database operations must use proper transaction management.. Avoid Raw SQL queries, direct database connections without connection pooling.
+- `com.example.service.PricingService`: Focus on Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.. Avoid Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility.
 - `com.example.strategy.PaymentStrategy`: Focus on Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid Monolithic if-else chains, hard-coded payment logic, single class handling all payment types.
 - `com.example.utils.StringParser`: Focus on Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid java.util.regex, String.split(), StringBuilder in loops.
 
@@ -79,4 +80,12 @@ Hot-path elements — never introduce O(n²) or worse. Always reason about compl
 - **com.example.payment.PaymentProcessor**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
 - **com.example.service.InventoryService.getAvailableStock(java.lang.String)**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
 - **com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+- **com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)**: Must complete in <5ms p99. Called on every cart update.
+
+## 🔐 CONTRACT-FROZEN SIGNATURES
+Internal logic may be modified, but never change method names, parameter types, parameter order, return types, or checked exceptions.
+
+- **com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)**: Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
+- **com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)**: Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
+- **com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
 <!-- VIBETAGS-END -->

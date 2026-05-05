@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
@@ -60,6 +61,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder windsurfPrivacySection;
     private StringBuilder windsurfCoreSection;
     private StringBuilder windsurfPerfSection;
+    private StringBuilder windsurfContractSection;
 
     // Zed builders
     private StringBuilder zedRules;
@@ -68,6 +70,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder zedPrivacySection;
     private StringBuilder zedCoreSection;
     private StringBuilder zedPerfSection;
+    private StringBuilder zedContractSection;
 
     // Other new platform builders
     private StringBuilder codyIgnoreFile;
@@ -97,6 +100,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsTxtPrivacy;
     private StringBuilder llmsTxtCore;
     private StringBuilder llmsTxtPerformance;
+    private StringBuilder llmsTxtContract;
     private StringBuilder llmsFullTxt;
     private StringBuilder llmsFullTxtContext;
     private StringBuilder llmsFullTxtAudit;
@@ -105,6 +109,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsFullTxtPrivacy;
     private StringBuilder llmsFullTxtCore;
     private StringBuilder llmsFullTxtPerformance;
+    private StringBuilder llmsFullTxtContract;
 
     // Per-element granular rule sections (one StringBuilder per owning class/package)
     private final Map<Element, StringBuilder> elementRules = new LinkedHashMap<>();
@@ -227,6 +232,15 @@ public final class GuardrailContentBuilder {
         for (Element e : collector.performance())
             appendPerformance(e, cursorPerfSec, claudePerfSec, codexPerfSec, copilotPerfSec, qwenPerfSec, geminiPerfSec);
 
+        StringBuilder cursorContractSec = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nThe following elements have contract-frozen public signatures. You MAY change internal implementation logic, but MUST NOT modify method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+        StringBuilder claudeContractSec = new StringBuilder("  <contract_signatures>\n");
+        StringBuilder codexContractSec  = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nInternal logic may be modified, but never change method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+        StringBuilder copilotContractSec = new StringBuilder("\n## Contract-Frozen Signatures\nDo not modify the public signatures of the following elements. Internal implementation changes are permitted:\n\n");
+        StringBuilder qwenContractSec   = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nSignatures (method names, parameters, return types, checked exceptions) are immutable. Internal logic may be changed.\n\n");
+        StringBuilder geminiContractSec = new StringBuilder();
+        for (Element e : collector.contract())
+            appendContract(e, cursorContractSec, claudeContractSec, codexContractSec, copilotContractSec, qwenContractSec, geminiContractSec);
+
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
             geminiMd.append("\n## LOCKED FILES (DO NOT MODIFY)\nDo not suggest modifications to the following files:\n\n").append(geminiLocked);
@@ -309,6 +323,18 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfPerfSection);
             if (zedActive)      zedRules.append(zedPerfSection);
         }
+        if (!collector.contract().isEmpty()) {
+            cursorRules.append(cursorContractSec);
+            claudeContractSec.append("  </contract_signatures>\n");
+            claudeMd.append(claudeContractSec);
+            claudeMd.append("\n<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>\n");
+            codexAgents.append(codexContractSec);
+            copilot.append(copilotContractSec);
+            qwenMd.append(qwenContractSec);
+            geminiMd.append("\n## CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions:\n\n").append(geminiContractSec);
+            if (windsurfActive) windsurfRules.append(windsurfContractSection);
+            if (zedActive)      zedRules.append(zedContractSection);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -322,6 +348,7 @@ public final class GuardrailContentBuilder {
         if (!collector.privacy().isEmpty())     { llmsTxt.append(llmsTxtPrivacy);     llmsFullTxt.append(llmsFullTxtPrivacy); }
         if (!collector.core().isEmpty())        { llmsTxt.append(llmsTxtCore);        llmsFullTxt.append(llmsFullTxtCore); }
         if (!collector.performance().isEmpty()) { llmsTxt.append(llmsTxtPerformance); llmsFullTxt.append(llmsFullTxtPerformance); }
+        if (!collector.contract().isEmpty())    { llmsTxt.append(llmsTxtContract);    llmsFullTxt.append(llmsFullTxtContract); }
 
         return new Result(buildContentMap(geminiMd), elementRules);
     }
@@ -546,6 +573,30 @@ public final class GuardrailContentBuilder {
         if (granularActive)  appendToGranular(e, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
     }
 
+    private void appendContract(Element e, StringBuilder cursorContractSec, StringBuilder claudeContractSec,
+                                StringBuilder codexContractSec, StringBuilder copilotContractSec,
+                                StringBuilder qwenContractSec, StringBuilder geminiContractSec) {
+        AIContract contract = e.getAnnotation(AIContract.class);
+        if (contract == null) return;
+        String className = ElementNaming.elementPath(e);
+        String reason = contract.reason();
+
+        if (cursorActive)  cursorContractSec.append("* `").append(className).append("` - ").append(reason).append("\n");
+        if (claudeActive)  claudeContractSec.append("    <element path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </element>\n");
+        if (codexActive)   codexContractSec.append("- **").append(className).append("**: ").append(reason).append("\n");
+        if (copilotActive) copilotContractSec.append("- `").append(className).append("` - ").append(reason).append("\n");
+        if (qwenActive)    qwenContractSec.append("* `").append(className).append("` - ").append(reason).append("\n");
+        if (geminiActive)  geminiContractSec.append("- `").append(className).append("`: ").append(reason).append("\n");
+
+        if (llmsActive)     llmsTxtContract.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(reason).append("\n");
+        if (llmsFullActive) llmsFullTxtContract.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+
+        if (aiderConvActive) aiderConventions.append("#### CONTRACT: ").append(className).append("\n- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.\n- **Reason**: ").append(reason).append("\n\n");
+        if (windsurfActive)  windsurfContractSection.append("* `").append(className).append("` - ").append(reason).append("\n");
+        if (zedActive)       zedContractSection.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (granularActive)  appendToGranular(e, "Contract-Frozen Signature", "- **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.\n- **Reason**: " + reason);
+    }
+
     private void appendToGranular(Element element, String title, String content) {
         Element owner = ElementNaming.owningElement(element);
         StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
@@ -587,6 +638,7 @@ public final class GuardrailContentBuilder {
         llmsTxtPrivacy  = new StringBuilder("\n## PII / Privacy Guardrails\n");
         llmsTxtCore     = new StringBuilder("\n## 🧠 Core Functionality\n");
         llmsTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\n");
+        llmsTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\n");
 
         llmsFullTxt = new StringBuilder("# " + projectName + " — AI Guardrail Rules\n" +
             "> Complete AI guardrail configuration generated from source annotations by VibeTags.\n\n" +
@@ -602,6 +654,7 @@ public final class GuardrailContentBuilder {
         llmsFullTxtPrivacy     = new StringBuilder("\n## PII / Privacy Guardrails\nNever include runtime values of the following elements in logs, console output, external API calls, test fixtures, or mock data.\n\n");
         llmsFullTxtCore        = new StringBuilder("\n## 🧠 Core Functionality\nThe following elements are well-tested core functionality. Make changes with extreme caution.\n\n");
         llmsFullTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\nThe following elements are on a hot-path and have strict time/space complexity constraints.\n\n");
+        llmsFullTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\nThe following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
 
         cursorIgnoreFile  = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Cursor-specific exclusion list.\n");
         claudeIgnoreFile  = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Claude-specific exclusion list.\n");
@@ -617,15 +670,17 @@ public final class GuardrailContentBuilder {
         windsurfIgnoreSection = new StringBuilder("\n## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)\nDo not reference, suggest changes to, or include the following in completions or answers.\n\n");
         windsurfDraftSection  = new StringBuilder("\n## 📝 IMPLEMENTATION TASKS (TODO)\nThe following elements are currently in DRAFT mode. Follow the instructions to implement them:\n\n");
         windsurfPrivacySection = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nNever include runtime values of the following in logs, console output, external API calls, test fixtures, or mock data.\n\n");
-        windsurfCoreSection   = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
-        windsurfPerfSection   = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) or worse complexity. Always reason about time/space before proposing changes.\n\n");
+        windsurfCoreSection     = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+        windsurfPerfSection     = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) or worse complexity. Always reason about time/space before proposing changes.\n\n");
+        windsurfContractSection = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
 
         zedRules = new StringBuilder("# AUTO-GENERATED AI RULES\n" + generatedHeader + "# Do not edit manually.\n\n## Locked Files (Do Not Modify)\n");
         zedIgnoreSection  = new StringBuilder("\n## Ignored Elements\nDo not reference or suggest changes to the following:\n\n");
         zedDraftSection   = new StringBuilder("\n## Implementation Tasks\nThe following elements are drafts that need implementation:\n\n");
         zedPrivacySection = new StringBuilder("\n## PII / Privacy Guardrails\nNever log, expose, or suggest code that outputs runtime values of these elements:\n\n");
-        zedCoreSection    = new StringBuilder("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
-        zedPerfSection    = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
+        zedCoreSection     = new StringBuilder("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
+        zedPerfSection     = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
+        zedContractSection = new StringBuilder("\n## Contract-Frozen Signatures\nInternal logic may be changed; never alter method names, parameter types, order, return types, or checked exceptions:\n\n");
 
         codyIgnoreFile      = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Cody-specific exclusion list.\n");
         supermavenIgnoreFile = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Supermaven-specific exclusion list.\n");
