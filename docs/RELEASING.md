@@ -211,6 +211,34 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 5. Check **Set as latest release** if applicable.
 6. Click **Publish release**.
 
+#### Image-path gotcha — must rewrite relative paths
+
+`docs/CHANGELOG.md` uses paths like `changelog-assets/0.X.Y/foo.png` for embedded images. **In the repo view** GitHub resolves these relative to the file's location (`docs/`), so they work. **In a GitHub Release page** GitHub resolves the same paths from the **repo root**, so they 404.
+
+Before uploading the release notes, rewrite the relative paths to absolute raw-content URLs pinned to the tag. From the repo root:
+
+```bash
+TAG=v0.7.1
+awk "/^## \[${TAG#v}\]/,/^## \[/{if (\$0 ~ /^## \[/ && \$0 !~ /\[${TAG#v}\]/) exit; print}" docs/CHANGELOG.md \
+  | sed "s|](changelog-assets/${TAG#v}/|](https://github.com/PIsberg/vibetags/raw/${TAG}/docs/changelog-assets/${TAG#v}/|g" \
+  > /tmp/release-notes-${TAG}.md
+
+gh release create $TAG \
+  --target main \
+  --title "VibeTags $TAG" \
+  --notes-file /tmp/release-notes-${TAG}.md \
+  --latest
+```
+
+If you forget the `sed`, the release will publish with broken image links. Fix afterward via:
+
+```bash
+gh release view $TAG --json body --jq .body \
+  | sed "s|](changelog-assets/${TAG#v}/|](https://github.com/PIsberg/vibetags/raw/${TAG}/docs/changelog-assets/${TAG#v}/|g" \
+  > /tmp/r.md
+gh release edit $TAG --notes-file /tmp/r.md
+```
+
 ### 7. Automatic Publishing
 
 Creating a release triggers the [Publish workflow](.github/workflows/publish.yml), which runs two parallel jobs:
