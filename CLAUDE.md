@@ -118,10 +118,20 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.roo/rules/*.md` | Roo Code (granular) | Markdown |
 | `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
 | `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
+| `.windsurfrules` | Windsurf IDE | Markdown |
+| `.windsurf/rules/*.md` | Windsurf IDE (granular) | YAML front-matter + Markdown |
+| `.rules` | Zed Editor | Markdown |
+| `.cody/config.json` | Sourcegraph Cody | JSON (custom commands) |
+| `.codyignore` | Sourcegraph Cody | Glob patterns |
+| `.supermavenignore` | Supermaven | Glob patterns |
+| `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
+| `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
+| `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
+| `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
 
 #### Granular rules
 
-Cursor, Trae, and Roo Code support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the class simple name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
 #### llms.txt vs llms-full.txt
 
@@ -194,6 +204,7 @@ All tests live in `vibetags/src/test`.
 | `AIGuardrailProcessorProcessTest` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
 | `AnnotationProcessorEndToEndTest` | Generated file content |
 | `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |
+| `NewPlatformsEndToEndTest` | Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, universal `.ai/rules/` |
 | `QwenEndToEndTest` | Qwen-specific output |
 | `QwenProcessorUnitTest` | Qwen processor options |
 | `VibeTagsLoggerUnitTest` | File logging |

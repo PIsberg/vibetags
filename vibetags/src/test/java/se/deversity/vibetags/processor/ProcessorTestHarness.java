@@ -65,6 +65,17 @@ class ProcessorTestHarness {
         touch(".cursor/rules/.vibetags"); // Create a hidden file to signal directory existence
         touch(".trae/rules/.vibetags");
         touch(".roo/rules/.vibetags");
+        // New platforms
+        touch(".windsurfrules");
+        touch(".rules");
+        touch(".cody/config.json");
+        touch(".codyignore");
+        touch(".supermavenignore");
+        touch(".windsurf/rules/.vibetags");
+        touch(".continue/rules/.vibetags");
+        touch(".tabnine/guidelines/.vibetags");
+        touch(".amazonq/rules/.vibetags");
+        touch(".ai/rules/.vibetags");
     }
 
     private void touch(String relative) throws IOException {

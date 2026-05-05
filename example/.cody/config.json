@@ -1,0 +1,14 @@
+{
+  "customCommands": [
+    {
+      "name": "vibetags-review",
+      "description": "Review code following VibeTags guardrails",
+      "prompt": "Review the selected code for compliance with the project AI guardrails. Check for violations of locked files, PII handling rules, performance constraints, and security requirements as defined in the project annotations."
+    },
+    {
+      "name": "vibetags-audit",
+      "description": "Security audit following VibeTags @AIAudit rules",
+      "prompt": "Perform a security audit of the selected code. Check for SQL injection, thread safety issues, and other vulnerabilities flagged in @AIAudit annotations."
+    }
+  ]
+}

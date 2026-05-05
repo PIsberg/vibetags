@@ -202,7 +202,11 @@ class AIGuardrailProcessorUnitTest {
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
-            "cursor_granular", "roo_granular", "trae_granular"
+            "cursor_granular", "roo_granular", "trae_granular",
+            // New platforms
+            "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
+            "windsurf_granular", "continue_granular", "tabnine_granular",
+            "amazonq_granular", "ai_rules_granular"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }

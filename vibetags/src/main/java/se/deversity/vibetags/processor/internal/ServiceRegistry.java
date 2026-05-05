@@ -20,7 +20,11 @@ public final class ServiceRegistry {
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full", "aider_conventions", "aider_ignore",
-        "cursor_granular", "roo_granular", "trae_granular"
+        "cursor_granular", "roo_granular", "trae_granular",
+        // New platforms
+        "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
+        "windsurf_granular", "continue_granular", "tabnine_granular",
+        "amazonq_granular", "ai_rules_granular"
     );
 
     private ServiceRegistry() {}
@@ -52,6 +56,17 @@ public final class ServiceRegistry {
         map.put("cursor_granular",   root.resolve(".cursor/rules"));
         map.put("roo_granular",      root.resolve(".roo/rules"));
         map.put("trae_granular",     root.resolve(".trae/rules"));
+        // New platforms
+        map.put("windsurf",          root.resolve(".windsurfrules"));
+        map.put("zed",               root.resolve(".rules"));
+        map.put("cody",              root.resolve(".cody/config.json"));
+        map.put("cody_ignore",       root.resolve(".codyignore"));
+        map.put("supermaven_ignore", root.resolve(".supermavenignore"));
+        map.put("windsurf_granular", root.resolve(".windsurf/rules"));
+        map.put("continue_granular", root.resolve(".continue/rules"));
+        map.put("tabnine_granular",  root.resolve(".tabnine/guidelines"));
+        map.put("amazonq_granular",  root.resolve(".amazonq/rules"));
+        map.put("ai_rules_granular", root.resolve(".ai/rules"));
         return map;
     }
 
