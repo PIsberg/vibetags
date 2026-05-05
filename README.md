@@ -35,17 +35,31 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with:
-- **Cursor** (Traditional `.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
-- **Trae** (Granular `.trae/rules/*.md`)
-- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+Generated configuration files work out-of-the-box with **20 AI platforms**:
+
+#### Traditional / Single-file formats
+- **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
+- **Windsurf** (`.windsurfrules` or **Granular** `.windsurf/rules/*.md`)
+- **Zed Editor** (`.rules`)
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
 - **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
-- **Gemini** (`.aiexclude` + `gemini_instructions.md`)
+- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
+- **Supermaven** (`.supermavenignore`)
 - **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
+
+#### Granular / Directory-based formats
+- **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
+- **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
+- **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
+- **Tabnine** (`.tabnine/guidelines/*.md`)
+- **Amazon Q** (`.amazonq/rules/*.md`)
+- **Trae** (`.trae/rules/*.md`)
+- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+- **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
 
 ## 📁 Project Structure
 
@@ -423,18 +437,39 @@ Create an empty placeholder file for the service you want to support, then compi
 **Getting started:** create empty placeholder files for the services you use, then compile:
 
 ```bash
-touch .cursorrules .cursorignore             # Enable Cursor support
-mkdir -p .cursor/rules                       # Enable Cursor Granular Rules
-mkdir -p .trae/rules                         # Enable Trae Granular Rules
-mkdir -p .roo/rules                           # Enable Roo Code Rules
-touch CONVENTIONS.md .aiderignore            # Enable Aider support
-touch CLAUDE.md .claudeignore                # Enable Claude support
-touch QWEN.md .qwenignore                   # Enable Qwen support
-touch .aiexclude gemini_instructions.md      # Enable Gemini/Codex support
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore # Enable Copilot
-touch llms.txt llms-full.txt                 # Enable Windsurf Cascade / llms.txt standard
+# --- Cursor ---
+touch .cursorrules .cursorignore             # Traditional + ignore
+mkdir -p .cursor/rules                       # Granular rules (per-class .mdc)
 
-mvn compile                                  # VibeTags populates accurately
+# --- Windsurf ---
+touch .windsurfrules                         # Traditional .windsurfrules
+mkdir -p .windsurf/rules                     # Granular rules (per-class .md)
+
+# --- Zed, Cody, Supermaven ---
+touch .rules                                 # Zed Editor
+touch .codyignore && mkdir -p .cody && touch .cody/config.json  # Sourcegraph Cody
+touch .supermavenignore                      # Supermaven
+
+# --- Continue, Tabnine, Amazon Q, Universal AI ---
+mkdir -p .continue/rules                     # Continue
+mkdir -p .tabnine/guidelines                 # Tabnine
+mkdir -p .amazonq/rules                      # Amazon Q
+mkdir -p .ai/rules                           # Universal .ai/rules standard
+
+# --- Trae, Roo Code ---
+mkdir -p .trae/rules                         # Trae IDE
+mkdir -p .roo/rules                          # Roo Code
+
+# --- Other platforms ---
+touch CONVENTIONS.md .aiderignore            # Aider
+touch CLAUDE.md .claudeignore                # Claude
+touch QWEN.md .qwenignore                   # Qwen
+touch .aiexclude gemini_instructions.md      # Gemini
+mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
+touch AGENTS.md                              # Codex CLI
+touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
+
+mvn compile                                  # VibeTags populates all opted-in files
 ```
 
 **Removing a service:** delete its file — it will never come back.
