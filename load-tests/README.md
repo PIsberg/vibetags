@@ -1,12 +1,13 @@
 # VibeTags Load Tests
 
-Standalone benchmark harness for the `AIGuardrailProcessor`. Four test categories live here:
+Standalone benchmark harness for the `AIGuardrailProcessor`. Five test categories live here:
 
 | Category | Class | What it measures |
 |---|---|---|
 | Annotation-volume sweep | `AnnotationVolumeStressTest` | Wall-clock cost as N annotated classes grows from 10 → 10 000 |
 | Memory-volume sweep | `MemoryVolumeStressTest` | Per-thread allocated bytes and peak heap, same N sweep |
 | Hot-path microbenchmarks | `ProcessorHotPathBenchmark` (JMH) | Per-call cost of `writeFileIfChanged`, `buildServiceFileMap`, `resolveActiveServices` |
+| Cache-hit microbenchmarks | `WriteCacheHitBenchmark` (JMH, since 0.7.1) | Per-call cost & allocation of `writeFileIfChanged` with the `WriteCache` wired in vs. null. Small (1 KB), medium (12 KB), large (1 MB) bodies × marker (`.md`) and non-marker (`.json`) file types |
 | Concurrent-build safety | `ConcurrentBuildTest` | Behaviour under N threads writing to a shared project root |
 
 ## Prerequisite
@@ -28,12 +29,18 @@ mvn test
 # Cap the sweep so CI stays fast (skips N > 500)
 mvn test -Dstress.max.classes=500
 
-# JMH microbenchmarks (~2 min)
-mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main
+# JMH microbenchmarks — both classes, JSON output + GC profiler (~3 min)
+mvn package -DskipTests
+java -jar target/benchmarks.jar -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
+     -rf json -rff results/<X.Y.Z>/jmh.json
 
-# A single JMH benchmark with custom forks/iterations
-mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main \
-    -Dexec.args="writeFileIfChanged -f 1 -wi 3 -i 5 -tu ms"
+# Just the cache-hit benchmark (proves the WriteCache value at 1 MB body sizes)
+java -jar target/benchmarks.jar WriteCacheHitBenchmark -wi 3 -i 5 -f 1 \
+     -tu us -bm avgt -prof gc \
+     -rf json -rff results/<X.Y.Z>/jmh-cache-hit.json
+
+# A single benchmark method with custom forks/iterations
+java -jar target/benchmarks.jar writeFileIfChanged -f 1 -wi 3 -i 5 -tu us
 ```
 
 ## What to measure for a library like this
@@ -60,20 +67,29 @@ The harness already writes machine-readable output and CI already uploads it (se
 
 ### 1. Capture results with version metadata
 
-`AnnotationVolumeStressTest` writes `target/stress-results-<timestamp>.txt`. JMH writes whatever `-rf` tells it to. Adopt one folder per release:
+`AnnotationVolumeStressTest` and `MemoryVolumeStressTest` write `target/{stress,memory}-results-<timestamp>.txt`. JMH writes whatever `-rf` tells it to. Adopt one folder per release:
 
 ```bash
-mkdir -p load-tests/results/0.6.0
-mvn test -Dtest=AnnotationVolumeStressTest -Dstress.results.dir=load-tests/results/0.6.0
-mvn package exec:java -Dexec.mainClass=org.openjdk.jmh.Main \
-    -Dexec.args="-rf json -rff load-tests/results/0.6.0/jmh.json"
+TAG=0.7.2
+mkdir -p load-tests/results/$TAG
+cd load-tests
+mvn test -Dprocessor.version=$TAG \
+         -Dtest=AnnotationVolumeStressTest,MemoryVolumeStressTest,ConcurrentBuildTest \
+         -Dstress.max.classes=1000
+
+mvn package -DskipTests -Dprocessor.version=$TAG
+java -jar target/benchmarks.jar -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
+     -rf json -rff results/$TAG/jmh.json
+java -jar target/benchmarks.jar WriteCacheHitBenchmark -wi 3 -i 5 -f 1 \
+     -tu us -bm avgt -prof gc \
+     -rf json -rff results/$TAG/jmh-cache-hit.json
 ```
 
-JMH's JSON output is the canonical comparison format — it includes mean, stdev, confidence intervals, and the raw samples per fork. Keep it. The text reports are for humans.
+JMH's JSON output is the canonical comparison format — it includes mean, stdev, confidence intervals, and the raw samples per fork. Keep it. The text reports are for humans. Currently committed baselines: `0.5.4`, `0.5.5`, `0.5.6`, `0.7.0`, `0.7.1`.
 
 ### 2. Establish a baseline per release tag
 
-Run the full sweep on a known-clean machine for every released version (`0.5.x`, `0.6.x`, …) and commit the result files under `load-tests/results/<version>/`. Treat them like golden files.
+Run the full sweep on a known-clean machine for every released version and commit the result files under `load-tests/results/<version>/`. Treat them like golden files.
 
 The numbers are machine-dependent, so a baseline only compares like-with-like:
 - Same JDK major + vendor (record `java -version` next to each result)
@@ -84,25 +100,23 @@ A single line at the top of each result file with `JDK / OS / CPU / commit-sha` 
 
 ### 3. Diffing
 
-For the stress sweep, two CSVs side-by-side give a regression table:
+For the stress sweep, eyeballing two `stress.txt` files side-by-side works for N ≤ 6 rows. The plotting script (see §4) reads every release folder and overlays them — that's the de-facto diff tool now.
 
-```bash
-# Convert text to CSV with awk, then diff with csvkit or pandas
-csvjoin -c Classes results/0.6.0/stress.csv results/0.7.0/stress.csv \
-  | csvcut -c Classes,Overhead_0.6.0,Overhead_0.7.0
-```
-
-For JMH, the official `jmh-compare` (or `jmh-visualizer`) diffs two `jmh.json` files and flags benchmarks where the new score is outside the old confidence interval — that's the canonical "is this a real regression?" check.
+For JMH, the official `jmh-compare` (or [JMH Visualizer](https://jmh.morethan.io/)) diffs two `jmh.json` files and flags benchmarks where the new score is outside the old confidence interval — that's the canonical "is this a real regression?" check.
 
 ### 4. Graphs that pay for themselves
 
-Three plots cover the questions that actually come up:
+The repo currently produces five release-trend plots and two cache-hit plots, all under `results/_plots/`:
 
-1. **Overhead vs. N (line plot, log-x)** — one line per release. The shape tells you whether scaling is still linear; the height tells you the constant factor. *Source: `Overhead(ms)` column from the stress sweep.*
-2. **Hot-path latency per release (grouped bar chart)** — six bars (one per JMH benchmark) × one group per release. Catches regressions in any single hot path even when overall compile time looks fine. *Source: `Score` from `jmh.json`.*
-3. **Heap / allocation profile during the N=10 000 run (line plot, time-series)** — peak-RSS or allocated-bytes against time. Useful only when investigating a memory regression; not part of the per-release dashboard. *Source: `-prof gc` (JMH) or `jcmd VM.native_memory` snapshots during the stress test.*
+1. **Overhead vs. N** (`overhead-vs-n.png`, line plot, log-x) — one line per release. Shape tells scaling; height tells constant factor. Source: `Overhead(ms)` column from `stress.txt`.
+2. **Hot-path latency by release** (`hotpath-by-release.png`, grouped bar chart, log-y) — six bars × one group per release. Catches per-hot-path regressions. Source: `Score` from `jmh.json`.
+3. **`writeFileIfChanged` variants** (`writeFileIfChanged-detail.png`, linear scale) — the three `writeFileIfChanged_*` benchmarks isolated from the rest, error bars visible.
+4. **Allocation overhead vs. N** (`memory-overhead-vs-n.png`) — `OverheadAlloc(KB)` from `MemoryVolumeStressTest`. Linear scaling expected; flat across releases means no allocation regression.
+5. **Peak heap vs. N** (`memory-peak-heap-vs-n.png`) — noisier than allocation overhead (GC-timing dependent). Useful for OOM-risk sanity, not regression decisions.
+6. **Cache-hit wall-clock** (`cache-hit-time.png`, log-y) — `WriteCacheHitBenchmark` proof, cache hit vs. no-cache, with speedup ratios annotated. Source: `jmh-cache-hit.json`.
+7. **Cache-hit allocation** (`cache-hit-alloc.png`, log-y) — same benchmark, `gc.alloc.rate.norm` axis. Shows the 10,000× allocation reduction at 1 MB body size.
 
-A 30-line `tools/plot-results.py` reading the JSON/CSV from `results/*/` and emitting PNGs into `results/_plots/` is enough — no Grafana, no time-series DB. The repo is the database.
+`tools/plot-results.py` regenerates 1–5 from any committed release folders. `tools/plot-cache-hit.py` regenerates 6–7 from a single `jmh-cache-hit.json`. No Grafana, no time-series DB — the repo is the database.
 
 ### 5. What CI already does — and what it doesn't
 
@@ -136,15 +150,26 @@ load-tests/
 ├── src/
 │   ├── main/java/.../SyntheticClassGenerator.java
 │   ├── main/java/.../ProcessorHotPathBenchmark.java   (JMH)
+│   ├── main/java/.../WriteCacheHitBenchmark.java      (JMH, since 0.7.1)
 │   └── test/java/.../AnnotationVolumeStressTest.java
 │       test/java/.../MemoryVolumeStressTest.java
 │       test/java/.../ConcurrentBuildTest.java
-└── results/                                   ← suggested; gitignored except for tagged baselines
-    ├── 0.6.0/
-    │   ├── env.txt          (jdk + os + cpu + sha)
-    │   ├── stress.csv
-    │   └── jmh.json
-    └── _plots/
+└── results/                                   ← committed baselines per release tag
+    ├── README.md
+    ├── 0.5.4/  0.5.5/  0.5.6/  0.7.0/  0.7.1/
+    │   ├── env.txt                       jdk + os + cpu + sha + release notes
+    │   ├── stress.txt                    AnnotationVolumeStressTest table
+    │   ├── memory.txt                    MemoryVolumeStressTest table
+    │   ├── concurrent.txt / .xml         ConcurrentBuildTest surefire
+    │   ├── jmh.json                      ProcessorHotPathBenchmark JMH JSON
+    │   └── jmh-cache-hit.json            WriteCacheHitBenchmark (0.7.1+ only)
+    │   └── jmh-cache-hit-summary.md      Human-readable cache-benchmark writeup (0.7.1+)
+    └── _plots/                           regenerated by tools/plot-{results,cache-hit}.py
         ├── overhead-vs-n.png
-        └── hotpath-by-release.png
+        ├── hotpath-by-release.png
+        ├── writeFileIfChanged-detail.png
+        ├── memory-overhead-vs-n.png
+        ├── memory-peak-heap-vs-n.png
+        ├── cache-hit-time.png            (since 0.7.1)
+        └── cache-hit-alloc.png           (since 0.7.1)
 ```
