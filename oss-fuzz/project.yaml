@@ -1,6 +1,6 @@
 homepage: "https://github.com/PIsberg/vibetags"
 language: jvm
-primary_contact: "pontus.isberg@deversity.se"
+primary_contact: "isberg.peter@gmail.com"
 fuzzing_engines:
   - libfuzzer
 sanitizers:
