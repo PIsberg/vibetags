@@ -17,3 +17,5 @@ docs/diagrams/encode_plantuml.py
 load-tests/target/
 load-tests/dependency-reduced-pom.xml
 .grok/
+# VibeTags per-output-file write cache (regenerated on every compile)
+.vibetags-cache

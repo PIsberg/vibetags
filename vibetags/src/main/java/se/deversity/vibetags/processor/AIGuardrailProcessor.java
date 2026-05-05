@@ -7,6 +7,7 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.WriteCache;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.*;
@@ -37,7 +38,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Public constructor for the service loader. */
     public AIGuardrailProcessor() {}
 
-    static final String VERSION = "0.7.0";
+    static final String VERSION = "0.7.1";
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
 
     /** Header written into every generated file — no version so bumping the dep never creates spurious diffs. */
@@ -54,6 +55,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Granular rules writer; recreated on init() to share the live fileWriter. */
     private GranularRulesWriter granularWriter = new GranularRulesWriter(fileWriter);
+
+    /** Per-output-file content cache; created on init() pointing at {@code <root>/.vibetags-cache}. */
+    private WriteCache writeCache = null;
 
     private Path root;
     private String projectName;
@@ -91,7 +95,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
-        this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log);
+        this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+        this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
 
         // Reset for potential reuse (tests reuse the processor instance via init).
@@ -157,6 +162,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(),
             !auditElements.isEmpty());
+
+        if (writeCache != null) writeCache.flush();
     }
 
     private void logSummary(Set<String> activeServices) {
@@ -217,14 +224,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return fileWriter.stripLegacyVibeTagsBlock(before);
     }
 
-    /** Returns the messager from processingEnv, or a no-op messager if processingEnv is null (common in unit tests). */
+    /**
+     * Returns the messager from {@code processingEnv}. Both call sites run after
+     * {@link #init(javax.annotation.processing.ProcessingEnvironment)} has populated
+     * {@code processingEnv} via {@code super.init(...)}, so the field is non-null here.
+     */
     private Messager getSafeMessager() {
-        if (processingEnv != null) return processingEnv.getMessager();
-        return new Messager() {
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, javax.lang.model.element.AnnotationMirror a, javax.lang.model.element.AnnotationValue v) {}
-        };
+        return processingEnv.getMessager();
     }
 }
