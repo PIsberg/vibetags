@@ -70,37 +70,37 @@ jobs:
       - name: Verify Generated AI Config Files
         run: |
           cd example
-          echo “Checking generated files exist and contain content...”
+          echo "Checking generated files exist and contain content..."
           for f in .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md .github/copilot-instructions.md llms.txt llms-full.txt .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore .windsurfrules .rules .cody/config.json .codyignore .supermavenignore .cursor/rules/com-example-payment-PaymentProcessor.mdc .cursor/rules/com-example-database-DatabaseConnector.mdc .trae/rules/com-example-payment-PaymentProcessor.md .roo/rules/com-example-payment-PaymentProcessor.md .windsurf/rules/com-example-payment-PaymentProcessor.md .continue/rules/com-example-payment-PaymentProcessor.md .tabnine/guidelines/com-example-payment-PaymentProcessor.md .amazonq/rules/com-example-payment-PaymentProcessor.md .ai/rules/com-example-payment-PaymentProcessor.md; do
-            if [ ! -f “$f” ]; then echo “FAIL $f missing”; exit 1; fi
-            if [ ! -s “$f” ]; then echo “FAIL $f empty”; exit 1; fi
-            echo “OK $f”
+            if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
+            if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
+            echo "OK $f"
           done
-          echo “All generated files present and non-empty”
+          echo "All generated files present and non-empty"
 
       - name: Verify @AIAudit Content
         run: |
           cd example
-          echo “Checking @AIAudit content in generated files...”
-          grep -q “MANDATORY SECURITY AUDITS” .cursorrules || { echo “FAIL Cursor audit section missing”; exit 1; }
-          echo “OK Cursor audit section”
-          grep -q “audit_requirements” CLAUDE.md || { echo “FAIL Claude audit requirements missing”; exit 1; }
-          echo “OK Claude audit requirements”
-          grep -q “CONTINUOUS AUDIT REQUIREMENTS” gemini_instructions.md || { echo “FAIL Gemini audit requirements missing”; exit 1; }
-          echo “OK Gemini audit requirements”
-          grep -q “MANDATORY SECURITY AUDITS” AGENTS.md || { echo “FAIL Codex audit guardrails missing”; exit 1; }
-          echo “OK Codex audit guardrails”
-          grep -q “MANDATORY SECURITY AUDITS” QWEN.md || { echo “FAIL Qwen audit guardrails missing”; exit 1; }
-          echo “OK Qwen audit guardrails”
-          grep -q “Security Audit Requirements” .github/copilot-instructions.md || { echo “FAIL Copilot audit requirements missing”; exit 1; }
-          echo “OK Copilot audit requirements”
-          grep -q “Security Audit Requirements” llms.txt || { echo “FAIL llms.txt audit section missing”; exit 1; }
-          echo “OK llms.txt audit section”
-          grep -q “Mandatory Security Audit Requirements” llms-full.txt || { echo “FAIL llms-full.txt audit section missing”; exit 1; }
-          echo “OK llms-full.txt audit section”
-          grep -q “SECURITY AUDIT: com.example.database.DatabaseConnector” CONVENTIONS.md || { echo “FAIL Aider conventions audit section missing”; exit 1; }
-          echo “OK Aider conventions audit section”
-          echo “All @AIAudit content verified”
+          echo "Checking @AIAudit content in generated files..."
+          grep -q "MANDATORY SECURITY AUDITS" .cursorrules || { echo "FAIL Cursor audit section missing"; exit 1; }
+          echo "OK Cursor audit section"
+          grep -q "audit_requirements" CLAUDE.md || { echo "FAIL Claude audit requirements missing"; exit 1; }
+          echo "OK Claude audit requirements"
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
+          echo "OK Gemini audit requirements"
+          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
+          echo "OK Codex audit guardrails"
+          grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
+          echo "OK Qwen audit guardrails"
+          grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }
+          echo "OK Copilot audit requirements"
+          grep -q "Security Audit Requirements" llms.txt || { echo "FAIL llms.txt audit section missing"; exit 1; }
+          echo "OK llms.txt audit section"
+          grep -q "Mandatory Security Audit Requirements" llms-full.txt || { echo "FAIL llms-full.txt audit section missing"; exit 1; }
+          echo "OK llms-full.txt audit section"
+          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
+          echo "OK Aider conventions audit section"
+          echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'
@@ -218,37 +218,37 @@ jobs:
       - name: Verify Generated AI Config Files
         run: |
           cd example
-          echo “Checking generated files exist and contain content...”
+          echo "Checking generated files exist and contain content..."
           for f in .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md .github/copilot-instructions.md llms.txt llms-full.txt .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore .windsurfrules .rules .cody/config.json .codyignore .supermavenignore .cursor/rules/com-example-payment-PaymentProcessor.mdc .cursor/rules/com-example-database-DatabaseConnector.mdc .trae/rules/com-example-payment-PaymentProcessor.md .roo/rules/com-example-payment-PaymentProcessor.md .windsurf/rules/com-example-payment-PaymentProcessor.md .continue/rules/com-example-payment-PaymentProcessor.md .tabnine/guidelines/com-example-payment-PaymentProcessor.md .amazonq/rules/com-example-payment-PaymentProcessor.md .ai/rules/com-example-payment-PaymentProcessor.md; do
-            if [ ! -f “$f” ]; then echo “FAIL $f missing”; exit 1; fi
-            if [ ! -s “$f” ]; then echo “FAIL $f empty”; exit 1; fi
-            echo “OK $f”
+            if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
+            if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
+            echo "OK $f"
           done
-          echo “All generated files present and non-empty”
+          echo "All generated files present and non-empty"
 
       - name: Verify @AIAudit Content
         run: |
           cd example
-          echo “Checking @AIAudit content in generated files...”
-          grep -q “MANDATORY SECURITY AUDITS” .cursorrules || { echo “FAIL Cursor audit section missing”; exit 1; }
-          echo “OK Cursor audit section”
-          grep -q “audit_requirements” CLAUDE.md || { echo “FAIL Claude audit requirements missing”; exit 1; }
-          echo “OK Claude audit requirements”
-          grep -q “CONTINUOUS AUDIT REQUIREMENTS” gemini_instructions.md || { echo “FAIL Gemini audit requirements missing”; exit 1; }
-          echo “OK Gemini audit requirements”
-          grep -q “MANDATORY SECURITY AUDITS” AGENTS.md || { echo “FAIL Codex audit guardrails missing”; exit 1; }
-          echo “OK Codex audit guardrails”
-          grep -q “MANDATORY SECURITY AUDITS” QWEN.md || { echo “FAIL Qwen audit guardrails missing”; exit 1; }
-          echo “OK Qwen audit guardrails”
-          grep -q “Security Audit Requirements” .github/copilot-instructions.md || { echo “FAIL Copilot audit requirements missing”; exit 1; }
-          echo “OK Copilot audit requirements”
-          grep -q “Security Audit Requirements” llms.txt || { echo “FAIL llms.txt audit section missing”; exit 1; }
-          echo “OK llms.txt audit section”
-          grep -q “Mandatory Security Audit Requirements” llms-full.txt || { echo “FAIL llms-full.txt audit section missing”; exit 1; }
-          echo “OK llms-full.txt audit section”
-          grep -q “SECURITY AUDIT: com.example.database.DatabaseConnector” CONVENTIONS.md || { echo “FAIL Aider conventions audit section missing”; exit 1; }
-          echo “OK Aider conventions audit section”
-          echo “All @AIAudit content verified”
+          echo "Checking @AIAudit content in generated files..."
+          grep -q "MANDATORY SECURITY AUDITS" .cursorrules || { echo "FAIL Cursor audit section missing"; exit 1; }
+          echo "OK Cursor audit section"
+          grep -q "audit_requirements" CLAUDE.md || { echo "FAIL Claude audit requirements missing"; exit 1; }
+          echo "OK Claude audit requirements"
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
+          echo "OK Gemini audit requirements"
+          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
+          echo "OK Codex audit guardrails"
+          grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
+          echo "OK Qwen audit guardrails"
+          grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }
+          echo "OK Copilot audit requirements"
+          grep -q "Security Audit Requirements" llms.txt || { echo "FAIL llms.txt audit section missing"; exit 1; }
+          echo "OK llms.txt audit section"
+          grep -q "Mandatory Security Audit Requirements" llms-full.txt || { echo "FAIL llms-full.txt audit section missing"; exit 1; }
+          echo "OK llms-full.txt audit section"
+          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
+          echo "OK Aider conventions audit section"
+          echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
         if: matrix.java == '17'
