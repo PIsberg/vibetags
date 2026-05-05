@@ -7,6 +7,7 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.WriteCache;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.*;
@@ -55,6 +56,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Granular rules writer; recreated on init() to share the live fileWriter. */
     private GranularRulesWriter granularWriter = new GranularRulesWriter(fileWriter);
 
+    /** Per-output-file content cache; created on init() pointing at {@code <root>/.vibetags-cache}. */
+    private WriteCache writeCache = null;
+
     private Path root;
     private String projectName;
 
@@ -91,7 +95,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
-        this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log);
+        this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+        this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
 
         // Reset for potential reuse (tests reuse the processor instance via init).
@@ -157,6 +162,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(),
             !auditElements.isEmpty());
+
+        if (writeCache != null) writeCache.flush();
     }
 
     private void logSummary(Set<String> activeServices) {

@@ -41,6 +41,12 @@ for f in "${AI_FILES[@]}"; do
   fi
 done
 
+# Remove the per-file write cache so the next compile is a full cold rebuild.
+if [ -f "$SCRIPT_DIR/.vibetags-cache" ]; then
+  rm "$SCRIPT_DIR/.vibetags-cache"
+  echo "  removed: .vibetags-cache"
+fi
+
 # Cleanup granular rules in directories
 for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **Per-output-file write cache.** Added a `.vibetags-cache` sidecar at the project root that records the SHA-256 of the last-written body, the file size, and the file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the read-and-compare path entirely. Real win for the "rebuild without changing annotated classes" case (most incremental builds). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+
 ## [0.7.0] - 2026-05-05
 
 This release adds the `@AIContract` annotation and broadens platform coverage to 10 additional AI assistants, while landing the first end-to-end performance measurement of the internal-package refactor that shipped in 0.6.0. No breaking changes: existing 0.5.x / 0.6.0 setups continue to work unchanged.
