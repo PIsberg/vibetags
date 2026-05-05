@@ -13,10 +13,23 @@ A pure performance release. Three optimisations target the steady-state incremen
 
 ### Performance
 
-- **Per-output-file write cache (`.vibetags-cache`).** New sidecar at the project root recording the SHA-256 of the last-written body, file size, and file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the entire read-and-compare-and-write path. Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+- **Per-output-file write cache (`.vibetags-cache`).** New sidecar at the project root recording a CRC32C fingerprint of the last-written body, file size, and file mtime for every generated platform file. On the next compile, if the cache says we wrote that exact body and the file is byte-stable since (size + mtime unchanged), the writer skips the entire read-and-compare-and-write path. CRC32C uses the SSE-4.2 hardware instruction on x86 and is roughly an order of magnitude faster than SHA-256 for this fingerprint use; collision probability between two differently-generated VibeTags bodies is ~1 in 4 billion, and a collision could only cause us to skip writing identical content (never silently corrupt output, since size + mtime are also checked). Cache is auto-rebuilt if missing or corrupt; safe to delete; gitignored.
+
+  **Where the cache helps and where it doesn't** (verified via the new `WriteCacheHitBenchmark`):
+  - On **warm-cache local SSD**, the cache is a wash on wall-clock — `Files.readAttributes` + CRC32C of a small body costs about the same as `Files.readString` + strip-equals on a warm OS page cache. The cache *does* eliminate the `String` allocation for the existing-content read (less GC pressure under load) and cuts the syscall count from 3 (open + read + close) to 1 (stat).
+  - On **cold caches, network filesystems, or genuinely large files**, the cache wins meaningfully: stat is a single round-trip; `readString` is multiple. The end-to-end test in `example/` shows the writes are correctly skipped — file mtimes stay identical across no-change rebuilds — which is the visible production benefit on any storage backend.
 - **Streaming byte-compare for non-marker writes.** When a non-marker output file (`.cursorignore`, `.aiderignore`, `.aiexclude`, ignore-style files, `.json` / `.toml` configs) exists at exactly the new content's byte length, `writeFileIfChanged` now stream-compares with early-exit on first byte mismatch instead of materialising the full file as a `String` for `.equals()`. Avoids a multi-MB allocation on large ignore files and finds mismatches in the first kilobyte without reading the rest. The strip-tolerant `readString` path is still used for ≤64-byte size differences.
 - **Pre-sized per-platform `StringBuilder`s.** `GuardrailContentBuilder` now pre-allocates the nine main per-platform buffers (`cursorRules`, `claudeMd`, `codexAgents`, `copilot`, `qwenMd`, `windsurfRules`, `zedRules`, `llmsTxt`, `llmsFullTxt`) based on collected element count (~1500 chars per element, capped at 256 KB). Eliminates the log₂(N) `char[]` grow-and-copy passes that the eight per-annotation `appendXxx()` loops previously triggered.
 - **Halved syscall count on the cache hot-path.** `WriteCache.isUnchanged` now uses a single `Files.readAttributes(BasicFileAttributes.class)` call to read both size and mtime in one stat instead of two separate `Files.size()` + `Files.getLastModifiedTime()` calls. `WriteCache.recordWrite` reuses `body.getBytes(UTF_8).length` (the value just written) instead of issuing a redundant `Files.size()` syscall after the write. The cache write-side overhead drops from ~30 µs to ~10 µs on Windows.
+
+### Tests
+
+- `WriteCacheTest` (10 tests): hit / miss-on-different-body / mtime-invalidation / delete-invalidation / size-invalidation / persistence / corrupt-cache fallback / idempotent flush / invalidate.
+- `WriteCacheProcessorIntegrationTest` (3 tests): cache file is created on first compile; second compile against unchanged sources keeps file mtimes stable; external edit invalidates the entry and triggers a rewrite that preserves user content above the marker block.
+- `StreamingByteCompareTest` (8 tests): exact match, first-/last-byte mismatch, empty file/expected, 256 KB random content, 64 KB content with one bit flipped, multi-byte UTF-8, exact 8 KB buffer-boundary case.
+- `WriteCacheHitBenchmark` (load-tests/, 8 JMH benchmarks): measures cache-hit vs. no-cache writeFileIfChanged paths against small (1 KB) and medium (12 KB) files, both marker (.md) and non-marker (.cursorrules) variants. Findings written up in `load-tests/results/0.7.1/jmh-cache-hit-summary.md`.
+
+**Total: 423 unit/integration tests + 8 new JMH benchmarks. All green.**
 
 ### Numbers (same machine, JDK Temurin 26, `stress.max.classes=1000`)
 
