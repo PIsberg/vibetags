@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-05
+
+This release adds the `@AIContract` annotation and broadens platform coverage to 10 additional AI assistants, while landing the first end-to-end performance measurement of the internal-package refactor that shipped in 0.6.0. No breaking changes: existing 0.5.x / 0.6.0 setups continue to work unchanged.
+
+### Added
+
+- **`@AIContract` annotation** — freezes the **public signature** (method name, parameter types, parameter order, return type, checked exceptions) of a class or method while explicitly inviting AI to refactor the internal logic. Use when the API surface is pinned by an OpenAPI / AsyncAPI contract or by another service that binds to it through generated clients or message schemas. Unlike `@AILocked` (which prohibits all changes), `@AIContract` separates the immutable surface from the mutable body. Compile-time warnings flag two contradictory or overlapping combinations: `@AIContract` + `@AIDraft` (signature frozen but needs drafting) and `@AIContract` + `@AILocked` (`@AILocked` already prohibits everything). Generated as a dedicated `<contract_signatures>` section in every platform output.
+- **10 new AI platform integrations**, all opt-in via the existing file-presence model:
+
+  | Platform | File / directory | Format |
+  |---|---|---|
+  | Windsurf IDE (traditional) | `.windsurfrules` | Markdown |
+  | Windsurf IDE (granular per-class rules) | `.windsurf/rules/*.md` | YAML front-matter + Markdown |
+  | Zed Editor | `.rules` | Markdown |
+  | Sourcegraph Cody | `.cody/config.json`, `.codyignore` | JSON / glob |
+  | Supermaven | `.supermavenignore` | glob |
+  | Continue (granular) | `.continue/rules/*.md` | YAML front-matter + Markdown |
+  | Tabnine (granular) | `.tabnine/guidelines/*.md` | Markdown |
+  | Amazon Q (granular) | `.amazonq/rules/*.md` | Markdown |
+  | Universal AI standard (granular) | `.ai/rules/*.md` | Markdown |
+  | Trae IDE (granular) | `.trae/rules/*.md` | YAML front-matter + Markdown |
+
+  As before: VibeTags **never creates these files** — `touch <file>` or `mkdir -p <dir>` to opt in, delete to opt out. New platforms add **zero overhead** to projects that don't enable them (the per-element platform appends from 0.5.6 are still gated on `activeServices`).
+
+### Changed
+
+- Bumped the `vibetags-usage` skill to **v1.2.0** — adds `@AIContract` to the trigger phrases, includes all new platform `touch` / `mkdir` commands in Quick Setup, expands the Annotation Combinations table (`@AIContract` + `@AIPerformance`, `@AIContract` + `@AIContext`), adds two new entries to the Diagnosing Issues table for the `@AIContract` warnings, and rewrites the Granular Rules section as an 8-platform table.
+- The CI verify step (`Verify Generated AI Config Files` in `build.yml`) and `example/reset-ai-files.sh` now cover every shipping platform, including the 10 new ones added this release.
+
+### Performance
+
+Same machine (i7-1260P), JDK Temurin 26, cap `stress.max.classes=1000`. **`OutputSize(B)` is byte-identical between 0.5.4, 0.5.5, 0.5.6, and 0.7.0** at every N — the work product is unchanged; only the cost has changed.
+
+#### Stress sweep — `Overhead(ms)` (processor − baseline)
+
+| N | 0.5.4 | 0.5.5 | 0.5.6 | **0.7.0** | Δ vs 0.5.6 |
+|---:|---:|---:|---:|---:|---:|
+| 10 | 730 | 750 | 432 | **425** | −1.6% |
+| 100 | -38 | -184 | 183 | **228** | +25% |
+| 500 | 1062 | 1859 | 283 | **16** | **−94%** |
+| 1000 | 933 | 1209 | 211 | **13** | **−94%** |
+
+![Annotation-volume overhead vs. N — 0.5.4 / 0.5.5 / 0.5.6 / 0.7.0](changelog-assets/0.7.0/overhead-vs-n.png)
+
+The 0.7.0 line is essentially flat from N=500 upwards — the per-compile setup cost dominates the per-element processing cost, which is what you want from a processor that scales linearly with project size. The N=10 / N=100 numbers are within process-launch-jitter noise, as documented in the load-tests README caveats.
+
+#### JMH hot-path (`avgt`, µs/op, lower is better)
+
+| Benchmark | 0.5.4 | 0.5.5 | 0.5.6 | **0.7.0** |
+|---|---:|---:|---:|---:|
+| `buildServiceFileMap` | 8.19 ± 0.13 | 4.80 ± 0.63 | 8.97 ± 0.96 | **6.69 ± 1.48** |
+| `resolveActiveServices_allPresent` | 554.55 ± 57.17 | 537.99 ± 150.02 | 599.04 ± 105.97 | **499.62 ± 155.86** |
+| `resolveActiveServices_nonePresent` | 497.27 ± 86.94 | 633.11 ± 350.46 | 583.44 ± 100.16 | **450.25 ± 106.48** |
+| `writeFileIfChanged_noChange` | 355.57 ± 296.12 | 437.66 ± 252.73 | 1934.54 ± 532.62 | **208.07 ± 8.92** |
+| `writeFileIfChanged_smallWrite` | 1916.92 ± 183.36 | 9456.07 ± 5186.26 | 4109.43 ± 411.87 | **748.71 ± 50.07** |
+| `writeFileIfChanged_largeWrite` | 3058.88 ± 293.93 | 5628.32 ± 4314.78 | 5253.74 ± 866.68 | **1486.33 ± 1277.36** |
+
+![JMH hot-path benchmarks by release (log y)](changelog-assets/0.7.0/hotpath-by-release.png)
+
+![JMH `writeFileIfChanged` variants (linear scale)](changelog-assets/0.7.0/writeFileIfChanged-detail.png)
+
+The dramatic drops on `writeFileIfChanged_*` and `_noChange` reflect the cumulative effect of the I/O-path simplifications shipped in 0.5.6 (atomic-move, fewer `readString` calls, single `indexOf`) plus the structural split shipped in 0.6.0 (extracting `GuardrailFileWriter` and friends out of the 1337-line monolith) — both finally measured end-to-end here. **No targeted perf work was done in 0.7.0 itself**; the gains are the previous two releases' optimisations being captured in a single comparable baseline.
+
+`buildServiceFileMap` shows a small regression from 0.5.5 (+1.9 µs) — expected, since the service map now contains 10 more entries to resolve. Still well within the JMH error bars.
+
+#### Memory
+
+![MemoryVolumeStressTest — allocation overhead vs. N](changelog-assets/0.7.0/memory-overhead-vs-n.png)
+
+Allocation overhead curves are indistinguishable across all four releases (~3% spread at N=1000). The new platforms add no measurable allocation cost — they're paid only when their opt-in file/directory exists, and the test project only opts into the same platforms as earlier baselines.
+
+### Why this isn't a breaking change
+
+- Annotation jar (`vibetags-annotations`) is API-additive — adding `@AIContract` cannot break consumers of `@AILocked`/`@AIContext`/etc.
+- Processor jar (`vibetags-processor`) recognises 10 more file paths; if those files don't exist, behaviour is identical to 0.6.0.
+- BOM (`vibetags-bom`) bump-only — same two managed coordinates, same scopes.
+- Generated content for unchanged annotations is byte-identical to 0.6.0 output.
+
+### Migration
+
+No migration steps. Bump the BOM coordinate (or the three explicit coordinates) to `0.7.0`:
+
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-bom</artifactId>
+    <version>0.7.0</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
+
+To enable any of the new platforms, create the placeholder file/directory in your project root (see `example/` for a working setup):
+
+```bash
+touch .windsurfrules .rules .supermavenignore
+mkdir -p .windsurf/rules .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .cody && touch .cody/config.json .codyignore
+```
+
 ## [0.6.0] - 2026-05-03
 
 This release splits VibeTags into two artifacts and introduces a BOM that manages them together. Existing 0.5.x consumers continue to work unchanged; new projects should adopt the split pattern below.
@@ -194,7 +293,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/PIsberg/vibetags/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/PIsberg/vibetags/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/PIsberg/vibetags/compare/v0.5.4...v0.5.5
