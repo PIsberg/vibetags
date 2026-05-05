@@ -59,7 +59,7 @@ A short smoke run (`-runs=10000`) takes about 30 seconds on a quiescent laptop a
 When ready, the path is:
 
 1. Open a PR to [`google/oss-fuzz`](https://github.com/google/oss-fuzz) creating `projects/vibetags/` with these four files (`project.yaml`, `Dockerfile`, `build.sh`, plus `VibeTagsFuzzer.java`).
-2. Once accepted, OSS-Fuzz reports findings to the contact in `project.yaml` (currently `pontus.isberg@deversity.se`) and creates issues on its own tracker that auto-disclose after 90 days.
+2. Once accepted, OSS-Fuzz reports findings to the contact in `project.yaml` (currently `isberg.peter@gmail.com`) and creates issues on its own tracker that auto-disclose after 90 days.
 
 ## What's left
 
