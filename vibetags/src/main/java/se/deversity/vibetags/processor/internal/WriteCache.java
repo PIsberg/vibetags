@@ -48,8 +48,58 @@ public final class WriteCache {
     private boolean loaded = false;
     private boolean dirty = false;
 
+    /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
+    private String buildFingerprint = null;
+
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
+    }
+
+    /**
+     * Returns the persisted top-level build fingerprint from the previous successful run, or
+     * {@code null} if no fingerprint is on file. The fingerprint covers the entire annotation
+     * input set plus the active service set — see {@link BuildFingerprint}.
+     */
+    public String getBuildFingerprint() {
+        loadIfNeeded();
+        return buildFingerprint;
+    }
+
+    /**
+     * Records the current run's top-level build fingerprint. Call this after a successful
+     * generate-and-write phase; the value is persisted on the next {@link #flush()}.
+     */
+    public void setBuildFingerprint(String fingerprint) {
+        loadIfNeeded();
+        if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
+            this.buildFingerprint = fingerprint;
+            this.dirty = true;
+        }
+    }
+
+    /**
+     * Returns true iff every entry currently in the cache points at a file whose size and mtime
+     * still match what we recorded. Used by the top-level fingerprint short-circuit to confirm
+     * that the on-disk state hasn't drifted (manual deletions, IDE rewrites, etc.) since we last
+     * generated, before skipping a full build.
+     *
+     * <p>An empty cache returns {@code true} — there is no on-disk state to invalidate, so the
+     * caller is free to fall through to the normal generate path on its own merits.
+     */
+    public boolean allCachedFilesStable() {
+        loadIfNeeded();
+        if (entries.isEmpty()) return true;
+        for (Map.Entry<String, Entry> e : entries.entrySet()) {
+            try {
+                BasicFileAttributes attrs = Files.readAttributes(
+                    java.nio.file.Paths.get(e.getKey()), BasicFileAttributes.class);
+                if (attrs.size() != e.getValue().size) return false;
+                if (attrs.lastModifiedTime().toMillis() != e.getValue().mtime) return false;
+            } catch (IOException ioe) {
+                return false; // missing or unreadable — caller must regenerate
+            }
+        }
+        return true;
     }
 
     /** Returns true iff cache says we wrote {@code body} to {@code file} and the file is byte-stable since. */
@@ -97,6 +147,9 @@ public final class WriteCache {
         if (!dirty) return;
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n");
+        if (buildFingerprint != null) {
+            sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
+        }
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             sb.append(e.getKey()).append('\t')
               .append(e.getValue().hash).append('\t')
@@ -131,7 +184,16 @@ public final class WriteCache {
         loaded = true;
         try {
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
-                if (line.isEmpty() || line.charAt(0) == '#') continue;
+                if (line.isEmpty()) continue;
+                if (line.charAt(0) == '#') {
+                    // Recognise the fingerprint header; ignore other comments.
+                    String prefix = "# fingerprint: ";
+                    if (line.startsWith(prefix)) {
+                        String fp = line.substring(prefix.length()).trim();
+                        if (!fp.isEmpty()) buildFingerprint = fp;
+                    }
+                    continue;
+                }
                 int t1 = line.indexOf('\t');
                 if (t1 < 0) continue;
                 int t2 = line.indexOf('\t', t1 + 1);

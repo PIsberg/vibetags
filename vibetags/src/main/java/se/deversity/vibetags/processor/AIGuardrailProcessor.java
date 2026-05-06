@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
+import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -130,6 +131,23 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
         Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
+        // Top-level fingerprint short-circuit: if neither the annotation set nor the active
+        // service set has changed since the last successful run, AND every file we wrote then is
+        // still byte-stable on disk, skip the entire build + per-file-compare phase. The two-part
+        // guard (input fingerprint AND output stability) means a manually deleted granular file
+        // still triggers regeneration.
+        String fingerprint = BuildFingerprint.compute(collector, activeServices);
+        if (writeCache != null
+                && fingerprint.equals(writeCache.getBuildFingerprint())
+                && writeCache.allCachedFilesStable()) {
+            Messager m = getSafeMessager();
+            m.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: inputs unchanged since last run (fingerprint " + fingerprint
+                    + "), skipping content build and writes.");
+            if (log != null) log.info("Inputs unchanged (fingerprint {}). Skipping generate phase.", fingerprint);
+            return;
+        }
+
         // Build all per-platform content in one pass.
         GuardrailContentBuilder.Result built =
             new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER).build();
@@ -163,7 +181,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             !ignoreElements.isEmpty(),
             !auditElements.isEmpty());
 
-        if (writeCache != null) writeCache.flush();
+        if (writeCache != null) {
+            writeCache.setBuildFingerprint(fingerprint);
+            writeCache.flush();
+        }
     }
 
     private void logSummary(Set<String> activeServices) {

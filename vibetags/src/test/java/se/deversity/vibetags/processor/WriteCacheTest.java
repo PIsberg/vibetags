@@ -214,6 +214,95 @@ class WriteCacheTest {
     }
 
     @Test
+    void freshCache_hasNoFingerprint(@TempDir Path tmp) {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        assertNull(cache.getBuildFingerprint(),
+            "fresh cache must report null fingerprint until one is recorded");
+    }
+
+    @Test
+    void setFingerprint_persistsAcrossInstances(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+
+        WriteCache writer = new WriteCache(cachePath);
+        writer.setBuildFingerprint("deadbeef");
+        // Need at least one entry OR the dirty flag for flush to write — setBuildFingerprint
+        // must mark the cache dirty on its own.
+        writer.flush();
+        assertTrue(Files.exists(cachePath), "setBuildFingerprint alone must mark cache dirty so flush writes");
+
+        WriteCache reader = new WriteCache(cachePath);
+        assertEquals("deadbeef", reader.getBuildFingerprint(),
+            "fingerprint must round-trip through the cache file");
+    }
+
+    @Test
+    void setFingerprint_ignoredWhenIdentical(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+
+        cache.setBuildFingerprint("aaaa1111");
+        cache.flush();
+        long firstMtime = Files.getLastModifiedTime(cachePath).toMillis();
+
+        // Re-setting the same value must not mark dirty → flush stays a no-op.
+        cache.setBuildFingerprint("aaaa1111");
+        cache.flush();
+        long secondMtime = Files.getLastModifiedTime(cachePath).toMillis();
+        assertEquals(firstMtime, secondMtime,
+            "no-op setBuildFingerprint must not rewrite the cache file");
+    }
+
+    @Test
+    void allCachedFilesStable_emptyCache_returnsTrue(@TempDir Path tmp) {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        assertTrue(cache.allCachedFilesStable(),
+            "an empty cache has no entries to invalidate");
+    }
+
+    @Test
+    void allCachedFilesStable_unchangedFiles_returnsTrue(@TempDir Path tmp) throws IOException {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        Path a = tmp.resolve("a.md");
+        Path b = tmp.resolve("b.md");
+        Files.writeString(a, "alpha");
+        Files.writeString(b, "beta");
+        cache.recordWrite(a, "alpha");
+        cache.recordWrite(b, "beta");
+
+        assertTrue(cache.allCachedFilesStable(),
+            "all cached files unchanged → stability check returns true");
+    }
+
+    @Test
+    void allCachedFilesStable_externallyModified_returnsFalse(@TempDir Path tmp) throws IOException {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        Path file = tmp.resolve("victim.md");
+        Files.writeString(file, "original");
+        cache.recordWrite(file, "original");
+
+        // External modification: bump mtime so the cached entry no longer matches.
+        FileTime later = FileTime.fromMillis(Files.getLastModifiedTime(file).toMillis() + 5_000);
+        Files.setLastModifiedTime(file, later);
+
+        assertFalse(cache.allCachedFilesStable(),
+            "modified mtime must invalidate the stability check");
+    }
+
+    @Test
+    void allCachedFilesStable_deletedFile_returnsFalse(@TempDir Path tmp) throws IOException {
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        Path file = tmp.resolve("victim.md");
+        Files.writeString(file, "doomed");
+        cache.recordWrite(file, "doomed");
+
+        Files.delete(file);
+
+        assertFalse(cache.allCachedFilesStable(),
+            "deleted cached file must invalidate the stability check");
+    }
+
+    @Test
     void size_reflectsRecordedEntries(@TempDir Path tmp) throws IOException {
         WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
         assertEquals(0, cache.size(), "fresh cache reports zero entries");
