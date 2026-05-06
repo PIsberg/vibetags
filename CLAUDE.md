@@ -186,6 +186,10 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 
+### Top-level fingerprint short-circuit
+
+The processor records a fingerprint of the build inputs — every collected annotation (FQN + attribute values) plus the resolved active-services set — into `.vibetags-cache` under a `# fingerprint: <hex>` header. On the next compile, if the fingerprint still matches AND every previously written file is byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no `GuardrailContentBuilder.build()`, no per-file compares, no writes. The two-part guard means a manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no longer matches the cache entry).
+
 ### Multi-module safety
 
 In multi-module builds, if a module has **no new annotations**, the processor skips updating shared files (`.cursorrules`, `llms.txt`, etc.) to avoid overwriting annotations contributed by sibling modules.
@@ -193,6 +197,10 @@ In multi-module builds, if a module has **no new annotations**, the processor sk
 ### SPI registration
 
 The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")` means new annotations are picked up automatically without touching the processor configuration.
+
+### Gradle incremental annotation processing
+
+The processor is declared as **aggregating** in `META-INF/gradle/incremental.annotation.processors`. Gradle therefore re-runs it only when annotations change anywhere in the compile unit, not on every unrelated `.java` edit. The category is `aggregating` (not `isolating`) because the generated files (`CLAUDE.md`, `.cursorrules`, `llms.txt`, etc.) are aggregated from annotations across the entire compilation unit — a per-source-file `isolating` declaration would produce stale output.
 
 ## Test Structure
 
