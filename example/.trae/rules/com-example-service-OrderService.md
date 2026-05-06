@@ -35,4 +35,17 @@ description: "AI rules for com.example.service.OrderService"
 ### Rules for method generateOrderConfirmation
 - **Rule**: Never log or expose runtime values of this element.
 - **Reason**: Output contains customer shipping address and contact details (PII)
+
+### Rules for method calculateDiscount
+- **Rule**: Changes MUST be accompanied by a matching test update.
+- **Coverage Goal**: 100%
+- **Frameworks**: JUNIT_5, ASSERTJ
+- **Mock Policy**: Use fixed prices — no external pricing calls in unit tests
+
+### Rules for method updateOrderStatus
+- **Rule**: Changes MUST be accompanied by a matching test update.
+- **Coverage Goal**: 95%
+- **Frameworks**: JUNIT_5, MOCKITO
+- **Test Location**: src/test/java/com/example/service/OrderServiceTest.java
+- **Mock Policy**: Mock OrderRepository and EventPublisher; use real state machine logic
 <!-- VIBETAGS-END -->

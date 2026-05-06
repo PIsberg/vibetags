@@ -12,6 +12,7 @@ import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -402,5 +403,73 @@ class AnnotationDefinitionsTest {
     @Test
     void testAIContractCanBeAppliedToClass() {
         assertDoesNotThrow(() -> assertNotNull(TestContractClass.class));
+    }
+
+    // -----------------------------------------------------------------------
+    // @AITestDriven
+    // -----------------------------------------------------------------------
+
+    @Test
+    void testAITestDrivenAnnotationRetention() {
+        Retention retention = AITestDriven.class.getAnnotation(Retention.class);
+        assertNotNull(retention);
+        assertEquals(RetentionPolicy.SOURCE, retention.value());
+    }
+
+    @Test
+    void testAITestDrivenAnnotationTargets() {
+        Target target = AITestDriven.class.getAnnotation(Target.class);
+        assertNotNull(target);
+        assertArrayEquals(
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            target.value()
+        );
+    }
+
+    @Test
+    void testAITestDrivenDefaultValues() throws NoSuchMethodException {
+        Method testLocationMethod = AITestDriven.class.getDeclaredMethod("testLocation");
+        Method coverageGoalMethod = AITestDriven.class.getDeclaredMethod("coverageGoal");
+        Method mockPolicyMethod   = AITestDriven.class.getDeclaredMethod("mockPolicy");
+        Method frameworkMethod    = AITestDriven.class.getDeclaredMethod("framework");
+
+        assertEquals("", testLocationMethod.getDefaultValue(), "testLocation must default to empty string");
+        assertEquals(100, coverageGoalMethod.getDefaultValue(), "coverageGoal must default to 100");
+        assertEquals("", mockPolicyMethod.getDefaultValue(), "mockPolicy must default to empty string");
+
+        AITestDriven.Framework[] defaultFrameworks = (AITestDriven.Framework[]) frameworkMethod.getDefaultValue();
+        assertNotNull(defaultFrameworks);
+        assertEquals(1, defaultFrameworks.length);
+        assertEquals(AITestDriven.Framework.JUNIT_5, defaultFrameworks[0], "default framework must be JUNIT_5");
+    }
+
+    @Test
+    void testAITestDrivenFrameworkEnumHasExpectedValues() {
+        AITestDriven.Framework[] values = AITestDriven.Framework.values();
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (AITestDriven.Framework f : values) names.add(f.name());
+        assertTrue(names.contains("JUNIT_5"));
+        assertTrue(names.contains("JUNIT_4"));
+        assertTrue(names.contains("TESTNG"));
+        assertTrue(names.contains("MOCKITO"));
+        assertTrue(names.contains("ASSERTJ"));
+        assertTrue(names.contains("SPOCK"));
+        assertTrue(names.contains("NONE"));
+    }
+
+    @Test
+    @AITestDriven(coverageGoal = 90, framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.MOCKITO})
+    void testAITestDrivenCanBeUsedOnMethods() throws NoSuchMethodException {
+        Method method = getClass().getDeclaredMethod("testAITestDrivenCanBeUsedOnMethods");
+        AITestDriven td = method.getAnnotation(AITestDriven.class);
+        assertNull(td); // Expected: null because SOURCE retention
+    }
+
+    @AITestDriven(coverageGoal = 100, framework = {AITestDriven.Framework.JUNIT_5})
+    static class TestTestDrivenClass {}
+
+    @Test
+    void testAITestDrivenCanBeAppliedToClass() {
+        assertDoesNotThrow(() -> assertNotNull(TestTestDrivenClass.class));
     }
 }

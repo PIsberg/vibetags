@@ -9,6 +9,7 @@ import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -28,8 +29,9 @@ public final class AnnotationCollector {
     private final Set<Element> draftElements       = new LinkedHashSet<>();
     private final Set<Element> privacyElements     = new LinkedHashSet<>();
     private final Set<Element> coreElements        = new LinkedHashSet<>();
-    private final Set<Element> performanceElements = new LinkedHashSet<>();
-    private final Set<Element> contractElements    = new LinkedHashSet<>();
+    private final Set<Element> performanceElements  = new LinkedHashSet<>();
+    private final Set<Element> contractElements     = new LinkedHashSet<>();
+    private final Set<Element> testDrivenElements   = new LinkedHashSet<>();
 
     private boolean anyAnnotationsFound = false;
 
@@ -44,12 +46,13 @@ public final class AnnotationCollector {
         coreElements.addAll(roundEnv.getElementsAnnotatedWith(AICore.class));
         performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
         contractElements.addAll(roundEnv.getElementsAnnotatedWith(AIContract.class));
+        testDrivenElements.addAll(roundEnv.getElementsAnnotatedWith(AITestDriven.class));
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
                      || !draftElements.isEmpty() || !privacyElements.isEmpty()
                      || !coreElements.isEmpty() || !performanceElements.isEmpty()
-                     || !contractElements.isEmpty();
+                     || !contractElements.isEmpty() || !testDrivenElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -64,6 +67,7 @@ public final class AnnotationCollector {
         coreElements.clear();
         performanceElements.clear();
         contractElements.clear();
+        testDrivenElements.clear();
         anyAnnotationsFound = false;
     }
 
@@ -74,7 +78,8 @@ public final class AnnotationCollector {
     public Set<Element> draft()       { return draftElements; }
     public Set<Element> privacy()     { return privacyElements; }
     public Set<Element> core()        { return coreElements; }
-    public Set<Element> performance() { return performanceElements; }
-    public Set<Element> contract()    { return contractElements; }
+    public Set<Element> performance()  { return performanceElements; }
+    public Set<Element> contract()     { return contractElements; }
+    public Set<Element> testDriven()   { return testDrivenElements; }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

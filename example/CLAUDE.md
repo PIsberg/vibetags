@@ -201,6 +201,21 @@
   </contract_signatures>
 
 <rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
+  <test_driven_requirements>
+    <element path="com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)">
+      <coverage_goal>100</coverage_goal>
+      <frameworks>JUNIT_5, ASSERTJ</frameworks>
+      <mock_policy>Use fixed prices — no external pricing calls in unit tests</mock_policy>
+    </element>
+    <element path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
+      <coverage_goal>95</coverage_goal>
+      <frameworks>JUNIT_5, MOCKITO</frameworks>
+      <test_location>src/test/java/com/example/service/OrderServiceTest.java</test_location>
+      <mock_policy>Mock OrderRepository and EventPublisher; use real state machine logic</mock_policy>
+    </element>
+  </test_driven_requirements>
+
+<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
