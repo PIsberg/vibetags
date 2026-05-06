@@ -42,9 +42,11 @@ public final class GranularRulesWriter {
         boolean tabnineGranular   = activeServices.contains("tabnine_granular");
         boolean amazonqGranular   = activeServices.contains("amazonq_granular");
         boolean aiRulesGranular   = activeServices.contains("ai_rules_granular");
+        boolean pearaiGranular    = activeServices.contains("pearai_granular");
         if (!cursorGranular && !traeGranular && !rooGranular
                 && !windsurfGranular && !continueGranular
-                && !tabnineGranular && !amazonqGranular && !aiRulesGranular) return writtenQNames;
+                && !tabnineGranular && !amazonqGranular && !aiRulesGranular
+                && !pearaiGranular) return writtenQNames;
 
         elementRules.forEach((element, builder) -> {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
@@ -119,6 +121,17 @@ public final class GranularRulesWriter {
                 fileWriter.writeFileIfChanged(
                     serviceFiles.get("ai_rules_granular").resolve(qName + ".md").toString(), md, true);
             }
+            if (pearaiGranular) {
+                String md = "---\n"
+                    + "description: \"AI rules for " + element + "\"\n"
+                    + "globs: [\"" + glob + "\"]\n"
+                    + "alwaysApply: false\n"
+                    + "---\n\n"
+                    + "# Rules for " + simpleName + "\n\n"
+                    + rulesContent;
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get("pearai_granular").resolve(qName + ".md").toString(), md, true);
+            }
         });
         return writtenQNames;
     }
@@ -136,5 +149,6 @@ public final class GranularRulesWriter {
         if (activeServices.contains("tabnine_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("tabnine_granular"),  ".md",  excludeQNames);
         if (activeServices.contains("amazonq_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("amazonq_granular"),  ".md",  excludeQNames);
         if (activeServices.contains("ai_rules_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("ai_rules_granular"), ".md",  excludeQNames);
+        if (activeServices.contains("pearai_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("pearai_granular"),   ".md",  excludeQNames);
     }
 }

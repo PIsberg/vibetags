@@ -49,11 +49,19 @@ public final class GuardrailContentBuilder {
     private final boolean qwenIgnoreFileActive;
     private final boolean granularActive;
 
-    // New platforms
+    // v0.7.0 platforms
     private final boolean windsurfActive;
     private final boolean zedActive;
     private final boolean codyIgnoreActive;
     private final boolean supermavenIgnoreActive;
+
+    // v0.8.0 platforms
+    private final boolean mentatActive;
+    private final boolean sweepActive;
+    private final boolean plandexActive;
+    private final boolean doubleIgnoreActive;
+    private final boolean interpreterActive;
+    private final boolean codeiumIgnoreActive;
 
     // Windsurf test-driven section
     private StringBuilder windsurfTestDrivenSection;
@@ -86,6 +94,25 @@ public final class GuardrailContentBuilder {
     // Other new platform builders
     private StringBuilder codyIgnoreFile;
     private StringBuilder supermavenIgnoreFile;
+
+    // v0.8.0 platform builders
+    private StringBuilder mentatLocked;
+    private StringBuilder mentatAudit;
+    private StringBuilder mentatPrivacy;
+    private StringBuilder mentatCore;
+    private StringBuilder mentatPerf;
+    private StringBuilder mentatContract;
+    private StringBuilder mentatIgnore;
+    private StringBuilder mentatDraft;
+    private StringBuilder mentatTestDriven;
+
+    private StringBuilder sweepRules;
+    private StringBuilder plandexLocked;
+    private StringBuilder plandexAudit;
+    private StringBuilder plandexPrivacy;
+    private StringBuilder interpreterRules;
+    private StringBuilder doubleIgnoreFile;
+    private StringBuilder codeiumIgnoreFile;
 
     // Primary platform builders
     private StringBuilder cursorRules;
@@ -156,11 +183,18 @@ public final class GuardrailContentBuilder {
                                     || activeServices.contains("continue_granular")
                                     || activeServices.contains("tabnine_granular")
                                     || activeServices.contains("amazonq_granular")
-                                    || activeServices.contains("ai_rules_granular");
+                                    || activeServices.contains("ai_rules_granular")
+                                    || activeServices.contains("pearai_granular");
         this.windsurfActive          = activeServices.contains("windsurf");
         this.zedActive               = activeServices.contains("zed");
         this.codyIgnoreActive        = activeServices.contains("cody_ignore");
         this.supermavenIgnoreActive  = activeServices.contains("supermaven_ignore");
+        this.mentatActive            = activeServices.contains("mentat");
+        this.sweepActive             = activeServices.contains("sweep");
+        this.plandexActive           = activeServices.contains("plandex");
+        this.doubleIgnoreActive      = activeServices.contains("double_ignore");
+        this.interpreterActive       = activeServices.contains("interpreter");
+        this.codeiumIgnoreActive     = activeServices.contains("codeium_ignore");
     }
 
     /**
@@ -454,6 +488,10 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### LOCKED: ").append(className).append("\n- **Status**: Locked (Do Not Edit)\n- **Reason**: ").append(reason).append("\n\n");
         if (windsurfActive)  windsurfRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
         if (zedActive)       zedRules.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (mentatActive)    mentatLocked.append("    {\"path\": \"").append(className).append("\", \"reason\": \"").append(reason).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Do not modify ").append(className).append(": ").append(reason).append("\"\n");
+        if (plandexActive)   plandexLocked.append("    - path: \"").append(className).append("\"\n      reason: \"").append(reason).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (locked): ").append(reason).append("\n");
         if (granularActive)  appendToGranular(e, "Locked Status", "- **Reason**: " + reason);
     }
 
@@ -483,6 +521,7 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### CONTEXT: ").append(className).append("\n- **Focus**: ").append(context.focus()).append("\n- **Avoid**: ").append(context.avoids()).append("\n\n");
         if (windsurfActive)  windsurfRules.append("* `").append(className).append("`\n  * Focus: ").append(context.focus()).append("\n  * Avoid: ").append(context.avoids()).append("\n");
         if (zedActive)       zedRules.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (context): Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
         if (granularActive)  appendToGranular(e, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
         if (geminiActive)    geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
     }
@@ -503,9 +542,13 @@ public final class GuardrailContentBuilder {
         if (claudeIgnoreFileActive)   claudeIgnoreFile.append(globPattern);
         if (copilotIgnoreFileActive)  copilotIgnoreFile.append(globPattern);
         if (qwenIgnoreFileActive)     qwenIgnoreFile.append(globPattern);
-        if (codyIgnoreActive)         codyIgnoreFile.append(globPattern);
-        if (supermavenIgnoreActive)   supermavenIgnoreFile.append(globPattern);
+        if (codyIgnoreActive)       codyIgnoreFile.append(globPattern);
+        if (supermavenIgnoreActive) supermavenIgnoreFile.append(globPattern);
+        if (doubleIgnoreActive)     doubleIgnoreFile.append(globPattern);
+        if (codeiumIgnoreActive)    codeiumIgnoreFile.append(globPattern);
         if (qwenActive) qwenIgnoreSec.append("* `").append(className).append("` \n");
+        if (mentatActive)     mentatIgnore.append("    {\"path\": \"").append(className).append("\"},\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (excluded): treat as non-existent\n");
 
         if (llmsActive)     llmsTxtIgnore.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): excluded from AI context\n");
         if (llmsFullActive) llmsFullTxtIgnore.append("### ").append(className).append("\n- Excluded from AI context entirely - treat as non-existent\n\n");
@@ -551,6 +594,10 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### SECURITY AUDIT: ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");
         if (windsurfActive)  windsurfAuditSec.append("* `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
         if (zedActive)       zedAuditSec.append("- `").append(className).append("` — check for: ").append(checkForJoined).append("\n");
+        if (mentatActive)    mentatAudit.append("    {\"path\": \"").append(className).append("\", \"checks\": [").append(buildJsonStringArray(checkFor)).append("]},\n");
+        if (sweepActive)     sweepRules.append("  - \"Security audit required for ").append(className).append(": ").append(checkForJoined).append("\"\n");
+        if (plandexActive)   plandexAudit.append("    - path: \"").append(className).append("\"\n      checks: [").append(checkForJoined).append("]\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append("\n");
         if (granularActive)  appendToGranular(e, "Security Audit Requirements", "When modifying this element, audit for:\n- " + String.join("\n- ", checkFor));
     }
 
@@ -575,6 +622,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### DRAFT/TODO: ").append(className).append("\n- **Instruction**: ").append(instructions).append("\n\n");
         if (windsurfActive)  windsurfDraftSection.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
         if (zedActive)       zedDraftSection.append("- `").append(className).append("`: ").append(instructions).append("\n");
+        if (mentatActive)    mentatDraft.append("    {\"path\": \"").append(className).append("\", \"instructions\": \"").append(instructions).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Implementation task for ").append(className).append(": ").append(instructions).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (draft): ").append(instructions).append("\n");
         if (granularActive)  appendToGranular(e, "Implementation Tasks", "- **Instruction**: " + instructions);
     }
 
@@ -599,6 +649,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### PRIVACY/PII: ").append(className).append("\n- **Safety Rule**: Never log or expose runtime values of this element.\n- **Reason**: ").append(reason).append("\n\n");
         if (windsurfActive)  windsurfPrivacySection.append("* `").append(className).append("` - ").append(reason).append("\n");
         if (zedActive)       zedPrivacySection.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (mentatActive)    mentatPrivacy.append("    {\"path\": \"").append(className).append("\", \"reason\": \"").append(reason).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"PII protection required for ").append(className).append(": never log or expose runtime values\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (privacy): ").append(reason).append("\n");
         if (granularActive)  appendToGranular(e, "PII / Privacy Guardrails", "- **Rule**: Never log or expose runtime values of this element.\n- **Reason**: " + reason);
     }
 
@@ -624,6 +677,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### CORE FUNCTIONALITY: ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
         if (windsurfActive)  windsurfCoreSection.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
         if (zedActive)       zedCoreSection.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+        if (mentatActive)    mentatCore.append("    {\"path\": \"").append(className).append("\", \"sensitivity\": \"").append(sensitivity).append("\", \"note\": \"").append(note).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Core functionality (change with caution): ").append(className).append(" [sensitivity: ").append(sensitivity).append("]\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
         if (granularActive)  appendToGranular(e, "Core Functionality", "- **Sensitivity**: " + sensitivity + "\n- **Note**: " + note);
     }
 
@@ -648,6 +704,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: ").append(constraint).append("\n\n");
         if (windsurfActive)  windsurfPerfSection.append("* `").append(className).append("` - ").append(constraint).append("\n");
         if (zedActive)       zedPerfSection.append("- `").append(className).append("`: ").append(constraint).append("\n");
+        if (mentatActive)    mentatPerf.append("    {\"path\": \"").append(className).append("\", \"constraint\": \"").append(constraint).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Performance constraint for ").append(className).append(": ").append(constraint).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (performance): ").append(constraint).append("\n");
         if (granularActive)  appendToGranular(e, "Performance Constraints", "- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: " + constraint);
     }
 
@@ -672,6 +731,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### CONTRACT: ").append(className).append("\n- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.\n- **Reason**: ").append(reason).append("\n\n");
         if (windsurfActive)  windsurfContractSection.append("* `").append(className).append("` - ").append(reason).append("\n");
         if (zedActive)       zedContractSection.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (mentatActive)    mentatContract.append("    {\"path\": \"").append(className).append("\", \"reason\": \"").append(reason).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Contract-frozen signature for ").append(className).append(": do not change method name, parameters, return type, or checked exceptions\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (contract): signature frozen — ").append(reason).append("\n");
         if (granularActive)  appendToGranular(e, "Contract-Frozen Signature", "- **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.\n- **Reason**: " + reason);
     }
 
@@ -724,6 +786,9 @@ public final class GuardrailContentBuilder {
         if (aiderConvActive) aiderConventions.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append("\n");
         if (windsurfActive)  windsurfTestDrivenSection.append("* `").append(className).append("` - ").append(summary).append("\n");
         if (zedActive)       zedTestDrivenSection.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (mentatActive)    mentatTestDriven.append("    {\"path\": \"").append(className).append("\", \"coverageGoal\": ").append(coverageGoal).append(", \"frameworks\": \"").append(frameworksStr).append("\"},\n");
+        if (sweepActive)     sweepRules.append("  - \"Test-driven requirement for ").append(className).append(": ").append(summary).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (test-driven): ").append(summary).append("\n");
         if (granularActive)  appendToGranular(e, "Test-Driven Requirements", "- **Rule**: Changes MUST be accompanied by a matching test update.\n- **Coverage Goal**: " + coverageGoal + "%\n- **Frameworks**: " + frameworksStr + (testLocation.isEmpty() ? "" : "\n- **Test Location**: " + testLocation) + (mockPolicy.isEmpty() ? "" : "\n- **Mock Policy**: " + mockPolicy));
     }
 
@@ -841,6 +906,31 @@ public final class GuardrailContentBuilder {
 
         if (codyIgnoreActive)       codyIgnoreFile       = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Cody-specific exclusion list.\n");
         if (supermavenIgnoreActive) supermavenIgnoreFile = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Supermaven-specific exclusion list.\n");
+        if (doubleIgnoreActive)     doubleIgnoreFile     = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Double.bot-specific exclusion list.\n");
+        if (codeiumIgnoreActive)    codeiumIgnoreFile    = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Codeium-specific exclusion list.\n");
+
+        if (mentatActive) {
+            mentatLocked    = new StringBuilder();
+            mentatAudit     = new StringBuilder();
+            mentatPrivacy   = new StringBuilder();
+            mentatCore      = new StringBuilder();
+            mentatPerf      = new StringBuilder();
+            mentatContract  = new StringBuilder();
+            mentatIgnore    = new StringBuilder();
+            mentatDraft     = new StringBuilder();
+            mentatTestDriven = new StringBuilder();
+        }
+        if (sweepActive) {
+            sweepRules = new StringBuilder();
+        }
+        if (plandexActive) {
+            plandexLocked = new StringBuilder();
+            plandexAudit  = new StringBuilder();
+            plandexPrivacy = new StringBuilder();
+        }
+        if (interpreterActive) {
+            interpreterRules = new StringBuilder();
+        }
     }
 
     private Map<String, String> buildContentMap(StringBuilder geminiMd) {
@@ -883,13 +973,18 @@ public final class GuardrailContentBuilder {
         if (activeServices.contains("aider_conventions")) contentByService.put("aider_conventions", aiderConventions.toString());
         if (activeServices.contains("aider_ignore"))      contentByService.put("aider_ignore",      aiderIgnore.toString());
 
-        if (activeServices.contains("windsurf"))         contentByService.put("windsurf",         windsurfRules.toString());
-        if (activeServices.contains("zed"))              contentByService.put("zed",              zedRules.toString());
-        if (activeServices.contains("cody_ignore"))      contentByService.put("cody_ignore",      codyIgnoreFile.toString());
+        if (activeServices.contains("windsurf"))          contentByService.put("windsurf",          windsurfRules.toString());
+        if (activeServices.contains("zed"))               contentByService.put("zed",               zedRules.toString());
+        if (activeServices.contains("cody_ignore"))       contentByService.put("cody_ignore",       codyIgnoreFile.toString());
         if (activeServices.contains("supermaven_ignore")) contentByService.put("supermaven_ignore", supermavenIgnoreFile.toString());
-        if (activeServices.contains("cody")) {
-            contentByService.put("cody", buildCodyConfig());
-        }
+        if (activeServices.contains("cody"))              contentByService.put("cody",              buildCodyConfig());
+
+        if (activeServices.contains("double_ignore"))   contentByService.put("double_ignore",   doubleIgnoreFile.toString());
+        if (activeServices.contains("codeium_ignore"))  contentByService.put("codeium_ignore",  codeiumIgnoreFile.toString());
+        if (activeServices.contains("mentat"))          contentByService.put("mentat",          buildMentatConfig());
+        if (activeServices.contains("sweep"))           contentByService.put("sweep",           buildSweepConfig());
+        if (activeServices.contains("plandex"))         contentByService.put("plandex",         buildPlandexConfig());
+        if (activeServices.contains("interpreter"))     contentByService.put("interpreter",     buildInterpreterProfile());
 
         return contentByService;
     }
@@ -909,5 +1004,82 @@ public final class GuardrailContentBuilder {
             "    }\n" +
             "  ]\n" +
             "}\n";
+    }
+
+    private String buildMentatConfig() {
+        StringBuilder sb = new StringBuilder("{\n  \"_generated_by\": \"VibeTags\",\n  \"rules\": {\n");
+        appendJsonSection(sb, "locked_files",   mentatLocked);
+        appendJsonSection(sb, "audit",          mentatAudit);
+        appendJsonSection(sb, "privacy",        mentatPrivacy);
+        appendJsonSection(sb, "core",           mentatCore);
+        appendJsonSection(sb, "performance",    mentatPerf);
+        appendJsonSection(sb, "contract",       mentatContract);
+        appendJsonSection(sb, "ignored",        mentatIgnore);
+        appendJsonSection(sb, "draft",          mentatDraft);
+        appendJsonSection(sb, "test_driven",    mentatTestDriven);
+        sb.append("  }\n}\n");
+        return sb.toString();
+    }
+
+    private static void appendJsonSection(StringBuilder out, String key, StringBuilder items) {
+        if (items == null || items.length() == 0) return;
+        // Trim trailing comma+newline from last item
+        String body = items.toString();
+        if (body.endsWith(",\n")) body = body.substring(0, body.length() - 2) + "\n";
+        out.append("    \"").append(key).append("\": [\n").append(body).append("    ],\n");
+    }
+
+    private String buildSweepConfig() {
+        StringBuilder sb = new StringBuilder(
+            "# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader +
+            "# Sweep AI code review rules. Do not edit manually.\n\n" +
+            "rules:\n");
+        if (sweepRules != null && sweepRules.length() > 0) {
+            sb.append(sweepRules);
+        } else {
+            sb.append("  []\n");
+        }
+        return sb.toString();
+    }
+
+    private String buildPlandexConfig() {
+        StringBuilder sb = new StringBuilder(
+            "# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader +
+            "# Plandex AI configuration. Do not edit manually.\n\n" +
+            "guardrails:\n");
+        if (plandexLocked != null && plandexLocked.length() > 0) {
+            sb.append("  locked:\n").append(plandexLocked);
+        }
+        if (plandexAudit != null && plandexAudit.length() > 0) {
+            sb.append("  audit:\n").append(plandexAudit);
+        }
+        if (plandexPrivacy != null && plandexPrivacy.length() > 0) {
+            sb.append("  privacy:\n").append(plandexPrivacy);
+        }
+        return sb.toString();
+    }
+
+    private String buildInterpreterProfile() {
+        StringBuilder sb = new StringBuilder(
+            "# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader +
+            "# Open Interpreter VibeTags guardrail profile. Do not edit manually.\n\n" +
+            "instructions: |\n");
+        if (interpreterRules != null && interpreterRules.length() > 0) {
+            sb.append("  ## Project Guardrails (Generated by VibeTags)\n\n");
+            for (String line : interpreterRules.toString().split("\n")) {
+                sb.append("  ").append(line).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Converts a String[] to a JSON array of quoted strings: "\"a\", \"b\"". */
+    private static String buildJsonStringArray(String[] values) {
+        StringBuilder sb = new StringBuilder();
+        for (String v : values) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append("\"").append(v).append("\"");
+        }
+        return sb.toString();
     }
 }

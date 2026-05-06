@@ -76,6 +76,14 @@ class ProcessorTestHarness {
         touch(".tabnine/guidelines/.vibetags");
         touch(".amazonq/rules/.vibetags");
         touch(".ai/rules/.vibetags");
+        // v0.8.0 platforms
+        touch(".pearai/rules/.vibetags");
+        touch(".mentatconfig.json");
+        touch("sweep.yaml");
+        touch(".plandex.yaml");
+        touch(".doubleignore");
+        touch(".interpreter/profiles/vibetags.yaml");
+        touch(".codeiumignore");
     }
 
     private void touch(String relative) throws IOException {

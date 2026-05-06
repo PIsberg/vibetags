@@ -304,10 +304,13 @@ class AIGuardrailProcessorProcessTest {
             "codex_config", "codex_rules", "qwen_settings", "qwen_refactor",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
-            // New platforms
+            // v0.7.0 platforms
             "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
             "windsurf_granular", "continue_granular", "tabnine_granular",
-            "amazonq_granular", "ai_rules_granular"
+            "amazonq_granular", "ai_rules_granular",
+            // v0.8.0 platforms
+            "pearai_granular", "mentat", "sweep", "plandex",
+            "double_ignore", "interpreter", "codeium_ignore"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");
