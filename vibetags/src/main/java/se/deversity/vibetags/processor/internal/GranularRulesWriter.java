@@ -15,6 +15,7 @@ import java.util.Set;
  * {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String, Set)} as the exclude list,
  * preventing a delete-then-recreate cycle on each compile.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GranularRulesWriter {
 
     private final GuardrailFileWriter fileWriter;

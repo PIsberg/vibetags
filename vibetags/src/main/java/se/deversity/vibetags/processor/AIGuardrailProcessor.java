@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
+@SuppressWarnings("PMD.GuardLogStatement")
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -164,7 +165,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Write the per-platform content files.
         contentByService.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
-            boolean isIgnoreFile = service.endsWith("_ignore") || service.equals("aider_ignore") || service.equals("aiexclude");
+            boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
             boolean changed = writeFileIfChanged(filePath.toString(), content, collector.anyAnnotationsFound() || isIgnoreFile);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";

@@ -27,6 +27,7 @@ import java.util.stream.Stream;
  * nullable — callers who haven't initialised a processing environment (typical in unit tests)
  * get a no-op messager and quiet logging.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GuardrailFileWriter {
 
     public static final String MARKER_START_MD = "<!-- VIBETAGS-START -->";
@@ -144,6 +145,7 @@ public final class GuardrailFileWriter {
         }
     }
 
+    @SuppressWarnings("PMD.UseVarargs")
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
                                      String existing, boolean hasNewRules, String[] markers) throws IOException {
         String markerStart = markers[0];
@@ -245,9 +247,10 @@ public final class GuardrailFileWriter {
      * Returns the appropriate marker pair for a file based on its extension.
      * Returns {@code null} for JSON/TOML which are overwritten without markers.
      */
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     public static String[] getMarkersFor(String fileName) {
         if (fileName.endsWith(".md") || fileName.endsWith(".mdc")
-            || fileName.equals("llms.txt") || fileName.equals("llms-full.txt")) {
+            || "llms.txt".equals(fileName) || "llms-full.txt".equals(fileName)) {
             return new String[]{MARKER_START_MD, MARKER_END_MD};
         }
         if (fileName.endsWith(".json") || fileName.endsWith(".toml")) {
@@ -388,6 +391,7 @@ public final class GuardrailFileWriter {
      * <p>The caller must already have established that {@code Files.size(file) == expected.length}
      * — this method does not re-check.
      */
+    @SuppressWarnings("PMD.AssignmentInOperand")
     public static boolean fileBytesEqual(Path file, byte[] expected) throws IOException {
         try (java.io.InputStream in = Files.newInputStream(file)) {
             byte[] buf = new byte[Math.min(8192, Math.max(1, expected.length))];

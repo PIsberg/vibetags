@@ -85,6 +85,6 @@ tasks.withType(JavaCompile) {
 pmd {
     consoleOutput = true
     toolVersion = "7.9.0"
-    ignoreFailures = true
+    ignoreFailures = false
     rulesets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
 }

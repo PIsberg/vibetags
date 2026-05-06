@@ -17,6 +17,7 @@ import javax.tools.Diagnostic;
  * Compile-time consistency checks for VibeTags annotations. Emits compiler warnings for
  * contradictory or no-op combinations so the developer notices at build time.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AnnotationValidator {
 
     private AnnotationValidator() {}

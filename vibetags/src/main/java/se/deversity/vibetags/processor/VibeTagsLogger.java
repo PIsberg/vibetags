@@ -120,6 +120,7 @@ public final class VibeTagsLogger {
      *                    defaults to {@value #DEFAULT_LOG_LEVEL}
      * @return a ready-to-use SLF4J {@code Logger}, or a no-op logger when level is OFF
      */
+    @SuppressWarnings({"PMD.SystemPrintln", "PMD.AvoidLiteralsInIfCondition"})
     public static Logger forRoot(Path projectRoot, String logPath, String level) {
         // Resolve the effective log file path
         Path logFile = resolveLogFile(projectRoot, logPath);
