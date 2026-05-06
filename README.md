@@ -1,6 +1,22 @@
 
 # VibeTags - AI Guardrails for Java Development
 
+## Table of Contents
+
+- [What is VibeTags?](#-what-is-vibetags)
+- [Project Structure](#-project-structure)
+- [Quick Start](#-quick-start)
+- [How It Works](#-how-it-works)
+- [Documentation](#-documentation)
+- [Building Both Projects](#-building-both-projects)
+- [Performance & Load Tests](#-performance--load-tests)
+- [When to Use VibeTags](#-when-to-use-vibetags)
+- [Advanced Features](#-advanced-features)
+- [Contributing](#-contributing)
+- [Project Components](#-project-components)
+- [License](#-license)
+- [Why VibeTags?](#-why-vibetags)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)

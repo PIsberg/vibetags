@@ -1,5 +1,23 @@
 # VibeTags Architecture - Technical Deep Dive
 
+## Table of Contents
+
+- [Overview](#overview)
+- [System Architecture](#system-architecture)
+- [Build Sequence](#build-sequence)
+- [Data Flow](#data-flow)
+- [Platform Output Formats](#platform-output-formats)
+- [Core Components](#core-components)
+- [Build Flow](#build-flow)
+- [Directory Structure](#directory-structure)
+- [Design Decisions](#design-decisions)
+- [Testing Strategy](#testing-strategy)
+- [Limitations](#limitations)
+- [Future Architecture](#future-architecture)
+- [Dependencies](#dependencies)
+- [Build Commands](#build-commands)
+- [AI Platform Integration](#ai-platform-integration)
+
 ## Overview
 
 VibeTags is a **Java annotation processor** (JSR 269 compliant) that generates AI platform-specific configuration files from Java source code annotations. It operates at **compile-time only**, with zero runtime overhead.
