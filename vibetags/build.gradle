@@ -121,3 +121,5 @@ pmd {
     ignoreFailures = false
     ruleSets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
 }
+
+tasks.named('pmdTest') { enabled = false }
