@@ -128,10 +128,17 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
 | `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
+| `.pearai/rules/*.md` | PearAI (granular) | YAML front-matter + Markdown |
+| `.mentatconfig.json` | Mentat | JSON config |
+| `sweep.yaml` | Sweep (GitHub App) | YAML rules list |
+| `.plandex.yaml` | Plandex | YAML guardrails |
+| `.doubleignore` | Double.bot | Glob patterns |
+| `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
+| `.codeiumignore` | Codeium | Glob patterns |
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
 #### llms.txt vs llms-full.txt
 
@@ -218,6 +225,7 @@ All tests live in `vibetags/src/test`.
 | `AnnotationProcessorEndToEndTest` | Generated file content |
 | `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |
 | `NewPlatformsEndToEndTest` | Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, universal `.ai/rules/` |
+| `NewPlatformsV2EndToEndTest` | PearAI, Mentat, Sweep, Plandex, Double.bot, Open Interpreter, Codeium |
 | `QwenEndToEndTest` | Qwen-specific output |
 | `QwenProcessorUnitTest` | Qwen processor options |
 | `VibeTagsLoggerUnitTest` | File logging |

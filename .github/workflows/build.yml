@@ -71,7 +71,24 @@ jobs:
         run: |
           cd example
           echo "Checking generated files exist and contain content..."
-          for f in .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md .github/copilot-instructions.md llms.txt llms-full.txt .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore .windsurfrules .rules .cody/config.json .codyignore .supermavenignore .cursor/rules/com-example-payment-PaymentProcessor.mdc .cursor/rules/com-example-database-DatabaseConnector.mdc .trae/rules/com-example-payment-PaymentProcessor.md .roo/rules/com-example-payment-PaymentProcessor.md .windsurf/rules/com-example-payment-PaymentProcessor.md .continue/rules/com-example-payment-PaymentProcessor.md .tabnine/guidelines/com-example-payment-PaymentProcessor.md .amazonq/rules/com-example-payment-PaymentProcessor.md .ai/rules/com-example-payment-PaymentProcessor.md; do
+          for f in \
+            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
+            .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
+            .github/copilot-instructions.md llms.txt llms-full.txt \
+            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
+            .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
+            .cursor/rules/com-example-payment-PaymentProcessor.mdc \
+            .cursor/rules/com-example-database-DatabaseConnector.mdc \
+            .trae/rules/com-example-payment-PaymentProcessor.md \
+            .roo/rules/com-example-payment-PaymentProcessor.md \
+            .windsurf/rules/com-example-payment-PaymentProcessor.md \
+            .continue/rules/com-example-payment-PaymentProcessor.md \
+            .tabnine/guidelines/com-example-payment-PaymentProcessor.md \
+            .amazonq/rules/com-example-payment-PaymentProcessor.md \
+            .ai/rules/com-example-payment-PaymentProcessor.md \
+            .pearai/rules/com-example-payment-PaymentProcessor.md \
+            .mentatconfig.json sweep.yaml .plandex.yaml \
+            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -100,6 +117,14 @@ jobs:
           echo "OK llms-full.txt audit section"
           grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
           echo "OK Aider conventions audit section"
+          grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
+          echo "OK sweep.yaml audit rule"
+          grep -q '"audit"' .mentatconfig.json || { echo "FAIL .mentatconfig.json audit section missing"; exit 1; }
+          echo "OK .mentatconfig.json audit section"
+          grep -q "audit:" .plandex.yaml || { echo "FAIL .plandex.yaml audit section missing"; exit 1; }
+          echo "OK .plandex.yaml audit section"
+          grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
+          echo "OK Open Interpreter profile audit"
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
@@ -219,7 +244,24 @@ jobs:
         run: |
           cd example
           echo "Checking generated files exist and contain content..."
-          for f in .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md .github/copilot-instructions.md llms.txt llms-full.txt .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore .windsurfrules .rules .cody/config.json .codyignore .supermavenignore .cursor/rules/com-example-payment-PaymentProcessor.mdc .cursor/rules/com-example-database-DatabaseConnector.mdc .trae/rules/com-example-payment-PaymentProcessor.md .roo/rules/com-example-payment-PaymentProcessor.md .windsurf/rules/com-example-payment-PaymentProcessor.md .continue/rules/com-example-payment-PaymentProcessor.md .tabnine/guidelines/com-example-payment-PaymentProcessor.md .amazonq/rules/com-example-payment-PaymentProcessor.md .ai/rules/com-example-payment-PaymentProcessor.md; do
+          for f in \
+            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
+            .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
+            .github/copilot-instructions.md llms.txt llms-full.txt \
+            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
+            .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
+            .cursor/rules/com-example-payment-PaymentProcessor.mdc \
+            .cursor/rules/com-example-database-DatabaseConnector.mdc \
+            .trae/rules/com-example-payment-PaymentProcessor.md \
+            .roo/rules/com-example-payment-PaymentProcessor.md \
+            .windsurf/rules/com-example-payment-PaymentProcessor.md \
+            .continue/rules/com-example-payment-PaymentProcessor.md \
+            .tabnine/guidelines/com-example-payment-PaymentProcessor.md \
+            .amazonq/rules/com-example-payment-PaymentProcessor.md \
+            .ai/rules/com-example-payment-PaymentProcessor.md \
+            .pearai/rules/com-example-payment-PaymentProcessor.md \
+            .mentatconfig.json sweep.yaml .plandex.yaml \
+            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -248,6 +290,14 @@ jobs:
           echo "OK llms-full.txt audit section"
           grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
           echo "OK Aider conventions audit section"
+          grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
+          echo "OK sweep.yaml audit rule"
+          grep -q '"audit"' .mentatconfig.json || { echo "FAIL .mentatconfig.json audit section missing"; exit 1; }
+          echo "OK .mentatconfig.json audit section"
+          grep -q "audit:" .plandex.yaml || { echo "FAIL .plandex.yaml audit section missing"; exit 1; }
+          echo "OK .plandex.yaml audit section"
+          grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
+          echo "OK Open Interpreter profile audit"
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov

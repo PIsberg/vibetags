@@ -21,10 +21,13 @@ public final class ServiceRegistry {
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full", "aider_conventions", "aider_ignore",
         "cursor_granular", "roo_granular", "trae_granular",
-        // New platforms
+        // v0.7.0 platforms
         "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
         "windsurf_granular", "continue_granular", "tabnine_granular",
-        "amazonq_granular", "ai_rules_granular"
+        "amazonq_granular", "ai_rules_granular",
+        // v0.8.0 platforms
+        "pearai_granular", "mentat", "sweep", "plandex",
+        "double_ignore", "interpreter", "codeium_ignore"
     );
 
     private ServiceRegistry() {}
@@ -67,6 +70,14 @@ public final class ServiceRegistry {
         map.put("tabnine_granular",  root.resolve(".tabnine/guidelines"));
         map.put("amazonq_granular",  root.resolve(".amazonq/rules"));
         map.put("ai_rules_granular", root.resolve(".ai/rules"));
+        // v0.8.0 platforms
+        map.put("pearai_granular",  root.resolve(".pearai/rules"));
+        map.put("mentat",           root.resolve(".mentatconfig.json"));
+        map.put("sweep",            root.resolve("sweep.yaml"));
+        map.put("plandex",          root.resolve(".plandex.yaml"));
+        map.put("double_ignore",    root.resolve(".doubleignore"));
+        map.put("interpreter",      root.resolve(".interpreter/profiles/vibetags.yaml"));
+        map.put("codeium_ignore",   root.resolve(".codeiumignore"));
         return map;
     }
 

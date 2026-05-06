@@ -58,7 +58,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **20 AI platforms**:
+Generated configuration files work out-of-the-box with **27 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
@@ -73,6 +73,12 @@ Generated configuration files work out-of-the-box with **20 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
+- **Mentat** (`.mentatconfig.json`)
+- **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
+- **Plandex** (`.plandex.yaml`)
+- **Double.bot** (`.doubleignore`)
+- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
+- **Codeium** (`.codeiumignore`)
 
 #### Granular / Directory-based formats
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
@@ -83,6 +89,7 @@ Generated configuration files work out-of-the-box with **20 AI platforms**:
 - **Trae** (`.trae/rules/*.md`)
 - **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
 - **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
+- **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
 
 ## 📁 Project Structure
 
@@ -490,6 +497,19 @@ mkdir -p .ai/rules                           # Universal .ai/rules standard
 # --- Trae, Roo Code ---
 mkdir -p .trae/rules                         # Trae IDE
 mkdir -p .roo/rules                          # Roo Code
+
+# --- PearAI ---
+mkdir -p .pearai/rules                       # PearAI granular rules (per-class .md)
+
+# --- Mentat, Sweep, Plandex ---
+touch .mentatconfig.json                     # Mentat AI assistant
+touch sweep.yaml                             # Sweep AI code review (GitHub App)
+touch .plandex.yaml                          # Plandex AI coding agent
+
+# --- Double.bot, Open Interpreter, Codeium ---
+touch .doubleignore                          # Double.bot exclusion list
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+touch .codeiumignore                         # Codeium exclusion list
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aiderignore            # Aider
