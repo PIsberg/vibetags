@@ -76,6 +76,7 @@ public final class VibeTagsLogger {
      * <p>Call this in tests that use a temporary directory as the project root, so the
      * directory can be cleaned up after the test completes.
      */
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     public static void shutdown() {
         try {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
@@ -120,7 +121,7 @@ public final class VibeTagsLogger {
      *                    defaults to {@value #DEFAULT_LOG_LEVEL}
      * @return a ready-to-use SLF4J {@code Logger}, or a no-op logger when level is OFF
      */
-    @SuppressWarnings({"PMD.SystemPrintln", "PMD.AvoidLiteralsInIfCondition"})
+    @SuppressWarnings({"PMD.SystemPrintln", "PMD.AvoidLiteralsInIfCondition", "PMD.AvoidCatchingGenericException"})
     public static Logger forRoot(Path projectRoot, String logPath, String level) {
         // Resolve the effective log file path
         Path logFile = resolveLogFile(projectRoot, logPath);

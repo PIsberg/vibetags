@@ -51,7 +51,7 @@ public final class GranularRulesWriter {
             writtenQNames.add(qName);
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();
-            String glob = ElementKind.PACKAGE.equals(element.getKind())
+            String glob = element.getKind() == ElementKind.PACKAGE
                 ? "**/" + simpleName + "/**/*.java"
                 : "**/" + simpleName + ".java";
 
