@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-bom</artifactId>
-    <version>0.7.1</version>
+    <version>0.8.0</version>
     <packaging>pom</packaging>
 
     <name>VibeTags BOM</name>
@@ -25,7 +25,7 @@
                     &lt;dependency&gt;
                         &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
                         &lt;artifactId&gt;vibetags-bom&lt;/artifactId&gt;
-                        &lt;version&gt;0.7.1&lt;/version&gt;
+                        &lt;version&gt;0.8.0&lt;/version&gt;
                         &lt;type&gt;pom&lt;/type&gt;
                         &lt;scope&gt;import&lt;/scope&gt;
                     &lt;/dependency&gt;
@@ -33,8 +33,8 @@
             &lt;/dependencyManagement&gt;
 
         Gradle:
-            implementation platform('se.deversity.vibetags:vibetags-bom:0.7.1')
-            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.7.1')
+            implementation platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.8.0')
             compileOnly 'se.deversity.vibetags:vibetags-annotations'
             annotationProcessor 'se.deversity.vibetags:vibetags-processor'
     </description>
@@ -66,7 +66,7 @@
         <!-- Single source of truth for the VibeTags artifact set. Bump this when releasing
              a new processor version; all consumers that import this BOM track the bump
              without further changes. -->
-        <vibetags.version>0.7.1</vibetags.version>
+        <vibetags.version>0.8.0</vibetags.version>
     </properties>
 
     <dependencyManagement>

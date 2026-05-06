@@ -12,7 +12,7 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 /**
- * JMH benchmark that proves the v0.7.1 {@link WriteCache} earns its keep.
+ * JMH benchmark that proves the v0.8.0 {@link WriteCache} earns its keep.
  *
  * <h2>Why a separate class?</h2>
  *

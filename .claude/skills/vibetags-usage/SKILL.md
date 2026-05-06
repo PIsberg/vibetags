@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract annotations, or wants to control how AI tools interact with Java code.
-version: 1.2.0
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven annotations, or wants to control how AI tools interact with Java code.
+version: 0.8.0
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.5.5</version>
+    <version>0.7.1</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.5.5'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.5.5'
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.7.1'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.7.1'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -53,6 +53,13 @@ mkdir -p .continue/rules                   # Continue (granular per-class rules)
 mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
 mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
 mkdir -p .ai/rules                         # Universal AI standard (granular)
+mkdir -p .pearai/rules                     # PearAI (granular per-class rules)
+touch .mentatconfig.json                   # Mentat
+touch sweep.yaml                           # Sweep (GitHub App)
+touch .plandex.yaml                        # Plandex
+touch .doubleignore                        # Double.bot
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+touch .codeiumignore                       # Codeium
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
@@ -229,6 +236,37 @@ Unlike `@AILocked` (which prohibits all changes), `@AIContract` explicitly invit
 
 ---
 
+### `@AITestDriven` — Enforce a test-driven workflow
+
+Use on: **class, method**
+
+```java
+@AITestDriven(
+    framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.MOCKITO},
+    coverageGoal = 90,
+    mockPolicy = "Always mock external APIs and database calls",
+    testLocation = "src/test/java/com/example/OrderServiceTest.java"
+)
+public class OrderService { ... }
+```
+
+Enforces a strict Red-Green-Refactor workflow: AI **must** include the corresponding test code in the same response as any proposed change. A change without matching tests is treated as incomplete.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `framework` | `Framework[]` | `{JUNIT_5}` | Testing frameworks the AI must use. Combine freely (e.g., `{JUNIT_5, MOCKITO}`). Options: `JUNIT_5`, `JUNIT_4`, `TESTNG`, `MOCKITO`, `ASSERTJ`, `SPOCK`, `NONE` |
+| `coverageGoal` | `int` | `100` | Minimum statement-coverage % the AI must achieve in the generated or updated tests (0–100) |
+| `testLocation` | `String` | `""` | Explicit path to the corresponding test file. Leave empty to let the AI infer the test class by naming convention |
+| `mockPolicy` | `String` | `""` | Instruction describing how external dependencies should be handled in tests |
+
+**Compile-time warnings:**
+
+- `@AITestDriven` + `@AIIgnore` on the same element — contradictory (`@AIIgnore` excludes the element from AI context entirely; `@AITestDriven` cannot enforce test coverage on an ignored element)
+- `@AITestDriven` + `@AILocked` on the same element — contradictory (`@AILocked` prohibits all modifications; `@AITestDriven` permits changes only when tests are updated — consider using only `@AILocked` if no changes at all are intended)
+- `@AITestDriven` with `coverageGoal` outside 0–100 — invalid value
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -243,6 +281,10 @@ Unlike `@AILocked` (which prohibits all changes), `@AIContract` explicitly invit
 | `@AIIgnore` + `@AIPrivacy` | **Warning**: redundant — `@AIIgnore` already excludes |
 | `@AIContract` + `@AIDraft` | **Warning**: contradictory — frozen signature can't need drafting |
 | `@AIContract` + `@AILocked` | **Warning**: overlapping intent — consider using only `@AILocked` |
+| `@AITestDriven` + `@AIContext` | Enforce TDD workflow AND guide implementation style |
+| `@AITestDriven` + `@AIPerformance` | Any change must include tests AND meet complexity constraints |
+| `@AITestDriven` + `@AIIgnore` | **Warning**: contradictory — `@AIIgnore` excludes element from AI context |
+| `@AITestDriven` + `@AILocked` | **Warning**: contradictory — `@AILocked` prohibits all changes |
 
 ---
 
@@ -260,11 +302,12 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q | Markdown |
 | `.ai/rules/*.md` | Universal AI standard | Markdown |
+| `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
 
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
-mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules
+mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
 ```
 
 ---
@@ -317,6 +360,9 @@ tasks.withType(JavaCompile) {
 | `[WARNING] @AIAudit has no checkFor items` | Empty `checkFor` array | Add at least one vulnerability string |
 | `[WARNING] contradictory @AIContract and @AIDraft` | Both annotations on same element | Remove one — a frozen signature can't also need drafting |
 | `[WARNING] overlapping @AIContract and @AILocked` | Both annotations on same element | Use only `@AILocked` if no changes at all are intended |
+| `[WARNING] contradictory @AITestDriven and @AIIgnore` | Both annotations on same element | Remove one — `@AIIgnore` excludes the element entirely |
+| `[WARNING] contradictory @AITestDriven and @AILocked` | Both annotations on same element | Remove one — `@AILocked` prohibits all changes |
+| `[WARNING] @AITestDriven has invalid coverageGoal` | `coverageGoal` outside 0–100 | Set a value between 0 and 100 (inclusive) |
 
 ---
 
@@ -345,3 +391,10 @@ tasks.withType(JavaCompile) {
 | `.ai/rules/*.md` | Universal AI standard (granular) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
+| `.pearai/rules/*.md` | PearAI (granular per-class rules) |
+| `.mentatconfig.json` | Mentat |
+| `sweep.yaml` | Sweep (GitHub App) |
+| `.plandex.yaml` | Plandex |
+| `.doubleignore` | Double.bot |
+| `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
+| `.codeiumignore` | Codeium |

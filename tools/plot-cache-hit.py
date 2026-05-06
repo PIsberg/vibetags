@@ -5,7 +5,7 @@ Generate two comparison plots from WriteCacheHitBenchmark JMH output:
   1. Wall-clock (us/op) — cacheHit vs noCache, log-y, grouped by body size.
   2. Allocation rate (B/op) — same grouping, log-y.
 
-Reads `load-tests/results/0.7.1/jmh-cache-hit.json` and writes:
+Reads `load-tests/results/0.8.0/jmh-cache-hit.json` and writes:
 
   load-tests/results/_plots/cache-hit-time.png
   load-tests/results/_plots/cache-hit-alloc.png
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = REPO_ROOT / "load-tests" / "results" / "0.7.1" / "jmh-cache-hit.json"
+DEFAULT_INPUT = REPO_ROOT / "load-tests" / "results" / "0.8.0" / "jmh-cache-hit.json"
 DEFAULT_OUT = REPO_ROOT / "load-tests" / "results" / "_plots"
 
 # Body-size groups in the order we want to display them.
