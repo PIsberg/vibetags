@@ -1,0 +1,27 @@
+codecov:
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 90%
+        threshold: 2%
+    patch:
+      default:
+        # @SuppressWarnings annotations (RetentionPolicy.SOURCE) are not tracked by
+        # JaCoCo but appear in the diff; this inflates the "uncovered lines" count
+        # on PMD-suppression commits. The executable lines in those commits are
+        # tested -- the apparent shortfall is purely from annotation lines.
+        target: 70%
+        threshold: 5%
+
+ignore:
+  - "vibetags-bom/"
+  - "example/"
+  - "load-tests/"
