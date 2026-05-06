@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'jacoco'
+    id 'pmd'
 }
 
 group = 'se.deversity.vibetags'
@@ -113,3 +114,12 @@ jacocoTestReport {
         xml.required = true
     }
 }
+
+pmd {
+    consoleOutput = true
+    toolVersion = "7.24.0"
+    ignoreFailures = false
+    ruleSets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
+}
+
+tasks.named('pmdTest') { enabled = false }

@@ -179,6 +179,7 @@ public final class WriteCache {
         return entries.size();
     }
 
+    @SuppressWarnings({"PMD.EmptyCatchBlock", "PMD.AvoidLiteralsInIfCondition"})
     private synchronized void loadIfNeeded() {
         if (loaded) return;
         loaded = true;

@@ -33,6 +33,7 @@ public final class AnnotationCollector {
     private final Set<Element> contractElements     = new LinkedHashSet<>();
     private final Set<Element> testDrivenElements   = new LinkedHashSet<>();
 
+    @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */

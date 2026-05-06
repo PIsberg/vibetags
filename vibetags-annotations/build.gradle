@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'pmd'
 }
 
 group = 'se.deversity.vibetags'
@@ -80,3 +81,12 @@ tasks.withType(JavaCompile) {
     options.compilerArgs += ['-proc:none']
     options.encoding = 'UTF-8'
 }
+
+pmd {
+    consoleOutput = true
+    toolVersion = "7.24.0"
+    ignoreFailures = false
+    ruleSets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
+}
+
+tasks.named('pmdTest') { enabled = false }

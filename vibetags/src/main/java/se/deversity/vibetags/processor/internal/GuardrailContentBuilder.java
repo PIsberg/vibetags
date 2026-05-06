@@ -23,6 +23,7 @@ import java.util.Map;
  * <p>The class has no IO: it neither reads nor writes files. Construct, call {@link #build},
  * use the result.
  */
+@SuppressWarnings({"PMD.AvoidStringBufferField", "PMD.AvoidDuplicateLiterals"})
 public final class GuardrailContentBuilder {
 
     private final AnnotationCollector collector;
@@ -51,7 +52,6 @@ public final class GuardrailContentBuilder {
     // New platforms
     private final boolean windsurfActive;
     private final boolean zedActive;
-    private final boolean codyActive;
     private final boolean codyIgnoreActive;
     private final boolean supermavenIgnoreActive;
 
@@ -159,7 +159,6 @@ public final class GuardrailContentBuilder {
                                     || activeServices.contains("ai_rules_granular");
         this.windsurfActive          = activeServices.contains("windsurf");
         this.zedActive               = activeServices.contains("zed");
-        this.codyActive              = activeServices.contains("cody");
         this.codyIgnoreActive        = activeServices.contains("cody_ignore");
         this.supermavenIgnoreActive  = activeServices.contains("supermaven_ignore");
     }
@@ -735,7 +734,7 @@ public final class GuardrailContentBuilder {
 
         if (!owner.equals(element)) {
             ElementKind kind = element.getKind();
-            String kindStr = (kind != null) ? kind.toString().toLowerCase() : "element";
+            String kindStr = (kind != null) ? kind.toString().toLowerCase(java.util.Locale.ROOT) : "element";
             sb.append("### Rules for ").append(kindStr).append(" ").append(element.getSimpleName()).append("\n");
         } else {
             sb.append("## ").append(title).append("\n");

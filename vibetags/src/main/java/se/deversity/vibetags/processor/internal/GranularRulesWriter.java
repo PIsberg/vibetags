@@ -15,6 +15,7 @@ import java.util.Set;
  * {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String, Set)} as the exclude list,
  * preventing a delete-then-recreate cycle on each compile.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GranularRulesWriter {
 
     private final GuardrailFileWriter fileWriter;
@@ -50,7 +51,7 @@ public final class GranularRulesWriter {
             writtenQNames.add(qName);
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();
-            String glob = ElementKind.PACKAGE.equals(element.getKind())
+            String glob = element.getKind() == ElementKind.PACKAGE
                 ? "**/" + simpleName + "/**/*.java"
                 : "**/" + simpleName + ".java";
 

@@ -20,7 +20,7 @@ public final class ElementNaming {
         Element current = e;
         while (current != null) {
             ElementKind kind = current.getKind();
-            if (current instanceof TypeElement || (kind != null && kind.equals(ElementKind.PACKAGE))) {
+            if (current instanceof TypeElement || (kind != null && kind == ElementKind.PACKAGE)) {
                 return current;
             }
             current = current.getEnclosingElement();
