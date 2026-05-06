@@ -427,6 +427,61 @@ class AITestDrivenProcessorTest {
     }
 
     @Test
+    void process_testDrivenWithMockPolicy_mockPolicyAppearsInClaudeMd() throws Exception {
+        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+            CapturingProcessor processor = makeCapturingProcessor();
+
+            Element element = testDrivenElement("com.example.PaymentService.charge", 95, "Mock Stripe client; use real validation logic");
+            RoundEnvironment roundEnv = testDrivenRoundEnvWith(element);
+
+            processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
+
+            String content = processor.contentFor("CLAUDE.md");
+            assertTrue(content.contains("mock_policy"),
+                "Claude XML must include <mock_policy> tag when mockPolicy is non-empty");
+            assertTrue(content.contains("Mock Stripe client"),
+                "Claude XML must include the mock policy value");
+        });
+    }
+
+    @Test
+    void process_testDrivenWithLocation_locationAppearsInLlmsFullTxt() throws Exception {
+        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+            CapturingProcessor processor = makeCapturingProcessor();
+            processor.process(Set.of(), testDrivenRoundEnv(
+                "com.example.OrderService.placeOrder", 100, "JUNIT_5",
+                "src/test/java/com/example/OrderServiceTest.java"));
+            triggerGeneration(processor);
+
+            String content = processor.contentFor("llms-full.txt");
+            assertTrue(content.contains("Test Location"),
+                "llms-full.txt must include Test Location when testLocation is provided");
+            assertTrue(content.contains("OrderServiceTest.java"),
+                "llms-full.txt must include the testLocation path");
+        });
+    }
+
+    @Test
+    void process_testDrivenWithMockPolicy_mockPolicyAppearsInLlmsFullTxt() throws Exception {
+        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+            CapturingProcessor processor = makeCapturingProcessor();
+
+            Element element = testDrivenElement("com.example.BillingService.invoice", 90, "Always mock the mailer");
+            RoundEnvironment roundEnv = testDrivenRoundEnvWith(element);
+
+            processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
+
+            String content = processor.contentFor("llms-full.txt");
+            assertTrue(content.contains("Mock Policy"),
+                "llms-full.txt must include Mock Policy section when mockPolicy is provided");
+            assertTrue(content.contains("Always mock the mailer"),
+                "llms-full.txt must include the mockPolicy value");
+        });
+    }
+
+    @Test
     void process_testDrivenAnnotation_llmsTxtContainsTestDrivenSection() throws Exception {
         withCwdSignalFiles(List.of("llms.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
