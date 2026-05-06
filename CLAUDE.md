@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
 The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 8 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
+- `vibetags-annotations/` — the 10 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
 - `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
 - `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).

@@ -6,6 +6,7 @@ import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
@@ -76,6 +77,43 @@ public final class AnnotationValidator {
                         + " is annotated with both @AIContract and @AILocked. "
                         + "@AILocked prohibits all modifications; @AIContract permits internal-logic changes. "
                         + "Consider using only @AILocked if no changes at all are intended.",
+                    element);
+            }
+        }
+
+        // Contradiction: @AITestDriven + @AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AITestDriven and @AIIgnore. "
+                        + "@AIIgnore excludes the element from AI context entirely; "
+                        + "@AITestDriven cannot enforce test coverage on an ignored element. "
+                        + "Remove one of the two annotations.",
+                    element);
+            }
+        }
+
+        // Contradiction: @AITestDriven + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AITestDriven and @AILocked. "
+                        + "@AILocked prohibits all modifications; @AITestDriven permits changes only when tests are updated. "
+                        + "Consider using only @AILocked if no changes at all are intended.",
+                    element);
+            }
+        }
+
+        // Invalid coverage goal
+        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+            AITestDriven td = element.getAnnotation(AITestDriven.class);
+            if (td.coverageGoal() < 0 || td.coverageGoal() > 100) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AITestDriven on " + element.toString()
+                        + " has an invalid coverageGoal (" + td.coverageGoal() + "). "
+                        + "Value must be between 0 and 100 (inclusive).",
                     element);
             }
         }

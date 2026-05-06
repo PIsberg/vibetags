@@ -102,6 +102,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AICore` - Marks sensitive core logic; AI must change with extreme caution (sensitivity: String, note: String)
 - `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
 - `@AIContract` - Freezes the public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions (reason: String)
+- `@AITestDriven` - Enforces Red-Green-Refactor; AI must provide matching test updates alongside any logic changes (testLocation: String, coverageGoal: int, framework: Framework[], mockPolicy: String)
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -111,8 +112,8 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
-- `AnnotationCollector` — owns the nine `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
-- `AnnotationValidator` — emits five compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap)
+- `AnnotationCollector` — owns the ten `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
+- `AnnotationValidator` — emits compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap, `@AITestDriven`+`@AIIgnore` contradiction, `@AITestDriven`+`@AILocked` contradiction, invalid `@AITestDriven.coverageGoal`)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
@@ -383,6 +384,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AICore`** | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` | Marks well-tested core logic; AI must change with extreme caution |
 | **`@AIPerformance`** | TYPE, METHOD, FIELD | `constraint: String` | Hot-path constraint; AI must not introduce O(n²) or worse complexity |
 | **`@AIContract`** | TYPE, METHOD | `reason: String` | Freezes public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions |
+| **`@AITestDriven`** | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` | Enforces Red-Green-Refactor: AI must not propose changes without also providing the matching test update |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -391,11 +393,15 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AICore` — visible, modifiable, but AI must treat changes with extreme caution and verify test coverage
 - `@AIPerformance` — visible, modifiable, but AI must never introduce O(n²) or worse complexity
 - `@AIContract` — visible, modifiable internally, but the public signature (name, param types/order, return type, checked exceptions) is immutable
+- `@AITestDriven` — visible, modifiable, but any change must be accompanied by a matching test update in the same response; the AI is the "accountability officer" that enforces the test suite
 
 **Invalid combinations that trigger compiler WARNINGs:**
 - `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
 - `@AIContract` + `@AIDraft` — contradictory; a frozen signature that also needs drafting is logically inconsistent
 - `@AIContract` + `@AILocked` — overlapping; `@AILocked` already prohibits all modifications, making `@AIContract`'s "logic is changeable" carve-out meaningless
+- `@AITestDriven` + `@AIIgnore` — contradictory; enforcing test coverage on an ignored element is logically inconsistent
+- `@AITestDriven` + `@AILocked` — contradictory; `@AILocked` prohibits all modifications while `@AITestDriven` permits changes when tests are provided
+- `@AITestDriven` with `coverageGoal` outside 0–100 — invalid; must be a valid percentage
 
 ### Annotation Processor
 

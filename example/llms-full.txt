@@ -204,4 +204,19 @@ The following elements have frozen public API signatures. Internal implementatio
 
 ### com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)
 - **Reason**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
+
+
+## 🧪 Test-Driven Requirements
+The following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.
+
+### com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)
+- **Coverage Goal**: 100%
+- **Frameworks**: JUNIT_5, ASSERTJ
+- **Mock Policy**: Use fixed prices — no external pricing calls in unit tests
+
+### com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
+- **Coverage Goal**: 95%
+- **Frameworks**: JUNIT_5, MOCKITO
+- **Test Location**: src/test/java/com/example/service/OrderServiceTest.java
+- **Mock Policy**: Mock OrderRepository and EventPublisher; use real state machine logic
 <!-- VIBETAGS-END -->

@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -82,6 +83,16 @@ public final class BuildFingerprint {
         appendAnnotationSet(sb, "T", collector.contract(), e -> {
             AIContract a = e.getAnnotation(AIContract.class);
             return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "TD", collector.testDriven(), e -> {
+            AITestDriven a = e.getAnnotation(AITestDriven.class);
+            if (a == null) return "";
+            StringBuilder attrs = new StringBuilder();
+            attrs.append(a.coverageGoal()).append('|');
+            attrs.append(a.testLocation()).append('|');
+            for (AITestDriven.Framework f : a.framework()) attrs.append(f.name()).append(',');
+            attrs.append('|').append(a.mockPolicy());
+            return attrs.toString();
         });
 
         sb.append("S{");

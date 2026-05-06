@@ -103,4 +103,10 @@ Do not modify the public signatures of the following elements. Internal implemen
 - `com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)` - Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
 - `com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)` - Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
 - `com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)` - B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
+
+## Test-Driven Requirements
+Do not suggest changes to the following elements without also providing the corresponding test update:
+
+- `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)` - Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
+- `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)` - Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
 <!-- VIBETAGS-END -->

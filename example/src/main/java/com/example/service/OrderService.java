@@ -4,6 +4,7 @@ import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import java.util.List;
 import java.util.Map;
@@ -45,16 +46,27 @@ public class OrderService {
      * AI is encouraged to help implement various discount strategies.
      */
     @AIDraft(instructions = "Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.")
+    @AITestDriven(
+        coverageGoal = 100,
+        framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.ASSERTJ},
+        mockPolicy = "Use fixed prices — no external pricing calls in unit tests"
+    )
     public double calculateDiscount(String orderId, String discountCode) {
         // @AIDraft: Implement discount logic
         return 0.0;
     }
-    
+
     /**
      * DRAFT: Order status tracking.
      * Need help implementing comprehensive status workflow.
      */
     @AIDraft(instructions = "Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.")
+    @AITestDriven(
+        coverageGoal = 95,
+        framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.MOCKITO},
+        testLocation = "src/test/java/com/example/service/OrderServiceTest.java",
+        mockPolicy = "Mock OrderRepository and EventPublisher; use real state machine logic"
+    )
     public String updateOrderStatus(String orderId, String newStatus) {
         // @AIDraft: Implement status tracking
         return "CREATED";

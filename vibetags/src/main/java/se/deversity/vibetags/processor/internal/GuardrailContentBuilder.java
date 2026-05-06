@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AITestDriven;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -53,6 +54,16 @@ public final class GuardrailContentBuilder {
     private final boolean codyActive;
     private final boolean codyIgnoreActive;
     private final boolean supermavenIgnoreActive;
+
+    // Windsurf test-driven section
+    private StringBuilder windsurfTestDrivenSection;
+
+    // Zed test-driven section
+    private StringBuilder zedTestDrivenSection;
+
+    // llms.txt test-driven sections
+    private StringBuilder llmsTxtTestDriven;
+    private StringBuilder llmsFullTxtTestDriven;
 
     // Windsurf builders
     private StringBuilder windsurfRules;
@@ -177,7 +188,8 @@ public final class GuardrailContentBuilder {
     private int mainBuilderHint() {
         int n = collector.locked().size() + collector.context().size() + collector.audit().size()
               + collector.draft().size() + collector.privacy().size() + collector.core().size()
-              + collector.performance().size() + collector.contract().size() + collector.ignore().size();
+              + collector.performance().size() + collector.contract().size() + collector.ignore().size()
+              + collector.testDriven().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -274,6 +286,15 @@ public final class GuardrailContentBuilder {
         for (Element e : collector.contract())
             appendContract(e, cursorContractSec, claudeContractSec, codexContractSec, copilotContractSec, qwenContractSec, geminiContractSec);
 
+        StringBuilder cursorTestDrivenSec = new StringBuilder("\n## 🧪 TEST-DRIVEN REQUIREMENTS\nThe following elements require a corresponding test update whenever their logic is modified.\nAI MUST NOT propose changes to these elements without also providing the matching test code.\n\n");
+        StringBuilder claudeTestDrivenSec = new StringBuilder("  <test_driven_requirements>\n");
+        StringBuilder codexTestDrivenSec  = new StringBuilder("\n## 🧪 TEST-DRIVEN REQUIREMENTS\nChanges to the following elements MUST be accompanied by a matching test update in the same response.\n\n");
+        StringBuilder copilotTestDrivenSec = new StringBuilder("\n## Test-Driven Requirements\nDo not suggest changes to the following elements without also providing the corresponding test update:\n\n");
+        StringBuilder qwenTestDrivenSec   = new StringBuilder("\n## 🧪 TEST-DRIVEN REQUIREMENTS\nChanges to the following elements MUST be accompanied by a matching test update in the same response.\n\n");
+        StringBuilder geminiTestDrivenSec = new StringBuilder();
+        for (Element e : collector.testDriven())
+            appendTestDriven(e, cursorTestDrivenSec, claudeTestDrivenSec, codexTestDrivenSec, copilotTestDrivenSec, qwenTestDrivenSec, geminiTestDrivenSec);
+
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
             geminiMd.append("\n## LOCKED FILES (DO NOT MODIFY)\nDo not suggest modifications to the following files:\n\n").append(geminiLocked);
@@ -368,6 +389,18 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfContractSection);
             if (zedActive)      zedRules.append(zedContractSection);
         }
+        if (!collector.testDriven().isEmpty()) {
+            cursorRules.append(cursorTestDrivenSec);
+            claudeTestDrivenSec.append("  </test_driven_requirements>\n");
+            claudeMd.append(claudeTestDrivenSec);
+            claudeMd.append("\n<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>\n");
+            codexAgents.append(codexTestDrivenSec);
+            copilot.append(copilotTestDrivenSec);
+            qwenMd.append(qwenTestDrivenSec);
+            geminiMd.append("\n## TEST-DRIVEN REQUIREMENTS\nChanges to the following elements MUST be accompanied by matching test code in the same response:\n\n").append(geminiTestDrivenSec);
+            if (windsurfActive) windsurfRules.append(windsurfTestDrivenSection);
+            if (zedActive)      zedRules.append(zedTestDrivenSection);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -382,6 +415,7 @@ public final class GuardrailContentBuilder {
             if (!collector.core().isEmpty())        llmsTxt.append(llmsTxtCore);
             if (!collector.performance().isEmpty()) llmsTxt.append(llmsTxtPerformance);
             if (!collector.contract().isEmpty())    llmsTxt.append(llmsTxtContract);
+            if (!collector.testDriven().isEmpty())  llmsTxt.append(llmsTxtTestDriven);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -392,6 +426,7 @@ public final class GuardrailContentBuilder {
             if (!collector.core().isEmpty())        llmsFullTxt.append(llmsFullTxtCore);
             if (!collector.performance().isEmpty()) llmsFullTxt.append(llmsFullTxtPerformance);
             if (!collector.contract().isEmpty())    llmsFullTxt.append(llmsFullTxtContract);
+            if (!collector.testDriven().isEmpty())  llmsFullTxt.append(llmsFullTxtTestDriven);
         }
 
         return new Result(buildContentMap(geminiMd), elementRules);
@@ -641,6 +676,58 @@ public final class GuardrailContentBuilder {
         if (granularActive)  appendToGranular(e, "Contract-Frozen Signature", "- **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.\n- **Reason**: " + reason);
     }
 
+    private void appendTestDriven(Element e, StringBuilder cursorTestDrivenSec, StringBuilder claudeTestDrivenSec,
+                                  StringBuilder codexTestDrivenSec, StringBuilder copilotTestDrivenSec,
+                                  StringBuilder qwenTestDrivenSec, StringBuilder geminiTestDrivenSec) {
+        AITestDriven td = e.getAnnotation(AITestDriven.class);
+        if (td == null) return;
+        String className = ElementNaming.elementPath(e);
+        int coverageGoal = td.coverageGoal();
+        String testLocation = td.testLocation();
+        String mockPolicy = td.mockPolicy();
+
+        StringBuilder frameworks = new StringBuilder();
+        for (AITestDriven.Framework f : td.framework()) {
+            if (frameworks.length() > 0) frameworks.append(", ");
+            frameworks.append(f.name());
+        }
+        String frameworksStr = frameworks.toString();
+
+        String locationHint = testLocation.isEmpty() ? "" : " Test file: " + testLocation + ".";
+        String mockHint = mockPolicy.isEmpty() ? "" : " Mock policy: " + mockPolicy + ".";
+        String summary = "Coverage goal: " + coverageGoal + "%. Framework: " + frameworksStr + "." + locationHint + mockHint;
+
+        if (cursorActive)  cursorTestDrivenSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (claudeActive) {
+            claudeTestDrivenSec.append("    <element path=\"").append(className).append("\">\n");
+            claudeTestDrivenSec.append("      <coverage_goal>").append(coverageGoal).append("</coverage_goal>\n");
+            claudeTestDrivenSec.append("      <frameworks>").append(frameworksStr).append("</frameworks>\n");
+            if (!testLocation.isEmpty())
+                claudeTestDrivenSec.append("      <test_location>").append(testLocation).append("</test_location>\n");
+            if (!mockPolicy.isEmpty())
+                claudeTestDrivenSec.append("      <mock_policy>").append(mockPolicy).append("</mock_policy>\n");
+            claudeTestDrivenSec.append("    </element>\n");
+        }
+        if (codexActive)   codexTestDrivenSec.append("- **").append(className).append("**: ").append(summary).append("\n");
+        if (copilotActive) copilotTestDrivenSec.append("- `").append(className).append("` - ").append(summary).append("\n");
+        if (qwenActive)    qwenTestDrivenSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (geminiActive)  geminiTestDrivenSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+
+        if (llmsActive)     llmsTxtTestDriven.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtTestDriven.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append("\n");
+
+        if (llmsFullActive && !testLocation.isEmpty())
+            llmsFullTxtTestDriven.append("- **Test Location**: ").append(testLocation).append("\n");
+        if (llmsFullActive && !mockPolicy.isEmpty())
+            llmsFullTxtTestDriven.append("- **Mock Policy**: ").append(mockPolicy).append("\n");
+        if (llmsFullActive) llmsFullTxtTestDriven.append("\n");
+
+        if (aiderConvActive) aiderConventions.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append("\n");
+        if (windsurfActive)  windsurfTestDrivenSection.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)       zedTestDrivenSection.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (granularActive)  appendToGranular(e, "Test-Driven Requirements", "- **Rule**: Changes MUST be accompanied by a matching test update.\n- **Coverage Goal**: " + coverageGoal + "%\n- **Frameworks**: " + frameworksStr + (testLocation.isEmpty() ? "" : "\n- **Test Location**: " + testLocation) + (mockPolicy.isEmpty() ? "" : "\n- **Mock Policy**: " + mockPolicy));
+    }
+
     private void appendToGranular(Element element, String title, String content) {
         Element owner = ElementNaming.owningElement(element);
         StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
@@ -700,6 +787,7 @@ public final class GuardrailContentBuilder {
                 llmsTxtCore     = new StringBuilder("\n## 🧠 Core Functionality\n");
                 llmsTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\n");
                 llmsTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\n");
+                llmsTxtTestDriven  = new StringBuilder("\n## 🧪 Test-Driven Requirements\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -717,6 +805,7 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtCore        = new StringBuilder("\n## 🧠 Core Functionality\nThe following elements are well-tested core functionality. Make changes with extreme caution.\n\n");
                 llmsFullTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\nThe following elements are on a hot-path and have strict time/space complexity constraints.\n\n");
                 llmsFullTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\nThe following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+                llmsFullTxtTestDriven  = new StringBuilder("\n## 🧪 Test-Driven Requirements\nThe following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.\n\n");
             }
         }
 
@@ -735,8 +824,9 @@ public final class GuardrailContentBuilder {
             windsurfDraftSection  = new StringBuilder("\n## 📝 IMPLEMENTATION TASKS (TODO)\nThe following elements are currently in DRAFT mode. Follow the instructions to implement them:\n\n");
             windsurfPrivacySection = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nNever include runtime values of the following in logs, console output, external API calls, test fixtures, or mock data.\n\n");
             windsurfCoreSection     = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
-            windsurfPerfSection     = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) or worse complexity. Always reason about time/space before proposing changes.\n\n");
-            windsurfContractSection = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+            windsurfPerfSection         = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) or worse complexity. Always reason about time/space before proposing changes.\n\n");
+            windsurfContractSection     = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+            windsurfTestDrivenSection   = new StringBuilder("\n## 🧪 TEST-DRIVEN REQUIREMENTS\nAI MUST NOT propose changes to the following elements without also providing the matching test code.\n\n");
         }
 
         if (zedActive) {
@@ -745,8 +835,9 @@ public final class GuardrailContentBuilder {
             zedDraftSection   = new StringBuilder("\n## Implementation Tasks\nThe following elements are drafts that need implementation:\n\n");
             zedPrivacySection = new StringBuilder("\n## PII / Privacy Guardrails\nNever log, expose, or suggest code that outputs runtime values of these elements:\n\n");
             zedCoreSection     = new StringBuilder("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
-            zedPerfSection     = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
-            zedContractSection = new StringBuilder("\n## Contract-Frozen Signatures\nInternal logic may be changed; never alter method names, parameter types, order, return types, or checked exceptions:\n\n");
+            zedPerfSection         = new StringBuilder("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
+            zedContractSection     = new StringBuilder("\n## Contract-Frozen Signatures\nInternal logic may be changed; never alter method names, parameter types, order, return types, or checked exceptions:\n\n");
+            zedTestDrivenSection   = new StringBuilder("\n## Test-Driven Requirements\nChanges to the following elements must be accompanied by matching test code:\n\n");
         }
 
         if (codyIgnoreActive)       codyIgnoreFile       = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Cody-specific exclusion list.\n");

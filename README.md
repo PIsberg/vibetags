@@ -12,6 +12,11 @@
 - [Performance & Load Tests](#-performance--load-tests)
 - [When to Use VibeTags](#-when-to-use-vibetags)
 - [Advanced Features](#-advanced-features)
+  - [@AIAudit - Continuous Security Auditing](#-aiaudit---continuous-security-auditing)
+  - [@AIDraft - Requesting AI Implementations](#-aidraft---requesting-ai-implementations)
+  - [Smart Validation Warnings](#-smart-validation-warnings)
+  - [@AIContract - Freezing Public API Signatures](#-aicontract---freezing-public-api-signatures)
+  - [@AITestDriven - Test-Driven AI Requirements](#-aitestdriven---test-driven-ai-requirements)
 - [Contributing](#-contributing)
 - [Project Components](#-project-components)
 - [License](#-license)
@@ -49,6 +54,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 - **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
+- **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
 
 ### Supported AI Platforms
 
@@ -91,10 +97,10 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
-├── vibetags-annotations/ # The 9 @interface classes (zero deps, RetentionPolicy.SOURCE)
+├── vibetags-annotations/ # The 10 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract
+│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract, AITestDriven
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -746,6 +752,17 @@ If you use `@AIContract` (signature frozen but logic can change) alongside `@AID
 If you use `@AIContract` alongside `@AILocked` (no changes at all), VibeTags will warn about the overlapping intent:
 `[WARNING] VibeTags: com.example.LegacyApi.process is annotated with both @AIContract and @AILocked. @AILocked prohibits all modifications; @AIContract permits internal-logic changes. Consider using only @AILocked if no changes at all are intended.`
 
+#### Contradictory Test-Driven Annotations
+If you use `@AITestDriven` on an element that is also annotated with `@AIIgnore`, VibeTags will warn you — an ignored element is excluded from AI context entirely, so test enforcement cannot apply:
+`[WARNING] VibeTags: com.example.OrderService.processPayment is annotated with both @AITestDriven and @AIIgnore. @AIIgnore excludes the element from AI context entirely; @AITestDriven cannot enforce test coverage on an ignored element. Remove one of the two annotations.`
+
+If you use `@AITestDriven` on an element that is also annotated with `@AILocked`, VibeTags will warn about the conflicting intent — `@AILocked` prohibits all changes while `@AITestDriven` permits changes when tests are provided:
+`[WARNING] VibeTags: com.example.LegacyService.compute is annotated with both @AITestDriven and @AILocked. @AILocked prohibits all modifications; @AITestDriven permits changes only when tests are updated. Consider using only @AILocked if no changes at all are intended.`
+
+#### Invalid Coverage Goal
+If you use `@AITestDriven` with a `coverageGoal` outside the valid 0-100 range, VibeTags will warn you:
+`[WARNING] VibeTags: @AITestDriven on com.example.Service.method has an invalid coverageGoal (150). Value must be between 0 and 100 (inclusive).`
+
 ### 📜 @AIContract - Freezing Public API Signatures
 
 The `@AIContract` annotation draws a hard line between **interface** and **implementation**. It tells AI assistants: *"You're welcome to change what happens inside this method — replace the algorithm, swap the data source, optimize the logic — but you must leave the method name, parameter types, parameter order, return type, and checked exceptions exactly as they are."*
@@ -821,6 +838,115 @@ The following elements have contract-frozen public signatures. You MAY change in
 - **Legacy bridges** — where modern code talks to older systems that expect exact data shapes
 - **Framework-wired methods** — where Spring, Dagger, or another framework locates methods by exact signature
 
+### 🧪 @AITestDriven - Test-Driven AI Requirements
+
+The `@AITestDriven` annotation is the **accountability officer** of the VibeTags suite. It transforms the AI from a simple code generator into a disciplined engineer that follows a strict Red-Green-Refactor workflow.
+
+When an AI tool scans a project and encounters this tag, it must treat the test suite as an immutable part of the "Definition of Done." Changes without tests are considered incomplete and must not be proposed.
+
+#### How It Works: The Enforcement Loop
+
+1. **Context Mapping** — The AI identifies the associated test class (via naming convention or explicit `testLocation`).
+2. **Requirement Analysis** — Before implementing, the AI reads the existing tests to understand expected behavior.
+3. **Synchronous Update** — New logic and new test cases are generated in a single pass. If the logic changes, the tests must reflect the new expected behavior.
+4. **Regression Check** — The AI verifies its changes do not break existing tests; if they do, it must fix the logic or explain why the test contract needs to evolve.
+
+#### Annotation Attributes
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `testLocation` | `String` | `""` | Explicit path to the test file when it doesn't follow standard naming (e.g. `src/test/integration/ProcTest.java`). Leave empty for convention-based resolution. |
+| `coverageGoal` | `int` | `100` | Minimum statement-coverage percentage the AI must achieve in generated or updated tests. |
+| `framework` | `Framework[]` | `{JUNIT_5}` | Testing frameworks the AI must use. Multiple values may be combined (e.g. `{JUNIT_5, MOCKITO}`). |
+| `mockPolicy` | `String` | `""` | Instruction describing how external dependencies should be handled (e.g. `"Always mock external APIs"`, `"Use H2 for database tests"`). |
+
+**Available frameworks:** `JUNIT_5`, `JUNIT_4`, `TESTNG`, `MOCKITO`, `ASSERTJ`, `SPOCK`, `NONE`
+
+#### Example Usage
+
+```java
+public class OrderService {
+
+    /**
+     * Discount engine — the logic here evolves frequently as business rules change.
+     * Every change MUST be accompanied by a full test update.
+     */
+    @AIDraft(instructions = "Implement discount calculation: percentage, fixed amount, BOGO, tiered.")
+    @AITestDriven(
+        coverageGoal = 100,
+        framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.ASSERTJ},
+        mockPolicy = "Use fixed prices — no external pricing calls in unit tests"
+    )
+    public double calculateDiscount(String orderId, String discountCode) {
+        return 0.0; // AI implements this, but must also provide the tests
+    }
+
+    /**
+     * Order status state machine — complex workflow that must stay fully tested.
+     */
+    @AITestDriven(
+        coverageGoal = 95,
+        framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.MOCKITO},
+        testLocation = "src/test/java/com/example/service/OrderServiceTest.java",
+        mockPolicy = "Mock OrderRepository and EventPublisher; use real state machine logic"
+    )
+    public String updateOrderStatus(String orderId, String newStatus) {
+        return "CREATED";
+    }
+}
+```
+
+#### Generated Output by Platform
+
+**Cursor (.cursorrules):**
+```markdown
+## 🧪 TEST-DRIVEN REQUIREMENTS
+The following elements require a corresponding test update whenever their logic is modified.
+AI MUST NOT propose changes to these elements without also providing the matching test code.
+
+* `com.example.service.OrderService.calculateDiscount` - Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
+* `com.example.service.OrderService.updateOrderStatus` - Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java.
+```
+
+**Claude (CLAUDE.md):**
+```xml
+<test_driven_requirements>
+  <element path="com.example.service.OrderService.calculateDiscount">
+    <coverage_goal>100</coverage_goal>
+    <frameworks>JUNIT_5, ASSERTJ</frameworks>
+    <mock_policy>Use fixed prices — no external pricing calls in unit tests</mock_policy>
+  </element>
+  <element path="com.example.service.OrderService.updateOrderStatus">
+    <coverage_goal>95</coverage_goal>
+    <frameworks>JUNIT_5, MOCKITO</frameworks>
+    <test_location>src/test/java/com/example/service/OrderServiceTest.java</test_location>
+    <mock_policy>Mock OrderRepository and EventPublisher; use real state machine logic</mock_policy>
+  </element>
+</test_driven_requirements>
+<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>
+```
+
+#### Compile-time Validation
+
+`@AITestDriven` has three dedicated compile-time checks:
+
+- **`@AITestDriven` + `@AIIgnore`** — contradictory. The element is excluded from AI context, so enforcing test coverage on it is impossible. Remove one of the two.
+  `[WARNING] VibeTags: com.example.OrderService.processPayment is annotated with both @AITestDriven and @AIIgnore. @AIIgnore excludes the element from AI context entirely; @AITestDriven cannot enforce test coverage on an ignored element. Remove one of the two annotations.`
+
+- **`@AITestDriven` + `@AILocked`** — contradictory. `@AILocked` prohibits all changes; `@AITestDriven` permits changes when tests are provided. Use only `@AILocked` if no changes are intended.
+  `[WARNING] VibeTags: com.example.LegacyService.compute is annotated with both @AITestDriven and @AILocked. @AILocked prohibits all modifications; @AITestDriven permits changes only when tests are updated. Consider using only @AILocked if no changes at all are intended.`
+
+- **`@AITestDriven` with invalid `coverageGoal`** — `coverageGoal` must be between 0 and 100 inclusive.
+  `[WARNING] VibeTags: @AITestDriven on com.example.Service.method has an invalid coverageGoal (150). Value must be between 0 and 100 (inclusive).`
+
+#### Best Use Cases
+
+- **Business logic** — discount engines, pricing algorithms, order state machines that change often
+- **Security-sensitive operations** — payment processing, authentication flows where regressions are costly
+- **Draft implementations** — combine with `@AIDraft` to ensure the AI writes both the implementation and its tests in one shot
+- **Core algorithms** — pair with `@AICore` when well-tested stability is critical
+- **API surface evolution** — ensure any behavioral change is validated by tests before it reaches production
+
 ## 🤝 Contributing
 
 VibeTags is designed to evolve based on community needs. Future extensions could include:
@@ -832,7 +958,7 @@ VibeTags is designed to evolve based on community needs. Future extensions could
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains all 8 Java annotations and the annotation processor that generates AI configuration files at compile time.
+The core annotation processor library. Contains all 10 Java annotations and the annotation processor that generates AI configuration files at compile time.
 
 ### [example/](example/README.md)
 A practical e-commerce application demonstrating real-world usage of all 8 VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.

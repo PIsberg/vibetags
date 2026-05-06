@@ -195,4 +195,13 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### CONTRACT: com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)
 - **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
 - **Reason**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
+
+#### TEST-DRIVEN: com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)
+- **Rule**: Changes MUST be accompanied by test updates.
+- **Coverage Goal**: 100%
+- **Frameworks**: JUNIT_5, ASSERTJ
+#### TEST-DRIVEN: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
+- **Rule**: Changes MUST be accompanied by test updates.
+- **Coverage Goal**: 95%
+- **Frameworks**: JUNIT_5, MOCKITO
 <!-- VIBETAGS-END -->
