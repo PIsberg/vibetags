@@ -1074,7 +1074,7 @@ public final class GuardrailContentBuilder {
     }
 
     /** Converts a String[] to a JSON array of quoted strings: "\"a\", \"b\"". */
-    private static String buildJsonStringArray(String[] values) {
+    private static String buildJsonStringArray(String... values) {
         StringBuilder sb = new StringBuilder();
         for (String v : values) {
             if (sb.length() > 0) sb.append(", ");
