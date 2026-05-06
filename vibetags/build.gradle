@@ -117,7 +117,7 @@ jacocoTestReport {
 
 pmd {
     consoleOutput = true
-    toolVersion = "7.21.0"
+    toolVersion = "7.24.0"
     ignoreFailures = false
     ruleSets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
 }
