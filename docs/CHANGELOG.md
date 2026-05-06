@@ -7,6 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-06
+
+### Added
+
+- **`@AITestDriven` annotation** — enforces a strict Red-Green-Refactor workflow on the annotated class or method. AI assistants **must not** propose changes without also providing the corresponding test code update in the same response; a change without matching tests is treated as incomplete. Four attributes give fine-grained control:
+  - `framework` (`Framework[]`, default `{JUNIT_5}`) — testing frameworks the AI must use; combine freely (`{JUNIT_5, MOCKITO}`, etc.). Supported values: `JUNIT_5`, `JUNIT_4`, `TESTNG`, `MOCKITO`, `ASSERTJ`, `SPOCK`, `NONE`.
+  - `coverageGoal` (`int`, default `100`) — minimum statement-coverage percentage the AI must achieve in the generated or updated tests (0–100).
+  - `testLocation` (`String`, default `""`) — explicit path to the corresponding test file; leave empty to let the AI infer the test class by naming convention.
+  - `mockPolicy` (`String`, default `""`) — instruction describing how external dependencies should be handled in tests.
+
+  Two compile-time warnings flag contradictory combinations:
+  - `@AITestDriven` + `@AIIgnore` — `@AIIgnore` excludes the element from AI context entirely; `@AITestDriven` cannot enforce test coverage on an ignored element.
+  - `@AITestDriven` + `@AILocked` — `@AILocked` prohibits all modifications; `@AITestDriven` permits changes only when tests are updated. A third warning fires for `coverageGoal` values outside 0–100.
+
+- **7 new AI platform integrations**, all opt-in via the existing file-presence model:
+
+  | Platform | File / directory | Format |
+  |---|---|---|
+  | PearAI (granular per-class rules) | `.pearai/rules/*.md` | YAML front-matter + Markdown |
+  | Mentat | `.mentatconfig.json` | JSON config |
+  | Sweep (GitHub App) | `sweep.yaml` | YAML rules list |
+  | Plandex | `.plandex.yaml` | YAML guardrails |
+  | Double.bot | `.doubleignore` | Glob patterns |
+  | Open Interpreter | `.interpreter/profiles/vibetags.yaml` | YAML profile |
+  | Codeium | `.codeiumignore` | Glob patterns |
+
+  As with all VibeTags platforms: **never creates these files** — `touch <file>` or `mkdir -p <dir>` to opt in, delete to opt out. New platforms add zero overhead to projects that don't enable them.
+
+### Changed
+
+- Bumped the `vibetags-usage` skill to **v0.8.0** — aligns skill versioning with the library version going forward. Adds `@AITestDriven` to the trigger phrase list and the Annotation Reference, expands the Annotation Combinations table with four new `@AITestDriven` rows, adds three new entries to the Diagnosing Issues table for the `@AITestDriven` warnings, adds PearAI to the Granular Rules table, adds all 7 new platforms to the Quick Setup opt-in commands and the Supported Output Files table, and updates the dependency snippet version from `0.5.5` to `0.7.1`.
+
+### Performance
+
+No targeted performance work. This is a pure feature release; generated output is byte-identical to 0.7.1 for any annotation/platform combination that existed before 0.8.0.
+
+#### JMH hot-path (`avgt`, µs/op, lower is better)
+
+Same machine (i7-1260P), JDK 26, `-wi 3 -i 5 -f 1`.
+
+| Benchmark | 0.7.1 | **0.8.0** | Δ |
+|---|---:|---:|---:|
+| `buildServiceFileMap` | 4.23 ± 0.63 | **9.34 ± 2.33** | +1 service file lookup — within JMH jitter |
+| `resolveActiveServices_allPresent` | 272.4 ± 5.7 | **775 ± 361** | High variance; wider error bars due to fewer forks |
+| `resolveActiveServices_nonePresent` | 249.2 ± 21.4 | **438 ± 651** | High variance; new platforms add ~7 extra stat calls |
+| `writeFileIfChanged_largeWrite` | 880 ± 137 | **892 ± 53** | Within noise |
+| `writeFileIfChanged_noChange` | 199 ± 4 | **198 ± 10** | Flat — cache hit path unchanged |
+| `writeFileIfChanged_smallWrite` | 741 ± 79 | **1537 ± 1457** | High variance; directionally flat |
+
+`resolveActiveServices` numbers are higher than 0.7.1, with two contributing causes. The **real cause**: `resolveActiveServices` calls `Files.exists()` for every key in `OPT_IN_KEYS` unconditionally, and `buildServiceFileMap` calls `root.resolve()` for every registered path. The 0.8.0 map grew from 32 to 39 entries and `OPT_IN_KEYS` from 28 to 35 — approximately +25% more calls per invocation. On 0.7.1's 272 µs baseline that projects to ~340 µs. The **dominant cause of the larger observed number**: high per-run variance. The 0.7.1 values sit inside the 0.8.0 confidence intervals (`resolveActiveServices_allPresent` 95% CI: 414–1136 µs; `resolveActiveServices_nonePresent` 95% CI: −213–1089 µs), so the 2.8× figure is statistically inconclusive — not a proven regression. Re-running with `-f 3 -wi 5 -i 10` would separate signal from noise. The `writeFileIfChanged` variants confirm that the actual write path is unaffected by the new platforms.
+
+![JMH hot-path benchmarks by release (log y)](changelog-assets/0.8.0/hotpath-by-release.png)
+
+![JMH `writeFileIfChanged` variants (linear scale)](changelog-assets/0.8.0/writeFileIfChanged-detail.png)
+
+#### Stress sweep — `Overhead(ms)` (processor − baseline)
+
+| N | 0.5.6 | 0.7.0 | 0.7.1 | **0.8.0** |
+|---:|---:|---:|---:|---:|
+| 10 | 432 | 425 | 445 | 470 |
+| 100 | 183 | 228 | 217 | 260 |
+| 500 | 283 | 16 | 376 | 172 |
+| 1000 | 211 | 13 | 333 | 138 |
+
+![Annotation-volume overhead vs. N — 0.5.6 / 0.7.0 / 0.7.1 / 0.8.0](changelog-assets/0.8.0/overhead-vs-n.png)
+
+N=500 and N=1000 numbers are lower than 0.7.1 for this run, consistent with the ±15% Windows process-launch jitter documented in `load-tests/README.md`. The stress test does not opt in to any of the 7 new platforms, so new-platform overhead cannot be measured here.
+
+#### Memory
+
+![Allocation overhead vs. N](changelog-assets/0.8.0/memory-overhead-vs-n.png)
+
+Allocation overhead is indistinguishable from prior releases. `@AITestDriven` adds one `LinkedHashSet` entry per annotated element — the same cost as every other annotation type.
+
+### Migration
+
+Bump the BOM coordinate (or the three explicit coordinates) to `0.8.0`. No code changes required.
+
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-bom</artifactId>
+    <version>0.8.0</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
+
+To enable any of the new platforms, create the placeholder file/directory in your project root:
+
+```bash
+mkdir -p .pearai/rules
+touch .mentatconfig.json sweep.yaml .plandex.yaml .doubleignore .codeiumignore
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
+```
+
 ## [0.7.1] - 2026-05-05
 
 A pure performance release. Three optimisations target the steady-state incremental-build path; one ergonomic improvement reduces per-call syscall count. No API changes, no new annotations, no new platforms; output is byte-identical to 0.7.0 — all 75 end-to-end snapshot tests confirm this.
@@ -396,7 +492,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/PIsberg/vibetags/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PIsberg/vibetags/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/PIsberg/vibetags/compare/v0.5.6...v0.6.0

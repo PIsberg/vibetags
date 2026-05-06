@@ -18,8 +18,8 @@ repositories {
 dependencies {
     // BOM is the single source of truth for vibetags-* versions. Apply it to both the
     // compile and annotation-processor configurations so neither needs an explicit version.
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.7.1')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.7.1')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.8.0')
 
     // Annotations on compile, processor on the annotation-processor path only —
     // keeps the processor's slf4j/logback off the consumer's compile classpath.
