@@ -46,21 +46,40 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Key Features
 
+The 15 annotations group into six categories by intent. Within each category they are listed alphabetically.
+
+#### 🛡️ Protection & Access Control — keep AI away from code
+
+- **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
-- **🧠 @AICore** - Mark well-tested core logic that is sensitive to changes (modifications require extreme caution)
+
+#### 🚧 Behavioral Constraints — limit what AI can change
+
+- **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
+
+#### 🧬 Design Intent — declare properties AI must preserve
+
+- **🧠 @AICore** - Mark well-tested core logic that is sensitive to changes (modifications require extreme caution)
+- **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
+- **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
+- **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
+
+#### 🔐 Security & Compliance — auditing, privacy, and regulation
+
+- **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
+- **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
+- **📜 @AIRegulation** - Tie code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX) — AI must document compliance impact and never weaken the requirement
+
+#### 🛠️ Implementation Workflow — guide how AI works on the code
+
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
-- **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
-- **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
-- **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
-- **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
-- **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
-- **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
+
+#### ♻️ Lifecycle — manage deprecation and removal
+
 - **⚠️ @AIDeprecated** - Actively route callers away from a deprecated element — declares the replacement, migration guide, and removal deadline
-- **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
-- **📜 @AIRegulation** - Tie code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX) — AI must document compliance impact and never weaken the requirement
 
 ### Supported AI Platforms
 
