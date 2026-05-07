@@ -1,6 +1,6 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven annotations, or wants to control how AI tools interact with Java code.
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation annotations, or wants to control how AI tools interact with Java code.
 version: 0.8.0
 ---
 
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.7.1</version>
+    <version>0.8.0</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.7.1'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.7.1'
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.8.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.8.0'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -267,6 +267,138 @@ Enforces a strict Red-Green-Refactor workflow: AI **must** include the correspon
 
 ---
 
+### `@AIThreadSafe` — Preserve a thread-safety strategy
+
+Use on: **class, method**
+
+```java
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.LOCK_FREE,
+    note = "All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map."
+)
+public class SessionCache { ... }
+```
+
+Declares an *existing* thread-safety design that AI must not silently break. Different from `@AIAudit(checkFor = "Thread Safety")` (which asks the AI to look for new bugs).
+
+**Strategies:** `SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`. Default `SYNCHRONIZED`.
+
+When to use: caches and registries shared across threads, atomics-backed counters, singletons guarded by a named lock, per-thread context held in `ThreadLocal`.
+
+---
+
+### `@AIImmutable` — Declare a class immutable
+
+Use on: **class**
+
+```java
+@AIImmutable(note = "Used by every test runner; safe to share across threads without copies.")
+public final class AsyncTestConfig {
+    private final int timeoutMs;
+    public AsyncTestConfig(int timeoutMs) { this.timeoutMs = timeoutMs; }
+}
+```
+
+Declares the type immutable so AI assistants will not introduce setters, mutating methods, or non-final fields. The processor warns at compile time when an `@AIImmutable` class declares a non-final, non-static instance field.
+
+When to use: value objects, config holders, snapshots passed across thread boundaries, cache keys.
+
+**Compile-time warnings:**
+
+- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
+- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` on the same type — redundant (`@AIImmutable` already implies thread-safety)
+
+---
+
+### `@AIDeprecated` — Route callers toward a replacement
+
+Use on: **class, method, field**
+
+```java
+@AIDeprecated(
+    replacedBy = "com.example.payment.PaymentProcessor",
+    migrationGuide = "Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.",
+    deadline = "v2.0 (2026-Q4)"
+)
+public class OldPaymentApi { ... }
+```
+
+Richer than Java's `@Deprecated`. Where `@AILocked` *preserves* an element, `@AIDeprecated` actively *routes AI toward killing it* — the AI is told to suggest migrating callers rather than extending the deprecated element.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `replacedBy` | `String` | `""` | Fully-qualified name of the replacement |
+| `migrationGuide` | `String` | `"Migrate any caller to the replacement."` | How callers should migrate |
+| `deadline` | `String` | `""` | Removal deadline (release version, ISO date, etc.) |
+
+When to use: legacy APIs being phased out, modules behind a sunset flag, methods kept only for backwards compatibility while callers migrate.
+
+**Compile-time warnings:**
+
+- `@AIDeprecated` + `@AILocked` on the same element — contradictory (locked preserves; deprecated routes callers away)
+
+---
+
+### `@AIObservability` — Protect instrumentation
+
+Use on: **class, method**
+
+```java
+@AIObservability(
+    metrics = {"orders.placed.total", "orders.placed.failed"},
+    traces  = {"order.place"},
+    logs    = {"OrderPlaced", "OrderPlacementFailed"},
+    note    = "Watched by the Orders SLO dashboard."
+)
+public void recordOrderPlaced(String orderId, boolean success) { ... }
+```
+
+Marks code whose metrics, trace spans, or log statements downstream dashboards/alerts depend on. AI assistants must not silently remove or rename the listed instrumentation.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `metrics` | `String[]` | `{}` | Metric counter/gauge names this element publishes |
+| `traces`  | `String[]` | `{}` | Trace span names this element opens |
+| `logs`    | `String[]` | `{}` | Log statement identifiers this element emits |
+| `note`    | `String`   | `""` | Free-form note (e.g., "watched by SLO dashboard X") |
+
+When to use: SLO emitters, audit-log writers, request handlers whose latency histograms feed an SLA, background workers whose failure metrics page on-call.
+
+**Compile-time warnings:**
+
+- `@AIObservability` with no `metrics`, `traces`, or `logs` — no-op (nothing to preserve)
+
+---
+
+### `@AIRegulation` — Tie code to a compliance clause
+
+Use on: **class, method, field**
+
+```java
+@AIRegulation(
+    standard = "GDPR",
+    clause = "Art. 17",
+    description = "Right to erasure — when invoked, deletes ALL PII for the given user across every connected store."
+)
+public class GdprService { ... }
+```
+
+Ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …). Stronger than `@AIAudit` because it names the exact article — AI assistants must document compliance impact for every change and must not weaken the requirement.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `standard`    | `String` | *(required)* | Compliance standard name (e.g., `"GDPR"`, `"PCI-DSS"`, `"HIPAA"`, `"SOX"`) |
+| `clause`      | `String` | `""`        | Specific clause/article/section |
+| `description` | `String` | non-blank   | What this element does to satisfy the requirement |
+
+When to use: GDPR Art. 17 / Art. 20 implementations, PCI-DSS card-handling code, HIPAA-protected PHI read/write paths, SOX-relevant financial reporting and audit-log writers.
+
+**Compile-time warnings:**
+
+- `@AIRegulation` with a blank `standard` — required attribute missing
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -285,6 +417,16 @@ Enforces a strict Red-Green-Refactor workflow: AI **must** include the correspon
 | `@AITestDriven` + `@AIPerformance` | Any change must include tests AND meet complexity constraints |
 | `@AITestDriven` + `@AIIgnore` | **Warning**: contradictory — `@AIIgnore` excludes element from AI context |
 | `@AITestDriven` + `@AILocked` | **Warning**: contradictory — `@AILocked` prohibits all changes |
+| `@AIThreadSafe` + `@AIPerformance` | Concurrent code with strict complexity budget |
+| `@AIThreadSafe` + `@AIAudit` | Preserve sync invariant AND audit each change for new bugs |
+| `@AIImmutable` + `@AIThreadSafe(IMMUTABLE)` | **Warning**: redundant — `@AIImmutable` already implies thread-safety |
+| `@AIDeprecated` + `@AIContext` | Mark for removal AND guide migration approach |
+| `@AIDeprecated` + `@AILocked` | **Warning**: contradictory — locked preserves; deprecated routes callers away |
+| `@AIObservability` + `@AIPerformance` | Instrumented hot-path code with budget AND dashboard dependencies |
+| `@AIObservability` + `@AICore` | Core logic whose metrics feed dashboards — change with extreme caution |
+| `@AIRegulation` + `@AIAudit` | Compliance clause AND mandatory security audit |
+| `@AIRegulation` + `@AIPrivacy` | PII handler tied to a specific GDPR/HIPAA/PCI-DSS clause |
+| `@AIRegulation` + `@AILocked` | Compliance code that must not be modified at all |
 
 ---
 
@@ -363,6 +505,11 @@ tasks.withType(JavaCompile) {
 | `[WARNING] contradictory @AITestDriven and @AIIgnore` | Both annotations on same element | Remove one — `@AIIgnore` excludes the element entirely |
 | `[WARNING] contradictory @AITestDriven and @AILocked` | Both annotations on same element | Remove one — `@AILocked` prohibits all changes |
 | `[WARNING] @AITestDriven has invalid coverageGoal` | `coverageGoal` outside 0–100 | Set a value between 0 and 100 (inclusive) |
+| `[WARNING] @AIImmutable on … but field … is not final` | Non-final, non-static field on `@AIImmutable` class | Make the field `final`, or drop `@AIImmutable` |
+| `[WARNING] contradictory @AIDeprecated and @AILocked` | Both annotations on same element | Pick one — locked preserves, deprecated routes callers away |
+| `[WARNING] @AIThreadSafe(IMMUTABLE) and @AIImmutable` | Both annotations on same type | Use `@AIImmutable` alone — immutability already implies thread-safety |
+| `[WARNING] @AIObservability declares no metrics, traces, or logs` | Empty annotation | Add at least one `metrics`/`traces`/`logs` entry |
+| `[WARNING] @AIRegulation has a blank 'standard'` | Required `standard` is empty/whitespace | Name the standard (e.g., `"GDPR"`, `"PCI-DSS"`) |
 
 ---
 

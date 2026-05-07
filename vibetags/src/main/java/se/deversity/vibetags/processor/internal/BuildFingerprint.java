@@ -4,11 +4,16 @@ import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIImmutable;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIObservability;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -93,6 +98,30 @@ public final class BuildFingerprint {
             for (AITestDriven.Framework f : a.framework()) attrs.append(f.name()).append(',');
             attrs.append('|').append(a.mockPolicy());
             return attrs.toString();
+        });
+        appendAnnotationSet(sb, "TS", collector.threadSafe(), e -> {
+            AIThreadSafe a = e.getAnnotation(AIThreadSafe.class);
+            return a == null ? "" : a.strategy().name() + "|" + a.note();
+        });
+        appendAnnotationSet(sb, "IM", collector.immutable(), e -> {
+            AIImmutable a = e.getAnnotation(AIImmutable.class);
+            return a == null ? "" : a.note();
+        });
+        appendAnnotationSet(sb, "DP", collector.deprecated(), e -> {
+            AIDeprecated a = e.getAnnotation(AIDeprecated.class);
+            return a == null ? "" : a.replacedBy() + "|" + a.migrationGuide() + "|" + a.deadline();
+        });
+        appendAnnotationSet(sb, "OB", collector.observability(), e -> {
+            AIObservability a = e.getAnnotation(AIObservability.class);
+            if (a == null) return "";
+            return String.join(",", a.metrics()) + "|"
+                 + String.join(",", a.traces()) + "|"
+                 + String.join(",", a.logs()) + "|"
+                 + a.note();
+        });
+        appendAnnotationSet(sb, "RG", collector.regulation(), e -> {
+            AIRegulation a = e.getAnnotation(AIRegulation.class);
+            return a == null ? "" : a.standard() + "|" + a.clause() + "|" + a.description();
         });
 
         sb.append("S{");

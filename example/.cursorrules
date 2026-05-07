@@ -110,4 +110,30 @@ AI MUST NOT propose changes to these elements without also providing the matchin
 
 * `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)` - Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
 * `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)` - Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
+
+## 🧵 THREAD-SAFE BY DESIGN
+The following elements are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning.
+
+* `com.example.concurrent.SessionCache` - Strategy: LOCK_FREE. Note: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
+
+## ❄️ IMMUTABLE TYPES
+The following types are declared immutable. NEVER introduce non-final fields, setters, or mutating methods.
+
+* `com.example.config.AsyncTestConfig` - Used by every test runner; safe to share across threads without copies.
+
+## ⚠️ DEPRECATED — ROUTE CALLERS AWAY
+The following elements are deprecated. Do not extend them. Suggest migrating any caller to the named replacement.
+
+* `com.example.legacy.OldPaymentApi` - Replaced by: `com.example.payment.PaymentProcessor`. Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double. (Removal deadline: v2.0 (2026-Q4))
+
+## 📡 OBSERVABILITY INSTRUMENTATION
+The following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the affected dashboard.
+
+* `com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)` - Metrics: orders.placed.total, orders.placed.failed. Traces: order.place. Logs: OrderPlaced, OrderPlacementFailed. Note: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
+
+## 📜 REGULATORY COMPLIANCE
+The following elements implement specific compliance clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.
+
+* `com.example.compliance.GdprService` - GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
+* `com.example.compliance.GdprService.exportUserData(java.lang.String)` - GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
 # VIBETAGS-END

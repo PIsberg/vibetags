@@ -173,6 +173,12 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AICore` | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` |
 | `@AIPerformance` | TYPE, METHOD | `constraint: String` |
 | `@AIContract` | TYPE, METHOD | `reason: String` |
+| `@AITestDriven` | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
+| `@AIThreadSafe` | TYPE, METHOD | `strategy: Strategy`, `note: String` |
+| `@AIImmutable` | TYPE | `note: String` |
+| `@AIDeprecated` | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
+| `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
+| `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
 
 **Annotation semantics:**
 
@@ -182,6 +188,12 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AICore` — marks well-tested, sensitive core logic (e.g., months to stabilize); AI is instructed to treat changes with extreme care
 - `@AIPerformance` — enforces strict time/space complexity on hot-path code; AI must not introduce O(n²) or worse solutions
 - `@AIContract` — freezes the public signature (method name, parameter types, parameter order, return type, checked exceptions); AI may change internal logic but must not alter the visible API surface
+- `@AITestDriven` — every change must include a matching test update; declares preferred framework, coverage goal, and mock policy
+- `@AIThreadSafe` — declares an explicit thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`); AI must preserve the synchronization invariant
+- `@AIImmutable` — declares the type immutable; the processor warns if any non-static field is non-final
+- `@AIDeprecated` — actively routes AI toward replacing callers; richer than Java's `@Deprecated` (replacement target, migration guide, removal deadline)
+- `@AIObservability` — names the metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them
+- `@AIRegulation` — ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …); AI must document compliance impact and never weaken the requirement
 
 **Compile-time validation warnings:**
 
@@ -190,6 +202,13 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIPrivacy` + `@AIIgnore` on the same element — redundant; ignore already excludes
 - `@AIContract` + `@AIDraft` on the same element — contradictory (signature frozen but needs drafting)
 - `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; `@AIContract` is redundant)
+- `@AITestDriven` + `@AIIgnore` / `@AILocked` — contradictory (cannot enforce tests on excluded or locked code)
+- `@AITestDriven` with `coverageGoal` outside `[0, 100]` — invalid value
+- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
+- `@AIDeprecated` + `@AILocked` on the same element — contradictory (locked preserves; deprecated routes callers away)
+- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
+- `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
+- `@AIRegulation` with a blank `standard` — required attribute missing
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 

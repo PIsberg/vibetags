@@ -22,6 +22,12 @@
 - `com.example.service.PricingService`: Focus - Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.. Avoid - Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
 - `com.example.strategy.PaymentStrategy`: Focus - Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid - Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
 - `com.example.utils.StringParser`: Focus - Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid - java.util.regex, String.split(), StringBuilder in loops
+- `com.example.concurrent.SessionCache` (thread-safe): Strategy: LOCK_FREE. Note: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
+- `com.example.config.AsyncTestConfig` (immutable): Used by every test runner; safe to share across threads without copies.
+- `com.example.legacy.OldPaymentApi` (deprecated): Replaced by: `com.example.payment.PaymentProcessor`. Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double. (Removal deadline: v2.0 (2026-Q4))
+- `com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)` (observability): Metrics: orders.placed.total, orders.placed.failed. Traces: order.place. Logs: OrderPlaced, OrderPlacementFailed. Note: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
+- `com.example.compliance.GdprService` (regulation): GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
+- `com.example.compliance.GdprService.exportUserData(java.lang.String)` (regulation): GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
 
 ## Security Audits
 Before suggesting changes to the following files, audit for the listed vulnerabilities:

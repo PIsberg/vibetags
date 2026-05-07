@@ -99,4 +99,30 @@ Changes to the following elements MUST be accompanied by matching test code in t
 
 - `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)`: Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
 - `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)`: Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
+
+## THREAD-SAFE BY DESIGN
+These elements are thread-safe by design — preserve the synchronization invariant on every change:
+
+- `com.example.concurrent.SessionCache`: Strategy: LOCK_FREE. Note: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
+
+## IMMUTABLE TYPES
+The following types are immutable. Do not introduce non-final fields, setters, or mutating methods:
+
+- `com.example.config.AsyncTestConfig`: Used by every test runner; safe to share across threads without copies.
+
+## DEPRECATED ELEMENTS
+The following elements are deprecated. Suggest migration to the named replacement for any caller:
+
+- `com.example.legacy.OldPaymentApi`: Replaced by: `com.example.payment.PaymentProcessor`. Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double. (Removal deadline: v2.0 (2026-Q4))
+
+## OBSERVABILITY INSTRUMENTATION
+The following elements emit metrics, traces, or log statements watched by dashboards. Preserve every instrumentation point:
+
+- `com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)`: Metrics: orders.placed.total, orders.placed.failed. Traces: order.place. Logs: OrderPlaced, OrderPlacementFailed. Note: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
+
+## REGULATORY COMPLIANCE
+The following elements implement compliance clauses. Document compliance impact for every change:
+
+- `com.example.compliance.GdprService`: GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
+- `com.example.compliance.GdprService.exportUserData(java.lang.String)`: GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
 <!-- VIBETAGS-END -->

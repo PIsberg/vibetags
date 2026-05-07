@@ -204,4 +204,31 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 95%
 - **Frameworks**: JUNIT_5, MOCKITO
+#### THREAD-SAFE: com.example.concurrent.SessionCache
+- **Strategy**: LOCK_FREE
+- **Note**: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
+
+#### IMMUTABLE: com.example.config.AsyncTestConfig
+- **Rule**: This type is immutable. Never introduce non-final fields, setters, or mutating methods.
+- **Note**: Used by every test runner; safe to share across threads without copies.
+
+#### DEPRECATED: com.example.legacy.OldPaymentApi
+- **Status**: Scheduled for removal. Do not extend.
+- **Replaced by**: com.example.payment.PaymentProcessor
+- **Migration**: Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.
+- **Deadline**: v2.0 (2026-Q4)
+
+#### OBSERVABILITY: com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)
+- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.
+- **Details**: Metrics: orders.placed.total, orders.placed.failed. Traces: order.place. Logs: OrderPlaced, OrderPlacementFailed. Note: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
+
+#### REGULATORY: com.example.compliance.GdprService
+- **Standard**: GDPR
+- **Clause**: Art. 17
+- **Description**: Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
+
+#### REGULATORY: com.example.compliance.GdprService.exportUserData(java.lang.String)
+- **Standard**: GDPR
+- **Clause**: Art. 20
+- **Description**: Right to data portability — exports the user's data in a machine-readable format.
 <!-- VIBETAGS-END -->
