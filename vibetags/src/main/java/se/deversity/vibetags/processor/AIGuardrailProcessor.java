@@ -200,6 +200,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         logSet("@AIPrivacy",     collector.privacy());
         logSet("@AICore",        collector.core());
         logSet("@AIPerformance", collector.performance());
+        logSet("@AIContract",     collector.contract());
+        logSet("@AITestDriven",   collector.testDriven());
+        logSet("@AIThreadSafe",   collector.threadSafe());
+        logSet("@AIImmutable",    collector.immutable());
+        logSet("@AIDeprecated",   collector.deprecated());
+        logSet("@AIObservability", collector.observability());
+        logSet("@AIRegulation",   collector.regulation());
     }
 
     private void logSet(String label, Set<Element> elements) {

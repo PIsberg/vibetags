@@ -4,7 +4,7 @@ A practical demonstration of **VibeTags** — Java annotations that act as AI gu
 
 ## 🎯 What This Example Demonstrates
 
-This is a sample e-commerce application that shows all ten VibeTags annotations in action:
+This is a sample e-commerce application that shows all fifteen VibeTags annotations in action:
 
 - **`@AILocked`** — Protects critical code from AI modifications
 - **`@AIIgnore`** — Excludes elements from AI context entirely (treat as non-existent)
@@ -16,6 +16,11 @@ This is a sample e-commerce application that shows all ten VibeTags annotations 
 - **`@AIPerformance`** — Sets strict time/space complexity constraints for hot-path code
 - **`@AIContract`** — Freezes a public API signature while still inviting AI to refactor the body
 - **`@AITestDriven`** — Requires AI to supply a matching test update alongside any code change
+- **`@AIThreadSafe`** — Declares a thread-safety strategy that AI must preserve on every change
+- **`@AIImmutable`** — Declares a class immutable; the processor warns if any field is non-final
+- **`@AIDeprecated`** — Marks an element for removal and points AI at the replacement
+- **`@AIObservability`** — Names metrics/traces/logs the AI must not remove or rename silently
+- **`@AIRegulation`** — Ties code to a specific compliance clause (GDPR, PCI-DSS, HIPAA, …)
 
 When compiled, the VibeTags annotation processor automatically generates AI configuration files for 27 platforms.
 
@@ -49,8 +54,18 @@ example/
     │       └── CreditCardStrategy.java        # @AIDraft + @AIPrivacy (PCI-DSS card fields)
     ├── utils/
     │   └── StringParser.java                  # @AIContext optimization hints
-    └── database/
-        └── DatabaseConnector.java             # @AIAudit + @AIPrivacy example
+    ├── database/
+    │   └── DatabaseConnector.java             # @AIAudit + @AIPrivacy example
+    ├── concurrent/
+    │   └── SessionCache.java                  # @AIThreadSafe (lock-free strategy)
+    ├── config/
+    │   └── AsyncTestConfig.java               # @AIImmutable value object
+    ├── legacy/
+    │   └── OldPaymentApi.java                 # @AIDeprecated routing callers to PaymentProcessor
+    ├── metrics/
+    │   └── OrderMetrics.java                  # @AIObservability — metrics/traces/logs
+    └── compliance/
+        └── GdprService.java                   # @AIRegulation (GDPR Art. 17 / Art. 20)
 ```
 
 ## 🚀 Quick Start
@@ -502,6 +517,158 @@ public String updateOrderStatus(String orderId, String newStatus) {
 
 ---
 
+### 11. `@AIThreadSafe` — Preserve a Thread-Safety Strategy
+
+Declare that a class or method is **explicitly designed** to be thread-safe and name the strategy. Different from `@AIAudit` (which says "check for bugs") — this preserves a design invariant. AI assistants must not silently break the synchronization scheme.
+
+```java
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.LOCK_FREE,
+    note = "All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map."
+)
+public class SessionCache {
+    private final Map<String, String> sessions = new ConcurrentHashMap<>();
+    public void put(String sessionId, String userId) { sessions.put(sessionId, userId); }
+}
+```
+
+**Strategies:** `SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`.
+
+**Real-world use cases:**
+- Caches and registries shared across request threads
+- Counters/aggregators backed by atomics or `LongAdder`
+- Singletons holding mutable state guarded by an explicit lock
+- Per-thread context objects held in `ThreadLocal`
+
+**Difference from `@AIAudit(checkFor = "Thread Safety")`:** `@AIAudit` asks the AI to look for *new* concurrency bugs. `@AIThreadSafe` declares an *existing* invariant that must not be broken — the AI is told the design is correct and the change must preserve it.
+
+---
+
+### 12. `@AIImmutable` — Declare a Class Immutable
+
+Mark a class as immutable so AI assistants will not introduce setters, mutating methods, or non-final fields. The processor warns at compile time when an `@AIImmutable` class declares a non-final, non-static instance field.
+
+```java
+@AIImmutable(note = "Used by every test runner; safe to share across threads without copies.")
+public final class AsyncTestConfig {
+    private final int timeoutMs;
+    private final int maxRetries;
+    private final String runnerName;
+
+    public AsyncTestConfig(int timeoutMs, int maxRetries, String runnerName) {
+        this.timeoutMs = timeoutMs;
+        this.maxRetries = maxRetries;
+        this.runnerName = runnerName;
+    }
+    public int getTimeoutMs() { return timeoutMs; }
+}
+```
+
+**Real-world use cases:**
+- Value objects (configuration, request/response DTOs, money types)
+- Record-style holders that predate Java records
+- Snapshots passed across thread boundaries
+- Cache keys where mutation would corrupt hash buckets
+
+**Difference from `@AIContext(avoids = "mutable state")`:** `@AIContext` is a soft hint. `@AIImmutable` is a first-class declaration with compile-time enforcement — the processor refuses to silently let a non-final field slip in.
+
+**Compile-time validation:** Combining `@AIImmutable` with `@AIThreadSafe(IMMUTABLE)` triggers a redundancy warning — `@AIImmutable` already implies thread-safety.
+
+---
+
+### 13. `@AIDeprecated` — Route Callers to a Replacement
+
+Richer than Java's `@Deprecated`: points the AI at the replacement, supplies a migration guide, and (optionally) a removal deadline. Where `@AILocked` *preserves* an element, `@AIDeprecated` actively *routes AI toward killing it* — the AI is told to suggest migrating callers rather than extending the deprecated element.
+
+```java
+@AIDeprecated(
+    replacedBy = "com.example.payment.PaymentProcessor",
+    migrationGuide = "Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.",
+    deadline = "v2.0 (2026-Q4)"
+)
+public class OldPaymentApi {
+    public boolean pay(String customerId, double amount) { return amount > 0; }
+}
+```
+
+**Real-world use cases:**
+- Legacy APIs being phased out over a release cycle
+- Modules behind a feature flag scheduled for removal
+- Vendored copies of libraries replaced by an upstream dependency
+- Methods that survive only for backwards compatibility while callers migrate
+
+**Generated guidance:** *"Do not extend this element. Suggest migration to [replacedBy] for any caller. Scheduled for removal in [deadline]."*
+
+**Compile-time validation:** `@AIDeprecated` + `@AILocked` triggers a contradiction warning — `@AILocked` preserves the element, `@AIDeprecated` routes callers away from it. Pick one.
+
+---
+
+### 14. `@AIObservability` — Protect Instrumentation
+
+Mark code that emits metrics, trace spans, or log statements that downstream dashboards and alerts depend on. AI assistants often delete metric counters or trace spans when refactoring surrounding code; this annotation makes the cost explicit.
+
+```java
+public class OrderMetrics {
+    @AIObservability(
+        metrics = {"orders.placed.total", "orders.placed.failed"},
+        traces  = {"order.place"},
+        logs    = {"OrderPlaced", "OrderPlacementFailed"},
+        note    = "Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo)."
+    )
+    public void recordOrderPlaced(String orderId, boolean success) {
+        // emits metrics, opens a trace span, and logs structured events
+    }
+}
+```
+
+**Real-world use cases:**
+- Service handlers wired to SLO dashboards
+- Background workers whose failure metrics page on-call
+- Code paths whose log lines feed an audit pipeline (immutable record)
+- API endpoints whose latency histograms are part of an SLA
+
+**Generated guidance:** *"This element has active observability instrumentation. Do not remove or rename any metric/trace/log statement without updating the corresponding dashboards."*
+
+**Compile-time validation:** `@AIObservability` with no `metrics`, `traces`, or `logs` triggers a no-op warning — there is nothing to preserve.
+
+---
+
+### 15. `@AIRegulation` — Tie Code to a Compliance Clause
+
+Tie code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …). Stronger than `@AIAudit` because it names the exact article — AI assistants must document compliance impact for every change and must not weaken the requirement.
+
+```java
+@AIRegulation(
+    standard = "GDPR",
+    clause = "Art. 17",
+    description = "Right to erasure — when invoked, deletes ALL PII for the given user across every connected store."
+)
+public class GdprService {
+    public void deleteAllUserData(String userId) {
+        // cascades the deletion to user, sessions, orders, audit logs, etc.
+    }
+
+    @AIRegulation(
+        standard = "GDPR",
+        clause = "Art. 20",
+        description = "Right to data portability — exports the user's data in a machine-readable format."
+    )
+    public byte[] exportUserData(String userId) { return new byte[0]; }
+}
+```
+
+**Real-world use cases:**
+- GDPR Art. 17 (right to erasure) and Art. 20 (data portability) implementations
+- PCI-DSS card-handling code (tokenization, masking, vault access)
+- HIPAA-protected health information (PHI) read/write paths
+- SOX-relevant financial reporting and audit-log writers
+
+**Generated guidance:** *"This element implements [standard] [clause]. Any change must document its compliance impact and must not weaken the requirement."*
+
+**Compile-time validation:** `@AIRegulation` with a blank `standard` triggers a warning — the standard name is required (e.g., `"GDPR"`, `"PCI-DSS"`, `"HIPAA"`, `"SOX"`).
+
+---
+
 ## 🔀 Mixed Usage — Fine-Grained Control
 
 You can combine multiple annotations on the same class or method for precise, layered control:
@@ -646,6 +813,13 @@ VibeTags warns you at compile time when annotation combinations are contradictor
 | `@AIContract` + `@AILocked` | Overlapping — `@AILocked` already prohibits all changes |
 | `@AIIgnore` present, no ignore files exist | Orphaned — no `.cursorignore`/`.claudeignore`/etc. to write to |
 | `@AILocked` present, no `.aiexclude` | Gemini lock not active |
+| `@AITestDriven` + `@AIIgnore` / `@AILocked` | Contradictory — cannot enforce tests on excluded or locked code |
+| `@AITestDriven(coverageGoal = …)` outside `[0, 100]` | Invalid coverage goal |
+| `@AIImmutable` on a type with a non-final, non-static instance field | Violates the immutability declaration |
+| `@AIDeprecated` + `@AILocked` | Contradictory — locked preserves; deprecated routes callers away |
+| `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` | Redundant — `@AIImmutable` already implies thread-safety |
+| `@AIObservability` with no metrics/traces/logs | No-op — nothing to preserve |
+| `@AIRegulation` with a blank `standard` | Required attribute missing |
 
 ---
 
@@ -663,6 +837,11 @@ VibeTags warns you at compile time when annotation combinations are contradictor
 | Hot-path performance code | `@AIPerformance` | Cache reads, request handlers |
 | Public API signature frozen by contract | `@AIContract` | OpenAPI methods, message-schema bindings |
 | Changes must include test updates | `@AITestDriven` | Business logic, financial calculations |
+| Concurrency design that must be preserved | `@AIThreadSafe` | Caches, atomics, lock-free data structures |
+| Class is immutable — no setters or non-final fields | `@AIImmutable` | Value objects, config holders, snapshots |
+| Element scheduled for removal — route callers away | `@AIDeprecated` | Legacy APIs, modules behind a sunset flag |
+| Code carries metrics/traces/logs dashboards depend on | `@AIObservability` | SLO emitters, audit log writers, trace spans |
+| Code implements a specific compliance clause | `@AIRegulation` | GDPR Art. 17, PCI-DSS card handling, HIPAA PHI |
 
 ---
 

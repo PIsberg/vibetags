@@ -17,6 +17,7 @@
   - [Smart Validation Warnings](#-smart-validation-warnings)
   - [@AIContract - Freezing Public API Signatures](#-aicontract---freezing-public-api-signatures)
   - [@AITestDriven - Test-Driven AI Requirements](#-aitestdriven---test-driven-ai-requirements)
+  - [@AIThreadSafe / @AIImmutable / @AIDeprecated / @AIObservability / @AIRegulation](#-new-in-v090-five-design-intent-annotations)
 - [Contributing](#-contributing)
 - [Project Components](#-project-components)
 - [License](#-license)
@@ -55,6 +56,11 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 - **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
+- **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
+- **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
+- **⚠️ @AIDeprecated** - Actively route callers away from a deprecated element — declares the replacement, migration guide, and removal deadline
+- **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
+- **📜 @AIRegulation** - Tie code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX) — AI must document compliance impact and never weaken the requirement
 
 ### Supported AI Platforms
 
@@ -107,7 +113,7 @@ vibetags/
 ├── vibetags-annotations/ # The 10 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract, AITestDriven
+│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract, AITestDriven, AIThreadSafe, AIImmutable, AIDeprecated, AIObservability, AIRegulation
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -139,7 +145,7 @@ vibetags/
 
 VibeTags ships as **two artifacts**:
 
-- **`vibetags-annotations`** — eight `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
+- **`vibetags-annotations`** — fifteen `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
 - **`vibetags-processor`** — the `javac` annotation processor (depends on slf4j/logback for `vibetags.log`). Goes on the annotation-processor path only — keeping it off `compileClasspath` is what stops slf4j/logback from leaking into consumer code.
 
 The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in one place; pinning each version explicitly is also supported.
@@ -326,7 +332,7 @@ public class PricingService {
 
 | Resource | What it covers |
 |---|---|
-| **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 8 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 15 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
@@ -967,6 +973,79 @@ AI MUST NOT propose changes to these elements without also providing the matchin
 - **Core algorithms** — pair with `@AICore` when well-tested stability is critical
 - **API surface evolution** — ensure any behavioral change is validated by tests before it reaches production
 
+### 🆕 New in v0.9.0: Five Design-Intent Annotations
+
+VibeTags v0.9.0 adds five annotations that capture *design intent* rather than process rules — they tell the AI what an element **is** so it cannot accidentally undo a property the team relies on.
+
+#### 🧵 `@AIThreadSafe(strategy)`
+
+Declares that the annotated class or method is explicitly designed to be thread-safe and names the strategy. Different from `@AIAudit` (which says "check for bugs") — this preserves a design invariant.
+
+```java
+@AIThreadSafe(strategy = AIThreadSafe.Strategy.LOCK_FREE,
+              note = "Backed by ConcurrentHashMap; do not introduce a synchronized block on the cache map.")
+public class SessionCache { ... }
+```
+
+Strategies: `SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`. Generated guidance: *"This class is explicitly designed as thread-safe via [strategy]. Any modification must preserve that guarantee and document its synchronization reasoning."*
+
+#### ❄️ `@AIImmutable`
+
+Declares a class immutable. Stronger than `@AIContext(avoids = "mutable state")` because it is a first-class intent. The processor warns at compile time when an `@AIImmutable` class declares a non-final, non-static instance field.
+
+```java
+@AIImmutable(note = "Used by every test runner; safe to share across threads.")
+public final class AsyncTestConfig {
+    private final int timeoutMs;
+    public AsyncTestConfig(int timeoutMs) { this.timeoutMs = timeoutMs; }
+}
+```
+
+#### ⚠️ `@AIDeprecated(replacedBy, migrationGuide, deadline)`
+
+Richer than Java's `@Deprecated`. Where `@AILocked` preserves an element, `@AIDeprecated` actively routes AI toward killing it — the AI is told to suggest migrating callers to `replacedBy` rather than extending the deprecated element.
+
+```java
+@AIDeprecated(
+    replacedBy = "com.example.payment.PaymentProcessor",
+    migrationGuide = "Switch callers to PaymentProcessor.charge(); the new API uses Money instead of double.",
+    deadline = "v2.0 (2026-Q4)")
+public class OldPaymentApi { ... }
+```
+
+Generated guidance: *"Do not extend this element. Suggest migration to [replacedBy] for any caller. Scheduled for removal in [deadline]."*
+
+#### 📡 `@AIObservability(metrics, traces, logs)`
+
+Marks code with instrumentation that downstream dashboards/alerts depend on. AI assistants often delete metric counters or trace spans when refactoring surrounding code; this annotation makes the cost explicit.
+
+```java
+@AIObservability(
+    metrics = {"orders.placed.total", "orders.placed.failed"},
+    traces  = {"order.place"},
+    logs    = {"OrderPlaced", "OrderPlacementFailed"},
+    note    = "Watched by the Orders SLO dashboard.")
+public void recordOrderPlaced(String orderId, boolean success) { ... }
+```
+
+#### 📜 `@AIRegulation(standard, clause, description)`
+
+Ties code to a specific compliance requirement. Stronger than `@AIAudit` because it names the exact article. Generated guidance: *"This element implements [standard] [clause]. Any change must document its compliance impact and must not weaken the requirement."*
+
+```java
+@AIRegulation(standard = "GDPR", clause = "Art. 17",
+              description = "Right to erasure — deletes all PII for the given user.")
+public void deleteAllUserData(String userId) { ... }
+```
+
+#### Validation warnings for the v0.9.0 annotations
+
+- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
+- `@AIDeprecated` + `@AILocked` — contradictory (locked preserves; deprecated routes callers away)
+- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
+- `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
+- `@AIRegulation` with a blank `standard` — required attribute missing
+
 ## 🤝 Contributing
 
 VibeTags is designed to evolve based on community needs. Future extensions could include:
@@ -978,7 +1057,7 @@ VibeTags is designed to evolve based on community needs. Future extensions could
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains all 10 Java annotations and the annotation processor that generates AI configuration files at compile time.
+The core annotation processor library. Contains all 15 Java annotations and the annotation processor that generates AI configuration files at compile time.
 
 ### [example/](example/README.md)
 A practical e-commerce application demonstrating real-world usage of all 8 VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.

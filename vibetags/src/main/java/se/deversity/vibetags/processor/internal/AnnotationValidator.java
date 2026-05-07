@@ -2,15 +2,22 @@ package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContract;
+import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
+import se.deversity.vibetags.annotations.AIImmutable;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIObservability;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
 
 /**
@@ -115,6 +122,69 @@ public final class AnnotationValidator {
                     "VibeTags: @AITestDriven on " + element.toString()
                         + " has an invalid coverageGoal (" + td.coverageGoal() + "). "
                         + "Value must be between 0 and 100 (inclusive).",
+                    element);
+            }
+        }
+
+        // @AIImmutable on a type with non-final instance fields
+        for (Element type : roundEnv.getElementsAnnotatedWith(AIImmutable.class)) {
+            for (Element enclosed : type.getEnclosedElements()) {
+                if (enclosed.getKind() != ElementKind.FIELD) continue;
+                if (enclosed.getModifiers().contains(Modifier.STATIC)) continue;
+                if (!enclosed.getModifiers().contains(Modifier.FINAL)) {
+                    messager.printMessage(Diagnostic.Kind.WARNING,
+                        "VibeTags: @AIImmutable on " + type.toString()
+                            + " but field '" + enclosed.getSimpleName() + "' is not final. "
+                            + "Immutable types must declare all instance fields final.",
+                        enclosed);
+                }
+            }
+        }
+
+        // Contradiction: @AIDeprecated + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIDeprecated.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIDeprecated and @AILocked. "
+                        + "@AILocked preserves the element; @AIDeprecated routes callers away from it. "
+                        + "These intents are contradictory — pick one.",
+                    element);
+            }
+        }
+
+        // Contradiction: @AIThreadSafe + @AIImmutable.IMMUTABLE strategy on the same type is redundant
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIThreadSafe.class)) {
+            AIThreadSafe ts = element.getAnnotation(AIThreadSafe.class);
+            if (ts.strategy() == AIThreadSafe.Strategy.IMMUTABLE
+                    && element.getAnnotation(AIImmutable.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with @AIThreadSafe(IMMUTABLE) and @AIImmutable. "
+                        + "Use @AIImmutable alone — immutability already implies thread-safety.",
+                    element);
+            }
+        }
+
+        // @AIObservability with no metrics, traces, or logs is a no-op
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIObservability.class)) {
+            AIObservability obs = element.getAnnotation(AIObservability.class);
+            if (obs.metrics().length == 0 && obs.traces().length == 0 && obs.logs().length == 0) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIObservability on " + element.toString()
+                        + " declares no metrics, traces, or logs. The annotation will be ignored.",
+                    element);
+            }
+        }
+
+        // @AIRegulation with blank standard
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIRegulation.class)) {
+            AIRegulation reg = element.getAnnotation(AIRegulation.class);
+            if (reg.standard() == null || reg.standard().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIRegulation on " + element.toString()
+                        + " has a blank 'standard' attribute. Name the compliance standard "
+                        + "(e.g., GDPR, PCI-DSS, HIPAA).",
                     element);
             }
         }

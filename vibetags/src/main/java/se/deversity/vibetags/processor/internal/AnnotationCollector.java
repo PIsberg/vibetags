@@ -4,12 +4,17 @@ import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIIgnore;
+import se.deversity.vibetags.annotations.AIImmutable;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIObservability;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -32,6 +37,11 @@ public final class AnnotationCollector {
     private final Set<Element> performanceElements  = new LinkedHashSet<>();
     private final Set<Element> contractElements     = new LinkedHashSet<>();
     private final Set<Element> testDrivenElements   = new LinkedHashSet<>();
+    private final Set<Element> threadSafeElements    = new LinkedHashSet<>();
+    private final Set<Element> immutableElements     = new LinkedHashSet<>();
+    private final Set<Element> deprecatedElements    = new LinkedHashSet<>();
+    private final Set<Element> observabilityElements = new LinkedHashSet<>();
+    private final Set<Element> regulationElements    = new LinkedHashSet<>();
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
@@ -48,12 +58,20 @@ public final class AnnotationCollector {
         performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
         contractElements.addAll(roundEnv.getElementsAnnotatedWith(AIContract.class));
         testDrivenElements.addAll(roundEnv.getElementsAnnotatedWith(AITestDriven.class));
+        threadSafeElements.addAll(roundEnv.getElementsAnnotatedWith(AIThreadSafe.class));
+        immutableElements.addAll(roundEnv.getElementsAnnotatedWith(AIImmutable.class));
+        deprecatedElements.addAll(roundEnv.getElementsAnnotatedWith(AIDeprecated.class));
+        observabilityElements.addAll(roundEnv.getElementsAnnotatedWith(AIObservability.class));
+        regulationElements.addAll(roundEnv.getElementsAnnotatedWith(AIRegulation.class));
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
                      || !draftElements.isEmpty() || !privacyElements.isEmpty()
                      || !coreElements.isEmpty() || !performanceElements.isEmpty()
-                     || !contractElements.isEmpty() || !testDrivenElements.isEmpty();
+                     || !contractElements.isEmpty() || !testDrivenElements.isEmpty()
+                     || !threadSafeElements.isEmpty() || !immutableElements.isEmpty()
+                     || !deprecatedElements.isEmpty() || !observabilityElements.isEmpty()
+                     || !regulationElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -69,18 +87,28 @@ public final class AnnotationCollector {
         performanceElements.clear();
         contractElements.clear();
         testDrivenElements.clear();
+        threadSafeElements.clear();
+        immutableElements.clear();
+        deprecatedElements.clear();
+        observabilityElements.clear();
+        regulationElements.clear();
         anyAnnotationsFound = false;
     }
 
-    public Set<Element> locked()      { return lockedElements; }
-    public Set<Element> context()     { return contextElements; }
-    public Set<Element> ignore()      { return ignoreElements; }
-    public Set<Element> audit()       { return auditElements; }
-    public Set<Element> draft()       { return draftElements; }
-    public Set<Element> privacy()     { return privacyElements; }
-    public Set<Element> core()        { return coreElements; }
-    public Set<Element> performance()  { return performanceElements; }
-    public Set<Element> contract()     { return contractElements; }
-    public Set<Element> testDriven()   { return testDrivenElements; }
+    public Set<Element> locked()        { return lockedElements; }
+    public Set<Element> context()       { return contextElements; }
+    public Set<Element> ignore()        { return ignoreElements; }
+    public Set<Element> audit()         { return auditElements; }
+    public Set<Element> draft()         { return draftElements; }
+    public Set<Element> privacy()       { return privacyElements; }
+    public Set<Element> core()          { return coreElements; }
+    public Set<Element> performance()    { return performanceElements; }
+    public Set<Element> contract()       { return contractElements; }
+    public Set<Element> testDriven()     { return testDrivenElements; }
+    public Set<Element> threadSafe()     { return threadSafeElements; }
+    public Set<Element> immutable()      { return immutableElements; }
+    public Set<Element> deprecated()     { return deprecatedElements; }
+    public Set<Element> observability()  { return observabilityElements; }
+    public Set<Element> regulation()     { return regulationElements; }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

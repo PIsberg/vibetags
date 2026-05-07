@@ -4,11 +4,16 @@ import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIImmutable;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIObservability;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -72,6 +77,18 @@ public final class GuardrailContentBuilder {
     // llms.txt test-driven sections
     private StringBuilder llmsTxtTestDriven;
     private StringBuilder llmsFullTxtTestDriven;
+
+    // llms.txt sections for v0.9.0 annotations
+    private StringBuilder llmsTxtThreadSafe;
+    private StringBuilder llmsTxtImmutable;
+    private StringBuilder llmsTxtDeprecated;
+    private StringBuilder llmsTxtObservability;
+    private StringBuilder llmsTxtRegulation;
+    private StringBuilder llmsFullTxtThreadSafe;
+    private StringBuilder llmsFullTxtImmutable;
+    private StringBuilder llmsFullTxtDeprecated;
+    private StringBuilder llmsFullTxtObservability;
+    private StringBuilder llmsFullTxtRegulation;
 
     // Windsurf builders
     private StringBuilder windsurfRules;
@@ -222,7 +239,8 @@ public final class GuardrailContentBuilder {
         int n = collector.locked().size() + collector.context().size() + collector.audit().size()
               + collector.draft().size() + collector.privacy().size() + collector.core().size()
               + collector.performance().size() + collector.contract().size() + collector.ignore().size()
-              + collector.testDriven().size();
+              + collector.testDriven().size() + collector.threadSafe().size() + collector.immutable().size()
+              + collector.deprecated().size() + collector.observability().size() + collector.regulation().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -327,6 +345,51 @@ public final class GuardrailContentBuilder {
         StringBuilder geminiTestDrivenSec = new StringBuilder();
         for (Element e : collector.testDriven())
             appendTestDriven(e, cursorTestDrivenSec, claudeTestDrivenSec, codexTestDrivenSec, copilotTestDrivenSec, qwenTestDrivenSec, geminiTestDrivenSec);
+
+        StringBuilder cursorThreadSafeSec = new StringBuilder("\n## 🧵 THREAD-SAFE BY DESIGN\nThe following elements are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning.\n\n");
+        StringBuilder claudeThreadSafeSec = new StringBuilder("  <thread_safe_elements>\n");
+        StringBuilder codexThreadSafeSec  = new StringBuilder("\n## 🧵 THREAD-SAFE BY DESIGN\nThese elements are explicitly designed to be thread-safe. Preserve the synchronization invariant on every change.\n\n");
+        StringBuilder copilotThreadSafeSec = new StringBuilder("\n## Thread-Safe by Design\nDo not modify these elements without preserving their thread-safety strategy:\n\n");
+        StringBuilder qwenThreadSafeSec   = new StringBuilder("\n## 🧵 THREAD-SAFE BY DESIGN\nThese elements are explicitly designed to be thread-safe — preserve the synchronization invariant.\n\n");
+        StringBuilder geminiThreadSafeSec = new StringBuilder();
+        for (Element e : collector.threadSafe())
+            appendThreadSafe(e, cursorThreadSafeSec, claudeThreadSafeSec, codexThreadSafeSec, copilotThreadSafeSec, qwenThreadSafeSec, geminiThreadSafeSec);
+
+        StringBuilder cursorImmutableSec = new StringBuilder("\n## ❄️ IMMUTABLE TYPES\nThe following types are declared immutable. NEVER introduce non-final fields, setters, or mutating methods.\n\n");
+        StringBuilder claudeImmutableSec = new StringBuilder("  <immutable_types>\n");
+        StringBuilder codexImmutableSec  = new StringBuilder("\n## ❄️ IMMUTABLE TYPES\nThe following types are immutable. Do not introduce non-final fields, setters, or mutating methods.\n\n");
+        StringBuilder copilotImmutableSec = new StringBuilder("\n## Immutable Types\nThe following types are immutable. Do not add mutating methods or non-final fields:\n\n");
+        StringBuilder qwenImmutableSec   = new StringBuilder("\n## ❄️ IMMUTABLE TYPES\nThe following types are immutable — never add setters, mutating methods, or non-final fields.\n\n");
+        StringBuilder geminiImmutableSec = new StringBuilder();
+        for (Element e : collector.immutable())
+            appendImmutable(e, cursorImmutableSec, claudeImmutableSec, codexImmutableSec, copilotImmutableSec, qwenImmutableSec, geminiImmutableSec);
+
+        StringBuilder cursorDeprecatedSec = new StringBuilder("\n## ⚠️ DEPRECATED — ROUTE CALLERS AWAY\nThe following elements are deprecated. Do not extend them. Suggest migrating any caller to the named replacement.\n\n");
+        StringBuilder claudeDeprecatedSec = new StringBuilder("  <deprecated_elements>\n");
+        StringBuilder codexDeprecatedSec  = new StringBuilder("\n## ⚠️ DEPRECATED ELEMENTS\nDo not extend these elements. Suggest migrating callers to the listed replacement.\n\n");
+        StringBuilder copilotDeprecatedSec = new StringBuilder("\n## Deprecated Elements\nDo not extend these elements. Migrate callers to the listed replacement:\n\n");
+        StringBuilder qwenDeprecatedSec   = new StringBuilder("\n## ⚠️ DEPRECATED ELEMENTS\nDo not extend or build on these elements — migrate callers to the replacement.\n\n");
+        StringBuilder geminiDeprecatedSec = new StringBuilder();
+        for (Element e : collector.deprecated())
+            appendDeprecated(e, cursorDeprecatedSec, claudeDeprecatedSec, codexDeprecatedSec, copilotDeprecatedSec, qwenDeprecatedSec, geminiDeprecatedSec);
+
+        StringBuilder cursorObservabilitySec = new StringBuilder("\n## 📡 OBSERVABILITY INSTRUMENTATION\nThe following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the affected dashboard.\n\n");
+        StringBuilder claudeObservabilitySec = new StringBuilder("  <observability_instrumentation>\n");
+        StringBuilder codexObservabilitySec  = new StringBuilder("\n## 📡 OBSERVABILITY INSTRUMENTATION\nThese elements carry instrumentation watched by dashboards/alerts. Do not remove or rename without flagging.\n\n");
+        StringBuilder copilotObservabilitySec = new StringBuilder("\n## Observability Instrumentation\nThe following elements have metrics/traces/logs watched by dashboards. Do not delete or rename them silently:\n\n");
+        StringBuilder qwenObservabilitySec   = new StringBuilder("\n## 📡 OBSERVABILITY INSTRUMENTATION\nThese elements carry instrumentation watched by dashboards. Preserve every metric, trace, and log statement.\n\n");
+        StringBuilder geminiObservabilitySec = new StringBuilder();
+        for (Element e : collector.observability())
+            appendObservability(e, cursorObservabilitySec, claudeObservabilitySec, codexObservabilitySec, copilotObservabilitySec, qwenObservabilitySec, geminiObservabilitySec);
+
+        StringBuilder cursorRegulationSec = new StringBuilder("\n## 📜 REGULATORY COMPLIANCE\nThe following elements implement specific compliance clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.\n\n");
+        StringBuilder claudeRegulationSec = new StringBuilder("  <regulatory_elements>\n");
+        StringBuilder codexRegulationSec  = new StringBuilder("\n## 📜 REGULATORY COMPLIANCE\nThese elements implement specific compliance clauses. Document compliance impact for every change.\n\n");
+        StringBuilder copilotRegulationSec = new StringBuilder("\n## Regulatory Compliance\nThese elements implement compliance clauses. Document the compliance impact of every change:\n\n");
+        StringBuilder qwenRegulationSec   = new StringBuilder("\n## 📜 REGULATORY COMPLIANCE\nThese elements implement compliance clauses — document compliance impact and never weaken the requirement.\n\n");
+        StringBuilder geminiRegulationSec = new StringBuilder();
+        for (Element e : collector.regulation())
+            appendRegulation(e, cursorRegulationSec, claudeRegulationSec, codexRegulationSec, copilotRegulationSec, qwenRegulationSec, geminiRegulationSec);
 
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
@@ -434,6 +497,56 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfTestDrivenSection);
             if (zedActive)      zedRules.append(zedTestDrivenSection);
         }
+        if (!collector.threadSafe().isEmpty()) {
+            cursorRules.append(cursorThreadSafeSec);
+            claudeThreadSafeSec.append("  </thread_safe_elements>\n");
+            claudeMd.append(claudeThreadSafeSec);
+            claudeMd.append("\n<rule>Elements listed in <thread_safe_elements> are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning in the change description.</rule>\n");
+            codexAgents.append(codexThreadSafeSec);
+            copilot.append(copilotThreadSafeSec);
+            qwenMd.append(qwenThreadSafeSec);
+            geminiMd.append("\n## THREAD-SAFE BY DESIGN\nThese elements are thread-safe by design — preserve the synchronization invariant on every change:\n\n").append(geminiThreadSafeSec);
+        }
+        if (!collector.immutable().isEmpty()) {
+            cursorRules.append(cursorImmutableSec);
+            claudeImmutableSec.append("  </immutable_types>\n");
+            claudeMd.append(claudeImmutableSec);
+            claudeMd.append("\n<rule>Types listed in <immutable_types> are immutable by design. Never introduce non-final fields, setters, or methods that mutate instance state.</rule>\n");
+            codexAgents.append(codexImmutableSec);
+            copilot.append(copilotImmutableSec);
+            qwenMd.append(qwenImmutableSec);
+            geminiMd.append("\n## IMMUTABLE TYPES\nThe following types are immutable. Do not introduce non-final fields, setters, or mutating methods:\n\n").append(geminiImmutableSec);
+        }
+        if (!collector.deprecated().isEmpty()) {
+            cursorRules.append(cursorDeprecatedSec);
+            claudeDeprecatedSec.append("  </deprecated_elements>\n");
+            claudeMd.append(claudeDeprecatedSec);
+            claudeMd.append("\n<rule>Elements listed in <deprecated_elements> are scheduled for removal. Do not extend them. When working with code that calls them, suggest migrating to the listed replacement.</rule>\n");
+            codexAgents.append(codexDeprecatedSec);
+            copilot.append(copilotDeprecatedSec);
+            qwenMd.append(qwenDeprecatedSec);
+            geminiMd.append("\n## DEPRECATED ELEMENTS\nThe following elements are deprecated. Suggest migration to the named replacement for any caller:\n\n").append(geminiDeprecatedSec);
+        }
+        if (!collector.observability().isEmpty()) {
+            cursorRules.append(cursorObservabilitySec);
+            claudeObservabilitySec.append("  </observability_instrumentation>\n");
+            claudeMd.append(claudeObservabilitySec);
+            claudeMd.append("\n<rule>Elements listed in <observability_instrumentation> publish metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the corresponding dashboard update.</rule>\n");
+            codexAgents.append(codexObservabilitySec);
+            copilot.append(copilotObservabilitySec);
+            qwenMd.append(qwenObservabilitySec);
+            geminiMd.append("\n## OBSERVABILITY INSTRUMENTATION\nThe following elements emit metrics, traces, or log statements watched by dashboards. Preserve every instrumentation point:\n\n").append(geminiObservabilitySec);
+        }
+        if (!collector.regulation().isEmpty()) {
+            cursorRules.append(cursorRegulationSec);
+            claudeRegulationSec.append("  </regulatory_elements>\n");
+            claudeMd.append(claudeRegulationSec);
+            claudeMd.append("\n<rule>Elements listed in <regulatory_elements> implement specific regulatory clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.</rule>\n");
+            codexAgents.append(codexRegulationSec);
+            copilot.append(copilotRegulationSec);
+            qwenMd.append(qwenRegulationSec);
+            geminiMd.append("\n## REGULATORY COMPLIANCE\nThe following elements implement compliance clauses. Document compliance impact for every change:\n\n").append(geminiRegulationSec);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -449,6 +562,11 @@ public final class GuardrailContentBuilder {
             if (!collector.performance().isEmpty()) llmsTxt.append(llmsTxtPerformance);
             if (!collector.contract().isEmpty())    llmsTxt.append(llmsTxtContract);
             if (!collector.testDriven().isEmpty())  llmsTxt.append(llmsTxtTestDriven);
+            if (!collector.threadSafe().isEmpty())    llmsTxt.append(llmsTxtThreadSafe);
+            if (!collector.immutable().isEmpty())     llmsTxt.append(llmsTxtImmutable);
+            if (!collector.deprecated().isEmpty())    llmsTxt.append(llmsTxtDeprecated);
+            if (!collector.observability().isEmpty()) llmsTxt.append(llmsTxtObservability);
+            if (!collector.regulation().isEmpty())    llmsTxt.append(llmsTxtRegulation);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -460,6 +578,11 @@ public final class GuardrailContentBuilder {
             if (!collector.performance().isEmpty()) llmsFullTxt.append(llmsFullTxtPerformance);
             if (!collector.contract().isEmpty())    llmsFullTxt.append(llmsFullTxtContract);
             if (!collector.testDriven().isEmpty())  llmsFullTxt.append(llmsFullTxtTestDriven);
+            if (!collector.threadSafe().isEmpty())    llmsFullTxt.append(llmsFullTxtThreadSafe);
+            if (!collector.immutable().isEmpty())     llmsFullTxt.append(llmsFullTxtImmutable);
+            if (!collector.deprecated().isEmpty())    llmsFullTxt.append(llmsFullTxtDeprecated);
+            if (!collector.observability().isEmpty()) llmsFullTxt.append(llmsFullTxtObservability);
+            if (!collector.regulation().isEmpty())    llmsFullTxt.append(llmsFullTxtRegulation);
         }
 
         return new Result(buildContentMap(geminiMd), elementRules);
@@ -792,6 +915,198 @@ public final class GuardrailContentBuilder {
         if (granularActive)  appendToGranular(e, "Test-Driven Requirements", "- **Rule**: Changes MUST be accompanied by a matching test update.\n- **Coverage Goal**: " + coverageGoal + "%\n- **Frameworks**: " + frameworksStr + (testLocation.isEmpty() ? "" : "\n- **Test Location**: " + testLocation) + (mockPolicy.isEmpty() ? "" : "\n- **Mock Policy**: " + mockPolicy));
     }
 
+    /**
+     * Helper for the v0.9.0 appenders — emits the standard cursor/codex/copilot/qwen/gemini
+     * one-line entry for an element + summary string. Each platform uses its own bullet style.
+     */
+    private void appendCommonRow(StringBuilder cursorSec, StringBuilder codexSec,
+                                  StringBuilder copilotSec, StringBuilder qwenSec,
+                                  StringBuilder geminiSec, String className, CharSequence summary) {
+        if (cursorActive)  cursorSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (codexActive)   codexSec.append("- **").append(className).append("**: ").append(summary).append("\n");
+        if (copilotActive) copilotSec.append("- `").append(className).append("` - ").append(summary).append("\n");
+        if (qwenActive)    qwenSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (geminiActive)  geminiSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+    }
+
+    private void appendThreadSafe(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec) {
+        AIThreadSafe ts = e.getAnnotation(AIThreadSafe.class);
+        if (ts == null) return;
+        String className = ElementNaming.elementPath(e);
+        String strategy = ts.strategy().name();
+        String note = ts.note();
+        String summary = "Strategy: " + strategy + (note.isEmpty() ? "" : ". Note: " + note);
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <strategy>").append(strategy).append("</strategy>\n");
+            if (!note.isEmpty()) claudeSec.append("      <note>").append(note).append("</note>\n");
+            claudeSec.append("    </element>\n");
+        }
+
+        if (llmsActive)     llmsTxtThreadSafe.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtThreadSafe.append("### ").append(className).append("\n- **Strategy**: ").append(strategy).append("\n");
+            if (!note.isEmpty()) llmsFullTxtThreadSafe.append("- **Note**: ").append(note).append("\n");
+            llmsFullTxtThreadSafe.append("\n");
+        }
+
+        if (aiderConvActive)   aiderConventions.append("#### THREAD-SAFE: ").append(className).append("\n- **Strategy**: ").append(strategy).append("\n").append(note.isEmpty() ? "" : "- **Note**: " + note + "\n").append("\n");
+        if (windsurfActive)    windsurfRules.append("* `").append(className).append("` (thread-safe) - ").append(summary).append("\n");
+        if (zedActive)         zedRules.append("- `").append(className).append("` (thread-safe): ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (thread-safe): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Thread-Safety Guarantee", "- **Strategy**: " + strategy + (note.isEmpty() ? "" : "\n- **Note**: " + note));
+    }
+
+    private void appendImmutable(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                 StringBuilder codexSec, StringBuilder copilotSec,
+                                 StringBuilder qwenSec, StringBuilder geminiSec) {
+        AIImmutable im = e.getAnnotation(AIImmutable.class);
+        if (im == null) return;
+        String className = ElementNaming.elementPath(e);
+        String note = im.note();
+
+        String summary = note.isEmpty() ? "immutable type" : note;
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <type path=\"").append(className).append("\">\n");
+            if (!note.isEmpty()) claudeSec.append("      <note>").append(note).append("</note>\n");
+            claudeSec.append("    </type>\n");
+        }
+
+        if (llmsActive)     llmsTxtImmutable.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): immutable type").append(note.isEmpty() ? "" : " — " + note).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtImmutable.append("### ").append(className).append("\n- Immutable type — never introduce non-final fields, setters, or mutating methods.\n");
+            if (!note.isEmpty()) llmsFullTxtImmutable.append("- **Note**: ").append(note).append("\n");
+            llmsFullTxtImmutable.append("\n");
+        }
+
+        if (aiderConvActive)   aiderConventions.append("#### IMMUTABLE: ").append(className).append("\n- **Rule**: This type is immutable. Never introduce non-final fields, setters, or mutating methods.\n").append(note.isEmpty() ? "" : "- **Note**: " + note + "\n").append("\n");
+        if (windsurfActive)    windsurfRules.append("* `").append(className).append("` (immutable)").append(note.isEmpty() ? "" : " - " + note).append("\n");
+        if (zedActive)         zedRules.append("- `").append(className).append("` (immutable)").append(note.isEmpty() ? "" : ": " + note).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (immutable)").append(note.isEmpty() ? "" : ": " + note).append("\n");
+        if (granularActive)    appendToGranular(e, "Immutable Type", "- **Rule**: This type is immutable. Never introduce non-final fields, setters, or mutating methods." + (note.isEmpty() ? "" : "\n- **Note**: " + note));
+    }
+
+    private void appendDeprecated(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec) {
+        AIDeprecated dep = e.getAnnotation(AIDeprecated.class);
+        if (dep == null) return;
+        String className = ElementNaming.elementPath(e);
+        String replacedBy = dep.replacedBy();
+        String migrationGuide = dep.migrationGuide();
+        String deadline = dep.deadline();
+
+        StringBuilder summary = new StringBuilder();
+        if (!replacedBy.isEmpty()) summary.append("Replaced by: `").append(replacedBy).append("`. ");
+        summary.append(migrationGuide);
+        if (!deadline.isEmpty()) summary.append(" (Removal deadline: ").append(deadline).append(")");
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n");
+            if (!replacedBy.isEmpty()) claudeSec.append("      <replaced_by>").append(replacedBy).append("</replaced_by>\n");
+            claudeSec.append("      <migration_guide>").append(migrationGuide).append("</migration_guide>\n");
+            if (!deadline.isEmpty()) claudeSec.append("      <deadline>").append(deadline).append("</deadline>\n");
+            claudeSec.append("    </element>\n");
+        }
+
+        if (llmsActive)     llmsTxtDeprecated.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtDeprecated.append("### ").append(className).append("\n");
+            if (!replacedBy.isEmpty()) llmsFullTxtDeprecated.append("- **Replaced by**: ").append(replacedBy).append("\n");
+            llmsFullTxtDeprecated.append("- **Migration**: ").append(migrationGuide).append("\n");
+            if (!deadline.isEmpty()) llmsFullTxtDeprecated.append("- **Deadline**: ").append(deadline).append("\n");
+            llmsFullTxtDeprecated.append("\n");
+        }
+
+        if (aiderConvActive)   aiderConventions.append("#### DEPRECATED: ").append(className).append("\n- **Status**: Scheduled for removal. Do not extend.\n").append(replacedBy.isEmpty() ? "" : "- **Replaced by**: " + replacedBy + "\n").append("- **Migration**: ").append(migrationGuide).append("\n").append(deadline.isEmpty() ? "" : "- **Deadline**: " + deadline + "\n").append("\n");
+        if (windsurfActive)    windsurfRules.append("* `").append(className).append("` (deprecated) - ").append(summary).append("\n");
+        if (zedActive)         zedRules.append("- `").append(className).append("` (deprecated): ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (deprecated): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Deprecated — Migrate Callers", (replacedBy.isEmpty() ? "" : "- **Replaced by**: " + replacedBy + "\n") + "- **Migration**: " + migrationGuide + (deadline.isEmpty() ? "" : "\n- **Deadline**: " + deadline));
+    }
+
+    private void appendObservability(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                     StringBuilder codexSec, StringBuilder copilotSec,
+                                     StringBuilder qwenSec, StringBuilder geminiSec) {
+        AIObservability obs = e.getAnnotation(AIObservability.class);
+        if (obs == null) return;
+        String className = ElementNaming.elementPath(e);
+        String[] metrics = obs.metrics();
+        String[] traces = obs.traces();
+        String[] logs = obs.logs();
+        String note = obs.note();
+
+        StringBuilder summary = new StringBuilder();
+        if (metrics.length > 0) summary.append("Metrics: ").append(String.join(", ", metrics)).append(". ");
+        if (traces.length > 0)  summary.append("Traces: ").append(String.join(", ", traces)).append(". ");
+        if (logs.length > 0)    summary.append("Logs: ").append(String.join(", ", logs)).append(". ");
+        if (!note.isEmpty())    summary.append("Note: ").append(note);
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n");
+            for (String m : metrics) claudeSec.append("      <metric>").append(m).append("</metric>\n");
+            for (String t : traces)  claudeSec.append("      <trace>").append(t).append("</trace>\n");
+            for (String l : logs)    claudeSec.append("      <log>").append(l).append("</log>\n");
+            if (!note.isEmpty()) claudeSec.append("      <note>").append(note).append("</note>\n");
+            claudeSec.append("    </element>\n");
+        }
+
+        if (llmsActive)     llmsTxtObservability.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtObservability.append("### ").append(className).append("\n");
+            if (metrics.length > 0) llmsFullTxtObservability.append("- **Metrics**: ").append(String.join(", ", metrics)).append("\n");
+            if (traces.length > 0)  llmsFullTxtObservability.append("- **Traces**: ").append(String.join(", ", traces)).append("\n");
+            if (logs.length > 0)    llmsFullTxtObservability.append("- **Logs**: ").append(String.join(", ", logs)).append("\n");
+            if (!note.isEmpty())    llmsFullTxtObservability.append("- **Note**: ").append(note).append("\n");
+            llmsFullTxtObservability.append("\n");
+        }
+
+        if (aiderConvActive)   aiderConventions.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n- **Details**: ").append(summary).append("\n\n");
+        if (windsurfActive)    windsurfRules.append("* `").append(className).append("` (observability) - ").append(summary).append("\n");
+        if (zedActive)         zedRules.append("- `").append(className).append("` (observability): ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (observability): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Observability Instrumentation", "- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard.\n- **Details**: " + summary);
+    }
+
+    private void appendRegulation(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec) {
+        AIRegulation reg = e.getAnnotation(AIRegulation.class);
+        if (reg == null) return;
+        String className = ElementNaming.elementPath(e);
+        String standard = reg.standard();
+        String clause = reg.clause();
+        String description = reg.description();
+
+        String summary = standard + (clause.isEmpty() ? "" : " " + clause) + " — " + description;
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <standard>").append(standard).append("</standard>\n");
+            if (!clause.isEmpty()) claudeSec.append("      <clause>").append(clause).append("</clause>\n");
+            claudeSec.append("      <description>").append(description).append("</description>\n    </element>\n");
+        }
+
+        if (llmsActive)     llmsTxtRegulation.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtRegulation.append("### ").append(className).append("\n- **Standard**: ").append(standard).append("\n");
+            if (!clause.isEmpty()) llmsFullTxtRegulation.append("- **Clause**: ").append(clause).append("\n");
+            llmsFullTxtRegulation.append("- **Description**: ").append(description).append("\n\n");
+        }
+
+        if (aiderConvActive)   aiderConventions.append("#### REGULATORY: ").append(className).append("\n- **Standard**: ").append(standard).append("\n").append(clause.isEmpty() ? "" : "- **Clause**: " + clause + "\n").append("- **Description**: ").append(description).append("\n\n");
+        if (windsurfActive)    windsurfRules.append("* `").append(className).append("` (regulation) - ").append(summary).append("\n");
+        if (zedActive)         zedRules.append("- `").append(className).append("` (regulation): ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (regulation): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Regulatory Compliance", "- **Standard**: " + standard + (clause.isEmpty() ? "" : "\n- **Clause**: " + clause) + "\n- **Description**: " + description);
+    }
+
     private void appendToGranular(Element element, String title, String content) {
         Element owner = ElementNaming.owningElement(element);
         StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
@@ -852,6 +1167,11 @@ public final class GuardrailContentBuilder {
                 llmsTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\n");
                 llmsTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\n");
                 llmsTxtTestDriven  = new StringBuilder("\n## 🧪 Test-Driven Requirements\n");
+                llmsTxtThreadSafe    = new StringBuilder("\n## 🧵 Thread-Safe by Design\n");
+                llmsTxtImmutable     = new StringBuilder("\n## ❄️ Immutable Types\n");
+                llmsTxtDeprecated    = new StringBuilder("\n## ⚠️ Deprecated Elements\n");
+                llmsTxtObservability = new StringBuilder("\n## 📡 Observability Instrumentation\n");
+                llmsTxtRegulation    = new StringBuilder("\n## 📜 Regulatory Compliance\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -870,6 +1190,11 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtPerformance = new StringBuilder("\n## ⚡ Performance Constraints\nThe following elements are on a hot-path and have strict time/space complexity constraints.\n\n");
                 llmsFullTxtContract    = new StringBuilder("\n## 🔐 Contract-Frozen Signatures\nThe following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
                 llmsFullTxtTestDriven  = new StringBuilder("\n## 🧪 Test-Driven Requirements\nThe following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.\n\n");
+                llmsFullTxtThreadSafe    = new StringBuilder("\n## 🧵 Thread-Safe by Design\nThese elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.\n\n");
+                llmsFullTxtImmutable     = new StringBuilder("\n## ❄️ Immutable Types\nThe following types are immutable. Never introduce non-final fields, setters, or mutating methods.\n\n");
+                llmsFullTxtDeprecated    = new StringBuilder("\n## ⚠️ Deprecated Elements\nThe following elements are deprecated. Suggest migration to the named replacement for any caller and do not extend them.\n\n");
+                llmsFullTxtObservability = new StringBuilder("\n## 📡 Observability Instrumentation\nThe following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on.\n\n");
+                llmsFullTxtRegulation    = new StringBuilder("\n## 📜 Regulatory Compliance\nThe following elements implement specific regulatory clauses. Document compliance impact for every change and never weaken the requirement.\n\n");
             }
         }
 

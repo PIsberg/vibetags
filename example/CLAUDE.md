@@ -216,6 +216,56 @@
   </test_driven_requirements>
 
 <rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>
+  <thread_safe_elements>
+    <element path="com.example.concurrent.SessionCache">
+      <strategy>LOCK_FREE</strategy>
+      <note>All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.</note>
+    </element>
+  </thread_safe_elements>
+
+<rule>Elements listed in <thread_safe_elements> are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning in the change description.</rule>
+  <immutable_types>
+    <type path="com.example.config.AsyncTestConfig">
+      <note>Used by every test runner; safe to share across threads without copies.</note>
+    </type>
+  </immutable_types>
+
+<rule>Types listed in <immutable_types> are immutable by design. Never introduce non-final fields, setters, or methods that mutate instance state.</rule>
+  <deprecated_elements>
+    <element path="com.example.legacy.OldPaymentApi">
+      <replaced_by>com.example.payment.PaymentProcessor</replaced_by>
+      <migration_guide>Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.</migration_guide>
+      <deadline>v2.0 (2026-Q4)</deadline>
+    </element>
+  </deprecated_elements>
+
+<rule>Elements listed in <deprecated_elements> are scheduled for removal. Do not extend them. When working with code that calls them, suggest migrating to the listed replacement.</rule>
+  <observability_instrumentation>
+    <element path="com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)">
+      <metric>orders.placed.total</metric>
+      <metric>orders.placed.failed</metric>
+      <trace>order.place</trace>
+      <log>OrderPlaced</log>
+      <log>OrderPlacementFailed</log>
+      <note>Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).</note>
+    </element>
+  </observability_instrumentation>
+
+<rule>Elements listed in <observability_instrumentation> publish metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the corresponding dashboard update.</rule>
+  <regulatory_elements>
+    <element path="com.example.compliance.GdprService">
+      <standard>GDPR</standard>
+      <clause>Art. 17</clause>
+      <description>Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.</description>
+    </element>
+    <element path="com.example.compliance.GdprService.exportUserData(java.lang.String)">
+      <standard>GDPR</standard>
+      <clause>Art. 20</clause>
+      <description>Right to data portability — exports the user's data in a machine-readable format.</description>
+    </element>
+  </regulatory_elements>
+
+<rule>Elements listed in <regulatory_elements> implement specific regulatory clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
