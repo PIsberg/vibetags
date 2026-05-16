@@ -166,6 +166,19 @@ public final class AnnotationValidator {
             }
         }
 
+        // No replacement target: @AIDeprecated with blank replacedBy
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIDeprecated.class)) {
+            AIDeprecated dep = element.getAnnotation(AIDeprecated.class);
+            if (dep.replacedBy().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIDeprecated on " + element.toString()
+                        + " has no 'replacedBy' target. AI assistants will flag the element as deprecated "
+                        + "but cannot route callers to a replacement. Add replacedBy = \"com.example.NewClass\" "
+                        + "to make the migration actionable.",
+                    element);
+            }
+        }
+
         // Contradiction: @AIDeprecated + @AILocked
         for (Element element : roundEnv.getElementsAnnotatedWith(AIDeprecated.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
