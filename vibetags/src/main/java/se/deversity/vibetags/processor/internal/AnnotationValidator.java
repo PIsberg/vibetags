@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.annotations.AIDraft;
@@ -39,6 +40,17 @@ public final class AnnotationValidator {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
                         + " is annotated with both @AIDraft and @AILocked. This is contradictory.",
+                    element);
+            }
+        }
+
+        // No-op: @AIContext with both focus and avoids blank
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
+            AIContext ctx = element.getAnnotation(AIContext.class);
+            if (ctx.focus().isBlank() && ctx.avoids().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIContext on " + element.toString()
+                        + " has blank 'focus' and 'avoids' attributes. The annotation will be ignored.",
                     element);
             }
         }
