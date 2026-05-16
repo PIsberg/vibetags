@@ -204,8 +204,11 @@ public final class WriteCache {
                 String path = line.substring(0, t1);
                 String hash = line.substring(t1 + 1, t2);
                 try {
-                    long size = Long.parseLong(line.substring(t2 + 1, t3));
-                    long mtime = Long.parseLong(line.substring(t3 + 1));
+                    long size  = Long.parseLong(line.substring(t2 + 1, t3));
+                    // trim() handles CRLF line endings on Windows: if the cache file was
+                    // written or edited on Windows, the mtime value may carry a trailing \r
+                    // that causes Long.parseLong to throw and silently drop a valid entry.
+                    long mtime = Long.parseLong(line.substring(t3 + 1).trim());
                     entries.put(path, new Entry(hash, size, mtime));
                 } catch (NumberFormatException ignored) {
                     // Skip corrupt rows — fresh entries replace them on next write.
