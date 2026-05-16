@@ -1,14 +1,146 @@
 
-# VibeTags - AI Guardrails for Java Development
+# VibeTags — AI Guardrails for Java Development
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
+[![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![Java 17 | 21 | 25 | 26](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
+
+**VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
+
+## Why VibeTags?
+
+`.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
+
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across 27 config formats.
+- **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
+- **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
+
+![VibeTags demo — annotate, compile, all platforms update](docs/demo.gif)
+
+## ⚡ Add VibeTags to Your Project in 60 Seconds
+
+<details>
+<summary><b>Maven</b></summary>
+
+**1. Add to `pom.xml`:**
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>se.deversity.vibetags</groupId>
+            <artifactId>vibetags-bom</artifactId>
+            <version>0.8.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-annotations</artifactId>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>se.deversity.vibetags</groupId>
+                        <artifactId>vibetags-processor</artifactId>
+                        <version>0.8.0</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**2. Opt in to the AI platforms you use** (file presence = opt-in; VibeTags never creates files on its own):
+
+```bash
+touch CLAUDE.md .cursorrules AGENTS.md   # Claude, Cursor, Codex CLI — add whichever you use
+```
+
+**3. Annotate your first class:**
+
+```java
+@AILocked(reason = "Legacy payment integration — changes will break production.")
+public interface PaymentProcessor {
+    String processPayment(double amount, String currency, String merchantId);
+}
+```
+
+**4. Compile:**
+
+```bash
+mvn compile
+```
+
+`CLAUDE.md` and `.cursorrules` now contain generated guardrail rules. Open either file and look for the `VIBETAGS-START` / `VIBETAGS-END` marker block — that section is managed by VibeTags and regenerated on every compile.
+
+</details>
+
+<details>
+<summary><b>Gradle</b></summary>
+
+**1. Add to `build.gradle`:**
+
+```groovy
+dependencies {
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+```
+
+**2. Opt in to the AI platforms you use:**
+
+```bash
+touch CLAUDE.md .cursorrules AGENTS.md
+```
+
+**3. Annotate your first class:**
+
+```java
+@AILocked(reason = "Legacy payment integration — changes will break production.")
+public interface PaymentProcessor {
+    String processPayment(double amount, String currency, String merchantId);
+}
+```
+
+**4. Compile:**
+
+```bash
+gradle compileJava
+```
+
+</details>
+
+---
 
 ## Table of Contents
 
 - [What is VibeTags?](#-what-is-vibetags)
 - [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
+- [Installation](#-quick-start)
 - [How It Works](#-how-it-works)
 - [Documentation](#-documentation)
-- [Building Both Projects](#-building-both-projects)
+- [Building from Source](#-building-both-projects)
 - [Performance & Load Tests](#-performance--load-tests)
 - [When to Use VibeTags](#-when-to-use-vibetags)
 - [Advanced Features](#-advanced-features)
@@ -21,19 +153,6 @@
 - [Contributing](#-contributing)
 - [Project Components](#-project-components)
 - [License](#-license)
-- [Why VibeTags?](#-why-vibetags)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
-[![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
-[![Java 17 | 21 | 25 | 26](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
-[![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
-[![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
-[![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
-
-
-**VibeTags** is a Java annotation processor that acts as AI guardrails for code generation tools like Cursor, Claude, Gemini, and Codex CLI. It allows developers to control AI behavior through simple annotations, protecting critical code and guiding AI implementations.
 
 ## 🎯 What is VibeTags?
 
@@ -153,14 +272,12 @@ vibetags/
 └── README.md             # This file
 ```
 
-## 🚀 Quick Start
+## 🚀 Installation
 
 ### Prerequisites
 
 - **Java 11 or higher**
 - **Maven 3.6+** or **Gradle 7.0+**
-
-### Installation
 
 VibeTags ships as **two artifacts**:
 
@@ -245,35 +362,6 @@ annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.8.0'
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
 
-### Option 1: Using Maven
-
-```bash
-# Step 1: Install the VibeTags library
-cd vibetags
-mvn clean install
-
-# Step 2: Build the example project
-cd ../example
-mvn clean compile
-
-# Step 3: Check generated AI guardrail files
-# (Note: Files are only updated if they ALREADY exist on disk)
-```
-
-### Option 2: Using Gradle
-
-```bash
-# Step 1: Install the VibeTags library
-cd vibetags
-gradle clean build publishToMavenLocal
-
-# Step 2: Build the example project
-cd ../example
-gradle clean build
-
-# Step 3: Check generated AI guardrail files
-```
-
 ## 📖 How It Works
 
 1. **Add Annotations** - Place VibeTags annotations on your Java classes and methods
@@ -356,7 +444,7 @@ public class PricingService {
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
 
-## 🛠️ Building Both Projects
+## 🛠️ Building from Source
 
 ### Build Everything with Maven
 
@@ -1090,9 +1178,5 @@ A Claude Code skill that gives your AI assistant a full working knowledge of Vib
 ## 📝 License
 
 This project is licensed under the [MIT License](LICENSE).
-
-## 🌟 Why VibeTags?
-
-AI code generation tools are powerful but need guardrails. VibeTags gives developers a standardized, programmatic way to control AI behavior across platforms, ensuring critical code stays protected while AI gets clear guidance on where and how to help.
 
 **Built with ❤️ for safer AI-assisted development**

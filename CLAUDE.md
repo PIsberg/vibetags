@@ -135,6 +135,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.doubleignore` | Double.bot | Glob patterns |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
 | `.codeiumignore` | Codeium | Glob patterns |
+| `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
 
 #### Granular rules
 
