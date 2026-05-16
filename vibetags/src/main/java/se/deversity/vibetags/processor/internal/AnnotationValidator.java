@@ -44,6 +44,19 @@ public final class AnnotationValidator {
             }
         }
 
+        // Contradiction: @AIDraft + @AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIDraft.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIDraft and @AIIgnore. "
+                        + "@AIIgnore excludes the element from AI context entirely; "
+                        + "@AIDraft cannot surface implementation instructions for an ignored element. "
+                        + "Remove one of the two annotations.",
+                    element);
+            }
+        }
+
         // No-op: @AIContext with both focus and avoids blank
         for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
             AIContext ctx = element.getAnnotation(AIContext.class);
