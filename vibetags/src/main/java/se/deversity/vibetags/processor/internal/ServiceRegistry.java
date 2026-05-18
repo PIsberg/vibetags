@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AIContext;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
 import java.nio.file.Files;
@@ -13,6 +14,10 @@ import java.util.Set;
  * Maps logical AI-platform service keys to their output file paths and resolves which services
  * are "active" based on which files already exist on disk (file-existence opt-in model).
  */
+@AIContext(
+    focus = "Maps platform service keys to output file paths; resolves active services by checking file existence on disk",
+    avoids = "Creating output files that do not already exist — file presence on disk is the user's explicit opt-in signal"
+)
 public final class ServiceRegistry {
 
     /** Subset of service keys whose presence on disk activates a service. */

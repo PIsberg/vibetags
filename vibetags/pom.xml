@@ -221,6 +221,37 @@
             </build>
         </profile>
 
+        <!-- Self-annotation: runs VibeTags on its own source code (dogfooding).
+             Requires 'mvn install' once first to bootstrap the processor into local Maven repo.
+             Usage: mvn compile -Pself-annotate  (from the vibetags/ directory) -->
+        <profile>
+            <id>self-annotate</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.15.0</version>
+                        <!-- combine.self="override" replaces the default configuration entirely,
+                             discarding -proc:none so the annotation processor can run. -->
+                        <configuration combine.self="override">
+                            <compilerArgs>
+                                <arg>-Avibetags.root=${project.basedir}/..</arg>
+                                <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                            </compilerArgs>
+                            <annotationProcessorPaths>
+                                <path>
+                                    <groupId>se.deversity.vibetags</groupId>
+                                    <artifactId>vibetags-processor</artifactId>
+                                    <version>${project.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- GPG signing: only active during publishing (CI or explicit local deploy) -->
         <profile>
             <id>sign-artifacts</id>

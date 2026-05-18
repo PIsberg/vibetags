@@ -1,5 +1,8 @@
 package se.deversity.vibetags.processor;
 
+import se.deversity.vibetags.annotations.AIContract;
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
@@ -35,6 +38,10 @@ import java.util.stream.Collectors;
  * {@link AbstractProcessor} adaptor plus a small set of package-private delegates kept in place
  * so the existing test suite continues to compile against the same surface.
  */
+@AICore(
+    sensitivity = "critical",
+    note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
+)
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
@@ -111,6 +118,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.elementRules = new java.util.LinkedHashMap<>();
     }
 
+    @AIContract(reason = "JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor")
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
@@ -129,6 +137,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return false; // allow other processors to see the same annotations
     }
 
+    @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")
     private void generateFiles() {
         if (log != null) {
             log.info("VibeTags v{} | {}", VERSION, GITHUB_URL);
