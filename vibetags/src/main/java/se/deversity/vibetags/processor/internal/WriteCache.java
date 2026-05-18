@@ -51,7 +51,7 @@ public final class WriteCache {
     /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
     private String buildFingerprint = null;
 
-    /** Combined mtime stamp of all module sidecar files; detects cross-module changes. {@code null} when unknown. */
+    /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
     private String sidecarStamp = null;
 
     public WriteCache(Path cachePath) {
@@ -82,7 +82,7 @@ public final class WriteCache {
 
     /**
      * Returns the persisted sidecar stamp from the previous run, or {@code null} if not on file.
-     * The stamp is a hex-encoded XOR of all module sidecar file mtimes; a change means a sibling
+     * The stamp is a hex-encoded polynomial hash of all module sidecar file mtimes; a change means a sibling
      * module's annotations changed and the aggregated output must be regenerated.
      */
     public String getSidecarStamp() {

@@ -130,6 +130,11 @@ public final class ModuleSidecar {
      * Reads all valid sidecar files from {@code root}, sorted by filename for deterministic
      * ordering. Automatically deletes sidecars whose module path no longer resolves to an existing
      * directory — this handles modules removed from the project.
+     *
+     * <p><strong>Parallel builds:</strong> if two modules compile concurrently (e.g. Gradle
+     * {@code --parallel}), a sibling's sidecar may be absent or mid-write when this method runs.
+     * The worst case is a single build cycle where one module's content is missing from the merged
+     * output; the next incremental build picks it up because the sidecar stamp will have changed.
      */
     public static List<ModuleSidecar> readAll(Path root) {
         if (!Files.isDirectory(root)) return Collections.emptyList();

@@ -253,4 +253,49 @@ class MultiModuleAggregationTest {
         Files.createDirectories(p.getParent());
         if (!Files.exists(p)) Files.createFile(p);
     }
+
+    // -----------------------------------------------------------------------
+    // Edge-case tests (from review)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sidecar_corruptBase64_prunedOnLoad(@TempDir Path root) throws IOException {
+        // Write a syntactically valid sidecar file but with corrupt Base64 in a body line.
+        Path sidecarFile = root.resolve(".vibetags-mod-" + "corrupt");
+        Files.writeString(sidecarFile, "moduleId=corrupt\nmodulePath=\ncursor=!!!NOT_BASE64!!!\n");
+
+        // readAll should silently discard the malformed sidecar and delete the file.
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertTrue(loaded.isEmpty(), "Corrupt sidecar should be pruned");
+        assertFalse(Files.exists(sidecarFile), "Corrupt sidecar file should be deleted");
+    }
+
+    @Test
+    void mergeFor_threeModules_deterministicOrdering() {
+        ModuleSidecar alpha = new ModuleSidecar("alpha", "alpha");
+        alpha.putBody("cursor", "## Alpha rules");
+
+        ModuleSidecar beta = new ModuleSidecar("beta", "beta");
+        beta.putBody("cursor", "## Beta rules");
+
+        ModuleSidecar gamma = new ModuleSidecar("gamma", "gamma");
+        gamma.putBody("cursor", "## Gamma rules");
+
+        String merged = ModuleSidecar.mergeFor("cursor", List.of(alpha, beta, gamma), false);
+
+        // All three modules present
+        assertTrue(merged.contains("# VIBETAGS-MODULE: alpha"));
+        assertTrue(merged.contains("# VIBETAGS-MODULE: beta"));
+        assertTrue(merged.contains("# VIBETAGS-MODULE: gamma"));
+        assertTrue(merged.contains("Alpha rules"));
+        assertTrue(merged.contains("Beta rules"));
+        assertTrue(merged.contains("Gamma rules"));
+
+        // Ordering: alpha before beta before gamma (list insertion order)
+        int alphaIdx = merged.indexOf("# VIBETAGS-MODULE: alpha");
+        int betaIdx = merged.indexOf("# VIBETAGS-MODULE: beta");
+        int gammaIdx = merged.indexOf("# VIBETAGS-MODULE: gamma");
+        assertTrue(alphaIdx < betaIdx, "alpha should appear before beta");
+        assertTrue(betaIdx < gammaIdx, "beta should appear before gamma");
+    }
 }
