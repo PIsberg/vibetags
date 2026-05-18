@@ -36,7 +36,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.8.0</version>
+            <version>0.9.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -60,7 +60,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.8.0</version>
+                        <version>0.9.0</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -101,8 +101,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.8.0')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.0')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -296,7 +296,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.8.0</version>
+            <version>0.9.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -321,7 +321,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.8.0</version>
+                        <version>0.9.0</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -335,8 +335,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.8.0')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.8.0')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.0')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -350,15 +350,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.8.0</version>
+    <version>0.9.0</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:0.8.0'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.8.0'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.0'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
