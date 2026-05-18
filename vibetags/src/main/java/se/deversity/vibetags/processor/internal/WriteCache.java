@@ -51,6 +51,9 @@ public final class WriteCache {
     /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
     private String buildFingerprint = null;
 
+    /** Combined mtime stamp of all module sidecar files; detects cross-module changes. {@code null} when unknown. */
+    private String sidecarStamp = null;
+
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
     }
@@ -73,6 +76,25 @@ public final class WriteCache {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
             this.buildFingerprint = fingerprint;
+            this.dirty = true;
+        }
+    }
+
+    /**
+     * Returns the persisted sidecar stamp from the previous run, or {@code null} if not on file.
+     * The stamp is a hex-encoded XOR of all module sidecar file mtimes; a change means a sibling
+     * module's annotations changed and the aggregated output must be regenerated.
+     */
+    public String getSidecarStamp() {
+        loadIfNeeded();
+        return sidecarStamp;
+    }
+
+    /** Records the current sidecar stamp; persisted on the next {@link #flush()}. */
+    public void setSidecarStamp(String stamp) {
+        loadIfNeeded();
+        if (!java.util.Objects.equals(this.sidecarStamp, stamp)) {
+            this.sidecarStamp = stamp;
             this.dirty = true;
         }
     }
@@ -150,6 +172,9 @@ public final class WriteCache {
         if (buildFingerprint != null) {
             sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
         }
+        if (sidecarStamp != null) {
+            sb.append("# sidecar-stamp: ").append(sidecarStamp).append('\n');
+        }
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             sb.append(e.getKey()).append('\t')
               .append(e.getValue().hash).append('\t')
@@ -192,6 +217,11 @@ public final class WriteCache {
                     if (line.startsWith(prefix)) {
                         String fp = line.substring(prefix.length()).trim();
                         if (!fp.isEmpty()) buildFingerprint = fp;
+                    }
+                    String sidecarPrefix = "# sidecar-stamp: ";
+                    if (line.startsWith(sidecarPrefix)) {
+                        String st = line.substring(sidecarPrefix.length()).trim();
+                        if (!st.isEmpty()) sidecarStamp = st;
                     }
                     continue;
                 }

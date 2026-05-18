@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.WriteCache;
@@ -16,8 +17,10 @@ import javax.tools.Diagnostic;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -135,14 +138,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
         Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
-        // Top-level fingerprint short-circuit: if neither the annotation set nor the active
-        // service set has changed since the last successful run, AND every file we wrote then is
-        // still byte-stable on disk, skip the entire build + per-file-compare phase. The two-part
-        // guard (input fingerprint AND output stability) means a manually deleted granular file
-        // still triggers regeneration.
+        // Compute module identity for multi-module aggregation.
+        Path compilationRoot = Paths.get("").toAbsolutePath();
+        String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
+        String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
+
+        // Top-level fingerprint short-circuit: if neither the annotation set, active services, nor
+        // any sibling sidecar have changed since the last run, AND every file we wrote then is
+        // still byte-stable on disk, skip the entire content-build + per-file-compare phase.
+        // The sidecar stamp is stored separately so the fingerprint stays 8 hex chars.
         String fingerprint = BuildFingerprint.compute(collector, activeServices);
+        String sidecarStampHex = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
         if (writeCache != null
                 && fingerprint.equals(writeCache.getBuildFingerprint())
+                && sidecarStampHex.equals(writeCache.getSidecarStamp())
                 && writeCache.allCachedFilesStable()) {
             Messager m = getSafeMessager();
             m.printMessage(Diagnostic.Kind.NOTE,
@@ -152,7 +161,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return;
         }
 
-        // Build all per-platform content in one pass.
+        // Build all per-platform content in one pass (current module only).
         GuardrailContentBuilder.Result built =
             new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER).build();
         Map<String, String> contentByService = built.contentByService;
@@ -160,16 +169,63 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         logSummary(activeServices);
 
+        // --- Multi-module aggregation ---
+        // Write this module's rendered bodies to its sidecar file so siblings can pick them up.
+        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
+        contentByService.forEach((service, body) -> {
+            Path filePath = serviceFiles.get(service);
+            if (filePath != null && GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString()) != null) {
+                mySidecar.putBody(service, body);
+            }
+        });
+        try {
+            mySidecar.save(root);
+        } catch (IOException e) {
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: Could not save module sidecar (" + e.getMessage() + "); multi-module aggregation disabled.");
+        }
+
+        // Read all sidecars (this module + any siblings that have already compiled).
+        List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
+        boolean multiModule = allSidecars.size() > 1;
+
+        // Merge per-service content: in multi-module builds, combine every sibling's contribution
+        // into the shared output files using module sub-markers.
+        final Map<String, String> effectiveContent;
+        if (multiModule) {
+            Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
+            for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
+                String service = entry.getKey();
+                if (!contentByService.containsKey(service)) continue;
+                Path filePath = entry.getValue();
+                String[] markers = GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString());
+                if (markers == null) continue; // JSON/TOML: keep current-module content as-is
+                boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
+                String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
+                if (!mergedBody.isBlank()) {
+                    merged.put(service, mergedBody);
+                }
+            }
+            effectiveContent = merged;
+        } else {
+            effectiveContent = contentByService;
+        }
+
         Messager messager = getSafeMessager();
         messager.printMessage(Diagnostic.Kind.NOTE,
-            "VibeTags: Generating files (v" + VERSION + ") for " + contentByService.size()
-                + " active services: " + String.join(", ", contentByService.keySet()));
+            "VibeTags: Generating files (v" + VERSION + ") for " + effectiveContent.size()
+                + " active services: " + String.join(", ", effectiveContent.keySet())
+                + (multiModule ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
 
         // Write the per-platform content files.
-        contentByService.forEach((service, content) -> {
+        effectiveContent.forEach((service, content) -> {
             Path filePath = serviceFiles.get(service);
             boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
-            boolean changed = writeFileIfChanged(filePath.toString(), content, collector.anyAnnotationsFound() || isIgnoreFile);
+            // hasNewRules: true if any module (not just this one) contributed to this service.
+            boolean anyContributed = multiModule
+                ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
+                : collector.anyAnnotationsFound();
+            boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
             String relPath = root.relativize(filePath).toString().replace('\\', '/');
             String status = changed ? "updated" : "no changes";
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
@@ -187,6 +243,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         if (writeCache != null) {
             writeCache.setBuildFingerprint(fingerprint);
+            writeCache.setSidecarStamp(sidecarStampHex);
             writeCache.flush();
         }
     }

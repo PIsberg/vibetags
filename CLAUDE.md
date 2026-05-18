@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
 The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 10 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
+- `vibetags-annotations/` — the 15 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
 - `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
 - `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).
@@ -223,7 +223,7 @@ In multi-module builds, if a module has **no new annotations**, the processor sk
 
 ### SPI registration
 
-The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")` means new annotations are picked up automatically without touching the processor configuration.
+The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("*")` means new annotations are picked up automatically without touching the processor configuration.
 
 ### Gradle incremental annotation processing
 
@@ -235,7 +235,7 @@ All tests live in `vibetags/src/test`.
 
 | Class | Coverage |
 |---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 9 annotations) |
+| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 15 annotations) |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
@@ -250,6 +250,14 @@ All tests live in `vibetags/src/test`.
 | `QwenProcessorUnitTest` | Qwen processor options |
 | `VibeTagsLoggerUnitTest` | File logging |
 | `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
+| `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
+| `NewAnnotationsV3DefinitionTest` | Definition-level tests for v0.9.0 annotations: `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
+| `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.0 annotations across all platforms |
+| `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.0 annotations |
+| `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
+| `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
+| `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
+| `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 
 ## Pre-commit Hooks

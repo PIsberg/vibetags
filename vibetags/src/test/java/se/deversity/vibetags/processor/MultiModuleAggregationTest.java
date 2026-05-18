@@ -1,0 +1,256 @@
+package se.deversity.vibetags.processor;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ModuleSidecar;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Verifies multi-module aggregation: when two modules share the same VibeTags root (via
+ * {@code vibetags.root}), both modules' annotations survive into the shared output files.
+ * Previously only the last module to compile was represented (last-writer-wins bug).
+ */
+class MultiModuleAggregationTest {
+
+    // -----------------------------------------------------------------------
+    // ModuleSidecar unit tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    void computeModuleId_rootModule_returnsRootSentinel(@TempDir Path root) {
+        String id = ModuleSidecar.computeModuleId(root, root);
+        assertEquals("_root_", id);
+    }
+
+    @Test
+    void computeModuleId_childModule_returnsRelativePath(@TempDir Path root) {
+        Path child = root.resolve("module-graph");
+        String id = ModuleSidecar.computeModuleId(child, root);
+        assertEquals("module-graph", id);
+    }
+
+    @Test
+    void computeModuleId_nestedModule_replacesPathSeparator(@TempDir Path root) {
+        Path child = root.resolve("a").resolve("b");
+        String id = ModuleSidecar.computeModuleId(child, root);
+        assertEquals("a_b", id);
+    }
+
+    @Test
+    void sidecar_saveAndLoad_roundTrips(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("module-graph")); // satisfy staleness check
+        ModuleSidecar orig = new ModuleSidecar("module-graph", "module-graph");
+        orig.putBody("cursor", "## LOCKED FILES\n* `com.example.Node`");
+        orig.putBody("claude", "<locked_files><file path=\"com.example.Node\"/></locked_files>");
+        orig.save(root);
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertEquals(1, loaded.size());
+        ModuleSidecar s = loaded.get(0);
+        assertEquals("module-graph", s.getModuleId());
+        assertEquals("## LOCKED FILES\n* `com.example.Node`", s.getBodies().get("cursor"));
+        assertEquals("<locked_files><file path=\"com.example.Node\"/></locked_files>",
+                s.getBodies().get("claude"));
+    }
+
+    @Test
+    void sidecar_emptyBody_notStored(@TempDir Path root) throws IOException {
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        s.putBody("cursor", "   ");   // blank — should be ignored
+        s.putBody("claude", "content");
+        s.save(root);
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertEquals(1, loaded.size());
+        assertNull(loaded.get(0).getBodies().get("cursor"));
+        assertNotNull(loaded.get(0).getBodies().get("claude"));
+    }
+
+    @Test
+    void sidecar_stalePruned_whenModuleDirMissing(@TempDir Path root) throws IOException {
+        // Write a sidecar claiming to be from "ghost-module" (directory doesn't exist)
+        ModuleSidecar stale = new ModuleSidecar("ghost_module", "ghost-module");
+        stale.putBody("cursor", "stale content");
+        stale.save(root);
+
+        // readAll() should prune it because root/ghost-module doesn't exist
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertTrue(loaded.isEmpty(), "Stale sidecar from non-existent module directory should be pruned");
+    }
+
+    @Test
+    void sidecar_rootModule_notPruned(@TempDir Path root) throws IOException {
+        // Root module (modulePath="") is never pruned even though there's no sub-directory
+        ModuleSidecar rootMod = new ModuleSidecar("_root_", "");
+        rootMod.putBody("cursor", "root content");
+        rootMod.save(root);
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertEquals(1, loaded.size());
+    }
+
+    // -----------------------------------------------------------------------
+    // mergeFor() tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    void mergeFor_singleModule_returnsBodyAsIs() throws IOException {
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        s.putBody("cursor", "## LOCKED FILES\n* `com.example.Foo`");
+
+        String merged = ModuleSidecar.mergeFor("cursor", List.of(s), false);
+        assertEquals("## LOCKED FILES\n* `com.example.Foo`", merged);
+    }
+
+    @Test
+    void mergeFor_twoModules_wrapsInSubMarkers_hashStyle() throws IOException {
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("cursor", "## LOCKED FILES\n* `com.example.Node`");
+
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("cursor", "## AUDIT\n* `com.example.KartaCli`");
+
+        String merged = ModuleSidecar.mergeFor("cursor", List.of(graph, cli), false);
+
+        assertTrue(merged.contains("# VIBETAGS-MODULE: module-graph"), "Should start graph sub-marker");
+        assertTrue(merged.contains("# VIBETAGS-MODULE-END: module-graph"), "Should end graph sub-marker");
+        assertTrue(merged.contains("# VIBETAGS-MODULE: module-cli"), "Should start cli sub-marker");
+        assertTrue(merged.contains("# VIBETAGS-MODULE-END: module-cli"), "Should end cli sub-marker");
+        assertTrue(merged.contains("com.example.Node"), "Graph annotation should be present");
+        assertTrue(merged.contains("com.example.KartaCli"), "CLI annotation should be present");
+    }
+
+    @Test
+    void mergeFor_twoModules_wrapsInSubMarkers_htmlStyle() {
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("claude", "<locked_files><file path=\"com.example.Node\"/></locked_files>");
+
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("claude", "<audit_requirements><file path=\"com.example.KartaCli\"/></audit_requirements>");
+
+        String merged = ModuleSidecar.mergeFor("claude", List.of(graph, cli), true);
+
+        assertTrue(merged.contains("<!-- VIBETAGS-MODULE: module-graph -->"));
+        assertTrue(merged.contains("<!-- VIBETAGS-MODULE-END: module-graph -->"));
+        assertTrue(merged.contains("<!-- VIBETAGS-MODULE: module-cli -->"));
+        assertTrue(merged.contains("com.example.Node"));
+        assertTrue(merged.contains("com.example.KartaCli"));
+    }
+
+    @Test
+    void mergeFor_skipsModulesWithNoBodyForService() {
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("cursor", "## LOCKED\n* `Node`");
+        // graph has no "claude" body
+
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("claude", "<audit>KartaCli</audit>");
+        // cli has no "cursor" body
+
+        // Merging "claude": only cli contributes → single body, no sub-markers
+        String claudeMerged = ModuleSidecar.mergeFor("claude", List.of(graph, cli), true);
+        assertEquals("<audit>KartaCli</audit>", claudeMerged);
+        assertFalse(claudeMerged.contains("VIBETAGS-MODULE"), "Single contributor → no sub-markers");
+
+        // Merging "cursor": only graph contributes → single body, no sub-markers
+        String cursorMerged = ModuleSidecar.mergeFor("cursor", List.of(graph, cli), false);
+        assertEquals("## LOCKED\n* `Node`", cursorMerged);
+    }
+
+    @Test
+    void mergeFor_noContributions_returnsEmpty() {
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        // No "llms" body registered
+        String merged = ModuleSidecar.mergeFor("llms", List.of(s), true);
+        assertTrue(merged.isEmpty());
+    }
+
+    // -----------------------------------------------------------------------
+    // Integration: two-module compile into the same root
+    // -----------------------------------------------------------------------
+
+    @Test
+    void twoModules_bothAnnotationsAppearInSharedOutput(@TempDir Path sharedRoot) throws IOException {
+        // Create module directories under the shared root
+        Path graphDir = sharedRoot.resolve("module-graph");
+        Path cliDir = sharedRoot.resolve("module-cli");
+        Files.createDirectories(graphDir);
+        Files.createDirectories(cliDir);
+
+        // Opt-in files at the shared root
+        touch(sharedRoot, "CLAUDE.md");
+        touch(sharedRoot, ".cursorrules");
+
+        // --- Simulate module-graph compiling (has @AILocked on Node) ---
+        // Build sidecar as if this module ran the processor
+        ModuleSidecar graphSidecar = new ModuleSidecar("module-graph", "module-graph");
+        graphSidecar.putBody("cursor", "## LOCKED FILES (DO NOT EDIT)\n* `com.example.graph.Node` - Reason: Core graph node");
+        graphSidecar.putBody("claude", "<locked_files>\n  <file path=\"com.example.graph.Node\">\n    <reason>Core graph node</reason>\n  </file>\n</locked_files>");
+        graphSidecar.save(sharedRoot);
+
+        // --- Simulate module-cli compiling (has @AIAudit on KartaCli) ---
+        ModuleSidecar cliSidecar = new ModuleSidecar("module-cli", "module-cli");
+        cliSidecar.putBody("cursor", "## MANDATORY SECURITY AUDITS\n* `com.example.cli.KartaCli`\n  - Required Checks: Path Traversal");
+        cliSidecar.putBody("claude", "<audit_requirements>\n  <file path=\"com.example.cli.KartaCli\">\n    <vulnerability_check>Path Traversal</vulnerability_check>\n  </file>\n</audit_requirements>");
+        cliSidecar.save(sharedRoot);
+
+        // Now simulate module-cli being the last to write .cursorrules
+        List<ModuleSidecar> all = ModuleSidecar.readAll(sharedRoot);
+        assertEquals(2, all.size(), "Both sidecars should be loaded");
+
+        String mergedCursor = ModuleSidecar.mergeFor("cursor", all, false);
+        String mergedClaude = ModuleSidecar.mergeFor("claude", all, true);
+
+        // Both modules' annotations should survive
+        assertTrue(mergedCursor.contains("com.example.graph.Node"),
+                "graph module's @AILocked should be in merged .cursorrules");
+        assertTrue(mergedCursor.contains("com.example.cli.KartaCli"),
+                "cli module's @AIAudit should be in merged .cursorrules");
+        assertTrue(mergedClaude.contains("com.example.graph.Node"),
+                "graph module's @AILocked should be in merged CLAUDE.md");
+        assertTrue(mergedClaude.contains("com.example.cli.KartaCli"),
+                "cli module's @AIAudit should be in merged CLAUDE.md");
+
+        // Write to .cursorrules using the file writer (simulating the final write step)
+        AIGuardrailProcessor proc = new AIGuardrailProcessor();
+        Path cursorrules = sharedRoot.resolve(".cursorrules");
+        proc.writeFileIfChanged(cursorrules.toString(), mergedCursor, true);
+
+        String onDisk = Files.readString(cursorrules);
+        assertTrue(onDisk.contains("com.example.graph.Node"),
+                "graph annotations must survive in the shared .cursorrules");
+        assertTrue(onDisk.contains("com.example.cli.KartaCli"),
+                "cli annotations must survive in the shared .cursorrules");
+    }
+
+    @Test
+    void computeSidecarStamp_changesWhenSidecarUpdated(@TempDir Path root) throws IOException {
+        // No sidecars initially
+        long stamp0 = ModuleSidecar.computeSidecarStamp(root);
+
+        // Write a sidecar
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        s.putBody("cursor", "content");
+        s.save(root);
+
+        long stamp1 = ModuleSidecar.computeSidecarStamp(root);
+        assertNotEquals(stamp0, stamp1, "Stamp should change after a sidecar is written");
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
+    private static void touch(Path root, String relative) throws IOException {
+        Path p = root.resolve(relative);
+        Files.createDirectories(p.getParent());
+        if (!Files.exists(p)) Files.createFile(p);
+    }
+}
