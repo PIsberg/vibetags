@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIPerformance;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,6 +31,10 @@ import java.util.Map;
  * <p>Not thread-safe across instances. A single processor invocation owns one
  * instance for its lifetime; concurrent compilations should use disjoint roots.
  */
+@AICore(
+    sensitivity = "high",
+    note = "Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files"
+)
 public final class WriteCache {
 
     /** Cache record. */
@@ -125,6 +131,7 @@ public final class WriteCache {
     }
 
     /** Returns true iff cache says we wrote {@code body} to {@code file} and the file is byte-stable since. */
+    @AIPerformance(constraint = "O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason")
     public boolean isUnchanged(Path file, String body) {
         loadIfNeeded();
         Entry e = entries.get(file.toString());

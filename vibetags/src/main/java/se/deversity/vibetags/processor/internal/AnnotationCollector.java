@@ -25,6 +25,10 @@ import java.util.Set;
  * Aggregates annotated elements across the multiple processing rounds {@code javac} performs.
  * Each annotation type has its own {@link LinkedHashSet} (insertion-ordered for stable output).
  */
+@AIContext(
+    focus = "Accumulates annotated elements across multiple javac processing rounds; one LinkedHashSet per annotation type preserves insertion order for stable BuildFingerprint output",
+    avoids = "Replacing LinkedHashSet with HashSet — insertion order stability is required for deterministic fingerprints across recompiles"
+)
 public final class AnnotationCollector {
 
     private final Set<Element> lockedElements      = new LinkedHashSet<>();

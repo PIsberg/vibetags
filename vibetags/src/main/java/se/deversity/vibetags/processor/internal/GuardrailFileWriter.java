@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AIContract;
+import se.deversity.vibetags.annotations.AICore;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.Messager;
@@ -27,6 +29,10 @@ import java.util.stream.Stream;
  * nullable — callers who haven't initialised a processing environment (typical in unit tests)
  * get a no-op messager and quiet logging.
  */
+@AICore(
+    sensitivity = "high",
+    note = "Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost"
+)
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GuardrailFileWriter {
 
@@ -67,6 +73,7 @@ public final class GuardrailFileWriter {
      *
      * @return {@code true} if the file was actually written
      */
+    @AIContract(reason = "Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics")
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         try {
             Path filePath = Paths.get(path);

@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AIContract;
+import se.deversity.vibetags.annotations.AICore;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,6 +31,10 @@ import java.util.stream.Stream;
  * merged output. Users can also manually delete {@code .vibetags-mod-*} files to force a clean
  * rebuild.
  */
+@AICore(
+    sensitivity = "high",
+    note = "Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility"
+)
 public final class ModuleSidecar {
 
     static final String SIDECAR_PREFIX = ".vibetags-mod-";
@@ -200,6 +206,7 @@ public final class ModuleSidecar {
      * @param sidecars    all known module sidecars (current + siblings)
      * @param htmlMarkers {@code true} for {@code <!-- -->} style, {@code false} for {@code #} style
      */
+    @AIContract(reason = "Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile")
     public static String mergeFor(String serviceKey, List<ModuleSidecar> sidecars, boolean htmlMarkers) {
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
         for (ModuleSidecar s : sidecars) {

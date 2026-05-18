@@ -21,6 +21,8 @@ load-tests/dependency-reduced-pom.xml
 .grok/
 # VibeTags per-output-file write cache (regenerated on every compile)
 .vibetags-cache
+# VibeTags per-module sidecar files (created by the processor during self-annotation and integration tests)
+.vibetags-mod-*
 # VibeTags atomic-write sidecar (current name since 0.5.6) — should never persist
 # past a successful Files.move, but ignore as a belt-and-suspenders.
 *.vibetags-tmp

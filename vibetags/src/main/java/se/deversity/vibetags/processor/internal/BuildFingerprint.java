@@ -35,6 +35,7 @@ import java.util.TreeSet;
  *
  * <p>Stateless. All methods are static.
  */
+@AIImmutable(note = "Purely stateless; private constructor prevents instantiation; all computation results are returned as values")
 public final class BuildFingerprint {
 
     private BuildFingerprint() {}
@@ -47,6 +48,7 @@ public final class BuildFingerprint {
      * is not guaranteed to be deterministic across runs. Active services are sorted alphabetically
      * for the same reason.
      */
+    @AIContract(reason = "Same inputs must always produce the same 8-hex output across JVM restarts; changing the algorithm silently invalidates all existing .vibetags-cache files")
     public static String compute(AnnotationCollector collector, Set<String> activeServices) {
         StringBuilder sb = new StringBuilder(4096);
 
@@ -155,6 +157,7 @@ public final class BuildFingerprint {
      * already trusts this construction. Collisions cannot corrupt output because the per-file
      * {@link WriteCache} entries are still validated by size + mtime + their own fingerprint.
      */
+    @AIPerformance(constraint = "O(N) in string length; uses String.hashCode() which HotSpot intrinsifies on x86; must not allocate intermediate byte[]")
     static String fingerprint(String s) {
         int h = s.hashCode();
         char[] out = new char[8];
