@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-19
+
+### Added
+
+- **5 new annotations** that were developed after `0.8.0` was tagged but before the Central release was caught.
+  These annotations were present in the local `0.8.0` build (13.4 kB) but absent from the published Central JAR
+  (9.7 kB — built from an earlier snapshot). `0.9.0` is the first release where all 15 annotations ship to Central:
+
+  | Annotation | Targets | Description |
+  |---|---|---|
+  | `@AIThreadSafe` | TYPE, METHOD | Declares an explicit thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`); AI must preserve the named invariant |
+  | `@AIImmutable` | TYPE | Declares a type immutable; compile-time warning when any non-static instance field is non-final |
+  | `@AIDeprecated` | TYPE, METHOD, FIELD | Actively routes AI toward migrating callers; richer than Java's `@Deprecated` (`replacedBy`, `migrationGuide`, `deadline`) |
+  | `@AIObservability` | TYPE, METHOD | Names metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them |
+  | `@AIRegulation` | TYPE, METHOD, FIELD | Ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX); AI must document compliance impact for every change |
+
+  Compile-time validation warnings added for contradictory combinations:
+  - `@AIImmutable` on a type with a non-final, non-static instance field
+  - `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant
+  - `@AIObservability` with no `metrics`, `traces`, or `logs` — no-op
+  - `@AIRegulation` with a blank `standard` — required attribute missing
+  - `@AIDeprecated` + `@AILocked` on the same element — contradictory
+
+- **Multi-module Maven/Gradle aggregation** — fixes a last-writer-wins bug where only the last module to compile
+  was represented in shared output files (`.cursorrules`, `CLAUDE.md`, etc.) when multiple modules shared the
+  same `vibetags.root`.
+
+  How it works: each module writes its rendered per-service bodies to a sidecar file
+  (`.vibetags-mod-<moduleId>`) at the shared root. On each compile, all sibling sidecars are read and merged
+  into the shared output. Multi-module output uses module sub-markers so each module's contribution is
+  traceable:
+  ```
+  # VIBETAGS-MODULE: module-graph
+  ## LOCKED FILES
+  * `com.example.graph.Node`
+  # VIBETAGS-MODULE-END: module-graph
+  # VIBETAGS-MODULE: module-cli
+  ## MANDATORY SECURITY AUDITS
+  * `com.example.cli.KartaCli`
+  # VIBETAGS-MODULE-END: module-cli
+  ```
+  Single-module projects: zero change in behaviour — no sidecars are read, no sub-markers are emitted.
+
+  Stale sidecar detection: sidecars whose `modulePath` directory no longer exists under the shared root are
+  automatically deleted, handling modules removed from the project.
+
+  The build fingerprint short-circuit was extended with a `# sidecar-stamp:` field (polynomial hash of all
+  sidecar file mtimes) so a sibling module's annotation change correctly invalidates the fingerprint and
+  triggers regeneration.
+
+- **Dogfooding / self-annotation** — the processor now annotates its own source files with VibeTags
+  annotations (`@AICore`, `@AIContract`, `@AILocked`, `@AIPerformance`, `@AIImmutable`, `@AIContext`),
+  making the project its own living example. A `self-annotate` Maven profile was added to
+  `vibetags/pom.xml` to regenerate the guardrail output after annotation changes:
+  ```bash
+  # Requires 'mvn install' once first to bootstrap the processor into local Maven repo
+  cd vibetags && mvn clean compile -Pself-annotate
+  ```
+
+### Changed
+
+- Bumped the `vibetags-usage` skill to **v0.9.0** — aligns skill versioning with the library version.
+
+### Fixed
+
+- **Version skew between Central and local builds** — `vibetags-annotations:0.8.0` on Maven Central (9.7 kB)
+  was built before the five new annotation classes were added, while the locally-built `0.8.0` (13.4 kB)
+  included them. Same coordinates, different content. `0.9.0` draws the clean line: the Central `0.8.0` jar
+  had 10 annotations; `0.9.0` is the first complete release with all 15.
+
+### Migration
+
+Bump the BOM coordinate (or the three explicit coordinates) to `0.9.0`. No code changes required.
+
+```xml
+<dependency>
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-bom</artifactId>
+    <version>0.9.0</version>
+    <type>pom</type>
+    <scope>import</scope>
+</dependency>
+```
+
+If you use `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, or `@AIRegulation`:
+these are new in 0.9.0 and require the 0.9.0 annotations jar. They were not available in the Central 0.8.0 jar.
+
 ## [0.8.0] - 2026-05-06
 
 ### Added
@@ -492,7 +579,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/PIsberg/vibetags/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PIsberg/vibetags/compare/v0.6.0...v0.7.0
