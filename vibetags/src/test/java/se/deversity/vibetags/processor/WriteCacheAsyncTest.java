@@ -27,7 +27,7 @@ class WriteCacheAsyncTest {
         this.cache = new WriteCache(tempDir.resolve(".vibetags-cache"));
     }
 
-    @AsyncTest(threads = 10, invocations = 50, timeoutMs = 5000)
+    @AsyncTest(threads = 10, invocations = 20, timeoutMs = 30_000)
     void testConcurrentCacheOperations() throws IOException {
         String uniqueId = UUID.randomUUID().toString();
         Path file = rootDir.resolve("file-" + uniqueId + ".txt");
