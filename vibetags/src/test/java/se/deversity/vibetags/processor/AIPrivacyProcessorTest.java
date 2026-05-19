@@ -21,12 +21,15 @@ import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
+import org.junit.jupiter.api.parallel.Isolated;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for @AIPrivacy annotation definition and processing in AIGuardrailProcessor.
  */
+@Isolated
 class AIPrivacyProcessorTest {
 
     // -----------------------------------------------------------------------

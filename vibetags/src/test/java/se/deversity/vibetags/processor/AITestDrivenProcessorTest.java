@@ -25,12 +25,15 @@ import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AITestDriven;
 
+import org.junit.jupiter.api.parallel.Isolated;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for @AITestDriven annotation definition, validation, and per-platform output.
  */
+@Isolated
 class AITestDrivenProcessorTest {
 
     // -----------------------------------------------------------------------

@@ -24,12 +24,15 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
+import org.junit.jupiter.api.parallel.Isolated;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for @AIContract annotation definition, validation, and per-platform output.
  */
+@Isolated
 class AIContractProcessorTest {
 
     // -----------------------------------------------------------------------
