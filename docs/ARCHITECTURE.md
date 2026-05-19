@@ -92,7 +92,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 
 **Key Components:**
 
-**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations`:
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (24 annotations total):
 - `@AILocked` - Prevents AI modifications (reason: String)
 - `@AIContext` - Guides AI behavior (focus: String, avoids: String)
 - `@AIDraft` - Requests AI implementation (instructions: String)
@@ -103,6 +103,20 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
 - `@AIContract` - Freezes the public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions (reason: String)
 - `@AITestDriven` - Enforces Red-Green-Refactor; AI must provide matching test updates alongside any logic changes (testLocation: String, coverageGoal: int, framework: Framework[], mockPolicy: String)
+- `@AIThreadSafe` - Declares thread-safety strategy (strategy: Strategy, note: String)
+- `@AIImmutable` - Declares a class immutable (note: String)
+- `@AIDeprecated` - Rich deprecation (replacedBy: String, migrationGuide: String, deadline: String)
+- `@AIObservability` - Names metrics/traces/logs (metrics: String[], traces: String[], logs: String[], note: String)
+- `@AIRegulation` - Compliance standard mapping (standard: String, clause: String, description: String)
+- `@AIParallelTests` - Enforces strict test isolation in generated/modified tests
+- `@AILegacyBridge` - Protects legacy compatibility helpers from modernization/refactoring
+- `@AIArchitecture` - Defines boundary and package layering constraints (belongsTo: String, cannotReference: String[])
+- `@AIPublicAPI` - Exposes public API surface and demands backwards-compatibility
+- `@AIStrictExceptions` - Enforces precise, robust exception handling
+- `@AIStrictTypes` - Prohibits loose typing where strongly typed models are required
+- `@AIInternationalized` - Prohibits hardcoding of user-facing strings
+- `@AIStrictClasspath` - Restricts imports to standard JDK and existing classpath
+- `@AISchemaSafe` - Guarantees persistent schema and serialization safety
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -385,6 +399,20 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIPerformance`** | TYPE, METHOD, FIELD | `constraint: String` | Hot-path constraint; AI must not introduce O(n²) or worse complexity |
 | **`@AIContract`** | TYPE, METHOD | `reason: String` | Freezes public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions |
 | **`@AITestDriven`** | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` | Enforces Red-Green-Refactor: AI must not propose changes without also providing the matching test update |
+| **`@AIThreadSafe`** | TYPE, METHOD | `strategy: Strategy`, `note: String` | Declares thread-safety strategy used to guarantee correctness under concurrent access |
+| **`@AIImmutable`** | TYPE | `note: String` | Declares a class structurally immutable; state cannot be modified |
+| **`@AIDeprecated`** | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` | Provides migration details for deprecated classes or methods |
+| **`@AIObservability`** | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` | Specifies requirements for logs, metrics, and traces instrumentation |
+| **`@AIRegulation`** | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` | Links elements directly to regulatory compliance standards (e.g. GDPR, PCI) |
+| **`@AIParallelTests`** | TYPE, METHOD | — | Enforces strict test isolation in generated/modified tests |
+| **`@AILegacyBridge`** | TYPE, METHOD | — | Protects legacy compatibility helpers from modernization/refactoring |
+| **`@AIArchitecture`** | TYPE | `belongsTo: String`, `cannotReference: String[]` | Defines boundary and package layering constraints |
+| **`@AIPublicAPI`** | TYPE, METHOD | — | Exposes public API surface and demands backwards-compatibility |
+| **`@AIStrictExceptions`** | TYPE, METHOD | — | Enforces precise, robust exception handling |
+| **`@AIStrictTypes`** | TYPE, METHOD, FIELD | — | Prohibits loose typing where strongly typed models are required |
+| **`@AIInternationalized`** | TYPE, METHOD | — | Prohibits hardcoding of user-facing strings |
+| **`@AIStrictClasspath`** | TYPE, METHOD | — | Restricts imports to standard JDK and existing classpath |
+| **`@AISchemaSafe`** | TYPE, FIELD | — | Guarantees persistent schema and serialization safety |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -394,6 +422,15 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIPerformance` — visible, modifiable, but AI must never introduce O(n²) or worse complexity
 - `@AIContract` — visible, modifiable internally, but the public signature (name, param types/order, return type, checked exceptions) is immutable
 - `@AITestDriven` — visible, modifiable, but any change must be accompanied by a matching test update in the same response; the AI is the "accountability officer" that enforces the test suite
+- `@AIParallelTests` — any test code generated or edited must be strictly thread-isolated, sharing no mutable state
+- `@AILegacyBridge` — tells the AI this is an intentional compatibility layer, bypassing modernization rules
+- `@AIArchitecture` — enforces rigid package/dependency layout; must never import forbidden layers
+- `@AIPublicAPI` — tells the AI the class represents a stable public entry point; changes must maintain exact backwards-compatibility
+- `@AIStrictExceptions` — demands structured exceptions (e.g. no catching/throwing raw Exception or RuntimeException)
+- `@AIStrictTypes` — demands explicit typing (e.g. no Map<String, Object> or raw Object for data transfers)
+- `@AIInternationalized` — mandates externalizing user-facing copy (e.g. to property bundles, never hardcoded strings)
+- `@AIStrictClasspath` — restricts additions to the standard JDK or already defined classpath elements; no external dependencies
+- `@AISchemaSafe` — protects persistent schemas (database models or serialization) against structural breaking changes
 
 **Invalid combinations that trigger compiler WARNINGs:**
 - `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
@@ -402,6 +439,12 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AITestDriven` + `@AIIgnore` — contradictory; enforcing test coverage on an ignored element is logically inconsistent
 - `@AITestDriven` + `@AILocked` — contradictory; `@AILocked` prohibits all modifications while `@AITestDriven` permits changes when tests are provided
 - `@AITestDriven` with `coverageGoal` outside 0–100 — invalid; must be a valid percentage
+- `@AILegacyBridge` + `@AIDraft` — contradictory; legacy bridges are locked from refactoring and cannot be drafted
+- `@AIPublicAPI` + `@AILocked` — redundant; `@AILocked` already bans modifications, superseding public API compatibility rules
+- `@AIParallelTests` + `@AILocked` — redundant; locked tests don't need parallel isolation advice since they cannot be modified
+- `@AISchemaSafe` + `@AIIgnore` — redundant; ignored items are not part of generated AI schemas or interactions
+- `@AIStrictClasspath` + `@AILocked` — redundant; locked items cannot have their imports changed
+- `@AIArchitecture` with empty layer attributes — invalid config; specifying `@AIArchitecture` without `belongsTo` or `cannotReference` has no effect
 
 ### Annotation Processor
 
@@ -418,38 +461,22 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 
 ```
 Accumulation phase (every round, until processingOver() == true):
-1. AnnotationCollector.collect(roundEnv) — drains the round into the nine
-   LinkedHashSet<Element> accumulators (one per annotation type)
-2. AnnotationValidator.validate(messager, roundEnv) — five compile-time checks:
-   - @AIDraft + @AILocked contradiction
-   - Empty @AIAudit.checkFor
-   - Redundant @AIPrivacy + @AIIgnore
-   - @AIContract + @AIDraft contradiction (signature frozen but needs drafting)
-   - @AIContract + @AILocked overlap (both annotations on same element)
+1. AnnotationCollector.collect(roundEnv) — drains the round into the LinkedHashSet<Element> accumulators (one per annotation type)
+2. AnnotationValidator.validate(messager, roundEnv) — compile-time checks:
+   - Contradiction checks (e.g. @AIDraft + @AILocked, @AILegacyBridge + @AIDraft)
+   - Redundancy checks (e.g. @AIPrivacy + @AIIgnore, @AIPublicAPI + @AILocked, @AIParallelTests + @AILocked)
+   - Config validation (e.g. empty @AIAudit, empty @AIArchitecture, invalid @AITestDriven coverageGoal)
 3. process() returns false so other processors still see the annotations
 
 Generation phase (once, on the round where processingOver() == true):
 4. ServiceRegistry.buildServiceFileMap(root) → service-key → file-path map
 5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
-6. GuardrailContentBuilder.build() runs all nine per-annotation appenders
-   (Locked / Context / Ignore / Audit / Draft / Privacy / Core / Performance / Contract)
-   in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final
-   service-key → content map. The builder owns every per-platform StringBuilder
-   and performs no I/O.
-7. GuardrailFileWriter.writeFileIfChanged(...) for each active service —
-   three-layer fast path (WriteCache hit → streaming byte-compare →
-   readString + strip-equals); marker-aware updates, YAML front-matter
-   preservation, atomic tmp+move writes; on success records the new
-   fingerprint in WriteCache
-8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae /
-   Roo / Windsurf / Continue / Tabnine / Amazon Q / .ai/rules
-9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files
-   (skipping the names just written, to avoid delete-then-recreate cycles;
-   invalidates the WriteCache entry for any file it deletes or rewrites)
-10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without
-    the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
-11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar
-    (no-op if no entries changed this build)
+6. GuardrailContentBuilder.build() runs the per-annotation appenders for all 24 annotation types in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final service-key → content map. The builder owns every per-platform StringBuilder and performs no I/O.
+7. GuardrailFileWriter.writeFileIfChanged(...) for each active service — three-layer fast path (WriteCache hit → streaming byte-compare → readString + strip-equals); marker-aware updates, YAML front-matter preservation, atomic tmp+move writes; on success records the new fingerprint in WriteCache
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / .ai/rules
+9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files (skipping the names just written, to avoid delete-then-recreate cycles; invalidates the WriteCache entry for any file it deletes or rewrites)
+10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
+11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar (no-op if no entries changed this build)
 ```
 
 **Output File Generation:**
@@ -580,7 +607,22 @@ vibetags/
 │   │   ├── AIPrivacy.java
 │   │   ├── AICore.java
 │   │   ├── AIPerformance.java
-│   │   └── AIContract.java
+│   │   ├── AIContract.java
+│   │   ├── AITestDriven.java
+│   │   ├── AIThreadSafe.java
+│   │   ├── AIImmutable.java
+│   │   ├── AIDeprecated.java
+│   │   ├── AIObservability.java
+│   │   ├── AIRegulation.java
+│   │   ├── AIParallelTests.java
+│   │   ├── AILegacyBridge.java
+│   │   ├── AIArchitecture.java
+│   │   ├── AIPublicAPI.java
+│   │   ├── AIStrictExceptions.java
+│   │   ├── AIStrictTypes.java
+│   │   ├── AIInternationalized.java
+│   │   ├── AIStrictClasspath.java
+│   │   └── AISchemaSafe.java
 │   ├── pom.xml
 │   └── build.gradle
 │
@@ -591,7 +633,7 @@ vibetags/
 │   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   │   └── internal/                     # Single-responsibility helpers
-│   │   │   │       ├── AnnotationCollector.java       # 8 LinkedHashSets per round
+│   │   │   │       ├── AnnotationCollector.java       # 24 LinkedHashSets per round
 │   │   │   │       ├── AnnotationValidator.java       # Compile-time consistency warnings
 │   │   │   │       ├── OrphanWarner.java              # "annotation used but ignore-file missing"
 │   │   │   │       ├── ServiceRegistry.java           # Service map + file-existence opt-in
@@ -900,6 +942,30 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 - `ProcessorHotPathBenchmark` — 6 benchmarks: `buildServiceFileMap`, `resolveActiveServices_{all,none}Present`, `writeFileIfChanged_{noChange,smallWrite,largeWrite}`. Run on every release-tagged baseline.
 - `WriteCacheHitBenchmark` _(0.7.1)_ — 8 benchmarks proving the cache: `(small=1KB, medium=12KB, large=1MB) × (marker .md, non-marker .cursorrules) × (cacheHit, noCache)` minus the four cache-hit cases at the same body size that are constant-time. Plots in `load-tests/results/_plots/cache-hit-{time,alloc}.png`.
 
+### Concurrency & Thread-Isolated Logging
+
+To run all 724+ unit and integration tests concurrently without static resource conflicts, the VibeTags test suite leverages a thread-isolated execution architecture under JUnit 5.
+
+#### 1. JUnit 5 Parallel Test Execution
+Tests are run fully concurrently at both the class and method levels. This is configured in [junit-platform.properties](file:///c:/dev/private/vibetags/vibetags/src/test/resources/junit-platform.properties):
+```properties
+junit.jupiter.execution.parallel.enabled = true
+junit.jupiter.execution.parallel.mode.default = concurrent
+junit.jupiter.execution.parallel.mode.classes.default = concurrent
+```
+
+#### 2. Thread-Isolated Logger Contexts
+Because tests initialize compiler environments dynamically, multiple threads compile and write logs concurrently. To prevent parallel threads from overwriting each other's Logback appenders or locking file handles, VibeTags partitions logging context using **absolute path hashing**:
+- **Logger Name Suffixing**: The logger name is programmatically appended with a hash of the absolute normalized path of the compilation project root:
+  ```java
+  private static String getLoggerName(Path projectRoot) {
+      if (projectRoot == null) return LOGGER_NAME;
+      return LOGGER_NAME + "." + Math.abs(projectRoot.toAbsolutePath().normalize().hashCode());
+  }
+  ```
+- **Context Partitioning**: Programmatically isolates logging configurations dynamically (e.g. `se.deversity.vibetags.491083`), detaching and closing previous appenders to prevent double-output during incremental compiles.
+- **FS Isolation Verification**: Handled by `VibeTagsLoggerConcurrencyTest`, which spins up concurrent execution loops to verify thread safety and filesystem isolation.
+
 ### Test Patterns
 
 **Mockito Mocking:**
@@ -1194,4 +1260,4 @@ Informational paragraph.             ← optional, key details for the LLM
 
 ---
 
-*Last updated: 2026-05-05 — added `@AIContract` annotation (9th annotation type); see `processor/internal/` for the helper split introduced in 0.6.0.*
+*Last updated: 2026-05-19 — added the 9 new AI guardrail annotations (bringing the total to 24) and implemented isolated parallel testing; see `processor/internal/` for the helper split.*

@@ -79,7 +79,15 @@ class AnnotationVolumeStressTest {
     @ParameterizedTest(name = "N={0} classes")
     @ValueSource(ints = {10, 100, 500, 1000, 5000, 10_000})
     void stressTest_nAnnotatedClasses(int n, @TempDir Path tempDir) throws Exception {
-        int maxClasses = Integer.parseInt(System.getProperty("stress.max.classes", String.valueOf(Integer.MAX_VALUE)));
+        String maxClassesProp = System.getProperty("stress.max.classes");
+        int maxClasses = Integer.MAX_VALUE;
+        if (maxClassesProp != null && !maxClassesProp.trim().isEmpty() && !maxClassesProp.contains("${")) {
+            try {
+                maxClasses = Integer.parseInt(maxClassesProp.trim());
+            } catch (NumberFormatException e) {
+                // Ignore, use default
+            }
+        }
         assumeTrue(n <= maxClasses, "Skipping N=" + n + " (stress.max.classes=" + maxClasses + ")");
         // --- create opt-in service files so the processor actively writes output ---
         Path projectRoot = tempDir.resolve("project");

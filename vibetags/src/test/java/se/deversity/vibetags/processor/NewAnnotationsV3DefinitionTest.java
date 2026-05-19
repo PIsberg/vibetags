@@ -16,7 +16,7 @@ import java.lang.reflect.Method;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Definition-level tests for the v0.9.0 annotations.
+ * Definition-level tests for the v0.9.5 annotations.
  */
 class NewAnnotationsV3DefinitionTest {
 

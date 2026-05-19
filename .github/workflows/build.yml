@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '25', '26' ]
+        java: [ '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -32,6 +32,12 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
+        run: |
+          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          cd /tmp/async-test-lib
+          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
+
       - name: Install VibeTags Annotations (Maven)
         run: |
           cd vibetags-annotations
@@ -128,7 +134,7 @@ jobs:
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
-        if: matrix.java == '17'
+        if: matrix.java == '21'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -185,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '25', '26' ]
+        java: [ '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -202,6 +208,12 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       
+      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
+        run: |
+          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          cd /tmp/async-test-lib
+          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
+
       - name: Publish VibeTags Annotations (Gradle)
         run: |
           cd vibetags-annotations
@@ -301,7 +313,7 @@ jobs:
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
-        if: matrix.java == '17'
+        if: matrix.java == '21'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

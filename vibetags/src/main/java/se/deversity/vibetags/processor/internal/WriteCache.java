@@ -50,6 +50,7 @@ public final class WriteCache {
     }
 
     private final Path cachePath;
+    private final Path rootDir;
     private final Map<String, Entry> entries = new LinkedHashMap<>();
     private boolean loaded = false;
     private boolean dirty = false;
@@ -62,6 +63,8 @@ public final class WriteCache {
 
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
+        Path parent = cachePath.getParent();
+        this.rootDir = parent != null ? parent.toAbsolutePath().normalize() : java.nio.file.Paths.get("").toAbsolutePath().normalize();
     }
 
     /**
@@ -69,7 +72,7 @@ public final class WriteCache {
      * {@code null} if no fingerprint is on file. The fingerprint covers the entire annotation
      * input set plus the active service set — see {@link BuildFingerprint}.
      */
-    public String getBuildFingerprint() {
+    public synchronized String getBuildFingerprint() {
         loadIfNeeded();
         return buildFingerprint;
     }
@@ -78,7 +81,7 @@ public final class WriteCache {
      * Records the current run's top-level build fingerprint. Call this after a successful
      * generate-and-write phase; the value is persisted on the next {@link #flush()}.
      */
-    public void setBuildFingerprint(String fingerprint) {
+    public synchronized void setBuildFingerprint(String fingerprint) {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
             this.buildFingerprint = fingerprint;
@@ -91,13 +94,13 @@ public final class WriteCache {
      * The stamp is a hex-encoded polynomial hash of all module sidecar file mtimes; a change means a sibling
      * module's annotations changed and the aggregated output must be regenerated.
      */
-    public String getSidecarStamp() {
+    public synchronized String getSidecarStamp() {
         loadIfNeeded();
         return sidecarStamp;
     }
 
     /** Records the current sidecar stamp; persisted on the next {@link #flush()}. */
-    public void setSidecarStamp(String stamp) {
+    public synchronized void setSidecarStamp(String stamp) {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.sidecarStamp, stamp)) {
             this.sidecarStamp = stamp;
@@ -114,13 +117,13 @@ public final class WriteCache {
      * <p>An empty cache returns {@code true} — there is no on-disk state to invalidate, so the
      * caller is free to fall through to the normal generate path on its own merits.
      */
-    public boolean allCachedFilesStable() {
+    public synchronized boolean allCachedFilesStable() {
         loadIfNeeded();
         if (entries.isEmpty()) return true;
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             try {
-                BasicFileAttributes attrs = Files.readAttributes(
-                    java.nio.file.Paths.get(e.getKey()), BasicFileAttributes.class);
+                Path fullPath = rootDir.resolve(e.getKey()).normalize();
+                BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
                 if (attrs.size() != e.getValue().size) return false;
                 if (attrs.lastModifiedTime().toMillis() != e.getValue().mtime) return false;
             } catch (IOException ioe) {
@@ -132,9 +135,10 @@ public final class WriteCache {
 
     /** Returns true iff cache says we wrote {@code body} to {@code file} and the file is byte-stable since. */
     @AIPerformance(constraint = "O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason")
-    public boolean isUnchanged(Path file, String body) {
+    public synchronized boolean isUnchanged(Path file, String body) {
         loadIfNeeded();
-        Entry e = entries.get(file.toString());
+        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        Entry e = entries.get(relKey);
         if (e == null) return false;
         try {
             // Single stat for both size and mtime — half the syscalls of two getXxx() calls.
@@ -149,30 +153,33 @@ public final class WriteCache {
 
     /** Records that {@code body} was written to {@code file}. One {@code readAttributes} call
      *  for both size and mtime; no per-call byte[] allocation. */
-    public void recordWrite(Path file, String body) {
+    public synchronized void recordWrite(Path file, String body) {
         loadIfNeeded();
         try {
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-            entries.put(file.toString(),
+            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            entries.put(relKey,
                 new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
             dirty = true;
         } catch (IOException ignored) {
             // If we can't stat the file we just wrote, drop the cache entry rather than store stale data.
-            entries.remove(file.toString());
+            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            entries.remove(relKey);
             dirty = true;
         }
     }
 
     /** Removes a cache entry (e.g. when the writer skipped the file or the path is no longer ours). */
-    public void invalidate(Path file) {
+    public synchronized void invalidate(Path file) {
         loadIfNeeded();
-        if (entries.remove(file.toString()) != null) {
+        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        if (entries.remove(relKey) != null) {
             dirty = true;
         }
     }
 
     /** Persists the cache to disk if anything changed. No-op when nothing was recorded. */
-    public void flush() {
+    public synchronized void flush() {
         if (!dirty) return;
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n");
@@ -206,7 +213,7 @@ public final class WriteCache {
     }
 
     /** Visible for tests. */
-    public int size() {
+    public synchronized int size() {
         loadIfNeeded();
         return entries.size();
     }
@@ -239,6 +246,14 @@ public final class WriteCache {
                 int t3 = line.indexOf('\t', t2 + 1);
                 if (t3 < 0) continue;
                 String path = line.substring(0, t1);
+                Path p = java.nio.file.Paths.get(path);
+                if (p.isAbsolute()) {
+                    try {
+                        path = rootDir.relativize(p.normalize()).toString().replace('\\', '/');
+                    } catch (IllegalArgumentException iae) {
+                        path = p.normalize().toString().replace('\\', '/');
+                    }
+                }
                 String hash = line.substring(t1 + 1, t2);
                 try {
                     long size  = Long.parseLong(line.substring(t2 + 1, t3));

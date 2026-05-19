@@ -268,4 +268,68 @@ The following elements implement specific regulatory clauses. Document complianc
 - **Standard**: GDPR
 - **Clause**: Art. 20
 - **Description**: Right to data portability — exports the user's data in a machine-readable format.
+
+
+## Strict Test Isolation
+AI tools must enforce strict isolation when generating or modifying tests for these elements.
+
+### com.example.config.ParallelTestSettings
+- Enforce strict test isolation and thread safety. Do not share mutable state between parallel test cases.
+
+
+## Legacy Compatibility Bridge
+These elements are legacy or compatibility bridges. Do not restructure or modernize them.
+
+### com.example.legacy.LegacyBridgeService
+- Legacy compatibility bridge. Do not refactor structural patterns. Only modify internal business logic as explicitly requested.
+
+
+## Architectural Boundary Constraints
+Strict architectural layering must be respected. No illegal references or imports.
+
+### com.example.service.LayeredDomainService
+- **Belongs to Layer**: domain
+- **Prohibited References**: infrastructure, ui
+
+
+## Public API Surface Protection
+These elements expose public API surfaces. Preserve signatures, Javadocs, and backward compatibility.
+
+### com.example.service.PublicPaymentController
+- Public API surface. Preserve signature, Javadoc, and behavior without breaking backwards compatibility.
+
+
+## Strict Exception Handling
+Precise and robust exception handling must be enforced. No catching or throwing generic Exception.
+
+### com.example.service.TransactionalPaymentService
+- Enforce precise exception handling. Prohibit catching or throwing generic Exceptions/Throwables. Use specific or custom exceptions.
+
+
+## Strict Type Safety
+Type safety must be strictly preserved. Loose or erased types are prohibited.
+
+### com.example.payment.PaymentDetails
+- Prohibit loose typing. Use strongly-typed transfer objects or domain models instead of Object or Map<String, Object>.
+
+
+## Internationalization Mandate
+User-facing strings must not be hardcoded; resolve them via localized resources.
+
+### com.example.utils.I18nMessageHelper
+- Internationalization mandate. Prohibit hardcoding user-facing strings; all user-visible text must be localized.
+
+
+## Strict Classpath Integrity
+Dynamic runtime class loading and reflections are strictly prohibited.
+
+### com.example.utils.StrictUtility
+- Strict classpath integrity. Prohibit dynamic runtime class loading, reflections, or external JAR injection.
+
+
+## Schema & Serialization Safety
+Schema and serialization compatibility must be strictly preserved.
+
+### com.example.database.UserEntity
+- Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.
 <!-- VIBETAGS-END -->

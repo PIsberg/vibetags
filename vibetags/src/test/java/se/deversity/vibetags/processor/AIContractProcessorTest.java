@@ -24,12 +24,15 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
+import org.junit.jupiter.api.parallel.Isolated;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for @AIContract annotation definition, validation, and per-platform output.
  */
+@Isolated
 class AIContractProcessorTest {
 
     // -----------------------------------------------------------------------
@@ -430,7 +433,7 @@ class AIContractProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(java.util.Map.of());
+        when(env.getOptions()).thenReturn(java.util.Map.of("vibetags.cache", "false"));
         processor.init(env);
         return processor;
     }

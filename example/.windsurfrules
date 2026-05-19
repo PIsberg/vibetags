@@ -113,4 +113,49 @@ AI MUST NOT propose changes to the following elements without also providing the
 
 * `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)` - Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
 * `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)` - Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
+
+## 🧪 STRICT TEST ISOLATION
+Enforce strict isolation for tests generated or modified for these elements:
+
+* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts.
+
+## 🌉 LEGACY COMPATIBILITY BRIDGE
+Do not refactor the structural patterns of these compatibility bridges:
+
+* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+
+## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
+Strict layered architecture constraints apply to these elements:
+
+* `com.example.service.LayeredDomainService` - Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## 🔌 PUBLIC API SURFACE PROTECTION
+Public API surface. Signatures and backwards compatibility must be strictly preserved:
+
+* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+
+## 🚨 STRICT EXCEPTION HANDLING
+Generic exception throwing/catching is strictly prohibited for these elements:
+
+* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+
+## 🏷️ STRICT TYPE SAFETY
+Loose typing is strictly prohibited for these elements:
+
+* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+
+## 🌐 INTERNATIONALIZATION MANDATE
+Hardcoding user-facing strings is strictly prohibited for these elements:
+
+* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+
+## 🛡️ STRICT CLASSPATH INTEGRITY
+Dynamic runtime class loading is strictly prohibited for these elements:
+
+* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+
+## 🗄️ SCHEMA & SERIALIZATION SAFETY
+Modifying schema or data formats without explicit migration plans is prohibited:
+
+* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 # VIBETAGS-END

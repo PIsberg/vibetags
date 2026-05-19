@@ -40,7 +40,7 @@ import static org.mockito.Mockito.*;
  *       every "false → continue evaluating" branch in the chain.</li>
  *   <li>Service-inactive false branches for windsurf/zed/mentat/sweep/interpreter across
  *       every {@code appendXxx()} method and the post-loop section appenders.</li>
- *   <li>Null v0.9.0 annotation guards ({@code if (ts == null) return;} etc.) in
+ *   <li>Null v0.9.5 annotation guards ({@code if (ts == null) return;} etc.) in
  *       {@code appendThreadSafe}, {@code appendImmutable}, {@code appendDeprecated},
  *       {@code appendObservability}, and {@code appendRegulation}.</li>
  *   <li>The {@code buildSweepConfig()} empty-rules else branch (produces {@code "  []\n"}).</li>
@@ -239,7 +239,7 @@ class GuardrailContentBuilderUnitTest {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Null v0.9.0 annotation guards (if (ts/im/dep/obs/reg == null) return;)
+    // Null v0.9.5 annotation guards (if (ts/im/dep/obs/reg == null) return;)
     // -------------------------------------------------------------------------------------------
 
     @Test
@@ -275,7 +275,7 @@ class GuardrailContentBuilderUnitTest {
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
                 collector, Set.of("cursor", "claude"), "Test", "");
         assertDoesNotThrow(builder::build,
-                "null v0.9.0 annotations must trigger early return, not NPE");
+                "null v0.9.5 annotations must trigger early return, not NPE");
     }
 
     // -------------------------------------------------------------------------------------------
@@ -328,7 +328,7 @@ class GuardrailContentBuilderUnitTest {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Null guards for pre-v0.9.0 annotations (L691, L731, L758, L785, L813, L840, L867)
+    // Null guards for pre-v0.9.5 annotations (L691, L731, L758, L785, L813, L840, L867)
     // -------------------------------------------------------------------------------------------
 
     @Test
@@ -371,7 +371,7 @@ class GuardrailContentBuilderUnitTest {
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
                 collector, Set.of("cursor", "claude"), "Test", "");
         assertDoesNotThrow(builder::build,
-                "null pre-v0.9.0 annotations must trigger early return, not NPE");
+                "null pre-v0.9.5 annotations must trigger early return, not NPE");
     }
 
     // -------------------------------------------------------------------------------------------

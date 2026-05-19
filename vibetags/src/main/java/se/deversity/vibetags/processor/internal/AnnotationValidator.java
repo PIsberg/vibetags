@@ -13,8 +13,18 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.annotations.AIParallelTests;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -25,7 +35,7 @@ import javax.tools.Diagnostic;
  * Compile-time consistency checks for VibeTags annotations. Emits compiler warnings for
  * contradictory or no-op combinations so the developer notices at build time.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.AvoidCatchingGenericException", "PMD.AvoidCatchingThrowable"})
 public final class AnnotationValidator {
 
     private AnnotationValidator() {}
@@ -33,7 +43,7 @@ public final class AnnotationValidator {
     /**
      * Runs all validations against the given round environment, emitting warnings via the messager.
      */
-    public static void validate(Messager messager, RoundEnvironment roundEnv) {
+    public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
         // Contradiction: @AIDraft + @AILocked
         for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
@@ -224,6 +234,115 @@ public final class AnnotationValidator {
                         + " has a blank 'standard' attribute. Name the compliance standard "
                         + "(e.g., GDPR, PCI-DSS, HIPAA).",
                     element);
+            }
+        }
+
+        // Contradiction: @AILegacyBridge + @AIDraft
+        for (Element element : roundEnv.getElementsAnnotatedWith(AILegacyBridge.class)) {
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AILegacyBridge and @AIDraft. These intents are contradictory.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIPublicAPI + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIPublicAPI.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIPublicAPI and @AILocked. "
+                        + "@AILocked already locks this element; @AIPublicAPI is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIParallelTests + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIParallelTests.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIParallelTests and @AILocked. "
+                        + "@AILocked already locks this element; @AIParallelTests is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AISchemaSafe + @AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISchemaSafe.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISchemaSafe and @AIIgnore. "
+                        + "@AIIgnore already excludes the element; @AISchemaSafe is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIStrictClasspath + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIStrictClasspath and @AILocked. "
+                        + "@AILocked already locks this element; @AIStrictClasspath is redundant.",
+                    element);
+            }
+        }
+
+        // Empty config warning: @AIArchitecture with blank belongsTo
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIArchitecture.class)) {
+            AIArchitecture arch = element.getAnnotation(AIArchitecture.class);
+            if (arch.belongsTo() == null || arch.belongsTo().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIArchitecture on " + element.toString()
+                        + " has a blank 'belongsTo' attribute. Name the layer or component it belongs to.",
+                    element);
+            }
+
+            // Compile-time checks for forbidden dependency imports/references
+            String[] forbidden = arch.cannotReference();
+            if (forbidden != null && forbidden.length > 0 && processingEnv != null) {
+                try {
+                    com.sun.source.util.Trees trees = com.sun.source.util.Trees.instance(processingEnv);
+                    if (trees != null) {
+                        com.sun.source.util.TreePath path = trees.getPath(element);
+                        if (path != null) {
+                            com.sun.source.tree.CompilationUnitTree cu = path.getCompilationUnit();
+                            if (cu != null) {
+                                for (com.sun.source.tree.ImportTree imp : cu.getImports()) {
+                                    String importStr = imp.getQualifiedIdentifier().toString();
+                                    for (String forbiddenPkg : forbidden) {
+                                        if (forbiddenPkg == null || forbiddenPkg.isBlank()) {
+                                            continue;
+                                        }
+                                        boolean match = false;
+                                        if (importStr.equals(forbiddenPkg)) {
+                                            match = true;
+                                        } else if (importStr.startsWith(forbiddenPkg + ".")) {
+                                            match = true;
+                                        } else if (importStr.startsWith(forbiddenPkg + "*")) {
+                                            match = true;
+                                        }
+                                        if (match) {
+                                            messager.printMessage(Diagnostic.Kind.ERROR,
+                                                "VibeTags: Class " + element.toString()
+                                                    + " is annotated with @AIArchitecture and is strictly prohibited from referencing '"
+                                                    + forbiddenPkg + "', but has an illegal import of '" + importStr + "'.",
+                                                element);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    // Gracefully fallback/ignore if Trees API is unavailable or throws exception (e.g. unit tests or non-standard JDKs)
+                    messager.printMessage(Diagnostic.Kind.NOTE,
+                        "VibeTags: Trees API not available for AST architectural import scanning: " + t.getMessage(),
+                        element);
+                }
             }
         }
     }

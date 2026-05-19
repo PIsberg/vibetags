@@ -266,6 +266,71 @@
   </regulatory_elements>
 
 <rule>Elements listed in <regulatory_elements> implement specific regulatory clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.</rule>
+  <test_isolation_elements>
+    <element path="com.example.config.ParallelTestSettings">
+      <isolation>strict</isolation>
+    </element>
+  </test_isolation_elements>
+
+<rule>For elements in <test_isolation_elements>, all generated or modified tests MUST run in complete isolation (no shared state, external resource conflicts, or order dependencies).</rule>
+  <legacy_bridge_elements>
+    <element path="com.example.legacy.LegacyBridgeService">
+      <refactor>prohibited</refactor>
+    </element>
+  </legacy_bridge_elements>
+
+<rule>Do not modernise, elegant-ize, or refactor structural patterns of elements in <legacy_bridge_elements>. Only modify internal business logic as explicitly requested.</rule>
+  <architecture_elements>
+    <element path="com.example.service.LayeredDomainService">
+      <belongs_to>domain</belongs_to>
+      <cannot_reference>infrastructure</cannot_reference>
+      <cannot_reference>ui</cannot_reference>
+    </element>
+  </architecture_elements>
+
+<rule>Respect layered architectural constraints in <architecture_elements>. Boundary crossing references are strictly prohibited.</rule>
+  <public_api_elements>
+    <element path="com.example.service.PublicPaymentController">
+      <api>public</api>
+    </element>
+  </public_api_elements>
+
+<rule>Elements in <public_api_elements> expose public API. Preserve public signature, Javadoc, and backwards compatibility without exceptions.</rule>
+  <strict_exceptions_elements>
+    <element path="com.example.service.TransactionalPaymentService">
+      <exceptions>strict</exceptions>
+    </element>
+  </strict_exceptions_elements>
+
+<rule>Catching or throwing generic Exception/Throwable is strictly prohibited in <strict_exceptions_elements>. Precise or custom exceptions required.</rule>
+  <strict_types_elements>
+    <element path="com.example.payment.PaymentDetails">
+      <types>strict</types>
+    </element>
+  </strict_types_elements>
+
+<rule>Loose typing (Object, Map<String, Object>, raw types) is strictly prohibited in <strict_types_elements>. Enforce type safety.</rule>
+  <internationalized_elements>
+    <element path="com.example.utils.I18nMessageHelper">
+      <i18n>required</i18n>
+    </element>
+  </internationalized_elements>
+
+<rule>Do not hardcode user-facing strings in <internationalized_elements>. Resolve all text via localization resource/message bundles.</rule>
+  <strict_classpath_elements>
+    <element path="com.example.utils.StrictUtility">
+      <classpath>strict</classpath>
+    </element>
+  </strict_classpath_elements>
+
+<rule>Dynamic class loading, custom classloaders, reflection hacks, or unverified external code are prohibited in <strict_classpath_elements>.</rule>
+  <schema_safe_elements>
+    <element path="com.example.database.UserEntity">
+      <schema>safe</schema>
+    </element>
+  </schema_safe_elements>
+
+<rule>Database or contract schema / serialization safety must be preserved in <schema_safe_elements>. Do not alter structures without migration paths.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

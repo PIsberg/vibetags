@@ -5,7 +5,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
 [![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
-[![Java 17 | 21 | 25 | 26](https://img.shields.io/badge/Java-17%20%7C%2021%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![Java 21 | 25 | 26](https://img.shields.io/badge/Java-21%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
@@ -36,7 +36,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.0</version>
+            <version>0.9.5</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -60,7 +60,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.0</version>
+                        <version>0.9.5</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -101,8 +101,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.0')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.0')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.5')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.5')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -166,23 +166,31 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Key Features
 
-The 15 annotations group into six categories by intent. Within each category they are listed alphabetically.
+The 24 annotations group into six categories by intent. Within each category they are listed alphabetically.
 
 #### 🛡️ Protection & Access Control — keep AI away from code
 
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
+- **🌉 @AILegacyBridge** - Mark compatibility bridges working around upstream dependencies/bugs (AI must not refactor or modernize structure; modify internal business logic only)
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
 
 #### 🚧 Behavioral Constraints — limit what AI can change
 
+- **🧱 @AIArchitecture** - Enforce layering boundaries (declares `belongsTo` layer and forbidden `cannotReference` layers)
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
+- **📦 @AIStrictClasspath** - Prevent dependency bloat (restricts imports and implementation to JDK and existing classpath only)
 
 #### 🧬 Design Intent — declare properties AI must preserve
 
 - **🧠 @AICore** - Mark well-tested core logic that is sensitive to changes (modifications require extreme caution)
 - **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
+- **🗣️ @AIInternationalized** - Prohibit hardcoded user-facing strings (all visible text must be extracted to i18n bundle message keys)
 - **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
+- **🌐 @AIPublicAPI** - Protect public APIs (all modifications must be additive; forbidden to rename or change serialization formats)
+- **🗄️ @AISchemaSafe** - Protect persistent database entities (forbids destructive changes, column drops, table drops)
+- **🛡️ @AIStrictExceptions** - Enforce strict error handling (forbids swallowing exceptions or throwing generic RuntimeExceptions)
+- **📐 @AIStrictTypes** - Require high-precision or timezone-sensitive data structures (e.g. `BigDecimal` for currency and `Instant`/`ZonedDateTime` for time)
 - **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
 
 #### 🔐 Security & Compliance — auditing, privacy, and regulation
@@ -195,6 +203,7 @@ The 15 annotations group into six categories by intent. Within each category the
 
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
+- **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
 
 #### ♻️ Lifecycle — manage deprecation and removal
@@ -249,10 +258,10 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
-├── vibetags-annotations/ # The 10 @interface classes (zero deps, RetentionPolicy.SOURCE)
+├── vibetags-annotations/ # The 24 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AILocked, AIContext, AIDraft, AIAudit, AIIgnore, AIPrivacy, AICore, AIPerformance, AIContract, AITestDriven, AIThreadSafe, AIImmutable, AIDeprecated, AIObservability, AIRegulation
+│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -282,7 +291,7 @@ vibetags/
 
 VibeTags ships as **two artifacts**:
 
-- **`vibetags-annotations`** — fifteen `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
+- **`vibetags-annotations`** — 24 `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
 - **`vibetags-processor`** — the `javac` annotation processor (depends on slf4j/logback for `vibetags.log`). Goes on the annotation-processor path only — keeping it off `compileClasspath` is what stops slf4j/logback from leaking into consumer code.
 
 The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in one place; pinning each version explicitly is also supported.
@@ -296,7 +305,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.0</version>
+            <version>0.9.5</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -321,7 +330,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.0</version>
+                        <version>0.9.5</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -335,8 +344,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.0')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.0')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.5')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.5')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -350,15 +359,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.0</version>
+    <version>0.9.5</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.0'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.0'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.5'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.5'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
@@ -897,6 +906,30 @@ If you use `@AITestDriven` on an element that is also annotated with `@AILocked`
 If you use `@AITestDriven` with a `coverageGoal` outside the valid 0-100 range, VibeTags will warn you:
 `[WARNING] VibeTags: @AITestDriven on com.example.Service.method has an invalid coverageGoal (150). Value must be between 0 and 100 (inclusive).`
 
+#### @AILegacyBridge and @AIDraft Contradiction
+Compatibility bridges should not be actively drafted or structurally modified:
+`[WARNING] VibeTags: com.example.OldBridge is annotated with both @AILegacyBridge and @AIDraft; compatibility bridges should not be actively drafted or structurally modified.`
+
+#### @AIPublicAPI and @AILocked Redundancy
+Since `@AILocked` completely prohibits changes, public API checks are redundant:
+`[WARNING] VibeTags: com.example.PublicController is annotated with both @AIPublicAPI and @AILocked; @AILocked already completely prohibits modifications, making public API rules redundant.`
+
+#### @AIParallelTests and @AILocked Redundancy
+Since `@AILocked` completely prohibits changes, parallel test rules are redundant:
+`[WARNING] VibeTags: com.example.MyTest is annotated with both @AIParallelTests and @AILocked; @AILocked already completely prohibits modifications, making test-driven specifications redundant.`
+
+#### @AISchemaSafe and @AIIgnore Redundancy
+Since `@AIIgnore` completely excludes the class, DB schema rules are redundant:
+`[WARNING] VibeTags: com.example.UserEntity is annotated with both @AISchemaSafe and @AIIgnore; ignore already completely excludes this element from AI context.`
+
+#### @AIStrictClasspath and @AILocked Redundancy
+Since `@AILocked` completely prohibits changes, classpath restriction checks are redundant:
+`[WARNING] VibeTags: com.example.Utils is annotated with both @AIStrictClasspath and @AILocked; locked elements already completely prohibit changes.`
+
+#### @AIArchitecture Configuration Check
+Using `@AIArchitecture` with no configured layers is a no-op:
+`[WARNING] VibeTags: com.example.DomainEntity is annotated with @AIArchitecture but has no configured 'belongsTo' or 'cannotReference' attributes.`
+
 ### 📜 @AIContract - Freezing Public API Signatures
 
 The `@AIContract` annotation draws a hard line between **interface** and **implementation**. It tells AI assistants: *"You're welcome to change what happens inside this method — replace the algorithm, swap the data source, optimize the logic — but you must leave the method name, parameter types, parameter order, return type, and checked exceptions exactly as they are."*
@@ -1081,9 +1114,9 @@ AI MUST NOT propose changes to these elements without also providing the matchin
 - **Core algorithms** — pair with `@AICore` when well-tested stability is critical
 - **API surface evolution** — ensure any behavioral change is validated by tests before it reaches production
 
-### 🆕 New in v0.9.0: Five Design-Intent Annotations
+### 🆕 New in v0.9.5: Five Design-Intent Annotations
 
-VibeTags v0.9.0 adds five annotations that capture *design intent* rather than process rules — they tell the AI what an element **is** so it cannot accidentally undo a property the team relies on.
+VibeTags v0.9.5 adds five annotations that capture *design intent* rather than process rules — they tell the AI what an element **is** so it cannot accidentally undo a property the team relies on.
 
 #### 🧵 `@AIThreadSafe(strategy)`
 
@@ -1146,13 +1179,157 @@ Ties code to a specific compliance requirement. Stronger than `@AIAudit` because
 public void deleteAllUserData(String userId) { ... }
 ```
 
-#### Validation warnings for the v0.9.0 annotations
+#### Validation warnings for the v0.9.5 annotations
 
 - `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
 - `@AIDeprecated` + `@AILocked` — contradictory (locked preserves; deprecated routes callers away)
 - `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
 - `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
 - `@AIRegulation` with a blank `standard` — required attribute missing
+
+### 🛡️ New in v0.9.5 (continued): Nine Platform Guardrail Annotations
+
+In addition to design-intent specifications, v0.9.5 introduces nine platform-wide guardrails to prevent AI tools from breaking test isolation, refactoring compatibility bridges, or violating architectural boundaries.
+
+#### 🧪 `@AIParallelTests`
+
+Mandates strict test isolation in test generation and execution. AI assistants must avoid shared mutable state, specific execution orders, or static/resource contention (ports, DB rows).
+
+```java
+@AIParallelTests
+public class ParallelTestSettings {
+    public static final int THREAD_COUNT = 4;
+}
+```
+
+Generated guidance: *"AI-generated or modified tests for this element must remain strictly isolated. Shared mutable state, execution order dependencies, or resource conflicts are strictly prohibited."*
+
+#### 🌉 `@AILegacyBridge`
+
+Protects legacy compatibility/helper bridges from unnecessary modernization or refactoring. Instructs AI assistants that the class works around a quirk or bug in upstream dependencies and its structural patterns must be left as-is, modifying only internal business logic.
+
+```java
+@AILegacyBridge
+public class LegacyBridgeService {
+    public String adaptLegacyCall(String key, String value) {
+        return "KEY=" + key + ";VAL=" + value;
+    }
+}
+```
+
+Generated guidance: *"This class is a legacy compatibility bridge. Do not modernize or refactor its structural pattern. Modify internal business logic only if explicitly requested."*
+
+#### 🧱 `@AIArchitecture(belongsTo, cannotReference)`
+
+Defines architectural boundaries and package layering rules. The processor checks and warns at compile time if an architectural boundary is crossed.
+
+```java
+@AIArchitecture(belongsTo = "domain", cannotReference = {"infrastructure", "ui"})
+public class LayeredDomainService {
+    public void processCoreDomainLogic() { }
+}
+```
+
+Generated guidance: *"This class belongs to the '[belongsTo]' layer. Any modification or implementation MUST NOT import, reference, or depend on classes in forbidden layers: [cannotReference]."*
+
+#### 🌐 `@AIPublicAPI`
+
+Exposes a public API surface and demands complete backwards-compatibility.
+
+```java
+@AIPublicAPI
+public class PublicPaymentController {
+    public String executeExternalPayment(String paymentToken, double amount) {
+        return "SUCCESS";
+    }
+}
+```
+
+Generated guidance: *"This element is a public API. Any change must be strictly additive. Do not remove, rename, or modify signatures, checked exceptions, or serialization formats."*
+
+#### 🛡️ `@AIStrictExceptions`
+
+Enforces precise, robust exception handling. AI assistants must not catch or throw generic exceptions like `Exception`, `Throwable`, or `RuntimeException`.
+
+```java
+@AIStrictExceptions
+public class TransactionalPaymentService {
+    public void processTransaction(String accountId, double amount) throws IllegalArgumentException {
+        if (accountId == null) throw new IllegalArgumentException("Account ID required");
+    }
+}
+```
+
+Generated guidance: *"Exceptions thrown or caught must be highly specific. Swallow-all catch blocks, throwing generic Exceptions/Throwables, or losing root cause stack traces are strictly prohibited."*
+
+#### 📐 `@AIStrictTypes`
+
+Prohibits loose typing (like `Object`, generic maps, or raw types) where well-defined, strongly-typed domain entities should be used.
+
+```java
+@AIStrictTypes
+public class PaymentDetails {
+    private final String accountHolder;
+    private final BigDecimal amount;
+    
+    public PaymentDetails(String accountHolder, BigDecimal amount) {
+        this.accountHolder = accountHolder;
+        this.amount = amount;
+    }
+}
+```
+
+Generated guidance: *"Avoid loose typing (e.g. Object, raw types, or generic Map<String, Object>). Use well-defined, strongly-typed domain models and high-precision types."*
+
+#### 🗣️ `@AIInternationalized`
+
+Prohibits hardcoding of user-facing strings or messages, mandating i18n bundle message keys.
+
+```java
+@AIInternationalized
+public class I18nMessageHelper {
+    private final ResourceBundle messages;
+    public I18nMessageHelper(Locale locale) {
+        this.messages = ResourceBundle.getBundle("messages", locale);
+    }
+}
+```
+
+Generated guidance: *"All user-visible strings, messages, labels, or errors must be resolved via localization resource bundles. Hardcoding strings is strictly prohibited."*
+
+#### 📦 `@AIStrictClasspath`
+
+Prevents dependency bloat by restricting imports to standard JDK and existing classpath libraries. Prohibits dynamic class loading or runtime reflection hacks.
+
+```java
+@AIStrictClasspath
+public class StrictUtility {
+    public static String computeSecureHash(String input) {
+        return String.valueOf(input.hashCode());
+    }
+}
+```
+
+Generated guidance: *"Dependencies are strictly constrained. Do not introduce new third-party imports, dynamic class loading, custom classloaders, or reflection hacks."*
+
+#### 🗄️ `@AISchemaSafe`
+
+Protects database entities and persistent schemas. Forbids destructive changes, dropping tables/columns, or breaking serialization/DTO backward compatibility.
+
+```java
+@AISchemaSafe
+public class UserEntity {
+    private final String userId;
+    private final String emailAddress;
+    
+    public UserEntity(String userId, String emailAddress) {
+        this.userId = userId;
+        this.emailAddress = emailAddress;
+    }
+}
+```
+
+Generated guidance: *"Guarantees schema and serialization safety. Destructive modifications (dropping columns/tables, changing field names, or breaking serialization schemas) are strictly prohibited."*
 
 ## 🤝 Contributing
 

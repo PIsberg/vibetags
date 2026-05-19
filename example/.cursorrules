@@ -136,4 +136,49 @@ The following elements implement specific compliance clauses. Any change MUST do
 
 * `com.example.compliance.GdprService` - GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
 * `com.example.compliance.GdprService.exportUserData(java.lang.String)` - GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
+
+## 🧪 STRICT TEST ISOLATION
+The following elements must be strictly isolated when generating or modifying tests. No shared mutable state or resource conflicts are permitted.
+
+* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts.
+
+## 🌉 LEGACY COMPATIBILITY BRIDGE
+The following elements are legacy compatibility bridges. Do not attempt to modernize or refactor their structural patterns; only modify internal business logic as explicitly requested.
+
+* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+
+## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
+The following elements have strict layering constraints. Prohibit imports or references that cross boundaries.
+
+* `com.example.service.LayeredDomainService` - Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## 🔌 PUBLIC API SURFACE PROTECTION
+The following elements are public-facing API surfaces. Always preserve public signatures, Javadoc, and backwards compatibility.
+
+* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+
+## 🚨 STRICT EXCEPTION HANDLING
+The following elements have strict exception constraints. Prohibit catching or throwing generic Exception/Throwable.
+
+* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+
+## 🏷️ STRICT TYPE SAFETY
+The following elements prohibit loose typing such as Object or Map<String, Object>. Strong type safety is required.
+
+* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+
+## 🌐 INTERNATIONALIZATION MANDATE
+The following elements implement i18n requirements. Prohibit hardcoded user-facing strings.
+
+* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+
+## 🛡️ STRICT CLASSPATH INTEGRITY
+The following elements prohibit dynamic runtime class loading, reflections, or loading of unverified dynamic code.
+
+* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+
+## 🗄️ SCHEMA & SERIALIZATION SAFETY
+The following elements have schema safety constraints. Restrict changing formats/fields without a backward-compatible migration plan.
+
+* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 # VIBETAGS-END

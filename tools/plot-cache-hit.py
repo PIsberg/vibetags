@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = REPO_ROOT / "load-tests" / "results" / "0.8.0" / "jmh-cache-hit.json"
+DEFAULT_INPUT = REPO_ROOT / "load-tests" / "results" / "0.9.5" / "jmh-cache-hit.json"
 DEFAULT_OUT = REPO_ROOT / "load-tests" / "results" / "_plots"
 
 # Body-size groups in the order we want to display them.
@@ -45,12 +45,20 @@ def load(path: Path) -> dict[str, dict]:
         name = entry["benchmark"].rsplit(".", 1)[-1]
         score = entry["primaryMetric"]["score"]
         err = entry["primaryMetric"]["scoreError"]
+        if isinstance(err, str) and err.upper() == "NAN":
+            err = 0.0
+        if err is None:
+            err = 0.0
         secondary = entry.get("secondaryMetrics", {}) or {}
-        alloc = None
+        alloc = 0.0
         alloc_key = next((k for k in secondary if k.endswith("alloc.rate.norm")), None)
         if alloc_key:
-            alloc = secondary[alloc_key]["score"]
-        out[name] = {"score": score, "err": err, "alloc": alloc}
+            alloc_val = secondary[alloc_key]["score"]
+            if isinstance(alloc_val, str) and alloc_val.upper() == "NAN":
+                alloc = 0.0
+            elif alloc_val is not None:
+                alloc = float(alloc_val)
+        out[name] = {"score": float(score), "err": float(err), "alloc": alloc}
     return out
 
 
