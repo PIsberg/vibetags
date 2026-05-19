@@ -1,6 +1,6 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation annotations, or wants to control how AI tools interact with Java code.
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests annotations, or wants to control how AI tools interact with Java code.
 version: 0.9.5
 ---
 
@@ -400,6 +400,169 @@ When to use: GDPR Art. 17 / Art. 20 implementations, PCI-DSS card-handling code,
 
 ---
 
+### `@AIArchitecture` — Enforce architectural layer boundaries
+
+Use on: **class**
+
+```java
+@AIArchitecture(
+    belongsTo = "domain",
+    cannotReference = {"infrastructure", "web"}
+)
+public class OrderService { ... }
+```
+
+Declares which architectural layer this class belongs to and which layers it must never import from. AI must not introduce references to forbidden layers — e.g., a domain class importing a JPA repository or an HTTP controller.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `belongsTo` | `String` | `""` | The layer or component this class belongs to (e.g., `"domain"`, `"application"`, `"web"`) |
+| `cannotReference` | `String[]` | `{}` | Layers or components this class must not import from |
+
+---
+
+### `@AILegacyBridge` — Protect compatibility bridges from modernization
+
+Use on: **class, method**
+
+```java
+@AILegacyBridge
+public class LegacyPaymentAdapter {
+    // Works around a quirk in the v1 payment provider SDK — must not be "cleaned up"
+    public String formatAmount(double amount) { ... }
+}
+```
+
+Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed.
+
+When to use: SDK adapter shims, workarounds for upstream library bugs, compatibility wrappers kept alive for old API clients.
+
+---
+
+### `@AIStrictClasspath` — Prevent dynamic loading and reflection hacks
+
+Use on: **class, method**
+
+```java
+@AIStrictClasspath
+public class DataParser {
+    // Must only use JDK and existing compile-time classpath — no runtime class loading
+}
+```
+
+Prohibits AI from introducing dynamic class loading, custom `ClassLoader`s, runtime reflection tricks, or execution of dynamically constructed code. All dependencies must be resolvable at compile time from the existing classpath.
+
+When to use: security-sensitive execution environments, GraalVM native-image targets, OSGi modules, any code that must be fully AOT-analyzable.
+
+---
+
+### `@AIInternationalized` — Prohibit hardcoded user-facing strings
+
+Use on: **class, method**
+
+```java
+@AIInternationalized
+public class NotificationTemplateRenderer {
+    // All user-visible text must come from message bundles — never hardcoded
+}
+```
+
+Instructs AI that all user-visible text (labels, messages, error strings, button text) must be resolved through the project's i18n framework (e.g., `MessageSource`, `ResourceBundle`, `gettext`). AI must never introduce hardcoded string literals for anything a user would see.
+
+When to use: UI components, REST error responses, email templates, notification services — any code whose output reaches end users.
+
+---
+
+### `@AIPublicAPI` — Preserve backward compatibility
+
+Use on: **class, method**
+
+```java
+@AIPublicAPI
+public class ProductSearchClient {
+    public List<Product> search(String query, int maxResults) { ... }
+}
+```
+
+Declares that this element is part of a public API surface. All AI changes must be **additive and backward-compatible** — renaming methods, changing parameter types, or altering serialization formats is forbidden. Internal implementation may be improved freely.
+
+Unlike `@AIContract` (which freezes one specific signature), `@AIPublicAPI` applies the backward-compatibility rule to the entire class.
+
+When to use: SDK entry points, REST controller response shapes, message schema classes, library interfaces consumed by third parties.
+
+---
+
+### `@AISchemaSafe` — Prevent destructive schema changes
+
+Use on: **class, field**
+
+```java
+@AISchemaSafe
+@Entity
+public class UserEntity {
+    @Column(name = "email", nullable = false)
+    private String email;
+}
+```
+
+Instructs AI that this class or field maps to persistent storage (database, message schema, serialization format). Destructive changes — dropping columns, renaming fields, changing types — are forbidden without explicit backward-compatible migrations. AI must propose additive-only changes.
+
+When to use: JPA/Hibernate entities, Avro/Protobuf schema classes, JSON serialization DTOs, Flyway-managed tables.
+
+---
+
+### `@AIStrictExceptions` — Enforce precise error handling
+
+Use on: **class, method**
+
+```java
+@AIStrictExceptions
+public class PaymentGatewayClient {
+    public Receipt charge(Money amount) throws PaymentDeclinedException { ... }
+}
+```
+
+Prohibits AI from catching or throwing `Exception`, `Throwable`, or other overly broad types. All exceptions must be specific, well-named, and carry descriptive messages with preserved stack traces. Silent catch blocks (`catch (Exception e) {}`) are also forbidden.
+
+When to use: external integrations, retry boundaries, error-handling layers, code that feeds into structured logging or alerting.
+
+---
+
+### `@AIStrictTypes` — Require precise domain types
+
+Use on: **class, method, field**
+
+```java
+@AIStrictTypes
+public class PricingCalculator {
+    // Use BigDecimal for money, Instant/ZonedDateTime for time — never double or String
+    public BigDecimal calculateDiscount(Money basePrice, Percentage rate) { ... }
+}
+```
+
+Instructs AI to avoid loose types (`Object`, raw collections, `Map<String, Object>`, `double` for currency, `String` for dates) and instead use well-defined, type-safe domain models or strongly-typed transfer objects.
+
+When to use: financial calculations, time/date handling, any domain model where type safety prevents silent data corruption.
+
+---
+
+### `@AIParallelTests` — Enforce test isolation for concurrent execution
+
+Use on: **class, method**
+
+```java
+@AIParallelTests
+public class OrderServiceTest {
+    // Tests must not share mutable state or bind to fixed ports
+}
+```
+
+Instructs AI that any generated or modified tests for this element must be safe for parallel execution. Forbidden: shared mutable static state, fixed port bindings, database rows with hard-coded IDs, execution-order dependencies. Each test must be fully self-contained.
+
+When to use: test classes run under JUnit 5 parallel execution, `@Isolated` test suites, any test module with `forkCount > 1` in Maven Surefire.
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -428,6 +591,21 @@ When to use: GDPR Art. 17 / Art. 20 implementations, PCI-DSS card-handling code,
 | `@AIRegulation` + `@AIAudit` | Compliance clause AND mandatory security audit |
 | `@AIRegulation` + `@AIPrivacy` | PII handler tied to a specific GDPR/HIPAA/PCI-DSS clause |
 | `@AIRegulation` + `@AILocked` | Compliance code that must not be modified at all |
+| `@AIArchitecture` + `@AIAudit` | Enforce layer boundaries AND audit each change for illegal imports |
+| `@AIArchitecture` + `@AIContext` | Layer constraints with guidance on permitted patterns within that layer |
+| `@AILegacyBridge` + `@AILocked` | Compatibility shim that must not be touched at all |
+| `@AILegacyBridge` + `@AIContext` | Bridge code with guidance on what internal logic *can* be changed |
+| `@AIPublicAPI` + `@AIContract` | Whole-class backward-compat rule AND per-method frozen signature (belt-and-suspenders) |
+| `@AIPublicAPI` + `@AITestDriven` | Public API change must include tests proving backward compatibility |
+| `@AISchemaSafe` + `@AIPrivacy` | Persistent entity with PII fields that must not appear in logs or fixtures |
+| `@AISchemaSafe` + `@AIRegulation` | Schema tied to a compliance clause (GDPR erasure table, PCI card-data store) |
+| `@AIStrictTypes` + `@AIPerformance` | Typed domain model AND strict complexity budget |
+| `@AIStrictTypes` + `@AIRegulation` | Type-safe financial or PII handler tied to a regulatory clause |
+| `@AIStrictExceptions` + `@AIAudit` | Precise error handling AND audit every change for swallowed exceptions |
+| `@AIStrictExceptions` + `@AIObservability` | Error handler whose log statements feed dashboards — must not be silenced |
+| `@AIInternationalized` + `@AIContext` | i18n enforcement with guidance on which bundle/framework to use |
+| `@AIStrictClasspath` + `@AIPerformance` | Compile-time-only deps AND strict complexity budget |
+| `@AIParallelTests` + `@AITestDriven` | Tests must be parallel-safe AND include coverage for every change |
 
 ---
 
