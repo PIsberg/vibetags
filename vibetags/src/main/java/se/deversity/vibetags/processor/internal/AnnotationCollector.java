@@ -15,6 +15,15 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.annotations.AIParallelTests;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -46,6 +55,15 @@ public final class AnnotationCollector {
     private final Set<Element> deprecatedElements    = new LinkedHashSet<>();
     private final Set<Element> observabilityElements = new LinkedHashSet<>();
     private final Set<Element> regulationElements    = new LinkedHashSet<>();
+    private final Set<Element> parallelTestsElements     = new LinkedHashSet<>();
+    private final Set<Element> legacyBridgeElements     = new LinkedHashSet<>();
+    private final Set<Element> architectureElements     = new LinkedHashSet<>();
+    private final Set<Element> publicApiElements        = new LinkedHashSet<>();
+    private final Set<Element> strictExceptionsElements = new LinkedHashSet<>();
+    private final Set<Element> strictTypesElements      = new LinkedHashSet<>();
+    private final Set<Element> internationalizedElements = new LinkedHashSet<>();
+    private final Set<Element> strictClasspathElements  = new LinkedHashSet<>();
+    private final Set<Element> schemaSafeElements       = new LinkedHashSet<>();
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
@@ -67,6 +85,15 @@ public final class AnnotationCollector {
         deprecatedElements.addAll(roundEnv.getElementsAnnotatedWith(AIDeprecated.class));
         observabilityElements.addAll(roundEnv.getElementsAnnotatedWith(AIObservability.class));
         regulationElements.addAll(roundEnv.getElementsAnnotatedWith(AIRegulation.class));
+        parallelTestsElements.addAll(roundEnv.getElementsAnnotatedWith(AIParallelTests.class));
+        legacyBridgeElements.addAll(roundEnv.getElementsAnnotatedWith(AILegacyBridge.class));
+        architectureElements.addAll(roundEnv.getElementsAnnotatedWith(AIArchitecture.class));
+        publicApiElements.addAll(roundEnv.getElementsAnnotatedWith(AIPublicAPI.class));
+        strictExceptionsElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictExceptions.class));
+        strictTypesElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictTypes.class));
+        internationalizedElements.addAll(roundEnv.getElementsAnnotatedWith(AIInternationalized.class));
+        strictClasspathElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class));
+        schemaSafeElements.addAll(roundEnv.getElementsAnnotatedWith(AISchemaSafe.class));
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
@@ -75,7 +102,11 @@ public final class AnnotationCollector {
                      || !contractElements.isEmpty() || !testDrivenElements.isEmpty()
                      || !threadSafeElements.isEmpty() || !immutableElements.isEmpty()
                      || !deprecatedElements.isEmpty() || !observabilityElements.isEmpty()
-                     || !regulationElements.isEmpty();
+                     || !regulationElements.isEmpty() || !parallelTestsElements.isEmpty()
+                     || !legacyBridgeElements.isEmpty() || !architectureElements.isEmpty()
+                     || !publicApiElements.isEmpty() || !strictExceptionsElements.isEmpty()
+                     || !strictTypesElements.isEmpty() || !internationalizedElements.isEmpty()
+                     || !strictClasspathElements.isEmpty() || !schemaSafeElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -96,6 +127,15 @@ public final class AnnotationCollector {
         deprecatedElements.clear();
         observabilityElements.clear();
         regulationElements.clear();
+        parallelTestsElements.clear();
+        legacyBridgeElements.clear();
+        architectureElements.clear();
+        publicApiElements.clear();
+        strictExceptionsElements.clear();
+        strictTypesElements.clear();
+        internationalizedElements.clear();
+        strictClasspathElements.clear();
+        schemaSafeElements.clear();
         anyAnnotationsFound = false;
     }
 
@@ -114,5 +154,14 @@ public final class AnnotationCollector {
     public Set<Element> deprecated()     { return deprecatedElements; }
     public Set<Element> observability()  { return observabilityElements; }
     public Set<Element> regulation()     { return regulationElements; }
+    public Set<Element> parallelTests()     { return parallelTestsElements; }
+    public Set<Element> legacyBridge()     { return legacyBridgeElements; }
+    public Set<Element> architecture()     { return architectureElements; }
+    public Set<Element> publicApi()        { return publicApiElements; }
+    public Set<Element> strictExceptions() { return strictExceptionsElements; }
+    public Set<Element> strictTypes()      { return strictTypesElements; }
+    public Set<Element> internationalized() { return internationalizedElements; }
+    public Set<Element> strictClasspath()  { return strictClasspathElements; }
+    public Set<Element> schemaSafe()       { return schemaSafeElements; }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

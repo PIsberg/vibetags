@@ -14,6 +14,15 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.annotations.AIParallelTests;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -125,6 +134,19 @@ public final class BuildFingerprint {
             AIRegulation a = e.getAnnotation(AIRegulation.class);
             return a == null ? "" : a.standard() + "|" + a.clause() + "|" + a.description();
         });
+        appendAnnotationSet(sb, "PT", collector.parallelTests(), e -> "");
+        appendAnnotationSet(sb, "LB", collector.legacyBridge(), e -> "");
+        appendAnnotationSet(sb, "AR", collector.architecture(), e -> {
+            AIArchitecture a = e.getAnnotation(AIArchitecture.class);
+            if (a == null) return "";
+            return a.belongsTo() + "|" + String.join(",", a.cannotReference());
+        });
+        appendAnnotationSet(sb, "PA", collector.publicApi(), e -> "");
+        appendAnnotationSet(sb, "SE", collector.strictExceptions(), e -> "");
+        appendAnnotationSet(sb, "ST", collector.strictTypes(), e -> "");
+        appendAnnotationSet(sb, "IT", collector.internationalized(), e -> "");
+        appendAnnotationSet(sb, "SC", collector.strictClasspath(), e -> "");
+        appendAnnotationSet(sb, "SS", collector.schemaSafe(), e -> "");
 
         sb.append("S{");
         for (String s : new TreeSet<>(activeServices)) {

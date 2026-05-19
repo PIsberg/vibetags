@@ -94,7 +94,7 @@ class VibeTagsLoggerUnitTest {
     void shutdown_releasesFileHandle() {
         VibeTagsLogger.forRoot(tempDir, null, "INFO");
         // Should not throw — file handle should be released
-        assertDoesNotThrow(VibeTagsLogger::shutdown);
+        assertDoesNotThrow(() -> VibeTagsLogger.shutdown());
     }
 
     @Test

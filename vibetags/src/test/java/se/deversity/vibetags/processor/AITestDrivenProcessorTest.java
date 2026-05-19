@@ -577,7 +577,7 @@ class AITestDrivenProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(java.util.Map.of());
+        when(env.getOptions()).thenReturn(java.util.Map.of("vibetags.cache", "false"));
         processor.init(env);
         return processor;
     }

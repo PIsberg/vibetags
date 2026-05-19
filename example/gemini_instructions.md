@@ -125,4 +125,49 @@ The following elements implement compliance clauses. Document compliance impact 
 
 - `com.example.compliance.GdprService`: GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
 - `com.example.compliance.GdprService.exportUserData(java.lang.String)`: GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
+
+## STRICT TEST ISOLATION
+Tests for these elements must run in complete isolation without sharing mutable state:
+
+- `com.example.config.ParallelTestSettings`: Strict test isolation required. No shared mutable state or external resource conflicts.
+
+## LEGACY COMPATIBILITY BRIDGE
+Do not restructure compatibility bridges. Only modify business logic:
+
+- `com.example.legacy.LegacyBridgeService`: Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+
+## ARCHITECTURAL BOUNDARY CONSTRAINTS
+Respect architectural layering. Boundary crossing references are prohibited:
+
+- `com.example.service.LayeredDomainService`: Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## PUBLIC API SURFACE PROTECTION
+Preserve public signatures, Javadoc, and backwards compatibility:
+
+- `com.example.service.PublicPaymentController`: Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+
+## STRICT EXCEPTION HANDLING
+Catching/throwing generic Exception is prohibited. Use precise exceptions:
+
+- `com.example.service.TransactionalPaymentService`: Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+
+## STRICT TYPE SAFETY
+Loose typing is prohibited. Strongly-typed models required:
+
+- `com.example.payment.PaymentDetails`: Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+
+## INTERNATIONALIZATION MANDATE
+User-facing strings must not be hardcoded; retrieve from resources:
+
+- `com.example.utils.I18nMessageHelper`: Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+
+## STRICT CLASSPATH INTEGRITY
+Dynamic class loading and reflection hacks are strictly prohibited:
+
+- `com.example.utils.StrictUtility`: Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+
+## SCHEMA & SERIALIZATION SAFETY
+Modifying schema or data formats without explicit migration plans is prohibited:
+
+- `com.example.database.UserEntity`: Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 <!-- VIBETAGS-END -->

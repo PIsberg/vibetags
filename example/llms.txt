@@ -94,4 +94,31 @@ AI tools reading this file should respect the guardrails defined below. These ru
 ## 📜 Regulatory Compliance
 - [GdprService](com.example.compliance.GdprService): GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
 - [GdprService.exportUserData(java.lang.String)](com.example.compliance.GdprService.exportUserData(java.lang.String)): GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
+
+## Strict Test Isolation
+- [ParallelTestSettings](com.example.config.ParallelTestSettings): Strict test isolation required. No shared mutable state or external resource conflicts.
+
+## Legacy Compatibility Bridge
+- [LegacyBridgeService](com.example.legacy.LegacyBridgeService): Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+
+## Architectural Boundary Constraints
+- [LayeredDomainService](com.example.service.LayeredDomainService): Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## Public API Surface Protection
+- [PublicPaymentController](com.example.service.PublicPaymentController): Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+
+## Strict Exception Handling
+- [TransactionalPaymentService](com.example.service.TransactionalPaymentService): Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+
+## Strict Type Safety
+- [PaymentDetails](com.example.payment.PaymentDetails): Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+
+## Internationalization Mandate
+- [I18nMessageHelper](com.example.utils.I18nMessageHelper): Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+
+## Strict Classpath Integrity
+- [StrictUtility](com.example.utils.StrictUtility): Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+
+## Schema & Serialization Safety
+- [UserEntity](com.example.database.UserEntity): Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 <!-- VIBETAGS-END -->

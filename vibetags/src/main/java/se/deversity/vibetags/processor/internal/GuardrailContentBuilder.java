@@ -14,6 +14,15 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.annotations.AIParallelTests;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -89,6 +98,26 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsFullTxtDeprecated;
     private StringBuilder llmsFullTxtObservability;
     private StringBuilder llmsFullTxtRegulation;
+
+    private StringBuilder llmsTxtParallelTests;
+    private StringBuilder llmsTxtLegacyBridge;
+    private StringBuilder llmsTxtArchitecture;
+    private StringBuilder llmsTxtPublicApi;
+    private StringBuilder llmsTxtStrictExceptions;
+    private StringBuilder llmsTxtStrictTypes;
+    private StringBuilder llmsTxtInternationalized;
+    private StringBuilder llmsTxtStrictClasspath;
+    private StringBuilder llmsTxtSchemaSafe;
+
+    private StringBuilder llmsFullTxtParallelTests;
+    private StringBuilder llmsFullTxtLegacyBridge;
+    private StringBuilder llmsFullTxtArchitecture;
+    private StringBuilder llmsFullTxtPublicApi;
+    private StringBuilder llmsFullTxtStrictExceptions;
+    private StringBuilder llmsFullTxtStrictTypes;
+    private StringBuilder llmsFullTxtInternationalized;
+    private StringBuilder llmsFullTxtStrictClasspath;
+    private StringBuilder llmsFullTxtSchemaSafe;
 
     // Windsurf builders
     private StringBuilder windsurfRules;
@@ -240,7 +269,10 @@ public final class GuardrailContentBuilder {
               + collector.draft().size() + collector.privacy().size() + collector.core().size()
               + collector.performance().size() + collector.contract().size() + collector.ignore().size()
               + collector.testDriven().size() + collector.threadSafe().size() + collector.immutable().size()
-              + collector.deprecated().size() + collector.observability().size() + collector.regulation().size();
+              + collector.deprecated().size() + collector.observability().size() + collector.regulation().size()
+              + collector.parallelTests().size() + collector.legacyBridge().size() + collector.architecture().size()
+              + collector.publicApi().size() + collector.strictExceptions().size() + collector.strictTypes().size()
+              + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -266,6 +298,87 @@ public final class GuardrailContentBuilder {
         // Per-platform Gemini section builders (assembled at the end)
         StringBuilder geminiLocked = new StringBuilder();
         StringBuilder geminiContext = new StringBuilder();
+
+        StringBuilder cursorParallelTestsSec = new StringBuilder("\n## 🧪 STRICT TEST ISOLATION\nThe following elements must be strictly isolated when generating or modifying tests. No shared mutable state or resource conflicts are permitted.\n\n");
+        StringBuilder claudeParallelTestsSec = new StringBuilder("  <test_isolation_elements>\n");
+        StringBuilder codexParallelTestsSec = new StringBuilder("\n## 🧪 STRICT TEST ISOLATION\nTests for the following elements must be strictly isolated (no shared mutable state/resources):\n\n");
+        StringBuilder copilotParallelTestsSec = new StringBuilder("\n## Strict Test Isolation\nDo not share mutable state or external resources in tests for these elements:\n\n");
+        StringBuilder qwenParallelTestsSec = new StringBuilder("\n## 🧪 STRICT TEST ISOLATION\nTests must run in complete thread isolation without shared mutable state:\n\n");
+        StringBuilder geminiParallelTestsSec = new StringBuilder();
+        StringBuilder windsurfParallelTestsSec = new StringBuilder("\n## 🧪 STRICT TEST ISOLATION\nEnforce strict isolation for tests generated or modified for these elements:\n\n");
+        StringBuilder zedParallelTestsSec = new StringBuilder("\n## Strict Test Isolation\nEnforce strict isolation in tests for these elements:\n\n");
+
+        StringBuilder cursorLegacyBridgeSec = new StringBuilder("\n## 🌉 LEGACY COMPATIBILITY BRIDGE\nThe following elements are legacy compatibility bridges. Do not attempt to modernize or refactor their structural patterns; only modify internal business logic as explicitly requested.\n\n");
+        StringBuilder claudeLegacyBridgeSec = new StringBuilder("  <legacy_bridge_elements>\n");
+        StringBuilder codexLegacyBridgeSec = new StringBuilder("\n## 🌉 LEGACY COMPATIBILITY BRIDGE\nDo not restructure or refactor structural patterns of these compatibility bridges:\n\n");
+        StringBuilder copilotLegacyBridgeSec = new StringBuilder("\n## Legacy Compatibility Bridge\nDo not refactor the structural patterns of these compatibility bridges:\n\n");
+        StringBuilder qwenLegacyBridgeSec = new StringBuilder("\n## 🌉 LEGACY COMPATIBILITY BRIDGE\nModernization/structural refactoring is prohibited for these elements:\n\n");
+        StringBuilder geminiLegacyBridgeSec = new StringBuilder();
+        StringBuilder windsurfLegacyBridgeSec = new StringBuilder("\n## 🌉 LEGACY COMPATIBILITY BRIDGE\nDo not refactor the structural patterns of these compatibility bridges:\n\n");
+        StringBuilder zedLegacyBridgeSec = new StringBuilder("\n## Legacy Compatibility Bridge\nDo not refactor the structural patterns of these compatibility bridges:\n\n");
+
+        StringBuilder cursorArchitectureSec = new StringBuilder("\n## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS\nThe following elements have strict layering constraints. Prohibit imports or references that cross boundaries.\n\n");
+        StringBuilder claudeArchitectureSec = new StringBuilder("  <architecture_elements>\n");
+        StringBuilder codexArchitectureSec = new StringBuilder("\n## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS\nStrict layering must be respected. No illegal boundary crossing references:\n\n");
+        StringBuilder copilotArchitectureSec = new StringBuilder("\n## Architectural Boundary Constraints\nStrict layering must be respected. Boundary crossing references are prohibited:\n\n");
+        StringBuilder qwenArchitectureSec = new StringBuilder("\n## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS\nStrict layered architecture constraints apply to these elements:\n\n");
+        StringBuilder geminiArchitectureSec = new StringBuilder();
+        StringBuilder windsurfArchitectureSec = new StringBuilder("\n## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS\nStrict layered architecture constraints apply to these elements:\n\n");
+        StringBuilder zedArchitectureSec = new StringBuilder("\n## Architectural Constraints\nStrict layered architecture constraints apply to these elements:\n\n");
+
+        StringBuilder cursorPublicApiSec = new StringBuilder("\n## 🔌 PUBLIC API SURFACE PROTECTION\nThe following elements are public-facing API surfaces. Always preserve public signatures, Javadoc, and backwards compatibility.\n\n");
+        StringBuilder claudePublicApiSec = new StringBuilder("  <public_api_elements>\n");
+        StringBuilder codexPublicApiSec = new StringBuilder("\n## 🔌 PUBLIC API SURFACE PROTECTION\nPreserve public signatures, Javadoc, and behavior without breaking backwards compatibility:\n\n");
+        StringBuilder copilotPublicApiSec = new StringBuilder("\n## Public API Surface Protection\nDo not modify public signatures or break compatibility for these elements:\n\n");
+        StringBuilder qwenPublicApiSec = new StringBuilder("\n## 🔌 PUBLIC API SURFACE PROTECTION\nPublic API surface. Signatures and backwards compatibility must be strictly preserved:\n\n");
+        StringBuilder geminiPublicApiSec = new StringBuilder();
+        StringBuilder windsurfPublicApiSec = new StringBuilder("\n## 🔌 PUBLIC API SURFACE PROTECTION\nPublic API surface. Signatures and backwards compatibility must be strictly preserved:\n\n");
+        StringBuilder zedPublicApiSec = new StringBuilder("\n## Public API Protection\nPublic API surface. Signatures and backwards compatibility must be strictly preserved:\n\n");
+
+        StringBuilder cursorStrictExceptionsSec = new StringBuilder("\n## 🚨 STRICT EXCEPTION HANDLING\nThe following elements have strict exception constraints. Prohibit catching or throwing generic Exception/Throwable.\n\n");
+        StringBuilder claudeStrictExceptionsSec = new StringBuilder("  <strict_exceptions_elements>\n");
+        StringBuilder codexStrictExceptionsSec = new StringBuilder("\n## 🚨 STRICT EXCEPTION HANDLING\nPrecise and robust exception handling required. Generic exception catching/throwing is prohibited:\n\n");
+        StringBuilder copilotStrictExceptionsSec = new StringBuilder("\n## Strict Exception Handling\nPrecise exception handling required. Do not catch or throw generic Exception/Throwable:\n\n");
+        StringBuilder qwenStrictExceptionsSec = new StringBuilder("\n## 🚨 STRICT EXCEPTION HANDLING\nGeneric exception throwing/catching is strictly prohibited for these elements:\n\n");
+        StringBuilder geminiStrictExceptionsSec = new StringBuilder();
+        StringBuilder windsurfStrictExceptionsSec = new StringBuilder("\n## 🚨 STRICT EXCEPTION HANDLING\nGeneric exception throwing/catching is strictly prohibited for these elements:\n\n");
+        StringBuilder zedStrictExceptionsSec = new StringBuilder("\n## Strict Exceptions\nGeneric exception throwing/catching is strictly prohibited for these elements:\n\n");
+
+        StringBuilder cursorStrictTypesSec = new StringBuilder("\n## 🏷️ STRICT TYPE SAFETY\nThe following elements prohibit loose typing such as Object or Map<String, Object>. Strong type safety is required.\n\n");
+        StringBuilder claudeStrictTypesSec = new StringBuilder("  <strict_types_elements>\n");
+        StringBuilder codexStrictTypesSec = new StringBuilder("\n## 🏷️ STRICT TYPE SAFETY\nType safety must be strictly preserved. Loose or erased types are prohibited:\n\n");
+        StringBuilder copilotStrictTypesSec = new StringBuilder("\n## Strict Type Safety\nLoose typing is prohibited. Strongly-typed objects must be used:\n\n");
+        StringBuilder qwenStrictTypesSec = new StringBuilder("\n## 🏷️ STRICT TYPE SAFETY\nLoose typing is strictly prohibited for these elements:\n\n");
+        StringBuilder geminiStrictTypesSec = new StringBuilder();
+        StringBuilder windsurfStrictTypesSec = new StringBuilder("\n## 🏷️ STRICT TYPE SAFETY\nLoose typing is strictly prohibited for these elements:\n\n");
+        StringBuilder zedStrictTypesSec = new StringBuilder("\n## Strict Types\nLoose typing is strictly prohibited for these elements:\n\n");
+
+        StringBuilder cursorInternationalizedSec = new StringBuilder("\n## 🌐 INTERNATIONALIZATION MANDATE\nThe following elements implement i18n requirements. Prohibit hardcoded user-facing strings.\n\n");
+        StringBuilder claudeInternationalizedSec = new StringBuilder("  <internationalized_elements>\n");
+        StringBuilder codexInternationalizedSec = new StringBuilder("\n## 🌐 INTERNATIONALIZATION MANDATE\nDo not hardcode user-facing strings. All user-visible text must be localized:\n\n");
+        StringBuilder copilotInternationalizedSec = new StringBuilder("\n## Internationalization Mandate\nAll user-visible text must be localized. Do not hardcode strings:\n\n");
+        StringBuilder qwenInternationalizedSec = new StringBuilder("\n## 🌐 INTERNATIONALIZATION MANDATE\nHardcoding user-facing strings is strictly prohibited for these elements:\n\n");
+        StringBuilder geminiInternationalizedSec = new StringBuilder();
+        StringBuilder windsurfInternationalizedSec = new StringBuilder("\n## 🌐 INTERNATIONALIZATION MANDATE\nHardcoding user-facing strings is strictly prohibited for these elements:\n\n");
+        StringBuilder zedInternationalizedSec = new StringBuilder("\n## Internationalization\nHardcoding user-facing strings is strictly prohibited for these elements:\n\n");
+
+        StringBuilder cursorStrictClasspathSec = new StringBuilder("\n## 🛡️ STRICT CLASSPATH INTEGRITY\nThe following elements prohibit dynamic runtime class loading, reflections, or loading of unverified dynamic code.\n\n");
+        StringBuilder claudeStrictClasspathSec = new StringBuilder("  <strict_classpath_elements>\n");
+        StringBuilder codexStrictClasspathSec = new StringBuilder("\n## 🛡️ STRICT CLASSPATH INTEGRITY\nDynamic class loading, custom classloaders, and reflection hacks are prohibited:\n\n");
+        StringBuilder copilotStrictClasspathSec = new StringBuilder("\n## Strict Classpath Integrity\nDynamic class loading and reflection hacks are strictly prohibited:\n\n");
+        StringBuilder qwenStrictClasspathSec = new StringBuilder("\n## 🛡️ STRICT CLASSPATH INTEGRITY\nDynamic runtime class loading is strictly prohibited for these elements:\n\n");
+        StringBuilder geminiStrictClasspathSec = new StringBuilder();
+        StringBuilder windsurfStrictClasspathSec = new StringBuilder("\n## 🛡️ STRICT CLASSPATH INTEGRITY\nDynamic runtime class loading is strictly prohibited for these elements:\n\n");
+        StringBuilder zedStrictClasspathSec = new StringBuilder("\n## Strict Classpath\nDynamic runtime class loading is strictly prohibited for these elements:\n\n");
+
+        StringBuilder cursorSchemaSafeSec = new StringBuilder("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nThe following elements have schema safety constraints. Restrict changing formats/fields without a backward-compatible migration plan.\n\n");
+        StringBuilder claudeSchemaSafeSec = new StringBuilder("  <schema_safe_elements>\n");
+        StringBuilder codexSchemaSafeSec = new StringBuilder("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nPreserve database/contract schema and serialization compatibility on every change:\n\n");
+        StringBuilder copilotSchemaSafeSec = new StringBuilder("\n## Schema & Serialization Safety\nDo not change serialization formats or schemas without a backward-compatible migration plan:\n\n");
+        StringBuilder qwenSchemaSafeSec = new StringBuilder("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nModifying schema or data formats without explicit migration plans is prohibited:\n\n");
+        StringBuilder geminiSchemaSafeSec = new StringBuilder();
+        StringBuilder windsurfSchemaSafeSec = new StringBuilder("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nModifying schema or data formats without explicit migration plans is prohibited:\n\n");
+        StringBuilder zedSchemaSafeSec = new StringBuilder("\n## Schema Safety\nModifying schema or data formats without explicit migration plans is prohibited:\n\n");
 
         for (Element e : collector.locked())      appendLocked(e, geminiLocked);
         appendContextHeaders();
@@ -390,6 +503,25 @@ public final class GuardrailContentBuilder {
         StringBuilder geminiRegulationSec = new StringBuilder();
         for (Element e : collector.regulation())
             appendRegulation(e, cursorRegulationSec, claudeRegulationSec, codexRegulationSec, copilotRegulationSec, qwenRegulationSec, geminiRegulationSec);
+
+        for (Element e : collector.parallelTests())
+            appendParallelTests(e, cursorParallelTestsSec, claudeParallelTestsSec, codexParallelTestsSec, copilotParallelTestsSec, qwenParallelTestsSec, geminiParallelTestsSec, windsurfParallelTestsSec, zedParallelTestsSec);
+        for (Element e : collector.legacyBridge())
+            appendLegacyBridge(e, cursorLegacyBridgeSec, claudeLegacyBridgeSec, codexLegacyBridgeSec, copilotLegacyBridgeSec, qwenLegacyBridgeSec, geminiLegacyBridgeSec, windsurfLegacyBridgeSec, zedLegacyBridgeSec);
+        for (Element e : collector.architecture())
+            appendArchitecture(e, cursorArchitectureSec, claudeArchitectureSec, codexArchitectureSec, copilotArchitectureSec, qwenArchitectureSec, geminiArchitectureSec, windsurfArchitectureSec, zedArchitectureSec);
+        for (Element e : collector.publicApi())
+            appendPublicAPI(e, cursorPublicApiSec, claudePublicApiSec, codexPublicApiSec, copilotPublicApiSec, qwenPublicApiSec, geminiPublicApiSec, windsurfPublicApiSec, zedPublicApiSec);
+        for (Element e : collector.strictExceptions())
+            appendStrictExceptions(e, cursorStrictExceptionsSec, claudeStrictExceptionsSec, codexStrictExceptionsSec, copilotStrictExceptionsSec, qwenStrictExceptionsSec, geminiStrictExceptionsSec, windsurfStrictExceptionsSec, zedStrictExceptionsSec);
+        for (Element e : collector.strictTypes())
+            appendStrictTypes(e, cursorStrictTypesSec, claudeStrictTypesSec, codexStrictTypesSec, copilotStrictTypesSec, qwenStrictTypesSec, geminiStrictTypesSec, windsurfStrictTypesSec, zedStrictTypesSec);
+        for (Element e : collector.internationalized())
+            appendInternationalized(e, cursorInternationalizedSec, claudeInternationalizedSec, codexInternationalizedSec, copilotInternationalizedSec, qwenInternationalizedSec, geminiInternationalizedSec, windsurfInternationalizedSec, zedInternationalizedSec);
+        for (Element e : collector.strictClasspath())
+            appendStrictClasspath(e, cursorStrictClasspathSec, claudeStrictClasspathSec, codexStrictClasspathSec, copilotStrictClasspathSec, qwenStrictClasspathSec, geminiStrictClasspathSec, windsurfStrictClasspathSec, zedStrictClasspathSec);
+        for (Element e : collector.schemaSafe())
+            appendSchemaSafe(e, cursorSchemaSafeSec, claudeSchemaSafeSec, codexSchemaSafeSec, copilotSchemaSafeSec, qwenSchemaSafeSec, geminiSchemaSafeSec, windsurfSchemaSafeSec, zedSchemaSafeSec);
 
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
@@ -548,6 +680,115 @@ public final class GuardrailContentBuilder {
             geminiMd.append("\n## REGULATORY COMPLIANCE\nThe following elements implement compliance clauses. Document compliance impact for every change:\n\n").append(geminiRegulationSec);
         }
 
+        if (!collector.parallelTests().isEmpty()) {
+            cursorRules.append(cursorParallelTestsSec);
+            claudeParallelTestsSec.append("  </test_isolation_elements>\n");
+            claudeMd.append(claudeParallelTestsSec);
+            claudeMd.append("\n<rule>For elements in <test_isolation_elements>, all generated or modified tests MUST run in complete isolation (no shared state, external resource conflicts, or order dependencies).</rule>\n");
+            codexAgents.append(codexParallelTestsSec);
+            copilot.append(copilotParallelTestsSec);
+            qwenMd.append(qwenParallelTestsSec);
+            geminiMd.append("\n## STRICT TEST ISOLATION\nTests for these elements must run in complete isolation without sharing mutable state:\n\n").append(geminiParallelTestsSec);
+            if (windsurfActive) windsurfRules.append(windsurfParallelTestsSec);
+            if (zedActive)      zedRules.append(zedParallelTestsSec);
+        }
+        if (!collector.legacyBridge().isEmpty()) {
+            cursorRules.append(cursorLegacyBridgeSec);
+            claudeLegacyBridgeSec.append("  </legacy_bridge_elements>\n");
+            claudeMd.append(claudeLegacyBridgeSec);
+            claudeMd.append("\n<rule>Do not modernise, elegant-ize, or refactor structural patterns of elements in <legacy_bridge_elements>. Only modify internal business logic as explicitly requested.</rule>\n");
+            codexAgents.append(codexLegacyBridgeSec);
+            copilot.append(copilotLegacyBridgeSec);
+            qwenMd.append(qwenLegacyBridgeSec);
+            geminiMd.append("\n## LEGACY COMPATIBILITY BRIDGE\nDo not restructure compatibility bridges. Only modify business logic:\n\n").append(geminiLegacyBridgeSec);
+            if (windsurfActive) windsurfRules.append(windsurfLegacyBridgeSec);
+            if (zedActive)      zedRules.append(zedLegacyBridgeSec);
+        }
+        if (!collector.architecture().isEmpty()) {
+            cursorRules.append(cursorArchitectureSec);
+            claudeArchitectureSec.append("  </architecture_elements>\n");
+            claudeMd.append(claudeArchitectureSec);
+            claudeMd.append("\n<rule>Respect layered architectural constraints in <architecture_elements>. Boundary crossing references are strictly prohibited.</rule>\n");
+            codexAgents.append(codexArchitectureSec);
+            copilot.append(copilotArchitectureSec);
+            qwenMd.append(qwenArchitectureSec);
+            geminiMd.append("\n## ARCHITECTURAL BOUNDARY CONSTRAINTS\nRespect architectural layering. Boundary crossing references are prohibited:\n\n").append(geminiArchitectureSec);
+            if (windsurfActive) windsurfRules.append(windsurfArchitectureSec);
+            if (zedActive)      zedRules.append(zedArchitectureSec);
+        }
+        if (!collector.publicApi().isEmpty()) {
+            cursorRules.append(cursorPublicApiSec);
+            claudePublicApiSec.append("  </public_api_elements>\n");
+            claudeMd.append(claudePublicApiSec);
+            claudeMd.append("\n<rule>Elements in <public_api_elements> expose public API. Preserve public signature, Javadoc, and backwards compatibility without exceptions.</rule>\n");
+            codexAgents.append(codexPublicApiSec);
+            copilot.append(copilotPublicApiSec);
+            qwenMd.append(qwenPublicApiSec);
+            geminiMd.append("\n## PUBLIC API SURFACE PROTECTION\nPreserve public signatures, Javadoc, and backwards compatibility:\n\n").append(geminiPublicApiSec);
+            if (windsurfActive) windsurfRules.append(windsurfPublicApiSec);
+            if (zedActive)      zedRules.append(zedPublicApiSec);
+        }
+        if (!collector.strictExceptions().isEmpty()) {
+            cursorRules.append(cursorStrictExceptionsSec);
+            claudeStrictExceptionsSec.append("  </strict_exceptions_elements>\n");
+            claudeMd.append(claudeStrictExceptionsSec);
+            claudeMd.append("\n<rule>Catching or throwing generic Exception/Throwable is strictly prohibited in <strict_exceptions_elements>. Precise or custom exceptions required.</rule>\n");
+            codexAgents.append(codexStrictExceptionsSec);
+            copilot.append(copilotStrictExceptionsSec);
+            qwenMd.append(qwenStrictExceptionsSec);
+            geminiMd.append("\n## STRICT EXCEPTION HANDLING\nCatching/throwing generic Exception is prohibited. Use precise exceptions:\n\n").append(geminiStrictExceptionsSec);
+            if (windsurfActive) windsurfRules.append(windsurfStrictExceptionsSec);
+            if (zedActive)      zedRules.append(zedStrictExceptionsSec);
+        }
+        if (!collector.strictTypes().isEmpty()) {
+            cursorRules.append(cursorStrictTypesSec);
+            claudeStrictTypesSec.append("  </strict_types_elements>\n");
+            claudeMd.append(claudeStrictTypesSec);
+            claudeMd.append("\n<rule>Loose typing (Object, Map<String, Object>, raw types) is strictly prohibited in <strict_types_elements>. Enforce type safety.</rule>\n");
+            codexAgents.append(codexStrictTypesSec);
+            copilot.append(copilotStrictTypesSec);
+            qwenMd.append(qwenStrictTypesSec);
+            geminiMd.append("\n## STRICT TYPE SAFETY\nLoose typing is prohibited. Strongly-typed models required:\n\n").append(geminiStrictTypesSec);
+            if (windsurfActive) windsurfRules.append(windsurfStrictTypesSec);
+            if (zedActive)      zedRules.append(zedStrictTypesSec);
+        }
+        if (!collector.internationalized().isEmpty()) {
+            cursorRules.append(cursorInternationalizedSec);
+            claudeInternationalizedSec.append("  </internationalized_elements>\n");
+            claudeMd.append(claudeInternationalizedSec);
+            claudeMd.append("\n<rule>Do not hardcode user-facing strings in <internationalized_elements>. Resolve all text via localization resource/message bundles.</rule>\n");
+            codexAgents.append(codexInternationalizedSec);
+            copilot.append(copilotInternationalizedSec);
+            qwenMd.append(qwenInternationalizedSec);
+            geminiMd.append("\n## INTERNATIONALIZATION MANDATE\nUser-facing strings must not be hardcoded; retrieve from resources:\n\n").append(geminiInternationalizedSec);
+            if (windsurfActive) windsurfRules.append(windsurfInternationalizedSec);
+            if (zedActive)      zedRules.append(zedInternationalizedSec);
+        }
+        if (!collector.strictClasspath().isEmpty()) {
+            cursorRules.append(cursorStrictClasspathSec);
+            claudeStrictClasspathSec.append("  </strict_classpath_elements>\n");
+            claudeMd.append(claudeStrictClasspathSec);
+            claudeMd.append("\n<rule>Dynamic class loading, custom classloaders, reflection hacks, or unverified external code are prohibited in <strict_classpath_elements>.</rule>\n");
+            codexAgents.append(codexStrictClasspathSec);
+            copilot.append(copilotStrictClasspathSec);
+            qwenMd.append(qwenStrictClasspathSec);
+            geminiMd.append("\n## STRICT CLASSPATH INTEGRITY\nDynamic class loading and reflection hacks are strictly prohibited:\n\n").append(geminiStrictClasspathSec);
+            if (windsurfActive) windsurfRules.append(windsurfStrictClasspathSec);
+            if (zedActive)      zedRules.append(zedStrictClasspathSec);
+        }
+        if (!collector.schemaSafe().isEmpty()) {
+            cursorRules.append(cursorSchemaSafeSec);
+            claudeSchemaSafeSec.append("  </schema_safe_elements>\n");
+            claudeMd.append(claudeSchemaSafeSec);
+            claudeMd.append("\n<rule>Database or contract schema / serialization safety must be preserved in <schema_safe_elements>. Do not alter structures without migration paths.</rule>\n");
+            codexAgents.append(codexSchemaSafeSec);
+            copilot.append(copilotSchemaSafeSec);
+            qwenMd.append(qwenSchemaSafeSec);
+            geminiMd.append("\n## SCHEMA & SERIALIZATION SAFETY\nModifying schema or data formats without explicit migration plans is prohibited:\n\n").append(geminiSchemaSafeSec);
+            if (windsurfActive) windsurfRules.append(windsurfSchemaSafeSec);
+            if (zedActive)      zedRules.append(zedSchemaSafeSec);
+        }
+
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
@@ -567,6 +808,15 @@ public final class GuardrailContentBuilder {
             if (!collector.deprecated().isEmpty())    llmsTxt.append(llmsTxtDeprecated);
             if (!collector.observability().isEmpty()) llmsTxt.append(llmsTxtObservability);
             if (!collector.regulation().isEmpty())    llmsTxt.append(llmsTxtRegulation);
+            if (!collector.parallelTests().isEmpty())     llmsTxt.append(llmsTxtParallelTests);
+            if (!collector.legacyBridge().isEmpty())      llmsTxt.append(llmsTxtLegacyBridge);
+            if (!collector.architecture().isEmpty())      llmsTxt.append(llmsTxtArchitecture);
+            if (!collector.publicApi().isEmpty())         llmsTxt.append(llmsTxtPublicApi);
+            if (!collector.strictExceptions().isEmpty())  llmsTxt.append(llmsTxtStrictExceptions);
+            if (!collector.strictTypes().isEmpty())       llmsTxt.append(llmsTxtStrictTypes);
+            if (!collector.internationalized().isEmpty())  llmsTxt.append(llmsTxtInternationalized);
+            if (!collector.strictClasspath().isEmpty())   llmsTxt.append(llmsTxtStrictClasspath);
+            if (!collector.schemaSafe().isEmpty())        llmsTxt.append(llmsTxtSchemaSafe);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -583,6 +833,15 @@ public final class GuardrailContentBuilder {
             if (!collector.deprecated().isEmpty())    llmsFullTxt.append(llmsFullTxtDeprecated);
             if (!collector.observability().isEmpty()) llmsFullTxt.append(llmsFullTxtObservability);
             if (!collector.regulation().isEmpty())    llmsFullTxt.append(llmsFullTxtRegulation);
+            if (!collector.parallelTests().isEmpty())     llmsFullTxt.append(llmsFullTxtParallelTests);
+            if (!collector.legacyBridge().isEmpty())      llmsFullTxt.append(llmsFullTxtLegacyBridge);
+            if (!collector.architecture().isEmpty())      llmsFullTxt.append(llmsFullTxtArchitecture);
+            if (!collector.publicApi().isEmpty())         llmsFullTxt.append(llmsFullTxtPublicApi);
+            if (!collector.strictExceptions().isEmpty())  llmsFullTxt.append(llmsFullTxtStrictExceptions);
+            if (!collector.strictTypes().isEmpty())       llmsFullTxt.append(llmsFullTxtStrictTypes);
+            if (!collector.internationalized().isEmpty())  llmsFullTxt.append(llmsFullTxtInternationalized);
+            if (!collector.strictClasspath().isEmpty())   llmsFullTxt.append(llmsFullTxtStrictClasspath);
+            if (!collector.schemaSafe().isEmpty())        llmsFullTxt.append(llmsFullTxtSchemaSafe);
         }
 
         return new Result(buildContentMap(geminiMd), elementRules);
@@ -1172,6 +1431,15 @@ public final class GuardrailContentBuilder {
                 llmsTxtDeprecated    = new StringBuilder("\n## ⚠️ Deprecated Elements\n");
                 llmsTxtObservability = new StringBuilder("\n## 📡 Observability Instrumentation\n");
                 llmsTxtRegulation    = new StringBuilder("\n## 📜 Regulatory Compliance\n");
+                llmsTxtParallelTests     = new StringBuilder("\n## Strict Test Isolation\n");
+                llmsTxtLegacyBridge      = new StringBuilder("\n## Legacy Compatibility Bridge\n");
+                llmsTxtArchitecture      = new StringBuilder("\n## Architectural Boundary Constraints\n");
+                llmsTxtPublicApi         = new StringBuilder("\n## Public API Surface Protection\n");
+                llmsTxtStrictExceptions  = new StringBuilder("\n## Strict Exception Handling\n");
+                llmsTxtStrictTypes       = new StringBuilder("\n## Strict Type Safety\n");
+                llmsTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\n");
+                llmsTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\n");
+                llmsTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -1195,6 +1463,15 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtDeprecated    = new StringBuilder("\n## ⚠️ Deprecated Elements\nThe following elements are deprecated. Suggest migration to the named replacement for any caller and do not extend them.\n\n");
                 llmsFullTxtObservability = new StringBuilder("\n## 📡 Observability Instrumentation\nThe following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on.\n\n");
                 llmsFullTxtRegulation    = new StringBuilder("\n## 📜 Regulatory Compliance\nThe following elements implement specific regulatory clauses. Document compliance impact for every change and never weaken the requirement.\n\n");
+                llmsFullTxtParallelTests     = new StringBuilder("\n## Strict Test Isolation\nAI tools must enforce strict isolation when generating or modifying tests for these elements.\n\n");
+                llmsFullTxtLegacyBridge      = new StringBuilder("\n## Legacy Compatibility Bridge\nThese elements are legacy or compatibility bridges. Do not restructure or modernize them.\n\n");
+                llmsFullTxtArchitecture      = new StringBuilder("\n## Architectural Boundary Constraints\nStrict architectural layering must be respected. No illegal references or imports.\n\n");
+                llmsFullTxtPublicApi         = new StringBuilder("\n## Public API Surface Protection\nThese elements expose public API surfaces. Preserve signatures, Javadocs, and backward compatibility.\n\n");
+                llmsFullTxtStrictExceptions  = new StringBuilder("\n## Strict Exception Handling\nPrecise and robust exception handling must be enforced. No catching or throwing generic Exception.\n\n");
+                llmsFullTxtStrictTypes       = new StringBuilder("\n## Strict Type Safety\nType safety must be strictly preserved. Loose or erased types are prohibited.\n\n");
+                llmsFullTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\nUser-facing strings must not be hardcoded; resolve them via localized resources.\n\n");
+                llmsFullTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\nDynamic runtime class loading and reflections are strictly prohibited.\n\n");
+                llmsFullTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\nSchema and serialization compatibility must be strictly preserved.\n\n");
             }
         }
 
@@ -1396,6 +1673,191 @@ public final class GuardrailContentBuilder {
             }
         }
         return sb.toString();
+    }
+
+    private void appendParallelTests(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                     StringBuilder codexSec, StringBuilder copilotSec,
+                                     StringBuilder qwenSec, StringBuilder geminiSec,
+                                     StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Strict test isolation required. No shared mutable state or external resource conflicts.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <isolation>strict</isolation>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtParallelTests.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtParallelTests.append("### ").append(className).append("\n- Enforce strict test isolation and thread safety. Do not share mutable state between parallel test cases.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### TEST ISOLATION: ").append(className).append("\n- **Rule**: Strict test isolation required. No shared mutable state, specific order, or resource conflicts.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (test-isolation): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Strict Test Isolation", "- **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.");
+    }
+
+    private void appendLegacyBridge(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                    StringBuilder codexSec, StringBuilder copilotSec,
+                                    StringBuilder qwenSec, StringBuilder geminiSec,
+                                    StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <refactor>prohibited</refactor>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtLegacyBridge.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtLegacyBridge.append("### ").append(className).append("\n- Legacy compatibility bridge. Do not refactor structural patterns. Only modify internal business logic as explicitly requested.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### LEGACY BRIDGE: ").append(className).append("\n- **Rule**: Do not restructure or modernize this class. Compatibility bridge.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (legacy-bridge): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Legacy Compatibility Bridge", "- **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.");
+    }
+
+    private void appendArchitecture(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                    StringBuilder codexSec, StringBuilder copilotSec,
+                                    StringBuilder qwenSec, StringBuilder geminiSec,
+                                    StringBuilder windsurfSec, StringBuilder zedSec) {
+        AIArchitecture arch = e.getAnnotation(AIArchitecture.class);
+        if (arch == null) return;
+        String className = ElementNaming.elementPath(e);
+        String belongsTo = arch.belongsTo();
+        String[] cannotRef = arch.cannotReference();
+        String cannotRefStr = String.join(", ", cannotRef);
+        String summary = "Belongs to layer: `" + belongsTo + "`" + (cannotRef.length > 0 ? ". Prohibited from referencing: [" + cannotRefStr + "]" : "");
+        
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <belongs_to>").append(belongsTo).append("</belongs_to>\n");
+            for (String r : cannotRef) {
+                claudeSec.append("      <cannot_reference>").append(r).append("</cannot_reference>\n");
+            }
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtArchitecture.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtArchitecture.append("### ").append(className).append("\n- **Belongs to Layer**: ").append(belongsTo).append("\n");
+            if (cannotRef.length > 0) llmsFullTxtArchitecture.append("- **Prohibited References**: ").append(cannotRefStr).append("\n");
+            llmsFullTxtArchitecture.append("\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### ARCHITECTURE LAYER: ").append(className).append("\n- **Layer**: ").append(belongsTo).append("\n").append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append("\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (architecture): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Architectural Boundary Constraints", "- **Layer**: " + belongsTo + (cannotRef.length > 0 ? "\n- **Prohibited References**: " + cannotRefStr : ""));
+    }
+
+    private void appendPublicAPI(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                 StringBuilder codexSec, StringBuilder copilotSec,
+                                 StringBuilder qwenSec, StringBuilder geminiSec,
+                                 StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <api>public</api>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtPublicApi.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtPublicApi.append("### ").append(className).append("\n- Public API surface. Preserve signature, Javadoc, and behavior without breaking backwards compatibility.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### PUBLIC API: ").append(className).append("\n- **Rule**: Exposes public API. Do not modify public signature or break backwards compatibility.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (public-api): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Public API Surface Protection", "- **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.");
+    }
+
+    private void appendStrictExceptions(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                         StringBuilder codexSec, StringBuilder copilotSec,
+                                         StringBuilder qwenSec, StringBuilder geminiSec,
+                                         StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <exceptions>strict</exceptions>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtStrictExceptions.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtStrictExceptions.append("### ").append(className).append("\n- Enforce precise exception handling. Prohibit catching or throwing generic Exceptions/Throwables. Use specific or custom exceptions.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### STRICT EXCEPTIONS: ").append(className).append("\n- **Rule**: Prohibit catching or throwing generic Exception/Throwable. Use custom, domain-specific exceptions.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (strict-exceptions): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Strict Exception Handling", "- **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.");
+    }
+
+    private void appendStrictTypes(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                   StringBuilder codexSec, StringBuilder copilotSec,
+                                   StringBuilder qwenSec, StringBuilder geminiSec,
+                                   StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <types>strict</types>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtStrictTypes.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtStrictTypes.append("### ").append(className).append("\n- Prohibit loose typing. Use strongly-typed transfer objects or domain models instead of Object or Map<String, Object>.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### STRICT TYPES: ").append(className).append("\n- **Rule**: Loose typing is prohibited. Enforce explicit type-safety and strongly-typed objects.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (strict-types): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Strict Type Safety", "- **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety.");
+    }
+
+    private void appendInternationalized(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                         StringBuilder codexSec, StringBuilder copilotSec,
+                                         StringBuilder qwenSec, StringBuilder geminiSec,
+                                         StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <i18n>required</i18n>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtInternationalized.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtInternationalized.append("### ").append(className).append("\n- Internationalization mandate. Prohibit hardcoding user-facing strings; all user-visible text must be localized.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### INTERNATIONALIZED: ").append(className).append("\n- **Rule**: Internationalization required. Do not hardcode user-facing labels or strings.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (i18n): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Internationalization Mandate", "- **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources.");
+    }
+
+    private void appendStrictClasspath(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                       StringBuilder codexSec, StringBuilder copilotSec,
+                                       StringBuilder qwenSec, StringBuilder geminiSec,
+                                       StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <classpath>strict</classpath>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtStrictClasspath.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtStrictClasspath.append("### ").append(className).append("\n- Strict classpath integrity. Prohibit dynamic runtime class loading, reflections, or external JAR injection.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### STRICT CLASSPATH: ").append(className).append("\n- **Rule**: Enforce strict classpath integrity. Dynamic loading or custom classloaders are prohibited.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (strict-classpath): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Strict Classpath Integrity", "- **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.");
+    }
+
+    private void appendSchemaSafe(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec,
+                                  StringBuilder windsurfSec, StringBuilder zedSec) {
+        String className = ElementNaming.elementPath(e);
+        String summary = "Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.";
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <schema>safe</schema>\n    </element>\n");
+        }
+        if (llmsActive)     llmsTxtSchemaSafe.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) llmsFullTxtSchemaSafe.append("### ").append(className).append("\n- Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.\n\n");
+        if (aiderConvActive)   aiderConventions.append("#### SCHEMA SAFE: ").append(className).append("\n- **Rule**: Schema safety required. Do not change serialization formats, database columns, or API models without a migration plan.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (schema-safe): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.");
     }
 
     /** Converts a String[] to a JSON array of quoted strings: "\"a\", \"b\"". */

@@ -98,4 +98,49 @@ Changes to the following elements must be accompanied by matching test code:
 
 - `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)`: Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
 - `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)`: Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
+
+## Strict Test Isolation
+Enforce strict isolation in tests for these elements:
+
+- `com.example.config.ParallelTestSettings`: Strict test isolation required. No shared mutable state or external resource conflicts.
+
+## Legacy Compatibility Bridge
+Do not refactor the structural patterns of these compatibility bridges:
+
+- `com.example.legacy.LegacyBridgeService`: Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+
+## Architectural Constraints
+Strict layered architecture constraints apply to these elements:
+
+- `com.example.service.LayeredDomainService`: Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## Public API Protection
+Public API surface. Signatures and backwards compatibility must be strictly preserved:
+
+- `com.example.service.PublicPaymentController`: Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+
+## Strict Exceptions
+Generic exception throwing/catching is strictly prohibited for these elements:
+
+- `com.example.service.TransactionalPaymentService`: Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+
+## Strict Types
+Loose typing is strictly prohibited for these elements:
+
+- `com.example.payment.PaymentDetails`: Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+
+## Internationalization
+Hardcoding user-facing strings is strictly prohibited for these elements:
+
+- `com.example.utils.I18nMessageHelper`: Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+
+## Strict Classpath
+Dynamic runtime class loading is strictly prohibited for these elements:
+
+- `com.example.utils.StrictUtility`: Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+
+## Schema Safety
+Modifying schema or data formats without explicit migration plans is prohibited:
+
+- `com.example.database.UserEntity`: Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 # VIBETAGS-END

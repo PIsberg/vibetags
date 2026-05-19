@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
-@SuppressWarnings("PMD.GuardLogStatement")
+@SuppressWarnings({"PMD.GuardLogStatement", "PMD.AvoidLiteralsInIfCondition", "PMD.NullAssignment"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -108,7 +108,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
-        this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+        String useCache = options.getOrDefault("vibetags.cache", "true");
+        if ("false".equalsIgnoreCase(useCache)) {
+            this.writeCache = null;
+        } else {
+            this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+        }
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
 
@@ -167,6 +172,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 "VibeTags: inputs unchanged since last run (fingerprint " + fingerprint
                     + "), skipping content build and writes.");
             if (log != null) log.info("Inputs unchanged (fingerprint {}). Skipping generate phase.", fingerprint);
+            VibeTagsLogger.shutdown(root);
             return;
         }
 
@@ -255,6 +261,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             writeCache.setSidecarStamp(sidecarStampHex);
             writeCache.flush();
         }
+        VibeTagsLogger.shutdown(root);
     }
 
     private void logSummary(Set<String> activeServices) {
@@ -276,6 +283,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         logSet("@AIDeprecated",   collector.deprecated());
         logSet("@AIObservability", collector.observability());
         logSet("@AIRegulation",   collector.regulation());
+        logSet("@AIParallelTests", collector.parallelTests());
+        logSet("@AILegacyBridge", collector.legacyBridge());
+        logSet("@AIArchitecture", collector.architecture());
+        logSet("@AIPublicAPI",    collector.publicApi());
+        logSet("@AIStrictExceptions", collector.strictExceptions());
+        logSet("@AIStrictTypes",  collector.strictTypes());
+        logSet("@AIInternationalized", collector.internationalized());
+        logSet("@AIStrictClasspath", collector.strictClasspath());
+        logSet("@AISchemaSafe",   collector.schemaSafe());
     }
 
     private void logSet(String label, Set<Element> elements) {

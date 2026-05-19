@@ -68,6 +68,9 @@ public final class VibeTagsLogger {
     static final String DEFAULT_LOG_FILE  = "vibetags.log";
     static final String DEFAULT_LOG_LEVEL = "INFO";
 
+    private static final ThreadLocal<java.util.Set<Path>> THREAD_PROJECT_ROOTS =
+            ThreadLocal.withInitial(java.util.LinkedHashSet::new);
+
     private VibeTagsLogger() {}
 
     /**
@@ -81,8 +84,30 @@ public final class VibeTagsLogger {
         try {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
             if (factory instanceof LoggerContext context) {
+                java.util.Set<Path> roots = THREAD_PROJECT_ROOTS.get();
+                for (Path root : roots) {
+                    String dynamicName = getLoggerName(root);
+                    context.getLogger(dynamicName).detachAndStopAllAppenders();
+                }
+                roots.clear();
                 context.getLogger(LOGGER_NAME).detachAndStopAllAppenders();
             }
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Detaches and stops appenders specifically for the given project root's logger.
+     */
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
+    public static void shutdown(Path projectRoot) {
+        if (projectRoot == null) return;
+        try {
+            ILoggerFactory factory = LoggerFactory.getILoggerFactory();
+            if (factory instanceof LoggerContext context) {
+                String dynamicName = getLoggerName(projectRoot);
+                context.getLogger(dynamicName).detachAndStopAllAppenders();
+            }
+            THREAD_PROJECT_ROOTS.get().remove(projectRoot);
         } catch (Exception ignored) {}
     }
 
@@ -95,6 +120,16 @@ public final class VibeTagsLogger {
      */
     public static Logger forRoot(Path projectRoot) {
         return forRoot(projectRoot, null, null);
+    }
+
+    /**
+     * Suffixes the logger name with an absolute path hash to isolate concurrent parallel test threads.
+     */
+    private static String getLoggerName(Path projectRoot) {
+        if (projectRoot == null) {
+            return LOGGER_NAME;
+        }
+        return LOGGER_NAME + "." + Math.abs(projectRoot.toAbsolutePath().normalize().hashCode());
     }
 
     /**
@@ -123,6 +158,9 @@ public final class VibeTagsLogger {
      */
     @SuppressWarnings({"PMD.SystemPrintln", "PMD.AvoidLiteralsInIfCondition", "PMD.AvoidCatchingGenericException"})
     public static Logger forRoot(Path projectRoot, String logPath, String level) {
+        if (projectRoot != null) {
+            THREAD_PROJECT_ROOTS.get().add(projectRoot);
+        }
         // Resolve the effective log file path
         Path logFile = resolveLogFile(projectRoot, logPath);
 
@@ -136,7 +174,7 @@ public final class VibeTagsLogger {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
             if (!(factory instanceof LoggerContext context)) {
                 // SLF4J is not bound to Logback — plain logger as fallback
-                return LoggerFactory.getLogger(LOGGER_NAME);
+                return LoggerFactory.getLogger(getLoggerName(projectRoot));
             }
 
             Level logbackLevel = Level.toLevel(level, Level.INFO);
@@ -154,7 +192,8 @@ public final class VibeTagsLogger {
             appender.setImmediateFlush(true);
             appender.start();
 
-            ch.qos.logback.classic.Logger logger = context.getLogger(LOGGER_NAME);
+            String dynamicLoggerName = getLoggerName(projectRoot);
+            ch.qos.logback.classic.Logger logger = context.getLogger(dynamicLoggerName);
             logger.detachAndStopAllAppenders(); // avoid duplicates in incremental/daemon builds
             logger.addAppender(appender);
             logger.setLevel(logbackLevel);
@@ -164,7 +203,7 @@ public final class VibeTagsLogger {
         } catch (Exception e) {
             // Never let logging setup break the annotation processor
             System.err.println("VibeTags: Failed to initialize file logger: " + e.getMessage());
-            return LoggerFactory.getLogger(LOGGER_NAME);
+            return LoggerFactory.getLogger(getLoggerName(projectRoot));
         }
     }
 

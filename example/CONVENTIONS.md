@@ -231,4 +231,32 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Standard**: GDPR
 - **Clause**: Art. 20
 - **Description**: Right to data portability — exports the user's data in a machine-readable format.
+
+#### TEST ISOLATION: com.example.config.ParallelTestSettings
+- **Rule**: Strict test isolation required. No shared mutable state, specific order, or resource conflicts.
+
+#### LEGACY BRIDGE: com.example.legacy.LegacyBridgeService
+- **Rule**: Do not restructure or modernize this class. Compatibility bridge.
+
+#### ARCHITECTURE LAYER: com.example.service.LayeredDomainService
+- **Layer**: domain
+- **Cannot Reference**: infrastructure, ui
+
+#### PUBLIC API: com.example.service.PublicPaymentController
+- **Rule**: Exposes public API. Do not modify public signature or break backwards compatibility.
+
+#### STRICT EXCEPTIONS: com.example.service.TransactionalPaymentService
+- **Rule**: Prohibit catching or throwing generic Exception/Throwable. Use custom, domain-specific exceptions.
+
+#### STRICT TYPES: com.example.payment.PaymentDetails
+- **Rule**: Loose typing is prohibited. Enforce explicit type-safety and strongly-typed objects.
+
+#### INTERNATIONALIZED: com.example.utils.I18nMessageHelper
+- **Rule**: Internationalization required. Do not hardcode user-facing labels or strings.
+
+#### STRICT CLASSPATH: com.example.utils.StrictUtility
+- **Rule**: Enforce strict classpath integrity. Dynamic loading or custom classloaders are prohibited.
+
+#### SCHEMA SAFE: com.example.database.UserEntity
+- **Rule**: Schema safety required. Do not change serialization formats, database columns, or API models without a migration plan.
 <!-- VIBETAGS-END -->

@@ -13,6 +13,15 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.annotations.AIParallelTests;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
@@ -223,6 +232,71 @@ public final class AnnotationValidator {
                     "VibeTags: @AIRegulation on " + element.toString()
                         + " has a blank 'standard' attribute. Name the compliance standard "
                         + "(e.g., GDPR, PCI-DSS, HIPAA).",
+                    element);
+            }
+        }
+
+        // Contradiction: @AILegacyBridge + @AIDraft
+        for (Element element : roundEnv.getElementsAnnotatedWith(AILegacyBridge.class)) {
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AILegacyBridge and @AIDraft. These intents are contradictory.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIPublicAPI + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIPublicAPI.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIPublicAPI and @AILocked. "
+                        + "@AILocked already locks this element; @AIPublicAPI is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIParallelTests + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIParallelTests.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIParallelTests and @AILocked. "
+                        + "@AILocked already locks this element; @AIParallelTests is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AISchemaSafe + @AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISchemaSafe.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISchemaSafe and @AIIgnore. "
+                        + "@AIIgnore already excludes the element; @AISchemaSafe is redundant.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AIStrictClasspath + @AILocked
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIStrictClasspath and @AILocked. "
+                        + "@AILocked already locks this element; @AIStrictClasspath is redundant.",
+                    element);
+            }
+        }
+
+        // Empty config warning: @AIArchitecture with blank belongsTo
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIArchitecture.class)) {
+            AIArchitecture arch = element.getAnnotation(AIArchitecture.class);
+            if (arch.belongsTo() == null || arch.belongsTo().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIArchitecture on " + element.toString()
+                        + " has a blank 'belongsTo' attribute. Name the layer or component it belongs to.",
                     element);
             }
         }

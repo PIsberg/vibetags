@@ -95,12 +95,19 @@ class AIGuardrailProcessorProcessTest {
     }
 
     @Test
-    void process_noSignalFiles_emitsNote() {
+    void process_noSignalFiles_emitsNote(@TempDir Path tempDir) {
         // vibetags/ has no signal files so resolveActiveServices will find nothing
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.init(mockEnv(messager));
+
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        when(env.getOptions()).thenReturn(Map.of(
+            "vibetags.root", tempDir.toAbsolutePath().toString(),
+            "vibetags.cache", "false"
+        ));
+        processor.init(env);
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         when(roundEnv.processingOver()).thenReturn(true);
