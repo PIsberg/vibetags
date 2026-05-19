@@ -298,4 +298,131 @@ class MultiModuleAggregationTest {
         assertTrue(alphaIdx < betaIdx, "alpha should appear before beta");
         assertTrue(betaIdx < gammaIdx, "beta should appear before gamma");
     }
+
+    // -----------------------------------------------------------------------
+    // hasContent() — not exercised by any other test
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sidecar_hasContent_falseWhenNoBodiesAdded() {
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        assertFalse(s.hasContent(), "Newly created sidecar with no bodies must report hasContent=false");
+    }
+
+    @Test
+    void sidecar_hasContent_trueAfterNonBlankBodyAdded() {
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        s.putBody("cursor", "## LOCKED\n* `com.example.Foo`");
+        assertTrue(s.hasContent(), "Sidecar with a non-blank body must report hasContent=true");
+    }
+
+    @Test
+    void sidecar_hasContent_falseAfterOnlyBlankBodyAdded() {
+        // putBody discards blank bodies, so hasContent must still be false.
+        ModuleSidecar s = new ModuleSidecar("_root_", "");
+        s.putBody("cursor", "   ");
+        assertFalse(s.hasContent(), "Blank body must not be stored — hasContent must remain false");
+    }
+
+    // -----------------------------------------------------------------------
+    // load() edge cases: line without '=' and missing moduleId
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sidecar_load_lineWithoutEquals_isSkipped(@TempDir Path root) throws IOException {
+        // A sidecar file with a valid moduleId but also a line with no '='.
+        // load() must skip the invalid line and still parse the valid body.
+        Path sidecarFile = root.resolve(".vibetags-mod-skiptest");
+        String encoded = java.util.Base64.getEncoder()
+            .encodeToString("## rules".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        Files.writeString(sidecarFile,
+            "moduleId=skiptest\n"
+            + "modulePath=\n"
+            + "THIS_LINE_HAS_NO_EQUALS_SIGN\n"
+            + "cursor=" + encoded + "\n");
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertEquals(1, loaded.size(), "Sidecar with an invalid line must still load");
+        assertEquals("skiptest", loaded.get(0).getModuleId());
+        assertEquals("## rules", loaded.get(0).getBodies().get("cursor"),
+            "Valid body entries after the invalid line must still be parsed");
+    }
+
+    @Test
+    void sidecar_load_missingModuleId_pruned(@TempDir Path root) throws IOException {
+        // A sidecar file with NO moduleId= line; load() returns null → readAll prunes it.
+        Path sidecarFile = root.resolve(".vibetags-mod-noid");
+        String encoded = java.util.Base64.getEncoder()
+            .encodeToString("content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        Files.writeString(sidecarFile,
+            "modulePath=\n"
+            + "cursor=" + encoded + "\n");
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+        assertTrue(loaded.isEmpty(), "Sidecar without moduleId must be pruned by readAll()");
+        assertFalse(Files.exists(sidecarFile),
+            "Malformed sidecar file must be deleted by readAll()");
+    }
+
+    // -----------------------------------------------------------------------
+    // Branch-coverage additions: ModuleSidecar edge cases
+    // -----------------------------------------------------------------------
+
+    /** L68 false branch: putBody with null body must not store anything. */
+    @Test
+    void putBody_nullBody_isIgnored() {
+        ModuleSidecar s = new ModuleSidecar("test", "");
+        s.putBody("cursor", null);
+        assertFalse(s.hasContent(), "null body must not be stored");
+    }
+
+    /** L146 true branch: readAll on a plain file (not a directory) returns empty. */
+    @Test
+    void readAll_nonDirectoryRoot_returnsEmptyList(@TempDir Path tmp) throws IOException {
+        Path file = tmp.resolve("notadir.txt");
+        Files.writeString(file, "content");
+        List<ModuleSidecar> result = ModuleSidecar.readAll(file);
+        assertTrue(result.isEmpty(), "readAll on a file (not dir) must return empty list");
+    }
+
+    /** L150 true branch: readAll filters out .tmp sidecar files. */
+    @Test
+    void readAll_skipsTmpSidecarFiles(@TempDir Path tmp) throws IOException {
+        Path tmpSidecar = tmp.resolve(".vibetags-mod-pending.tmp");
+        Files.writeString(tmpSidecar, "moduleId=pending\nmodulePath=\n");
+        List<ModuleSidecar> result = ModuleSidecar.readAll(tmp);
+        assertTrue(result.isEmpty(), ".tmp sidecar files must be filtered out by readAll");
+    }
+
+    /**
+     * L159 false branch: sidecar with modulePath="_root_" is included without stale check
+     * (the !"_root_".equals(s.modulePath) condition evaluates false -> no directory check).
+     */
+    @Test
+    void readAll_sidecarWithRootModulePath_isIncludedWithoutStaleCheck(@TempDir Path tmp) throws IOException {
+        ModuleSidecar s = new ModuleSidecar("root-module", "_root_");
+        s.putBody("cursor", "## Rules\n* rule one");
+        s.save(tmp);
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(tmp);
+        assertTrue(loaded.stream().anyMatch(m -> "root-module".equals(m.getModuleId())),
+            "sidecar with modulePath='_root_' must be included without stale directory check");
+    }
+
+    /** L177 true branch: listPaths on a plain file (not a directory) returns empty. */
+    @Test
+    void listPaths_nonDirectoryRoot_returnsEmptyList(@TempDir Path tmp) throws IOException {
+        Path file = tmp.resolve("notadir.txt");
+        Files.writeString(file, "x");
+        List<Path> result = ModuleSidecar.listPaths(file);
+        assertTrue(result.isEmpty(), "listPaths on a file must return empty list");
+    }
+
+    /** L182 true branch: listPaths excludes .tmp sidecar files. */
+    @Test
+    void listPaths_skipsTmpSidecarFiles(@TempDir Path tmp) throws IOException {
+        Path tmpSidecar = tmp.resolve(".vibetags-mod-x.tmp");
+        Files.writeString(tmpSidecar, "irrelevant");
+        List<Path> result = ModuleSidecar.listPaths(tmp);
+        assertTrue(result.isEmpty(), ".tmp files must be excluded from listPaths");
+    }
 }

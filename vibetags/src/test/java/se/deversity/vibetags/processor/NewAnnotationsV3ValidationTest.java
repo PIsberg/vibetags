@@ -85,7 +85,27 @@ class NewAnnotationsV3ValidationTest {
                 "package com.example.v3;\n"
                     + "import se.deversity.vibetags.annotations.AIRegulation;\n"
                     + "@AIRegulation(standard = \"   \")\n"
-                    + "public class BlankRegulation {}\n")
+                    + "public class BlankRegulation {}\n"),
+
+            // @AIObservability with only traces (no metrics, no logs) — must NOT warn.
+            // Covers the traces.length==0 false branch in AnnotationValidator's AND chain.
+            new StringSource("com/example/v3/TracesOnlyObservability.java",
+                "package com.example.v3;\n"
+                    + "import se.deversity.vibetags.annotations.AIObservability;\n"
+                    + "public class TracesOnlyObservability {\n"
+                    + "    @AIObservability(traces = {\"span.operation\"})\n"
+                    + "    public void trace() {}\n"
+                    + "}\n"),
+
+            // @AIObservability with only logs (no metrics, no traces) — must NOT warn.
+            // Covers the logs.length==0 false branch in AnnotationValidator's AND chain.
+            new StringSource("com/example/v3/LogsOnlyObservability.java",
+                "package com.example.v3;\n"
+                    + "import se.deversity.vibetags.annotations.AIObservability;\n"
+                    + "public class LogsOnlyObservability {\n"
+                    + "    @AIObservability(logs = {\"app.query.execute\"})\n"
+                    + "    public void logOp() {}\n"
+                    + "}\n")
         );
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -146,6 +166,20 @@ class NewAnnotationsV3ValidationTest {
         assertTrue(warnings.stream().anyMatch(w ->
                 w.contains("@AIObservability") && w.contains("ignored")),
             "Expected warning about empty @AIObservability annotation. Warnings: " + warnings);
+    }
+
+    @Test
+    void doesNotWarn_aiObservability_whenTracesProvided() {
+        assertTrue(warnings.stream().noneMatch(w ->
+                w.contains("TracesOnlyObservability") && w.contains("ignored")),
+            "No warning expected when @AIObservability has traces. Warnings: " + warnings);
+    }
+
+    @Test
+    void doesNotWarn_aiObservability_whenLogsProvided() {
+        assertTrue(warnings.stream().noneMatch(w ->
+                w.contains("LogsOnlyObservability") && w.contains("ignored")),
+            "No warning expected when @AIObservability has logs. Warnings: " + warnings);
     }
 
     @Test

@@ -318,4 +318,79 @@ class WriteCacheTest {
         cache.invalidate(a);
         assertEquals(1, cache.size(), "size decrements after invalidate");
     }
+
+    // -----------------------------------------------------------------------
+    // Cache-file parsing edge cases (covers loadIfNeeded branches)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void load_emptyLine_isSkipped(@TempDir Path tmp) throws IOException {
+        // Covers the `if (line.isEmpty()) continue;` branch in loadIfNeeded.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath,
+            "# fingerprint: abc12345\n"
+                + "\n"                                           // empty line
+                + ".cursorrules\tabc\t42\t1000\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertEquals(1, cache.size(), "empty line must be silently skipped; valid entry must load");
+        assertEquals("abc12345", cache.getBuildFingerprint());
+    }
+
+    @Test
+    void load_fingerprintPrefixWithEmptyValue_isIgnored(@TempDir Path tmp) throws IOException {
+        // Covers the `if (!fp.isEmpty()) buildFingerprint = fp;` false branch:
+        // a "# fingerprint: " line whose value is blank must not overwrite a prior fingerprint.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath,
+            "# fingerprint: \n"      // blank value — must not be stored
+                + ".cursorrules\tabc\t42\t1000\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertNull(cache.getBuildFingerprint(),
+            "blank fingerprint value must leave fingerprint as null");
+    }
+
+    @Test
+    void load_sidecarStampPrefixWithEmptyValue_isIgnored(@TempDir Path tmp) throws IOException {
+        // Covers the `if (!st.isEmpty()) sidecarStamp = st;` false branch.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath,
+            "# sidecar-stamp: \n"    // blank value — must not be stored
+                + ".cursorrules\tabc\t42\t1000\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertNull(cache.getSidecarStamp(),
+            "blank sidecar-stamp value must leave stamp as null");
+    }
+
+    @Test
+    void load_lineWithNoTab_isSkipped(@TempDir Path tmp) throws IOException {
+        // Covers the `if (t1 < 0) continue;` branch in loadIfNeeded.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath,
+            "no-tab-in-this-line\n"
+                + ".cursorrules\tabc\t42\t1000\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertEquals(1, cache.size(), "line without any tab must be skipped; valid entry must load");
+    }
+
+    @Test
+    void load_lineWithOnlyTwoTabs_isSkipped(@TempDir Path tmp) throws IOException {
+        // Covers the `if (t3 < 0) continue;` branch: the valid format needs 3 tabs
+        // (path, hash, size, mtime). A line with only 2 tabs is malformed.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath,
+            "only\ttwo\ttabs\n"                                  // 2 tabs → t3 < 0
+                + ".cursorrules\tabc\t42\t1000\n",
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertEquals(1, cache.size(), "line with only two tabs must be skipped; valid entry must load");
+    }
 }
