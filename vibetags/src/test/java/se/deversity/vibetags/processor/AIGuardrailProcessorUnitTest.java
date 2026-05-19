@@ -747,6 +747,18 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(content.contains("**/pkg/**/*.java"), "Package glob should be recursive");
     }
 
+    @Test
+    void init_withBlankRootOverride_doesNotThrow() {
+        // Covers the !rootOverride.isBlank() = false branch at L97:
+        // a non-null but blank vibetags.root falls back to the JVM working directory.
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        ProcessingEnvironment pe = mock(ProcessingEnvironment.class);
+        when(pe.getOptions()).thenReturn(Map.of("vibetags.root", "   "));
+        when(pe.getMessager()).thenReturn(noopMessager());
+        assertDoesNotThrow(() -> processor.init(pe),
+            "blank vibetags.root must not throw — fallback to working directory");
+    }
+
     private static Messager noopMessager() {
         return new Messager() {
             public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
