@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
 The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 15 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
+- `vibetags-annotations/` — the 24 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
 - `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
 - `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).
@@ -262,6 +262,15 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AIDeprecated` | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
 | `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
 | `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
+| `@AIArchitecture` | TYPE | `belongsTo: String`, `cannotReference: String[]` |
+| `@AILegacyBridge` | TYPE, METHOD | *(none)* |
+| `@AIStrictClasspath` | TYPE, METHOD | *(none)* |
+| `@AIInternationalized` | TYPE, METHOD | *(none)* |
+| `@AIPublicAPI` | TYPE, METHOD | *(none)* |
+| `@AISchemaSafe` | TYPE, FIELD | *(none)* |
+| `@AIStrictExceptions` | TYPE, METHOD | *(none)* |
+| `@AIStrictTypes` | TYPE, METHOD, FIELD | *(none)* |
+| `@AIParallelTests` | TYPE, METHOD | *(none)* |
 
 **Annotation semantics:**
 
@@ -277,6 +286,15 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIDeprecated` — actively routes AI toward replacing callers; richer than Java's `@Deprecated` (replacement target, migration guide, removal deadline)
 - `@AIObservability` — names the metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them
 - `@AIRegulation` — ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …); AI must document compliance impact and never weaken the requirement
+- `@AIArchitecture` — declares `belongsTo` layer and forbidden `cannotReference` layers; AI must not introduce cross-layer imports
+- `@AILegacyBridge` — marks compatibility shims for upstream quirks/bugs; AI must not modernize the structure, only internal logic may change
+- `@AIStrictClasspath` — prohibits dynamic class loading, custom `ClassLoader`s, and runtime reflection; all deps must resolve at compile time
+- `@AIInternationalized` — all user-visible text must come from i18n bundles; AI must never hardcode user-facing strings
+- `@AIPublicAPI` — all changes must be additive and backward-compatible; renaming or changing serialization is forbidden
+- `@AISchemaSafe` — maps to persistent storage; destructive schema changes require explicit backward-compatible migrations
+- `@AIStrictExceptions` — prohibits catching/throwing `Exception`/`Throwable`; requires specific types with descriptive messages
+- `@AIStrictTypes` — prohibits loose types (`Object`, raw collections, `double` for money); requires well-typed domain models
+- `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
 
 **Compile-time validation warnings:**
 
@@ -303,6 +321,14 @@ The processor records a fingerprint of the build inputs — every collected anno
 
 In multi-module builds, if a module has **no new annotations**, the processor skips updating shared files (`.cursorrules`, `llms.txt`, etc.) to avoid overwriting annotations contributed by sibling modules.
 
+### Internal class responsibilities
+
+Beyond what the VibeTags-generated section below describes, three additional internal classes handle cross-cutting concerns:
+
+- `AnnotationValidator` — all compile-time consistency checks (contradictory combinations, no-op annotations, invalid values) extracted from `AIGuardrailProcessor` into a single class; add new warnings here
+- `ElementNaming` — constructs fully-qualified element paths (e.g., `com.example.Foo.bar`) for use in generated output; handles TYPE, METHOD, FIELD, and PACKAGE kinds
+- `OrphanWarner` — emits warnings when an annotation is present but the corresponding platform opt-in file is absent (e.g., `@AIIgnore` with no `.cursorignore`)
+
 ### SPI registration
 
 The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("*")` means new annotations are picked up automatically without touching the processor configuration.
@@ -317,7 +343,7 @@ All tests live in `vibetags/src/test`.
 
 | Class | Coverage |
 |---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 15 annotations) |
+| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 24 annotations) |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
@@ -331,14 +357,38 @@ All tests live in `vibetags/src/test`.
 | `QwenEndToEndTest` | Qwen-specific output |
 | `QwenProcessorUnitTest` | Qwen processor options |
 | `VibeTagsLoggerUnitTest` | File logging |
+| `VibeTagsLoggerAsyncTest` | Async/background logging behaviour |
+| `VibeTagsLoggerConcurrencyTest` | Logger thread-safety under concurrent writes |
 | `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
+| `MultiModuleAggregationTest` | Sidecar aggregation and sub-marker output across multiple modules |
+| `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
 | `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
-| `NewAnnotationsV3DefinitionTest` | Definition-level tests for v0.9.5 annotations: `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
+| `NewAnnotationsV3DefinitionTest` | Definition-level tests for `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
 | `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |
+| `NewAnnotationsV3MinimalTest` | Minimal smoke tests for v0.9.5 annotation output |
 | `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.5 annotations |
+| `NewAnnotationsV4DefinitionTest` | Definition-level tests for the 9 new annotations (`@AIArchitecture`, `@AILegacyBridge`, etc.) |
+| `NewAnnotationsV4EndToEndTest` | End-to-end generated content for the 9 new annotations across all platforms |
+| `NewAnnotationsV4ValidationTest` | Compile-time validation warnings for the 9 new annotations |
 | `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
+| `BuildFingerprintUnitTest` | `BuildFingerprint.compute()` determinism and collision properties |
+| `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged |
 | `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
 | `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
+| `GuardrailContentBuilderUnitTest` | Per-annotation content generation for each platform |
+| `GuardrailFileWriterCoverageTest` | `GuardrailFileWriter` branch coverage |
+| `GuardrailFileWriterEdgeCaseTest` | Edge cases: empty content, missing parent dir, read-only file |
+| `GranularRulesWriterUnitTest` | Per-class rule file writes and cleanup ordering |
+| `CleanupGranularDirectoryTest` | Orphan granular file removal after annotation deletion |
+| `AnnotationCollectorUnitTest` | `AnnotationCollector` accumulation across multiple rounds |
+| `AnnotationValidatorUnitTest` | All compile-time validation warning combinations |
+| `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
+| `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |
+| `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
+| `WriteCacheProcessorIntegrationTest` | Cache integration: created on first compile, stable mtimes on second, rewrite on external edit |
+| `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
+| `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
+| `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
 | `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 
