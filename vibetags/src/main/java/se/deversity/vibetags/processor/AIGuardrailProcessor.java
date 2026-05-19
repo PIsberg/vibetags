@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 )
 @SupportedAnnotationTypes("*")
 @SupportedSourceVersion(SourceVersion.RELEASE_11)
-@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level"})
+@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache"})
 @SuppressWarnings({"PMD.GuardLogStatement", "PMD.AvoidLiteralsInIfCondition", "PMD.NullAssignment"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
@@ -261,6 +261,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             writeCache.setSidecarStamp(sidecarStampHex);
             writeCache.flush();
         }
+        collector.reset();
+        this.elementRules = new java.util.LinkedHashMap<>();
         VibeTagsLogger.shutdown(root);
     }
 
@@ -307,7 +309,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     // ---------------------------------------------------------------------------------------
 
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
-        AnnotationValidator.validate(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, processingEnv);
     }
 
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {

@@ -24,6 +24,7 @@ import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -42,7 +43,7 @@ public final class AnnotationValidator {
     /**
      * Runs all validations against the given round environment, emitting warnings via the messager.
      */
-    public static void validate(Messager messager, RoundEnvironment roundEnv) {
+    public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
         // Contradiction: @AIDraft + @AILocked
         for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
@@ -298,6 +299,50 @@ public final class AnnotationValidator {
                     "VibeTags: @AIArchitecture on " + element.toString()
                         + " has a blank 'belongsTo' attribute. Name the layer or component it belongs to.",
                     element);
+            }
+
+            // Compile-time checks for forbidden dependency imports/references
+            String[] forbidden = arch.cannotReference();
+            if (forbidden != null && forbidden.length > 0 && processingEnv != null) {
+                try {
+                    com.sun.source.util.Trees trees = com.sun.source.util.Trees.instance(processingEnv);
+                    if (trees != null) {
+                        com.sun.source.util.TreePath path = trees.getPath(element);
+                        if (path != null) {
+                            com.sun.source.tree.CompilationUnitTree cu = path.getCompilationUnit();
+                            if (cu != null) {
+                                for (com.sun.source.tree.ImportTree imp : cu.getImports()) {
+                                    String importStr = imp.getQualifiedIdentifier().toString();
+                                    for (String forbiddenPkg : forbidden) {
+                                        if (forbiddenPkg == null || forbiddenPkg.isBlank()) {
+                                            continue;
+                                        }
+                                        boolean match = false;
+                                        if (importStr.equals(forbiddenPkg)) {
+                                            match = true;
+                                        } else if (importStr.startsWith(forbiddenPkg + ".")) {
+                                            match = true;
+                                        } else if (importStr.startsWith(forbiddenPkg + "*")) {
+                                            match = true;
+                                        }
+                                        if (match) {
+                                            messager.printMessage(Diagnostic.Kind.ERROR,
+                                                "VibeTags: Class " + element.toString()
+                                                    + " is annotated with @AIArchitecture and is strictly prohibited from referencing '"
+                                                    + forbiddenPkg + "', but has an illegal import of '" + importStr + "'.",
+                                                element);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    // Gracefully fallback/ignore if Trees API is unavailable or throws exception (e.g. unit tests or non-standard JDKs)
+                    messager.printMessage(Diagnostic.Kind.NOTE,
+                        "VibeTags: Trees API not available for AST architectural import scanning: " + t.getMessage(),
+                        element);
+                }
             }
         }
     }

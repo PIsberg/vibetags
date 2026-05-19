@@ -132,6 +132,34 @@ class ProcessorTestHarness {
         }
     }
 
+    List<javax.tools.Diagnostic<? extends JavaFileObject>> compileReturningDiagnostics() {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        if (compiler == null) {
+            throw new IllegalStateException("JavaCompiler unavailable — run tests with a JDK, not a JRE");
+        }
+        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+            Path classOut = root.resolve("classes");
+            Files.createDirectories(classOut);
+            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+
+            List<String> options = List.of(
+                "-classpath", System.getProperty("java.class.path"),
+                "-proc:only",
+                "-Avibetags.root=" + root.toAbsolutePath()
+            );
+
+            JavaCompiler.CompilationTask task = compiler.getTask(
+                null, fm, diagnostics, options, null, sources
+            );
+            task.setProcessors(List.of(new AIGuardrailProcessor()));
+            task.call();
+            return diagnostics.getDiagnostics();
+        } catch (IOException e) {
+            throw new RuntimeException("Compilation setup failed", e);
+        }
+    }
+
     /** Returns the temp directory that receives all processor output. */
     Path root() {
         return root;

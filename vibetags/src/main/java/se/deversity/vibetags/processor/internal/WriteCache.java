@@ -50,6 +50,7 @@ public final class WriteCache {
     }
 
     private final Path cachePath;
+    private final Path rootDir;
     private final Map<String, Entry> entries = new LinkedHashMap<>();
     private boolean loaded = false;
     private boolean dirty = false;
@@ -62,6 +63,8 @@ public final class WriteCache {
 
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
+        Path parent = cachePath.getParent();
+        this.rootDir = parent != null ? parent.toAbsolutePath().normalize() : java.nio.file.Paths.get("").toAbsolutePath().normalize();
     }
 
     /**
@@ -119,8 +122,8 @@ public final class WriteCache {
         if (entries.isEmpty()) return true;
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             try {
-                BasicFileAttributes attrs = Files.readAttributes(
-                    java.nio.file.Paths.get(e.getKey()), BasicFileAttributes.class);
+                Path fullPath = rootDir.resolve(e.getKey()).normalize();
+                BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
                 if (attrs.size() != e.getValue().size) return false;
                 if (attrs.lastModifiedTime().toMillis() != e.getValue().mtime) return false;
             } catch (IOException ioe) {
@@ -134,7 +137,8 @@ public final class WriteCache {
     @AIPerformance(constraint = "O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason")
     public boolean isUnchanged(Path file, String body) {
         loadIfNeeded();
-        Entry e = entries.get(file.toString());
+        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        Entry e = entries.get(relKey);
         if (e == null) return false;
         try {
             // Single stat for both size and mtime — half the syscalls of two getXxx() calls.
@@ -153,12 +157,14 @@ public final class WriteCache {
         loadIfNeeded();
         try {
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-            entries.put(file.toString(),
+            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            entries.put(relKey,
                 new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
             dirty = true;
         } catch (IOException ignored) {
             // If we can't stat the file we just wrote, drop the cache entry rather than store stale data.
-            entries.remove(file.toString());
+            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            entries.remove(relKey);
             dirty = true;
         }
     }
@@ -166,7 +172,8 @@ public final class WriteCache {
     /** Removes a cache entry (e.g. when the writer skipped the file or the path is no longer ours). */
     public void invalidate(Path file) {
         loadIfNeeded();
-        if (entries.remove(file.toString()) != null) {
+        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        if (entries.remove(relKey) != null) {
             dirty = true;
         }
     }
@@ -239,6 +246,14 @@ public final class WriteCache {
                 int t3 = line.indexOf('\t', t2 + 1);
                 if (t3 < 0) continue;
                 String path = line.substring(0, t1);
+                Path p = java.nio.file.Paths.get(path);
+                if (p.isAbsolute()) {
+                    try {
+                        path = rootDir.relativize(p.normalize()).toString().replace('\\', '/');
+                    } catch (IllegalArgumentException iae) {
+                        path = p.normalize().toString().replace('\\', '/');
+                    }
+                }
                 String hash = line.substring(t1 + 1, t2);
                 try {
                     long size  = Long.parseLong(line.substring(t2 + 1, t3));

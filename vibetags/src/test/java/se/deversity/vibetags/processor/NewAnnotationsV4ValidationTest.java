@@ -91,7 +91,15 @@ class NewAnnotationsV4ValidationTest {
                 "package com.example.v4;\n"
                     + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
                     + "@AIArchitecture(belongsTo = \"   \")\n"
-                    + "public class BlankArchitecture {}\n")
+                    + "public class BlankArchitecture {}\n"),
+
+            // @AIArchitecture with forbidden import
+            new StringSource("com/example/v4/ForbiddenArchitectureImport.java",
+                "package com.example.v4;\n"
+                    + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
+                    + "import java.util.ArrayList;\n"
+                    + "@AIArchitecture(belongsTo = \"domain\", cannotReference = {\"java.util\"})\n"
+                    + "public class ForbiddenArchitectureImport {}\n")
         );
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -159,6 +167,13 @@ class NewAnnotationsV4ValidationTest {
         assertTrue(warnings.stream().anyMatch(w ->
                 w.contains("@AIArchitecture") && w.contains("belongsTo") && w.contains("blank")),
             "Expected warning about blank belongsTo on @AIArchitecture. Warnings: " + warnings);
+    }
+
+    @Test
+    void errors_aiArchitecture_withForbiddenImport() {
+        assertTrue(warnings.stream().anyMatch(w ->
+                w.contains("@AIArchitecture") && w.contains("strictly prohibited from referencing 'java.util'") && w.contains("illegal import of 'java.util.ArrayList'")),
+            "Expected compilation error about forbidden import. Diagnostics/Warnings: " + warnings);
     }
 
     private static final class StringSource extends SimpleJavaFileObject {
