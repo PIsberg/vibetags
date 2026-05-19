@@ -23,7 +23,7 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies that AnnotationValidator emits the expected warnings for the v0.9.0 annotations.
+ * Verifies that AnnotationValidator emits the expected warnings for the v0.9.5 annotations.
  * Compiles in-memory sources and checks the diagnostics collected by the compiler.
  */
 class NewAnnotationsV3ValidationTest {

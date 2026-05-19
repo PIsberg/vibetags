@@ -63,10 +63,13 @@ def load_jmh(version_dir: Path) -> dict[str, tuple[float, float]]:
     out = {}
     for entry in data:
         name = entry["benchmark"].rsplit(".", 1)[-1]
-        out[name] = (
-            entry["primaryMetric"]["score"],
-            entry["primaryMetric"]["scoreError"],
-        )
+        score = entry["primaryMetric"]["score"]
+        err = entry["primaryMetric"]["scoreError"]
+        if isinstance(err, str) and err.upper() == "NAN":
+            err = 0.0
+        if err is None:
+            err = 0.0
+        out[name] = (float(score), float(err))
     return out
 
 

@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end tests for v0.9.0 annotations with EMPTY optional fields.
+ * End-to-end tests for v0.9.5 annotations with EMPTY optional fields.
  *
  * <p>{@link NewAnnotationsV3EndToEndTest} exercises fully-populated annotations. This test
  * covers the complementary false branches: {@code note.isEmpty()}, {@code replacedBy.isEmpty()},

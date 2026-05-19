@@ -87,7 +87,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsTxtTestDriven;
     private StringBuilder llmsFullTxtTestDriven;
 
-    // llms.txt sections for v0.9.0 annotations
+    // llms.txt sections for v0.9.5 annotations
     private StringBuilder llmsTxtThreadSafe;
     private StringBuilder llmsTxtImmutable;
     private StringBuilder llmsTxtDeprecated;
@@ -1175,7 +1175,7 @@ public final class GuardrailContentBuilder {
     }
 
     /**
-     * Helper for the v0.9.0 appenders — emits the standard cursor/codex/copilot/qwen/gemini
+     * Helper for the v0.9.5 appenders — emits the standard cursor/codex/copilot/qwen/gemini
      * one-line entry for an element + summary string. Each platform uses its own bullet style.
      */
     private void appendCommonRow(StringBuilder cursorSec, StringBuilder codexSec,

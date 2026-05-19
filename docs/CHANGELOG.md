@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.0] - 2026-05-19
+## [0.9.5] - 2026-05-19
 
 ### Added
 
 - **5 new annotations** that were developed after `0.8.0` was tagged but before the Central release was caught.
   These annotations were present in the local `0.8.0` build (13.4 kB) but absent from the published Central JAR
-  (9.7 kB — built from an earlier snapshot). `0.9.0` is the first release where all 15 annotations ship to Central:
+  (9.7 kB — built from an earlier snapshot). `0.9.5` is the first release where all 15 annotations ship to Central:
 
   | Annotation | Targets | Description |
   |---|---|---|
@@ -68,31 +68,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Bumped the `vibetags-usage` skill to **v0.9.0** — aligns skill versioning with the library version.
+- Bumped the `vibetags-usage` skill to **v0.9.5** — aligns skill versioning with the library version.
 
 ### Fixed
 
 - **Version skew between Central and local builds** — `vibetags-annotations:0.8.0` on Maven Central (9.7 kB)
   was built before the five new annotation classes were added, while the locally-built `0.8.0` (13.4 kB)
-  included them. Same coordinates, different content. `0.9.0` draws the clean line: the Central `0.8.0` jar
-  had 10 annotations; `0.9.0` is the first complete release with all 15.
+  included them. Same coordinates, different content. `0.9.5` draws the clean line: the Central `0.8.0` jar
+  had 10 annotations; `0.9.5` is the first complete release with all 15.
 
 ### Migration
 
-Bump the BOM coordinate (or the three explicit coordinates) to `0.9.0`. No code changes required.
+Bump the BOM coordinate (or the three explicit coordinates) to `0.9.5`. No code changes required.
 
 ```xml
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-bom</artifactId>
-    <version>0.9.0</version>
+    <version>0.9.5</version>
     <type>pom</type>
     <scope>import</scope>
 </dependency>
 ```
 
 If you use `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, or `@AIRegulation`:
-these are new in 0.9.0 and require the 0.9.0 annotations jar. They were not available in the Central 0.8.0 jar.
+these are new in 0.9.5 and require the 0.9.5 annotations jar. They were not available in the Central 0.8.0 jar.
 
 ## [0.8.0] - 2026-05-06
 
@@ -579,8 +579,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.0...HEAD
-[0.9.0]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.0
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.5...HEAD
+[0.9.5]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.5
 [0.8.0]: https://github.com/PIsberg/vibetags/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/PIsberg/vibetags/compare/v0.6.0...v0.7.0

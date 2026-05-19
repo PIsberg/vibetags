@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end tests for the v0.9.0 annotations: @AIThreadSafe, @AIImmutable, @AIDeprecated,
+ * End-to-end tests for the v0.9.5 annotations: @AIThreadSafe, @AIImmutable, @AIDeprecated,
  * @AIObservability, @AIRegulation. Verifies that each annotation produces sections in the
  * generated guardrail files for the major platforms.
  */

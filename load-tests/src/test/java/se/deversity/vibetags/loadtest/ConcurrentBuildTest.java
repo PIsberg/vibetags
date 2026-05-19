@@ -1,7 +1,9 @@
 package se.deversity.vibetags.loadtest;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import se.deversity.vibetags.processor.VibeTagsLogger;
 
 import javax.tools.*;
 import java.io.IOException;
@@ -150,6 +152,11 @@ class ConcurrentBuildTest {
         //   assertTrue(corruptedFiles.isEmpty(), "No files should be corrupted: " + corruptedFiles);
     }
 
+    @AfterEach
+    void releaseProcessorLogHandle() {
+        VibeTagsLogger.shutdown();
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -175,7 +182,8 @@ class ConcurrentBuildTest {
                     "-d", classesDir.toString(),
                     "-classpath", System.getProperty("java.class.path"),
                     "-processor", PROCESSOR_CLASS,
-                    "-Avibetags.root=" + projectRoot.toAbsolutePath()
+                    "-Avibetags.root=" + projectRoot.toAbsolutePath(),
+                    "-Avibetags.log.level=OFF"
             );
 
             DiagnosticCollector<JavaFileObject> diag = new DiagnosticCollector<>();

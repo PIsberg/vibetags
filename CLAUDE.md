@@ -333,9 +333,9 @@ All tests live in `vibetags/src/test`.
 | `VibeTagsLoggerUnitTest` | File logging |
 | `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
 | `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
-| `NewAnnotationsV3DefinitionTest` | Definition-level tests for v0.9.0 annotations: `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
-| `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.0 annotations across all platforms |
-| `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.0 annotations |
+| `NewAnnotationsV3DefinitionTest` | Definition-level tests for v0.9.5 annotations: `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
+| `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |
+| `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.5 annotations |
 | `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
 | `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
 | `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
