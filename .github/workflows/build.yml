@@ -32,6 +32,12 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
+        run: |
+          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          cd /tmp/async-test-lib
+          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
+
       - name: Install VibeTags Annotations (Maven)
         run: |
           cd vibetags-annotations
@@ -202,6 +208,12 @@ jobs:
           distribution: 'temurin'
           cache: gradle
       
+      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
+        run: |
+          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          cd /tmp/async-test-lib
+          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
+
       - name: Publish VibeTags Annotations (Gradle)
         run: |
           cd vibetags-annotations

@@ -91,20 +91,30 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.5.12'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.3.0'
     testImplementation 'org.mockito:mockito-core:5.14.2'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.3'
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+compileJava {
     // Disable annotation processing when compiling the processor itself
     options.compilerArgs += ['-proc:none']
-    options.encoding = 'UTF-8'
+}
+
+compileTestJava {
+    // Tests require Java 21 to support async-test-lib and virtual threads
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 test {
     useJUnitPlatform()
-    jvmArgs "-Dnet.bytebuddy.experimental=true"
+    jvmArgs "-Dnet.bytebuddy.experimental=true", "-Dlicense.mock.mode=true"
     finalizedBy jacocoTestReport
 }
 
