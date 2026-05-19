@@ -24,7 +24,7 @@ The main CI workflow. Runs three jobs in parallel except `load-tests`, which wai
 
 ### Job: `build-maven`
 
-Matrix over **JDK 17, 21, 25, 26** (Temurin distribution, Maven dependency cache). Steps:
+Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). Steps:
 
 1. **Harden runner** — egress audit.
 2. **Checkout**.
@@ -38,7 +38,7 @@ Matrix over **JDK 17, 21, 25, 26** (Temurin distribution, Maven dependency cache
 10. **Run Integration Tests** — `cd vibetags && mvn test -Drun.integration.tests=true -B`. These tests assume the example project has been compiled in step 8 and inspect its generated output.
 11. **Verify Generated AI Config Files** — checks that 17 specific files under `example/` exist and are non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, and granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`.
 12. **Verify @AIAudit Content** — greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
-13. **Upload coverage to Codecov** — only on the JDK 17 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
+13. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
 
 ### Job: `load-tests`
 
@@ -52,7 +52,7 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 
 ### Job: `build-gradle`
 
-Mirror of `build-maven` but with Gradle. Matrix over **JDK 17, 21, 25, 26**. Differences:
+Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differences:
 
 - Uses Gradle dependency cache.
 - `gradle wrapper || echo "Wrapper generation skipped"` runs before each build to generate a wrapper if missing — the `||` swallows the error if a wrapper already exists.

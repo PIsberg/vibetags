@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '25', '26' ]
+        java: [ '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -134,7 +134,7 @@ jobs:
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
-        if: matrix.java == '17'
+        if: matrix.java == '21'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -191,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '25', '26' ]
+        java: [ '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -313,7 +313,7 @@ jobs:
           echo "All @AIAudit content verified"
 
       - name: Upload coverage to Codecov
-        if: matrix.java == '17'
+        if: matrix.java == '21'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

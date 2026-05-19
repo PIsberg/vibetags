@@ -72,7 +72,7 @@ example/
 
 ### Prerequisites
 
-- **Java 17 or higher** installed
+- **Java 21 or higher** installed
 - **Maven 3.6+** or **Gradle 7.0+** installed
 - **VibeTags library** built and installed locally (see below)
 

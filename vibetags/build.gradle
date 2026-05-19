@@ -9,8 +9,8 @@ group = 'se.deversity.vibetags'
 version = '0.9.5'
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
     withSourcesJar()
     withJavadocJar()
 }
@@ -106,11 +106,6 @@ compileJava {
     options.compilerArgs += ['-proc:none']
 }
 
-compileTestJava {
-    // Tests require Java 21 to support async-test-lib and virtual threads
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
 
 test {
     useJUnitPlatform()
