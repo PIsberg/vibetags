@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **5 new annotations** that were developed after `0.8.0` was tagged but before the Central release was caught.
-  These annotations were present in the local `0.8.0` build (13.4 kB) but absent from the published Central JAR
-  (9.7 kB — built from an earlier snapshot). `0.9.5` is the first release where all 15 annotations ship to Central:
+- **14 new annotations** bringing the total from 10 (Central `0.8.0`) to 24. Five were present in the local
+  `0.8.0` build (13.4 kB) but absent from the published Central JAR (9.7 kB — built from an earlier snapshot).
+  `0.9.5` is the first release where all 24 annotations ship to Central:
 
   | Annotation | Targets | Description |
   |---|---|---|
@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   | `@AIDeprecated` | TYPE, METHOD, FIELD | Actively routes AI toward migrating callers; richer than Java's `@Deprecated` (`replacedBy`, `migrationGuide`, `deadline`) |
   | `@AIObservability` | TYPE, METHOD | Names metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them |
   | `@AIRegulation` | TYPE, METHOD, FIELD | Ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX); AI must document compliance impact for every change |
+  | `@AIArchitecture` | TYPE | Declares the architectural layer this class belongs to (`belongsTo`) and the layers it must never import from (`cannotReference`); AI must not introduce cross-layer dependencies |
+  | `@AILegacyBridge` | TYPE, METHOD | Marks compatibility bridges working around upstream bugs or quirks; AI must not modernize the structure — only internal business logic may change |
+  | `@AIStrictClasspath` | TYPE, METHOD | Prohibits dynamic class loading, custom `ClassLoader`s, and runtime reflection hacks; all dependencies must be resolvable at compile time |
+  | `@AIInternationalized` | TYPE, METHOD | All user-visible text must be resolved via i18n resources (e.g., `MessageSource`, `ResourceBundle`); AI must never hardcode user-facing strings |
+  | `@AIPublicAPI` | TYPE, METHOD | All changes must be additive and backward-compatible; renaming methods, changing parameter types, or altering serialization formats is forbidden |
+  | `@AISchemaSafe` | TYPE, FIELD | Prevents destructive schema changes (column drops, table drops, field renames) without explicit backward-compatible migrations |
+  | `@AIStrictExceptions` | TYPE, METHOD | Prohibits catching or throwing `Exception`/`Throwable`; requires specific exception types with descriptive messages and preserved stack traces |
+  | `@AIStrictTypes` | TYPE, METHOD, FIELD | Prohibits loose types (`Object`, raw collections, `double` for currency); requires well-defined domain models or strongly-typed transfer objects |
+  | `@AIParallelTests` | TYPE, METHOD | Generated or modified tests must be safe for parallel execution: no shared mutable state, no fixed ports, no execution-order dependencies |
 
   Compile-time validation warnings added for contradictory combinations:
   - `@AIImmutable` on a type with a non-final, non-static instance field
@@ -66,10 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cd vibetags && mvn clean compile -Pself-annotate
   ```
 
-### Changed
-
-- Bumped the `vibetags-usage` skill to **v0.9.5** — aligns skill versioning with the library version.
-
 ### Fixed
 
 - **Version skew between Central and local builds** — `vibetags-annotations:0.8.0` on Maven Central (9.7 kB)
@@ -91,8 +96,10 @@ Bump the BOM coordinate (or the three explicit coordinates) to `0.9.5`. No code 
 </dependency>
 ```
 
-If you use `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, or `@AIRegulation`:
-these are new in 0.9.5 and require the 0.9.5 annotations jar. They were not available in the Central 0.8.0 jar.
+All 14 new annotations require the 0.9.5 annotations jar. None were available in the Central 0.8.0 jar:
+`@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation`,
+`@AIArchitecture`, `@AILegacyBridge`, `@AIStrictClasspath`, `@AIInternationalized`,
+`@AIPublicAPI`, `@AISchemaSafe`, `@AIStrictExceptions`, `@AIStrictTypes`, `@AIParallelTests`.
 
 ## [0.8.0] - 2026-05-06
 
