@@ -9,6 +9,7 @@
 [![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
+[![Lines of Code](https://www.aschey.tech/tokei/github/PIsberg/VibeTags?languages=Java&category=code)](https://github.com/PIsberg/VibeTags)
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
 
@@ -215,35 +216,35 @@ The 24 annotations group into six categories by intent. Within each category the
 Generated configuration files work out-of-the-box with **27 AI platforms**:
 
 #### Traditional / Single-file formats
-- **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
-- **Windsurf** (`.windsurfrules` or **Granular** `.windsurf/rules/*.md`)
-- **Zed Editor** (`.rules`)
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
-- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
-- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
+- **Codeium** (`.codeiumignore`)
+- **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
+- **Double.bot** (`.doubleignore`)
+- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **Mentat** (`.mentatconfig.json`)
+- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
+- **Plandex** (`.plandex.yaml`)
+- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
-- **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
-- **Mentat** (`.mentatconfig.json`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Plandex** (`.plandex.yaml`)
-- **Double.bot** (`.doubleignore`)
-- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
-- **Codeium** (`.codeiumignore`)
+- **Windsurf** (`.windsurfrules` or **Granular** `.windsurf/rules/*.md`)
+- **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
+- **Zed Editor** (`.rules`)
 
 #### Granular / Directory-based formats
-- **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
-- **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
-- **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
-- **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Amazon Q** (`.amazonq/rules/*.md`)
-- **Trae** (`.trae/rules/*.md`)
-- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
-- **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
+- **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
+- **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
+- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+- **Tabnine** (`.tabnine/guidelines/*.md`)
+- **Trae** (`.trae/rules/*.md`)
+- **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
+- **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
 
 ## 📁 Project Structure
 
