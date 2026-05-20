@@ -240,6 +240,8 @@ Generated configuration files work out-of-the-box with **29 AI platforms**:
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
 - **Codeium** (`.codeiumignore`)
 - **Antigravity AI** (`.antigravityignore`)
+- **Cline** (`.clinerules`)
+- **JetBrains Junie** (`.junie/guidelines.md`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
@@ -641,6 +643,10 @@ touch .doubleignore                          # Double.bot exclusion list
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list
+
+# --- Cline, JetBrains Junie ---
+touch .clinerules                            # Cline AI assistant
+mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aiderignore            # Aider

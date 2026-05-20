@@ -219,6 +219,8 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.codeiumignore` | Codeium | Glob patterns |
 | `GEMINI.md` | Google Gemini (official markdown) | Markdown |
 | `.antigravityignore` | Antigravity AI | Glob patterns |
+| `.clinerules` | Cline AI assistant | Markdown |
+| `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
 
 #### Granular rules
@@ -399,6 +401,7 @@ All tests live in `vibetags/src/test`.
 | `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
 | `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
+| `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent` |
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent` across all platforms |
 | `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent` |

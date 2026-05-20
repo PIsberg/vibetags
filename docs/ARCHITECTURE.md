@@ -508,6 +508,8 @@ Generation phase (once, on the round where processingOver() == true):
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 | `GEMINI.md` | Markdown | Gemini (official markdown) | Identical guardrail content to gemini_instructions.md |
 | `.antigravityignore` | Glob patterns | Antigravity AI | Standalone exclusion list |
+| `.clinerules` | Markdown | Cline AI assistant | Same guardrail content as `.cursorrules` |
+| `.junie/guidelines.md` | Markdown | JetBrains Junie | Same guardrail content as `.cursorrules` with Junie-specific heading |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
 | `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |

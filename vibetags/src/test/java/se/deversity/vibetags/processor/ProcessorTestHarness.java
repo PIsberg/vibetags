@@ -87,6 +87,9 @@ class ProcessorTestHarness {
         // v0.9.6 platforms
         touch("GEMINI.md");
         touch(".antigravityignore");
+        // v0.9.7 platforms
+        touch(".clinerules");
+        touch(".junie/guidelines.md");
     }
 
     private void touch(String relative) throws IOException {
