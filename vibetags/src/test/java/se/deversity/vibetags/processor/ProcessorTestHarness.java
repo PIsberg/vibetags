@@ -84,6 +84,9 @@ class ProcessorTestHarness {
         touch(".doubleignore");
         touch(".interpreter/profiles/vibetags.yaml");
         touch(".codeiumignore");
+        // v0.9.6 platforms
+        touch("GEMINI.md");
+        touch(".antigravityignore");
     }
 
     private void touch(String relative) throws IOException {

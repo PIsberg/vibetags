@@ -217,6 +217,8 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.doubleignore` | Double.bot | Glob patterns |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
 | `.codeiumignore` | Codeium | Glob patterns |
+| `GEMINI.md` | Google Gemini (official markdown) | Markdown |
+| `.antigravityignore` | Antigravity AI | Glob patterns |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
 
 #### Granular rules
@@ -390,6 +392,7 @@ All tests live in `vibetags/src/test`.
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
 | `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
 | `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
+| `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 
 ## Pre-commit Hooks

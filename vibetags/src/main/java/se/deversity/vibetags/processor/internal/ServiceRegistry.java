@@ -32,7 +32,9 @@ public final class ServiceRegistry {
         "amazonq_granular", "ai_rules_granular",
         // v0.8.0 platforms
         "pearai_granular", "mentat", "sweep", "plandex",
-        "double_ignore", "interpreter", "codeium_ignore"
+        "double_ignore", "interpreter", "codeium_ignore",
+        // v0.9.6 platforms
+        "gemini_md", "antigravity_ignore"
     );
 
     private ServiceRegistry() {}
@@ -83,6 +85,9 @@ public final class ServiceRegistry {
         map.put("double_ignore",    root.resolve(".doubleignore"));
         map.put("interpreter",      root.resolve(".interpreter/profiles/vibetags.yaml"));
         map.put("codeium_ignore",   root.resolve(".codeiumignore"));
+        // v0.9.6 platforms
+        map.put("gemini_md",          root.resolve("GEMINI.md"));
+        map.put("antigravity_ignore", root.resolve(".antigravityignore"));
         return map;
     }
 

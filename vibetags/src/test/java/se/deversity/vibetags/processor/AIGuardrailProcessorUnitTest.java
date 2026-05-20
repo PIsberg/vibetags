@@ -209,7 +209,9 @@ class AIGuardrailProcessorUnitTest {
             "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
             "pearai_granular", "mentat", "sweep", "plandex",
-            "double_ignore", "interpreter", "codeium_ignore"
+            "double_ignore", "interpreter", "codeium_ignore",
+            // v0.9.6 platforms
+            "gemini_md", "antigravity_ignore"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }

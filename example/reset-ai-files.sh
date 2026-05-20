@@ -37,6 +37,9 @@ AI_FILES=(
   ".doubleignore"
   ".interpreter/profiles/vibetags.yaml"
   ".codeiumignore"
+  # v0.9.6 platforms
+  "GEMINI.md"
+  ".antigravityignore"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
