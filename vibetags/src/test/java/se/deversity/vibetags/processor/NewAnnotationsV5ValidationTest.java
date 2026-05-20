@@ -64,7 +64,23 @@ class NewAnnotationsV5ValidationTest {
                 "package com.example.v5;\n"
                     + "import se.deversity.vibetags.annotations.AIFeatureFlag;\n"
                     + "@AIFeatureFlag\n"
-                    + "public class FeatureFlagBlankFlag {}\n")
+                    + "public class FeatureFlagBlankFlag {}\n"),
+
+            // @AISecure with blank aspect
+            new StringSource("com/example/v5/SecureBlankAspect.java",
+                "package com.example.v5;\n"
+                    + "import se.deversity.vibetags.annotations.AISecure;\n"
+                    + "@AISecure\n"
+                    + "public class SecureBlankAspect {}\n"),
+
+            // @AISecure + @AIIgnore — contradictory
+            new StringSource("com/example/v5/SecureIgnoreConflicted.java",
+                "package com.example.v5;\n"
+                    + "import se.deversity.vibetags.annotations.AISecure;\n"
+                    + "import se.deversity.vibetags.annotations.AIIgnore;\n"
+                    + "@AISecure(aspect = \"encryption\")\n"
+                    + "@AIIgnore\n"
+                    + "public class SecureIgnoreConflicted {}\n")
         );
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -111,6 +127,20 @@ class NewAnnotationsV5ValidationTest {
         assertTrue(warnings.stream().anyMatch(w ->
                 w.contains("@AIFeatureFlag") && w.contains("blank") && w.contains("flag")),
             "Expected warning about blank flag attribute on @AIFeatureFlag. Warnings: " + warnings);
+    }
+
+    @Test
+    void warns_aiSecure_withBlankAspect() {
+        assertTrue(warnings.stream().anyMatch(w ->
+                w.contains("@AISecure") && w.contains("blank") && w.contains("aspect")),
+            "Expected warning about blank aspect on @AISecure. Warnings: " + warnings);
+    }
+
+    @Test
+    void warns_aiSecureAndAiIgnore_combination() {
+        assertTrue(warnings.stream().anyMatch(w ->
+                w.contains("@AISecure") && w.contains("@AIIgnore") && w.contains("contradictory")),
+            "Expected warning about @AISecure + @AIIgnore. Warnings: " + warnings);
     }
 
     private static final class StringSource extends SimpleJavaFileObject {

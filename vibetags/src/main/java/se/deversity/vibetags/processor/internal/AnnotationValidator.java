@@ -24,6 +24,7 @@ import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AISecure;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -362,6 +363,26 @@ public final class AnnotationValidator {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: @AIFeatureFlag on " + element.toString()
                         + " has a blank 'flag' attribute. Specify the feature flag key (e.g., @AIFeatureFlag(flag = \"my.feature.enabled\")).",
+                    element);
+            }
+        }
+
+        // @AISecure with blank aspect — advisory warning
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISecure.class)) {
+            AISecure sec = element.getAnnotation(AISecure.class);
+            if (sec != null && (sec.aspect() == null || sec.aspect().isBlank())) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AISecure on " + element.toString()
+                        + " has a blank 'aspect' attribute. Consider specifying the security concern "
+                        + "(e.g., 'authentication', 'encryption', 'authorization').",
+                    element);
+            }
+            // @AISecure + @AIIgnore — contradictory
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISecure and @AIIgnore. This is contradictory: "
+                        + "@AIIgnore hides the element but @AISecure requires it to be visible for security review.",
                     element);
             }
         }

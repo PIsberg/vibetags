@@ -41,6 +41,12 @@ class NewAnnotationsV5EndToEndTest {
                 + "@AIFeatureFlag(flag = \"checkout.beta.enabled\", defaultValue = false)\n"
                 + "public class BetaCheckout {}\n");
 
+        harness.addSource("com.example.security.TokenValidator",
+            "package com.example.security;\n"
+                + "import se.deversity.vibetags.annotations.AISecure;\n"
+                + "@AISecure(aspect = \"authentication\")\n"
+                + "public class TokenValidator {}\n");
+
         harness.compile();
     }
 
@@ -98,5 +104,27 @@ class NewAnnotationsV5EndToEndTest {
         String claude = harness.readFile("CLAUDE.md");
         assertTrue(claude.contains("feature_flag_elements"), "CLAUDE.md must contain feature_flag_elements section");
         assertTrue(claude.contains("com.example.feature.BetaCheckout"), "CLAUDE.md must list the feature-flag-gated class");
+    }
+
+    // --- @AISecure ---
+
+    @Test
+    void secure_cursorRulesContainsSection() throws IOException {
+        String rules = harness.readFile(".cursorrules");
+        assertTrue(rules.contains("SECURITY-CRITICAL"), "Cursorrules must contain security-critical section header");
+        assertTrue(rules.contains("com.example.security.TokenValidator"), "Cursorrules must list the security-annotated class");
+    }
+
+    @Test
+    void secure_cursorRulesContainsAspect() throws IOException {
+        String rules = harness.readFile(".cursorrules");
+        assertTrue(rules.contains("authentication"), "Cursorrules must include the security aspect");
+    }
+
+    @Test
+    void secure_claudeMdContainsSecurityElements() throws IOException {
+        String claude = harness.readFile("CLAUDE.md");
+        assertTrue(claude.contains("security_elements"), "CLAUDE.md must contain security_elements section");
+        assertTrue(claude.contains("com.example.security.TokenValidator"), "CLAUDE.md must list the security-annotated class");
     }
 }

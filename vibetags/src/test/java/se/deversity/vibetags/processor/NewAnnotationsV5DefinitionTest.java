@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AISecure;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -13,7 +14,7 @@ import java.lang.reflect.Method;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Definition-level tests for v1.0.0 annotations: @AIIdempotent, @AIFeatureFlag.
+ * Definition-level tests for v1.0.0 annotations: @AIIdempotent, @AIFeatureFlag, @AISecure.
  */
 class NewAnnotationsV5DefinitionTest {
 
@@ -65,5 +66,27 @@ class NewAnnotationsV5DefinitionTest {
     void featureFlag_defaultValueDefaultIsFalse() throws NoSuchMethodException {
         Method m = AIFeatureFlag.class.getDeclaredMethod("defaultValue");
         assertEquals(false, m.getDefaultValue());
+    }
+
+    // ----------------- @AISecure -----------------
+
+    @Test
+    void secure_hasSourceRetention() {
+        Retention r = AISecure.class.getAnnotation(Retention.class);
+        assertNotNull(r);
+        assertEquals(RetentionPolicy.SOURCE, r.value());
+    }
+
+    @Test
+    void secure_targetsTypeAndMethod() {
+        Target t = AISecure.class.getAnnotation(Target.class);
+        assertNotNull(t);
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+    }
+
+    @Test
+    void secure_aspectDefaultIsEmpty() throws NoSuchMethodException {
+        Method m = AISecure.class.getDeclaredMethod("aspect");
+        assertEquals("", m.getDefaultValue());
     }
 }

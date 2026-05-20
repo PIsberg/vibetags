@@ -275,6 +275,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AIParallelTests` | TYPE, METHOD | *(none)* |
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
 | `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
+| `@AISecure` | TYPE, METHOD | `aspect: String` |
 
 **Annotation semantics:**
 
@@ -301,6 +302,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
 - `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
 - `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume it is always active
+- `@AISecure` — marks security-critical code; AI must never weaken security properties and must flag every change for security review
 
 **Compile-time validation warnings:**
 
