@@ -22,6 +22,7 @@ import se.deversity.vibetags.annotations.AIStrictTypes;
 import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AIIdempotent;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -343,6 +344,17 @@ public final class AnnotationValidator {
                         "VibeTags: Trees API not available for AST architectural import scanning: " + t.getMessage(),
                         element);
                 }
+            }
+        }
+
+        // Contradiction: @AIIdempotent + @AIDraft
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIIdempotent.class)) {
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIIdempotent and @AIDraft. This is contradictory: "
+                        + "@AIIdempotent declares a stable behavioral contract while @AIDraft marks the element as unfinished.",
+                    element);
             }
         }
     }

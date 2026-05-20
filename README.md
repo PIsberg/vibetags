@@ -206,6 +206,7 @@ The 24 annotations group into six categories by intent. Within each category the
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
+- **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
 
 #### ♻️ Lifecycle — manage deprecation and removal
 
@@ -266,7 +267,7 @@ vibetags/
 ├── vibetags-annotations/ # The 24 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
+│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIdempotent, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -1336,6 +1337,21 @@ public class UserEntity {
 ```
 
 Generated guidance: *"Guarantees schema and serialization safety. Destructive modifications (dropping columns/tables, changing field names, or breaking serialization schemas) are strictly prohibited."*
+
+#### ♻️ `@AIIdempotent`
+
+Declares that the annotated method or type guarantees idempotency — calling it multiple times must produce the same result as calling it once. AI assistants must never introduce side effects (such as unconditional inserts or non-idempotent state mutations) that would break this guarantee.
+
+```java
+public class GdprService {
+    @AIIdempotent(reason = "Deleting a user's data multiple times must produce the same result — must not throw on second invocation.")
+    public void deleteAllUserData(String userId) {
+        // idempotent delete — safe to re-call
+    }
+}
+```
+
+Generated guidance: *"Idempotency guaranteed. Multiple invocations must produce the same result as one. Never introduce side effects that cause repeated invocations to produce different results."*
 
 ## 🤝 Contributing
 

@@ -23,6 +23,7 @@ import se.deversity.vibetags.annotations.AIStrictTypes;
 import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AIIdempotent;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -124,6 +125,10 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsFullTxtInternationalized;
     private StringBuilder llmsFullTxtStrictClasspath;
     private StringBuilder llmsFullTxtSchemaSafe;
+
+    // v1.0.0 annotations
+    private StringBuilder llmsTxtIdempotent;
+    private StringBuilder llmsFullTxtIdempotent;
 
     // Windsurf builders
     private StringBuilder windsurfRules;
@@ -282,7 +287,8 @@ public final class GuardrailContentBuilder {
               + collector.deprecated().size() + collector.observability().size() + collector.regulation().size()
               + collector.parallelTests().size() + collector.legacyBridge().size() + collector.architecture().size()
               + collector.publicApi().size() + collector.strictExceptions().size() + collector.strictTypes().size()
-              + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size();
+              + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size()
+              + collector.idempotent().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -532,6 +538,17 @@ public final class GuardrailContentBuilder {
             appendStrictClasspath(e, cursorStrictClasspathSec, claudeStrictClasspathSec, codexStrictClasspathSec, copilotStrictClasspathSec, qwenStrictClasspathSec, geminiStrictClasspathSec, windsurfStrictClasspathSec, zedStrictClasspathSec);
         for (Element e : collector.schemaSafe())
             appendSchemaSafe(e, cursorSchemaSafeSec, claudeSchemaSafeSec, codexSchemaSafeSec, copilotSchemaSafeSec, qwenSchemaSafeSec, geminiSchemaSafeSec, windsurfSchemaSafeSec, zedSchemaSafeSec);
+
+        StringBuilder cursorIdempotentSec  = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThe following operations are idempotent. Multiple invocations MUST produce the same result as a single invocation. Never introduce side effects that break this guarantee.\n\n");
+        StringBuilder claudeIdempotentSec  = new StringBuilder("  <idempotent_elements>\n");
+        StringBuilder codexIdempotentSec   = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent (multiple invocations = same result as once):\n\n");
+        StringBuilder copilotIdempotentSec = new StringBuilder("\n## Idempotency Guarantees\nThe following operations are idempotent — calling them multiple times is safe:\n\n");
+        StringBuilder qwenIdempotentSec    = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nMultiple invocations of these operations must produce the same result:\n\n");
+        StringBuilder geminiIdempotentSec  = new StringBuilder();
+        StringBuilder windsurfIdempotentSec = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent — multiple calls = same as one call:\n\n");
+        StringBuilder zedIdempotentSec      = new StringBuilder("\n## Idempotency\nThese operations must remain idempotent:\n\n");
+        for (Element e : collector.idempotent())
+            appendIdempotent(e, cursorIdempotentSec, claudeIdempotentSec, codexIdempotentSec, copilotIdempotentSec, qwenIdempotentSec, geminiIdempotentSec, windsurfIdempotentSec, zedIdempotentSec);
 
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
@@ -798,6 +815,18 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfSchemaSafeSec);
             if (zedActive)      zedRules.append(zedSchemaSafeSec);
         }
+        if (!collector.idempotent().isEmpty()) {
+            cursorRules.append(cursorIdempotentSec);
+            claudeIdempotentSec.append("  </idempotent_elements>\n");
+            claudeMd.append(claudeIdempotentSec);
+            claudeMd.append("\n<rule>Operations listed in <idempotent_elements> must remain idempotent. Never introduce side effects that cause repeated invocations to produce different results.</rule>\n");
+            codexAgents.append(codexIdempotentSec);
+            copilot.append(copilotIdempotentSec);
+            qwenMd.append(qwenIdempotentSec);
+            geminiMd.append("\n## IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent — calling them multiple times must produce the same result:\n\n").append(geminiIdempotentSec);
+            if (windsurfActive) windsurfRules.append(windsurfIdempotentSec);
+            if (zedActive)      zedRules.append(zedIdempotentSec);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -827,6 +856,7 @@ public final class GuardrailContentBuilder {
             if (!collector.internationalized().isEmpty())  llmsTxt.append(llmsTxtInternationalized);
             if (!collector.strictClasspath().isEmpty())   llmsTxt.append(llmsTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsTxt.append(llmsTxtSchemaSafe);
+            if (!collector.idempotent().isEmpty())        llmsTxt.append(llmsTxtIdempotent);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -852,6 +882,7 @@ public final class GuardrailContentBuilder {
             if (!collector.internationalized().isEmpty())  llmsFullTxt.append(llmsFullTxtInternationalized);
             if (!collector.strictClasspath().isEmpty())   llmsFullTxt.append(llmsFullTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsFullTxt.append(llmsFullTxtSchemaSafe);
+            if (!collector.idempotent().isEmpty())        llmsFullTxt.append(llmsFullTxtIdempotent);
         }
 
         return new Result(buildContentMap(geminiMd), elementRules);
@@ -1451,6 +1482,7 @@ public final class GuardrailContentBuilder {
                 llmsTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\n");
                 llmsTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\n");
                 llmsTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\n");
+                llmsTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -1483,6 +1515,7 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\nUser-facing strings must not be hardcoded; resolve them via localized resources.\n\n");
                 llmsFullTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\nDynamic runtime class loading and reflections are strictly prohibited.\n\n");
                 llmsFullTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\nSchema and serialization compatibility must be strictly preserved.\n\n");
+                llmsFullTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\nThese operations are idempotent — calling multiple times must produce the same result as calling once.\n\n");
             }
         }
 
@@ -1872,6 +1905,37 @@ public final class GuardrailContentBuilder {
         if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
         if (interpreterActive) interpreterRules.append("- `").append(className).append("` (schema-safe): ").append(summary).append("\n");
         if (granularActive)    appendToGranular(e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.");
+    }
+
+    private void appendIdempotent(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec,
+                                  StringBuilder windsurfSec, StringBuilder zedSec) {
+        AIIdempotent idempotent = e.getAnnotation(AIIdempotent.class);
+        if (idempotent == null) return;
+        String className = ElementNaming.elementPath(e);
+        String reason = idempotent.reason();
+        String summary = "Idempotency guaranteed. Multiple invocations must produce the same result as one."
+                       + (reason.isEmpty() ? "" : " Reason: " + reason);
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <idempotent>true</idempotent>\n");
+            if (!reason.isEmpty()) claudeSec.append("      <reason>").append(reason).append("</reason>\n");
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtIdempotent.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtIdempotent.append("### ").append(className).append("\n- Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.\n");
+            if (!reason.isEmpty()) llmsFullTxtIdempotent.append("- **Reason**: ").append(reason).append("\n");
+            llmsFullTxtIdempotent.append("\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### IDEMPOTENT: ").append(className).append("\n- **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.\n").append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n").append("\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (sweepActive)       sweepRules.append("  - \"Idempotency requirement for ").append(className).append(": ").append(summary).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (idempotent): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Idempotency Guarantee", "- **Rule**: This operation is idempotent. Calling it multiple times must produce the same result as calling it once." + (reason.isEmpty() ? "" : "\n- **Reason**: " + reason));
     }
 
     /** Converts a String[] to a JSON array of quoted strings: "\"a\", \"b\"". */

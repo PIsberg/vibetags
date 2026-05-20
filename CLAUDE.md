@@ -273,6 +273,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AIStrictExceptions` | TYPE, METHOD | *(none)* |
 | `@AIStrictTypes` | TYPE, METHOD, FIELD | *(none)* |
 | `@AIParallelTests` | TYPE, METHOD | *(none)* |
+| `@AIIdempotent` | TYPE, METHOD | `reason: String` |
 
 **Annotation semantics:**
 
@@ -297,6 +298,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIStrictExceptions` — prohibits catching/throwing `Exception`/`Throwable`; requires specific types with descriptive messages
 - `@AIStrictTypes` — prohibits loose types (`Object`, raw collections, `double` for money); requires well-typed domain models
 - `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
+- `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
 
 **Compile-time validation warnings:**
 
@@ -393,6 +395,9 @@ All tests live in `vibetags/src/test`.
 | `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
 | `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
+| `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent` |
+| `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent` across all platforms |
+| `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent` |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 
 ## Pre-commit Hooks
