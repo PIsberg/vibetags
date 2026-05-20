@@ -38,6 +38,9 @@ import java.util.stream.Stream;
 public final class ModuleSidecar {
 
     static final String SIDECAR_PREFIX = ".vibetags-mod-";
+    /** Format version written into every sidecar header. Bump when the format changes. */
+    static final int FORMAT_VERSION = 1;
+    private static final String KEY_FORMAT_VERSION = "# version";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
 
@@ -86,6 +89,7 @@ public final class ModuleSidecar {
         Path tmp = root.resolve(SIDECAR_PREFIX + moduleId + ".tmp");
 
         StringBuilder sb = new StringBuilder();
+        sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n');
         sb.append(KEY_MODULE_ID).append('=').append(moduleId).append('\n');
         sb.append(KEY_MODULE_PATH).append('=').append(modulePath).append('\n');
         for (Map.Entry<String, String> entry : bodies.entrySet()) {
@@ -110,6 +114,7 @@ public final class ModuleSidecar {
             String modulePath = "";
             Map<String, String> bodies = new LinkedHashMap<>();
             for (String line : lines) {
+                if (line.startsWith("#")) continue; // version header or comment — skip
                 int eq = line.indexOf('=');
                 if (eq < 0) continue;
                 String key = line.substring(0, eq);

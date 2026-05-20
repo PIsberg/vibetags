@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '21', '25', '26' ]
+        java: [ '17', '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -34,7 +34,7 @@ jobs:
       
       - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
         run: |
-          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
           cd /tmp/async-test-lib
           JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
 
@@ -194,7 +194,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '21', '25', '26' ]
+        java: [ '17', '21', '25', '26' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -213,7 +213,7 @@ jobs:
       
       - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
         run: |
-          git clone --depth 1 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
+          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
           cd /tmp/async-test-lib
           JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
 

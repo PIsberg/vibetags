@@ -59,9 +59,9 @@ class AIGuardrailProcessorUnitTest {
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(annotation);
         assertArrayEquals(
-            new String[]{"*"},
+            new String[]{"se.deversity.vibetags.annotations.*"},
             annotation.value(),
-            "Must use '*' so the processor runs even when all VibeTags annotations are removed"
+            "Must use package wildcard — covers all current and future annotations without triggering on unrelated compilations"
         );
     }
 
