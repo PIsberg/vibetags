@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
 The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 24 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
+- `vibetags-annotations/` — the 27 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
 - `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
 - `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).
@@ -321,6 +321,11 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
 - `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
 - `@AIRegulation` with a blank `standard` — required attribute missing
+- `@AIIdempotent` + `@AIDraft` on the same element — contradictory (idempotent declares a stable contract; draft marks it as unfinished)
+- `@AIFeatureFlag` + `@AILocked` on the same element — contradictory (locked freezes code; feature flag implies conditional execution)
+- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
+- `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 
@@ -354,7 +359,7 @@ All tests live in `vibetags/src/test`.
 
 | Class | Coverage |
 |---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 24 annotations) |
+| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 27 annotations) |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
@@ -406,9 +411,9 @@ All tests live in `vibetags/src/test`.
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
 | `ParallelFileWriteTest` | Parallel file-write correctness: 50+ active services written via `ForkJoinPool.commonPool()` without corruption (v0.9.7) |
-| `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent` |
-| `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent` across all platforms |
-| `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent` |
+| `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
+| `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |
+| `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 
 ## Pre-commit Hooks

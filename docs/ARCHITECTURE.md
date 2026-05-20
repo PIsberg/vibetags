@@ -417,6 +417,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AISchemaSafe`** | TYPE, FIELD | — | Guarantees persistent schema and serialization safety |
 | **`@AIIdempotent`** | TYPE, METHOD | `reason: String` | Declares that an operation must remain idempotent |
 | **`@AIFeatureFlag`** | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` | Marks code gated behind a feature flag |
+| **`@AISecure`** | TYPE, METHOD | `aspect: String` | Marks security-critical code; AI must not weaken security properties and must flag changes for security review |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -437,6 +438,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AISchemaSafe` — protects persistent schemas (database models or serialization) against structural breaking changes
 - `@AIIdempotent` — declares the operation must remain idempotent; AI must not introduce side effects that cause repeated calls to produce different results
 - `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- `@AISecure` — marks security-critical code (crypto, auth, session management); AI must not weaken security properties and must flag any change for security review
 
 **Invalid combinations that trigger compiler WARNINGs:**
 - `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
@@ -452,6 +454,8 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIIdempotent` + `@AIDraft` — contradictory; idempotent declares a stable contract while draft marks the element as unfinished
 - `@AIFeatureFlag` + `@AILocked` — contradictory; locked freezes code while feature flag implies conditional execution
 - `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
+- `@AISecure` + `@AIIgnore` — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
 - `@AIStrictClasspath` + `@AILocked` — redundant; locked items cannot have their imports changed
 - `@AIArchitecture` with empty layer attributes — invalid config; specifying `@AIArchitecture` without `belongsTo` or `cannotReference` has no effect
 

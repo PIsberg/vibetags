@@ -208,6 +208,7 @@ The 24 annotations group into six categories by intent. Within each category the
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
 - **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
 - **🚩 @AIFeatureFlag** - Mark code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- **🔐 @AISecure** - Mark security-critical code (authentication, encryption, authorization) — AI must not weaken security properties and must flag any change for security review
 
 #### ♻️ Lifecycle — manage deprecation and removal
 
@@ -215,19 +216,20 @@ The 24 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **29 AI platforms**:
+Generated configuration files work out-of-the-box with **32 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
+- **Antigravity AI** (`.antigravityignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
-- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
-- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
+- **Cline** (`.clinerules`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
-- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
+- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **JetBrains Junie** (`.junie/guidelines.md`)
 - **Mentat** (`.mentatconfig.json`)
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
 - **Plandex** (`.plandex.yaml`)
@@ -235,13 +237,7 @@ Generated configuration files work out-of-the-box with **29 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Plandex** (`.plandex.yaml`)
-- **Double.bot** (`.doubleignore`)
-- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
-- **Codeium** (`.codeiumignore`)
-- **Antigravity AI** (`.antigravityignore`)
-- **Cline** (`.clinerules`)
-- **JetBrains Junie** (`.junie/guidelines.md`)
+- **Windsurf IDE** (`.windsurfrules`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
