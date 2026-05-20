@@ -118,6 +118,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AIStrictClasspath` - Restricts imports to standard JDK and existing classpath
 - `@AISchemaSafe` - Guarantees persistent schema and serialization safety
 - `@AIIdempotent` - Declares that an operation must remain idempotent (reason: String)
+- `@AIFeatureFlag` - Marks code gated behind a feature flag (flag: String, defaultValue: boolean)
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -415,6 +416,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIStrictClasspath`** | TYPE, METHOD | — | Restricts imports to standard JDK and existing classpath |
 | **`@AISchemaSafe`** | TYPE, FIELD | — | Guarantees persistent schema and serialization safety |
 | **`@AIIdempotent`** | TYPE, METHOD | `reason: String` | Declares that an operation must remain idempotent |
+| **`@AIFeatureFlag`** | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` | Marks code gated behind a feature flag |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -434,6 +436,7 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIStrictClasspath` — restricts additions to the standard JDK or already defined classpath elements; no external dependencies
 - `@AISchemaSafe` — protects persistent schemas (database models or serialization) against structural breaking changes
 - `@AIIdempotent` — declares the operation must remain idempotent; AI must not introduce side effects that cause repeated calls to produce different results
+- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
 
 **Invalid combinations that trigger compiler WARNINGs:**
 - `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
@@ -447,6 +450,8 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIParallelTests` + `@AILocked` — redundant; locked tests don't need parallel isolation advice since they cannot be modified
 - `@AISchemaSafe` + `@AIIgnore` — redundant; ignored items are not part of generated AI schemas or interactions
 - `@AIIdempotent` + `@AIDraft` — contradictory; idempotent declares a stable contract while draft marks the element as unfinished
+- `@AIFeatureFlag` + `@AILocked` — contradictory; locked freezes code while feature flag implies conditional execution
+- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
 - `@AIStrictClasspath` + `@AILocked` — redundant; locked items cannot have their imports changed
 - `@AIArchitecture` with empty layer attributes — invalid config; specifying `@AIArchitecture` without `belongsTo` or `cannotReference` has no effect
 
@@ -629,7 +634,8 @@ vibetags/
 │   │   ├── AIInternationalized.java
 │   │   ├── AIStrictClasspath.java
 │   │   ├── AISchemaSafe.java
-│   │   └── AIIdempotent.java
+│   │   ├── AIIdempotent.java
+│   │   └── AIFeatureFlag.java
 │   ├── pom.xml
 │   └── build.gradle
 │

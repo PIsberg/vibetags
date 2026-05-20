@@ -274,6 +274,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `@AIStrictTypes` | TYPE, METHOD, FIELD | *(none)* |
 | `@AIParallelTests` | TYPE, METHOD | *(none)* |
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
+| `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
 
 **Annotation semantics:**
 
@@ -299,6 +300,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 - `@AIStrictTypes` — prohibits loose types (`Object`, raw collections, `double` for money); requires well-typed domain models
 - `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
 - `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
+- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume it is always active
 
 **Compile-time validation warnings:**
 

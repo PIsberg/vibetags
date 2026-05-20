@@ -23,6 +23,7 @@ import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -344,6 +345,24 @@ public final class AnnotationValidator {
                         "VibeTags: Trees API not available for AST architectural import scanning: " + t.getMessage(),
                         element);
                 }
+            }
+        }
+
+        // @AIFeatureFlag + @AILocked — contradictory
+        for (Element element : roundEnv.getElementsAnnotatedWith(AIFeatureFlag.class)) {
+            if (element.getAnnotation(AILocked.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIFeatureFlag and @AILocked. These are contradictory: "
+                        + "@AILocked freezes the code; @AIFeatureFlag implies conditional execution and @AILocked is redundant.",
+                    element);
+            }
+            AIFeatureFlag ff = element.getAnnotation(AIFeatureFlag.class);
+            if (ff != null && (ff.flag() == null || ff.flag().isBlank())) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIFeatureFlag on " + element.toString()
+                        + " has a blank 'flag' attribute. Specify the feature flag key (e.g., @AIFeatureFlag(flag = \"my.feature.enabled\")).",
+                    element);
             }
         }
 

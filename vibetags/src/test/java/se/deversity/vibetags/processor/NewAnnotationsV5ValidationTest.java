@@ -48,7 +48,23 @@ class NewAnnotationsV5ValidationTest {
                     + "import se.deversity.vibetags.annotations.AIDraft;\n"
                     + "@AIIdempotent(reason = \"Safe to retry\")\n"
                     + "@AIDraft(instructions = \"Still being written\")\n"
-                    + "public class IdempotentDraftConflicted {}\n")
+                    + "public class IdempotentDraftConflicted {}\n"),
+
+            // @AIFeatureFlag + @AILocked — contradictory
+            new StringSource("com/example/v5/FeatureFlagLockedConflicted.java",
+                "package com.example.v5;\n"
+                    + "import se.deversity.vibetags.annotations.AIFeatureFlag;\n"
+                    + "import se.deversity.vibetags.annotations.AILocked;\n"
+                    + "@AIFeatureFlag(flag = \"my.flag\")\n"
+                    + "@AILocked\n"
+                    + "public class FeatureFlagLockedConflicted {}\n"),
+
+            // @AIFeatureFlag with blank flag
+            new StringSource("com/example/v5/FeatureFlagBlankFlag.java",
+                "package com.example.v5;\n"
+                    + "import se.deversity.vibetags.annotations.AIFeatureFlag;\n"
+                    + "@AIFeatureFlag\n"
+                    + "public class FeatureFlagBlankFlag {}\n")
         );
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -81,6 +97,20 @@ class NewAnnotationsV5ValidationTest {
         assertTrue(warnings.stream().anyMatch(w ->
                 w.contains("@AIIdempotent") && w.contains("@AIDraft") && w.contains("contradictory")),
             "Expected warning about @AIIdempotent + @AIDraft. Warnings: " + warnings);
+    }
+
+    @Test
+    void warns_aiFeatureFlagAndAiLocked_combination() {
+        assertTrue(warnings.stream().anyMatch(w ->
+                w.contains("@AIFeatureFlag") && w.contains("@AILocked") && w.contains("contradictory")),
+            "Expected warning about @AIFeatureFlag + @AILocked. Warnings: " + warnings);
+    }
+
+    @Test
+    void warns_aiFeatureFlag_withBlankFlag() {
+        assertTrue(warnings.stream().anyMatch(w ->
+                w.contains("@AIFeatureFlag") && w.contains("blank") && w.contains("flag")),
+            "Expected warning about blank flag attribute on @AIFeatureFlag. Warnings: " + warnings);
     }
 
     private static final class StringSource extends SimpleJavaFileObject {

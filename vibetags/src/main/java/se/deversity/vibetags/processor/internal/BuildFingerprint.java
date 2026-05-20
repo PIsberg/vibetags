@@ -24,6 +24,7 @@ import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -151,6 +152,10 @@ public final class BuildFingerprint {
         appendAnnotationSet(sb, "ID", collector.idempotent(), e -> {
             AIIdempotent a = e.getAnnotation(AIIdempotent.class);
             return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "FF", collector.featureFlag(), e -> {
+            AIFeatureFlag a = e.getAnnotation(AIFeatureFlag.class);
+            return a == null ? "" : a.flag() + "|" + a.defaultValue();
         });
 
         sb.append("S{");

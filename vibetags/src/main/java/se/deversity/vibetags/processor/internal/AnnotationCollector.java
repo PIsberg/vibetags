@@ -25,6 +25,7 @@ import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -68,6 +69,7 @@ public final class AnnotationCollector {
 
     // v1.0.0 annotations
     private final Set<Element> idempotentElements       = new LinkedHashSet<>();
+    private final Set<Element> featureFlagElements      = new LinkedHashSet<>();
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
@@ -99,6 +101,7 @@ public final class AnnotationCollector {
         strictClasspathElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class));
         schemaSafeElements.addAll(roundEnv.getElementsAnnotatedWith(AISchemaSafe.class));
         idempotentElements.addAll(roundEnv.getElementsAnnotatedWith(AIIdempotent.class));
+        featureFlagElements.addAll(roundEnv.getElementsAnnotatedWith(AIFeatureFlag.class));
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
@@ -112,7 +115,7 @@ public final class AnnotationCollector {
                      || !publicApiElements.isEmpty() || !strictExceptionsElements.isEmpty()
                      || !strictTypesElements.isEmpty() || !internationalizedElements.isEmpty()
                      || !strictClasspathElements.isEmpty() || !schemaSafeElements.isEmpty()
-                     || !idempotentElements.isEmpty();
+                     || !idempotentElements.isEmpty() || !featureFlagElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -143,6 +146,7 @@ public final class AnnotationCollector {
         strictClasspathElements.clear();
         schemaSafeElements.clear();
         idempotentElements.clear();
+        featureFlagElements.clear();
         anyAnnotationsFound = false;
     }
 
@@ -171,5 +175,6 @@ public final class AnnotationCollector {
     public Set<Element> strictClasspath()  { return strictClasspathElements; }
     public Set<Element> schemaSafe()       { return schemaSafeElements; }
     public Set<Element> idempotent()       { return idempotentElements; }
+    public Set<Element> featureFlag()      { return featureFlagElements; }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

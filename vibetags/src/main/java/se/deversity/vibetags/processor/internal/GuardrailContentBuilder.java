@@ -24,6 +24,7 @@ import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -129,6 +130,8 @@ public final class GuardrailContentBuilder {
     // v1.0.0 annotations
     private StringBuilder llmsTxtIdempotent;
     private StringBuilder llmsFullTxtIdempotent;
+    private StringBuilder llmsTxtFeatureFlag;
+    private StringBuilder llmsFullTxtFeatureFlag;
 
     // Windsurf builders
     private StringBuilder windsurfRules;
@@ -288,7 +291,7 @@ public final class GuardrailContentBuilder {
               + collector.parallelTests().size() + collector.legacyBridge().size() + collector.architecture().size()
               + collector.publicApi().size() + collector.strictExceptions().size() + collector.strictTypes().size()
               + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size()
-              + collector.idempotent().size();
+              + collector.idempotent().size() + collector.featureFlag().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -549,6 +552,17 @@ public final class GuardrailContentBuilder {
         StringBuilder zedIdempotentSec      = new StringBuilder("\n## Idempotency\nThese operations must remain idempotent:\n\n");
         for (Element e : collector.idempotent())
             appendIdempotent(e, cursorIdempotentSec, claudeIdempotentSec, codexIdempotentSec, copilotIdempotentSec, qwenIdempotentSec, geminiIdempotentSec, windsurfIdempotentSec, zedIdempotentSec);
+
+        StringBuilder cursorFeatureFlagSec  = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThe following elements are gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check.\n\n");
+        StringBuilder claudeFeatureFlagSec  = new StringBuilder("  <feature_flag_elements>\n");
+        StringBuilder codexFeatureFlagSec   = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume the flag is always active:\n\n");
+        StringBuilder copilotFeatureFlagSec = new StringBuilder("\n## Feature Flag Gated Code\nThe following elements are gated behind a feature flag — always preserve the flag check:\n\n");
+        StringBuilder qwenFeatureFlagSec    = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume it is always active:\n\n");
+        StringBuilder geminiFeatureFlagSec  = new StringBuilder();
+        StringBuilder windsurfFeatureFlagSec = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nNever assume these feature flags are always active — preserve all flag checks:\n\n");
+        StringBuilder zedFeatureFlagSec      = new StringBuilder("\n## Feature Flags\nThese elements are behind feature flags — never assume always active:\n\n");
+        for (Element e : collector.featureFlag())
+            appendFeatureFlag(e, cursorFeatureFlagSec, claudeFeatureFlagSec, codexFeatureFlagSec, copilotFeatureFlagSec, qwenFeatureFlagSec, geminiFeatureFlagSec, windsurfFeatureFlagSec, zedFeatureFlagSec);
 
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
@@ -827,6 +841,18 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfIdempotentSec);
             if (zedActive)      zedRules.append(zedIdempotentSec);
         }
+        if (!collector.featureFlag().isEmpty()) {
+            cursorRules.append(cursorFeatureFlagSec);
+            claudeFeatureFlagSec.append("  </feature_flag_elements>\n");
+            claudeMd.append(claudeFeatureFlagSec);
+            claudeMd.append("\n<rule>Elements listed in <feature_flag_elements> are gated by a feature flag. Always preserve the flag check — never assume the flag is always active.</rule>\n");
+            codexAgents.append(codexFeatureFlagSec);
+            copilot.append(copilotFeatureFlagSec);
+            qwenMd.append(qwenFeatureFlagSec);
+            geminiMd.append("\n## FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume the flag is always active:\n\n").append(geminiFeatureFlagSec);
+            if (windsurfActive) windsurfRules.append(windsurfFeatureFlagSec);
+            if (zedActive)      zedRules.append(zedFeatureFlagSec);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -857,6 +883,7 @@ public final class GuardrailContentBuilder {
             if (!collector.strictClasspath().isEmpty())   llmsTxt.append(llmsTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsTxt.append(llmsTxtSchemaSafe);
             if (!collector.idempotent().isEmpty())        llmsTxt.append(llmsTxtIdempotent);
+            if (!collector.featureFlag().isEmpty())       llmsTxt.append(llmsTxtFeatureFlag);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -883,6 +910,7 @@ public final class GuardrailContentBuilder {
             if (!collector.strictClasspath().isEmpty())   llmsFullTxt.append(llmsFullTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsFullTxt.append(llmsFullTxtSchemaSafe);
             if (!collector.idempotent().isEmpty())        llmsFullTxt.append(llmsFullTxtIdempotent);
+            if (!collector.featureFlag().isEmpty())       llmsFullTxt.append(llmsFullTxtFeatureFlag);
         }
 
         return new Result(buildContentMap(geminiMd), elementRules);
@@ -1483,6 +1511,7 @@ public final class GuardrailContentBuilder {
                 llmsTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\n");
                 llmsTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\n");
                 llmsTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\n");
+                llmsTxtFeatureFlag       = new StringBuilder("\n## 🚩 Feature Flag Gated Code\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -1516,6 +1545,7 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\nDynamic runtime class loading and reflections are strictly prohibited.\n\n");
                 llmsFullTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\nSchema and serialization compatibility must be strictly preserved.\n\n");
                 llmsFullTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\nThese operations are idempotent — calling multiple times must produce the same result as calling once.\n\n");
+                llmsFullTxtFeatureFlag       = new StringBuilder("\n## 🚩 Feature Flag Gated Code\nThese elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.\n\n");
             }
         }
 
@@ -1905,6 +1935,39 @@ public final class GuardrailContentBuilder {
         if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
         if (interpreterActive) interpreterRules.append("- `").append(className).append("` (schema-safe): ").append(summary).append("\n");
         if (granularActive)    appendToGranular(e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.");
+    }
+
+    private void appendFeatureFlag(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                   StringBuilder codexSec, StringBuilder copilotSec,
+                                   StringBuilder qwenSec, StringBuilder geminiSec,
+                                   StringBuilder windsurfSec, StringBuilder zedSec) {
+        AIFeatureFlag ff = e.getAnnotation(AIFeatureFlag.class);
+        if (ff == null) return;
+        String className = ElementNaming.elementPath(e);
+        String flag = ff.flag();
+        boolean defaultValue = ff.defaultValue();
+        String flagDisplay = flag.isEmpty() ? "(unspecified)" : "'" + flag + "'";
+        String summary = "Gated by feature flag: " + flagDisplay + " (default: " + defaultValue + "). "
+                       + "Preserve the flag check — never assume it is always on.";
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n");
+            if (!flag.isEmpty()) claudeSec.append("      <flag>").append(flag).append("</flag>\n");
+            claudeSec.append("      <default_value>").append(defaultValue).append("</default_value>\n");
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtFeatureFlag.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtFeatureFlag.append("### ").append(className).append("\n- Feature flag: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n");
+            llmsFullTxtFeatureFlag.append("- Preserve the flag check. Never assume the flag is always active. Test both enabled and disabled code paths.\n\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### FEATURE FLAG: ").append(className).append("\n- **Flag**: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n- **Rule**: Never assume flag is always active. Preserve the flag check.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (sweepActive)       sweepRules.append("  - \"Feature flag gate for ").append(className).append(": ").append(summary).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (feature-flag): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Feature Flag Gate", "- **Flag**: " + flagDisplay + " (default: " + defaultValue + ")\n- **Rule**: This code is gated behind a feature flag. Preserve the flag check. Never assume the flag is always active.");
     }
 
     private void appendIdempotent(Element e, StringBuilder cursorSec, StringBuilder claudeSec,

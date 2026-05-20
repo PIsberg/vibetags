@@ -4,6 +4,7 @@ import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
 
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,15 @@ public class InventoryService {
     )
     public void releaseReservation(String orderId) {
         // Mirror of reserveStock — must stay in sync
+    }
+
+    /**
+     * Experimental low-stock alert delivery via push notification.
+     * Gated behind the "inventory.push-alerts.enabled" feature flag (default: off).
+     */
+    @AIFeatureFlag(flag = "inventory.push-alerts.enabled", defaultValue = false)
+    public void sendLowStockAlert(String sku, int currentLevel) {
+        // Feature-flag gated — must check flag before sending
     }
 
     /**

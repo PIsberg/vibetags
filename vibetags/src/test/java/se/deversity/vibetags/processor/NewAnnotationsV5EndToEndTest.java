@@ -11,9 +11,9 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end integration tests for v1.0.0 annotations: @AIIdempotent.
+ * End-to-end integration tests for v1.0.0 annotations: @AIIdempotent, @AIFeatureFlag.
  *
- * Verifies that the annotation is correctly processed and produces expected prompt outputs
+ * Verifies that the annotations are correctly processed and produce expected prompt outputs
  * across the major platforms.
  */
 class NewAnnotationsV5EndToEndTest {
@@ -34,6 +34,12 @@ class NewAnnotationsV5EndToEndTest {
                 + "  @AIIdempotent(reason = \"Deduplication key ensures re-sends are safe.\")\n"
                 + "  public void processPayment(String deduplicationKey) {}\n"
                 + "}\n");
+
+        harness.addSource("com.example.feature.BetaCheckout",
+            "package com.example.feature;\n"
+                + "import se.deversity.vibetags.annotations.AIFeatureFlag;\n"
+                + "@AIFeatureFlag(flag = \"checkout.beta.enabled\", defaultValue = false)\n"
+                + "public class BetaCheckout {}\n");
 
         harness.compile();
     }
@@ -70,5 +76,27 @@ class NewAnnotationsV5EndToEndTest {
         String agents = harness.readFile("AGENTS.md");
         assertTrue(agents.contains("IDEMPOTENCY"), "AGENTS.md must contain idempotency section");
         assertTrue(agents.contains("com.example.idempotent.PaymentHandler.processPayment"), "AGENTS.md must list the annotated method");
+    }
+
+    // --- @AIFeatureFlag ---
+
+    @Test
+    void featureFlag_cursorRulesContainsSection() throws IOException {
+        String rules = harness.readFile(".cursorrules");
+        assertTrue(rules.contains("FEATURE FLAG"), "Cursorrules must contain feature flag section header");
+        assertTrue(rules.contains("com.example.feature.BetaCheckout"), "Cursorrules must list the feature-flag-gated class");
+    }
+
+    @Test
+    void featureFlag_cursorRulesContainsFlagKey() throws IOException {
+        String rules = harness.readFile(".cursorrules");
+        assertTrue(rules.contains("checkout.beta.enabled"), "Cursorrules must include the flag key");
+    }
+
+    @Test
+    void featureFlag_claudeMdContainsFeatureFlagElements() throws IOException {
+        String claude = harness.readFile("CLAUDE.md");
+        assertTrue(claude.contains("feature_flag_elements"), "CLAUDE.md must contain feature_flag_elements section");
+        assertTrue(claude.contains("com.example.feature.BetaCheckout"), "CLAUDE.md must list the feature-flag-gated class");
     }
 }
