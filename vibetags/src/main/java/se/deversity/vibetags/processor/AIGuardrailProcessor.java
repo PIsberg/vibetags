@@ -241,7 +241,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         GuardrailFileWriter originalWriter = this.fileWriter;
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, new SynchronizedMessager(messager), log, writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
-        java.util.concurrent.ConcurrentLinkedQueue<String[]> statusQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        java.util.Queue<String[]> statusQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
         try {
             effectiveContent.entrySet().parallelStream().forEach(entry -> {
                 String service = entry.getKey();
