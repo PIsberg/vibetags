@@ -8,4 +8,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 ## Locked Files
 
 ## Contextual Rules
+
+## 🔐 Contract-Frozen Signatures
+- [invoice](com.example.BillingService.invoice): Partner API SLA
 <!-- VIBETAGS-END -->

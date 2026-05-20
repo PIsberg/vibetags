@@ -232,20 +232,39 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 + " active services: " + String.join(", ", effectiveContent.keySet())
                 + (multiModule ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
 
-        // Write the per-platform content files.
-        effectiveContent.forEach((service, content) -> {
-            Path filePath = serviceFiles.get(service);
-            boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
-            // hasNewRules: true if any module (not just this one) contributed to this service.
-            boolean anyContributed = multiModule
-                ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
-                : collector.anyAnnotationsFound();
-            boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
-            String relPath = root.relativize(filePath).toString().replace('\\', '/');
-            String status = changed ? "updated" : "no changes";
-            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + status + " - " + relPath);
-            if (log != null) log.info("{} — {}", relPath, status);
-        });
+        // Write the per-platform content files in parallel using ForkJoinPool.commonPool().
+        // Each entry writes a distinct file path, so there is no shared mutable state between tasks.
+        // WriteCache is synchronized on every method. The injected Messager is not guaranteed
+        // thread-safe; we temporarily swap fileWriter to use a synchronized proxy for the duration
+        // of the parallel phase, then restore the original after. Status messages (relPath + status)
+        // are collected in a thread-safe queue and emitted sequentially from the main thread.
+        GuardrailFileWriter originalWriter = this.fileWriter;
+        this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, new SynchronizedMessager(messager), log, writeCache);
+        this.granularWriter = new GranularRulesWriter(this.fileWriter);
+        java.util.concurrent.ConcurrentLinkedQueue<String[]> statusQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        try {
+            effectiveContent.entrySet().parallelStream().forEach(entry -> {
+                String service = entry.getKey();
+                String content = entry.getValue();
+                Path filePath = serviceFiles.get(service);
+                boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
+                // hasNewRules: true if any module (not just this one) contributed to this service.
+                boolean anyContributed = multiModule
+                    ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
+                    : collector.anyAnnotationsFound();
+                boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
+                String relPath = root.relativize(filePath).toString().replace('\\', '/');
+                statusQueue.add(new String[]{relPath, changed ? "updated" : "no changes"});
+            });
+        } finally {
+            this.fileWriter = originalWriter;
+            this.granularWriter = new GranularRulesWriter(this.fileWriter);
+        }
+        // Emit status messages sequentially from the main thread.
+        for (String[] entry : statusQueue) {
+            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + entry[1] + " - " + entry[0]);
+            if (log != null) log.info("{} — {}", entry[0], entry[1]);
+        }
 
         // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans.
         Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices);
@@ -347,5 +366,35 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Messager getSafeMessager() {
         return processingEnv.getMessager();
+    }
+
+    /**
+     * Thread-safe {@link Messager} proxy used during the parallel file-write phase.
+     * Serializes all {@code printMessage} calls onto the delegate via a lock, so
+     * concurrent worker threads in {@code ForkJoinPool.commonPool()} cannot race on
+     * the underlying (non-thread-safe) javac Messager.
+     */
+    private static final class SynchronizedMessager implements Messager {
+        private final Messager delegate;
+
+        SynchronizedMessager(Messager delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override public synchronized void printMessage(Diagnostic.Kind kind, CharSequence msg) {
+            delegate.printMessage(kind, msg);
+        }
+        @Override public synchronized void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {
+            delegate.printMessage(kind, msg, e);
+        }
+        @Override public synchronized void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
+                                                        javax.lang.model.element.AnnotationMirror a) {
+            delegate.printMessage(kind, msg, e, a);
+        }
+        @Override public synchronized void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
+                                                        javax.lang.model.element.AnnotationMirror a,
+                                                        javax.lang.model.element.AnnotationValue v) {
+            delegate.printMessage(kind, msg, e, a, v);
+        }
     }
 }

@@ -5,6 +5,13 @@
   </locked_files>
   <contextual_instructions>
   </contextual_instructions>
+  <contract_signatures>
+    <element path="com.example.BillingService.invoice">
+      <reason>Partner API SLA</reason>
+    </element>
+  </contract_signatures>
+
+<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

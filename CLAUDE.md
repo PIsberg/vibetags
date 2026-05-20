@@ -405,6 +405,7 @@ All tests live in `vibetags/src/test`.
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
+| `ParallelFileWriteTest` | Parallel file-write correctness: 50+ active services written via `ForkJoinPool.commonPool()` without corruption (v0.9.7) |
 | `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent` |
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent` across all platforms |
 | `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent` |

@@ -6,4 +6,9 @@
 ## LOCKED FILES (DO NOT EDIT)
 
 ## CONTEXTUAL RULES
+
+## 🔐 CONTRACT-FROZEN SIGNATURES
+Internal logic may be modified, but never change method names, parameter types, parameter order, return types, or checked exceptions.
+
+- **com.example.BillingService.invoice**: Partner API SLA
 <!-- VIBETAGS-END -->
