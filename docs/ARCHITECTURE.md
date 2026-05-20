@@ -497,6 +497,8 @@ Generation phase (once, on the round where processingOver() == true):
 | `.codex/config.toml` | TOML | Codex | Model and tool configuration |
 | `.codex/rules/vibetags.rules` | Starlark | Codex | Command permissions |
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
+| `GEMINI.md` | Markdown | Gemini (official markdown) | Identical guardrail content to gemini_instructions.md |
+| `.antigravityignore` | Glob patterns | Antigravity AI | Standalone exclusion list |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
 | `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |
@@ -730,7 +732,7 @@ vibetags/
 
 ### 2. Single Processor, Multiple Outputs
 
-**Decision:** One processor generates all 15+ output files in a single pass
+**Decision:** One processor generates all 17+ output files in a single pass
 
 **Rationale:**
 - Single source of truth for annotation data

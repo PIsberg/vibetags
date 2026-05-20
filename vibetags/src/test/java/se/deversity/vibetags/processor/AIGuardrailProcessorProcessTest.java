@@ -317,7 +317,9 @@ class AIGuardrailProcessorProcessTest {
             "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
             "pearai_granular", "mentat", "sweep", "plandex",
-            "double_ignore", "interpreter", "codeium_ignore"
+            "double_ignore", "interpreter", "codeium_ignore",
+            // v0.9.6 platforms
+            "gemini_md", "antigravity_ignore"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");

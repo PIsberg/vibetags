@@ -77,6 +77,12 @@ public final class GuardrailContentBuilder {
     private final boolean interpreterActive;
     private final boolean codeiumIgnoreActive;
 
+    // v0.9.6 platforms
+    private final boolean geminiMdActive;
+    private final boolean antigravityIgnoreActive;
+    /** True if either gemini_instructions.md or GEMINI.md is active — drives gemini section builders. */
+    private final boolean anyGeminiActive;
+
     // Windsurf test-driven section
     private StringBuilder windsurfTestDrivenSection;
 
@@ -159,6 +165,7 @@ public final class GuardrailContentBuilder {
     private StringBuilder interpreterRules;
     private StringBuilder doubleIgnoreFile;
     private StringBuilder codeiumIgnoreFile;
+    private StringBuilder antigravityIgnoreFile;
 
     // Primary platform builders
     private StringBuilder cursorRules;
@@ -241,6 +248,9 @@ public final class GuardrailContentBuilder {
         this.doubleIgnoreActive      = activeServices.contains("double_ignore");
         this.interpreterActive       = activeServices.contains("interpreter");
         this.codeiumIgnoreActive     = activeServices.contains("codeium_ignore");
+        this.geminiMdActive          = activeServices.contains("gemini_md");
+        this.antigravityIgnoreActive = activeServices.contains("antigravity_ignore");
+        this.anyGeminiActive         = this.geminiActive || this.geminiMdActive;
     }
 
     /**
@@ -862,7 +872,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexAgents.append("- **").append(className).append("**: ").append(reason).append("\n");
         if (copilotActive) copilot.append("- `").append(className).append("` - ").append(reason).append("\n");
         if (qwenActive)    qwenMd.append("* `").append(className).append("` - ").append(reason).append("\n");
-        if (geminiActive)  geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (anyGeminiActive) geminiLocked.append("- `").append(className).append("`: ").append(reason).append("\n");
 
         if (llmsActive)     llmsTxt.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(reason).append("\n");
         if (llmsFullActive) llmsFullTxt.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
@@ -905,7 +915,7 @@ public final class GuardrailContentBuilder {
         if (zedActive)       zedRules.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
         if (interpreterActive) interpreterRules.append("- `").append(className).append("` (context): Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
         if (granularActive)  appendToGranular(e, "Context & Focus", "- **Focus**: " + context.focus() + "\n- **Avoid**: " + context.avoids());
-        if (geminiActive)    geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
+        if (anyGeminiActive) geminiContext.append("- `").append(className).append("`: Focus - ").append(context.focus()).append(". Avoid - ").append(context.avoids()).append("\n");
     }
 
     private void appendIgnore(Element e, StringBuilder claudeIgnoreSec, StringBuilder codexIgnoreSec,
@@ -916,7 +926,7 @@ public final class GuardrailContentBuilder {
         if (claudeActive)    claudeIgnoreSec.append("    <file path=\"").append(className).append("\"/>\n");
         if (aiexcludeActive) aiExclude.append("**/").append(e.getSimpleName()).append(".java\n");
         if (codexActive)     codexIgnoreSec.append("- `").append(className).append("` \n");
-        if (geminiActive)    geminiIgnoreSec.append("- `").append(className).append("` \n");
+        if (anyGeminiActive) geminiIgnoreSec.append("- `").append(className).append("` \n");
         if (copilotActive)   copilotIgnoreSec.append("- `").append(className).append("` \n");
 
         String globPattern = "**/" + e.getSimpleName() + ".java\n";
@@ -926,8 +936,9 @@ public final class GuardrailContentBuilder {
         if (qwenIgnoreFileActive)     qwenIgnoreFile.append(globPattern);
         if (codyIgnoreActive)       codyIgnoreFile.append(globPattern);
         if (supermavenIgnoreActive) supermavenIgnoreFile.append(globPattern);
-        if (doubleIgnoreActive)     doubleIgnoreFile.append(globPattern);
-        if (codeiumIgnoreActive)    codeiumIgnoreFile.append(globPattern);
+        if (doubleIgnoreActive)       doubleIgnoreFile.append(globPattern);
+        if (codeiumIgnoreActive)      codeiumIgnoreFile.append(globPattern);
+        if (antigravityIgnoreActive)  antigravityIgnoreFile.append(globPattern);
         if (qwenActive) qwenIgnoreSec.append("* `").append(className).append("` \n");
         if (mentatActive)     mentatIgnore.append("    {\"path\": \"").append(className).append("\"},\n");
         if (interpreterActive) interpreterRules.append("- `").append(className).append("` (excluded): treat as non-existent\n");
@@ -961,7 +972,7 @@ public final class GuardrailContentBuilder {
             for (String v : checkFor) claudeAuditSec.append("      <vulnerability_check>").append(v).append("</vulnerability_check>\n");
             claudeAuditSec.append("    </file>\n");
         }
-        if (geminiActive) {
+        if (anyGeminiActive) {
             geminiAuditSec.append("File: `").append(className).append("` \nCritical Vulnerabilities to Prevent: ");
             for (String v : checkFor) geminiAuditSec.append("\n- ").append(v);
             geminiAuditSec.append("\n\n");
@@ -994,7 +1005,7 @@ public final class GuardrailContentBuilder {
         if (cursorActive)  cursorDraftSec.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
         if (claudeActive)  claudeDraftSec.append("    <task path=\"").append(className).append("\">\n      <instructions>").append(instructions).append("</instructions>\n    </task>\n");
         if (codexActive)   codexDraftSec.append("- **").append(className).append("**: ").append(instructions).append("\n");
-        if (geminiActive)  geminiDraftSec.append("- `").append(className).append("`: ").append(instructions).append("\n");
+        if (anyGeminiActive) geminiDraftSec.append("- `").append(className).append("`: ").append(instructions).append("\n");
         if (copilotActive) copilotDraftSec.append("- `").append(className).append("`: ").append(instructions).append("\n");
         if (qwenActive)    qwenDraftSec.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
 
@@ -1021,7 +1032,7 @@ public final class GuardrailContentBuilder {
         if (cursorActive)  cursorPrivacySec.append("* `").append(className).append("` - ").append(reason).append("\n");
         if (claudeActive)  claudePrivacySec.append("    <element path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </element>\n");
         if (codexActive)   codexPrivacySec.append("- `").append(className).append("`: ").append(reason).append("\n");
-        if (geminiActive)  geminiPrivacySec.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (anyGeminiActive) geminiPrivacySec.append("- `").append(className).append("`: ").append(reason).append("\n");
         if (copilotActive) copilotPrivacySec.append("- `").append(className).append("` - ").append(reason).append("\n");
         if (qwenActive)    qwenPrivacySec.append("* `").append(className).append("` - ").append(reason).append("\n");
 
@@ -1051,7 +1062,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexCoreSec.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
         if (copilotActive) copilotCoreSec.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append("\n");
         if (qwenActive)    qwenCoreSec.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
-        if (geminiActive)  geminiCoreSec.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+        if (anyGeminiActive) geminiCoreSec.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
 
         if (llmsActive)     llmsTxtCore.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
         if (llmsFullActive) llmsFullTxtCore.append("### ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
@@ -1078,7 +1089,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexPerfSec.append("- **").append(className).append("**: ").append(constraint).append("\n");
         if (copilotActive) copilotPerfSec.append("- `").append(className).append("`: ").append(constraint).append("\n");
         if (qwenActive)    qwenPerfSec.append("* `").append(className).append("` - ").append(constraint).append("\n");
-        if (geminiActive)  geminiPerfSec.append("- `").append(className).append("`: ").append(constraint).append("\n");
+        if (anyGeminiActive) geminiPerfSec.append("- `").append(className).append("`: ").append(constraint).append("\n");
 
         if (llmsActive)     llmsTxtPerformance.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(constraint).append("\n");
         if (llmsFullActive) llmsFullTxtPerformance.append("### ").append(className).append("\n- **Constraint**: ").append(constraint).append("\n\n");
@@ -1105,7 +1116,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexContractSec.append("- **").append(className).append("**: ").append(reason).append("\n");
         if (copilotActive) copilotContractSec.append("- `").append(className).append("` - ").append(reason).append("\n");
         if (qwenActive)    qwenContractSec.append("* `").append(className).append("` - ").append(reason).append("\n");
-        if (geminiActive)  geminiContractSec.append("- `").append(className).append("`: ").append(reason).append("\n");
+        if (anyGeminiActive) geminiContractSec.append("- `").append(className).append("`: ").append(reason).append("\n");
 
         if (llmsActive)     llmsTxtContract.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(reason).append("\n");
         if (llmsFullActive) llmsFullTxtContract.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
@@ -1154,7 +1165,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexTestDrivenSec.append("- **").append(className).append("**: ").append(summary).append("\n");
         if (copilotActive) copilotTestDrivenSec.append("- `").append(className).append("` - ").append(summary).append("\n");
         if (qwenActive)    qwenTestDrivenSec.append("* `").append(className).append("` - ").append(summary).append("\n");
-        if (geminiActive)  geminiTestDrivenSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (anyGeminiActive) geminiTestDrivenSec.append("- `").append(className).append("`: ").append(summary).append("\n");
 
         if (llmsActive)     llmsTxtTestDriven.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
         if (llmsFullActive) llmsFullTxtTestDriven.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append("\n");
@@ -1185,7 +1196,7 @@ public final class GuardrailContentBuilder {
         if (codexActive)   codexSec.append("- **").append(className).append("**: ").append(summary).append("\n");
         if (copilotActive) copilotSec.append("- `").append(className).append("` - ").append(summary).append("\n");
         if (qwenActive)    qwenSec.append("* `").append(className).append("` - ").append(summary).append("\n");
-        if (geminiActive)  geminiSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (anyGeminiActive) geminiSec.append("- `").append(className).append("`: ").append(summary).append("\n");
     }
 
     private void appendThreadSafe(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
@@ -1510,6 +1521,7 @@ public final class GuardrailContentBuilder {
         if (supermavenIgnoreActive) supermavenIgnoreFile = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Supermaven-specific exclusion list.\n");
         if (doubleIgnoreActive)     doubleIgnoreFile     = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Double.bot-specific exclusion list.\n");
         if (codeiumIgnoreActive)    codeiumIgnoreFile    = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Codeium-specific exclusion list.\n");
+        if (antigravityIgnoreActive) antigravityIgnoreFile = new StringBuilder("# AUTO-GENERATED BY VIBETAGS\n" + generatedHeader + "# Antigravity AI-specific exclusion list.\n");
 
         if (mentatActive) {
             mentatLocked    = new StringBuilder();
@@ -1581,9 +1593,11 @@ public final class GuardrailContentBuilder {
         if (activeServices.contains("supermaven_ignore")) contentByService.put("supermaven_ignore", supermavenIgnoreFile.toString());
         if (activeServices.contains("cody"))              contentByService.put("cody",              buildCodyConfig());
 
-        if (activeServices.contains("double_ignore"))   contentByService.put("double_ignore",   doubleIgnoreFile.toString());
-        if (activeServices.contains("codeium_ignore"))  contentByService.put("codeium_ignore",  codeiumIgnoreFile.toString());
-        if (activeServices.contains("mentat"))          contentByService.put("mentat",          buildMentatConfig());
+        if (activeServices.contains("double_ignore"))      contentByService.put("double_ignore",      doubleIgnoreFile.toString());
+        if (activeServices.contains("codeium_ignore"))     contentByService.put("codeium_ignore",     codeiumIgnoreFile.toString());
+        if (activeServices.contains("antigravity_ignore")) contentByService.put("antigravity_ignore", antigravityIgnoreFile.toString());
+        if (activeServices.contains("gemini_md"))          contentByService.put("gemini_md",          geminiMd.toString());
+        if (activeServices.contains("mentat"))             contentByService.put("mentat",             buildMentatConfig());
         if (activeServices.contains("sweep"))           contentByService.put("sweep",           buildSweepConfig());
         if (activeServices.contains("plandex"))         contentByService.put("plandex",         buildPlandexConfig());
         if (activeServices.contains("interpreter"))     contentByService.put("interpreter",     buildInterpreterProfile());

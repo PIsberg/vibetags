@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests annotations, or wants to control how AI tools interact with Java code.
-version: 0.9.5
+version: 0.9.6
 ---
 
 # VibeTags Usage Guide
@@ -40,7 +40,7 @@ mkdir -p .trae/rules                       # Trae (granular per-class rules)
 mkdir -p .roo/rules                        # Roo Code (per-class rules)
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
-touch .aiexclude gemini_instructions.md    # Gemini
+touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 touch AGENTS.md                            # Codex CLI
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
@@ -60,6 +60,8 @@ touch .plandex.yaml                        # Plandex
 touch .doubleignore                        # Double.bot
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                       # Codeium
+touch GEMINI.md                            # Gemini (official markdown)
+touch .antigravityignore                   # Antigravity AI
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 ```
 
@@ -705,7 +707,8 @@ tasks.withType(JavaCompile) {
 | `.roo/rules/*.md` | Roo Code |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
-| `gemini_instructions.md`, `.aiexclude` | Gemini |
+| `gemini_instructions.md`, `GEMINI.md`, `.aiexclude` | Gemini |
+| `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
 | `.rules` | Zed Editor |

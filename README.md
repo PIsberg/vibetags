@@ -213,11 +213,13 @@ The 24 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **27 AI platforms**:
+Generated configuration files work out-of-the-box with **29 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
+- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
+- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
@@ -231,9 +233,11 @@ Generated configuration files work out-of-the-box with **27 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Windsurf** (`.windsurfrules` or **Granular** `.windsurf/rules/*.md`)
-- **Windsurf Cascade & all LLM agents** (`llms.txt`, `llms-full.txt`) — follows the [llms.txt standard](https://llmstxt.org/)
-- **Zed Editor** (`.rules`)
+- **Plandex** (`.plandex.yaml`)
+- **Double.bot** (`.doubleignore`)
+- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
+- **Codeium** (`.codeiumignore`)
+- **Antigravity AI** (`.antigravityignore`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
@@ -630,16 +634,17 @@ touch .mentatconfig.json                     # Mentat AI assistant
 touch sweep.yaml                             # Sweep AI code review (GitHub App)
 touch .plandex.yaml                          # Plandex AI coding agent
 
-# --- Double.bot, Open Interpreter, Codeium ---
+# --- Double.bot, Open Interpreter, Codeium, Antigravity ---
 touch .doubleignore                          # Double.bot exclusion list
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
+touch .antigravityignore                     # Antigravity AI exclusion list
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aiderignore            # Aider
 touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
-touch .aiexclude gemini_instructions.md      # Gemini
+touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard

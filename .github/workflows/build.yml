@@ -94,7 +94,8 @@ jobs:
             .ai/rules/com-example-payment-PaymentProcessor.md \
             .pearai/rules/com-example-payment-PaymentProcessor.md \
             .mentatconfig.json sweep.yaml .plandex.yaml \
-            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore; do
+            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
+            GEMINI.md .antigravityignore; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -111,6 +112,8 @@ jobs:
           echo "OK Claude audit requirements"
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
           echo "OK Gemini audit requirements"
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
+          echo "OK GEMINI.md audit requirements"
           grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
           echo "OK Codex audit guardrails"
           grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
@@ -273,7 +276,8 @@ jobs:
             .ai/rules/com-example-payment-PaymentProcessor.md \
             .pearai/rules/com-example-payment-PaymentProcessor.md \
             .mentatconfig.json sweep.yaml .plandex.yaml \
-            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore; do
+            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
+            GEMINI.md .antigravityignore; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -290,6 +294,8 @@ jobs:
           echo "OK Claude audit requirements"
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
           echo "OK Gemini audit requirements"
+          grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
+          echo "OK GEMINI.md audit requirements"
           grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
           echo "OK Codex audit guardrails"
           grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
