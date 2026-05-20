@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-05-20
+
+### Added
+
+- **3 new SOURCE-retention annotations** (total: 27):
+
+  | Annotation | Targets | Description |
+  |---|---|---|
+  | `@AIIdempotent` | TYPE, METHOD | Declares that the annotated operation must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results. Attribute: `reason`. |
+  | `@AIFeatureFlag` | TYPE, METHOD, FIELD | Marks code gated behind a runtime feature flag; AI must preserve the flag check and must never assume the flag is always active or always inactive. Attributes: `flag` (key string), `defaultValue` (boolean). |
+  | `@AISecure` | TYPE, METHOD | Marks security-critical code (authentication, encryption, authorization, session management); AI must not weaken security properties and must flag every proposed change for security review. Attribute: `aspect`. |
+
+  Compile-time validation warnings for contradictory or no-op combinations:
+  - `@AIIdempotent` + `@AIDraft` — contradictory (idempotent declares a stable contract; draft marks it as unfinished)
+  - `@AIFeatureFlag` + `@AILocked` — contradictory (locked freezes code; feature flag implies conditional execution)
+  - `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+  - `@AISecure` with blank `aspect` — advisory; consider specifying the security concern
+  - `@AISecure` + `@AIIgnore` — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
+
+- **3 new AI platform integrations** (total: 32 platforms):
+
+  | Platform | File | Format |
+  |---|---|---|
+  | Cline AI assistant | `.clinerules` | Markdown |
+  | JetBrains Junie | `.junie/guidelines.md` | Markdown |
+  | Amazon Kiro | `.kiro/steering/*.md` | Markdown (granular per-class) |
+
+  Enable:
+  ```bash
+  touch .clinerules
+  mkdir -p .junie && touch .junie/guidelines.md
+  mkdir -p .kiro/steering
+  ```
+
+- **Parallel file writes** — all platform output files are now written concurrently
+  via `ForkJoinPool.commonPool()` using `parallelStream()`. A `SynchronizedMessager`
+  proxy wraps the javac `Messager` for thread safety. Status messages are collected
+  in a `Queue<String[]>` and emitted sequentially from the main thread after the
+  parallel phase. On an incremental compile where nothing changed the parallel
+  overhead is negligible — every `writeFileIfChanged` call returns immediately at
+  the `WriteCache.isUnchanged()` check.
+
+### Fixed
+
+- **`CapturingProcessor` race condition in tests** — three test-internal
+  `CapturingProcessor` subclasses (`AITestDrivenProcessorTest`,
+  `AIContractProcessorTest`, `AIPrivacyProcessorTest`) stored captured output in
+  `LinkedHashMap`, which is not thread-safe. The `parallelStream()` in
+  `generateFiles()` calls the overridden `writeFileIfChanged()` from multiple
+  `ForkJoinPool` worker threads simultaneously, causing silent entry drops and
+  assertion failures. Fixed by switching to `ConcurrentHashMap`.
+
+- **PMD violations** — two violations introduced in the parallel-writes change:
+  - `LooseCoupling`: `ConcurrentLinkedQueue` used as declaration type instead of
+    the `Queue` interface (`AIGuardrailProcessor.java`)
+  - `UnusedPrivateField`: dead `junieRules` StringBuilder field in
+    `GuardrailContentBuilder` — Junie content is built via
+    `cursorContent.replace(header)` and never uses the field
+
+- **`tools/plot-cache-hit.py` auto-discovery** — the script had a hardcoded
+  `DEFAULT_INPUT` pointing to the 0.9.5 result directory. It now auto-discovers
+  the latest version folder that contains a `jmh-cache-hit.json` file. Added
+  `--input` and `--out` argparse flags for explicit override.
+
 ## [0.9.5] - 2026-05-19
 
 ### Added
@@ -586,7 +650,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.7...HEAD
+[0.9.7]: https://github.com/PIsberg/vibetags/compare/v0.9.5...v0.9.7
 [0.9.5]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.5
 [0.8.0]: https://github.com/PIsberg/vibetags/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
