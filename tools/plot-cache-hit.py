@@ -5,15 +5,19 @@ Generate two comparison plots from WriteCacheHitBenchmark JMH output:
   1. Wall-clock (us/op) — cacheHit vs noCache, log-y, grouped by body size.
   2. Allocation rate (B/op) — same grouping, log-y.
 
-Reads `load-tests/results/0.8.0/jmh-cache-hit.json` and writes:
+Reads the most-recent version's jmh-cache-hit.json and writes:
 
   load-tests/results/_plots/cache-hit-time.png
   load-tests/results/_plots/cache-hit-alloc.png
 
 Usage:
     python tools/plot-cache-hit.py
+    python tools/plot-cache-hit.py --input load-tests/results/0.9.7/jmh-cache-hit.json
+    python tools/plot-cache-hit.py --out load-tests/results/_plots
 """
+import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -21,8 +25,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = REPO_ROOT / "load-tests" / "results" / "0.9.5" / "jmh-cache-hit.json"
-DEFAULT_OUT = REPO_ROOT / "load-tests" / "results" / "_plots"
+_RESULTS_DIR = REPO_ROOT / "load-tests" / "results"
+_VERSION_PAT = re.compile(r"^\d+\.\d+\.\d+$")
+DEFAULT_OUT = _RESULTS_DIR / "_plots"
+
+
+def _latest_input() -> Path:
+    """Return jmh-cache-hit.json from the highest version directory that has one."""
+    versions = sorted(
+        (p for p in _RESULTS_DIR.iterdir() if p.is_dir() and _VERSION_PAT.match(p.name)),
+        key=lambda p: [int(x) for x in p.name.split(".")],
+    )
+    for v in reversed(versions):
+        candidate = v / "jmh-cache-hit.json"
+        if candidate.exists():
+            return candidate
+    sys.exit(f"No jmh-cache-hit.json found under {_RESULTS_DIR}")
 
 # Body-size groups in the order we want to display them.
 SIZES = [
@@ -123,12 +141,22 @@ def plot_grouped_bars(
 
 
 def main() -> None:
-    data = load(DEFAULT_INPUT)
-    DEFAULT_OUT.mkdir(parents=True, exist_ok=True)
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--input", type=Path, default=None,
+                        help="Path to jmh-cache-hit.json (default: latest version directory)")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
+                        help="Output directory for PNGs")
+    args = parser.parse_args()
+
+    input_path = args.input if args.input else _latest_input()
+    out_dir = args.out
+    data = load(input_path)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     plot_grouped_bars(
         data,
-        DEFAULT_OUT / "cache-hit-time.png",
+        out_dir / "cache-hit-time.png",
         metric="score",
         ylabel="avgt µs/op (log scale, lower is better)",
         title="WriteCacheHitBenchmark — wall-clock per writeFileIfChanged call",
@@ -137,14 +165,14 @@ def main() -> None:
 
     plot_grouped_bars(
         data,
-        DEFAULT_OUT / "cache-hit-alloc.png",
+        out_dir / "cache-hit-alloc.png",
         metric="alloc",
         ylabel="bytes allocated per op (log scale, lower is better)",
         title="WriteCacheHitBenchmark — allocation per writeFileIfChanged call",
         log_y=True,
     )
 
-    print(f"Wrote plots to {DEFAULT_OUT}")
+    print(f"Wrote plots to {out_dir} (source: {input_path})")
     for name in sorted(data):
         if "_cacheHit" in name or "_noCache" in name:
             d = data[name]

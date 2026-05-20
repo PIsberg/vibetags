@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.5</version>
+    <version>0.9.7</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Annotations</name>
@@ -23,12 +23,12 @@
             &lt;dependency&gt;
                 &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
                 &lt;artifactId&gt;vibetags-annotations&lt;/artifactId&gt;
-                &lt;version&gt;0.9.5&lt;/version&gt;
+                &lt;version&gt;0.9.7&lt;/version&gt;
             &lt;/dependency&gt;
 
         Gradle:
-            compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.5'
-            annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.5'
+            compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.7'
+            annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.7'
     </description>
     <url>https://github.com/PIsberg/vibetags</url>
 
