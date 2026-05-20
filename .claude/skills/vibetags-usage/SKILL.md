@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests annotations, or wants to control how AI tools interact with Java code.
-version: 0.9.6
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure annotations, or wants to control how AI tools interact with Java code.
+version: 0.9.7
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.9.5</version>
+    <version>0.9.7</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.9.5'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.5'
+compileOnly 'se.deversity.vibetags:vibetags-processor:0.9.7'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.7'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -62,6 +62,9 @@ mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # O
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
 touch .antigravityignore                   # Antigravity AI
+touch .clinerules                          # Cline AI assistant
+mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
+mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 ```
 
@@ -565,6 +568,85 @@ When to use: test classes run under JUnit 5 parallel execution, `@Isolated` test
 
 ---
 
+### `@AIIdempotent` — Declare an operation must be idempotent
+
+Use on: **class, method**
+
+```java
+@AIIdempotent(reason = "Called by the retry scheduler — multiple invocations must produce the same result.")
+public void processOrder(String orderId) {
+    // Must tolerate repeated calls without double-processing
+}
+```
+
+Declares that the annotated operation is expected to be idempotent. AI must not introduce side effects that cause repeated calls to produce different results (e.g., double-inserts, repeated external API calls without deduplication, counter increments on every call).
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `reason` | `String` | `""` | Free-form note explaining why idempotency is required |
+
+When to use: retry handlers, message consumers, webhook processors, payment captures, any operation exposed to at-least-once delivery.
+
+**Compile-time warnings:**
+
+- `@AIIdempotent` + `@AIDraft` on the same element — contradictory (idempotent declares a stable contract while draft marks the element as unfinished)
+
+---
+
+### `@AIFeatureFlag` — Mark code gated behind a feature flag
+
+Use on: **class, method, field**
+
+```java
+@AIFeatureFlag(flag = "checkout.new-flow", defaultValue = false)
+public void processNewCheckout(Cart cart) {
+    // Only active when the 'checkout.new-flow' flag is enabled
+}
+```
+
+Tells AI that the annotated element is gated behind a runtime feature flag. AI must preserve the flag check and must never assume the flag is always active (or always inactive). Removing the conditional guard, inlining the `true` branch, or hardcoding the default is forbidden.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `flag` | `String` | `""` | The feature flag key (e.g., `"checkout.new-flow"`) |
+| `defaultValue` | `boolean` | `false` | The flag's default value when not explicitly set |
+
+When to use: A/B experiments, gradual rollouts, kill switches, beta features, dark launches.
+
+**Compile-time warnings:**
+
+- `@AIFeatureFlag` + `@AILocked` on the same element — contradictory (locked freezes code while feature flag implies conditional execution)
+- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+
+---
+
+### `@AISecure` — Mark security-critical code
+
+Use on: **class, method**
+
+```java
+@AISecure(aspect = "authentication")
+public class JwtTokenValidator {
+    // Any change here must be reviewed for security implications
+    public boolean validate(String token) { ... }
+}
+```
+
+Declares that the annotated element implements a security-critical concern (e.g., authentication, encryption, authorization, session management, input sanitization). AI must not weaken security properties and must explicitly flag any proposed change for security review.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `aspect` | `String` | `""` | The security concern (e.g., `"authentication"`, `"encryption"`, `"authorization"`) |
+
+When to use: JWT/OAuth token handling, cryptographic operations, authorization checks, session management, input validation against injection attacks, any code whose weakening would create a security vulnerability.
+
+**Compile-time warnings:**
+
+- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
+- `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -608,6 +690,14 @@ When to use: test classes run under JUnit 5 parallel execution, `@Isolated` test
 | `@AIInternationalized` + `@AIContext` | i18n enforcement with guidance on which bundle/framework to use |
 | `@AIStrictClasspath` + `@AIPerformance` | Compile-time-only deps AND strict complexity budget |
 | `@AIParallelTests` + `@AITestDriven` | Tests must be parallel-safe AND include coverage for every change |
+| `@AIIdempotent` + `@AIDraft` | **Warning**: contradictory — idempotent declares a stable contract; draft marks it as unfinished |
+| `@AIIdempotent` + `@AIContext` | Idempotent operation with guidance on which deduplication approach to use |
+| `@AIFeatureFlag` + `@AILocked` | **Warning**: contradictory — locked freezes code; feature flag implies conditional execution |
+| `@AIFeatureFlag` + `@AIContext` | Flag-gated code with guidance on how to manage the flag lifecycle |
+| `@AISecure` + `@AIIgnore` | **Warning**: contradictory — `@AIIgnore` hides the element; `@AISecure` requires AI visibility for security review |
+| `@AISecure` + `@AIAudit` | Security-critical code that must also be audited on every change |
+| `@AISecure` + `@AIPrivacy` | Security-critical PII handler — must not be weakened AND values must never leak |
+| `@AISecure` + `@AICore` | Core security logic — treat all changes with extreme caution AND flag for security review |
 
 ---
 
@@ -626,11 +716,13 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.amazonq/rules/*.md` | Amazon Q | Markdown |
 | `.ai/rules/*.md` | Universal AI standard | Markdown |
 | `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
+| `.kiro/steering/*.md` | Amazon Kiro | Markdown |
 
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
+mkdir -p .kiro/steering
 ```
 
 ---
@@ -691,6 +783,11 @@ tasks.withType(JavaCompile) {
 | `[WARNING] @AIThreadSafe(IMMUTABLE) and @AIImmutable` | Both annotations on same type | Use `@AIImmutable` alone — immutability already implies thread-safety |
 | `[WARNING] @AIObservability declares no metrics, traces, or logs` | Empty annotation | Add at least one `metrics`/`traces`/`logs` entry |
 | `[WARNING] @AIRegulation has a blank 'standard'` | Required `standard` is empty/whitespace | Name the standard (e.g., `"GDPR"`, `"PCI-DSS"`) |
+| `[WARNING] contradictory @AIIdempotent and @AIDraft` | Both annotations on same element | Remove one — idempotent declares a stable contract; draft implies it's unfinished |
+| `[WARNING] contradictory @AIFeatureFlag and @AILocked` | Both annotations on same element | Remove one — locked freezes; feature flag implies conditional execution |
+| `[WARNING] @AIFeatureFlag has no flag key` | Blank `flag` attribute | Set the flag key (e.g., `flag = "checkout.new-flow"`) |
+| `[WARNING] @AISecure has no aspect` | Blank `aspect` attribute | Specify the security concern (e.g., `aspect = "authentication"`) |
+| `[WARNING] contradictory @AISecure and @AIIgnore` | Both annotations on same element | Remove `@AIIgnore` — security-critical code must remain visible to AI for review |
 
 ---
 
@@ -727,4 +824,7 @@ tasks.withType(JavaCompile) {
 | `.doubleignore` | Double.bot |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.codeiumignore` | Codeium |
+| `.clinerules` | Cline AI assistant |
+| `.junie/guidelines.md` | JetBrains Junie |
+| `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |

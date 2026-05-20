@@ -6,4 +6,9 @@
 ## LOCKED FILES (DO NOT EDIT)
 
 ## CONTEXTUAL RULES
+
+## 🔐 CONTRACT-FROZEN SIGNATURES
+The following elements have contract-frozen public signatures. You MAY change internal implementation logic, but MUST NOT modify method names, parameter types, parameter order, return types, or checked exceptions.
+
+* `com.example.BillingService.invoice` - Partner API SLA
 # VIBETAGS-END

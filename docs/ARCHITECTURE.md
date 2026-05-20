@@ -117,6 +117,8 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `@AIInternationalized` - Prohibits hardcoding of user-facing strings
 - `@AIStrictClasspath` - Restricts imports to standard JDK and existing classpath
 - `@AISchemaSafe` - Guarantees persistent schema and serialization safety
+- `@AIIdempotent` - Declares that an operation must remain idempotent (reason: String)
+- `@AIFeatureFlag` - Marks code gated behind a feature flag (flag: String, defaultValue: boolean)
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -133,7 +135,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
 - `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs nine `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O. Since 0.7.1: pre-allocates the nine main per-platform buffers based on collected element count (~1500 chars per element, capped at 256 KB) so the per-annotation appender loops don't trigger log₂(N) `char[]` grow/copy passes as content accumulates.
 - `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files. Since 0.7.1 also owns the cache-fast-path entry to `writeFileIfChanged` and a streaming byte-compare for non-marker files.
-- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / `.ai/rules` and orchestrates orphan cleanup via the file writer
+- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / `.ai/rules` and orchestrates orphan cleanup via the file writer
 - `WriteCache` — per-output-file content cache backed by a `.vibetags-cache` sidecar at the project root; lets `GuardrailFileWriter` skip the read+compare path on no-change rebuilds. **Detailed below in [Design Decision 5](#5-write-cache-since-071).** _(since 0.7.1)_
 
 This split keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
@@ -413,6 +415,9 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 | **`@AIInternationalized`** | TYPE, METHOD | — | Prohibits hardcoding of user-facing strings |
 | **`@AIStrictClasspath`** | TYPE, METHOD | — | Restricts imports to standard JDK and existing classpath |
 | **`@AISchemaSafe`** | TYPE, FIELD | — | Guarantees persistent schema and serialization safety |
+| **`@AIIdempotent`** | TYPE, METHOD | `reason: String` | Declares that an operation must remain idempotent |
+| **`@AIFeatureFlag`** | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` | Marks code gated behind a feature flag |
+| **`@AISecure`** | TYPE, METHOD | `aspect: String` | Marks security-critical code; AI must not weaken security properties and must flag changes for security review |
 
 **Annotation semantics compared:**
 - `@AILocked` — visible to AI but must not be modified
@@ -431,6 +436,9 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIInternationalized` — mandates externalizing user-facing copy (e.g. to property bundles, never hardcoded strings)
 - `@AIStrictClasspath` — restricts additions to the standard JDK or already defined classpath elements; no external dependencies
 - `@AISchemaSafe` — protects persistent schemas (database models or serialization) against structural breaking changes
+- `@AIIdempotent` — declares the operation must remain idempotent; AI must not introduce side effects that cause repeated calls to produce different results
+- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- `@AISecure` — marks security-critical code (crypto, auth, session management); AI must not weaken security properties and must flag any change for security review
 
 **Invalid combinations that trigger compiler WARNINGs:**
 - `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
@@ -443,6 +451,11 @@ All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at 
 - `@AIPublicAPI` + `@AILocked` — redundant; `@AILocked` already bans modifications, superseding public API compatibility rules
 - `@AIParallelTests` + `@AILocked` — redundant; locked tests don't need parallel isolation advice since they cannot be modified
 - `@AISchemaSafe` + `@AIIgnore` — redundant; ignored items are not part of generated AI schemas or interactions
+- `@AIIdempotent` + `@AIDraft` — contradictory; idempotent declares a stable contract while draft marks the element as unfinished
+- `@AIFeatureFlag` + `@AILocked` — contradictory; locked freezes code while feature flag implies conditional execution
+- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
+- `@AISecure` + `@AIIgnore` — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
 - `@AIStrictClasspath` + `@AILocked` — redundant; locked items cannot have their imports changed
 - `@AIArchitecture` with empty layer attributes — invalid config; specifying `@AIArchitecture` without `belongsTo` or `cannotReference` has no effect
 
@@ -473,7 +486,7 @@ Generation phase (once, on the round where processingOver() == true):
 5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
 6. GuardrailContentBuilder.build() runs the per-annotation appenders for all 24 annotation types in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final service-key → content map. The builder owns every per-platform StringBuilder and performs no I/O.
 7. GuardrailFileWriter.writeFileIfChanged(...) for each active service — three-layer fast path (WriteCache hit → streaming byte-compare → readString + strip-equals); marker-aware updates, YAML front-matter preservation, atomic tmp+move writes; on success records the new fingerprint in WriteCache
-8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / .ai/rules
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / .ai/rules
 9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files (skipping the names just written, to avoid delete-then-recreate cycles; invalidates the WriteCache entry for any file it deletes or rewrites)
 10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
 11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar (no-op if no entries changed this build)
@@ -499,6 +512,8 @@ Generation phase (once, on the round where processingOver() == true):
 | `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
 | `GEMINI.md` | Markdown | Gemini (official markdown) | Identical guardrail content to gemini_instructions.md |
 | `.antigravityignore` | Glob patterns | Antigravity AI | Standalone exclusion list |
+| `.clinerules` | Markdown | Cline AI assistant | Same guardrail content as `.cursorrules` |
+| `.junie/guidelines.md` | Markdown | JetBrains Junie | Same guardrail content as `.cursorrules` with Junie-specific heading |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
 | `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |
@@ -624,7 +639,9 @@ vibetags/
 │   │   ├── AIStrictTypes.java
 │   │   ├── AIInternationalized.java
 │   │   ├── AIStrictClasspath.java
-│   │   └── AISchemaSafe.java
+│   │   ├── AISchemaSafe.java
+│   │   ├── AIIdempotent.java
+│   │   └── AIFeatureFlag.java
 │   ├── pom.xml
 │   └── build.gradle
 │

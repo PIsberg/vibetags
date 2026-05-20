@@ -561,7 +561,8 @@ class AITestDrivenProcessorTest {
     // -----------------------------------------------------------------------
 
     static class CapturingProcessor extends AIGuardrailProcessor {
-        final java.util.Map<String, String> captured = new java.util.LinkedHashMap<>();
+        // ConcurrentHashMap: writeFileIfChanged is called from parallelStream() workers
+        final java.util.Map<String, String> captured = new java.util.concurrent.ConcurrentHashMap<>();
 
         @Override
         public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {

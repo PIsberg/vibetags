@@ -34,7 +34,9 @@ public final class ServiceRegistry {
         "pearai_granular", "mentat", "sweep", "plandex",
         "double_ignore", "interpreter", "codeium_ignore",
         // v0.9.6 platforms
-        "gemini_md", "antigravity_ignore"
+        "gemini_md", "antigravity_ignore",
+        // v0.9.7 platforms
+        "cline", "junie", "kiro_granular"
     );
 
     private ServiceRegistry() {}
@@ -88,6 +90,10 @@ public final class ServiceRegistry {
         // v0.9.6 platforms
         map.put("gemini_md",          root.resolve("GEMINI.md"));
         map.put("antigravity_ignore", root.resolve(".antigravityignore"));
+        // v0.9.7 platforms
+        map.put("cline",         root.resolve(".clinerules"));
+        map.put("junie",         root.resolve(".junie/guidelines.md"));
+        map.put("kiro_granular", root.resolve(".kiro/steering"));
         return map;
     }
 

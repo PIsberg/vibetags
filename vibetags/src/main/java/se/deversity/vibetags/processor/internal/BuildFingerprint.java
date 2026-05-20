@@ -23,6 +23,9 @@ import se.deversity.vibetags.annotations.AIStrictTypes;
 import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AISecure;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -147,6 +150,18 @@ public final class BuildFingerprint {
         appendAnnotationSet(sb, "IT", collector.internationalized(), e -> "");
         appendAnnotationSet(sb, "SC", collector.strictClasspath(), e -> "");
         appendAnnotationSet(sb, "SS", collector.schemaSafe(), e -> "");
+        appendAnnotationSet(sb, "ID", collector.idempotent(), e -> {
+            AIIdempotent a = e.getAnnotation(AIIdempotent.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "FF", collector.featureFlag(), e -> {
+            AIFeatureFlag a = e.getAnnotation(AIFeatureFlag.class);
+            return a == null ? "" : a.flag() + "|" + a.defaultValue();
+        });
+        appendAnnotationSet(sb, "SEC", collector.secure(), e -> {
+            AISecure a = e.getAnnotation(AISecure.class);
+            return a == null ? "" : a.aspect();
+        });
 
         sb.append("S{");
         for (String s : new TreeSet<>(activeServices)) {

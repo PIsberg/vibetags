@@ -206,6 +206,9 @@ The 24 annotations group into six categories by intent. Within each category the
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
 - **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
+- **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
+- **🚩 @AIFeatureFlag** - Mark code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- **🔐 @AISecure** - Mark security-critical code (authentication, encryption, authorization) — AI must not weaken security properties and must flag any change for security review
 
 #### ♻️ Lifecycle — manage deprecation and removal
 
@@ -213,19 +216,20 @@ The 24 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **29 AI platforms**:
+Generated configuration files work out-of-the-box with **32 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
+- **Antigravity AI** (`.antigravityignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
-- **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
-- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
+- **Cline** (`.clinerules`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
-- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
+- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **JetBrains Junie** (`.junie/guidelines.md`)
 - **Mentat** (`.mentatconfig.json`)
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
 - **Plandex** (`.plandex.yaml`)
@@ -233,17 +237,14 @@ Generated configuration files work out-of-the-box with **29 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Plandex** (`.plandex.yaml`)
-- **Double.bot** (`.doubleignore`)
-- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
-- **Codeium** (`.codeiumignore`)
-- **Antigravity AI** (`.antigravityignore`)
+- **Windsurf IDE** (`.windsurfrules`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
+- **Amazon Kiro** (`.kiro/steering/*.md`)
 - **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
@@ -266,7 +267,7 @@ vibetags/
 ├── vibetags-annotations/ # The 24 @interface classes (zero deps, RetentionPolicy.SOURCE)
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
+│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIdempotent, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -629,6 +630,9 @@ mkdir -p .roo/rules                          # Roo Code
 # --- PearAI ---
 mkdir -p .pearai/rules                       # PearAI granular rules (per-class .md)
 
+# --- Amazon Kiro ---
+mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
+
 # --- Mentat, Sweep, Plandex ---
 touch .mentatconfig.json                     # Mentat AI assistant
 touch sweep.yaml                             # Sweep AI code review (GitHub App)
@@ -639,6 +643,10 @@ touch .doubleignore                          # Double.bot exclusion list
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list
+
+# --- Cline, JetBrains Junie ---
+touch .clinerules                            # Cline AI assistant
+mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aiderignore            # Aider
@@ -1336,6 +1344,21 @@ public class UserEntity {
 ```
 
 Generated guidance: *"Guarantees schema and serialization safety. Destructive modifications (dropping columns/tables, changing field names, or breaking serialization schemas) are strictly prohibited."*
+
+#### ♻️ `@AIIdempotent`
+
+Declares that the annotated method or type guarantees idempotency — calling it multiple times must produce the same result as calling it once. AI assistants must never introduce side effects (such as unconditional inserts or non-idempotent state mutations) that would break this guarantee.
+
+```java
+public class GdprService {
+    @AIIdempotent(reason = "Deleting a user's data multiple times must produce the same result — must not throw on second invocation.")
+    public void deleteAllUserData(String userId) {
+        // idempotent delete — safe to re-call
+    }
+}
+```
+
+Generated guidance: *"Idempotency guaranteed. Multiple invocations must produce the same result as one. Never introduce side effects that cause repeated invocations to produce different results."*
 
 ## 🤝 Contributing
 

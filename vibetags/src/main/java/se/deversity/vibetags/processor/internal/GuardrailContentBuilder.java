@@ -23,6 +23,9 @@ import se.deversity.vibetags.annotations.AIStrictTypes;
 import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AISecure;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -80,6 +83,10 @@ public final class GuardrailContentBuilder {
     // v0.9.6 platforms
     private final boolean geminiMdActive;
     private final boolean antigravityIgnoreActive;
+
+    // v0.9.7 platforms
+    private final boolean clineActive;
+    private final boolean junieActive;
     /** True if either gemini_instructions.md or GEMINI.md is active — drives gemini section builders. */
     private final boolean anyGeminiActive;
 
@@ -125,6 +132,14 @@ public final class GuardrailContentBuilder {
     private StringBuilder llmsFullTxtStrictClasspath;
     private StringBuilder llmsFullTxtSchemaSafe;
 
+    // v1.0.0 annotations
+    private StringBuilder llmsTxtIdempotent;
+    private StringBuilder llmsFullTxtIdempotent;
+    private StringBuilder llmsTxtFeatureFlag;
+    private StringBuilder llmsFullTxtFeatureFlag;
+    private StringBuilder llmsTxtSecure;
+    private StringBuilder llmsFullTxtSecure;
+
     // Windsurf builders
     private StringBuilder windsurfRules;
     private StringBuilder windsurfIgnoreSection;
@@ -146,6 +161,7 @@ public final class GuardrailContentBuilder {
     // Other new platform builders
     private StringBuilder codyIgnoreFile;
     private StringBuilder supermavenIgnoreFile;
+
 
     // v0.8.0 platform builders
     private StringBuilder mentatLocked;
@@ -237,7 +253,8 @@ public final class GuardrailContentBuilder {
                                     || activeServices.contains("tabnine_granular")
                                     || activeServices.contains("amazonq_granular")
                                     || activeServices.contains("ai_rules_granular")
-                                    || activeServices.contains("pearai_granular");
+                                    || activeServices.contains("pearai_granular")
+                                    || activeServices.contains("kiro_granular");
         this.windsurfActive          = activeServices.contains("windsurf");
         this.zedActive               = activeServices.contains("zed");
         this.codyIgnoreActive        = activeServices.contains("cody_ignore");
@@ -251,6 +268,8 @@ public final class GuardrailContentBuilder {
         this.geminiMdActive          = activeServices.contains("gemini_md");
         this.antigravityIgnoreActive = activeServices.contains("antigravity_ignore");
         this.anyGeminiActive         = this.geminiActive || this.geminiMdActive;
+        this.clineActive             = activeServices.contains("cline");
+        this.junieActive             = activeServices.contains("junie");
     }
 
     /**
@@ -282,7 +301,8 @@ public final class GuardrailContentBuilder {
               + collector.deprecated().size() + collector.observability().size() + collector.regulation().size()
               + collector.parallelTests().size() + collector.legacyBridge().size() + collector.architecture().size()
               + collector.publicApi().size() + collector.strictExceptions().size() + collector.strictTypes().size()
-              + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size();
+              + collector.internationalized().size() + collector.strictClasspath().size() + collector.schemaSafe().size()
+              + collector.idempotent().size() + collector.featureFlag().size() + collector.secure().size();
         return Math.max(4096, Math.min(256 * 1024, 1500 * n));
     }
 
@@ -532,6 +552,39 @@ public final class GuardrailContentBuilder {
             appendStrictClasspath(e, cursorStrictClasspathSec, claudeStrictClasspathSec, codexStrictClasspathSec, copilotStrictClasspathSec, qwenStrictClasspathSec, geminiStrictClasspathSec, windsurfStrictClasspathSec, zedStrictClasspathSec);
         for (Element e : collector.schemaSafe())
             appendSchemaSafe(e, cursorSchemaSafeSec, claudeSchemaSafeSec, codexSchemaSafeSec, copilotSchemaSafeSec, qwenSchemaSafeSec, geminiSchemaSafeSec, windsurfSchemaSafeSec, zedSchemaSafeSec);
+
+        StringBuilder cursorIdempotentSec  = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThe following operations are idempotent. Multiple invocations MUST produce the same result as a single invocation. Never introduce side effects that break this guarantee.\n\n");
+        StringBuilder claudeIdempotentSec  = new StringBuilder("  <idempotent_elements>\n");
+        StringBuilder codexIdempotentSec   = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent (multiple invocations = same result as once):\n\n");
+        StringBuilder copilotIdempotentSec = new StringBuilder("\n## Idempotency Guarantees\nThe following operations are idempotent — calling them multiple times is safe:\n\n");
+        StringBuilder qwenIdempotentSec    = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nMultiple invocations of these operations must produce the same result:\n\n");
+        StringBuilder geminiIdempotentSec  = new StringBuilder();
+        StringBuilder windsurfIdempotentSec = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent — multiple calls = same as one call:\n\n");
+        StringBuilder zedIdempotentSec      = new StringBuilder("\n## Idempotency\nThese operations must remain idempotent:\n\n");
+        for (Element e : collector.idempotent())
+            appendIdempotent(e, cursorIdempotentSec, claudeIdempotentSec, codexIdempotentSec, copilotIdempotentSec, qwenIdempotentSec, geminiIdempotentSec, windsurfIdempotentSec, zedIdempotentSec);
+
+        StringBuilder cursorFeatureFlagSec  = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThe following elements are gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check.\n\n");
+        StringBuilder claudeFeatureFlagSec  = new StringBuilder("  <feature_flag_elements>\n");
+        StringBuilder codexFeatureFlagSec   = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume the flag is always active:\n\n");
+        StringBuilder copilotFeatureFlagSec = new StringBuilder("\n## Feature Flag Gated Code\nThe following elements are gated behind a feature flag — always preserve the flag check:\n\n");
+        StringBuilder qwenFeatureFlagSec    = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume it is always active:\n\n");
+        StringBuilder geminiFeatureFlagSec  = new StringBuilder();
+        StringBuilder windsurfFeatureFlagSec = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nNever assume these feature flags are always active — preserve all flag checks:\n\n");
+        StringBuilder zedFeatureFlagSec      = new StringBuilder("\n## Feature Flags\nThese elements are behind feature flags — never assume always active:\n\n");
+        for (Element e : collector.featureFlag())
+            appendFeatureFlag(e, cursorFeatureFlagSec, claudeFeatureFlagSec, codexFeatureFlagSec, copilotFeatureFlagSec, qwenFeatureFlagSec, geminiFeatureFlagSec, windsurfFeatureFlagSec, zedFeatureFlagSec);
+
+        StringBuilder cursorSecureSec  = new StringBuilder("\n## 🔐 SECURITY-CRITICAL CODE\nThe following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.\n\n");
+        StringBuilder claudeSecureSec  = new StringBuilder("  <security_elements>\n");
+        StringBuilder codexSecureSec   = new StringBuilder("\n## 🔐 SECURITY-CRITICAL CODE\nDo not weaken security properties of these elements. Review every change for security impact:\n\n");
+        StringBuilder copilotSecureSec = new StringBuilder("\n## Security-Critical Code\nThe following elements are security-critical — do not weaken their security properties:\n\n");
+        StringBuilder qwenSecureSec    = new StringBuilder("\n## 🔐 SECURITY-CRITICAL CODE\nNever weaken security properties of these elements. Flag any change for security review:\n\n");
+        StringBuilder geminiSecureSec  = new StringBuilder();
+        StringBuilder windsurfSecureSec = new StringBuilder("\n## 🔐 SECURITY-CRITICAL CODE\nNever weaken security properties of these elements. Every change requires security review:\n\n");
+        StringBuilder zedSecureSec      = new StringBuilder("\n## Security-Critical Code\nNever weaken security properties of these elements:\n\n");
+        for (Element e : collector.secure())
+            appendSecure(e, cursorSecureSec, claudeSecureSec, codexSecureSec, copilotSecureSec, qwenSecureSec, geminiSecureSec, windsurfSecureSec, zedSecureSec);
 
         // Gemini composition (locked + context + audit go before the rest)
         if (!collector.locked().isEmpty()) {
@@ -798,6 +851,42 @@ public final class GuardrailContentBuilder {
             if (windsurfActive) windsurfRules.append(windsurfSchemaSafeSec);
             if (zedActive)      zedRules.append(zedSchemaSafeSec);
         }
+        if (!collector.idempotent().isEmpty()) {
+            cursorRules.append(cursorIdempotentSec);
+            claudeIdempotentSec.append("  </idempotent_elements>\n");
+            claudeMd.append(claudeIdempotentSec);
+            claudeMd.append("\n<rule>Operations listed in <idempotent_elements> must remain idempotent. Never introduce side effects that cause repeated invocations to produce different results.</rule>\n");
+            codexAgents.append(codexIdempotentSec);
+            copilot.append(copilotIdempotentSec);
+            qwenMd.append(qwenIdempotentSec);
+            geminiMd.append("\n## IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent — calling them multiple times must produce the same result:\n\n").append(geminiIdempotentSec);
+            if (windsurfActive) windsurfRules.append(windsurfIdempotentSec);
+            if (zedActive)      zedRules.append(zedIdempotentSec);
+        }
+        if (!collector.featureFlag().isEmpty()) {
+            cursorRules.append(cursorFeatureFlagSec);
+            claudeFeatureFlagSec.append("  </feature_flag_elements>\n");
+            claudeMd.append(claudeFeatureFlagSec);
+            claudeMd.append("\n<rule>Elements listed in <feature_flag_elements> are gated by a feature flag. Always preserve the flag check — never assume the flag is always active.</rule>\n");
+            codexAgents.append(codexFeatureFlagSec);
+            copilot.append(copilotFeatureFlagSec);
+            qwenMd.append(qwenFeatureFlagSec);
+            geminiMd.append("\n## FEATURE FLAG GATED CODE\nThese elements are gated behind a feature flag. Never assume the flag is always active:\n\n").append(geminiFeatureFlagSec);
+            if (windsurfActive) windsurfRules.append(windsurfFeatureFlagSec);
+            if (zedActive)      zedRules.append(zedFeatureFlagSec);
+        }
+        if (!collector.secure().isEmpty()) {
+            cursorRules.append(cursorSecureSec);
+            claudeSecureSec.append("  </security_elements>\n");
+            claudeMd.append(claudeSecureSec);
+            claudeMd.append("\n<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>\n");
+            codexAgents.append(codexSecureSec);
+            copilot.append(copilotSecureSec);
+            qwenMd.append(qwenSecureSec);
+            geminiMd.append("\n## SECURITY-CRITICAL CODE\nDo not weaken security properties of these elements. Flag any change for security review:\n\n").append(geminiSecureSec);
+            if (windsurfActive) windsurfRules.append(windsurfSecureSec);
+            if (zedActive)      zedRules.append(zedSecureSec);
+        }
 
         claudeMd.append("</project_guardrails>\n");
         claudeMd.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
@@ -827,6 +916,9 @@ public final class GuardrailContentBuilder {
             if (!collector.internationalized().isEmpty())  llmsTxt.append(llmsTxtInternationalized);
             if (!collector.strictClasspath().isEmpty())   llmsTxt.append(llmsTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsTxt.append(llmsTxtSchemaSafe);
+            if (!collector.idempotent().isEmpty())        llmsTxt.append(llmsTxtIdempotent);
+            if (!collector.featureFlag().isEmpty())       llmsTxt.append(llmsTxtFeatureFlag);
+            if (!collector.secure().isEmpty())            llmsTxt.append(llmsTxtSecure);
         }
         if (llmsFullActive) {
             llmsFullTxt.append(llmsFullTxtContext);
@@ -852,9 +944,23 @@ public final class GuardrailContentBuilder {
             if (!collector.internationalized().isEmpty())  llmsFullTxt.append(llmsFullTxtInternationalized);
             if (!collector.strictClasspath().isEmpty())   llmsFullTxt.append(llmsFullTxtStrictClasspath);
             if (!collector.schemaSafe().isEmpty())        llmsFullTxt.append(llmsFullTxtSchemaSafe);
+            if (!collector.idempotent().isEmpty())        llmsFullTxt.append(llmsFullTxtIdempotent);
+            if (!collector.featureFlag().isEmpty())       llmsFullTxt.append(llmsFullTxtFeatureFlag);
+            if (!collector.secure().isEmpty())            llmsFullTxt.append(llmsFullTxtSecure);
         }
 
-        return new Result(buildContentMap(geminiMd), elementRules);
+        // v0.9.7: Cline and Junie derive their content from cursorRules (same Markdown format).
+        // Cline uses identical content; Junie replaces the cursor header with its own heading.
+        String clineContent = clineActive ? cursorRules.toString() : null;
+        String junieContent = null;
+        if (junieActive) {
+            String cursorContent = cursorRules.toString();
+            String cursorHeader = "# AUTO-GENERATED AI RULES\n" + generatedHeader + "# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n";
+            String junieHeader = "# JetBrains Junie Guidelines\n" + generatedHeader + "# AUTO-GENERATED BY VIBETAGS. Do not edit manually.\n\n## Locked Files (Do Not Modify)\nThe following files must not be modified:\n\n";
+            junieContent = cursorContent.replace(cursorHeader, junieHeader);
+        }
+
+        return new Result(buildContentMap(geminiMd, clineContent, junieContent), elementRules);
     }
 
     // -------------------------------------------------------------------------------------------
@@ -1451,6 +1557,9 @@ public final class GuardrailContentBuilder {
                 llmsTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\n");
                 llmsTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\n");
                 llmsTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\n");
+                llmsTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\n");
+                llmsTxtFeatureFlag       = new StringBuilder("\n## 🚩 Feature Flag Gated Code\n");
+                llmsTxtSecure            = new StringBuilder("\n## 🔐 Security-Critical Code\n");
             }
             if (llmsFullActive) {
                 llmsFullTxt = preSized("# " + projectName + " — AI Guardrail Rules\n" +
@@ -1483,6 +1592,9 @@ public final class GuardrailContentBuilder {
                 llmsFullTxtInternationalized = new StringBuilder("\n## Internationalization Mandate\nUser-facing strings must not be hardcoded; resolve them via localized resources.\n\n");
                 llmsFullTxtStrictClasspath   = new StringBuilder("\n## Strict Classpath Integrity\nDynamic runtime class loading and reflections are strictly prohibited.\n\n");
                 llmsFullTxtSchemaSafe        = new StringBuilder("\n## Schema & Serialization Safety\nSchema and serialization compatibility must be strictly preserved.\n\n");
+                llmsFullTxtIdempotent        = new StringBuilder("\n## ♻️ Idempotency Guarantees\nThese operations are idempotent — calling multiple times must produce the same result as calling once.\n\n");
+                llmsFullTxtFeatureFlag       = new StringBuilder("\n## 🚩 Feature Flag Gated Code\nThese elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.\n\n");
+                llmsFullTxtSecure            = new StringBuilder("\n## 🔐 Security-Critical Code\nThese elements are security-critical. Do not weaken security properties. Every change requires security review.\n\n");
             }
         }
 
@@ -1547,9 +1659,13 @@ public final class GuardrailContentBuilder {
         }
     }
 
-    private Map<String, String> buildContentMap(StringBuilder geminiMd) {
+    private Map<String, String> buildContentMap(StringBuilder geminiMd,
+                                                String clineContent,
+                                                String junieContent) {
         Map<String, String> contentByService = new LinkedHashMap<>();
         if (activeServices.contains("cursor"))    contentByService.put("cursor",    cursorRules.toString());
+        if (activeServices.contains("cline") && clineContent != null) contentByService.put("cline", clineContent);
+        if (activeServices.contains("junie") && junieContent != null) contentByService.put("junie", junieContent);
         if (activeServices.contains("qwen"))      contentByService.put("qwen",      qwenMd.toString());
         if (activeServices.contains("claude"))    contentByService.put("claude",    claudeMd.toString());
         if (activeServices.contains("gemini"))    contentByService.put("gemini",    geminiMd.toString());
@@ -1872,6 +1988,101 @@ public final class GuardrailContentBuilder {
         if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
         if (interpreterActive) interpreterRules.append("- `").append(className).append("` (schema-safe): ").append(summary).append("\n");
         if (granularActive)    appendToGranular(e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.");
+    }
+
+    private void appendSecure(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                              StringBuilder codexSec, StringBuilder copilotSec,
+                              StringBuilder qwenSec, StringBuilder geminiSec,
+                              StringBuilder windsurfSec, StringBuilder zedSec) {
+        AISecure secure = e.getAnnotation(AISecure.class);
+        if (secure == null) return;
+        String className = ElementNaming.elementPath(e);
+        String aspect = secure.aspect();
+        String summary = "Security-critical code" + (aspect.isEmpty() ? "" : " [" + aspect + "]")
+                       + ". Do not weaken security properties. Flag any change for security review.";
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n");
+            if (!aspect.isEmpty()) claudeSec.append("      <aspect>").append(aspect).append("</aspect>\n");
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtSecure.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtSecure.append("### ").append(className).append("\n- Security-critical code");
+            if (!aspect.isEmpty()) llmsFullTxtSecure.append(" (aspect: ").append(aspect).append(")");
+            llmsFullTxtSecure.append(".\n- Never weaken security properties. Every change requires explicit security review.\n\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### SECURITY-CRITICAL: ").append(className).append("\n").append(aspect.isEmpty() ? "" : "- **Aspect**: " + aspect + "\n").append("- **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (sweepActive)       sweepRules.append("  - \"Security-critical: ").append(className).append(" [").append(aspect.isEmpty() ? "general" : aspect).append("]. Do not weaken security.\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (security-critical): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Security-Critical Code", "- **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact." + (aspect.isEmpty() ? "" : "\n- **Aspect**: " + aspect));
+    }
+
+    private void appendFeatureFlag(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                   StringBuilder codexSec, StringBuilder copilotSec,
+                                   StringBuilder qwenSec, StringBuilder geminiSec,
+                                   StringBuilder windsurfSec, StringBuilder zedSec) {
+        AIFeatureFlag ff = e.getAnnotation(AIFeatureFlag.class);
+        if (ff == null) return;
+        String className = ElementNaming.elementPath(e);
+        String flag = ff.flag();
+        boolean defaultValue = ff.defaultValue();
+        String flagDisplay = flag.isEmpty() ? "(unspecified)" : "'" + flag + "'";
+        String summary = "Gated by feature flag: " + flagDisplay + " (default: " + defaultValue + "). "
+                       + "Preserve the flag check — never assume it is always on.";
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n");
+            if (!flag.isEmpty()) claudeSec.append("      <flag>").append(flag).append("</flag>\n");
+            claudeSec.append("      <default_value>").append(defaultValue).append("</default_value>\n");
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtFeatureFlag.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtFeatureFlag.append("### ").append(className).append("\n- Feature flag: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n");
+            llmsFullTxtFeatureFlag.append("- Preserve the flag check. Never assume the flag is always active. Test both enabled and disabled code paths.\n\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### FEATURE FLAG: ").append(className).append("\n- **Flag**: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n- **Rule**: Never assume flag is always active. Preserve the flag check.\n\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (sweepActive)       sweepRules.append("  - \"Feature flag gate for ").append(className).append(": ").append(summary).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (feature-flag): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Feature Flag Gate", "- **Flag**: " + flagDisplay + " (default: " + defaultValue + ")\n- **Rule**: This code is gated behind a feature flag. Preserve the flag check. Never assume the flag is always active.");
+    }
+
+    private void appendIdempotent(Element e, StringBuilder cursorSec, StringBuilder claudeSec,
+                                  StringBuilder codexSec, StringBuilder copilotSec,
+                                  StringBuilder qwenSec, StringBuilder geminiSec,
+                                  StringBuilder windsurfSec, StringBuilder zedSec) {
+        AIIdempotent idempotent = e.getAnnotation(AIIdempotent.class);
+        if (idempotent == null) return;
+        String className = ElementNaming.elementPath(e);
+        String reason = idempotent.reason();
+        String summary = "Idempotency guaranteed. Multiple invocations must produce the same result as one."
+                       + (reason.isEmpty() ? "" : " Reason: " + reason);
+
+        appendCommonRow(cursorSec, codexSec, copilotSec, qwenSec, geminiSec, className, summary);
+        if (claudeActive) {
+            claudeSec.append("    <element path=\"").append(className).append("\">\n      <idempotent>true</idempotent>\n");
+            if (!reason.isEmpty()) claudeSec.append("      <reason>").append(reason).append("</reason>\n");
+            claudeSec.append("    </element>\n");
+        }
+        if (llmsActive)     llmsTxtIdempotent.append("- [").append(ElementNaming.elementDisplayName(e)).append("](").append(className).append("): ").append(summary).append("\n");
+        if (llmsFullActive) {
+            llmsFullTxtIdempotent.append("### ").append(className).append("\n- Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.\n");
+            if (!reason.isEmpty()) llmsFullTxtIdempotent.append("- **Reason**: ").append(reason).append("\n");
+            llmsFullTxtIdempotent.append("\n");
+        }
+        if (aiderConvActive)   aiderConventions.append("#### IDEMPOTENT: ").append(className).append("\n- **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.\n").append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n").append("\n");
+        if (windsurfActive)    windsurfSec.append("* `").append(className).append("` - ").append(summary).append("\n");
+        if (zedActive)         zedSec.append("- `").append(className).append("`: ").append(summary).append("\n");
+        if (sweepActive)       sweepRules.append("  - \"Idempotency requirement for ").append(className).append(": ").append(summary).append("\"\n");
+        if (interpreterActive) interpreterRules.append("- `").append(className).append("` (idempotent): ").append(summary).append("\n");
+        if (granularActive)    appendToGranular(e, "Idempotency Guarantee", "- **Rule**: This operation is idempotent. Calling it multiple times must produce the same result as calling it once." + (reason.isEmpty() ? "" : "\n- **Reason**: " + reason));
     }
 
     /** Converts a String[] to a JSON array of quoted strings: "\"a\", \"b\"". */

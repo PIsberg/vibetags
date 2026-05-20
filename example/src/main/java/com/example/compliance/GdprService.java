@@ -1,6 +1,7 @@
 package com.example.compliance;
 
 import se.deversity.vibetags.annotations.AIRegulation;
+import se.deversity.vibetags.annotations.AIIdempotent;
 
 /**
  * GDPR compliance service.
@@ -16,6 +17,7 @@ import se.deversity.vibetags.annotations.AIRegulation;
 )
 public class GdprService {
 
+    @AIIdempotent(reason = "Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.")
     public void deleteAllUserData(String userId) {
         // Implementation cascades the deletion to user, sessions, orders, audit logs, etc.
     }

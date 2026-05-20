@@ -48,10 +48,11 @@ public final class GranularRulesWriter {
         boolean amazonqGranular   = activeServices.contains("amazonq_granular");
         boolean aiRulesGranular   = activeServices.contains("ai_rules_granular");
         boolean pearaiGranular    = activeServices.contains("pearai_granular");
+        boolean kiroGranular      = activeServices.contains("kiro_granular");
         if (!cursorGranular && !traeGranular && !rooGranular
                 && !windsurfGranular && !continueGranular
                 && !tabnineGranular && !amazonqGranular && !aiRulesGranular
-                && !pearaiGranular) return writtenQNames;
+                && !pearaiGranular && !kiroGranular) return writtenQNames;
 
         elementRules.forEach((element, builder) -> {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
@@ -137,6 +138,11 @@ public final class GranularRulesWriter {
                 fileWriter.writeFileIfChanged(
                     serviceFiles.get("pearai_granular").resolve(qName + ".md").toString(), md, true);
             }
+            if (kiroGranular) {
+                String md = "# Amazon Kiro Steering: " + simpleName + "\n\n" + rulesContent;
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get("kiro_granular").resolve(qName + ".md").toString(), md, true);
+            }
         });
         return writtenQNames;
     }
@@ -155,5 +161,6 @@ public final class GranularRulesWriter {
         if (activeServices.contains("amazonq_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("amazonq_granular"),  ".md",  excludeQNames);
         if (activeServices.contains("ai_rules_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("ai_rules_granular"), ".md",  excludeQNames);
         if (activeServices.contains("pearai_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("pearai_granular"),   ".md",  excludeQNames);
+        if (activeServices.contains("kiro_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("kiro_granular"),     ".md",  excludeQNames);
     }
 }

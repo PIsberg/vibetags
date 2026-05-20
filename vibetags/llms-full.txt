@@ -10,4 +10,11 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
+
+
+## 🔐 Contract-Frozen Signatures
+The following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.
+
+### com.example.BillingService.invoice
+- **Reason**: Partner API SLA
 <!-- VIBETAGS-END -->
