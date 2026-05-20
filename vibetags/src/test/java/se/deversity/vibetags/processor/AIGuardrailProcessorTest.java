@@ -33,15 +33,15 @@ class AIGuardrailProcessorTest {
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(supportedTypes);
         assertEquals(1, supportedTypes.value().length);
-        assertEquals("*", supportedTypes.value()[0],
-            "Must use '*' so the processor runs even when all VibeTags annotations are removed");
+        assertEquals("se.deversity.vibetags.annotations.*", supportedTypes.value()[0],
+            "Must use package wildcard so new annotations are auto-discovered without touching the processor");
     }
 
     @Test
-    void testProcessorSupportsJava11() {
+    void testProcessorSupportsJava17() {
         SupportedSourceVersion sourceVersion = 
             AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class);
         assertNotNull(sourceVersion);
-        assertEquals(SourceVersion.RELEASE_11, sourceVersion.value());
+        assertEquals(SourceVersion.RELEASE_17, sourceVersion.value());
     }
 }

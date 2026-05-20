@@ -35,8 +35,8 @@
     </scm>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>6.1.0</junit.version>
     </properties>
@@ -53,7 +53,15 @@
             <version>0.9.7</version>
         </dependency>
 
-        <!-- Logging: SLF4J API + Logback file appender for vibetags.log -->
+        <!-- Logging: SLF4J API + Logback file appender for vibetags.log.
+             These are intentionally compile-scope (NOT optional):
+             Maven's annotationProcessorPaths resolver excludes optional
+             dependencies of the processor, which would cause a
+             NoClassDefFoundError for org.slf4j.Logger at compile time.
+             When configured correctly (processor on annotationProcessorPaths,
+             not as a compile <dependency>), these jars live on the isolated
+             AP classpath and do NOT appear on the consumer's compile or
+             runtime classpath — there is no transitive leakage. -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -190,6 +198,33 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- SBOM: generates CycloneDX BOM at package phase, attached as classifier "cyclonedx" -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>2.9.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeAggregateBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <projectType>library</projectType>
+                    <schemaVersion>1.6</schemaVersion>
+                    <includeBomSerialNumber>true</includeBomSerialNumber>
+                    <includeCompileScope>true</includeCompileScope>
+                    <includeProvidedScope>false</includeProvidedScope>
+                    <includeRuntimeScope>true</includeRuntimeScope>
+                    <includeSystemScope>false</includeSystemScope>
+                    <includeTestScope>false</includeTestScope>
+                    <includeLicenseText>false</includeLicenseText>
+                    <outputFormat>all</outputFormat>
+                    <outputName>bom</outputName>
+                </configuration>
             </plugin>
         </plugins>
     </build>

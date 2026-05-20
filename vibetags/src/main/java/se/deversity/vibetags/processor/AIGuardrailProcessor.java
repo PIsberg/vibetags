@@ -42,8 +42,8 @@ import java.util.stream.Collectors;
     sensitivity = "critical",
     note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
 )
-@SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_11)
+@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
+@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache"})
 @SuppressWarnings({"PMD.GuardLogStatement", "PMD.AvoidLiteralsInIfCondition", "PMD.NullAssignment"})
 public class AIGuardrailProcessor extends AbstractProcessor {

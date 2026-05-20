@@ -25,7 +25,7 @@ class VibeTagsLoggerAsyncTest {
 
     @AsyncTest(threads = 20, invocations = 10, timeoutMs = 60_000)
     void testLoggerIsolationUnderConcurrency(@TempDir Path tempDir) throws Exception {
-        long threadId = Thread.currentThread().threadId();
+        long threadId = Thread.currentThread().getId(); // Thread.threadId() is Java 19+; getId() works on 17+
         // Dynamic isolated subdirectory per thread to prevent cross-talk
         Path threadDir = tempDir.resolve("thread-" + threadId + "-" + System.nanoTime());
         Files.createDirectories(threadDir);
