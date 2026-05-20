@@ -54,23 +54,23 @@
         </dependency>
 
         <!-- Logging: SLF4J API + Logback file appender for vibetags.log.
-             Marked optional so they do NOT become transitive dependencies of projects
-             that mistakenly declare vibetags-processor as a <dependency> rather than
-             placing it on the annotation-processor path. When used correctly via
-             annotationProcessorPaths (Maven) or annotationProcessor (Gradle), Maven
-             resolves the processor's full dependency graph regardless of <optional>,
-             so the logger still works. -->
+             These are intentionally compile-scope (NOT optional):
+             Maven's annotationProcessorPaths resolver excludes optional
+             dependencies of the processor, which would cause a
+             NoClassDefFoundError for org.slf4j.Logger at compile time.
+             When configured correctly (processor on annotationProcessorPaths,
+             not as a compile <dependency>), these jars live on the isolated
+             AP classpath and do NOT appear on the consumer's compile or
+             runtime classpath — there is no transitive leakage. -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>2.0.18</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.5.32</version>
-            <optional>true</optional>
         </dependency>
 
         <dependency>
