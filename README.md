@@ -212,7 +212,7 @@ The 24 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **27 AI platforms**:
+Generated configuration files work out-of-the-box with **29 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
@@ -221,7 +221,7 @@ Generated configuration files work out-of-the-box with **27 AI platforms**:
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
 - **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
-- **Gemini** (`gemini_instructions.md`, `.aiexclude`)
+- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
 - **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
@@ -233,6 +233,7 @@ Generated configuration files work out-of-the-box with **27 AI platforms**:
 - **Double.bot** (`.doubleignore`)
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
 - **Codeium** (`.codeiumignore`)
+- **Antigravity AI** (`.antigravityignore`)
 
 #### Granular / Directory-based formats
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
@@ -629,16 +630,17 @@ touch .mentatconfig.json                     # Mentat AI assistant
 touch sweep.yaml                             # Sweep AI code review (GitHub App)
 touch .plandex.yaml                          # Plandex AI coding agent
 
-# --- Double.bot, Open Interpreter, Codeium ---
+# --- Double.bot, Open Interpreter, Codeium, Antigravity ---
 touch .doubleignore                          # Double.bot exclusion list
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
+touch .antigravityignore                     # Antigravity AI exclusion list
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aiderignore            # Aider
 touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
-touch .aiexclude gemini_instructions.md      # Gemini
+touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
