@@ -321,7 +321,7 @@ class AIGuardrailProcessorProcessTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie"
+            "cline", "junie", "kiro_granular"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");

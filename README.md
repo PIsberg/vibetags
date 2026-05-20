@@ -248,6 +248,7 @@ Generated configuration files work out-of-the-box with **29 AI platforms**:
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
+- **Amazon Kiro** (`.kiro/steering/*.md`)
 - **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
@@ -632,6 +633,9 @@ mkdir -p .roo/rules                          # Roo Code
 
 # --- PearAI ---
 mkdir -p .pearai/rules                       # PearAI granular rules (per-class .md)
+
+# --- Amazon Kiro ---
+mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
 
 # --- Mentat, Sweep, Plandex ---
 touch .mentatconfig.json                     # Mentat AI assistant

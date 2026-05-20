@@ -255,7 +255,8 @@ public final class GuardrailContentBuilder {
                                     || activeServices.contains("tabnine_granular")
                                     || activeServices.contains("amazonq_granular")
                                     || activeServices.contains("ai_rules_granular")
-                                    || activeServices.contains("pearai_granular");
+                                    || activeServices.contains("pearai_granular")
+                                    || activeServices.contains("kiro_granular");
         this.windsurfActive          = activeServices.contains("windsurf");
         this.zedActive               = activeServices.contains("zed");
         this.codyIgnoreActive        = activeServices.contains("cody_ignore");

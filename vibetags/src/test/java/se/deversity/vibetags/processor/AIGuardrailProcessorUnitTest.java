@@ -213,7 +213,7 @@ class AIGuardrailProcessorUnitTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie"
+            "cline", "junie", "kiro_granular"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }

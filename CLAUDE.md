@@ -211,6 +211,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
 | `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
 | `.pearai/rules/*.md` | PearAI (granular) | YAML front-matter + Markdown |
+| `.kiro/steering/*.md` | Amazon Kiro (granular) | Markdown |
 | `.mentatconfig.json` | Mentat | JSON config |
 | `sweep.yaml` | Sweep (GitHub App) | YAML rules list |
 | `.plandex.yaml` | Plandex | YAML guardrails |
@@ -225,7 +226,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
 #### llms.txt vs llms-full.txt
 
@@ -403,6 +404,7 @@ All tests live in `vibetags/src/test`.
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
+| `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
 | `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent` |
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent` across all platforms |
 | `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent` |

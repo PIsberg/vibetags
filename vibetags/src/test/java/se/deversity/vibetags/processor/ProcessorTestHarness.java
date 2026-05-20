@@ -90,6 +90,7 @@ class ProcessorTestHarness {
         // v0.9.7 platforms
         touch(".clinerules");
         touch(".junie/guidelines.md");
+        touch(".kiro/steering/.vibetags");
     }
 
     private void touch(String relative) throws IOException {

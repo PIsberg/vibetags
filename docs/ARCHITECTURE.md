@@ -135,7 +135,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
 - `GuardrailContentBuilder` — owns every per-platform `StringBuilder` and runs nine `appendXxx(Element)` methods (one per annotation type); produces a `service-key → content` map plus the per-element granular rule map. No I/O. Since 0.7.1: pre-allocates the nine main per-platform buffers based on collected element count (~1500 chars per element, capped at 256 KB) so the per-annotation appender loops don't trigger log₂(N) `char[]` grow/copy passes as content accumulates.
 - `GuardrailFileWriter` — atomic, marker-aware file writes, YAML front-matter preservation, legacy (pre-marker) block migration, and orphan cleanup for granular rule files. Since 0.7.1 also owns the cache-fast-path entry to `writeFileIfChanged` and a streaming byte-compare for non-marker files.
-- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / `.ai/rules` and orchestrates orphan cleanup via the file writer
+- `GranularRulesWriter` — writes per-class `.mdc`/`.md` files for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / `.ai/rules` and orchestrates orphan cleanup via the file writer
 - `WriteCache` — per-output-file content cache backed by a `.vibetags-cache` sidecar at the project root; lets `GuardrailFileWriter` skip the read+compare path on no-change rebuilds. **Detailed below in [Design Decision 5](#5-write-cache-since-071).** _(since 0.7.1)_
 
 This split keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
@@ -482,7 +482,7 @@ Generation phase (once, on the round where processingOver() == true):
 5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
 6. GuardrailContentBuilder.build() runs the per-annotation appenders for all 24 annotation types in one pass, then assembles llms.txt, llms-full.txt, gemini, and the final service-key → content map. The builder owns every per-platform StringBuilder and performs no I/O.
 7. GuardrailFileWriter.writeFileIfChanged(...) for each active service — three-layer fast path (WriteCache hit → streaming byte-compare → readString + strip-equals); marker-aware updates, YAML front-matter preservation, atomic tmp+move writes; on success records the new fingerprint in WriteCache
-8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / .ai/rules
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / .ai/rules
 9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files (skipping the names just written, to avoid delete-then-recreate cycles; invalidates the WriteCache entry for any file it deletes or rewrites)
 10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
 11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar (no-op if no entries changed this build)
