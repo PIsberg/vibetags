@@ -1,0 +1,208 @@
+package se.deversity.vibetags.processor.internal.content.platforms;
+
+import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
+import se.deversity.vibetags.processor.internal.content.RenderingContext;
+
+/**
+ * PlatformRenderer for generating `.windsurfrules`.
+ */
+public final class WindsurfRenderer implements PlatformRenderer {
+    @Override
+    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
+        StringBuilder sb = new StringBuilder(4096);
+        sb.append("# AUTO-GENERATED AI RULES\n")
+          .append(context.getGeneratedHeader())
+          .append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
+
+        for (Element e : collector.locked()) {
+            FormatterRegistry.locked().format(e, sb, Platform.WINDSURF);
+        }
+
+        sb.append("\n## CONTEXTUAL RULES\n");
+        for (Element e : collector.context()) {
+            FormatterRegistry.context().format(e, sb, Platform.WINDSURF);
+        }
+
+        for (Element e : collector.threadSafe()) {
+            FormatterRegistry.threadSafe().format(e, sb, Platform.WINDSURF);
+        }
+        for (Element e : collector.immutable()) {
+            FormatterRegistry.immutable().format(e, sb, Platform.WINDSURF);
+        }
+        for (Element e : collector.deprecated()) {
+            FormatterRegistry.deprecated().format(e, sb, Platform.WINDSURF);
+        }
+        for (Element e : collector.observability()) {
+            FormatterRegistry.observability().format(e, sb, Platform.WINDSURF);
+        }
+        for (Element e : collector.regulation()) {
+            FormatterRegistry.regulation().format(e, sb, Platform.WINDSURF);
+        }
+
+        if (!collector.audit().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code.\n\n");
+            for (Element e : collector.audit()) {
+                FormatterRegistry.audit().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.ignore().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)\nDo not reference, suggest changes to, or include the following in completions or answers.\n\n");
+            for (Element e : collector.ignore()) {
+                FormatterRegistry.ignore().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.draft().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 📝 IMPLEMENTATION TASKS (TODO)\nThe following elements are currently in DRAFT mode. Follow the instructions to implement them:\n\n");
+            for (Element e : collector.draft()) {
+                FormatterRegistry.draft().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.privacy().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🔒 PII / PRIVACY GUARDRAILS\nNever include runtime values of the following in logs, console output, external API calls, test fixtures, or mock data.\n\n");
+            for (Element e : collector.privacy()) {
+                FormatterRegistry.privacy().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.core().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution.\n\n");
+            for (Element e : collector.core()) {
+                FormatterRegistry.core().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.performance().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## ⚡ PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) or worse complexity. Always reason about time/space before proposing changes.\n\n");
+            for (Element e : collector.performance()) {
+                FormatterRegistry.performance().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.contract().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🔐 CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n");
+            for (Element e : collector.contract()) {
+                FormatterRegistry.contract().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.testDriven().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🧪 TEST-DRIVEN REQUIREMENTS\nAI MUST NOT propose changes to the following elements without also providing the matching test code.\n\n");
+            for (Element e : collector.testDriven()) {
+                FormatterRegistry.testDriven().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.parallelTests().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🧪 STRICT TEST ISOLATION\nEnforce strict isolation for tests generated or modified for these elements:\n\n");
+            for (Element e : collector.parallelTests()) {
+                FormatterRegistry.parallelTests().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.legacyBridge().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🌉 LEGACY COMPATIBILITY BRIDGE\nDo not refactor the structural patterns of these compatibility bridges:\n\n");
+            for (Element e : collector.legacyBridge()) {
+                FormatterRegistry.legacyBridge().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.architecture().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS\nStrict layered architecture constraints apply to these elements:\n\n");
+            for (Element e : collector.architecture()) {
+                FormatterRegistry.architecture().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.publicApi().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🔌 PUBLIC API SURFACE PROTECTION\nPublic API surface. Signatures and backwards compatibility must be strictly preserved:\n\n");
+            for (Element e : collector.publicApi()) {
+                FormatterRegistry.publicApi().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.strictExceptions().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚨 STRICT EXCEPTION HANDLING\nGeneric exception throwing/catching is strictly prohibited for these elements:\n\n");
+            for (Element e : collector.strictExceptions()) {
+                FormatterRegistry.strictExceptions().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.strictTypes().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🏷️ STRICT TYPE SAFETY\nLoose typing is strictly prohibited for these elements:\n\n");
+            for (Element e : collector.strictTypes()) {
+                FormatterRegistry.strictTypes().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.internationalized().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🌐 INTERNATIONALIZATION MANDATE\nHardcoding user-facing strings is strictly prohibited for these elements:\n\n");
+            for (Element e : collector.internationalized()) {
+                FormatterRegistry.internationalized().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.strictClasspath().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🛡️ STRICT CLASSPATH INTEGRITY\nDynamic runtime class loading is strictly prohibited for these elements:\n\n");
+            for (Element e : collector.strictClasspath()) {
+                FormatterRegistry.strictClasspath().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.schemaSafe().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nModifying schema or data formats without explicit migration plans is prohibited:\n\n");
+            for (Element e : collector.schemaSafe()) {
+                FormatterRegistry.schemaSafe().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.idempotent().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## ♻️ IDEMPOTENCY GUARANTEES\nThese operations must remain idempotent — multiple calls = same as one call:\n\n");
+            for (Element e : collector.idempotent()) {
+                FormatterRegistry.idempotent().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.featureFlag().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚩 FEATURE FLAG GATED CODE\nNever assume these feature flags are always active — preserve all flag checks:\n\n");
+            for (Element e : collector.featureFlag()) {
+                FormatterRegistry.featureFlag().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.secure().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🔐 SECURITY-CRITICAL CODE\nNever weaken security properties of these elements. Every change requires security review:\n\n");
+            for (Element e : collector.secure()) {
+                FormatterRegistry.secure().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        return sb.toString();
+    }
+}
