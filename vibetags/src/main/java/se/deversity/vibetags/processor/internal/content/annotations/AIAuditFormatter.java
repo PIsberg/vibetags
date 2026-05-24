@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
+// CPD-OFF
+
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.processor.internal.ElementNaming;

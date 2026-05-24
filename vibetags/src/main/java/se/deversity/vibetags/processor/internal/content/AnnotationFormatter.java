@@ -5,6 +5,7 @@ import javax.lang.model.element.Element;
 /**
  * Defines the contract to format cross-platform content fragments for an individual annotation type.
  */
+@FunctionalInterface
 public interface AnnotationFormatter {
     /**
      * Formats the annotation value for the given element and appends it to the platform's buffer.

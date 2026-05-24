@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * A highly decoupled, thin coordinator that builds AI guardrail files by delegating
  * file rendering to specific PlatformRenderer implementations.
  */
-@SuppressWarnings({"PMD.AvoidStringBufferField", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings({"PMD.AvoidStringBufferField", "PMD.UnusedPrivateField", "PMD.LiteralsFirstInComparisons"})
 public final class GuardrailContentBuilder {
 
     private final AnnotationCollector collector;

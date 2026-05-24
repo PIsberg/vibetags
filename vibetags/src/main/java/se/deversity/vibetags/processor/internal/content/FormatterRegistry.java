@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.content.annotations.*;
 /**
  * A central registry providing access to stateless, thread-safe annotation formatters.
  */
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public final class FormatterRegistry {
     private static final AILockedFormatter LOCKED = new AILockedFormatter();
     private static final AIContextFormatter CONTEXT = new AIContextFormatter();

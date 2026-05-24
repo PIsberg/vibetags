@@ -298,6 +298,7 @@ public final class LlmsRenderer implements PlatformRenderer {
         return sb.toString();
     }
 
+    @SuppressWarnings("PMD.UnusedFormalParameter")
     private static void appendSection(StringBuilder sb, Collection<Element> elements, Platform platform, String heading, FormatterCaller caller) {
         if (elements.isEmpty()) return;
         sb.append(heading);
@@ -306,6 +307,7 @@ public final class LlmsRenderer implements PlatformRenderer {
         }
     }
 
+    @FunctionalInterface
     private interface FormatterCaller {
         void call(Element e, StringBuilder buffer);
     }

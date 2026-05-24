@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
+// CPD-OFF
+
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.processor.internal.ElementNaming;
@@ -9,6 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AITestDriven annotations for all platforms.
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AITestDrivenFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {

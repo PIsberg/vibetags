@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.AnnotationCollector;
 /**
  * Defines the contract to render a single, specific platform configuration file.
  */
+@FunctionalInterface
 public interface PlatformRenderer {
     /**
      * Renders the platform configuration based on the collected annotations.
