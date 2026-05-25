@@ -53,6 +53,16 @@
             <version>0.9.7</version>
         </dependency>
 
+        <!-- JSpecify null annotations (@NullMarked, @Nullable, @NonNull).
+             Compile-scope so the annotations are available both in the
+             processor source and on the annotation-processor classpath.
+             JSpecify artifacts are source-only — zero runtime overhead. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Logging: SLF4J API + Logback file appender for vibetags.log.
              These are intentionally compile-scope (NOT optional):
              Maven's annotationProcessorPaths resolver excludes optional

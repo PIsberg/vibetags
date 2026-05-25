@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AILocked;
@@ -61,7 +62,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
     /** SLF4J logger backed by a Logback FileAppender writing to {@code vibetags.log} in the project root. */
-    private Logger log = null;
+    private @Nullable Logger log = null;
 
     /** Lazily constructed file writer; recreated on init() with the live messager + log. */
     private GuardrailFileWriter fileWriter = new GuardrailFileWriter(GENERATED_HEADER, null, null);
@@ -70,7 +71,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private GranularRulesWriter granularWriter = new GranularRulesWriter(fileWriter);
 
     /** Per-output-file content cache; created on init() pointing at {@code <root>/.vibetags-cache}. */
-    private WriteCache writeCache = null;
+    private @Nullable WriteCache writeCache = null;
 
     private Path root;
     private String projectName;

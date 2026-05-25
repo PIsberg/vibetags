@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import java.io.IOException;
@@ -56,10 +57,10 @@ public final class WriteCache {
     private boolean dirty = false;
 
     /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
-    private String buildFingerprint = null;
+    private @Nullable String buildFingerprint = null;
 
     /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
-    private String sidecarStamp = null;
+    private @Nullable String sidecarStamp = null;
 
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
@@ -72,7 +73,7 @@ public final class WriteCache {
      * {@code null} if no fingerprint is on file. The fingerprint covers the entire annotation
      * input set plus the active service set — see {@link BuildFingerprint}.
      */
-    public synchronized String getBuildFingerprint() {
+    public synchronized @Nullable String getBuildFingerprint() {
         loadIfNeeded();
         return buildFingerprint;
     }
@@ -94,7 +95,7 @@ public final class WriteCache {
      * The stamp is a hex-encoded polynomial hash of all module sidecar file mtimes; a change means a sibling
      * module's annotations changed and the aggregated output must be regenerated.
      */
-    public synchronized String getSidecarStamp() {
+    public synchronized @Nullable String getSidecarStamp() {
         loadIfNeeded();
         return sidecarStamp;
     }

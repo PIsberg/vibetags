@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLogger;
 
+import org.jspecify.annotations.Nullable;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -102,7 +104,7 @@ public final class VibeTagsLogger {
      * Detaches and stops appenders specifically for the given project root's logger.
      */
     @SuppressWarnings("PMD.AvoidCatchingGenericException")
-    public static void shutdown(Path projectRoot) {
+    public static void shutdown(@Nullable Path projectRoot) {
         if (projectRoot == null) return;
         try {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
@@ -130,7 +132,7 @@ public final class VibeTagsLogger {
     /**
      * Suffixes the logger name with an absolute path hash to isolate concurrent parallel test threads.
      */
-    private static String getLoggerName(Path projectRoot) {
+    private static String getLoggerName(@Nullable Path projectRoot) {
         if (projectRoot == null) {
             return LOGGER_NAME;
         }
@@ -162,7 +164,7 @@ public final class VibeTagsLogger {
      * @return a ready-to-use SLF4J {@code Logger}, or a no-op logger when level is OFF
      */
     @SuppressWarnings({"PMD.SystemPrintln", "PMD.AvoidLiteralsInIfCondition", "PMD.AvoidCatchingGenericException"})
-    public static Logger forRoot(Path projectRoot, String logPath, String level) {
+    public static Logger forRoot(@Nullable Path projectRoot, @Nullable String logPath, @Nullable String level) {
         if (projectRoot != null) {
             THREAD_PROJECT_ROOTS.get().add(projectRoot);
         }
@@ -212,7 +214,7 @@ public final class VibeTagsLogger {
         }
     }
 
-    private static Path resolveLogFile(Path projectRoot, String logPath) {
+    private static Path resolveLogFile(@Nullable Path projectRoot, @Nullable String logPath) {
         if (logPath == null || logPath.isBlank()) {
             return projectRoot.resolve(DEFAULT_LOG_FILE);
         }

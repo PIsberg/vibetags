@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import java.io.IOException;
@@ -107,7 +108,7 @@ public final class ModuleSidecar {
     }
 
     /** Loads a sidecar from {@code path}, returning {@code null} if the file is malformed. */
-    static ModuleSidecar load(Path path) {
+    static @Nullable ModuleSidecar load(Path path) {
         try {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
