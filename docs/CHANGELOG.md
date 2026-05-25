@@ -53,6 +53,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (one new instance per renderer object); changed to `private static final` since `CursorRenderer` is
   stateless, eliminating unnecessary allocations and correctly satisfying the no-instance-fields rule
 
+### Refactored
+
+- **`GuardrailContentBuilder` modularised** (PR #178, `refactor/issue-4-guardrail-content-builder`):
+  the monolithic 2 100-line class has been decomposed into a three-layer content pipeline:
+  - **`AnnotationFormatter`** (SPI interface) — one stateless implementation per annotation (27 classes
+    in `internal.content.annotations`); each formatter renders its annotation's attributes into a
+    platform-neutral text block
+  - **`PlatformRenderer`** (SPI interface) — one stateless implementation per target platform (18 classes
+    in `internal.content.platforms`); each renderer assembles the full output file by calling the
+    appropriate formatters via `FormatterRegistry`
+  - **`FormatterRegistry`** and **`PlatformRendererRegistry`** — lookup tables that map annotation types
+    and `Platform` enum values to their respective implementations; `GuardrailContentBuilder` is now a
+    thin coordinator that delegates all content generation to these registries
+  - **`RenderingContext`** — immutable value object carrying the active-services set and per-build options
+    through the render call chain, replacing scattered method parameters
+  - **`Platform`** enum — centralises the platform ↔ service-key mapping that was previously spread
+    across `GuardrailContentBuilder` and `ServiceRegistry`
+  - Adding a new platform or annotation now requires one new class and one registry entry; no changes to
+    `GuardrailContentBuilder` or any existing renderer/formatter
+
 ---
 
 ## [0.9.7] - 2026-05-20
