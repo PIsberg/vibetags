@@ -37,7 +37,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.5</version>
+            <version>0.9.8</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -61,7 +61,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.5</version>
+                        <version>0.9.8</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -102,8 +102,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.5')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.5')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.8')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.8')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -311,7 +311,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.5</version>
+            <version>0.9.8</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -336,7 +336,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.5</version>
+                        <version>0.9.8</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -350,8 +350,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.5')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.5')
+    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.8')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.8')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -365,15 +365,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.5</version>
+    <version>0.9.8</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.5'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.5'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.8'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.8'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
@@ -1128,9 +1128,9 @@ AI MUST NOT propose changes to these elements without also providing the matchin
 - **Core algorithms** — pair with `@AICore` when well-tested stability is critical
 - **API surface evolution** — ensure any behavioral change is validated by tests before it reaches production
 
-### 🆕 New in v0.9.5: Five Design-Intent Annotations
+### 🆕 New in v0.9.8: Five Design-Intent Annotations
 
-VibeTags v0.9.5 adds five annotations that capture *design intent* rather than process rules — they tell the AI what an element **is** so it cannot accidentally undo a property the team relies on.
+VibeTags v0.9.8 adds five annotations that capture *design intent* rather than process rules — they tell the AI what an element **is** so it cannot accidentally undo a property the team relies on.
 
 #### 🧵 `@AIThreadSafe(strategy)`
 
@@ -1193,7 +1193,7 @@ Ties code to a specific compliance requirement. Stronger than `@AIAudit` because
 public void deleteAllUserData(String userId) { ... }
 ```
 
-#### Validation warnings for the v0.9.5 annotations
+#### Validation warnings for the v0.9.8 annotations
 
 - `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
 - `@AIDeprecated` + `@AILocked` — contradictory (locked preserves; deprecated routes callers away)
@@ -1201,9 +1201,9 @@ public void deleteAllUserData(String userId) { ... }
 - `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
 - `@AIRegulation` with a blank `standard` — required attribute missing
 
-### 🛡️ New in v0.9.5 (continued): Nine Platform Guardrail Annotations
+### 🛡️ New in v0.9.8 (continued): Nine Platform Guardrail Annotations
 
-In addition to design-intent specifications, v0.9.5 introduces nine platform-wide guardrails to prevent AI tools from breaking test isolation, refactoring compatibility bridges, or violating architectural boundaries.
+In addition to design-intent specifications, v0.9.8 introduces nine platform-wide guardrails to prevent AI tools from breaking test isolation, refactoring compatibility bridges, or violating architectural boundaries.
 
 #### 🧪 `@AIParallelTests`
 

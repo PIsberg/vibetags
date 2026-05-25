@@ -7,6 +7,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-05-25
+
+### Added
+
+- **SpotBugs static analysis** integrated into the Maven build (`spotbugs-maven-plugin:4.9.8.3`,
+  `effort=Max`, `threshold=Low`); runs in the `verify` phase and fails the build on any finding.
+  Upgrading from 4.9.3.0 → 4.9.8.3 simultaneously adds Java 26 (class file major version 70) support,
+  fixing a CI failure on the JDK 26 matrix leg.
+
+- **JSpecify 1.0.0 null annotations** throughout the processor source:
+  - `@NullMarked` `package-info.java` files for all 5 processor packages establish non-null-by-default
+  - `@Nullable` on every nullable return type: `PlatformRenderer.render()`, `Platform.fromServiceKey()`,
+    `ModuleSidecar.load()`, `WriteCache.getBuildFingerprint()`, `WriteCache.getSidecarStamp()`,
+    `GuardrailFileWriter.getMarkersFor()`
+  - `@Nullable` on all nullable constructor parameters and fields throughout `AIGuardrailProcessor`,
+    `GuardrailFileWriter`, `OrphanWarner`, `VibeTagsLogger`, and `WriteCache`
+
+- **ArchUnit 1.4.0 architecture fitness functions** — 7 rules that make structural invariants
+  machine-enforceable (run as part of the normal test suite):
+  - All public classes in `content.annotations` must implement `AnnotationFormatter` and be `final`
+  - All public classes in `content.platforms` must implement `PlatformRenderer` and be `final`
+  - Formatter and renderer classes must have no non-static instance fields (thread-safety under the
+    `ForkJoinPool` parallel writes added in v0.9.7)
+  - The `content.annotations` and `content.platforms` sub-packages must be cycle-free
+
+### Fixed (SpotBugs analysis)
+
+- **`AnnotationCollector`** — all 27 annotation-set getters now return `Collections.unmodifiableSet()`
+  wrappers instead of exposing the internal `LinkedHashSet` directly (`EI_EXPOSE_REP`)
+- **`RenderingContext`** — constructor now makes a defensive `LinkedHashSet` copy of the `activeServices`
+  parameter before wrapping with `unmodifiableSet` (`EI_EXPOSE_REP2`)
+- **`LlmsRenderer`** — 25 anonymous `FormatterCaller` implementations converted to lambdas, eliminating
+  hidden outer-class captures (`SIC_INNER_SHOULD_BE_STATIC_ANON`)
+- **`VibeTagsLogger`** — both `shutdown()` overloads narrowed from `catch (Exception)` to
+  `catch (RuntimeException)` to avoid silently swallowing checked exceptions (`REC_CATCH_EXCEPTION`)
+- **`GuardrailFileWriter`**, **`ModuleSidecar`**, **`WriteCache`** — null guards added for
+  `Path.getFileName()` and `Path.getParent()` (both return `null` for root paths)
+  (`NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE`)
+- **`AIGuardrailProcessor`** — removed 5 unread field declarations (`URF_UNREAD_FIELD`)
+
+### Fixed (ArchUnit analysis)
+
+- **`ClineRenderer`**, **`JunieRenderer`** — the shared `CursorRenderer` field was `private final`
+  (one new instance per renderer object); changed to `private static final` since `CursorRenderer` is
+  stateless, eliminating unnecessary allocations and correctly satisfying the no-instance-fields rule
+
+### Refactored
+
+- **`GuardrailContentBuilder` modularised** (PR #178, `refactor/issue-4-guardrail-content-builder`):
+  the monolithic 2 100-line class has been decomposed into a three-layer content pipeline:
+  - **`AnnotationFormatter`** (SPI interface) — one stateless implementation per annotation (27 classes
+    in `internal.content.annotations`); each formatter renders its annotation's attributes into a
+    platform-neutral text block
+  - **`PlatformRenderer`** (SPI interface) — one stateless implementation per target platform (18 classes
+    in `internal.content.platforms`); each renderer assembles the full output file by calling the
+    appropriate formatters via `FormatterRegistry`
+  - **`FormatterRegistry`** and **`PlatformRendererRegistry`** — lookup tables that map annotation types
+    and `Platform` enum values to their respective implementations; `GuardrailContentBuilder` is now a
+    thin coordinator that delegates all content generation to these registries
+  - **`RenderingContext`** — immutable value object carrying the active-services set and per-build options
+    through the render call chain, replacing scattered method parameters
+  - **`Platform`** enum — centralises the platform ↔ service-key mapping that was previously spread
+    across `GuardrailContentBuilder` and `ServiceRegistry`
+  - Adding a new platform or annotation now requires one new class and one registry entry; no changes to
+    `GuardrailContentBuilder` or any existing renderer/formatter
+
+---
+
+## [0.9.7] - 2026-05-20
+
+### Added
+
+- **3 new annotations** (total annotation count: 27):
+
+  | Annotation | Targets | Description |
+  |---|---|---|
+  | `@AIIdempotent` | TYPE, METHOD | Declares an operation must be idempotent; AI must not introduce side effects that cause repeated calls to produce different results |
+  | `@AIFeatureFlag` | TYPE, METHOD, FIELD | Marks code gated behind a runtime feature flag; AI must preserve the flag check and handle both enabled and disabled paths |
+  | `@AISecure` | TYPE, METHOD | Marks security-critical code (authentication, encryption, session management); every change must be flagged for security review |
+
+  Compile-time validation warnings for the new annotations:
+  - `@AIIdempotent` + `@AIDraft` — contradictory (stable contract vs. unfinished element)
+  - `@AIFeatureFlag` + `@AILocked` — contradictory (locked freezes; flag implies conditional execution)
+  - `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+  - `@AISecure` with blank `aspect` — advisory; specify the security concern
+  - `@AISecure` + `@AIIgnore` — contradictory; `@AIIgnore` hides but `@AISecure` requires AI visibility
+
+- **3 new platform integrations**:
+
+  | Platform | File | Format |
+  |---|---|---|
+  | Cline AI assistant | `.clinerules` | Markdown |
+  | JetBrains Junie | `.junie/guidelines.md` | Markdown |
+  | Amazon Kiro (granular per-class) | `.kiro/steering/*.md` | Markdown |
+
+- **Parallel file writes** — all active platform files are now written concurrently via
+  `ForkJoinPool.commonPool()`, reducing annotation-processor wall-clock time on large projects with
+  many enabled platforms
+
+- **WriteCache fast-path speedup** — 272–322× wall-clock speedup at 1 MB body size when the
+  fingerprint short-circuit is not active but content is byte-stable; avoids UTF-8 re-encoding on the
+  comparison path
+
+### Fixed
+
+- Concurrent test helpers in `CapturingProcessor` switched to `ConcurrentHashMap` to prevent race
+  conditions when processor tests run in parallel
+- PMD: `LooseCoupling` (Queue interface), `UnusedPrivateField` (`junieRules` field)
+- `plot-cache-hit.py`: removed hardcoded `DEFAULT_INPUT` path, added `argparse` for proper CLI use
+
+### Migration
+
+Bump the BOM coordinate to `0.9.7`. All 3 new annotations are in `vibetags-annotations:0.9.7`.
+
+```xml
+<vibetags.bom.version>0.9.7</vibetags.bom.version>
+```
+
+---
+
 ## [0.9.5] - 2026-05-19
 
 ### Added
