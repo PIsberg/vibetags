@@ -89,7 +89,10 @@ public final class GuardrailFileWriter {
                 Files.createDirectories(parent);
             }
 
-            String fileName = filePath.getFileName().toString();
+            // Path.getFileName() returns null only for root paths (e.g. "/") — never for
+            // the concrete file paths VibeTags constructs, but we guard for correctness.
+            Path fileNamePath = filePath.getFileName();
+            String fileName = fileNamePath != null ? fileNamePath.toString() : "";
             String[] markers = getMarkersFor(fileName);
             boolean supportsMarkers = (markers != null);
 
@@ -326,7 +329,9 @@ public final class GuardrailFileWriter {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(extension))
                   .filter(p -> {
-                      String name = p.getFileName().toString();
+                      // Path.getFileName() returns null only for root paths — guard for correctness.
+                      Path fn = p.getFileName();
+                      String name = fn != null ? fn.toString() : "";
                       int dot = name.lastIndexOf('.');
                       return !excludeQNames.contains(dot >= 0 ? name.substring(0, dot) : name);
                   })

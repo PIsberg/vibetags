@@ -67,7 +67,9 @@ public final class GuardrailContentBuilder {
                                    String projectName,
                                    String generatedHeader) {
         this.collector = collector;
-        this.activeServices = activeServices;
+        // Defensive copy: callers must not be able to mutate the active-services set
+        // through the reference they passed in.
+        this.activeServices = new java.util.LinkedHashSet<>(activeServices);
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
     }

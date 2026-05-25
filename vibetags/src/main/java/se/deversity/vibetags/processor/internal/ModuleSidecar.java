@@ -151,9 +151,19 @@ public final class ModuleSidecar {
         if (!Files.isDirectory(root)) return Collections.emptyList();
         List<ModuleSidecar> result = new ArrayList<>();
         try (Stream<Path> stream = Files.list(root)) {
-            stream.filter(p -> p.getFileName().toString().startsWith(SIDECAR_PREFIX))
-                  .filter(p -> !p.getFileName().toString().endsWith(".tmp"))
-                  .sorted(Comparator.comparing(p -> p.getFileName().toString()))
+            stream.filter(p -> {
+                      // Path.getFileName() returns null only for root paths — guard for correctness.
+                      Path fn = p.getFileName();
+                      return fn != null && fn.toString().startsWith(SIDECAR_PREFIX);
+                  })
+                  .filter(p -> {
+                      Path fn = p.getFileName();
+                      return fn == null || !fn.toString().endsWith(".tmp");
+                  })
+                  .sorted(Comparator.comparing(p -> {
+                      Path fn = p.getFileName();
+                      return fn != null ? fn.toString() : "";
+                  }))
                   .forEach(p -> {
                       ModuleSidecar s = load(p);
                       if (s == null) {
@@ -183,10 +193,16 @@ public final class ModuleSidecar {
         List<Path> result = new ArrayList<>();
         try (Stream<Path> stream = Files.list(root)) {
             stream.filter(p -> {
-                      String n = p.getFileName().toString();
+                      // Path.getFileName() returns null only for root paths — guard for correctness.
+                      Path fn = p.getFileName();
+                      if (fn == null) return false;
+                      String n = fn.toString();
                       return n.startsWith(SIDECAR_PREFIX) && !n.endsWith(".tmp");
                   })
-                  .sorted(Comparator.comparing(p -> p.getFileName().toString()))
+                  .sorted(Comparator.comparing(p -> {
+                      Path fn = p.getFileName();
+                      return fn != null ? fn.toString() : "";
+                  }))
                   .forEach(result::add);
         } catch (IOException ignored) {}
         return result;

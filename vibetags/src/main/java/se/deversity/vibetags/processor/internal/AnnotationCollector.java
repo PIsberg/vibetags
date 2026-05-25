@@ -30,6 +30,7 @@ import se.deversity.vibetags.annotations.AISecure;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -155,32 +156,34 @@ public final class AnnotationCollector {
         anyAnnotationsFound = false;
     }
 
-    public Set<Element> locked()        { return lockedElements; }
-    public Set<Element> context()       { return contextElements; }
-    public Set<Element> ignore()        { return ignoreElements; }
-    public Set<Element> audit()         { return auditElements; }
-    public Set<Element> draft()         { return draftElements; }
-    public Set<Element> privacy()       { return privacyElements; }
-    public Set<Element> core()          { return coreElements; }
-    public Set<Element> performance()    { return performanceElements; }
-    public Set<Element> contract()       { return contractElements; }
-    public Set<Element> testDriven()     { return testDrivenElements; }
-    public Set<Element> threadSafe()     { return threadSafeElements; }
-    public Set<Element> immutable()      { return immutableElements; }
-    public Set<Element> deprecated()     { return deprecatedElements; }
-    public Set<Element> observability()  { return observabilityElements; }
-    public Set<Element> regulation()     { return regulationElements; }
-    public Set<Element> parallelTests()     { return parallelTestsElements; }
-    public Set<Element> legacyBridge()     { return legacyBridgeElements; }
-    public Set<Element> architecture()     { return architectureElements; }
-    public Set<Element> publicApi()        { return publicApiElements; }
-    public Set<Element> strictExceptions() { return strictExceptionsElements; }
-    public Set<Element> strictTypes()      { return strictTypesElements; }
-    public Set<Element> internationalized() { return internationalizedElements; }
-    public Set<Element> strictClasspath()  { return strictClasspathElements; }
-    public Set<Element> schemaSafe()       { return schemaSafeElements; }
-    public Set<Element> idempotent()       { return idempotentElements; }
-    public Set<Element> featureFlag()      { return featureFlagElements; }
-    public Set<Element> secure()           { return secureElements; }
+    // Unmodifiable views: callers iterate but must not add to these sets.
+    // collect() and reset() operate directly on the internal LinkedHashSet fields.
+    public Set<Element> locked()        { return Collections.unmodifiableSet(lockedElements); }
+    public Set<Element> context()       { return Collections.unmodifiableSet(contextElements); }
+    public Set<Element> ignore()        { return Collections.unmodifiableSet(ignoreElements); }
+    public Set<Element> audit()         { return Collections.unmodifiableSet(auditElements); }
+    public Set<Element> draft()         { return Collections.unmodifiableSet(draftElements); }
+    public Set<Element> privacy()       { return Collections.unmodifiableSet(privacyElements); }
+    public Set<Element> core()          { return Collections.unmodifiableSet(coreElements); }
+    public Set<Element> performance()    { return Collections.unmodifiableSet(performanceElements); }
+    public Set<Element> contract()       { return Collections.unmodifiableSet(contractElements); }
+    public Set<Element> testDriven()     { return Collections.unmodifiableSet(testDrivenElements); }
+    public Set<Element> threadSafe()     { return Collections.unmodifiableSet(threadSafeElements); }
+    public Set<Element> immutable()      { return Collections.unmodifiableSet(immutableElements); }
+    public Set<Element> deprecated()     { return Collections.unmodifiableSet(deprecatedElements); }
+    public Set<Element> observability()  { return Collections.unmodifiableSet(observabilityElements); }
+    public Set<Element> regulation()     { return Collections.unmodifiableSet(regulationElements); }
+    public Set<Element> parallelTests()     { return Collections.unmodifiableSet(parallelTestsElements); }
+    public Set<Element> legacyBridge()     { return Collections.unmodifiableSet(legacyBridgeElements); }
+    public Set<Element> architecture()     { return Collections.unmodifiableSet(architectureElements); }
+    public Set<Element> publicApi()        { return Collections.unmodifiableSet(publicApiElements); }
+    public Set<Element> strictExceptions() { return Collections.unmodifiableSet(strictExceptionsElements); }
+    public Set<Element> strictTypes()      { return Collections.unmodifiableSet(strictTypesElements); }
+    public Set<Element> internationalized() { return Collections.unmodifiableSet(internationalizedElements); }
+    public Set<Element> strictClasspath()  { return Collections.unmodifiableSet(strictClasspathElements); }
+    public Set<Element> schemaSafe()       { return Collections.unmodifiableSet(schemaSafeElements); }
+    public Set<Element> idempotent()       { return Collections.unmodifiableSet(idempotentElements); }
+    public Set<Element> featureFlag()      { return Collections.unmodifiableSet(featureFlagElements); }
+    public Set<Element> secure()           { return Collections.unmodifiableSet(secureElements); }
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }
