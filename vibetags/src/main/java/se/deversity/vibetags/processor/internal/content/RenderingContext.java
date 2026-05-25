@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -13,7 +15,8 @@ public final class RenderingContext {
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
-        this.activeServices = activeServices;
+        // Defensive copy: prevent callers from mutating the set through the stored reference.
+        this.activeServices = Collections.unmodifiableSet(new LinkedHashSet<>(activeServices));
     }
 
     public String getProjectName() {
@@ -24,6 +27,7 @@ public final class RenderingContext {
         return generatedHeader;
     }
 
+    /** Returns an unmodifiable view of the active-service keys. */
     public Set<String> getActiveServices() {
         return activeServices;
     }

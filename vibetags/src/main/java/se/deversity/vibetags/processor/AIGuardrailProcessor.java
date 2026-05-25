@@ -76,14 +76,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private String projectName;
 
     private final AnnotationCollector collector = new AnnotationCollector();
-    private final Set<Element> lockedElements      = collector.locked();
-    private final Set<Element> contextElements     = collector.context();
-    private final Set<Element> ignoreElements      = collector.ignore();
-    private final Set<Element> auditElements       = collector.audit();
-    private final Set<Element> draftElements       = collector.draft();
-    private final Set<Element> privacyElements     = collector.privacy();
-    private final Set<Element> coreElements        = collector.core();
-    private final Set<Element> performanceElements = collector.performance();
+    // Only the three sets actually read in generateFiles() are kept as fields.
+    // The rest (contextElements, draftElements, privacyElements, coreElements,
+    // performanceElements) were written-only — logSummary() calls collector.*() directly.
+    private final Set<Element> lockedElements = collector.locked();
+    private final Set<Element> ignoreElements = collector.ignore();
+    private final Set<Element> auditElements  = collector.audit();
 
     /** Per-element granular rule sections, populated by GuardrailContentBuilder.build(). */
     private Map<Element, StringBuilder> elementRules = new java.util.LinkedHashMap<>();

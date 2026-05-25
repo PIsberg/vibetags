@@ -92,7 +92,10 @@ public final class VibeTagsLogger {
                 roots.clear();
                 context.getLogger(LOGGER_NAME).detachAndStopAllAppenders();
             }
-        } catch (Exception ignored) {}
+        } catch (RuntimeException ignored) {
+            // Never let logging teardown propagate — Logback internals may throw
+            // unchecked exceptions in exotic class-loader or OSGi environments.
+        }
     }
 
     /**
@@ -108,7 +111,9 @@ public final class VibeTagsLogger {
                 context.getLogger(dynamicName).detachAndStopAllAppenders();
             }
             THREAD_PROJECT_ROOTS.get().remove(projectRoot);
-        } catch (Exception ignored) {}
+        } catch (RuntimeException ignored) {
+            // Never let logging teardown propagate.
+        }
     }
 
     /**

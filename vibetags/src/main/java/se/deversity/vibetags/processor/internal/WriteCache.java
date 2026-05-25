@@ -196,10 +196,15 @@ public final class WriteCache {
               .append(e.getValue().mtime).append('\n');
         }
         try {
-            if (cachePath.getParent() != null) {
-                Files.createDirectories(cachePath.getParent());
+            // Store parent in a local so SpotBugs can track the null-check across the two uses.
+            Path cacheParent = cachePath.getParent();
+            if (cacheParent != null) {
+                Files.createDirectories(cacheParent);
             }
-            Path tmp = cachePath.resolveSibling(cachePath.getFileName() + ".tmp");
+            // Path.getFileName() returns null only for root paths — guard for correctness.
+            Path cacheFileName = cachePath.getFileName();
+            Path tmp = cachePath.resolveSibling(
+                    (cacheFileName != null ? cacheFileName.toString() : ".vibetags-cache") + ".tmp");
             Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
             try {
                 Files.move(tmp, cachePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);

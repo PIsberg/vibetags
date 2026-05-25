@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusion filter for VibeTags processor.
+  Excludes intentional patterns that are not genuine bugs.
+-->
+<FindBugsFilter>
+
+  <!-- URF_UNREAD_FIELD: GuardrailContentBuilder fields are written in initBuilders() and
+       accessed via reflection by GuardrailContentBuilderLazyAllocationTest to verify
+       lazy allocation. The build() method uses PlatformRendererRegistry, not these fields. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailContentBuilder"/>
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- DE_MIGHT_IGNORE: ModuleSidecar.computeSidecarStamp() catches IOException on
+       getLastModifiedTime() to treat unreadable sidecars as "stamp=0" rather than
+       failing the build. tryDelete() swallows IOException because a failed cleanup
+       is non-fatal — the sidecar will simply be re-processed on the next compile. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
+    <Bug pattern="DE_MIGHT_IGNORE"/>
+  </Match>
+
+  <!-- PZLA_PREFER_ZERO_LENGTH_ARRAYS: getMarkersFor() returning null is intentional —
+       null specifically signals "this file type uses no markers (full overwrite)",
+       distinct from an empty markers array which would break all callers checking
+       `if (markers == null)`. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
+    <Method name="getMarkersFor"/>
+    <Bug pattern="PZLA_PREFER_ZERO_LENGTH_ARRAYS"/>
+  </Match>
+
+  <!-- MS_EXPOSE_REP: PlatformRendererRegistry returns private static singleton renderers.
+       All renderer implementations are stateless and effectively immutable — no caller
+       can corrupt the singleton via the returned reference. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry"/>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
+  <!-- EI_EXPOSE_REP2: GuardrailFileWriter stores a shared WriteCache reference by design.
+       WriteCache is the shared per-build cache instance owned by the processor; the
+       SynchronizedMessager swap in generateFiles() explicitly creates a second
+       GuardrailFileWriter pointing at the same cache for parallel writes. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- EI_EXPOSE_REP2: GranularRulesWriter stores a shared GuardrailFileWriter reference.
+       The processor intentionally passes its live fileWriter so the two share the same
+       Messager, Logger, and WriteCache for all granular-file writes. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GranularRulesWriter"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- DB_DUPLICATE_SWITCH_CLAUSES: formatter switch cases that currently emit identical
+       output for multiple platforms are intentionally separate. Platforms may diverge in
+       future versions, and merging cases would make that harder without changing behaviour. -->
+  <Match>
+    <Package name="se.deversity.vibetags.processor.internal.content.annotations"/>
+    <Bug pattern="DB_DUPLICATE_SWITCH_CLAUSES"/>
+  </Match>
+
+  <!-- NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE: generateFiles() is @AILocked — step order
+       is load-bearing and must not be changed. serviceFiles.get(service) is guaranteed
+       non-null by construction: effectiveContent keys are a strict subset of serviceFiles
+       keys (activeServices is derived from serviceFiles by checking file existence).
+       The synthetic lambda$generateFiles$0 method is part of the same locked logic. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="generateFiles"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="lambda$generateFiles$0"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+  </Match>
+
+</FindBugsFilter>
