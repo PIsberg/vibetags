@@ -86,6 +86,9 @@ dependencies {
     // dep so existing consumers still get the annotations via vibetags-processor.
     api 'se.deversity.vibetags:vibetags-annotations:0.9.5'
 
+    // JSpecify null annotations (@NullMarked, @Nullable, @NonNull)
+    implementation 'org.jspecify:jspecify:1.0.0'
+
     // Logging: SLF4J API + Logback file appender for vibetags.log
     implementation 'org.slf4j:slf4j-api:2.0.16'
     implementation 'ch.qos.logback:logback-classic:1.5.12'

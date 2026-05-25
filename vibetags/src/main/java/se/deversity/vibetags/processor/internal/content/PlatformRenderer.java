@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 
 /**
@@ -15,5 +16,5 @@ public interface PlatformRenderer {
      * @param context the rendering context (project name, headers, etc.)
      * @return the rendered file contents, or null if this platform is not active or handled elsewhere
      */
-    String render(AnnotationCollector collector, Platform platform, RenderingContext context);
+    @Nullable String render(AnnotationCollector collector, Platform platform, RenderingContext context);
 }

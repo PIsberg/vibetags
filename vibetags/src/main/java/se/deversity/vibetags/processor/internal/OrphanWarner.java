@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.Messager;
@@ -15,7 +16,7 @@ public final class OrphanWarner {
 
     private OrphanWarner() {}
 
-    public static void warnAboutOrphans(Messager messager, Logger log, Set<String> active,
+    public static void warnAboutOrphans(Messager messager, @Nullable Logger log, Set<String> active,
                                         boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
         if (hasIgnore) {
             warn(messager, log, active.contains("cursor") && !active.contains("cursor_ignore"),
@@ -36,7 +37,7 @@ public final class OrphanWarner {
         }
     }
 
-    private static void warn(Messager messager, Logger log, boolean condition, String message) {
+    private static void warn(Messager messager, @Nullable Logger log, boolean condition, String message) {
         if (!condition) return;
         messager.printMessage(Diagnostic.Kind.WARNING, message);
         if (log != null) log.warn(message);
