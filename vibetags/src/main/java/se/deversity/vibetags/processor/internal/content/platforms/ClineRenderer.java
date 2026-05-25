@@ -10,10 +10,11 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * Uses the exact same Markdown output format as `.cursorrules`.
  */
 public final class ClineRenderer implements PlatformRenderer {
-    private final CursorRenderer cursorRenderer = new CursorRenderer();
+    // CursorRenderer is stateless — one shared instance is sufficient.
+    private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
 
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        return cursorRenderer.render(collector, platform, context);
+        return CURSOR_RENDERER.render(collector, platform, context);
     }
 }
