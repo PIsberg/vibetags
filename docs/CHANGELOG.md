@@ -706,7 +706,9 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.8...HEAD
+[0.9.8]: https://github.com/PIsberg/vibetags/compare/v0.9.7...v0.9.8
+[0.9.7]: https://github.com/PIsberg/vibetags/compare/v0.9.5...v0.9.7
 [0.9.5]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.5
 [0.8.0]: https://github.com/PIsberg/vibetags/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/PIsberg/vibetags/compare/v0.7.0...v0.7.1
