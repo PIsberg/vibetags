@@ -16,7 +16,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vibetags.bom.version>0.9.5</vibetags.bom.version>
+        <vibetags.bom.version>0.9.8</vibetags.bom.version>
     </properties>
 
     <dependencyManagement>
