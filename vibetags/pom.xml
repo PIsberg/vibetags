@@ -142,7 +142,9 @@
                             <compilerArgs>
                                 <arg>-proc:none</arg>
                                 <arg>-XDcompilePolicy=simple</arg>
-                                <arg>-Xplugin:ErrorProne</arg>
+                                <!-- UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag
+                                     which was removed in JDK 26; disable until Error Prone fixes it -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>
