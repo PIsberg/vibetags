@@ -30,6 +30,8 @@ public final class GranularRulesWriter {
     }
 
     /**
+     * Writes per-class granular rule files for all active platforms.
+     *
      * @param elementRules    map of owning class/package element → accumulated rules markdown
      * @param serviceFiles    service-key → directory path map
      * @param activeServices  currently-active services (controls which platforms get files)

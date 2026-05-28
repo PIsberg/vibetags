@@ -10,6 +10,9 @@
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
 [![Lines of Code](https://www.aschey.tech/tokei/github/PIsberg/VibeTags?languages=Java&category=code)](https://github.com/PIsberg/VibeTags)
+[![PMD](https://img.shields.io/badge/PMD-passing-brightgreen)](https://pmd.github.io/)
+[![SpotBugs](https://img.shields.io/badge/SpotBugs-passing-brightgreen)](https://spotbugs.github.io/)
+[![Error Prone](https://img.shields.io/badge/Error%20Prone-passing-brightgreen)](https://errorprone.info/)
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
 
