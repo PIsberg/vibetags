@@ -136,7 +136,7 @@ public final class VibeTagsLogger {
         if (projectRoot == null) {
             return LOGGER_NAME;
         }
-        return LOGGER_NAME + "." + Math.abs(projectRoot.toAbsolutePath().normalize().hashCode());
+        return LOGGER_NAME + "." + (projectRoot.toAbsolutePath().normalize().hashCode() & Integer.MAX_VALUE);
     }
 
     /**

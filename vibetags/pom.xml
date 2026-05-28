@@ -123,8 +123,31 @@
                 <version>3.15.0</version>
                 <configuration>
                     <!-- Disable annotation processing for the processor itself -->
-                    <compilerArgument>-proc:none</compilerArgument>
+                    <compilerArgs>
+                        <arg>-proc:none</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>2.36.0</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
+                <executions>
+                    <!-- Error Prone runs only on main sources; test sources skip it -->
+                    <execution>
+                        <id>default-compile</id>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>-proc:none</arg>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>-Xplugin:ErrorProne</arg>
+                                <arg>-XDshould-stop.ifError=FLOW</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -212,7 +212,7 @@ public final class GuardrailFileWriter {
             String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
             if (existing.strip().equals(finalContent.strip())) return false;
 
-            if (!hasNewRules && !existing.isEmpty()) {
+            if (!hasNewRules) {
                 skipUpdateMsg(fileName);
                 return false;
             }
