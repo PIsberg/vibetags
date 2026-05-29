@@ -289,7 +289,7 @@ vibetags/
 
 ### Prerequisites
 
-- **Java 11 or higher**
+- **Java 21 or higher** (tested on 21, 25, 26)
 - **Maven 3.6+** or **Gradle 7.0+**
 
 VibeTags ships as **two artifacts**:
