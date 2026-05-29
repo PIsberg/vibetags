@@ -26,6 +26,7 @@ public final class PlatformRendererRegistry {
     private static final InterpreterRenderer INTERPRETER_RENDERER = new InterpreterRenderer();
     private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
+    private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
 
     private PlatformRendererRegistry() {}
@@ -92,6 +93,8 @@ public final class PlatformRendererRegistry {
                 return CLINE_RENDERER;
             case JUNIE:
                 return JUNIE_RENDERER;
+            case FIREBASE:
+                return FIREBASE_RENDERER;
             case CURSOR_GRANULAR:
             case TRAE_GRANULAR:
             case ROO_GRANULAR:

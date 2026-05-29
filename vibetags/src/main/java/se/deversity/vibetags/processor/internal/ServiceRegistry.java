@@ -36,7 +36,9 @@ public final class ServiceRegistry {
         // v0.9.6 platforms
         "gemini_md", "antigravity_ignore",
         // v0.9.7 platforms
-        "cline", "junie", "kiro_granular"
+        "cline", "junie", "kiro_granular",
+        // Firebase AI
+        "firebase"
     );
 
     private ServiceRegistry() {}
@@ -94,6 +96,8 @@ public final class ServiceRegistry {
         map.put("cline",         root.resolve(".clinerules"));
         map.put("junie",         root.resolve(".junie/guidelines.md"));
         map.put("kiro_granular", root.resolve(".kiro/steering"));
+        // Firebase AI
+        map.put("firebase",      root.resolve(".idx/airules.md"));
         return map;
     }
 
