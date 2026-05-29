@@ -24,7 +24,7 @@ The main CI workflow. Jobs run in parallel except `load-tests`, which waits on `
 
 ### Job: `build-maven`
 
-Matrix over **JDK 17, 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 17 is the minimum supported version; the rest are forward-compatibility checks. Steps:
+Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps:
 
 1. **Harden runner** — egress audit.
 2. **Checkout**.
@@ -56,7 +56,7 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 
 ### Job: `build-gradle`
 
-Mirror of `build-maven` but with Gradle. Matrix over **JDK 17, 21, 25, 26**. Differences:
+Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differences:
 
 - Uses Gradle dependency cache.
 - `gradle wrapper || echo "Wrapper generation skipped"` runs before each build to generate a wrapper if missing — the `||` swallows the error if a wrapper already exists.
