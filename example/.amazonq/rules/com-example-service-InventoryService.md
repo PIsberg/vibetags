@@ -24,4 +24,8 @@
 ### Rules for method bulkRestock
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+
+### Rules for method sendLowStockAlert
+- **Flag**: 'inventory.push-alerts.enabled' (default: false)
+- **Rule**: This code is gated behind a feature flag. Preserve the flag check. Never assume the flag is always active.
 <!-- VIBETAGS-END -->

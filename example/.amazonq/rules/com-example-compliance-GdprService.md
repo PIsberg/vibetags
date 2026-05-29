@@ -10,4 +10,8 @@
 - **Standard**: GDPR
 - **Clause**: Art. 20
 - **Description**: Right to data portability — exports the user's data in a machine-readable format.
+
+### Rules for method deleteAllUserData
+- **Rule**: This operation is idempotent. Calling it multiple times must produce the same result as calling it once.
+- **Reason**: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
 <!-- VIBETAGS-END -->

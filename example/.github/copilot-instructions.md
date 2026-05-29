@@ -180,4 +180,19 @@ Dynamic class loading and reflection hacks are strictly prohibited:
 Do not change serialization formats or schemas without a backward-compatible migration plan:
 
 - `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+
+## Idempotency Guarantees
+The following operations are idempotent — calling them multiple times is safe:
+
+- `com.example.compliance.GdprService.deleteAllUserData(java.lang.String)` - Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## Feature Flag Gated Code
+The following elements are gated behind a feature flag — always preserve the flag check:
+
+- `com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)` - Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## Security-Critical Code
+The following elements are security-critical — do not weaken their security properties:
+
+- `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 <!-- VIBETAGS-END -->

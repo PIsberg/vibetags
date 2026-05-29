@@ -50,4 +50,7 @@ rules:
   - "Contract-frozen signature for com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int): do not change method name, parameters, return type, or checked exceptions"
   - "Test-driven requirement for com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String): Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests."
   - "Test-driven requirement for com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String): Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic."
+  - "Idempotency requirement for com.example.compliance.GdprService.deleteAllUserData(java.lang.String): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation."
+  - "Feature flag gate for com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int): Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on."
+  - "Security-critical: com.example.security.SecurityConfig [authentication]. Do not weaken security."
 # VIBETAGS-END

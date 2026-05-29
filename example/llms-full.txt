@@ -332,4 +332,28 @@ Schema and serialization compatibility must be strictly preserved.
 
 ### com.example.database.UserEntity
 - Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.
+
+
+## ♻️ Idempotency Guarantees
+These operations are idempotent — calling multiple times must produce the same result as calling once.
+
+### com.example.compliance.GdprService.deleteAllUserData(java.lang.String)
+- Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.
+- **Reason**: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+
+## 🚩 Feature Flag Gated Code
+These elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.
+
+### com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)
+- Feature flag: 'inventory.push-alerts.enabled' (default: false)
+- Preserve the flag check. Never assume the flag is always active. Test both enabled and disabled code paths.
+
+
+## 🔐 Security-Critical Code
+These elements are security-critical. Do not weaken security properties. Every change requires security review.
+
+### com.example.security.SecurityConfig
+- Security-critical code (aspect: authentication).
+- Never weaken security properties. Every change requires explicit security review.
 <!-- VIBETAGS-END -->

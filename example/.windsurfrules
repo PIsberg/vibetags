@@ -158,4 +158,19 @@ Dynamic runtime class loading is strictly prohibited for these elements:
 Modifying schema or data formats without explicit migration plans is prohibited:
 
 * `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+
+## ♻️ IDEMPOTENCY GUARANTEES
+These operations must remain idempotent — multiple calls = same as one call:
+
+* `com.example.compliance.GdprService.deleteAllUserData(java.lang.String)` - Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## 🚩 FEATURE FLAG GATED CODE
+Never assume these feature flags are always active — preserve all flag checks:
+
+* `com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)` - Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## 🔐 SECURITY-CRITICAL CODE
+Never weaken security properties of these elements. Every change requires security review:
+
+* `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 # VIBETAGS-END

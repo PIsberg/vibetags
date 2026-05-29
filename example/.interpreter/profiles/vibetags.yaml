@@ -75,4 +75,7 @@ instructions: |
   - `com.example.utils.I18nMessageHelper` (i18n): Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
   - `com.example.utils.StrictUtility` (strict-classpath): Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
   - `com.example.database.UserEntity` (schema-safe): Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+  - `com.example.compliance.GdprService.deleteAllUserData(java.lang.String)` (idempotent): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+  - `com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)` (feature-flag): Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+  - `com.example.security.SecurityConfig` (security-critical): Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 # VIBETAGS-END

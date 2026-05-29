@@ -259,4 +259,16 @@ This file contains project-specific coding conventions and AI guardrails extract
 
 #### SCHEMA SAFE: com.example.database.UserEntity
 - **Rule**: Schema safety required. Do not change serialization formats, database columns, or API models without a migration plan.
+
+#### IDEMPOTENT: com.example.compliance.GdprService.deleteAllUserData(java.lang.String)
+- **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.
+- **Reason**: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+#### FEATURE FLAG: com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)
+- **Flag**: 'inventory.push-alerts.enabled' (default: false)
+- **Rule**: Never assume flag is always active. Preserve the flag check.
+
+#### SECURITY-CRITICAL: com.example.security.SecurityConfig
+- **Aspect**: authentication
+- **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.
 <!-- VIBETAGS-END -->
