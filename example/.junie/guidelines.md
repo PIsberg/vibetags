@@ -198,4 +198,65 @@ The following elements are gated behind a feature flag. Do not assume the flag i
 The following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.
 
 * `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
+
+## 🚫 ACCESS & CALLS LIMITATIONS
+The following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.
+
+* `com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()` - Only callable by: [com.example.service.PricingService, com.example.payment.PaymentProcessor]
+
+## 🛡️ SANDBOX & TEST HARNESS EXCLUSION
+The following elements are strictly sandbox/test code. Production code must never import or reference them.
+
+* `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` - Strictly sandbox or test environment only. Production code must never import or invoke.
+
+## ⚡ MEMORY ALLOCATION BUDGETS
+The following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.
+
+* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Strict memory budget policy: ZERO_ALLOCATION. Minimize or prevent runtime allocations.
+
+## 🧠 DETERMINISTIC PURE FUNCTIONS
+The following elements must remain pure functions without side effects or mutations.
+
+* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
+
+## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES
+The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
+
+* `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` - Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. Allowed imports: [java.math.BigDecimal]
+
+## ❄️ open-closed EXTENSION PATTERNS
+The following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.
+
+* `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` - Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
+
+## 🚨 MANDATORY INPUT SANITIZATION
+The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
+
+* `sqlRawInput` - Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+
+## 🔒 SECURE LOGGING MASKING
+The following sensitive elements must be masked, hashed, or omitted from log/stdout streams.
+
+* `passwordRaw` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+* `creditCardNumber` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+
+## 📋 REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS
+Any change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.
+
+* `com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])` - Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: HIGH
+
+## 🛠️ EXPERIMENTAL PROTOTYPE STUBS
+Strict QA constraints and tests are relaxed for these elements, but production classes must never import them.
+
+* `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` - Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it.
+
+## ⚠️ SUNSET DEPRACTED APIs
+Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.
+
+* `com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)` - Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DEBT-742. Replacement: `com.example.service.PricingService`
+
+## 🚧 TEMPORARY CODE WORKAROUNDS
+Temporary stubs or hacks that must be refactored or removed before their expiration limit.
+
+* `com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()` - Temporary logic/workaround. Expires on: 2028-12-31. Reason: Hotfix workaround until upstream payment provider updates their API.
 <!-- VIBETAGS-END -->

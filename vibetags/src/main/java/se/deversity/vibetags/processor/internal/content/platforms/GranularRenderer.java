@@ -4,6 +4,8 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.ElementNaming;
@@ -173,6 +175,83 @@ public final class GranularRenderer implements PlatformRenderer {
             AISecure secure = e.getAnnotation(AISecure.class);
             if (secure != null) {
                 appendToGranular(elementRules, e, "Security-Critical Code", "- **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact." + (secure.aspect().isEmpty() ? "" : "\n- **Aspect**: " + secure.aspect()));
+            }
+        }
+
+        // New annotations granular rules
+        for (Element e : collector.callersOnly()) {
+            AICallersOnly callersOnly = e.getAnnotation(AICallersOnly.class);
+            if (callersOnly != null) {
+                appendToGranular(elementRules, e, "Access Restrictions", "- **Allowed Callers**: [" + String.join(", ", callersOnly.value()) + "]");
+            }
+        }
+        for (Element e : collector.sandboxOnly()) {
+            appendToGranular(elementRules, e, "Sandbox Restriction", "- **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.");
+        }
+        for (Element e : collector.memoryBudget()) {
+            AIMemoryBudget mb = e.getAnnotation(AIMemoryBudget.class);
+            if (mb != null) {
+                appendToGranular(elementRules, e, "Memory Budget Constraints", "- **Policy**: " + mb.value().name() + "\n- **Rule**: Strictly limit or prevent object allocations.");
+            }
+        }
+        for (Element e : collector.pure()) {
+            appendToGranular(elementRules, e, "Mathematical Purity", "- **Rule**: Must remain a pure function. Forbid state modifications and side effects.");
+        }
+        for (Element e : collector.domainModel()) {
+            AIDomainModel dm = e.getAnnotation(AIDomainModel.class);
+            if (dm != null) {
+                String allowedStr = String.join(", ", dm.allow());
+                appendToGranular(elementRules, e, "Domain Model Boundary", "- **Purity**: Framework-free DDD Entity." + (dm.allow().length > 0 ? "\n- **Allowed Imports**: " + allowedStr : ""));
+            }
+        }
+        for (Element e : collector.extensible()) {
+            AIExtensible extensible = e.getAnnotation(AIExtensible.class);
+            if (extensible != null) {
+                appendToGranular(elementRules, e, "Polymorphic Extension Pattern", "- **Pattern**: " + extensible.value().name() + "\n- **Rule**: Open for extension, closed for modification. Use strategy or visitor subclasses instead of changing this file.");
+            }
+        }
+        for (Element e : collector.inputSanitized()) {
+            AIInputSanitized is = e.getAnnotation(AIInputSanitized.class);
+            if (is != null) {
+                String[] types = new String[is.value().length];
+                for (int i = 0; i < is.value().length; i++) {
+                    types[i] = is.value()[i].name();
+                }
+                appendToGranular(elementRules, e, "Input Sanitization", "- **Target Filters**: " + String.join(", ", types) + "\n- **Rule**: Run raw input strings through approved sanitizers.");
+            }
+        }
+        for (Element e : collector.secureLogging()) {
+            AISecureLogging sl = e.getAnnotation(AISecureLogging.class);
+            if (sl != null) {
+                appendToGranular(elementRules, e, "Secure Logging Masking", "- **Policy**: " + sl.value().name() + "\n- **Rule**: Never pass this raw variable to log appenders or stdout streams.");
+            }
+        }
+        for (Element e : collector.explain()) {
+            AIExplain explain = e.getAnnotation(AIExplain.class);
+            if (explain != null) {
+                appendToGranular(elementRules, e, "Chain-of-Thought Explanation", "- **Complexity Level**: " + explain.value().name() + "\n- **Rule**: Any logic modification requires updating a walkthrough/markdown file with structured architectural rationale.");
+            }
+        }
+        for (Element e : collector.prototype()) {
+            appendToGranular(elementRules, e, "Experimental Prototype", "- **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.");
+        }
+        for (Element e : collector.sunset()) {
+            AISunset sunset = e.getAnnotation(AISunset.class);
+            if (sunset != null) {
+                String repName = "java.lang.Object";
+                try {
+                    repName = sunset.replacement().getName();
+                } catch (MirroredTypeException mte) {
+                    TypeMirror tm = mte.getTypeMirror();
+                    if (tm != null) repName = tm.toString();
+                }
+                appendToGranular(elementRules, e, "Sunset Element", "- **Status**: Strict Deprecation (No new references)\n- **JIRA Ticket**: " + sunset.jira() + "\n- **Replacement**: " + repName);
+            }
+        }
+        for (Element e : collector.temporary()) {
+            AITemporary temp = e.getAnnotation(AITemporary.class);
+            if (temp != null) {
+                appendToGranular(elementRules, e, "Temporary Workaround", "- **Expiration**: " + temp.expiresOn() + "\n- **Reason**: " + temp.reason() + "\n- **Rule**: Hotfix or stub that must be removed before expiration.");
             }
         }
 

@@ -28,6 +28,20 @@ import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.annotations.AISecure;
 
+// New annotations
+import se.deversity.vibetags.annotations.AICallersOnly;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIDomainModel;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIPrototype;
+import se.deversity.vibetags.annotations.AISunset;
+import se.deversity.vibetags.annotations.AITemporary;
+
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import java.util.Collections;
@@ -74,6 +88,20 @@ public final class AnnotationCollector {
     private final Set<Element> featureFlagElements      = new LinkedHashSet<>();
     private final Set<Element> secureElements           = new LinkedHashSet<>();
 
+    // New annotations fields
+    private final Set<Element> callersOnlyElements      = new LinkedHashSet<>();
+    private final Set<Element> sandboxOnlyElements      = new LinkedHashSet<>();
+    private final Set<Element> memoryBudgetElements     = new LinkedHashSet<>();
+    private final Set<Element> pureElements             = new LinkedHashSet<>();
+    private final Set<Element> domainModelElements      = new LinkedHashSet<>();
+    private final Set<Element> extensibleElements       = new LinkedHashSet<>();
+    private final Set<Element> inputSanitizedElements   = new LinkedHashSet<>();
+    private final Set<Element> secureLoggingElements    = new LinkedHashSet<>();
+    private final Set<Element> explainElements          = new LinkedHashSet<>();
+    private final Set<Element> prototypeElements        = new LinkedHashSet<>();
+    private final Set<Element> sunsetElements           = new LinkedHashSet<>();
+    private final Set<Element> temporaryElements        = new LinkedHashSet<>();
+
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
 
@@ -107,6 +135,20 @@ public final class AnnotationCollector {
         featureFlagElements.addAll(roundEnv.getElementsAnnotatedWith(AIFeatureFlag.class));
         secureElements.addAll(roundEnv.getElementsAnnotatedWith(AISecure.class));
 
+        // Collect new annotations
+        callersOnlyElements.addAll(roundEnv.getElementsAnnotatedWith(AICallersOnly.class));
+        sandboxOnlyElements.addAll(roundEnv.getElementsAnnotatedWith(AISandboxOnly.class));
+        memoryBudgetElements.addAll(roundEnv.getElementsAnnotatedWith(AIMemoryBudget.class));
+        pureElements.addAll(roundEnv.getElementsAnnotatedWith(AIPure.class));
+        domainModelElements.addAll(roundEnv.getElementsAnnotatedWith(AIDomainModel.class));
+        extensibleElements.addAll(roundEnv.getElementsAnnotatedWith(AIExtensible.class));
+        inputSanitizedElements.addAll(roundEnv.getElementsAnnotatedWith(AIInputSanitized.class));
+        secureLoggingElements.addAll(roundEnv.getElementsAnnotatedWith(AISecureLogging.class));
+        explainElements.addAll(roundEnv.getElementsAnnotatedWith(AIExplain.class));
+        prototypeElements.addAll(roundEnv.getElementsAnnotatedWith(AIPrototype.class));
+        sunsetElements.addAll(roundEnv.getElementsAnnotatedWith(AISunset.class));
+        temporaryElements.addAll(roundEnv.getElementsAnnotatedWith(AITemporary.class));
+
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
                      || !draftElements.isEmpty() || !privacyElements.isEmpty()
@@ -120,7 +162,13 @@ public final class AnnotationCollector {
                      || !strictTypesElements.isEmpty() || !internationalizedElements.isEmpty()
                      || !strictClasspathElements.isEmpty() || !schemaSafeElements.isEmpty()
                      || !idempotentElements.isEmpty() || !featureFlagElements.isEmpty()
-                     || !secureElements.isEmpty();
+                     || !secureElements.isEmpty()
+                     || !callersOnlyElements.isEmpty() || !sandboxOnlyElements.isEmpty()
+                     || !memoryBudgetElements.isEmpty() || !pureElements.isEmpty()
+                     || !domainModelElements.isEmpty() || !extensibleElements.isEmpty()
+                     || !inputSanitizedElements.isEmpty() || !secureLoggingElements.isEmpty()
+                     || !explainElements.isEmpty() || !prototypeElements.isEmpty()
+                     || !sunsetElements.isEmpty() || !temporaryElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -153,6 +201,20 @@ public final class AnnotationCollector {
         idempotentElements.clear();
         featureFlagElements.clear();
         secureElements.clear();
+
+        // Clear new annotations
+        callersOnlyElements.clear();
+        sandboxOnlyElements.clear();
+        memoryBudgetElements.clear();
+        pureElements.clear();
+        domainModelElements.clear();
+        extensibleElements.clear();
+        inputSanitizedElements.clear();
+        secureLoggingElements.clear();
+        explainElements.clear();
+        prototypeElements.clear();
+        sunsetElements.clear();
+        temporaryElements.clear();
         anyAnnotationsFound = false;
     }
 
@@ -185,5 +247,20 @@ public final class AnnotationCollector {
     public Set<Element> idempotent()       { return Collections.unmodifiableSet(idempotentElements); }
     public Set<Element> featureFlag()      { return Collections.unmodifiableSet(featureFlagElements); }
     public Set<Element> secure()           { return Collections.unmodifiableSet(secureElements); }
+
+    // Getters for new annotations
+    public Set<Element> callersOnly()      { return Collections.unmodifiableSet(callersOnlyElements); }
+    public Set<Element> sandboxOnly()      { return Collections.unmodifiableSet(sandboxOnlyElements); }
+    public Set<Element> memoryBudget()     { return Collections.unmodifiableSet(memoryBudgetElements); }
+    public Set<Element> pure()             { return Collections.unmodifiableSet(pureElements); }
+    public Set<Element> domainModel()      { return Collections.unmodifiableSet(domainModelElements); }
+    public Set<Element> extensible()       { return Collections.unmodifiableSet(extensibleElements); }
+    public Set<Element> inputSanitized()   { return Collections.unmodifiableSet(inputSanitizedElements); }
+    public Set<Element> secureLogging()    { return Collections.unmodifiableSet(secureLoggingElements); }
+    public Set<Element> explain()          { return Collections.unmodifiableSet(explainElements); }
+    public Set<Element> prototype()        { return Collections.unmodifiableSet(prototypeElements); }
+    public Set<Element> sunset()           { return Collections.unmodifiableSet(sunsetElements); }
+    public Set<Element> temporary()        { return Collections.unmodifiableSet(temporaryElements); }
+
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 }

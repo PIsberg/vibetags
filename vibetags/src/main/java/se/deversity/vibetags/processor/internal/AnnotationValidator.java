@@ -26,6 +26,20 @@ import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.annotations.AISecure;
 
+// New annotations imports
+import se.deversity.vibetags.annotations.AICallersOnly;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIDomainModel;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIPrototype;
+import se.deversity.vibetags.annotations.AISunset;
+import se.deversity.vibetags.annotations.AITemporary;
+
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -395,6 +409,87 @@ public final class AnnotationValidator {
                         + " is annotated with both @AIIdempotent and @AIDraft. This is contradictory: "
                         + "@AIIdempotent declares a stable behavioral contract while @AIDraft marks the element as unfinished.",
                     element);
+            }
+        }
+
+        // Contradiction: @AISandboxOnly + @AIDomainModel
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISandboxOnly.class)) {
+            if (element.getAnnotation(AIDomainModel.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISandboxOnly and @AIDomainModel. "
+                        + "Sandbox mocks should not be subjected to framework-free domain model constraints.",
+                    element);
+            }
+        }
+
+        // Contradiction: @AISunset + @AIDraft
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISunset.class)) {
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISunset and @AIDraft. "
+                        + "Sunset elements must not be actively drafted or expanded.",
+                    element);
+            }
+        }
+
+        // Redundancy: @AISecureLogging + @AIIgnore
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISecureLogging.class)) {
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AISecureLogging and @AIIgnore. "
+                        + "@AIIgnore already completely excludes this element; @AISecureLogging is redundant.",
+                    element);
+            }
+        }
+
+        // Empty JIRA or missing attributes: @AISunset
+        for (Element element : roundEnv.getElementsAnnotatedWith(AISunset.class)) {
+            AISunset sunset = element.getAnnotation(AISunset.class);
+            if (sunset != null && (sunset.jira() == null || sunset.jira().isBlank())) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AISunset on " + element.toString()
+                        + " has a blank 'jira' attribute. Specify the JIRA issue ticket key.",
+                    element);
+            }
+        }
+
+        // Verification and expiry: @AITemporary
+        for (Element element : roundEnv.getElementsAnnotatedWith(AITemporary.class)) {
+            AITemporary temp = element.getAnnotation(AITemporary.class);
+            if (temp != null) {
+                if (temp.expiresOn() == null || temp.expiresOn().isBlank()) {
+                    messager.printMessage(Diagnostic.Kind.WARNING,
+                        "VibeTags: @AITemporary on " + element.toString()
+                            + " has a blank 'expiresOn' attribute. Specify an ISO date (YYYY-MM-DD).",
+                        element);
+                } else {
+                    String expiresOn = temp.expiresOn().trim();
+                    if (!expiresOn.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                        messager.printMessage(Diagnostic.Kind.WARNING,
+                            "VibeTags: @AITemporary on " + element.toString()
+                                + " has an invalid 'expiresOn' date format: '" + expiresOn + "'. Must be YYYY-MM-DD.",
+                            element);
+                    } else {
+                        try {
+                            java.time.LocalDate exprDate = java.time.LocalDate.parse(expiresOn);
+                            java.time.LocalDate now = java.time.LocalDate.now();
+                            if (now.isAfter(exprDate)) {
+                                messager.printMessage(Diagnostic.Kind.WARNING,
+                                    "VibeTags: Temporary logic in " + element.toString()
+                                        + " has expired on " + expiresOn + ". Reason: " + temp.reason() + ". Clean up immediately.",
+                                    element);
+                            }
+                        } catch (java.time.format.DateTimeParseException e) {
+                            messager.printMessage(Diagnostic.Kind.WARNING,
+                                "VibeTags: @AITemporary on " + element.toString()
+                                    + " has an unparseable 'expiresOn' date: '" + expiresOn + "'.",
+                                element);
+                        }
+                    }
+                }
             }
         }
     }

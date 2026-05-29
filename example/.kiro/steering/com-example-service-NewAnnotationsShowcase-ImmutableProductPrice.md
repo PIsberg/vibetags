@@ -1,0 +1,7 @@
+<!-- VIBETAGS-START -->
+# Amazon Kiro Steering: ImmutableProductPrice
+
+## Domain Model Boundary
+- **Purity**: Framework-free DDD Entity.
+- **Allowed Imports**: java.math.BigDecimal
+<!-- VIBETAGS-END -->

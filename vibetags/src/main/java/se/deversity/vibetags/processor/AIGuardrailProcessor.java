@@ -4,6 +4,18 @@ import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AICallersOnly;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIDomainModel;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIPrototype;
+import se.deversity.vibetags.annotations.AISunset;
+import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
@@ -336,6 +348,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         logSet("@AIInternationalized", collector.internationalized());
         logSet("@AIStrictClasspath", collector.strictClasspath());
         logSet("@AISchemaSafe",   collector.schemaSafe());
+
+        // New annotations logging
+        logSet("@AICallersOnly",  collector.callersOnly());
+        logSet("@AISandboxOnly",  collector.sandboxOnly());
+        logSet("@AIMemoryBudget", collector.memoryBudget());
+        logSet("@AIPure",         collector.pure());
+        logSet("@AIDomainModel",  collector.domainModel());
+        logSet("@AIExtensible",   collector.extensible());
+        logSet("@AIInputSanitized", collector.inputSanitized());
+        logSet("@AISecureLogging",  collector.secureLogging());
+        logSet("@AIExplain",      collector.explain());
+        logSet("@AIPrototype",    collector.prototype());
+        logSet("@AISunset",       collector.sunset());
+        logSet("@AITemporary",    collector.temporary());
     }
 
     private void logSet(String label, Set<Element> elements) {

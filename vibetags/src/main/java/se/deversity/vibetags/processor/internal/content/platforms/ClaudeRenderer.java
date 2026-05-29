@@ -275,6 +275,127 @@ public final class ClaudeRenderer implements PlatformRenderer {
             sb.append("\n<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>\n");
         }
 
+        // New annotations formatting sections for Claude
+        if (!collector.callersOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <access_limitations>\n");
+            for (Element e : collector.callersOnly()) {
+                FormatterRegistry.callersOnly().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </access_limitations>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Do not invoke elements in <access_limitations> from outside their specified allowed caller packages or classes.</rule>\n");
+        }
+
+        if (!collector.sandboxOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <sandbox_only_elements>\n");
+            for (Element e : collector.sandboxOnly()) {
+                FormatterRegistry.sandboxOnly().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </sandbox_only_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <sandbox_only_elements> belong exclusively to sandbox or test environments. Never import or invoke them in production code paths.</rule>\n");
+        }
+
+        if (!collector.memoryBudget().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <memory_budget_elements>\n");
+            for (Element e : collector.memoryBudget()) {
+                FormatterRegistry.memoryBudget().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </memory_budget_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Avoid runtime heap object allocations, autoboxing, or dynamic overhead within classes/methods in <memory_budget_elements>.</rule>\n");
+        }
+
+        if (!collector.pure().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <pure_functions>\n");
+            for (Element e : collector.pure()) {
+                FormatterRegistry.pure().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </pure_functions>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Methods in <pure_functions> must remain mathematically pure. Side effects, mutations of class/static state, or blocking operations are strictly forbidden.</rule>\n");
+        }
+
+        if (!collector.domainModel().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <domain_model_elements>\n");
+            for (Element e : collector.domainModel()) {
+                FormatterRegistry.domainModel().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </domain_model_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Classes in <domain_model_elements> are pure domain models. Do not import or reference database or web framework dependencies (Spring, Hibernate, JPA, Jackson).</rule>\n");
+        }
+
+        if (!collector.extensible().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <extensible_patterns>\n");
+            for (Element e : collector.extensible()) {
+                FormatterRegistry.extensible().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </extensible_patterns>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Respect extensibility guidelines for elements in <extensible_patterns>. Implement strategy/visitor extensions rather than expanding branch conditional logic.</rule>\n");
+        }
+
+        if (!collector.inputSanitized().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <sanitization_elements>\n");
+            for (Element e : collector.inputSanitized()) {
+                FormatterRegistry.inputSanitized().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </sanitization_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Strict input sanitization is mandatory for elements in <sanitization_elements>. Raw input must pass through approved filters before hitting queries or renderers.</rule>\n");
+        }
+
+        if (!collector.secureLogging().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <secure_logging_elements>\n");
+            for (Element e : collector.secureLogging()) {
+                FormatterRegistry.secureLogging().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </secure_logging_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Sensitive variables in <secure_logging_elements> must never be printed or logged in raw form. Enforce secure masking or hashing.</rule>\n");
+        }
+
+        if (!collector.explain().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <explain_elements>\n");
+            for (Element e : collector.explain()) {
+                FormatterRegistry.explain().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </explain_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Any modification to elements in <explain_elements> requires an explicit, structured Chain-of-Thought markdown description of changes and complexity analysis.</rule>\n");
+        }
+
+        if (!collector.prototype().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <prototype_elements>\n");
+            for (Element e : collector.prototype()) {
+                FormatterRegistry.prototype().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </prototype_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Classes in <prototype_elements> are experimental prototypes. Strict rules are relaxed locally, but production classes must never import or depend on them.</rule>\n");
+        }
+
+        if (!collector.sunset().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <sunset_elements>\n");
+            for (Element e : collector.sunset()) {
+                FormatterRegistry.sunset().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </sunset_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Do not introduce *new* references or calls to sunset elements in <sunset_elements>. Migrate callers to their modern replacements.</rule>\n");
+        }
+
+        if (!collector.temporary().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <temporary_workarounds>\n");
+            for (Element e : collector.temporary()) {
+                FormatterRegistry.temporary().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </temporary_workarounds>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <temporary_workarounds> are short-lived stubs or hotfixes that must be refactored or deleted before their designated expiration date.</rule>\n");
+        }
+
         sb.append("</project_guardrails>\n");
         sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 

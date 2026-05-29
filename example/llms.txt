@@ -130,4 +130,41 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## 🔐 Security-Critical Code
 - [SecurityConfig](com.example.security.SecurityConfig): Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
+
+## Access Limitations
+- [NewAnnotationsShowcase.executeSecureDatabaseWipe()](com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()): Only callable by: [com.example.service.PricingService, com.example.payment.PaymentProcessor]
+
+## Sandbox & Test Exclusion
+- [SandboxTestHelper](com.example.service.NewAnnotationsShowcase.SandboxTestHelper): Strictly sandbox or test environment only. Production code must never import or invoke.
+
+## Memory Allocation Budgets
+- [NewAnnotationsShowcase.calculateFastFibonacci(int)](com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)): Strict memory budget policy: ZERO_ALLOCATION. Minimize or prevent runtime allocations.
+
+## Deterministic Pure Functions
+- [NewAnnotationsShowcase.calculateFastFibonacci(int)](com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)): Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
+
+## Framework-Free Domain Entities
+- [ImmutableProductPrice](com.example.service.NewAnnotationsShowcase.ImmutableProductPrice): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. Allowed imports: [java.math.BigDecimal]
+
+## open-closed Extension Patterns
+- [TaxCalculatorStrategy](com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
+
+## Mandatory Input Sanitization
+- [sqlRawInput](sqlRawInput): Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+
+## Secure Logging Masking
+- [passwordRaw](passwordRaw): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+- [creditCardNumber](creditCardNumber): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+
+## Required Chain-of-Thought Explanations
+- [NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])](com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])): Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: HIGH
+
+## Experimental Prototype Stubs
+- [DraftKafkaIntegrationSpike](com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike): Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it.
+
+## Sunset Deprecated APIs
+- [NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)](com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)): Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DEBT-742. Replacement: `com.example.service.PricingService`
+
+## Temporary Code Workarounds
+- [NewAnnotationsShowcase.temporaryUpstreamBypass()](com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()): Temporary logic/workaround. Expires on: 2028-12-31. Reason: Hotfix workaround until upstream payment provider updates their API.
 <!-- VIBETAGS-END -->

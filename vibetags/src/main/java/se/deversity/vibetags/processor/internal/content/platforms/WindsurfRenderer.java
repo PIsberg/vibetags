@@ -203,6 +203,103 @@ public final class WindsurfRenderer implements PlatformRenderer {
             sb.append(sec);
         }
 
+        // New annotations formatting sections for Windsurf
+        if (!collector.callersOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚫 ACCESS & CALLS LIMITATIONS\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n");
+            for (Element e : collector.callersOnly()) {
+                FormatterRegistry.callersOnly().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.sandboxOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🛡️ SANDBOX & TEST HARNESS EXCLUSION\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n");
+            for (Element e : collector.sandboxOnly()) {
+                FormatterRegistry.sandboxOnly().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.memoryBudget().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## ⚡ MEMORY ALLOCATION BUDGETS\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n");
+            for (Element e : collector.memoryBudget()) {
+                FormatterRegistry.memoryBudget().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.pure().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🧠 DETERMINISTIC PURE FUNCTIONS\nThe following elements must remain pure functions without side effects or mutations.\n\n");
+            for (Element e : collector.pure()) {
+                FormatterRegistry.pure().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.domainModel().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n");
+            for (Element e : collector.domainModel()) {
+                FormatterRegistry.domainModel().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.extensible().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## ❄️ open-closed EXTENSION PATTERNS\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n");
+            for (Element e : collector.extensible()) {
+                FormatterRegistry.extensible().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.inputSanitized().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚨 MANDATORY INPUT SANITIZATION\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n");
+            for (Element e : collector.inputSanitized()) {
+                FormatterRegistry.inputSanitized().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.secureLogging().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🔒 SECURE LOGGING MASKING\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n");
+            for (Element e : collector.secureLogging()) {
+                FormatterRegistry.secureLogging().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.explain().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 📋 REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n");
+            for (Element e : collector.explain()) {
+                FormatterRegistry.explain().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.prototype().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🛠️ EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n");
+            for (Element e : collector.prototype()) {
+                FormatterRegistry.prototype().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.sunset().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## ⚠️ SUNSET DEPRACTED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n");
+            for (Element e : collector.sunset()) {
+                FormatterRegistry.sunset().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.temporary().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## 🚧 TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n");
+            for (Element e : collector.temporary()) {
+                FormatterRegistry.temporary().format(e, sec, Platform.WINDSURF);
+            }
+            sb.append(sec);
+        }
+
         return sb.toString();
     }
 }
