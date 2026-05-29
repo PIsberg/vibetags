@@ -170,6 +170,20 @@ class MultiModuleProcessorTest {
     }
 
     @Test
+    void computeModulePath_compilationRootOutsideVibetagsRoot_returnsEmpty(@TempDir Path tmp) {
+        // Regression: an out-of-tree compilation root yields a "../../.."-escaping relative path.
+        // Stored as the sidecar's modulePath, readAll() would resolve it for a directory-existence
+        // staleness check — unreliable across symlinked temp dirs (macOS /var -> /private/var),
+        // where it wrongly pruned the just-written sidecar and broke the first-compile assertion.
+        // Must return "" so the staleness check is skipped for such modules.
+        Path vibetagsRoot = tmp.resolve("project");
+        Path compilationRoot = tmp.resolve("somewhere").resolve("else").resolve("deep");
+
+        assertTrue(ModuleSidecar.computeModulePath(compilationRoot, vibetagsRoot).isEmpty(),
+            "an out-of-tree compilation root must yield an empty module path");
+    }
+
+    @Test
     void computeModulePath_compilationRootEqualsVibetagsRoot_returnsEmpty(@TempDir Path tmp) throws IOException {
         // When compilationRoot == vibetagsRoot, rel is "" → computeModulePath returns ""
         // Covers the ".".equals(rel) ? "" branch in computeModulePath.
