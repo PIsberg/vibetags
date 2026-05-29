@@ -150,6 +150,26 @@ class MultiModuleProcessorTest {
     }
 
     @Test
+    void computeModuleId_compilationRootOutsideVibetagsRoot_usesStableHash(@TempDir Path tmp) {
+        // Regression: when the compilation root is not under the VibeTags root (as in every
+        // single-module test, where the root is a @TempDir far from the project dir), relativize
+        // produces a long "../../.."-laden path. Used verbatim as a filename, that can exceed the
+        // OS limit — on macOS save() then failed with ENAMETOOLONG and wrote no sidecar. The id
+        // must instead be a short, stable hash with no path segments.
+        Path vibetagsRoot = tmp.resolve("project");
+        Path compilationRoot = tmp.resolve("somewhere").resolve("else").resolve("deep");
+
+        String id = ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot);
+
+        assertTrue(id.matches("[0-9a-f]+"),
+            "an out-of-tree compilation root must yield a short hex hash id, got: " + id);
+        assertTrue(!id.contains(".."),
+            "module id must never embed '..' path segments (filename-length risk), got: " + id);
+        assertTrue(id.equals(ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot)),
+            "id must be stable across calls");
+    }
+
+    @Test
     void computeModulePath_compilationRootEqualsVibetagsRoot_returnsEmpty(@TempDir Path tmp) throws IOException {
         // When compilationRoot == vibetagsRoot, rel is "" → computeModulePath returns ""
         // Covers the ".".equals(rel) ? "" branch in computeModulePath.
