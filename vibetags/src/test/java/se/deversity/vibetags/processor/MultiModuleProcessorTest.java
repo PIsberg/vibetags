@@ -150,6 +150,40 @@ class MultiModuleProcessorTest {
     }
 
     @Test
+    void computeModuleId_compilationRootOutsideVibetagsRoot_usesStableHash(@TempDir Path tmp) {
+        // Regression: when the compilation root is not under the VibeTags root (as in every
+        // single-module test, where the root is a @TempDir far from the project dir), relativize
+        // produces a long "../../.."-laden path. Used verbatim as a filename, that can exceed the
+        // OS limit — on macOS save() then failed with ENAMETOOLONG and wrote no sidecar. The id
+        // must instead be a short, stable hash with no path segments.
+        Path vibetagsRoot = tmp.resolve("project");
+        Path compilationRoot = tmp.resolve("somewhere").resolve("else").resolve("deep");
+
+        String id = ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot);
+
+        assertTrue(id.matches("[0-9a-f]+"),
+            "an out-of-tree compilation root must yield a short hex hash id, got: " + id);
+        assertTrue(!id.contains(".."),
+            "module id must never embed '..' path segments (filename-length risk), got: " + id);
+        assertTrue(id.equals(ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot)),
+            "id must be stable across calls");
+    }
+
+    @Test
+    void computeModulePath_compilationRootOutsideVibetagsRoot_returnsEmpty(@TempDir Path tmp) {
+        // Regression: an out-of-tree compilation root yields a "../../.."-escaping relative path.
+        // Stored as the sidecar's modulePath, readAll() would resolve it for a directory-existence
+        // staleness check — unreliable across symlinked temp dirs (macOS /var -> /private/var),
+        // where it wrongly pruned the just-written sidecar and broke the first-compile assertion.
+        // Must return "" so the staleness check is skipped for such modules.
+        Path vibetagsRoot = tmp.resolve("project");
+        Path compilationRoot = tmp.resolve("somewhere").resolve("else").resolve("deep");
+
+        assertTrue(ModuleSidecar.computeModulePath(compilationRoot, vibetagsRoot).isEmpty(),
+            "an out-of-tree compilation root must yield an empty module path");
+    }
+
+    @Test
     void computeModulePath_compilationRootEqualsVibetagsRoot_returnsEmpty(@TempDir Path tmp) throws IOException {
         // When compilationRoot == vibetagsRoot, rel is "" → computeModulePath returns ""
         // Covers the ".".equals(rel) ? "" branch in computeModulePath.

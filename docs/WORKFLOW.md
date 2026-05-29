@@ -20,17 +20,17 @@ All third-party actions are pinned by full commit SHA with the version as a trai
 
 ## 1. Build and Test (`build.yml`)
 
-The main CI workflow. Runs three jobs in parallel except `load-tests`, which waits on `build-maven`.
+The main CI workflow. Jobs run in parallel except `load-tests`, which waits on `build-maven`.
 
 ### Job: `build-maven`
 
-Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). Steps:
+Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps:
 
 1. **Harden runner** — egress audit.
 2. **Checkout**.
 3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
 4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`.
-5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it.
+5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it. PMD, SpotBugs and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis ~4×. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive.
 6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `example/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 8 runs.
 7. **Reset AI Config Files** — `cd example && bash reset-ai-files.sh`. Truncates every generated AI config file in `example/` to zero bytes and removes all granular rule files under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
 8. **Build Example Project** — `cd example && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.
@@ -39,6 +39,10 @@ Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). S
 11. **Verify Generated AI Config Files** — checks that 17 specific files under `example/` exist and are non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, and granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`.
 12. **Verify @AIAudit Content** — greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
 13. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
+
+### Job: `cross-platform`
+
+Matrix over **`windows-latest`, `macos-latest`** (`fail-fast: false`), JDK 21, `shell: bash`. The main matrix only runs on Linux, but the processor's file handling is OS-sensitive — path separators, CRLF line endings, the marker-aware `GuardrailFileWriter`, and `root.relativize()`. This job installs `async-test-lib` and the annotations jar, then runs the library's self-contained unit tests (`cd vibetags && mvn test -B`) on Windows and macOS. It uses the default `JAVA_HOME` (the Linux-only `JAVA_HOME_21_X64` does not exist on Windows or arm64 macOS) and omits the `harden-runner` step, which only supports Linux runners.
 
 ### Job: `load-tests`
 

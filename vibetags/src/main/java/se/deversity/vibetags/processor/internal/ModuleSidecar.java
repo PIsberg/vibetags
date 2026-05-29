@@ -279,9 +279,18 @@ public final class ModuleSidecar {
      */
     public static String computeModuleId(Path compilationRoot, Path vibetagsRoot) {
         try {
-            String rel = vibetagsRoot.relativize(compilationRoot).toString();
-            if (rel.isEmpty() || ".".equals(rel)) return "_root_";
-            return rel.replace(java.io.File.separatorChar, '_').replaceAll("[^a-zA-Z0-9._-]", "_");
+            Path rel = vibetagsRoot.relativize(compilationRoot);
+            String relStr = rel.toString();
+            if (relStr.isEmpty() || ".".equals(relStr)) return "_root_";
+            // If the compilation root is not *under* the VibeTags root, the relative path escapes
+            // upward (starts with ".."). Such an id is meaningless and, worse, unbounded in length:
+            // an output dir or @TempDir far from the project can produce a filename that exceeds the
+            // OS limit (seen on macOS, where save() then fails with ENAMETOOLONG and no sidecar is
+            // written). Fall back to a short stable hash, as the different-root case below does.
+            if (rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString())) {
+                return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
+            }
+            return relStr.replace(java.io.File.separatorChar, '_').replaceAll("[^a-zA-Z0-9._-]", "_");
         } catch (IllegalArgumentException e) {
             // Different filesystem roots (e.g., Windows different drives)
             return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
@@ -294,8 +303,17 @@ public final class ModuleSidecar {
      */
     public static String computeModulePath(Path compilationRoot, Path vibetagsRoot) {
         try {
-            String rel = vibetagsRoot.relativize(compilationRoot).toString();
-            return ".".equals(rel) ? "" : rel;
+            Path rel = vibetagsRoot.relativize(compilationRoot);
+            String relStr = rel.toString();
+            if (relStr.isEmpty() || ".".equals(relStr)) return "";
+            // Out-of-tree compilation root (relative path escapes upward with ".."): there is no
+            // meaningful module path under the root, and resolving the ".."-path for the staleness
+            // check in readAll() is unreliable across symlinked temp dirs — notably macOS, where
+            // /var -> /private/var adds a level, so the ".." count (derived from the symlink path)
+            // over-shoots and lands on a non-existent directory, wrongly pruning the sidecar.
+            // Treat it as root-like ("") so readAll() skips the directory-existence check entirely.
+            if (rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString())) return "";
+            return relStr;
         } catch (IllegalArgumentException e) {
             return "";
         }

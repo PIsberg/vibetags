@@ -10,33 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  # Verifies the processor compiles to Java 17 bytecode on the minimum supported JDK.
-  # Full tests are not run here because async-test-lib is compiled for Java 21 and
-  # cannot be loaded by a Java 17 JVM (class file version mismatch).
-  compile-java17:
-    name: Compile Check (JDK 17 — minimum supported)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
-        with:
-          egress-policy: audit
-
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: maven
-
-      - name: Install VibeTags Annotations (Maven)
-        run: cd vibetags-annotations && mvn install -B -q
-
-      - name: Compile VibeTags Processor (no tests)
-        run: cd vibetags && mvn compile -B
-
   build-maven:
     name: Maven Build (JDK ${{ matrix.java }})
     runs-on: ubuntu-latest
@@ -71,9 +44,17 @@ jobs:
           mvn install -B
 
       - name: Build VibeTags Library (Maven)
+        # PMD, SpotBugs and CPD are JDK-independent source/bytecode analysis, so run them
+        # once (on JDK 21) instead of repeating identical work on every matrix JDK. Error Prone
+        # stays on every JDK — it is a compiler plugin and is genuinely JDK-sensitive (see the
+        # JDK 26 UnsafeFinalization workaround in vibetags/pom.xml). -Dmaven.pmd.skip also skips CPD.
         run: |
           cd vibetags
-          mvn clean install -B
+          if [ "${{ matrix.java }}" = "21" ]; then
+            mvn clean install -B
+          else
+            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+          fi
 
       - name: Install VibeTags BOM (Maven)
         run: |
@@ -171,6 +152,47 @@ jobs:
           files: vibetags/target/site/jacoco/jacoco.xml
           flags: unittests
           fail_ci_if_error: true
+
+  cross-platform:
+    name: Cross-Platform Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, macos-latest ]
+    # Path separators, line endings (CRLF) and the marker-aware writer are
+    # OS-sensitive; the main matrix only runs on Linux. This job runs the
+    # library's unit tests (self-contained, temp-dir based) on Windows and
+    # macOS to catch platform-specific regressions in file handling.
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
+        run: |
+          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git "${RUNNER_TEMP}/async-test-lib"
+          cd "${RUNNER_TEMP}/async-test-lib"
+          mvn install -DskipTests -B -q
+
+      - name: Install VibeTags Annotations (Maven)
+        run: |
+          cd vibetags-annotations
+          mvn install -B -q
+
+      - name: Run Unit Tests (VibeTags Library)
+        run: |
+          cd vibetags
+          mvn test -B
 
   load-tests:
     name: Load Tests (JDK 21)

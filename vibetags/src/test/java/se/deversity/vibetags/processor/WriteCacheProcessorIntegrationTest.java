@@ -62,9 +62,8 @@ class WriteCacheProcessorIntegrationTest {
         long claudeMtime1 = Files.getLastModifiedTime(claude).toMillis();
         assertTrue(cursorMtime1 > 0);
 
-        // Wait long enough that filesystem mtime resolution would register a change
-        // if we re-wrote the file (FAT/Windows mtime resolution can be 1-2 s).
-        Thread.sleep(1500);
+        // Let the filesystem clock tick so that a re-write — if one happened — would be visible.
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
 
         // Recompile against the same sources — same processor instance not reused, but
         // .vibetags-cache survives on disk.
@@ -85,7 +84,7 @@ class WriteCacheProcessorIntegrationTest {
         Path cursor = h.root().resolve(".cursorrules");
         long mtime1 = Files.getLastModifiedTime(cursor).toMillis();
 
-        Thread.sleep(1500);
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
 
         // Simulate user editing the file: append a line at the very top (outside the marker block).
         // The processor's read-compare path will rebuild a 'finalContent' that no longer matches
@@ -96,7 +95,7 @@ class WriteCacheProcessorIntegrationTest {
         assertTrue(editMtime > mtime1, "edit must bump mtime");
 
         // Recompile — cache now disagrees with disk; processor must re-read and re-write.
-        Thread.sleep(1500);
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
         ProcessorTestHarness.withExampleSources(tmp);
         long mtime3 = Files.getLastModifiedTime(cursor).toMillis();
 

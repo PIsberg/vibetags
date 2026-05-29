@@ -69,6 +69,21 @@ public final class WriteCache {
     }
 
     /**
+     * Stable cache key for a file, relative to {@link #rootDir} where possible. Falls back to the
+     * absolute path when the file lives on a different filesystem root than {@code rootDir} — e.g.
+     * a {@code @TempDir} on a different Windows drive than the project — which would otherwise make
+     * {@link Path#relativize} throw {@code IllegalArgumentException: 'other' has different root}.
+     */
+    private String cacheKey(Path file) {
+        Path abs = file.toAbsolutePath().normalize();
+        try {
+            return rootDir.relativize(abs).toString().replace('\\', '/');
+        } catch (IllegalArgumentException differentRoot) {
+            return abs.toString().replace('\\', '/');
+        }
+    }
+
+    /**
      * Returns the persisted top-level build fingerprint from the previous successful run, or
      * {@code null} if no fingerprint is on file. The fingerprint covers the entire annotation
      * input set plus the active service set — see {@link BuildFingerprint}.
@@ -138,7 +153,7 @@ public final class WriteCache {
     @AIPerformance(constraint = "O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason")
     public synchronized boolean isUnchanged(Path file, String body) {
         loadIfNeeded();
-        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        String relKey = cacheKey(file);
         Entry e = entries.get(relKey);
         if (e == null) return false;
         try {
@@ -158,13 +173,13 @@ public final class WriteCache {
         loadIfNeeded();
         try {
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            String relKey = cacheKey(file);
             entries.put(relKey,
                 new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
             dirty = true;
         } catch (IOException ignored) {
             // If we can't stat the file we just wrote, drop the cache entry rather than store stale data.
-            String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+            String relKey = cacheKey(file);
             entries.remove(relKey);
             dirty = true;
         }
@@ -173,7 +188,7 @@ public final class WriteCache {
     /** Removes a cache entry (e.g. when the writer skipped the file or the path is no longer ours). */
     public synchronized void invalidate(Path file) {
         loadIfNeeded();
-        String relKey = rootDir.relativize(file.toAbsolutePath().normalize()).toString().replace('\\', '/');
+        String relKey = cacheKey(file);
         if (entries.remove(relKey) != null) {
             dirty = true;
         }

@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.processor.internal.WriteCache;
 
@@ -8,6 +10,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -392,5 +395,21 @@ class WriteCacheTest {
 
         WriteCache cache = new WriteCache(cachePath);
         assertEquals(1, cache.size(), "line with only two tabs must be skipped; valid entry must load");
+    }
+
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    void fileOnDifferentDrive_thanCacheRoot_doesNotThrow() {
+        // Regression: on Windows a project (and thus the cache root) on one drive plus an output
+        // dir / @TempDir on another makes rootDir.relativize(file) throw
+        // "IllegalArgumentException: 'other' has different root". relativize is purely lexical,
+        // so distinct drive letters reproduce it without either drive needing to exist.
+        WriteCache cache = new WriteCache(Paths.get("C:\\vt-cache-root\\.vibetags-cache"));
+        Path onAnotherDrive = Paths.get("D:\\vt-output\\CLAUDE.md");
+
+        assertFalse(assertDoesNotThrow(() -> cache.isUnchanged(onAnotherDrive, "body")),
+            "a file on a different drive must miss the cache, not crash");
+        assertDoesNotThrow(() -> cache.invalidate(onAnotherDrive),
+            "invalidate must tolerate a different-drive path");
     }
 }
