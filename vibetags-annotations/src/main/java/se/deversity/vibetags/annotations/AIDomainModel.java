@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * The compiler will scan and block any imports from Spring, JPA/Hibernate, Jackson, etc. unless explicitly whitelisted.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 public @interface AIDomainModel {
     /**
      * Optional list of packages or classes that are explicitly allowed to be imported.

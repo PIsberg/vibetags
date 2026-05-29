@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Ensures the target component remains clean of invalid dependency references (e.g., domain depending on web).
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 public @interface AIArchitecture {
     /**
      * Defines the architectural layer or component this class belongs to.

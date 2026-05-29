@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
  * Relaxes standard strict quality rules (e.g. required i18n, coverage) within the class, but prevents it from leaking into stable production code.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 public @interface AIPrototype {
 }

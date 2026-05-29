@@ -13,6 +13,7 @@
 [![PMD](https://img.shields.io/badge/PMD-passing-brightgreen)](https://pmd.github.io/)
 [![SpotBugs](https://img.shields.io/badge/SpotBugs-passing-brightgreen)](https://spotbugs.github.io/)
 [![Error Prone](https://img.shields.io/badge/Error%20Prone-passing-brightgreen)](https://errorprone.info/)
+[![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen)](https://checkstyle.org/)
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
 

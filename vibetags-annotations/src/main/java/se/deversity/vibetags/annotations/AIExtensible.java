@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Prompts the AI to introduce strategy or visitor patterns rather than accumulating massive conditional/switch statements.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 public @interface AIExtensible {
     enum Strategy {
         STRATEGY_PATTERN,
