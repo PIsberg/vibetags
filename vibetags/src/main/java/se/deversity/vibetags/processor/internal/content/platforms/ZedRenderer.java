@@ -203,6 +203,103 @@ public final class ZedRenderer implements PlatformRenderer {
             sb.append(sec);
         }
 
+        // New annotations formatting sections for Zed
+        if (!collector.callersOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Access Limitations\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n");
+            for (Element e : collector.callersOnly()) {
+                FormatterRegistry.callersOnly().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.sandboxOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Sandbox & Test Exclusion\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n");
+            for (Element e : collector.sandboxOnly()) {
+                FormatterRegistry.sandboxOnly().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.memoryBudget().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Memory Allocation Budgets\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n");
+            for (Element e : collector.memoryBudget()) {
+                FormatterRegistry.memoryBudget().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.pure().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Deterministic Pure Functions\nThe following elements must remain pure functions without side effects or mutations.\n\n");
+            for (Element e : collector.pure()) {
+                FormatterRegistry.pure().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.domainModel().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Framework-Free Domain Entities\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n");
+            for (Element e : collector.domainModel()) {
+                FormatterRegistry.domainModel().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.extensible().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## open-closed Extension Patterns\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n");
+            for (Element e : collector.extensible()) {
+                FormatterRegistry.extensible().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.inputSanitized().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Mandatory Input Sanitization\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n");
+            for (Element e : collector.inputSanitized()) {
+                FormatterRegistry.inputSanitized().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.secureLogging().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Secure Logging Masking\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n");
+            for (Element e : collector.secureLogging()) {
+                FormatterRegistry.secureLogging().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.explain().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Required Chain-of-Thought Explanations\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n");
+            for (Element e : collector.explain()) {
+                FormatterRegistry.explain().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.prototype().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Experimental Prototype Stubs\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n");
+            for (Element e : collector.prototype()) {
+                FormatterRegistry.prototype().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.sunset().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Sunset Deprecated APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n");
+            for (Element e : collector.sunset()) {
+                FormatterRegistry.sunset().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
+        if (!collector.temporary().isEmpty()) {
+            StringBuilder sec = new StringBuilder("\n## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n");
+            for (Element e : collector.temporary()) {
+                FormatterRegistry.temporary().format(e, sec, Platform.ZED);
+            }
+            sb.append(sec);
+        }
+
         return sb.toString();
     }
 }

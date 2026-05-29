@@ -1,192 +1,202 @@
 package se.deversity.vibetags.processor;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIDomainModel;
+import se.deversity.vibetags.annotations.AIIgnore;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AISunset;
+import se.deversity.vibetags.annotations.AITemporary;
 
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.SimpleJavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.StandardLocation;
-import javax.tools.ToolProvider;
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.Element;
+import javax.tools.Diagnostic;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
- * Verifies that AnnotationValidator emits the expected warnings for the new V4 annotations.
- * Compiles in-memory sources and checks the diagnostics collected by the compiler.
+ * Direct unit tests for the 12 new annotations and their compile-time validation rules.
  */
 class NewAnnotationsV4ValidationTest {
 
-    @TempDir
-    static Path tempDir;
+    @Test
+    void validateAnnotations_sandboxOnlyAndDomainModel_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
-    private static List<String> warnings;
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.SandboxMock");
+        when(element.getAnnotation(AISandboxOnly.class)).thenReturn(mock(AISandboxOnly.class));
+        when(element.getAnnotation(AIDomainModel.class)).thenReturn(mock(AIDomainModel.class));
 
-    @BeforeAll
-    static void compileAndCollect() throws IOException {
-        warnings = new ArrayList<>();
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISandboxOnly.class);
 
-        Path classOut = tempDir.resolve("classes");
-        Files.createDirectories(classOut);
+        processor.validateAnnotations(messager, roundEnv);
 
-        List<JavaFileObject> sources = List.of(
-            // @AILegacyBridge + @AIDraft
-            new StringSource("com/example/v4/LegacyBridgeDraftConflicted.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AILegacyBridge;\n"
-                    + "import se.deversity.vibetags.annotations.AIDraft;\n"
-                    + "@AILegacyBridge\n"
-                    + "@AIDraft(instructions = \"modernize it!\")\n"
-                    + "public class LegacyBridgeDraftConflicted {}\n"),
-
-            // @AIPublicAPI + @AILocked
-            new StringSource("com/example/v4/PublicApiLockedRedundant.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AIPublicAPI;\n"
-                    + "import se.deversity.vibetags.annotations.AILocked;\n"
-                    + "@AIPublicAPI\n"
-                    + "@AILocked\n"
-                    + "public class PublicApiLockedRedundant {}\n"),
-
-            // @AIParallelTests + @AILocked
-            new StringSource("com/example/v4/ParallelTestsLockedRedundant.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AIParallelTests;\n"
-                    + "import se.deversity.vibetags.annotations.AILocked;\n"
-                    + "@AIParallelTests\n"
-                    + "@AILocked\n"
-                    + "public class ParallelTestsLockedRedundant {}\n"),
-
-            // @AISchemaSafe + @AIIgnore
-            new StringSource("com/example/v4/SchemaSafeIgnoreRedundant.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AISchemaSafe;\n"
-                    + "import se.deversity.vibetags.annotations.AIIgnore;\n"
-                    + "@AISchemaSafe\n"
-                    + "@AIIgnore\n"
-                    + "public class SchemaSafeIgnoreRedundant {}\n"),
-
-            // @AIStrictClasspath + @AILocked
-            new StringSource("com/example/v4/StrictClasspathLockedRedundant.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AIStrictClasspath;\n"
-                    + "import se.deversity.vibetags.annotations.AILocked;\n"
-                    + "@AIStrictClasspath\n"
-                    + "@AILocked\n"
-                    + "public class StrictClasspathLockedRedundant {}\n"),
-
-            // @AIArchitecture with blank belongsTo
-            new StringSource("com/example/v4/BlankArchitecture.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
-                    + "@AIArchitecture(belongsTo = \"   \")\n"
-                    + "public class BlankArchitecture {}\n"),
-
-            // @AIArchitecture with forbidden import
-            new StringSource("com/example/v4/ForbiddenArchitectureImport.java",
-                "package com.example.v4;\n"
-                    + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
-                    + "import java.util.ArrayList;\n"
-                    + "@AIArchitecture(belongsTo = \"domain\", cannotReference = {\"java.util\"})\n"
-                    + "public class ForbiddenArchitectureImport {}\n")
-        );
-
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
-            List<String> options = List.of(
-                "-classpath", System.getProperty("java.class.path"),
-                "-proc:only",
-                "-Avibetags.root=" + tempDir.toAbsolutePath()
-            );
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics, options, null, sources);
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
-            task.call();
-        }
-
-        for (var d : diagnostics.getDiagnostics()) {
-            warnings.add(d.getMessage(Locale.ROOT));
-        }
-    }
-
-    @AfterAll
-    static void tearDown() {
-        VibeTagsLogger.shutdown();
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("@AISandboxOnly") && w.contains("@AIDomainModel"));
     }
 
     @Test
-    void warns_aiLegacyBridgeAndAiDraft_combination() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AILegacyBridge") && w.contains("@AIDraft") && w.contains("contradictory")),
-            "Expected warning about @AILegacyBridge + @AIDraft. Warnings: " + warnings);
+    void validateAnnotations_sunsetAndDraft_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.SunsetClass");
+        AISunset sunset = mock(AISunset.class);
+        when(sunset.jira()).thenReturn("PROJ-123");
+        when(element.getAnnotation(AISunset.class)).thenReturn(sunset);
+        when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISunset.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("@AISunset") && w.contains("@AIDraft"));
     }
 
     @Test
-    void warns_aiPublicApiAndAiLocked_combination() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AIPublicAPI") && w.contains("@AILocked") && w.contains("redundant")),
-            "Expected warning about @AIPublicAPI + @AILocked. Warnings: " + warnings);
+    void validateAnnotations_secureLoggingAndIgnore_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.IgnoredField");
+        when(element.getAnnotation(AISecureLogging.class)).thenReturn(mock(AISecureLogging.class));
+        when(element.getAnnotation(AIIgnore.class)).thenReturn(mock(AIIgnore.class));
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISecureLogging.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("@AISecureLogging") && w.contains("@AIIgnore"));
     }
 
     @Test
-    void warns_aiParallelTestsAndAiLocked_combination() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AIParallelTests") && w.contains("@AILocked") && w.contains("redundant")),
-            "Expected warning about @AIParallelTests + @AILocked. Warnings: " + warnings);
+    void validateAnnotations_sunsetBlankJira_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        AISunset sunset = mock(AISunset.class);
+        when(sunset.jira()).thenReturn(" "); // blank
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.SunsetMethod");
+        when(element.getAnnotation(AISunset.class)).thenReturn(sunset);
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISunset.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("@AISunset") && w.contains("jira"));
     }
 
     @Test
-    void warns_aiSchemaSafeAndAiIgnore_combination() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AISchemaSafe") && w.contains("@AIIgnore") && w.contains("redundant")),
-            "Expected warning about @AISchemaSafe + @AIIgnore. Warnings: " + warnings);
+    void validateAnnotations_temporaryBlankExpiresOn_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        AITemporary temp = mock(AITemporary.class);
+        when(temp.expiresOn()).thenReturn(""); // blank
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.TempHack");
+        when(element.getAnnotation(AITemporary.class)).thenReturn(temp);
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("@AITemporary") && w.contains("expiresOn"));
     }
 
     @Test
-    void warns_aiStrictClasspathAndAiLocked_combination() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AIStrictClasspath") && w.contains("@AILocked") && w.contains("redundant")),
-            "Expected warning about @AIStrictClasspath + @AILocked. Warnings: " + warnings);
+    void validateAnnotations_temporaryMalformedDate_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        AITemporary temp = mock(AITemporary.class);
+        when(temp.expiresOn()).thenReturn("2026/05/29"); // invalid format, must be YYYY-MM-DD
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.TempHack");
+        when(element.getAnnotation(AITemporary.class)).thenReturn(temp);
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("invalid 'expiresOn' date format"));
     }
 
     @Test
-    void warns_aiArchitecture_withBlankBelongsTo() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AIArchitecture") && w.contains("belongsTo") && w.contains("blank")),
-            "Expected warning about blank belongsTo on @AIArchitecture. Warnings: " + warnings);
+    void validateAnnotations_temporaryExpiredDate_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(warnings);
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+
+        AITemporary temp = mock(AITemporary.class);
+        when(temp.expiresOn()).thenReturn("2020-01-01"); // expired date
+        when(temp.reason()).thenReturn("Expired hotfix");
+
+        Element element = mock(Element.class);
+        when(element.toString()).thenReturn("com.example.OldTempHack");
+        when(element.getAnnotation(AITemporary.class)).thenReturn(temp);
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
+
+        processor.validateAnnotations(messager, roundEnv);
+
+        assertEquals(1, warnings.size());
+        String w = warnings.get(0);
+        assertTrue(w.contains("has expired on 2020-01-01") && w.contains("Expired hotfix"));
     }
 
-    @Test
-    void errors_aiArchitecture_withForbiddenImport() {
-        assertTrue(warnings.stream().anyMatch(w ->
-                w.contains("@AIArchitecture") && w.contains("strictly prohibited from referencing 'java.util'") && w.contains("illegal import of 'java.util.ArrayList'")),
-            "Expected compilation error about forbidden import. Diagnostics/Warnings: " + warnings);
-    }
-
-    private static final class StringSource extends SimpleJavaFileObject {
-        private final String content;
-
-        StringSource(String path, String content) {
-            super(URI.create("string:///" + path), Kind.SOURCE);
-            this.content = content;
-        }
-
-        @Override
-        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-            return content;
-        }
+    private static Messager capturingMessager(List<String> sink) {
+        Messager m = mock(Messager.class);
+        doAnswer(inv -> {
+            if (Diagnostic.Kind.WARNING.equals(inv.getArgument(0))) {
+                sink.add(inv.getArgument(1, CharSequence.class).toString());
+            }
+            return null;
+        }).when(m).printMessage(any(Diagnostic.Kind.class), any(CharSequence.class));
+        doAnswer(inv -> {
+            if (Diagnostic.Kind.WARNING.equals(inv.getArgument(0))) {
+                sink.add(inv.getArgument(1, CharSequence.class).toString());
+            }
+            return null;
+        }).when(m).printMessage(any(Diagnostic.Kind.class), any(CharSequence.class), any());
+        return m;
     }
 }

@@ -164,24 +164,30 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Key Features
 
-The 24 annotations group into six categories by intent. Within each category they are listed alphabetically.
+The 39 annotations group into six categories by intent. Within each category they are listed alphabetically.
 
 #### 🛡️ Protection & Access Control — keep AI away from code
 
+- **🔒 @AICallersOnly** - Restrict method or class access to authorized packages/classes only (prevents architectural bypasses)
 - **🚫 @AIIgnore** - Exclude classes, methods, or fields from AI context entirely (auto-generated code, deprecated scaffolding)
 - **🌉 @AILegacyBridge** - Mark compatibility bridges working around upstream dependencies/bugs (AI must not refactor or modernize structure; modify internal business logic only)
 - **🔒 @AILocked** - Protect critical code from AI modifications (legacy systems, compliance code, security-critical logic)
+- **🧪 @AISandboxOnly** - Restrict elements strictly to mock/sandbox environments (prevents leakage into production pathways)
 
 #### 🚧 Behavioral Constraints — limit what AI can change
 
 - **🧱 @AIArchitecture** - Enforce layering boundaries (declares `belongsTo` layer and forbidden `cannotReference` layers)
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
+- **💾 @AIMemoryBudget** - Enforce zero-allocation, no-new-objects, or no-autoboxing policies on high-performance paths
 - **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
+- **🧼 @AIPure** - Mark deterministic, side-effect-free pure mathematical functions
 - **📦 @AIStrictClasspath** - Prevent dependency bloat (restricts imports and implementation to JDK and existing classpath only)
 
 #### 🧬 Design Intent — declare properties AI must preserve
 
 - **🧠 @AICore** - Mark well-tested core logic that is sensitive to changes (modifications require extreme caution)
+- **🌾 @AIDomainModel** - Enforce Domain-Driven Design (DDD) boundaries by preventing external framework imports (JPA, Jackson, Spring, etc.)
+- **🔌 @AIExtensible** - Mark classes open for capability extensions using Strategy, Visitor, or Factory patterns instead of if-else spikes
 - **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
 - **🗣️ @AIInternationalized** - Prohibit hardcoded user-facing strings (all visible text must be extracted to i18n bundle message keys)
 - **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
@@ -194,22 +200,28 @@ The 24 annotations group into six categories by intent. Within each category the
 #### 🔐 Security & Compliance — auditing, privacy, and regulation
 
 - **🛡️ @AIAudit** - Tag critical infrastructure for continuous AI security auditing (SQL injection, thread safety, etc.)
+- **🧼 @AIInputSanitized** - Require input parameters or fields to be run through SQL injection, XSS, LDAP, or path traversal sanitizers
 - **🔐 @AIPrivacy** - Mark fields and methods that handle PII — AI must never include their values in logs, suggestions, test fixtures, or external API calls
 - **📜 @AIRegulation** - Tie code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX) — AI must document compliance impact and never weaken the requirement
+- **🔒 @AISecureLogging** - Enforce masking (omit, hash, credit-card, email) on log statement variables to avoid runtime leakage
 
 #### 🛠️ Implementation Workflow — guide how AI works on the code
 
 - **📋 @AIContext** - Guide AI on how to work with specific classes (performance optimizations, design patterns, frameworks)
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
-- **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
-- **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
-- **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
+- **💬 @AIExplain** - Demand Chain-of-Thought (CoT) sequence/class diagrams or mathematical justifications before applying code changes
 - **🚩 @AIFeatureFlag** - Mark code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
+- **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
+- **🧪 @AIPrototype** - Relax standard strict quality rules (e.g. coverage, i18n) for rapid spikes while preventing leaks into production code
 - **🔐 @AISecure** - Mark security-critical code (authentication, encryption, authorization) — AI must not weaken security properties and must flag any change for security review
+- **🧪 @AITestDriven** - Enforce Red-Green-Refactor discipline — AI must provide matching test updates alongside any logic changes (configurable coverage goal, framework, and mock policy)
 
 #### ♻️ Lifecycle — manage deprecation and removal
 
 - **⚠️ @AIDeprecated** - Actively route callers away from a deprecated element — declares the replacement, migration guide, and removal deadline
+- **🌅 @AISunset** - Block any new references to an API scheduled for decommissioning (specifies JIRA ticket and target replacement class)
+- **⏳ @AITemporary** - Tag a hotfix, mock stub, or dirty hack with an expiration date (YYYY-MM-DD) which warns at compile-time if exceeded
 
 ### Supported AI Platforms
 

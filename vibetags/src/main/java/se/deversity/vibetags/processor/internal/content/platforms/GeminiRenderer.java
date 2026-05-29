@@ -178,6 +178,79 @@ public final class GeminiRenderer implements PlatformRenderer {
             sb.append("\n## SECURITY-CRITICAL CODE\nDo not weaken security properties of these elements. Flag any change for security review:\n\n").append(sec);
         }
 
+        // New annotations formatting sections for Gemini
+        if (!collector.callersOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.callersOnly()) FormatterRegistry.callersOnly().format(e, sec, platform);
+            sb.append("\n## ACCESS & CALLS LIMITATIONS\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries:\n\n").append(sec);
+        }
+
+        if (!collector.sandboxOnly().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, sec, platform);
+            sb.append("\n## SANDBOX & TEST HARNESS EXCLUSION\nThe following elements are strictly sandbox/test code. Production code must never import or reference them:\n\n").append(sec);
+        }
+
+        if (!collector.memoryBudget().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.memoryBudget()) FormatterRegistry.memoryBudget().format(e, sec, platform);
+            sb.append("\n## MEMORY ALLOCATION BUDGETS\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully:\n\n").append(sec);
+        }
+
+        if (!collector.pure().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.pure()) FormatterRegistry.pure().format(e, sec, platform);
+            sb.append("\n## DETERMINISTIC PURE FUNCTIONS\nThe following elements must remain pure functions without side effects or mutations:\n\n").append(sec);
+        }
+
+        if (!collector.domainModel().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.domainModel()) FormatterRegistry.domainModel().format(e, sec, platform);
+            sb.append("\n## FRAMEWORK-FREE DOMAIN ENTITIES\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages:\n\n").append(sec);
+        }
+
+        if (!collector.extensible().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.extensible()) FormatterRegistry.extensible().format(e, sec, platform);
+            sb.append("\n## OPEN-CLOSED EXTENSION PATTERNS\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals:\n\n").append(sec);
+        }
+
+        if (!collector.inputSanitized().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.inputSanitized()) FormatterRegistry.inputSanitized().format(e, sec, platform);
+            sb.append("\n## MANDATORY INPUT SANITIZATION\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers:\n\n").append(sec);
+        }
+
+        if (!collector.secureLogging().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.secureLogging()) FormatterRegistry.secureLogging().format(e, sec, platform);
+            sb.append("\n## SECURE LOGGING MASKING\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams:\n\n").append(sec);
+        }
+
+        if (!collector.explain().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.explain()) FormatterRegistry.explain().format(e, sec, platform);
+            sb.append("\n## REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough:\n\n").append(sec);
+        }
+
+        if (!collector.prototype().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.prototype()) FormatterRegistry.prototype().format(e, sec, platform);
+            sb.append("\n## EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them:\n\n").append(sec);
+        }
+
+        if (!collector.sunset().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.sunset()) FormatterRegistry.sunset().format(e, sec, platform);
+            sb.append("\n## SUNSET DEPRECATED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden:\n\n").append(sec);
+        }
+
+        if (!collector.temporary().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (Element e : collector.temporary()) FormatterRegistry.temporary().format(e, sec, platform);
+            sb.append("\n## TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit:\n\n").append(sec);
+        }
+
         return sb.toString();
     }
 }

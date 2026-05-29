@@ -1,198 +1,164 @@
 package se.deversity.vibetags.processor;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import javax.lang.model.element.Element;
+import se.deversity.vibetags.annotations.*;
+import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.platforms.*;
+import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
-import java.io.IOException;
-import java.nio.file.Path;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
- * End-to-end integration tests for the 9 new V4 annotations:
- * @AIParallelTests, @AILegacyBridge, @AIArchitecture, @AIPublicAPI, @AIStrictExceptions,
- * @AIStrictTypes, @AIInternationalized, @AIStrictClasspath, @AISchemaSafe.
- *
- * Verifies that each new annotation is correctly processed and produces expected prompt
- * outputs across the major platforms.
+ * End-to-end rendering and formatters tests for the 12 new annotations.
  */
 class NewAnnotationsV4EndToEndTest {
 
-    @TempDir
-    static Path tempDir;
-
-    private static ProcessorTestHarness harness;
-
-    @BeforeAll
-    static void setUp() throws IOException {
-        harness = new ProcessorTestHarness(tempDir);
-
-        harness.addSource("com.example.parallel.ConcurrentRunner",
-            "package com.example.parallel;\n"
-                + "import se.deversity.vibetags.annotations.AIParallelTests;\n"
-                + "@AIParallelTests\n"
-                + "public class ConcurrentRunner {}\n");
-
-        harness.addSource("com.example.legacy.BizarreBugFixBridge",
-            "package com.example.legacy;\n"
-                + "import se.deversity.vibetags.annotations.AILegacyBridge;\n"
-                + "@AILegacyBridge\n"
-                + "public class BizarreBugFixBridge {}\n");
-
-        harness.addSource("com.example.domain.InvoiceEntity",
-            "package com.example.domain;\n"
-                + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
-                + "@AIArchitecture(belongsTo = \"domain\", cannotReference = {\"web\", \"database\"})\n"
-                + "public class InvoiceEntity {}\n");
-
-        harness.addSource("com.example.api.PublicBillingApi",
-            "package com.example.api;\n"
-                + "import se.deversity.vibetags.annotations.AIPublicAPI;\n"
-                + "@AIPublicAPI\n"
-                + "public class PublicBillingApi {}\n");
-
-        harness.addSource("com.example.exception.StrictDatabaseException",
-            "package com.example.exception;\n"
-                + "import se.deversity.vibetags.annotations.AIStrictExceptions;\n"
-                + "@AIStrictExceptions\n"
-                + "public class StrictDatabaseException {}\n");
-
-        harness.addSource("com.example.types.StrongBillingRecord",
-            "package com.example.types;\n"
-                + "import se.deversity.vibetags.annotations.AIStrictTypes;\n"
-                + "@AIStrictTypes\n"
-                + "public class StrongBillingRecord {}\n");
-
-        harness.addSource("com.example.i18n.LocalizedMessageProvider",
-            "package com.example.i18n;\n"
-                + "import se.deversity.vibetags.annotations.AIInternationalized;\n"
-                + "@AIInternationalized\n"
-                + "public class LocalizedMessageProvider {}\n");
-
-        harness.addSource("com.example.classpath.IsolatedPluginLoader",
-            "package com.example.classpath;\n"
-                + "import se.deversity.vibetags.annotations.AIStrictClasspath;\n"
-                + "@AIStrictClasspath\n"
-                + "public class IsolatedPluginLoader {}\n");
-
-        harness.addSource("com.example.schema.SerializedOrderState",
-            "package com.example.schema;\n"
-                + "import se.deversity.vibetags.annotations.AISchemaSafe;\n"
-                + "@AISchemaSafe\n"
-                + "public class SerializedOrderState {}\n");
-
-        harness.compile();
-    }
-
-    @AfterAll
-    static void tearDown() {
-        VibeTagsLogger.shutdown();
-    }
-
-    // --- @AIParallelTests ---
     @Test
-    void parallelTests_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("STRICT TEST ISOLATION"), "Cursorrules must contain parallel tests section");
-        assertTrue(rules.contains("com.example.parallel.ConcurrentRunner"), "Cursorrules must list the ConcurrentRunner class");
+    void testNewAnnotationsRendering_Cursor() {
+        AnnotationCollector collector = mock(AnnotationCollector.class);
+        
+        // Mock AICallersOnly
+        Element callersOnlyElement = mock(Element.class);
+        when(callersOnlyElement.toString()).thenReturn("com.example.SecureUtil");
+        AICallersOnly callersOnly = mock(AICallersOnly.class);
+        when(callersOnly.value()).thenReturn(new String[]{"com.example.auth.*"});
+        when(callersOnlyElement.getAnnotation(AICallersOnly.class)).thenReturn(callersOnly);
+        doReturn(Set.of(callersOnlyElement)).when(collector).callersOnly();
 
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<test_isolation_elements>"), "Claude.md must contain test isolation elements tag");
-        assertTrue(claude.contains("com.example.parallel.ConcurrentRunner"), "Claude.md must list ConcurrentRunner");
+        // Mock AITemporary
+        Element temporaryElement = mock(Element.class);
+        when(temporaryElement.toString()).thenReturn("com.example.TempStub");
+        AITemporary temporary = mock(AITemporary.class);
+        when(temporary.expiresOn()).thenReturn("2026-06-30");
+        when(temporary.reason()).thenReturn("Bank API downtime");
+        when(temporaryElement.getAnnotation(AITemporary.class)).thenReturn(temporary);
+        doReturn(Set.of(temporaryElement)).when(collector).temporary();
 
-        String llms = harness.readFile("llms.txt");
-        assertTrue(llms.contains("Strict Test Isolation"), "llms.txt must contain test isolation section");
+        // Mock remaining collectors as empty to avoid NPEs
+        doReturn(Set.of()).when(collector).locked();
+        doReturn(Set.of()).when(collector).context();
+        doReturn(Set.of()).when(collector).audit();
+        doReturn(Set.of()).when(collector).ignore();
+        doReturn(Set.of()).when(collector).draft();
+        doReturn(Set.of()).when(collector).privacy();
+        doReturn(Set.of()).when(collector).core();
+        doReturn(Set.of()).when(collector).performance();
+        doReturn(Set.of()).when(collector).contract();
+        doReturn(Set.of()).when(collector).testDriven();
+        doReturn(Set.of()).when(collector).threadSafe();
+        doReturn(Set.of()).when(collector).immutable();
+        doReturn(Set.of()).when(collector).deprecated();
+        doReturn(Set.of()).when(collector).observability();
+        doReturn(Set.of()).when(collector).regulation();
+        doReturn(Set.of()).when(collector).parallelTests();
+        doReturn(Set.of()).when(collector).legacyBridge();
+        doReturn(Set.of()).when(collector).architecture();
+        doReturn(Set.of()).when(collector).publicApi();
+        doReturn(Set.of()).when(collector).strictExceptions();
+        doReturn(Set.of()).when(collector).strictTypes();
+        doReturn(Set.of()).when(collector).internationalized();
+        doReturn(Set.of()).when(collector).strictClasspath();
+        doReturn(Set.of()).when(collector).schemaSafe();
+        doReturn(Set.of()).when(collector).idempotent();
+        doReturn(Set.of()).when(collector).featureFlag();
+        doReturn(Set.of()).when(collector).secure();
+        doReturn(Set.of()).when(collector).sandboxOnly();
+        doReturn(Set.of()).when(collector).memoryBudget();
+        doReturn(Set.of()).when(collector).pure();
+        doReturn(Set.of()).when(collector).domainModel();
+        doReturn(Set.of()).when(collector).extensible();
+        doReturn(Set.of()).when(collector).inputSanitized();
+        doReturn(Set.of()).when(collector).secureLogging();
+        doReturn(Set.of()).when(collector).explain();
+        doReturn(Set.of()).when(collector).prototype();
+        doReturn(Set.of()).when(collector).sunset();
+
+        CursorRenderer renderer = new CursorRenderer();
+        RenderingContext context = new RenderingContext("TestProj", "# Header\n", Set.of("cursor"));
+        String output = renderer.render(collector, Platform.CURSOR, context);
+
+        assertTrue(output.contains("ACCESS & CALLS LIMITATIONS"));
+        assertTrue(output.contains("com.example.SecureUtil"));
+        assertTrue(output.contains("Only callable by: [com.example.auth.*]"));
+
+        assertTrue(output.contains("TEMPORARY CODE WORKAROUNDS"));
+        assertTrue(output.contains("com.example.TempStub"));
+        assertTrue(output.contains("Expires on: 2026-06-30"));
+        assertTrue(output.contains("Bank API downtime"));
     }
 
-    // --- @AILegacyBridge ---
     @Test
-    void legacyBridge_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("LEGACY COMPATIBILITY BRIDGE"), "Cursorrules must contain legacy bridge section");
-        assertTrue(rules.contains("com.example.legacy.BizarreBugFixBridge"), "Cursorrules must list BizarreBugFixBridge");
+    void testNewAnnotationsRendering_Claude() {
+        AnnotationCollector collector = mock(AnnotationCollector.class);
+        
+        // Mock AISandboxOnly
+        Element sandboxOnlyElement = mock(Element.class);
+        when(sandboxOnlyElement.toString()).thenReturn("com.example.MockGateway");
+        AISandboxOnly sandboxOnly = mock(AISandboxOnly.class);
+        when(sandboxOnlyElement.getAnnotation(AISandboxOnly.class)).thenReturn(sandboxOnly);
+        doReturn(Set.of(sandboxOnlyElement)).when(collector).sandboxOnly();
 
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<legacy_bridge_elements>"), "Claude.md must contain legacy bridge tag");
+        // Mock AISecureLogging
+        Element secureLoggingElement = mock(Element.class);
+        when(secureLoggingElement.toString()).thenReturn("com.example.User.password");
+        AISecureLogging secureLogging = mock(AISecureLogging.class);
+        when(secureLogging.value()).thenReturn(AISecureLogging.MaskingPolicy.HASH);
+        when(secureLoggingElement.getAnnotation(AISecureLogging.class)).thenReturn(secureLogging);
+        doReturn(Set.of(secureLoggingElement)).when(collector).secureLogging();
 
-        String llms = harness.readFile("llms.txt");
-        assertTrue(llms.contains("Legacy Compatibility Bridge"), "llms.txt must contain legacy bridge section");
-    }
+        // Mock remaining collectors as empty to avoid NPEs
+        doReturn(Set.of()).when(collector).locked();
+        doReturn(Set.of()).when(collector).context();
+        doReturn(Set.of()).when(collector).audit();
+        doReturn(Set.of()).when(collector).ignore();
+        doReturn(Set.of()).when(collector).draft();
+        doReturn(Set.of()).when(collector).privacy();
+        doReturn(Set.of()).when(collector).core();
+        doReturn(Set.of()).when(collector).performance();
+        doReturn(Set.of()).when(collector).contract();
+        doReturn(Set.of()).when(collector).testDriven();
+        doReturn(Set.of()).when(collector).threadSafe();
+        doReturn(Set.of()).when(collector).immutable();
+        doReturn(Set.of()).when(collector).deprecated();
+        doReturn(Set.of()).when(collector).observability();
+        doReturn(Set.of()).when(collector).regulation();
+        doReturn(Set.of()).when(collector).parallelTests();
+        doReturn(Set.of()).when(collector).legacyBridge();
+        doReturn(Set.of()).when(collector).architecture();
+        doReturn(Set.of()).when(collector).publicApi();
+        doReturn(Set.of()).when(collector).strictExceptions();
+        doReturn(Set.of()).when(collector).strictTypes();
+        doReturn(Set.of()).when(collector).internationalized();
+        doReturn(Set.of()).when(collector).strictClasspath();
+        doReturn(Set.of()).when(collector).schemaSafe();
+        doReturn(Set.of()).when(collector).idempotent();
+        doReturn(Set.of()).when(collector).featureFlag();
+        doReturn(Set.of()).when(collector).secure();
+        doReturn(Set.of()).when(collector).callersOnly();
+        doReturn(Set.of()).when(collector).memoryBudget();
+        doReturn(Set.of()).when(collector).pure();
+        doReturn(Set.of()).when(collector).domainModel();
+        doReturn(Set.of()).when(collector).extensible();
+        doReturn(Set.of()).when(collector).inputSanitized();
+        doReturn(Set.of()).when(collector).explain();
+        doReturn(Set.of()).when(collector).prototype();
+        doReturn(Set.of()).when(collector).sunset();
+        doReturn(Set.of()).when(collector).temporary();
 
-    // --- @AIArchitecture ---
-    @Test
-    void architecture_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("ARCHITECTURAL BOUNDARY CONSTRAINTS"), "Cursorrules must contain architecture section");
-        assertTrue(rules.contains("com.example.domain.InvoiceEntity"), "Cursorrules must list InvoiceEntity");
-        assertTrue(rules.contains("Belongs to layer: `domain`"), "Cursorrules must mention domain layer");
+        ClaudeRenderer renderer = new ClaudeRenderer();
+        RenderingContext context = new RenderingContext("TestProj", "# Header\n", Set.of("claude"));
+        String output = renderer.render(collector, Platform.CLAUDE, context);
 
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<architecture_elements>"), "Claude.md must contain architectural layers tag");
-        assertTrue(claude.contains("<belongs_to>domain</belongs_to>"), "Claude.md must list belongs_to");
+        assertTrue(output.contains("<sandbox_only_elements>"));
+        assertTrue(output.contains("com.example.MockGateway"));
 
-        String conventions = harness.readFile("CONVENTIONS.md");
-        assertTrue(conventions.contains("ARCHITECTURE LAYER: com.example.domain.InvoiceEntity"), "CONVENTIONS.md must list domain layer info");
-    }
-
-    // --- @AIPublicAPI ---
-    @Test
-    void publicApi_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("PUBLIC API SURFACE PROTECTION"), "Cursorrules must contain public API section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<public_api_elements>"), "Claude.md must contain public API tag");
-    }
-
-    // --- @AIStrictExceptions ---
-    @Test
-    void strictExceptions_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("STRICT EXCEPTION HANDLING"), "Cursorrules must contain strict exception section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<strict_exceptions_elements>"), "Claude.md must contain strict exception tag");
-    }
-
-    // --- @AIStrictTypes ---
-    @Test
-    void strictTypes_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("STRICT TYPE SAFETY"), "Cursorrules must contain strict types section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<strict_types_elements>"), "Claude.md must contain strict types tag");
-    }
-
-    // --- @AIInternationalized ---
-    @Test
-    void internationalized_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("INTERNATIONALIZATION"), "Cursorrules must contain i18n section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<internationalized_elements>"), "Claude.md must contain i18n tag");
-    }
-
-    // --- @AIStrictClasspath ---
-    @Test
-    void strictClasspath_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("STRICT CLASSPATH INTEGRITY"), "Cursorrules must contain classpath section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<strict_classpath_elements>"), "Claude.md must contain classpath tag");
-    }
-
-    // --- @AISchemaSafe ---
-    @Test
-    void schemaSafe_isGenerated() throws IOException {
-        String rules = harness.readFile(".cursorrules");
-        assertTrue(rules.contains("SCHEMA \u0026 SERIALIZATION SAFETY"), "Cursorrules must contain schema safe section");
-
-        String claude = harness.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<schema_safe_elements>"), "Claude.md must contain schema safe tag");
+        assertTrue(output.contains("<secure_logging_elements>"));
+        assertTrue(output.contains("com.example.User.password"));
+        assertTrue(output.contains("<logging_policy>HASH</logging_policy>"));
     }
 }

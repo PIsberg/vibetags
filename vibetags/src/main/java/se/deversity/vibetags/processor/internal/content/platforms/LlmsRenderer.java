@@ -171,6 +171,55 @@ public final class LlmsRenderer implements PlatformRenderer {
             full ? "\n## 🔐 Security-Critical Code\nThese elements are security-critical. Do not weaken security properties. Every change requires security review.\n\n" : "\n## 🔐 Security-Critical Code\n",
             (e, buf) -> FormatterRegistry.secure().format(e, buf, platform));
 
+        // New annotations formatting sections for LLMS formats
+        appendSection(sb, collector.callersOnly(), platform,
+            full ? "\n## Access Limitations\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n" : "\n## Access Limitations\n",
+            (e, buf) -> FormatterRegistry.callersOnly().format(e, buf, platform));
+
+        appendSection(sb, collector.sandboxOnly(), platform,
+            full ? "\n## Sandbox & Test Exclusion\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n" : "\n## Sandbox & Test Exclusion\n",
+            (e, buf) -> FormatterRegistry.sandboxOnly().format(e, buf, platform));
+
+        appendSection(sb, collector.memoryBudget(), platform,
+            full ? "\n## Memory Allocation Budgets\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n" : "\n## Memory Allocation Budgets\n",
+            (e, buf) -> FormatterRegistry.memoryBudget().format(e, buf, platform));
+
+        appendSection(sb, collector.pure(), platform,
+            full ? "\n## Deterministic Pure Functions\nThe following elements must remain pure functions without side effects or mutations.\n\n" : "\n## Deterministic Pure Functions\n",
+            (e, buf) -> FormatterRegistry.pure().format(e, buf, platform));
+
+        appendSection(sb, collector.domainModel(), platform,
+            full ? "\n## Framework-Free Domain Entities\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n" : "\n## Framework-Free Domain Entities\n",
+            (e, buf) -> FormatterRegistry.domainModel().format(e, buf, platform));
+
+        appendSection(sb, collector.extensible(), platform,
+            full ? "\n## open-closed Extension Patterns\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n" : "\n## open-closed Extension Patterns\n",
+            (e, buf) -> FormatterRegistry.extensible().format(e, buf, platform));
+
+        appendSection(sb, collector.inputSanitized(), platform,
+            full ? "\n## Mandatory Input Sanitization\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n" : "\n## Mandatory Input Sanitization\n",
+            (e, buf) -> FormatterRegistry.inputSanitized().format(e, buf, platform));
+
+        appendSection(sb, collector.secureLogging(), platform,
+            full ? "\n## Secure Logging Masking\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n" : "\n## Secure Logging Masking\n",
+            (e, buf) -> FormatterRegistry.secureLogging().format(e, buf, platform));
+
+        appendSection(sb, collector.explain(), platform,
+            full ? "\n## Required Chain-of-Thought Explanations\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n" : "\n## Required Chain-of-Thought Explanations\n",
+            (e, buf) -> FormatterRegistry.explain().format(e, buf, platform));
+
+        appendSection(sb, collector.prototype(), platform,
+            full ? "\n## Experimental Prototype Stubs\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n" : "\n## Experimental Prototype Stubs\n",
+            (e, buf) -> FormatterRegistry.prototype().format(e, buf, platform));
+
+        appendSection(sb, collector.sunset(), platform,
+            full ? "\n## Sunset Deprecated APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n" : "\n## Sunset Deprecated APIs\n",
+            (e, buf) -> FormatterRegistry.sunset().format(e, buf, platform));
+
+        appendSection(sb, collector.temporary(), platform,
+            full ? "\n## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n" : "\n## Temporary Code Workarounds\n",
+            (e, buf) -> FormatterRegistry.temporary().format(e, buf, platform));
+
         return sb.toString();
     }
 

@@ -356,4 +356,95 @@ These elements are security-critical. Do not weaken security properties. Every c
 ### com.example.security.SecurityConfig
 - Security-critical code (aspect: authentication).
 - Never weaken security properties. Every change requires explicit security review.
+
+
+## Access Limitations
+The following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.
+
+### com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()
+- **Allowed Callers**: com.example.service.PricingService, com.example.payment.PaymentProcessor
+
+
+## Sandbox & Test Exclusion
+The following elements are strictly sandbox/test code. Production code must never import or reference them.
+
+### com.example.service.NewAnnotationsShowcase.SandboxTestHelper
+- **Scope**: Sandbox/testing environments only. Never use in production.
+
+
+## Memory Allocation Budgets
+The following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.
+
+### com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Memory Policy**: ZERO_ALLOCATION
+
+
+## Deterministic Pure Functions
+The following elements must remain pure functions without side effects or mutations.
+
+### com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Requirement**: Mathematically pure function. No side effects.
+
+
+## Framework-Free Domain Entities
+The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
+
+### com.example.service.NewAnnotationsShowcase.ImmutableProductPrice
+- **Domain Boundary**: Framework-agnostic Domain Entity.
+- **Allowed Packages**: java.math.BigDecimal
+
+
+## open-closed Extension Patterns
+The following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.
+
+### com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy
+- **Extension Design**: STRATEGY_PATTERN. Use polymorphism.
+
+
+## Mandatory Input Sanitization
+The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
+
+### sqlRawInput
+- **Sanitization Requirement**: SQL_INJECTION
+
+
+## Secure Logging Masking
+The following sensitive elements must be masked, hashed, or omitted from log/stdout streams.
+
+### passwordRaw
+- **Secure Logging Policy**: HASH
+
+### creditCardNumber
+- **Secure Logging Policy**: MASK_CREDIT_CARD
+
+
+## Required Chain-of-Thought Explanations
+Any change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.
+
+### com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])
+- **Explanation Needed**: Yes, Chain-of-Thought (Complexity: HIGH)
+
+
+## Experimental Prototype Stubs
+Strict QA constraints and tests are relaxed for these elements, but production classes must never import them.
+
+### com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike
+- **Scope**: Experimental Prototype. Bypasses strict validation rules.
+
+
+## Sunset Deprecated APIs
+Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.
+
+### com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)
+- **Sunset Status**: Active (Forbid new calls)
+- **JIRA Ticket**: DEBT-742
+- **Replacement**: com.example.service.PricingService
+
+
+## Temporary Code Workarounds
+Temporary stubs or hacks that must be refactored or removed before their expiration limit.
+
+### com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()
+- **Temporal Expiration**: 2028-12-31
+- **Reason**: Hotfix workaround until upstream payment provider updates their API.
 <!-- VIBETAGS-END -->

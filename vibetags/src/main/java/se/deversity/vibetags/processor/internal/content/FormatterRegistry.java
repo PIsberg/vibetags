@@ -35,6 +35,20 @@ public final class FormatterRegistry {
     private static final AIFeatureFlagFormatter FEATURE_FLAG = new AIFeatureFlagFormatter();
     private static final AISecureFormatter SECURE = new AISecureFormatter();
 
+    // New annotation formatters
+    private static final AICallersOnlyFormatter CALLERS_ONLY = new AICallersOnlyFormatter();
+    private static final AISandboxOnlyFormatter SANDBOX_ONLY = new AISandboxOnlyFormatter();
+    private static final AIMemoryBudgetFormatter MEMORY_BUDGET = new AIMemoryBudgetFormatter();
+    private static final AIPureFormatter PURE = new AIPureFormatter();
+    private static final AIDomainModelFormatter DOMAIN_MODEL = new AIDomainModelFormatter();
+    private static final AIExtensibleFormatter EXTENSIBLE = new AIExtensibleFormatter();
+    private static final AIInputSanitizedFormatter INPUT_SANITIZED = new AIInputSanitizedFormatter();
+    private static final AISecureLoggingFormatter SECURE_LOGGING = new AISecureLoggingFormatter();
+    private static final AIExplainFormatter EXPLAIN = new AIExplainFormatter();
+    private static final AIPrototypeFormatter PROTOTYPE = new AIPrototypeFormatter();
+    private static final AISunsetFormatter SUNSET = new AISunsetFormatter();
+    private static final AITemporaryFormatter TEMPORARY = new AITemporaryFormatter();
+
     private FormatterRegistry() {}
 
     public static AILockedFormatter locked() { return LOCKED; }
@@ -64,4 +78,18 @@ public final class FormatterRegistry {
     public static AIIdempotentFormatter idempotent() { return IDEMPOTENT; }
     public static AIFeatureFlagFormatter featureFlag() { return FEATURE_FLAG; }
     public static AISecureFormatter secure() { return SECURE; }
+
+    // Getters for new formatters
+    public static AICallersOnlyFormatter callersOnly() { return CALLERS_ONLY; }
+    public static AISandboxOnlyFormatter sandboxOnly() { return SANDBOX_ONLY; }
+    public static AIMemoryBudgetFormatter memoryBudget() { return MEMORY_BUDGET; }
+    public static AIPureFormatter pure() { return PURE; }
+    public static AIDomainModelFormatter domainModel() { return DOMAIN_MODEL; }
+    public static AIExtensibleFormatter extensible() { return EXTENSIBLE; }
+    public static AIInputSanitizedFormatter inputSanitized() { return INPUT_SANITIZED; }
+    public static AISecureLoggingFormatter secureLogging() { return SECURE_LOGGING; }
+    public static AIExplainFormatter explain() { return EXPLAIN; }
+    public static AIPrototypeFormatter prototype() { return PROTOTYPE; }
+    public static AISunsetFormatter sunset() { return SUNSET; }
+    public static AITemporaryFormatter temporary() { return TEMPORARY; }
 }

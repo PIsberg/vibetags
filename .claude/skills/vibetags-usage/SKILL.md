@@ -1,6 +1,6 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure annotations, or wants to control how AI tools interact with Java code.
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary annotations, or wants to control how AI tools interact with Java code.
 version: 0.9.8
 ---
 
@@ -645,6 +645,200 @@ When to use: JWT/OAuth token handling, cryptographic operations, authorization c
 - `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
 - `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
 
+### `@AICallersOnly` — Restrict allowed invoking callers
+
+Use on: **class, method**
+
+```java
+@AICallersOnly({"com.example.service.PricingService", "com.example.payment.PaymentProcessor"})
+public static void executeSecureDatabaseWipe() { ... }
+```
+
+Restricts which packages or classes are permitted to invoke this method or class. Enforced by the compiler/processor to prevent AI from introducing illegal architectural bypasses.
+
+---
+
+### `@AISandboxOnly` — Restrict to mock or sandbox environments
+
+Use on: **class, method**
+
+```java
+@AISandboxOnly
+public class SandboxTestHelper { ... }
+```
+
+Restricts the target element strictly to sandbox, dev, or mock/test environments. Prevents the AI from importing or referencing sandbox utilities in production pathways.
+
+**Compile-time warnings:**
+
+- `@AISandboxOnly` + `@AIDomainModel` on the same element — contradictory (sandbox mocks should not be subjected to framework-free domain model constraints)
+
+---
+
+### `@AIMemoryBudget` — Enforce strict allocation policies
+
+Use on: **class, method**
+
+```java
+@AIMemoryBudget(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION)
+public static int calculateFastFibonacci(int n) { ... }
+```
+
+Restricts heap allocations, autoboxing, or object instantiation inside high-performance critical sections.
+
+**Allocation Policies:** `ZERO_ALLOCATION`, `NO_AUTOBOXING`, `NO_NEW_OBJECTS`.
+
+---
+
+### `@AIPure` — Mark side-effect-free pure mathematical functions
+
+Use on: **method**
+
+```java
+@AIPure
+public static int add(int a, int b) { return a + b; }
+```
+
+Declares that a method is a pure mathematical function. Must be deterministic (same input leads to same output) and have zero side effects.
+
+---
+
+### `@AIDomainModel` — Enforce Domain-Driven Design boundaries
+
+Use on: **class**
+
+```java
+@AIDomainModel(allow = {"java.math.BigDecimal"})
+public class ImmutableProductPrice { ... }
+```
+
+Enforces DDD boundaries by preventing external/framework imports. The compiler will scan and block any imports from Spring, JPA/Hibernate, Jackson, etc. unless explicitly whitelisted.
+
+---
+
+### `@AIExtensible` — Mark open-closed polymorphic extension hooks
+
+Use on: **class**
+
+```java
+@AIExtensible(AIExtensible.Strategy.STRATEGY_PATTERN)
+public interface TaxCalculatorStrategy { ... }
+```
+
+Signals that a class or interface must be extended using polymorphic designs (Open-Closed Principle). Prompts the AI to introduce strategy or visitor patterns rather than accumulating massive conditional/switch statements.
+
+**Strategies:** `STRATEGY_PATTERN`, `VISITOR_PATTERN`, `FACTORY`.
+
+---
+
+### `@AIInputSanitized` — Enforce input parameter sanitization
+
+Use on: **parameter, field**
+
+```java
+public static void executeDatabaseQuery(
+        @AIInputSanitized({AIInputSanitized.SanitizerType.SQL_INJECTION}) String sqlRawInput) { ... }
+```
+
+Enforces sanitization pipelines on input parameters or fields before they reach queries, HTML renderers, or files.
+
+**Sanitizer Types:** `SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, `LDAP`.
+
+---
+
+### `@AISecureLogging` — Mask sensitive variables in log statements
+
+Use on: **field, parameter**
+
+```java
+public static void registerUserSession(
+        String username,
+        @AISecureLogging(AISecureLogging.MaskingPolicy.HASH) String passwordRaw) { ... }
+```
+
+Protects sensitive variables from being logged directly or leaked in console outputs.
+
+**Masking Policies:** `OMIT`, `HASH`, `MASK_CREDIT_CARD`, `MASK_EMAIL`.
+
+**Compile-time warnings:**
+
+- `@AISecureLogging` + `@AIIgnore` on the same element — redundant (`@AIIgnore` already completely excludes the element)
+
+---
+
+### `@AIExplain` — Require Chain-of-Thought mathematical/architectural explanations
+
+Use on: **class, method**
+
+```java
+@AIExplain(AIExplain.ComplexityLevel.HIGH)
+public static double runComplexMatrixMath(double[][] a, double[][] b) { ... }
+```
+
+Enforces step-by-step mathematical/architectural Chain-of-Thought (CoT) explanations of any modifications.
+
+**Complexity Levels:** `HIGH`, `MEDIUM`, `LOW`.
+
+---
+
+### `@AIPrototype` — Declare rapid disposable spikes
+
+Use on: **class**
+
+```java
+@AIPrototype
+public class DraftKafkaIntegrationSpike { ... }
+```
+
+Declares a rapid framework prototype. Relaxes standard strict quality rules (e.g. required i18n, coverage) within the class, but prevents it from leaking into stable production code.
+
+---
+
+### `@AISunset` — Ultra-strict api sunset deprecation guardrail
+
+Use on: **class, method, field**
+
+```java
+@AISunset(replacement = PricingService.class, jira = "DEBT-742")
+public static double deprecatedLegacyCalculatePrice(double basePrice) { ... }
+```
+
+AI models are strictly prohibited from adding any new references/calls to elements annotated with `@AISunset`.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `replacement` | `Class<?>` | `Object.class` | Fully qualified class replacement for the sunset API element |
+| `jira` | `String` | *(required)* | JIRA or issue tracking ticket for deprecation/sunset progress (e.g. "DEBT-123") |
+
+**Compile-time warnings:**
+
+- `@AISunset` + `@AIDraft` on the same element — contradictory (sunset elements must not be actively drafted or expanded)
+- `@AISunset` with blank `jira` — missing required JIRA issue key warning
+
+---
+
+### `@AITemporary` — Warn or block expired temporary logic and hotfixes
+
+Use on: **class, method**
+
+```java
+@AITemporary(expiresOn = "2028-12-31", reason = "Hotfix workaround until upstream updates their API.")
+public static void temporaryUpstreamBypass() { ... }
+```
+
+Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilation once the local clock date exceeds the expiration date.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `expiresOn` | `String` | *(required)* | Expiration date in ISO format YYYY-MM-DD (e.g. "2026-06-30") |
+| `reason` | `String` | *(required)* | Rationale behind this temporary workaround |
+
+**Compile-time warnings:**
+
+- `@AITemporary` with a blank `expiresOn` — missing required expiration date
+- `@AITemporary` with an invalid `expiresOn` format (not YYYY-MM-DD)
+- `@AITemporary` where local date is after `expiresOn` — expired logic warning
+
 ---
 
 ## Annotation Combinations
@@ -698,6 +892,12 @@ When to use: JWT/OAuth token handling, cryptographic operations, authorization c
 | `@AISecure` + `@AIAudit` | Security-critical code that must also be audited on every change |
 | `@AISecure` + `@AIPrivacy` | Security-critical PII handler — must not be weakened AND values must never leak |
 | `@AISecure` + `@AICore` | Core security logic — treat all changes with extreme caution AND flag for security review |
+| `@AISandboxOnly` + `@AIDomainModel` | **Warning**: contradictory — sandbox mocks should not be subjected to framework-free domain model constraints |
+| `@AISunset` + `@AIDraft` | **Warning**: contradictory — sunset elements must not be actively drafted or expanded |
+| `@AISecureLogging` + `@AIIgnore` | **Warning**: redundant — `@AIIgnore` already completely excludes this element |
+| `@AIMemoryBudget` + `@AIPerformance` | Enforce zero-allocation along with O(1) latency constraints on hot-path logic |
+| `@AIPure` + `@AIMemoryBudget` | Enforce deterministic pure functions that have a zero allocation footprint |
+| `@AIExplain` + `@AICore` | Core sensitive logic requiring high-fidelity Sequence/Class diagrams for any modification |
 
 ---
 
@@ -788,6 +988,14 @@ tasks.withType(JavaCompile) {
 | `[WARNING] @AIFeatureFlag has no flag key` | Blank `flag` attribute | Set the flag key (e.g., `flag = "checkout.new-flow"`) |
 | `[WARNING] @AISecure has no aspect` | Blank `aspect` attribute | Specify the security concern (e.g., `aspect = "authentication"`) |
 | `[WARNING] contradictory @AISecure and @AIIgnore` | Both annotations on same element | Remove `@AIIgnore` — security-critical code must remain visible to AI for review |
+| `[WARNING] contradictory @AISandboxOnly and @AIDomainModel` | Both annotations on same element | Sandbox mocks should not be subjected to framework-free domain model constraints |
+| `[WARNING] contradictory @AISunset and @AIDraft` | Both annotations on same element | Sunset elements must not be actively drafted or expanded |
+| `[WARNING] redundant @AISecureLogging and @AIIgnore` | Both annotations on same element | `@AIIgnore` already completely excludes this element; `@AISecureLogging` is redundant |
+| `[WARNING] @AISunset has a blank 'jira'` | Blank `jira` attribute | Specify the JIRA issue ticket key (e.g., `jira = "DEBT-123"`) |
+| `[WARNING] @AITemporary has a blank 'expiresOn'` | Blank `expiresOn` attribute | Specify an ISO date (`expiresOn = "YYYY-MM-DD"`) |
+| `[WARNING] @AITemporary has an invalid 'expiresOn' date format` | Format not YYYY-MM-DD | Use strict `YYYY-MM-DD` syntax (e.g., `"2026-06-30"`) |
+| `[WARNING] Temporary logic in … has expired` | Current date is past `expiresOn` | The temporary hotfix/hack has expired; clean it up immediately |
+| `[WARNING] @AIArchitecture has a blank 'belongsTo'` | Blank `belongsTo` layer | Specify the layer name (e.g., `belongsTo = "domain"`) |
 
 ---
 

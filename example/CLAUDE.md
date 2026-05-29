@@ -354,6 +354,96 @@
   </security_elements>
 
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
+  <access_limitations>
+    <file path="com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()">
+      <allowed_callers>com.example.service.PricingService, com.example.payment.PaymentProcessor</allowed_callers>
+    </file>
+  </access_limitations>
+
+<rule>Do not invoke elements in <access_limitations> from outside their specified allowed caller packages or classes.</rule>
+  <sandbox_only_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper">
+      <policy>Sandbox or test only. Do not invoke from production.</policy>
+    </file>
+  </sandbox_only_elements>
+
+<rule>Elements in <sandbox_only_elements> belong exclusively to sandbox or test environments. Never import or invoke them in production code paths.</rule>
+  <memory_budget_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)">
+      <allocation_policy>ZERO_ALLOCATION</allocation_policy>
+    </file>
+  </memory_budget_elements>
+
+<rule>Avoid runtime heap object allocations, autoboxing, or dynamic overhead within classes/methods in <memory_budget_elements>.</rule>
+  <pure_functions>
+    <file path="com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)">
+      <policy>Pure function: no side effects, deterministic.</policy>
+    </file>
+  </pure_functions>
+
+<rule>Methods in <pure_functions> must remain mathematically pure. Side effects, mutations of class/static state, or blocking operations are strictly forbidden.</rule>
+  <domain_model_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice">
+      <domain_model_boundary>Pure Domain Model</domain_model_boundary>
+      <allowed_imports>java.math.BigDecimal</allowed_imports>
+    </file>
+  </domain_model_elements>
+
+<rule>Classes in <domain_model_elements> are pure domain models. Do not import or reference database or web framework dependencies (Spring, Hibernate, JPA, Jackson).</rule>
+  <extensible_patterns>
+    <file path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy">
+      <extension_pattern>STRATEGY_PATTERN</extension_pattern>
+    </file>
+  </extensible_patterns>
+
+<rule>Respect extensibility guidelines for elements in <extensible_patterns>. Implement strategy/visitor extensions rather than expanding branch conditional logic.</rule>
+  <sanitization_elements>
+    <file path="sqlRawInput">
+      <sanitization_types>SQL_INJECTION</sanitization_types>
+    </file>
+  </sanitization_elements>
+
+<rule>Strict input sanitization is mandatory for elements in <sanitization_elements>. Raw input must pass through approved filters before hitting queries or renderers.</rule>
+  <secure_logging_elements>
+    <file path="passwordRaw">
+      <logging_policy>HASH</logging_policy>
+    </file>
+    <file path="creditCardNumber">
+      <logging_policy>MASK_CREDIT_CARD</logging_policy>
+    </file>
+  </secure_logging_elements>
+
+<rule>Sensitive variables in <secure_logging_elements> must never be printed or logged in raw form. Enforce secure masking or hashing.</rule>
+  <explain_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])">
+      <explanation_required>HIGH</explanation_required>
+    </file>
+  </explain_elements>
+
+<rule>Any modification to elements in <explain_elements> requires an explicit, structured Chain-of-Thought markdown description of changes and complexity analysis.</rule>
+  <prototype_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike">
+      <status>Experimental Prototype</status>
+    </file>
+  </prototype_elements>
+
+<rule>Classes in <prototype_elements> are experimental prototypes. Strict rules are relaxed locally, but production classes must never import or depend on them.</rule>
+  <sunset_elements>
+    <file path="com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)">
+      <sunset_ticket>DEBT-742</sunset_ticket>
+      <replacement_target>com.example.service.PricingService</replacement_target>
+    </file>
+  </sunset_elements>
+
+<rule>Do not introduce *new* references or calls to sunset elements in <sunset_elements>. Migrate callers to their modern replacements.</rule>
+  <temporary_workarounds>
+    <file path="com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()">
+      <temporary_expiration>2028-12-31</temporary_expiration>
+      <temporary_reason>Hotfix workaround until upstream payment provider updates their API.</temporary_reason>
+    </file>
+  </temporary_workarounds>
+
+<rule>Elements in <temporary_workarounds> are short-lived stubs or hotfixes that must be refactored or deleted before their designated expiration date.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
