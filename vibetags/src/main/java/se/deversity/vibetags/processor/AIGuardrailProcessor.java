@@ -125,19 +125,27 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     @AIContract(reason = "JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor")
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (roundEnv.processingOver()) {
-            // compareAndSet guarantees exactly one thread enters generateFiles() even if
-            // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
-            if (processed.compareAndSet(false, true)) {
-                generateFiles();
+        // Guardrail generation is advisory: it must NEVER be able to fail the consumer's
+        // compilation. Any unexpected runtime failure is downgraded to a WARNING so javac
+        // continues. We always return false so peer processors still see the annotations.
+        try {
+            if (roundEnv.processingOver()) {
+                // compareAndSet guarantees exactly one thread enters generateFiles() even if
+                // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
+                if (processed.compareAndSet(false, true)) {
+                    generateFiles();
+                }
+                return false;
             }
-            return false;
+            if (processed.get()) return false;
+
+            collector.collect(roundEnv);
+            validateAnnotations(processingEnv.getMessager(), roundEnv);
+        } catch (RuntimeException e) {
+            getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
+            if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
         }
-        if (processed.get()) return false;
-
-        collector.collect(roundEnv);
-        validateAnnotations(processingEnv.getMessager(), roundEnv);
-
         return false; // allow other processors to see the same annotations
     }
 
