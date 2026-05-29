@@ -124,6 +124,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     @AIContract(reason = "JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor")
     @Override
+    @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate: guardrail generation must never fail the host build
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         // Guardrail generation is advisory: it must NEVER be able to fail the consumer's
         // compilation. Any unexpected runtime failure is downgraded to a WARNING so javac
@@ -150,6 +151,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")
+    @SuppressWarnings("PMD.CloseResource") // the dedicated ForkJoinPool is shut down in the finally block (no AutoCloseable on JDK 17)
     private void generateFiles() {
         if (log != null) {
             log.info("VibeTags v{} | {}", VERSION, GITHUB_URL);
@@ -239,18 +241,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 + " active services: " + String.join(", ", effectiveContent.keySet())
                 + (multiModule ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
 
-        // Write the per-platform content files in parallel using ForkJoinPool.commonPool().
-        // Each entry writes a distinct file path, so there is no shared mutable state between tasks.
-        // WriteCache is synchronized on every method. The injected Messager is not guaranteed
-        // thread-safe; we temporarily swap fileWriter to use a synchronized proxy for the duration
-        // of the parallel phase, then restore the original after. Status messages (relPath + status)
-        // are collected in a thread-safe queue and emitted sequentially from the main thread.
+        // Write the per-platform content files in parallel on a VibeTags-owned, bounded
+        // ForkJoinPool — NOT the shared commonPool. The processor runs inside the consumer's
+        // javac, so borrowing commonPool would contend with whatever else their build is doing;
+        // a dedicated pool (sized to the file count, capped at the CPU count) keeps the work
+        // isolated and is torn down before we return. Each entry writes a distinct file path, so
+        // there is no shared mutable state between tasks. WriteCache is synchronized on every
+        // method. The injected Messager is not guaranteed thread-safe; we temporarily swap
+        // fileWriter to use a synchronized proxy for the duration of the parallel phase, then
+        // restore the original after. Status messages (relPath + status) are collected in a
+        // thread-safe queue and emitted sequentially from the main thread.
         GuardrailFileWriter originalWriter = this.fileWriter;
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, new SynchronizedMessager(messager), log, writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
         java.util.Queue<String[]> statusQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        int parallelism = Math.min(Runtime.getRuntime().availableProcessors(),
+                                   Math.max(1, effectiveContent.size()));
+        java.util.concurrent.ForkJoinPool pool = new java.util.concurrent.ForkJoinPool(parallelism);
         try {
-            effectiveContent.entrySet().parallelStream().forEach(entry -> {
+            pool.submit(() -> effectiveContent.entrySet().parallelStream().forEach(entry -> {
                 String service = entry.getKey();
                 String content = entry.getValue();
                 Path filePath = serviceFiles.get(service);
@@ -262,8 +271,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
                 String relPath = root.relativize(filePath).toString().replace('\\', '/');
                 statusQueue.add(new String[]{relPath, changed ? "updated" : "no changes"});
-            });
+            })).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (java.util.concurrent.ExecutionException e) {
+            // Surface to the top-level guard in process(), which downgrades it to a WARNING.
+            // Chain the ExecutionException so the original failure's stack trace is preserved.
+            throw new IllegalStateException("VibeTags parallel file write failed", e);
         } finally {
+            pool.shutdown();
             this.fileWriter = originalWriter;
             this.granularWriter = new GranularRulesWriter(this.fileWriter);
         }
