@@ -78,6 +78,21 @@ PMD/SpotBugs/CPD; `-Djacoco.skip=true` drops coverage instrumentation. Together
 they cut a targeted run to a few seconds. Run the full `mvn clean test -B` once
 before opening a PR.
 
+#### Optional: use the Maven Daemon (`mvnd`)
+
+Every plain `mvn` invocation pays ~2-3 s of cold JVM + Maven + plugin startup —
+which dominates short, targeted runs. [`mvnd`](https://github.com/apache/maven-mvnd)
+keeps a warm JVM (and a hot JIT) between runs, so repeated builds are noticeably
+snappier. It is a drop-in replacement — install it
+(`choco install mvndaemon`, `brew install mvndaemon`, or `sdk install mvnd`) and
+use `mvnd` wherever you would type `mvn`:
+
+```bash
+mvnd -o test -Dtest=WriteCacheProcessorIntegrationTest -Djacoco.skip=true
+```
+
+`mvnd` is purely a local convenience; CI and the published build still use `mvn`.
+
 ## How to Contribute
 
 ### Reporting Bugs
