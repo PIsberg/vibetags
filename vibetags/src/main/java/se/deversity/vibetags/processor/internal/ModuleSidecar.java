@@ -44,7 +44,6 @@ public final class ModuleSidecar {
     private static final String KEY_FORMAT_VERSION = "# version";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
-    private static final String SUPPRESS_EMPTY_CATCH = "EmptyCatch";
 
     private static final int MULTI_MODULE_THRESHOLD = 2;
 
@@ -149,7 +148,6 @@ public final class ModuleSidecar {
      * The worst case is a single build cycle where one module's content is missing from the merged
      * output; the next incremental build picks it up because the sidecar stamp will have changed.
      */
-    @SuppressWarnings(SUPPRESS_EMPTY_CATCH)
     public static List<ModuleSidecar> readAll(Path root) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
@@ -191,7 +189,6 @@ public final class ModuleSidecar {
      * Lists sidecar file paths under {@code root} without parsing them.
      * Used to compute a lightweight stamp for the fingerprint short-circuit.
      */
-    @SuppressWarnings(SUPPRESS_EMPTY_CATCH)
     public static List<Path> listPaths(Path root) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<Path> result = new ArrayList<>();
@@ -323,7 +320,6 @@ public final class ModuleSidecar {
      * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
      * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
      */
-    @SuppressWarnings(SUPPRESS_EMPTY_CATCH)
     public static long computeSidecarStamp(Path root) {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
@@ -338,7 +334,6 @@ public final class ModuleSidecar {
     // Internals
     // -----------------------------------------------------------------------
 
-    @SuppressWarnings(SUPPRESS_EMPTY_CATCH)
     private static void tryDelete(Path p) {
         try { Files.deleteIfExists(p); } catch (IOException ignored) {}
     }

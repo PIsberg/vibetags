@@ -11,7 +11,6 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AIContext annotations for all platforms.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AIContextFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {

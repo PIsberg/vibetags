@@ -46,7 +46,6 @@ import java.util.stream.Collectors;
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache"})
-@SuppressWarnings({"PMD.GuardLogStatement", "PMD.AvoidLiteralsInIfCondition", "PMD.NullAssignment"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -124,7 +123,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     @AIContract(reason = "JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor")
     @Override
-    @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate: guardrail generation must never fail the host build
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         // Guardrail generation is advisory: it must NEVER be able to fail the consumer's
         // compilation. Any unexpected runtime failure is downgraded to a WARNING so javac
@@ -151,7 +149,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")
-    @SuppressWarnings("PMD.CloseResource") // the dedicated ForkJoinPool is shut down in the finally block (no AutoCloseable on JDK 17)
     private void generateFiles() {
         if (log != null) {
             log.info("VibeTags v{} | {}", VERSION, GITHUB_URL);

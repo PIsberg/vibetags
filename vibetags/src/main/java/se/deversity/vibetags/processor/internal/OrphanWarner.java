@@ -11,7 +11,6 @@ import java.util.Set;
  * Warns about "orphaned" annotation usage — when an annotation is present but the
  * corresponding ignore-file isn't, so the protection won't actually take effect.
  */
-@SuppressWarnings("PMD.GuardLogStatement")
 public final class OrphanWarner {
 
     private OrphanWarner() {}

@@ -37,7 +37,6 @@ public final class PlatformRendererRegistry {
      * @param platform the platform type
      * @return the associated PlatformRenderer
      */
-    @SuppressWarnings("PMD.ExhaustiveSwitchHasDefault")
     public static PlatformRenderer getRenderer(Platform platform) {
         switch (platform) {
             case CURSOR:
