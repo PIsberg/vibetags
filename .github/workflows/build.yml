@@ -71,9 +71,17 @@ jobs:
           mvn install -B
 
       - name: Build VibeTags Library (Maven)
+        # PMD, SpotBugs and CPD are JDK-independent source/bytecode analysis, so run them
+        # once (on JDK 21) instead of repeating identical work on every matrix JDK. Error Prone
+        # stays on every JDK — it is a compiler plugin and is genuinely JDK-sensitive (see the
+        # JDK 26 UnsafeFinalization workaround in vibetags/pom.xml). -Dmaven.pmd.skip also skips CPD.
         run: |
           cd vibetags
-          mvn clean install -B
+          if [ "${{ matrix.java }}" = "21" ]; then
+            mvn clean install -B
+          else
+            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+          fi
 
       - name: Install VibeTags BOM (Maven)
         run: |
