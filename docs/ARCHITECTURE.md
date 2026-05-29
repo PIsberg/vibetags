@@ -1013,8 +1013,8 @@ void testResolveActiveServices(@TempDir Path tempDir) throws IOException {
 ### CI/CD
 
 GitHub Actions workflow tests:
-- **Maven builds:** JDK 11, 17, 21
-- **Gradle builds:** JDK 17, 21 (Gradle requires 17+)
+- **Maven builds:** JDK 21, 25, 26
+- **Gradle builds:** JDK 21, 25, 26
 - Verifies generated file existence
 - Validates content in all outputs
 - Code coverage via Codecov
