@@ -222,6 +222,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.antigravityignore` | Antigravity AI | Glob patterns |
 | `.clinerules` | Cline AI assistant | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
+| `.idx/airules.md` | Firebase AI | Markdown |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
 
 #### Granular rules
