@@ -10,7 +10,6 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AIParallelTests annotations for all platforms.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AIParallelTestsFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {

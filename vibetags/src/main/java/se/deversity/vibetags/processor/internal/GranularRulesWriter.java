@@ -20,7 +20,6 @@ import java.util.Set;
     focus = "Writes per-class granular rule files for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles",
     avoids = "Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools"
 )
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GranularRulesWriter {
 
     private final GuardrailFileWriter fileWriter;

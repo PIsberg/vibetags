@@ -11,7 +11,6 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AISecure annotations for all platforms.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AISecureFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {

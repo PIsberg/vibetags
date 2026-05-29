@@ -86,7 +86,7 @@ pmd {
     consoleOutput = true
     toolVersion = "7.24.0"
     ignoreFailures = false
-    ruleSets = ["category/java/errorprone.xml", "category/java/bestpractices.xml"]
+    ruleSetFiles = files("${projectDir}/../pmd-ruleset.xml")
 }
 
 tasks.named('pmdTest') { enabled = false }

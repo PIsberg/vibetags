@@ -34,7 +34,6 @@ import java.util.stream.Stream;
     sensitivity = "high",
     note = "Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost"
 )
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class GuardrailFileWriter {
 
     public static final String MARKER_START_MD = "<!-- VIBETAGS-START -->";
@@ -156,7 +155,6 @@ public final class GuardrailFileWriter {
         }
     }
 
-    @SuppressWarnings("PMD.UseVarargs")
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
                                      String existing, boolean hasNewRules, String[] markers) throws IOException {
         String markerStart = markers[0];
@@ -258,7 +256,6 @@ public final class GuardrailFileWriter {
      * Returns the appropriate marker pair for a file based on its extension.
      * Returns {@code null} for JSON/TOML which are overwritten without markers.
      */
-    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     public static @Nullable String[] getMarkersFor(String fileName) {
         if (fileName.endsWith(".md") || fileName.endsWith(".mdc")
             || "llms.txt".equals(fileName) || "llms-full.txt".equals(fileName)) {
@@ -404,7 +401,6 @@ public final class GuardrailFileWriter {
      * <p>The caller must already have established that {@code Files.size(file) == expected.length}
      * — this method does not re-check.
      */
-    @SuppressWarnings("PMD.AssignmentInOperand")
     public static boolean fileBytesEqual(Path file, byte[] expected) throws IOException {
         try (java.io.InputStream in = Files.newInputStream(file)) {
             byte[] buf = new byte[Math.min(8192, Math.max(1, expected.length))];

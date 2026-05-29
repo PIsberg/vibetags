@@ -102,7 +102,6 @@ public final class AnnotationCollector {
     private final Set<Element> sunsetElements           = new LinkedHashSet<>();
     private final Set<Element> temporaryElements        = new LinkedHashSet<>();
 
-    @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean anyAnnotationsFound = false;
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */

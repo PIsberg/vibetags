@@ -169,8 +169,7 @@
                     <printFailingErrors>true</printFailingErrors>
                     <includeTests>false</includeTests>
                     <rulesets>
-                        <ruleset>category/java/errorprone.xml</ruleset>
-                        <ruleset>category/java/bestpractices.xml</ruleset>
+                        <ruleset>${project.basedir}/../pmd-ruleset.xml</ruleset>
                     </rulesets>
                 </configuration>
                 <executions>
