@@ -1,15 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
-import se.deversity.vibetags.annotations.AIAudit;
-import se.deversity.vibetags.annotations.AIContext;
-import se.deversity.vibetags.annotations.AIPerformance;
-import se.deversity.vibetags.annotations.AIDraft;
-import se.deversity.vibetags.annotations.AICore;
-import se.deversity.vibetags.annotations.AIImmutable;
-import se.deversity.vibetags.annotations.AIDeprecated;
-import se.deversity.vibetags.annotations.AIPrivacy;
-import se.deversity.vibetags.annotations.AIRegulation;
+import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 
 import javax.annotation.processing.RoundEnvironment;
@@ -212,6 +204,178 @@ class AnnotationCollectorUnitTest {
         boolean added = collector.collect(re);
 
         assertFalse(added, "collect() must return false when no annotations are present");
+        assertFalse(collector.anyAnnotationsFound());
+    }
+
+    // ------------------------------------------------------------------
+    // Position 16+: New annotations
+    // ------------------------------------------------------------------
+
+    @Test
+    void collect_onlyCallersOnlyAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AICallersOnly.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.callersOnly().isEmpty());
+    }
+
+    @Test
+    void collect_onlySandboxOnlyAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AISandboxOnly.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.sandboxOnly().isEmpty());
+    }
+
+    @Test
+    void collect_onlyMemoryBudgetAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIMemoryBudget.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.memoryBudget().isEmpty());
+    }
+
+    @Test
+    void collect_onlyPureAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIPure.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.pure().isEmpty());
+    }
+
+    @Test
+    void collect_onlyDomainModelAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIDomainModel.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.domainModel().isEmpty());
+    }
+
+    @Test
+    void collect_onlyExtensibleAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIExtensible.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.extensible().isEmpty());
+    }
+
+    @Test
+    void collect_onlyInputSanitizedAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIInputSanitized.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.inputSanitized().isEmpty());
+    }
+
+    @Test
+    void collect_onlySecureLoggingAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AISecureLogging.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.secureLogging().isEmpty());
+    }
+
+    @Test
+    void collect_onlyExplainAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIExplain.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.explain().isEmpty());
+    }
+
+    @Test
+    void collect_onlyPrototypeAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIPrototype.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.prototype().isEmpty());
+    }
+
+    @Test
+    void collect_onlySunsetAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AISunset.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.sunset().isEmpty());
+    }
+
+    @Test
+    void collect_onlyTemporaryAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AITemporary.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.temporary().isEmpty());
+    }
+
+    @Test
+    void reset_clearsNewAnnotations() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re1 = mock(RoundEnvironment.class);
+        doReturn(Set.of(mockElem("com.example.C1"))).when(re1).getElementsAnnotatedWith(AICallersOnly.class);
+        doReturn(Set.of(mockElem("com.example.C2"))).when(re1).getElementsAnnotatedWith(AISandboxOnly.class);
+        doReturn(Set.of(mockElem("com.example.C3"))).when(re1).getElementsAnnotatedWith(AIMemoryBudget.class);
+        doReturn(Set.of(mockElem("com.example.C4"))).when(re1).getElementsAnnotatedWith(AIPure.class);
+        doReturn(Set.of(mockElem("com.example.C5"))).when(re1).getElementsAnnotatedWith(AIDomainModel.class);
+        doReturn(Set.of(mockElem("com.example.C6"))).when(re1).getElementsAnnotatedWith(AIExtensible.class);
+        doReturn(Set.of(mockElem("com.example.C7"))).when(re1).getElementsAnnotatedWith(AIInputSanitized.class);
+        doReturn(Set.of(mockElem("com.example.C8"))).when(re1).getElementsAnnotatedWith(AISecureLogging.class);
+        doReturn(Set.of(mockElem("com.example.C9"))).when(re1).getElementsAnnotatedWith(AIExplain.class);
+        doReturn(Set.of(mockElem("com.example.C10"))).when(re1).getElementsAnnotatedWith(AIPrototype.class);
+        doReturn(Set.of(mockElem("com.example.C11"))).when(re1).getElementsAnnotatedWith(AISunset.class);
+        doReturn(Set.of(mockElem("com.example.C12"))).when(re1).getElementsAnnotatedWith(AITemporary.class);
+
+        assertTrue(collector.collect(re1));
+        assertFalse(collector.callersOnly().isEmpty());
+        assertFalse(collector.sandboxOnly().isEmpty());
+        assertFalse(collector.memoryBudget().isEmpty());
+        assertFalse(collector.pure().isEmpty());
+        assertFalse(collector.domainModel().isEmpty());
+        assertFalse(collector.extensible().isEmpty());
+        assertFalse(collector.inputSanitized().isEmpty());
+        assertFalse(collector.secureLogging().isEmpty());
+        assertFalse(collector.explain().isEmpty());
+        assertFalse(collector.prototype().isEmpty());
+        assertFalse(collector.sunset().isEmpty());
+        assertFalse(collector.temporary().isEmpty());
+
+        collector.reset();
+
+        assertTrue(collector.callersOnly().isEmpty());
+        assertTrue(collector.sandboxOnly().isEmpty());
+        assertTrue(collector.memoryBudget().isEmpty());
+        assertTrue(collector.pure().isEmpty());
+        assertTrue(collector.domainModel().isEmpty());
+        assertTrue(collector.extensible().isEmpty());
+        assertTrue(collector.inputSanitized().isEmpty());
+        assertTrue(collector.secureLogging().isEmpty());
+        assertTrue(collector.explain().isEmpty());
+        assertTrue(collector.prototype().isEmpty());
+        assertTrue(collector.sunset().isEmpty());
+        assertTrue(collector.temporary().isEmpty());
         assertFalse(collector.anyAnnotationsFound());
     }
 }

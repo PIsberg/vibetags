@@ -8,6 +8,8 @@ import se.deversity.vibetags.processor.internal.content.annotations.*;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -629,5 +631,821 @@ class FormatterBranchCoverageTest {
         StringBuilder sb = new StringBuilder();
         fmt.format(el, sb, Platform.FIREBASE);
         assertEquals(0, sb.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AICallersOnlyFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiCallersOnlyFormatter_allPlatforms() {
+        AICallersOnlyFormatter fmt = new AICallersOnlyFormatter();
+        Element el = mockEl("com.example.SecureSvc");
+        AICallersOnly ann = mock(AICallersOnly.class);
+        when(ann.value()).thenReturn(new String[]{"admin", "system"});
+        when(el.getAnnotation(AICallersOnly.class)).thenReturn(ann);
+
+        // 1. null annotation
+        when(el.getAnnotation(AICallersOnly.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AICallersOnly.class)).thenReturn(ann);
+
+        // 2. CURSOR (standard platform)
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Only callable by: [admin, system]"));
+
+        // 3. CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<allowed_callers>admin, system</allowed_callers>"));
+
+        // 4. LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("- **Allowed Callers**: admin, system"));
+
+        // 5. AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### CALLERS LIMIT: com.example.SecureSvc"));
+
+        // 6. INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(callers limited)"));
+
+        // 7. Default (Unhandled platform)
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AISandboxOnlyFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiSandboxOnlyFormatter_allPlatforms() {
+        AISandboxOnlyFormatter fmt = new AISandboxOnlyFormatter();
+        Element el = mockEl("com.example.SandboxSvc");
+        AISandboxOnly ann = mock(AISandboxOnly.class);
+        when(el.getAnnotation(AISandboxOnly.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AISandboxOnly.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AISandboxOnly.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Strictly sandbox or test environment only"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<policy>Sandbox or test only. Do not invoke from production.</policy>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("Sandbox/testing environments only"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### SANDBOX ONLY: com.example.SandboxSvc"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(sandbox-only)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIMemoryBudgetFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiMemoryBudgetFormatter_allPlatforms() {
+        AIMemoryBudgetFormatter fmt = new AIMemoryBudgetFormatter();
+        Element el = mockEl("com.example.Alloc");
+        AIMemoryBudget ann = mock(AIMemoryBudget.class);
+        when(ann.value()).thenReturn(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION);
+        when(el.getAnnotation(AIMemoryBudget.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIMemoryBudget.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIMemoryBudget.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("ZERO_ALLOCATION"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<allocation_policy>ZERO_ALLOCATION</allocation_policy>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("ZERO_ALLOCATION"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### MEMORY BUDGET: com.example.Alloc"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(memory-budget)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIPureFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiPureFormatter_allPlatforms() {
+        AIPureFormatter fmt = new AIPureFormatter();
+        Element el = mockEl("com.example.Pure");
+        AIPure ann = mock(AIPure.class);
+        when(el.getAnnotation(AIPure.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIPure.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIPure.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Must remain a pure function"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<policy>Pure function: no side effects, deterministic.</policy>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("Mathematically pure function"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### PURE FUNCTION: com.example.Pure"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(pure)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIDomainModelFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiDomainModelFormatter_allPlatforms() {
+        AIDomainModelFormatter fmt = new AIDomainModelFormatter();
+        Element el = mockEl("com.example.Domain");
+        AIDomainModel ann = mock(AIDomainModel.class);
+        when(ann.allow()).thenReturn(new String[]{"java.util"});
+        when(el.getAnnotation(AIDomainModel.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIDomainModel.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIDomainModel.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Allowed imports: [java.util]"));
+
+        // CURSOR with empty allow
+        when(ann.allow()).thenReturn(new String[0]);
+        StringBuilder sbCursorEmpty = new StringBuilder();
+        fmt.format(el, sbCursorEmpty, Platform.CURSOR);
+        assertTrue(sbCursorEmpty.toString().contains("No external framework imports permitted"));
+        when(ann.allow()).thenReturn(new String[]{"java.util"});
+
+        // CLAUDE with non-empty allow
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<allowed_imports>java.util</allowed_imports>"));
+
+        // CLAUDE with empty allow
+        when(ann.allow()).thenReturn(new String[0]);
+        StringBuilder sbClaudeEmpty = new StringBuilder();
+        fmt.format(el, sbClaudeEmpty, Platform.CLAUDE);
+        assertFalse(sbClaudeEmpty.toString().contains("<allowed_imports>"));
+        when(ann.allow()).thenReturn(new String[]{"java.util"});
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("- **Allowed Packages**: java.util"));
+
+        // LLMS_FULL with empty allow
+        when(ann.allow()).thenReturn(new String[0]);
+        StringBuilder sbLlmsFullEmpty = new StringBuilder();
+        fmt.format(el, sbLlmsFullEmpty, Platform.LLMS_FULL);
+        assertFalse(sbLlmsFullEmpty.toString().contains("Allowed Packages"));
+        when(ann.allow()).thenReturn(new String[]{"java.util"});
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("- **Allowed**: java.util"));
+
+        // AIDER_CONVENTIONS with empty allow
+        when(ann.allow()).thenReturn(new String[0]);
+        StringBuilder sbAiderEmpty = new StringBuilder();
+        fmt.format(el, sbAiderEmpty, Platform.AIDER_CONVENTIONS);
+        assertFalse(sbAiderEmpty.toString().contains("Allowed"));
+        when(ann.allow()).thenReturn(new String[]{"java.util"});
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(domain model)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIExtensibleFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiExtensibleFormatter_allPlatforms() {
+        AIExtensibleFormatter fmt = new AIExtensibleFormatter();
+        Element el = mockEl("com.example.Ext");
+        AIExtensible ann = mock(AIExtensible.class);
+        when(ann.value()).thenReturn(AIExtensible.Strategy.STRATEGY_PATTERN);
+        when(el.getAnnotation(AIExtensible.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIExtensible.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIExtensible.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("STRATEGY_PATTERN"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<extension_pattern>STRATEGY_PATTERN</extension_pattern>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("Use polymorphism"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### POLYMORPHIC EXTENSION: com.example.Ext"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(extensible)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIInputSanitizedFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiInputSanitizedFormatter_allPlatforms() {
+        AIInputSanitizedFormatter fmt = new AIInputSanitizedFormatter();
+        Element el = mockEl("com.example.Input");
+        AIInputSanitized ann = mock(AIInputSanitized.class);
+        when(ann.value()).thenReturn(new AIInputSanitized.SanitizerType[]{
+            AIInputSanitized.SanitizerType.SQL_INJECTION, AIInputSanitized.SanitizerType.XSS
+        });
+        when(el.getAnnotation(AIInputSanitized.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIInputSanitized.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIInputSanitized.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("SQL_INJECTION, XSS"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<sanitization_types>SQL_INJECTION, XSS</sanitization_types>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("- **Sanitization Requirement**: SQL_INJECTION, XSS"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### INPUT SANITIZATION: com.example.Input"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(sanitized)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AISecureLoggingFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiSecureLoggingFormatter_allPlatforms() {
+        AISecureLoggingFormatter fmt = new AISecureLoggingFormatter();
+        Element el = mockEl("com.example.Log");
+        AISecureLogging ann = mock(AISecureLogging.class);
+        when(ann.value()).thenReturn(AISecureLogging.MaskingPolicy.HASH);
+        when(el.getAnnotation(AISecureLogging.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AISecureLogging.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AISecureLogging.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Enforce masking policy: HASH"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<logging_policy>HASH</logging_policy>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("HASH"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### SECURE LOGGING: com.example.Log"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(secure-logging)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIExplainFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiExplainFormatter_allPlatforms() {
+        AIExplainFormatter fmt = new AIExplainFormatter();
+        Element el = mockEl("com.example.Exp");
+        AIExplain ann = mock(AIExplain.class);
+        when(ann.value()).thenReturn(AIExplain.ComplexityLevel.HIGH);
+        when(el.getAnnotation(AIExplain.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIExplain.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIExplain.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Complexity: HIGH"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<explanation_required>HIGH</explanation_required>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("Complexity: HIGH"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### EXPLAIN RATIONALE: com.example.Exp"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(explain)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AIPrototypeFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiPrototypeFormatter_allPlatforms() {
+        AIPrototypeFormatter fmt = new AIPrototypeFormatter();
+        Element el = mockEl("com.example.Proto");
+        AIPrototype ann = mock(AIPrototype.class);
+        when(el.getAnnotation(AIPrototype.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AIPrototype.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AIPrototype.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Experimental prototype class"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<status>Experimental Prototype</status>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("Bypasses strict validation rules"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### EXPERIMENTAL PROTOTYPE: com.example.Proto"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(prototype)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AISunsetFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiSunsetFormatter_allPlatforms() {
+        AISunsetFormatter fmt = new AISunsetFormatter();
+        Element el = mockEl("com.example.Sunset");
+        AISunset ann = mock(AISunset.class);
+        when(ann.jira()).thenReturn("JIRA-123");
+        doReturn(Object.class).when(ann).replacement();
+        when(el.getAnnotation(AISunset.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AISunset.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AISunset.class)).thenReturn(ann);
+
+        // CURSOR (with standard replacement)
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Replacement: `java.lang.Object`"));
+
+        // MirroredTypeException with non-null TypeMirror
+        javax.lang.model.type.TypeMirror tm = mock(javax.lang.model.type.TypeMirror.class);
+        when(tm.toString()).thenReturn("com.example.NewImpl");
+        javax.lang.model.type.MirroredTypeException mte = new javax.lang.model.type.MirroredTypeException(tm);
+        doThrow(mte).when(ann).replacement();
+
+        StringBuilder sbCursorMirror = new StringBuilder();
+        fmt.format(el, sbCursorMirror, Platform.CURSOR);
+        assertTrue(sbCursorMirror.toString().contains("Replacement: `com.example.NewImpl`"));
+
+        // MirroredTypeException with null TypeMirror
+        javax.lang.model.type.MirroredTypeException mteNull = mock(javax.lang.model.type.MirroredTypeException.class);
+        doReturn(null).when(mteNull).getTypeMirror();
+        doThrow(mteNull).when(ann).replacement();
+
+        StringBuilder sbCursorMirrorNull = new StringBuilder();
+        fmt.format(el, sbCursorMirrorNull, Platform.CURSOR);
+        assertTrue(sbCursorMirrorNull.toString().contains("Replacement: `java.lang.Object`"));
+
+        // Reset normal behavior
+        doReturn(Object.class).when(ann).replacement();
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<sunset_ticket>JIRA-123</sunset_ticket>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("- **JIRA Ticket**: JIRA-123"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### SUNSET API: com.example.Sunset"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(sunset)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // AITemporaryFormatter
+    // -----------------------------------------------------------------------
+
+    @Test
+    void aiTemporaryFormatter_allPlatforms() {
+        AITemporaryFormatter fmt = new AITemporaryFormatter();
+        Element el = mockEl("com.example.Temp");
+        AITemporary ann = mock(AITemporary.class);
+        when(ann.expiresOn()).thenReturn("2026-06-01");
+        when(ann.reason()).thenReturn("quick-fix");
+        when(el.getAnnotation(AITemporary.class)).thenReturn(ann);
+
+        // null annotation
+        when(el.getAnnotation(AITemporary.class)).thenReturn(null);
+        StringBuilder sbNull = new StringBuilder();
+        fmt.format(el, sbNull, Platform.CURSOR);
+        assertEquals(0, sbNull.length());
+        when(el.getAnnotation(AITemporary.class)).thenReturn(ann);
+
+        // CURSOR
+        StringBuilder sbCursor = new StringBuilder();
+        fmt.format(el, sbCursor, Platform.CURSOR);
+        assertTrue(sbCursor.toString().contains("Expires on: 2026-06-01"));
+
+        // CLAUDE
+        StringBuilder sbClaude = new StringBuilder();
+        fmt.format(el, sbClaude, Platform.CLAUDE);
+        assertTrue(sbClaude.toString().contains("<temporary_expiration>2026-06-01</temporary_expiration>"));
+
+        // LLMS_FULL
+        StringBuilder sbLlmsFull = new StringBuilder();
+        fmt.format(el, sbLlmsFull, Platform.LLMS_FULL);
+        assertTrue(sbLlmsFull.toString().contains("quick-fix"));
+
+        // AIDER_CONVENTIONS
+        StringBuilder sbAider = new StringBuilder();
+        fmt.format(el, sbAider, Platform.AIDER_CONVENTIONS);
+        assertTrue(sbAider.toString().contains("#### TEMPORARY WORKAROUND: com.example.Temp"));
+
+        // INTERPRETER
+        StringBuilder sbInterpreter = new StringBuilder();
+        fmt.format(el, sbInterpreter, Platform.INTERPRETER);
+        assertTrue(sbInterpreter.toString().contains("(temporary)"));
+
+        // Default
+        StringBuilder sbDefault = new StringBuilder();
+        fmt.format(el, sbDefault, Platform.FIREBASE);
+        assertEquals(0, sbDefault.length());
+    }
+
+    // -----------------------------------------------------------------------
+    // GranularRenderer — new annotations
+    // -----------------------------------------------------------------------
+
+    @Test
+    void granularRenderer_newAnnotations() {
+        se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer renderer =
+            new se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer();
+        se.deversity.vibetags.processor.internal.AnnotationCollector collector =
+            new se.deversity.vibetags.processor.internal.AnnotationCollector();
+
+        javax.annotation.processing.RoundEnvironment re = mock(javax.annotation.processing.RoundEnvironment.class);
+        Element el = mockEl("com.example.NewAnnotated");
+
+        // 1. AICallersOnly
+        AICallersOnly callersOnly = mock(AICallersOnly.class);
+        when(callersOnly.value()).thenReturn(new String[]{"admin"});
+        when(el.getAnnotation(AICallersOnly.class)).thenReturn(callersOnly);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AICallersOnly.class);
+
+        // 2. AISandboxOnly
+        AISandboxOnly sandboxOnly = mock(AISandboxOnly.class);
+        when(el.getAnnotation(AISandboxOnly.class)).thenReturn(sandboxOnly);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AISandboxOnly.class);
+
+        // 3. AIMemoryBudget
+        AIMemoryBudget mb = mock(AIMemoryBudget.class);
+        when(mb.value()).thenReturn(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION);
+        when(el.getAnnotation(AIMemoryBudget.class)).thenReturn(mb);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIMemoryBudget.class);
+
+        // 4. AIPure
+        AIPure pure = mock(AIPure.class);
+        when(el.getAnnotation(AIPure.class)).thenReturn(pure);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIPure.class);
+
+        // 5. AIDomainModel
+        AIDomainModel dm = mock(AIDomainModel.class);
+        when(dm.allow()).thenReturn(new String[]{"java.util"});
+        when(el.getAnnotation(AIDomainModel.class)).thenReturn(dm);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIDomainModel.class);
+
+        // 6. AIExtensible
+        AIExtensible ext = mock(AIExtensible.class);
+        when(ext.value()).thenReturn(AIExtensible.Strategy.STRATEGY_PATTERN);
+        when(el.getAnnotation(AIExtensible.class)).thenReturn(ext);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIExtensible.class);
+
+        // 7. AIInputSanitized
+        AIInputSanitized is = mock(AIInputSanitized.class);
+        when(is.value()).thenReturn(new AIInputSanitized.SanitizerType[]{AIInputSanitized.SanitizerType.SQL_INJECTION});
+        when(el.getAnnotation(AIInputSanitized.class)).thenReturn(is);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIInputSanitized.class);
+
+        // 8. AISecureLogging
+        AISecureLogging sl = mock(AISecureLogging.class);
+        when(sl.value()).thenReturn(AISecureLogging.MaskingPolicy.HASH);
+        when(el.getAnnotation(AISecureLogging.class)).thenReturn(sl);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AISecureLogging.class);
+
+        // 9. AIExplain
+        AIExplain exp = mock(AIExplain.class);
+        when(exp.value()).thenReturn(AIExplain.ComplexityLevel.HIGH);
+        when(el.getAnnotation(AIExplain.class)).thenReturn(exp);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIExplain.class);
+
+        // 10. AIPrototype
+        AIPrototype proto = mock(AIPrototype.class);
+        when(el.getAnnotation(AIPrototype.class)).thenReturn(proto);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIPrototype.class);
+
+        // 11. AISunset (with MirroredTypeException)
+        AISunset sunset = mock(AISunset.class);
+        when(sunset.jira()).thenReturn("JIRA-456");
+        javax.lang.model.type.TypeMirror tm = mock(javax.lang.model.type.TypeMirror.class);
+        when(tm.toString()).thenReturn("com.example.NewClass");
+        javax.lang.model.type.MirroredTypeException mte = new javax.lang.model.type.MirroredTypeException(tm);
+        when(sunset.replacement()).thenThrow(mte);
+        when(el.getAnnotation(AISunset.class)).thenReturn(sunset);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AISunset.class);
+
+        // 12. AITemporary
+        AITemporary temp = mock(AITemporary.class);
+        when(temp.expiresOn()).thenReturn("2026-06-01");
+        when(temp.reason()).thenReturn("quick-fix");
+        when(el.getAnnotation(AITemporary.class)).thenReturn(temp);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AITemporary.class);
+
+        collector.collect(re);
+
+        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+            renderer.renderGranular(collector);
+
+        assertFalse(result.isEmpty());
+        String out = result.values().iterator().next().toString();
+        assertTrue(out.contains("Allowed Callers"));
+        assertTrue(out.contains("Sandbox Restriction"));
+        assertTrue(out.contains("ZERO_ALLOCATION"));
+        assertTrue(out.contains("Mathematical Purity"));
+        assertTrue(out.contains("Domain Model Boundary"));
+        assertTrue(out.contains("Allowed Imports"));
+        assertTrue(out.contains("Polymorphic Extension Pattern"));
+        assertTrue(out.contains("Input Sanitization"));
+        assertTrue(out.contains("Secure Logging Masking"));
+        assertTrue(out.contains("Chain-of-Thought Explanation"));
+        assertTrue(out.contains("Experimental Prototype"));
+        assertTrue(out.contains("Sunset Element"));
+        assertTrue(out.contains("com.example.NewClass"));
+        assertTrue(out.contains("Temporary Workaround"));
+        assertTrue(out.contains("quick-fix"));
+    }
+
+    @Test
+    void granularRenderer_sunsetWithNullMirror() {
+        se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer renderer =
+            new se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer();
+        se.deversity.vibetags.processor.internal.AnnotationCollector collector =
+            new se.deversity.vibetags.processor.internal.AnnotationCollector();
+
+        javax.annotation.processing.RoundEnvironment re = mock(javax.annotation.processing.RoundEnvironment.class);
+        Element el = mockEl("com.example.SunsetNull");
+
+        AISunset sunset = mock(AISunset.class);
+        when(sunset.jira()).thenReturn("JIRA-789");
+        javax.lang.model.type.MirroredTypeException mte = mock(javax.lang.model.type.MirroredTypeException.class);
+        doReturn(null).when(mte).getTypeMirror();
+        doThrow(mte).when(sunset).replacement();
+        when(el.getAnnotation(AISunset.class)).thenReturn(sunset);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AISunset.class);
+
+        collector.collect(re);
+
+        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+            renderer.renderGranular(collector);
+
+        assertFalse(result.isEmpty());
+        String out = result.values().iterator().next().toString();
+        assertTrue(out.contains("java.lang.Object"));
+    }
+
+    @Test
+    void granularRenderer_domainModelWithEmptyAllow() {
+        se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer renderer =
+            new se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer();
+        se.deversity.vibetags.processor.internal.AnnotationCollector collector =
+            new se.deversity.vibetags.processor.internal.AnnotationCollector();
+
+        javax.annotation.processing.RoundEnvironment re = mock(javax.annotation.processing.RoundEnvironment.class);
+        Element el = mockEl("com.example.DomainEmpty");
+
+        AIDomainModel dm = mock(AIDomainModel.class);
+        when(dm.allow()).thenReturn(new String[0]);
+        when(el.getAnnotation(AIDomainModel.class)).thenReturn(dm);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIDomainModel.class);
+
+        collector.collect(re);
+
+        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+            renderer.renderGranular(collector);
+
+        assertFalse(result.isEmpty());
+        String out = result.values().iterator().next().toString();
+        assertFalse(out.contains("Allowed Imports"));
     }
 }
