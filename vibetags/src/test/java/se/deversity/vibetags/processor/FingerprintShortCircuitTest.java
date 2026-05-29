@@ -65,8 +65,8 @@ class FingerprintShortCircuitTest {
         patchedCache.setSidecarStamp("0");
         patchedCache.flush();
 
-        // Wait long enough for filesystem mtime resolution (FAT/NTFS can be 1-2 s).
-        Thread.sleep(1500);
+        // Let the filesystem clock tick so a re-write — if one happened — would be visible.
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
 
         // ---- Second compile: same sources, sidecar-stamp now matches ----
         ProcessorTestHarness.withExampleSources(tmp);
@@ -101,7 +101,7 @@ class FingerprintShortCircuitTest {
         patchedCache.setSidecarStamp("0");
         patchedCache.flush();
 
-        Thread.sleep(1500);
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
 
         // Recompile with a DIFFERENT reason → fingerprint changes → short-circuit must NOT fire.
         ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
@@ -133,7 +133,7 @@ class FingerprintShortCircuitTest {
         Path cursorRules = tmp.resolve(".cursorrules");
         Files.delete(cursorRules);
 
-        Thread.sleep(1500);
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
 
         // Recompile — deleted file means stability check fails → short-circuit must NOT fire.
         ProcessorTestHarness.withExampleSources(tmp);

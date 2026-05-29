@@ -101,6 +101,36 @@ class ProcessorTestHarness {
         }
     }
 
+    /**
+     * Blocks until the filesystem clock has advanced far enough that a file written after this
+     * call is guaranteed a strictly-greater last-modified timestamp than one written before it.
+     *
+     * <p>The write cache and fingerprint short-circuit compare millisecond mtimes, so mtime-based
+     * tests must let the on-disk timestamp move on between two compiles. This adapts to the
+     * filesystem's actual mtime granularity (~1 ms on ext4/NTFS/APFS, up to ~2 s on FAT) by
+     * probing it directly, instead of always paying a fixed 1.5 s worst-case wait. Capped at 2 s
+     * so a coarse or quirky filesystem can never hang the suite.
+     */
+    static void awaitFilesystemTick(Path dir) throws IOException, InterruptedException {
+        Path probe = Files.createTempFile(dir, ".tick", ".tmp");
+        try {
+            long start = Files.getLastModifiedTime(probe).toMillis();
+            long deadlineNanos = System.nanoTime() + 2_000_000_000L; // 2 s safety cap
+            while (true) {
+                Files.write(probe, new byte[]{1});
+                if (Files.getLastModifiedTime(probe).toMillis() > start) {
+                    return;
+                }
+                if (System.nanoTime() >= deadlineNanos) {
+                    return;
+                }
+                Thread.sleep(1);
+            }
+        } finally {
+            Files.deleteIfExists(probe);
+        }
+    }
+
     /** Queues an in-memory Java source file (fully qualified class name + source content). */
     void addSource(String qualifiedClassName, String content) {
         String path = qualifiedClassName.replace('.', '/') + ".java";
