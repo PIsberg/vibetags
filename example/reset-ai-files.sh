@@ -40,6 +40,11 @@ AI_FILES=(
   # v0.9.6 platforms
   "GEMINI.md"
   ".antigravityignore"
+  # v0.9.7 platforms
+  ".clinerules"
+  ".junie/guidelines.md"
+  # Firebase AI
+  ".idx/airules.md"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
