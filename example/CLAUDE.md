@@ -331,6 +331,29 @@
   </schema_safe_elements>
 
 <rule>Database or contract schema / serialization safety must be preserved in <schema_safe_elements>. Do not alter structures without migration paths.</rule>
+  <idempotent_elements>
+    <element path="com.example.compliance.GdprService.deleteAllUserData(java.lang.String)">
+      <idempotent>true</idempotent>
+      <reason>Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.</reason>
+    </element>
+  </idempotent_elements>
+
+<rule>Operations listed in <idempotent_elements> must remain idempotent. Never introduce side effects that cause repeated invocations to produce different results.</rule>
+  <feature_flag_elements>
+    <element path="com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)">
+      <flag>inventory.push-alerts.enabled</flag>
+      <default_value>false</default_value>
+    </element>
+  </feature_flag_elements>
+
+<rule>Elements listed in <feature_flag_elements> are gated by a feature flag. Always preserve the flag check — never assume the flag is always active.</rule>
+  <security_elements>
+    <element path="com.example.security.SecurityConfig">
+      <aspect>authentication</aspect>
+    </element>
+  </security_elements>
+
+<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

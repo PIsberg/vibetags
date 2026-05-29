@@ -23,4 +23,8 @@
 ## Core Functionality
 - **Sensitivity**: Critical
 - **Note**: This is a security manager. Any single-line change can compromise the entire project.
+
+## Security-Critical Code
+- **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact.
+- **Aspect**: authentication
 <!-- VIBETAGS-END -->

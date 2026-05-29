@@ -181,4 +181,19 @@ The following elements prohibit dynamic runtime class loading, reflections, or l
 The following elements have schema safety constraints. Restrict changing formats/fields without a backward-compatible migration plan.
 
 * `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+
+## ♻️ IDEMPOTENCY GUARANTEES
+The following operations are idempotent. Multiple invocations MUST produce the same result as a single invocation. Never introduce side effects that break this guarantee.
+
+* `com.example.compliance.GdprService.deleteAllUserData(java.lang.String)` - Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## 🚩 FEATURE FLAG GATED CODE
+The following elements are gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check.
+
+* `com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)` - Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## 🔐 SECURITY-CRITICAL CODE
+The following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.
+
+* `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 # VIBETAGS-END

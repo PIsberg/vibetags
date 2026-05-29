@@ -165,4 +165,19 @@ Dynamic class loading, custom classloaders, and reflection hacks are prohibited:
 Preserve database/contract schema and serialization compatibility on every change:
 
 - **com.example.database.UserEntity**: Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+
+## ♻️ IDEMPOTENCY GUARANTEES
+These operations must remain idempotent (multiple invocations = same result as once):
+
+- **com.example.compliance.GdprService.deleteAllUserData(java.lang.String)**: Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## 🚩 FEATURE FLAG GATED CODE
+These elements are gated behind a feature flag. Never assume the flag is always active:
+
+- **com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)**: Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## 🔐 SECURITY-CRITICAL CODE
+Do not weaken security properties of these elements. Review every change for security impact:
+
+- **com.example.security.SecurityConfig**: Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 <!-- VIBETAGS-END -->

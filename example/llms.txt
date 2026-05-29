@@ -121,4 +121,13 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Schema & Serialization Safety
 - [UserEntity](com.example.database.UserEntity): Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+
+## ♻️ Idempotency Guarantees
+- [GdprService.deleteAllUserData(java.lang.String)](com.example.compliance.GdprService.deleteAllUserData(java.lang.String)): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## 🚩 Feature Flag Gated Code
+- [InventoryService.sendLowStockAlert(java.lang.String,int)](com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)): Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## 🔐 Security-Critical Code
+- [SecurityConfig](com.example.security.SecurityConfig): Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 <!-- VIBETAGS-END -->
