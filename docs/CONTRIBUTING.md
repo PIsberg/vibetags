@@ -58,6 +58,26 @@ See [`load-tests/README.md`](../load-tests/README.md) and
 benchmark catalogue, baseline-capture procedure, and committed release-tagged
 results.
 
+### Faster local iteration
+
+The full suite runs ~800 tests in ~16 s — most of which are full in-process
+`javac` compilations, so it is already CPU-bound and parallel (JUnit runs tests
+concurrently). When you are iterating on one area, don't run everything:
+
+```bash
+# Run a single test class (offline, skip coverage instrumentation)
+mvn -o test -Dtest=WriteCacheProcessorIntegrationTest -Djacoco.skip=true
+
+# Run a few classes, or a single method
+mvn -o test -Dtest='WriteCacheProcessorIntegrationTest,FingerprintShortCircuitTest'
+mvn -o test -Dtest=AIGuardrailProcessorUnitTest#process_processingOver_returnsEarlyWithFalse
+```
+
+`-o` (offline) skips dependency resolution; running `test` (not `verify`) skips
+PMD/SpotBugs/CPD; `-Djacoco.skip=true` drops coverage instrumentation. Together
+they cut a targeted run to a few seconds. Run the full `mvn clean test -B` once
+before opening a PR.
+
 ## How to Contribute
 
 ### Reporting Bugs
