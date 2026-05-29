@@ -22,7 +22,7 @@ This is a sample e-commerce application that shows all fifteen VibeTags annotati
 - **`@AIObservability`** — Names metrics/traces/logs the AI must not remove or rename silently
 - **`@AIRegulation`** — Ties code to a specific compliance clause (GDPR, PCI-DSS, HIPAA, …)
 
-When compiled, the VibeTags annotation processor automatically generates AI configuration files for 27 platforms.
+When compiled, the VibeTags annotation processor automatically generates AI configuration files for 33 platforms.
 
 > **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../README.md).
 
@@ -122,6 +122,8 @@ mkdir -p .cody && touch .cody/config.json && touch .codyignore
 touch .supermavenignore .mentatconfig.json sweep.yaml .plandex.yaml
 touch .doubleignore .codeiumignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
+mkdir -p .junie && touch .junie/guidelines.md
+mkdir -p .idx && touch .idx/airules.md
 ```
 
 The `reset-ai-files.sh` script does the same thing and can be used to clear generated content for a clean rebuild:

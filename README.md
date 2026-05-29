@@ -213,7 +213,7 @@ The 24 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **32 AI platforms**:
+Generated configuration files work out-of-the-box with **33 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
@@ -224,6 +224,7 @@ Generated configuration files work out-of-the-box with **32 AI platforms**:
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
+- **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)

@@ -35,6 +35,7 @@ public enum Platform {
     ANTIGRAVITY_IGNORE("antigravity_ignore"),
     CLINE("cline"),
     JUNIE("junie"),
+    FIREBASE("firebase"),
     CODEX_CONFIG("codex_config"),
     CODEX_RULES("codex_rules"),
     QWEN_SETTINGS("qwen_settings"),
