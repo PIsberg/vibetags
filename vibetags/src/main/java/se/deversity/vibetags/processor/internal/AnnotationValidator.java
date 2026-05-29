@@ -17,9 +17,6 @@ import se.deversity.vibetags.annotations.AIParallelTests;
 import se.deversity.vibetags.annotations.AILegacyBridge;
 import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.annotations.AIPublicAPI;
-import se.deversity.vibetags.annotations.AIStrictExceptions;
-import se.deversity.vibetags.annotations.AIStrictTypes;
-import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
@@ -27,16 +24,9 @@ import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.annotations.AISecure;
 
 // New annotations imports
-import se.deversity.vibetags.annotations.AICallersOnly;
 import se.deversity.vibetags.annotations.AISandboxOnly;
-import se.deversity.vibetags.annotations.AIMemoryBudget;
-import se.deversity.vibetags.annotations.AIPure;
 import se.deversity.vibetags.annotations.AIDomainModel;
-import se.deversity.vibetags.annotations.AIExtensible;
-import se.deversity.vibetags.annotations.AIInputSanitized;
 import se.deversity.vibetags.annotations.AISecureLogging;
-import se.deversity.vibetags.annotations.AIExplain;
-import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
 

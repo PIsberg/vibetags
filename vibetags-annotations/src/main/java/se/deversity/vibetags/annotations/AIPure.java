@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
  * Must be deterministic (same input leads to same output) and have zero side effects.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.METHOD})
+@Target(ElementType.METHOD)
 public @interface AIPure {
 }
