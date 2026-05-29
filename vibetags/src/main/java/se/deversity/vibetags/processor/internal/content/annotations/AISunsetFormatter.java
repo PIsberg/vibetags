@@ -11,7 +11,6 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AISunset annotations for all platforms.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AISunsetFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {
@@ -33,38 +32,19 @@ public final class AISunsetFormatter implements AnnotationFormatter {
         
         String summary = "Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: " + jira + ". Replacement: `" + replacementName + "`";
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
+            return;
+        }
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
-                break;
             case CLAUDE:
                 sb.append("    <file path=\"").append(className).append("\">\n      <sunset_ticket>").append(jira).append("</sunset_ticket>\n      <replacement_target>").append(replacementName).append("</replacement_target>\n    </file>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
-                break;
-            case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sunset Status**: Active (Forbid new calls)\n- **JIRA Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### SUNSET API: ").append(className).append("\n- **Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (sunset): ").append(summary).append("\n");

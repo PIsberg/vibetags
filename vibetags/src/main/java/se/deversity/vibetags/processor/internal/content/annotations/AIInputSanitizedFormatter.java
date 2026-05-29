@@ -9,7 +9,6 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 /**
  * Formats @AIInputSanitized annotations for all platforms.
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public final class AIInputSanitizedFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {
@@ -24,38 +23,19 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
         String typeList = String.join(", ", typesStr);
         String summary = "Input parameter/field must be strictly sanitized against injection attacks: [" + typeList + "]";
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
+            return;
+        }
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
-                break;
             case CLAUDE:
                 sb.append("    <file path=\"").append(className).append("\">\n      <sanitization_types>").append(typeList).append("</sanitization_types>\n    </file>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
-                break;
-            case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sanitization Requirement**: ").append(typeList).append("\n\n");
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### INPUT SANITIZATION: ").append(className).append("\n- **Required Filters**: ").append(typeList).append("\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (sanitized): ").append(summary).append("\n");
