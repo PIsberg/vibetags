@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-05-31
+
+### Added
+- **12 new AI guardrail annotations** with compile-time validation rules, formatters, and showcase examples.
+- **Firebase AI support** with `.idx/airules.md` output integration.
+- **Static analysis enhancements**: Checkstyle and Error Prone integrated into the build. Replaced inline PMD suppressions with a central `pmd-ruleset.xml`.
+- **CI/CD**: Added Windows and macOS cross-platform test jobs, bumped Java target to 21.
+
+### Refactored
+- Extracted duplicate formatter logic to satisfy CPD.
+- Improved resilient sidecar and cache logic for different filesystem roots and symlinked temp dirs.
+
+### Performance
+- Isolated parallel file writes from the host `commonPool`.
+
+### Fixed
+- Disabled `UnsafeFinalization` check for JDK 26 compatibility.
+- Ensure consumer build never fails on guardrail errors by downgrading failures to WARNING.
+- Achieved full branch coverage for all 12 V5 AI guardrail annotations.
+
 ## [0.9.8] - 2026-05-25
 
 ### Added
@@ -706,7 +726,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.8...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.9...HEAD
+[0.9.9]: https://github.com/PIsberg/vibetags/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/PIsberg/vibetags/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/PIsberg/vibetags/compare/v0.9.5...v0.9.7
 [0.9.5]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.5
