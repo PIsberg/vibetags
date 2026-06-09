@@ -366,7 +366,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
         contentByService.forEach((service, body) -> {
             Path filePath = serviceFiles.get(service);
-            if (filePath != null && GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString()) != null) {
+            // Path.getFileName() returns null only for root paths — guard for correctness.
+            Path fileName = filePath != null ? filePath.getFileName() : null;
+            if (fileName != null && GuardrailFileWriter.getMarkersFor(fileName.toString()) != null) {
                 mySidecar.putBody(service, body);
             }
         });
@@ -385,6 +387,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             allSidecars.add(mySidecar);
             allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
         }
+        // CPD-OFF — intentional mirror of the merge block in generateFiles(): a check verdict
+        // is only trustworthy if it reproduces generation exactly, and generateFiles() is
+        // @AILocked (its step order is load-bearing), so the shared block cannot be extracted.
         boolean multiModule = allSidecars.size() > 1;
 
         final Map<String, String> effectiveContent;
@@ -393,8 +398,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
                 String service = entry.getKey();
                 if (!contentByService.containsKey(service)) continue;
-                Path filePath = entry.getValue();
-                String[] markers = GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString());
+                // Path.getFileName() returns null only for root paths — guard for correctness.
+                Path fileName = entry.getValue().getFileName();
+                if (fileName == null) continue;
+                String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
                 if (markers == null) continue; // JSON/TOML: keep current-module content as-is
                 boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
                 String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
@@ -406,6 +413,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         } else {
             effectiveContent = contentByService;
         }
+        // CPD-ON
 
         // Dry-run writer: null messager (per-file "Updated" notes would be misleading here),
         // null cache (a verification verdict must come from real file compares, never the cache).
