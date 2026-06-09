@@ -215,7 +215,9 @@ class AIGuardrailProcessorUnitTest {
             // v0.9.7 platforms
             "cline", "junie", "kiro_granular",
             // Firebase AI
-            "firebase"
+            "firebase",
+            // Machine-readable @AILocked report
+            "locks_report"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
     }

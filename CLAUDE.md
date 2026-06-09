@@ -224,6 +224,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
+| `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
 
 #### Granular rules
 
@@ -248,6 +249,16 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.root` | JVM working directory | Override the output directory for all generated files |
 | `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
 | `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
+| `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |
+| `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes nothing — no output files, no sidecars, no cache |
+
+### Check mode (CI drift enforcement)
+
+With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `generateFiles()`. It runs the same service resolution, content build, and multi-module merge (the module's sidecar save is simulated in memory), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that records every would-be write/scrub/delete into `dryRunChanges()` instead of touching disk. Any recorded path fails the build via `Messager.ERROR`. The fingerprint short-circuit and write cache are bypassed so the verdict never depends on cache state; internal failures in check mode fail closed (ERROR, not the usual downgrade-to-WARNING).
+
+### Machine-readable lock report (`.vibetags-locks`)
+
+An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits one JSON object per `@AILocked` element: element path, kind, source file, 1-based `startLine`/`endLine`, and reason. The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a `.json` file, so it rides the module-sidecar merge in multi-module builds instead of last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in `process()` while rounds are live); under non-javac compilers entries omit position fields. Consumed by the locked-files GitHub Action in `action/locked-files/`, which fails PRs whose diffs touch locked line ranges, strip `@AILocked` annotations, or delete locked files.
 
 ### Annotations (all `RetentionPolicy.SOURCE`)
 
@@ -390,6 +401,8 @@ All tests live in `vibetags/src/test`.
 | `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
 | `BuildFingerprintUnitTest` | `BuildFingerprint.compute()` determinism and collision properties |
 | `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged |
+| `CheckModeTest` | Opt-in check mode (`-Avibetags.check=true`): pass/fail verdicts, zero writes, multi-module merge parity, dry-run `GuardrailFileWriter` |
+| `LocksReportEndToEndTest` | `.vibetags-locks` machine-readable lock report: class/method positions via the javac Tree API, JSON escaping, opt-in behaviour |
 | `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
 | `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
 | `GuardrailContentBuilderUnitTest` | Per-annotation content generation for each platform |

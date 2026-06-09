@@ -91,6 +91,8 @@ class ProcessorTestHarness {
         touch(".clinerules");
         touch(".junie/guidelines.md");
         touch(".kiro/steering/.vibetags");
+        // Machine-readable @AILocked report
+        touch(".vibetags-locks");
     }
 
     private void touch(String relative) throws IOException {
@@ -141,35 +143,14 @@ class ProcessorTestHarness {
      * Runs {@link AIGuardrailProcessor} via the Java compiler against the queued sources.
      * The processor option {@code -Avibetags.root} is set to {@link #root} so that all
      * generated AI config files land in the temp directory.
+     *
+     * @param extraOptions additional compiler options (e.g. {@code "-Avibetags.check=true"})
      */
-    void compile() {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new IllegalStateException("JavaCompiler unavailable — run tests with a JDK, not a JRE");
-        }
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
-            Path classOut = root.resolve("classes");
-            Files.createDirectories(classOut);
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
-
-            List<String> options = List.of(
-                "-classpath", System.getProperty("java.class.path"),
-                "-proc:only",
-                "-Avibetags.root=" + root.toAbsolutePath()
-            );
-
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics, options, null, sources
-            );
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
-            task.call();
-        } catch (IOException e) {
-            throw new RuntimeException("Compilation setup failed", e);
-        }
+    void compile(String... extraOptions) {
+        compileReturningDiagnostics(extraOptions);
     }
 
-    List<javax.tools.Diagnostic<? extends JavaFileObject>> compileReturningDiagnostics() {
+    List<javax.tools.Diagnostic<? extends JavaFileObject>> compileReturningDiagnostics(String... extraOptions) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             throw new IllegalStateException("JavaCompiler unavailable — run tests with a JDK, not a JRE");
@@ -180,11 +161,12 @@ class ProcessorTestHarness {
             Files.createDirectories(classOut);
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
 
-            List<String> options = List.of(
+            List<String> options = new ArrayList<>(List.of(
                 "-classpath", System.getProperty("java.class.path"),
                 "-proc:only",
                 "-Avibetags.root=" + root.toAbsolutePath()
-            );
+            ));
+            options.addAll(List.of(extraOptions));
 
             JavaCompiler.CompilationTask task = compiler.getTask(
                 null, fm, diagnostics, options, null, sources

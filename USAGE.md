@@ -68,6 +68,109 @@ tasks.withType(JavaCompile) {
 }
 ```
 
+### Check Mode — CI Drift Enforcement (Opt-in)
+
+By default VibeTags *generates* guardrail files and never fails your build. **Check mode** flips that for CI: it verifies that every generated file is in sync with the annotations and **fails the compile** if anything has drifted — without writing a single byte to disk.
+
+| Option | Default | Description |
+|---|---|---|
+| `vibetags.check` | `false` | When `true`, verify instead of generate: run the full content build and multi-module merge, compare against the files on disk, and report every file a normal compile would change as a compile **error**. Nothing is written — no output files, no sidecars, no cache. |
+
+Drift is detected for all of it: changed annotations not yet regenerated, hand-edited generated blocks, stale granular rule files, and orphaned granular files a normal compile would clean up. The write cache and fingerprint short-circuit are bypassed, so the verdict never depends on local cache state — a fresh CI checkout works.
+
+Javac `-A` options can't be passed as a Maven user property, so opt in through a profile.
+
+**Maven profile** (CI opts in with `mvn compile -P vibetags-check`; the default build is untouched):
+
+```xml
+<profile>
+    <id>vibetags-check</id>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Avibetags.check=true</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</profile>
+```
+
+**Gradle:**
+
+```groovy
+// Opt in via a project property: gradle compileJava -PvibetagsCheck
+tasks.withType(JavaCompile) {
+    if (project.hasProperty('vibetagsCheck')) {
+        options.compilerArgs += ['-Avibetags.check=true']
+    }
+}
+```
+
+**GitHub Actions:**
+
+```yaml
+- name: Verify AI guardrails are in sync
+  run: mvn -B compile -P vibetags-check
+```
+
+When the check fails, the error lists every out-of-date file:
+
+```text
+[ERROR] VibeTags: check failed — 3 guardrail file(s) are out of date with the annotations:
+  - CLAUDE.md
+  - .cursorrules
+  - .cursor/rules/com-example-PaymentProcessor.mdc
+Run a normal compile (without -Avibetags.check=true) and commit the regenerated files.
+```
+
+To fix: run a normal compile locally and commit the regenerated files.
+
+### Locked-Code PR Guard (GitHub Action)
+
+Guardrail files *ask* AI tools to keep out of `@AILocked` code — the locked-files guard *verifies* nothing slipped through. It fails a pull request whose diff touches locked code.
+
+**1. Opt in to the machine-readable lock report** (same file-existence model as every platform):
+
+```bash
+touch .vibetags-locks
+mvn compile
+```
+
+The compile writes `.vibetags-locks` — JSON Lines between `# VIBETAGS` hash markers, one entry per `@AILocked` element with its source file and 1-based line range:
+
+```text
+# VIBETAGS-START
+{"type":"locked","element":"com.example.PaymentProcessor","kind":"CLASS","file":"src/main/java/com/example/PaymentProcessor.java","startLine":12,"endLine":240,"reason":"Core payment logic"}
+# VIBETAGS-END
+```
+
+Line positions come from the javac Compiler Tree API; under other compilers (ECJ) entries omit positions and tools fall back to file-level matching. In Maven multi-module builds the report aggregates every module's locks via module sub-markers.
+
+**2. Add the action to your PR workflow:**
+
+```yaml
+jobs:
+  locked-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: PIsberg/vibetags/action/locked-files@main
+```
+
+The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
+
 ### Choosing Which AI Services to Support (Opt-in Model)
 
 VibeTags operates on a **Strict Opt-in Model**. It **never** creates new configuration files on its own. Instead, it only populates or updates files that **already exist** in your project root.

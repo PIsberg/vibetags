@@ -848,7 +848,7 @@ class Coverage1dot0GapTest {
                 + "@AILocked(reason = \"sync test\")\n"
                 + "public class SomeService {}\n");
         // compile() triggers generateFiles() which creates SynchronizedMessager
-        assertDoesNotThrow(h::compile,
+        assertDoesNotThrow(() -> h.compile(),
             "compile() must not throw even when SynchronizedMessager is in use");
     }
 
