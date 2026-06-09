@@ -13,6 +13,7 @@ import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import org.slf4j.Logger;
 
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
 )
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
-@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache"})
+@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache", "vibetags.check"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -74,6 +75,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     private Path root;
     private String projectName;
+
+    /**
+     * Opt-in check mode ({@code -Avibetags.check=true}): verify generated files instead of
+     * writing them, and fail the build on drift. Default {@code false} — normal generation.
+     */
+    private boolean checkMode;
+
+    /** Best-effort source line resolution for {@code @AILocked} elements (javac Tree API). */
+    private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
     private final AnnotationCollector collector = new AnnotationCollector();
     // Only the three sets actually read in generateFiles() are kept as fields.
@@ -106,6 +116,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
+        this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
+        this.positionResolver = SourcePositionResolver.forEnv(processingEnv);
+
         String useCache = options.getOrDefault("vibetags.cache", "true");
         if ("false".equalsIgnoreCase(useCache)) {
             this.writeCache = null;
@@ -126,24 +139,42 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         // Guardrail generation is advisory: it must NEVER be able to fail the consumer's
         // compilation. Any unexpected runtime failure is downgraded to a WARNING so javac
-        // continues. We always return false so peer processors still see the annotations.
+        // continues. The one exception is opt-in check mode (-Avibetags.check=true), whose
+        // entire purpose is to fail the build — there an internal failure fails closed as an
+        // ERROR rather than silently passing. We always return false so peer processors still
+        // see the annotations.
         try {
             if (roundEnv.processingOver()) {
                 // compareAndSet guarantees exactly one thread enters generateFiles() even if
                 // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
                 if (processed.compareAndSet(false, true)) {
-                    generateFiles();
+                    if (checkMode) {
+                        checkFiles();
+                    } else {
+                        generateFiles();
+                    }
                 }
                 return false;
             }
             if (processed.get()) return false;
 
             collector.collect(roundEnv);
+            // Positions must be resolved while the round is live — the Tree API cannot map
+            // elements back to source once processing is over.
+            for (Element e : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
+                collector.recordLockedPosition(e, positionResolver.resolve(e));
+            }
             validateAnnotations(processingEnv.getMessager(), roundEnv);
         } catch (RuntimeException e) {
-            getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
-                "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
-            if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
+            if (checkMode) {
+                getSafeMessager().printMessage(Diagnostic.Kind.ERROR,
+                    "VibeTags: check mode could not verify guardrail files (failing build): " + e);
+                if (log != null) log.error("Check mode failed; failing build (check is opt-in).", e);
+            } else {
+                getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
+                if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
+            }
         }
         return false; // allow other processors to see the same annotations
     }
@@ -302,6 +333,128 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
+        VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Opt-in verification mode ({@code -Avibetags.check=true}). Runs the same service
+     * resolution, content build, and multi-module merge as {@link #generateFiles()}, but
+     * touches NOTHING on disk — no output files, no sidecar, no cache. Every file a normal
+     * compile would create, update, scrub, or delete is instead reported as a compile ERROR,
+     * failing the build until the consumer regenerates and commits. Intended for CI drift
+     * detection; the fingerprint short-circuit and write cache are deliberately bypassed so
+     * the verdict never depends on cache state.
+     */
+    private void checkFiles() {
+        if (log != null) {
+            log.info("VibeTags v{} | {} — check mode (no files will be written)", VERSION, GITHUB_URL);
+            log.info("Root: {}", root.toAbsolutePath());
+        }
+
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
+        Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
+
+        GuardrailContentBuilder.Result built =
+            new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER).build();
+        Map<String, String> contentByService = built.contentByService;
+
+        // Simulate this module's sidecar save in memory: the merge below must reflect the
+        // freshly built bodies, not whatever a previous compile persisted to disk.
+        Path compilationRoot = Paths.get("").toAbsolutePath();
+        String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
+        String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
+        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
+        contentByService.forEach((service, body) -> {
+            Path filePath = serviceFiles.get(service);
+            // Path.getFileName() returns null only for root paths — guard for correctness.
+            Path fileName = filePath != null ? filePath.getFileName() : null;
+            if (fileName != null && GuardrailFileWriter.getMarkersFor(fileName.toString()) != null) {
+                mySidecar.putBody(service, body);
+            }
+        });
+        List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.readAll(root));
+        boolean replaced = false;
+        for (int i = 0; i < allSidecars.size(); i++) {
+            if (allSidecars.get(i).getModuleId().equals(moduleId)) {
+                allSidecars.set(i, mySidecar);
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            // readAll() returns sidecars sorted by filename (= moduleId); keep that ordering
+            // so the merged sub-marker sequence matches what generateFiles() would produce.
+            allSidecars.add(mySidecar);
+            allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
+        }
+        // CPD-OFF — intentional mirror of the merge block in generateFiles(): a check verdict
+        // is only trustworthy if it reproduces generation exactly, and generateFiles() is
+        // @AILocked (its step order is load-bearing), so the shared block cannot be extracted.
+        boolean multiModule = allSidecars.size() > 1;
+
+        final Map<String, String> effectiveContent;
+        if (multiModule) {
+            Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
+            for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
+                String service = entry.getKey();
+                if (!contentByService.containsKey(service)) continue;
+                // Path.getFileName() returns null only for root paths — guard for correctness.
+                Path fileName = entry.getValue().getFileName();
+                if (fileName == null) continue;
+                String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
+                if (markers == null) continue; // JSON/TOML: keep current-module content as-is
+                boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
+                String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
+                if (!mergedBody.isBlank()) {
+                    merged.put(service, mergedBody);
+                }
+            }
+            effectiveContent = merged;
+        } else {
+            effectiveContent = contentByService;
+        }
+        // CPD-ON
+
+        // Dry-run writer: null messager (per-file "Updated" notes would be misleading here),
+        // null cache (a verification verdict must come from real file compares, never the cache).
+        GuardrailFileWriter checkWriter = new GuardrailFileWriter(GENERATED_HEADER, null, log, null, true);
+        for (Map.Entry<String, String> entry : effectiveContent.entrySet()) {
+            String service = entry.getKey();
+            Path filePath = serviceFiles.get(service);
+            boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
+            boolean anyContributed = multiModule
+                ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
+                : collector.anyAnnotationsFound();
+            checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
+        }
+        GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
+        Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices);
+        checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
+
+        Messager messager = getSafeMessager();
+        List<String> drift = checkWriter.dryRunChanges();
+        if (drift.isEmpty()) {
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: check passed — all " + effectiveContent.size()
+                    + " active guardrail files are in sync with the annotations.");
+            if (log != null) log.info("Check passed: {} guardrail files in sync.", effectiveContent.size());
+        } else {
+            StringBuilder sb = new StringBuilder("VibeTags: check failed — ")
+                .append(drift.size())
+                .append(" guardrail file(s) are out of date with the annotations:");
+            for (String p : drift) {
+                String rel;
+                try {
+                    rel = root.relativize(Paths.get(p)).toString().replace('\\', '/');
+                } catch (IllegalArgumentException e) {
+                    rel = p;
+                }
+                sb.append("\n  - ").append(rel);
+            }
+            sb.append("\nRun a normal compile (without -Avibetags.check=true) and commit the regenerated files.");
+            messager.printMessage(Diagnostic.Kind.ERROR, sb.toString());
+            if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
+        }
         VibeTagsLogger.shutdown(root);
     }
 

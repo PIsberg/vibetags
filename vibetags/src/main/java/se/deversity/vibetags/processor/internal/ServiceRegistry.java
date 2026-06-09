@@ -38,7 +38,9 @@ public final class ServiceRegistry {
         // v0.9.7 platforms
         "cline", "junie", "kiro_granular",
         // Firebase AI
-        "firebase"
+        "firebase",
+        // Machine-readable @AILocked report for CI diff guards
+        "locks_report"
     );
 
     private ServiceRegistry() {}
@@ -98,6 +100,8 @@ public final class ServiceRegistry {
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
         map.put("firebase",      root.resolve(".idx/airules.md"));
+        // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
+        map.put("locks_report",  root.resolve(".vibetags-locks"));
         return map;
     }
 

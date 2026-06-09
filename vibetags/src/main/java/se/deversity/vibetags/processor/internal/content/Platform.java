@@ -41,7 +41,8 @@ public enum Platform {
     QWEN_SETTINGS("qwen_settings"),
     QWEN_REFACTOR("qwen_refactor"),
     CODY("cody"),
-    
+    LOCKS_REPORT("locks_report"),
+
     // Granular rule platforms
     CURSOR_GRANULAR("cursor_granular"),
     TRAE_GRANULAR("trae_granular"),

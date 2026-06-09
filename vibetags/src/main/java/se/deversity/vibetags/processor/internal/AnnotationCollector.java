@@ -42,6 +42,8 @@ import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
 
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import java.util.Collections;
@@ -103,6 +105,27 @@ public final class AnnotationCollector {
     private final Set<Element> temporaryElements        = new LinkedHashSet<>();
 
     private boolean anyAnnotationsFound = false;
+
+    /**
+     * Source positions of {@code @AILocked} elements, recorded by the processor during the
+     * collection rounds (the Tree API needs a live round). LinkedHashMap so iteration matches
+     * the insertion order of {@link #lockedElements}. Best-effort: elements compile under
+     * non-javac compilers without positions and are simply absent from this map.
+     */
+    private final java.util.Map<Element, SourcePositionResolver.Position> lockedPositions =
+        new java.util.LinkedHashMap<>();
+
+    /** Records the source position of a locked element; null positions are ignored. */
+    public void recordLockedPosition(Element element, SourcePositionResolver.@Nullable Position position) {
+        if (position != null) {
+            lockedPositions.put(element, position);
+        }
+    }
+
+    /** Best-effort source position of a locked element, or {@code null} when unknown. */
+    public SourcePositionResolver.@Nullable Position lockedPosition(Element element) {
+        return lockedPositions.get(element);
+    }
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */
     public boolean collect(RoundEnvironment roundEnv) {
@@ -214,6 +237,7 @@ public final class AnnotationCollector {
         prototypeElements.clear();
         sunsetElements.clear();
         temporaryElements.clear();
+        lockedPositions.clear();
         anyAnnotationsFound = false;
     }
 
