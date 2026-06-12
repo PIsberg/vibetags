@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`Automatic-Module-Name` in both jar manifests** (`se.deversity.vibetags.annotations`,
+  `se.deversity.vibetags.processor`) so JPMS consumers get a stable module name instead of a
+  filename-derived automatic one. `Implementation-Version` is now also written to the manifest
+  (Maven and Gradle builds).
+- **Format-version fields on every on-disk machine format** ahead of 1.0:
+  - `.vibetags-cache` carries a `# format: 1` header; caches written in a newer, unknown format
+    are discarded wholesale instead of mis-parsed.
+  - `.vibetags-mod-*` sidecars: the existing `# version=1` header is now *enforced* on load —
+    a sidecar written by a newer processor is skipped (never deleted) in mixed-version
+    multi-module builds.
+  - `.vibetags-locks` starts with a `{"type":"format","version":1}` JSON record; consumers that
+    filter on `type == "locked"` (like the bundled GitHub Action) are unaffected.
+
+### Changed
+- **The processor version is now part of the build fingerprint** (`BuildFingerprint`). Upgrading
+  VibeTags invalidates the previous `.vibetags-cache` fingerprint, so a release that renders
+  different content from unchanged annotations can no longer be skipped by the short-circuit.
+  Expect one full regeneration on the first compile after any upgrade.
+
+### Fixed
+- **`@AIInputSanitized` / `@AISecureLogging` on method parameters now emit the fully qualified
+  element path** (e.g. `com.example.Foo.exportKeys(java.lang.String)#filePath`) instead of the
+  bare parameter name, which made same-named parameters on different methods indistinguishable
+  (#212). **Migration note:** generated guardrail files containing parameter-level entries will
+  show a one-time diff on the first compile after upgrading; CI check mode (`-Avibetags.check=true`)
+  will flag this as drift until the files are regenerated.
+
+### Build
+- Bumped `spotbugs-maven-plugin` 4.9.8.3 → 4.10.2.0 (its JSpecify-aware analyzer found a missing
+  null guard in `JunieRenderer`, now fixed) and `jacoco-maven-plugin` 0.8.14 → 0.8.15.
+
+### Documentation
+- Documented all 39 annotations consistently: `CLAUDE.md` (annotation table, semantics, and
+  validation warnings for the 12 v0.9.9 annotations) and `USAGE.md` (new sections for
+  `@AIFeatureFlag`, `@AISecure`, and the twelve v0.9.9 precision guardrails).
+
 ## [0.9.9] - 2026-05-31
 
 ### Added
