@@ -229,13 +229,13 @@ The following elements require extension using polymorphic patterns (Strategy/Vi
 ## Mandatory Input Sanitization
 The following parameters/fields must go through strict sanitizers before hitting queries or renderers:
 
-- `sqlRawInput` - Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+- `com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput` - Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
 
 ## Secure Logging Masking
 The following sensitive elements must be masked, hashed, or omitted from log/stdout streams:
 
-- `passwordRaw` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
-- `creditCardNumber` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+- `com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+- `com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
 
 ## Required Chain-of-Thought Explanations
 Any change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough:

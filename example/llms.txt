@@ -150,11 +150,11 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [TaxCalculatorStrategy](com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
 
 ## Mandatory Input Sanitization
-- [sqlRawInput](sqlRawInput): Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+- [NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput](com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput): Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
 
 ## Secure Logging Masking
-- [passwordRaw](passwordRaw): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
-- [creditCardNumber](creditCardNumber): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+- [NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw](com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+- [NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber](com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
 
 ## Required Chain-of-Thought Explanations
 - [NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])](com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])): Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: HIGH

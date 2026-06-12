@@ -398,17 +398,17 @@
 
 <rule>Respect extensibility guidelines for elements in <extensible_patterns>. Implement strategy/visitor extensions rather than expanding branch conditional logic.</rule>
   <sanitization_elements>
-    <file path="sqlRawInput">
+    <file path="com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput">
       <sanitization_types>SQL_INJECTION</sanitization_types>
     </file>
   </sanitization_elements>
 
 <rule>Strict input sanitization is mandatory for elements in <sanitization_elements>. Raw input must pass through approved filters before hitting queries or renderers.</rule>
   <secure_logging_elements>
-    <file path="passwordRaw">
+    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw">
       <logging_policy>HASH</logging_policy>
     </file>
-    <file path="creditCardNumber">
+    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber">
       <logging_policy>MASK_CREDIT_CARD</logging_policy>
     </file>
   </secure_logging_elements>
