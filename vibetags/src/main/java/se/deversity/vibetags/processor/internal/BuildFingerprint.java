@@ -45,16 +45,32 @@ public final class BuildFingerprint {
     private BuildFingerprint() {}
 
     /**
-     * Computes the fingerprint over (collector annotations × resolved active services).
+     * Computes the fingerprint over (processor version × collector annotations × resolved active
+     * services).
      *
      * <p>Element ordering is normalised by element-path (a stable, FQN-like string) before hashing,
      * because {@link java.util.LinkedHashSet} preserves insertion order and javac's discovery order
      * is not guaranteed to be deterministic across runs. Active services are sorted alphabetically
      * for the same reason.
+     *
+     * <p>The processor version ({@link ProcessorVersion}) is part of the input deliberately: a new
+     * processor release may render different content from identical annotations, so an upgrade must
+     * invalidate the previous fingerprint rather than short-circuit past regeneration.
      */
     @AIContract(reason = "Same inputs must always produce the same 8-hex output across JVM restarts; changing the algorithm silently invalidates all existing .vibetags-cache files")
     public static String compute(AnnotationCollector collector, Set<String> activeServices) {
+        return compute(collector, activeServices, ProcessorVersion.get());
+    }
+
+    /**
+     * Version-explicit variant of {@link #compute(AnnotationCollector, Set)}. Visible so tests can
+     * verify that a version change alone invalidates the fingerprint.
+     */
+    public static String compute(AnnotationCollector collector, Set<String> activeServices,
+                                 String processorVersion) {
         StringBuilder sb = new StringBuilder(4096);
+
+        sb.append("V{").append(processorVersion).append('}');
 
         appendAnnotationSet(sb, "L", collector.locked(), e -> {
             AILocked a = e.getAnnotation(AILocked.class);

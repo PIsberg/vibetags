@@ -17,6 +17,7 @@ import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
+import se.deversity.vibetags.processor.internal.ProcessorVersion;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -148,6 +149,45 @@ class BuildFingerprintUnitTest {
             BuildFingerprint.compute(c1, Set.of("cursor")),
             BuildFingerprint.compute(c2, Set.of("cursor")),
             "Identical null-annotation inputs must produce the same fingerprint");
+    }
+
+    @Test
+    void compute_processorVersionChange_invalidatesFingerprint() {
+        // A new processor release may render different content from identical annotation
+        // inputs, so the version alone must change the fingerprint — otherwise the
+        // short-circuit would skip regeneration after an upgrade and leave stale output.
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = mock(RoundEnvironment.class);
+
+        Element lockedElem = namedElement("com.example.Locked");
+        when(lockedElem.getAnnotation(AILocked.class)).thenReturn(null);
+        doReturn(Set.of(lockedElem)).when(re).getElementsAnnotatedWith(AILocked.class);
+        collector.collect(re);
+
+        String v1 = BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0");
+        String v2 = BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.1");
+
+        assertNotEquals(v1, v2,
+            "Identical inputs under different processor versions must produce different fingerprints");
+        assertEquals(v1, BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+            "Same version + same inputs must stay deterministic");
+    }
+
+    @Test
+    void compute_defaultOverload_usesRunningProcessorVersion() {
+        AnnotationCollector collector = new AnnotationCollector();
+
+        assertEquals(
+            BuildFingerprint.compute(collector, Set.of("cursor"), ProcessorVersion.get()),
+            BuildFingerprint.compute(collector, Set.of("cursor")),
+            "The two-arg overload must fingerprint with the running processor's version");
+    }
+
+    @Test
+    void processorVersion_isNeverBlank() {
+        String v = ProcessorVersion.get();
+        assertNotNull(v, "ProcessorVersion.get() must never return null");
+        assertFalse(v.isBlank(), "ProcessorVersion.get() must never return blank");
     }
 
     // -----------------------------------------------------------------------
