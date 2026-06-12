@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
 The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 27 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
+- `vibetags-annotations/` — the 39 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
 - `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
 - `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).
@@ -258,7 +258,7 @@ With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `g
 
 ### Machine-readable lock report (`.vibetags-locks`)
 
-An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits one JSON object per `@AILocked` element: element path, kind, source file, 1-based `startLine`/`endLine`, and reason. The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a `.json` file, so it rides the module-sidecar merge in multi-module builds instead of last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in `process()` while rounds are live); under non-javac compilers entries omit position fields. Consumed by the locked-files GitHub Action in `action/locked-files/`, which fails PRs whose diffs touch locked line ranges, strip `@AILocked` annotations, or delete locked files.
+An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits one JSON object per `@AILocked` element: element path, kind, source file, 1-based `startLine`/`endLine`, and reason. The first JSON record is `{"type":"format","version":N}` so consumers can reject reports written in a future, incompatible schema (filter on `type == "locked"` to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a `.json` file, so it rides the module-sidecar merge in multi-module builds instead of last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in `process()` while rounds are live); under non-javac compilers entries omit position fields. Consumed by the locked-files GitHub Action in `action/locked-files/`, which fails PRs whose diffs touch locked line ranges, strip `@AILocked` annotations, or delete locked files.
 
 ### Annotations (all `RetentionPolicy.SOURCE`)
 
@@ -291,6 +291,18 @@ An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` t
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
 | `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
 | `@AISecure` | TYPE, METHOD | `aspect: String` |
+| `@AICallersOnly` | TYPE, METHOD | `value: String[]` |
+| `@AISandboxOnly` | TYPE, METHOD | *(none)* |
+| `@AIMemoryBudget` | TYPE, METHOD | `value: AllocationPolicy` |
+| `@AIPure` | METHOD | *(none)* |
+| `@AIDomainModel` | TYPE | `allow: String[]` |
+| `@AIExtensible` | TYPE | `value: Strategy` |
+| `@AIInputSanitized` | PARAMETER, FIELD | `value: SanitizerType[]` |
+| `@AISecureLogging` | FIELD, PARAMETER | `value: MaskingPolicy` |
+| `@AIExplain` | TYPE, METHOD | `value: ComplexityLevel` |
+| `@AIPrototype` | TYPE | *(none)* |
+| `@AISunset` | TYPE, METHOD, FIELD | `jira: String`, `replacement: Class<?>` |
+| `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
 
 **Annotation semantics:**
 
@@ -318,6 +330,18 @@ An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` t
 - `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
 - `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume it is always active
 - `@AISecure` — marks security-critical code; AI must never weaken security properties and must flag every change for security review
+- `@AICallersOnly` — only the listed callers may invoke the element; AI must not introduce calls from outside the allowed boundary
+- `@AISandboxOnly` — sandbox/test-harness code; production code must never import or reference it
+- `@AIMemoryBudget` — strict heap-allocation budget (`ZERO_ALLOCATION`, `NO_AUTOBOXING`, …); AI must optimize allocations and never add per-call garbage
+- `@AIPure` — must remain a pure function: no side effects, no state mutation, deterministic for the same inputs
+- `@AIDomainModel` — framework-free domain entity; AI must not import Spring, JPA/Hibernate, Jackson, or other framework packages (exceptions via `allow`)
+- `@AIExtensible` — extend via the declared polymorphic pattern (`STRATEGY_PATTERN`, `VISITOR_PATTERN`, …); AI must not append branch conditionals
+- `@AIInputSanitized` — parameter/field must pass approved sanitizers (`SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, …) before reaching queries or renderers
+- `@AISecureLogging` — sensitive value; AI must enforce the masking policy (`OMIT`, `HASH`, `MASK_CREDIT_CARD`, …) in any logging it writes
+- `@AIExplain` — changes require a step-by-step proof of correctness in the PR/walkthrough, scaled to the declared complexity level
+- `@AIPrototype` — experimental stub: QA/test constraints are relaxed, but production classes must never import it
+- `@AISunset` — strict deprecation tied to a JIRA ticket; introducing *new* references is forbidden, callers route to `replacement`
+- `@AITemporary` — hotfix/stub with an expiration date (`YYYY-MM-DD`); must be removed before expiry, warned at compile time once exceeded
 
 **Compile-time validation warnings:**
 
@@ -338,12 +362,16 @@ An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` t
 - `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
 - `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
 - `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
+- `@AISunset` + `@AIDraft` on the same element — contradictory (sunset elements must not be actively drafted or expanded)
+- `@AISunset` with a blank `jira` — required attribute missing
+- `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
+- `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 
 ### Top-level fingerprint short-circuit
 
-The processor records a fingerprint of the build inputs — every collected annotation (FQN + attribute values) plus the resolved active-services set — into `.vibetags-cache` under a `# fingerprint: <hex>` header. On the next compile, if the fingerprint still matches AND every previously written file is byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no `GuardrailContentBuilder.build()`, no per-file compares, no writes. The two-part guard means a manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no longer matches the cache entry).
+The processor records a fingerprint of the build inputs — the processor version (`ProcessorVersion`), every collected annotation (FQN + attribute values), plus the resolved active-services set — into `.vibetags-cache` under a `# fingerprint: <hex>` header. Folding the version in means upgrading the processor invalidates the previous fingerprint, so a release that renders different content from unchanged annotations can never be skipped. The cache file also carries a `# format: <n>` header; a cache written by a newer (unknown) format is discarded wholesale rather than mis-parsed. On the next compile, if the fingerprint still matches AND every previously written file is byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no `GuardrailContentBuilder.build()`, no per-file compares, no writes. The two-part guard means a manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no longer matches the cache entry).
 
 ### Multi-module safety
 
@@ -371,7 +399,7 @@ All tests live in `vibetags/src/test`.
 
 | Class | Coverage |
 |---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 27 annotations) |
+| `AnnotationDefinitionsTest` | Annotation structure and defaults (the original 27 annotations; the 12 newest are covered by `NewAnnotationsV4`/`V5` definition tests) |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |

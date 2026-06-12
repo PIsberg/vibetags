@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -139,6 +140,39 @@ class MultiModuleProcessorTest {
             "readAll must find mod-a");
         assertTrue(loaded.stream().anyMatch(s -> "mod-b".equals(s.getModuleId())),
             "readAll must find mod-b");
+    }
+
+    @Test
+    void multiModule_readAll_skipsButNeverDeletesFutureVersionSidecar(@TempDir Path tmp) throws Exception {
+        // A sidecar written by a NEWER processor (mixed-version multi-module build) declares a
+        // higher "# version" than this build understands. It must be excluded from the merge
+        // (we cannot safely parse it) but NEVER deleted — the newer sibling module owns it.
+        ModuleSidecar current = new ModuleSidecar("mod-current", "");
+        current.putBody("cursor", "content-current");
+        current.save(tmp);
+
+        Path futureSidecar = tmp.resolve(".vibetags-mod-future");
+        Files.writeString(futureSidecar,
+            "# version=99\nmoduleId=mod-future\nmodulePath=\nsome-future-key{not=parseable}\n");
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(tmp);
+        assertTrue(loaded.stream().anyMatch(s -> "mod-current".equals(s.getModuleId())),
+            "current-format sidecar must load normally");
+        assertFalse(loaded.stream().anyMatch(s -> "mod-future".equals(s.getModuleId())),
+            "future-format sidecar must not be parsed into the merge");
+        assertTrue(Files.exists(futureSidecar),
+            "future-format sidecar must not be deleted — its module owns it");
+    }
+
+    @Test
+    void multiModule_readAll_deletesMalformedSidecar(@TempDir Path tmp) throws Exception {
+        // Distinct from the future-version case: a sidecar with no moduleId is garbage from
+        // any version's perspective and keeps the existing delete-on-malformed behaviour.
+        Path malformed = tmp.resolve(".vibetags-mod-broken");
+        Files.writeString(malformed, "# version=1\nno-module-id-here=x\n");
+
+        ModuleSidecar.readAll(tmp);
+        assertFalse(Files.exists(malformed), "malformed sidecar must be pruned");
     }
 
     @Test

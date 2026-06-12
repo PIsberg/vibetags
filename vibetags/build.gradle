@@ -105,6 +105,19 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+jar {
+    manifest {
+        attributes(
+            // Stable JPMS module name for modular consumers; changing it after 1.0 is breaking.
+            'Automatic-Module-Name': 'se.deversity.vibetags.processor',
+            // Feeds ProcessorVersion → BuildFingerprint so a processor upgrade
+            // invalidates stale .vibetags-cache fingerprints.
+            'Implementation-Title': 'vibetags-processor',
+            'Implementation-Version': version
+        )
+    }
+}
+
 compileJava {
     // Disable annotation processing when compiling the processor itself
     options.compilerArgs += ['-proc:none']

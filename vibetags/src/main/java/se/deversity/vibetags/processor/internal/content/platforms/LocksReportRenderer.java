@@ -28,11 +28,20 @@ import javax.lang.model.element.Element;
  */
 public final class LocksReportRenderer implements PlatformRenderer {
 
+    /**
+     * Format version emitted as the first JSON record ({@code {"type":"format","version":N}}).
+     * Bump when the per-entry schema changes incompatibly. Consumers that filter on
+     * {@code type == "locked"} (like the bundled GitHub Action) skip the record automatically;
+     * version-aware consumers can use it to reject reports they do not understand.
+     */
+    static final int FORMAT_VERSION = 1;
+
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder();
         sb.append(context.getGeneratedHeader())
-          .append("# Machine-readable @AILocked report (JSON Lines; '#' lines are comments).\n");
+          .append("# Machine-readable @AILocked report (JSON Lines; '#' lines are comments).\n")
+          .append("{\"type\":\"format\",\"version\":").append(FORMAT_VERSION).append("}\n");
 
         for (Element e : collector.locked()) {
             AILocked annotation = e.getAnnotation(AILocked.class);

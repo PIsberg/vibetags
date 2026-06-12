@@ -133,8 +133,33 @@ class LocksReportEndToEndTest {
                 + "public class B {}\n");
         h.compile();
 
-        assertTrue(jsonLines(h.readFile(".vibetags-locks")).isEmpty(),
-            "no @AILocked elements means no JSON entries (header comments only)");
+        List<String> entries = jsonLines(h.readFile(".vibetags-locks"));
+        assertEquals(List.of("{\"type\":\"format\",\"version\":1}"), entries,
+            "no @AILocked elements means only the format record (plus header comments)");
+    }
+
+    @Test
+    void locksReport_startsWithFormatVersionRecord(@TempDir Path tmp) throws Exception {
+        ProcessorTestHarness h = withVaultSource(tmp);
+
+        List<String> entries = jsonLines(h.readFile(".vibetags-locks"));
+        assertFalse(entries.isEmpty(), "report must contain JSON records");
+        assertEquals("{\"type\":\"format\",\"version\":1}", entries.get(0),
+            "the first JSON record must declare the report's format version so consumers "
+                + "can reject reports written in a future, incompatible schema");
+        assertTrue(entries.stream().skip(1).allMatch(l -> l.contains("\"type\":\"locked\"")),
+            "all records after the format record must be lock entries");
+    }
+
+    private static ProcessorTestHarness withVaultSource(Path tmp) throws Exception {
+        ProcessorTestHarness h = new ProcessorTestHarness(tmp);
+        h.addSource("com.example.lockdemo.Vault",
+            "package com.example.lockdemo;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"audited\")\n"
+                + "public class Vault {}\n");
+        h.compile();
+        return h;
     }
 
     /** Extracts the non-comment JSON lines from the report (skips {@code #} marker/header lines). */

@@ -266,7 +266,10 @@ public final class GranularRenderer implements PlatformRenderer {
         if (!owner.equals(element)) {
             ElementKind kind = element.getKind();
             String kindStr = (kind != null) ? kind.toString().toLowerCase(java.util.Locale.ROOT) : "element";
-            sb.append("### Rules for ").append(kindStr).append(" ").append(element.getSimpleName()).append("\n");
+            CharSequence name = (kind == ElementKind.PARAMETER)
+                    ? ElementNaming.elementDisplayName(element)
+                    : element.getSimpleName();
+            sb.append("### Rules for ").append(kindStr).append(" ").append(name).append("\n");
         } else {
             sb.append("## ").append(title).append("\n");
         }

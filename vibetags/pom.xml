@@ -196,7 +196,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.14</version>
+                <version>0.8.15</version>
                 <executions>
                     <execution>
                         <goals>
@@ -211,6 +211,24 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <!-- Implementation-Version feeds ProcessorVersion → BuildFingerprint,
+                                 so a processor upgrade invalidates stale .vibetags-cache fingerprints. -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- Stable JPMS module name for modular consumers; changing it after 1.0 is breaking. -->
+                            <Automatic-Module-Name>se.deversity.vibetags.processor</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
             </plugin>
             <!-- Required for Maven Central publishing: sources JAR -->
             <plugin>
@@ -243,7 +261,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.9.8.3</version>
+                <version>4.10.2.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>

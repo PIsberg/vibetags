@@ -17,15 +17,15 @@ alwaysApply: false
 ### Rules for method calculateFastFibonacci
 - **Rule**: Must remain a pure function. Forbid state modifications and side effects.
 
-### Rules for parameter sqlRawInput
+### Rules for parameter NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput
 - **Target Filters**: SQL_INJECTION
 - **Rule**: Run raw input strings through approved sanitizers.
 
-### Rules for parameter passwordRaw
+### Rules for parameter NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
 - **Policy**: HASH
 - **Rule**: Never pass this raw variable to log appenders or stdout streams.
 
-### Rules for parameter creditCardNumber
+### Rules for parameter NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber
 - **Policy**: MASK_CREDIT_CARD
 - **Rule**: Never pass this raw variable to log appenders or stdout streams.
 

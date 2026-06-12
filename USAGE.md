@@ -17,6 +17,7 @@
 - [@AITestDriven — Test-Driven AI Requirements](#-aitestdriven---test-driven-ai-requirements)
 - [Design-Intent Annotations (v0.9.8)](#-new-in-v098-five-design-intent-annotations)
 - [Platform Guardrail Annotations (v0.9.8)](#️-new-in-v098-continued-nine-platform-guardrail-annotations)
+- [Precision Guardrail Annotations (v0.9.9)](#-new-in-v099-twelve-precision-guardrail-annotations)
 
 For the full annotation table, processor options, and output-file formats, see also [CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -939,4 +940,117 @@ public class GdprService {
 ```
 
 Generated guidance: *"Idempotency guaranteed. Multiple invocations must produce the same result as one. Never introduce side effects that cause repeated invocations to produce different results."*
+
+#### 🚩 `@AIFeatureFlag(flag, defaultValue)`
+
+Marks code gated behind a feature flag. AI assistants must preserve the flag check and never assume the flag is always active when refactoring.
+
+```java
+@AIFeatureFlag(flag = "checkout.new-payment-flow", defaultValue = false)
+public void processWithNewFlow(Order order) { ... }
+```
+
+Generated guidance: *"This element is gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check."*
+
+#### 🔐 `@AISecure(aspect)`
+
+Marks security-critical code. AI must never weaken security properties (authentication, encryption, input validation, …) and must flag every change for security review.
+
+```java
+@AISecure(aspect = "authentication")
+public boolean verifyToken(String jwt) { ... }
+```
+
+Generated guidance: *"Security-critical. AI must not weaken security properties. Any change must be reviewed for security impact."*
+
+### 🆕 New in v0.9.9: Twelve Precision Guardrail Annotations
+
+v0.9.9 extends the set to 39 annotations with element-precise guardrails — including the first two annotations that target **method parameters** (`@AIInputSanitized`, `@AISecureLogging`).
+
+#### 🚫 `@AICallersOnly(value)`
+
+Restricts who may invoke the element. AI must not introduce calls from outside the allowed callers.
+
+```java
+@AICallersOnly({"com.example.billing.InvoiceService", "com.example.billing.RefundService"})
+public void postLedgerEntry(LedgerEntry entry) { ... }
+```
+
+#### 🛡️ `@AISandboxOnly`
+
+Marks sandbox/test-harness code. Production classes must never import or reference it.
+
+#### ⚡ `@AIMemoryBudget(value)`
+
+Declares a strict allocation budget (`ZERO_ALLOCATION`, `NO_AUTOBOXING`, …) on hot-path code. AI must optimize allocations and never introduce per-call garbage.
+
+```java
+@AIMemoryBudget(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION)
+public long checksum(byte[] frame) { ... }
+```
+
+#### 🧠 `@AIPure`
+
+The method must remain a pure function: no side effects, no state mutation, deterministic for the same inputs.
+
+#### 🧱 `@AIDomainModel(allow)`
+
+A framework-free domain entity. AI must not import Spring, JPA/Hibernate, Jackson, or other framework packages; explicit exceptions go in `allow`.
+
+#### ❄️ `@AIExtensible(value)`
+
+The type is extended via the declared polymorphic pattern (`STRATEGY_PATTERN`, `VISITOR_PATTERN`, …). AI must implement extensions polymorphically, never by appending branch conditionals.
+
+#### 🚨 `@AIInputSanitized(value)` — *parameter/field*
+
+The annotated parameter or field must pass approved sanitizers (`SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, …) before reaching queries or renderers.
+
+```java
+public void exportKeys(
+        @AIInputSanitized({AIInputSanitized.SanitizerType.PATH_TRAVERSAL}) String filePath) { ... }
+```
+
+Parameter entries are rendered with their full element path, e.g. `com.example.KeyStore.exportKeys(java.lang.String)#filePath`.
+
+#### 🔒 `@AISecureLogging(value)` — *field/parameter*
+
+A sensitive value that must never reach logs or stdout unprotected. AI must enforce the masking policy (`OMIT`, `HASH`, `MASK_CREDIT_CARD`, …) in any logging it writes.
+
+```java
+public void registerUserSession(
+        @AISecureLogging(AISecureLogging.MaskingPolicy.HASH) String passwordRaw) { ... }
+```
+
+#### 📋 `@AIExplain(value)`
+
+Any change requires a step-by-step proof of correctness in the PR/walkthrough, scaled to the declared complexity level (`HIGH`, `MEDIUM`, …).
+
+#### 🛠️ `@AIPrototype`
+
+An experimental stub: QA and test constraints are relaxed, but production classes must never import it.
+
+#### 🌅 `@AISunset(jira, replacement)`
+
+Strict deprecation tied to a JIRA ticket. Introducing *new* references is forbidden; AI routes callers to `replacement`.
+
+```java
+@AISunset(jira = "PAY-1234", replacement = PaymentProcessorV2.class)
+public class LegacyPaymentProcessor { ... }
+```
+
+#### 🚧 `@AITemporary(expiresOn, reason)`
+
+A hotfix or stub with an expiration date. The processor warns at compile time when `expiresOn` (`YYYY-MM-DD`) has passed.
+
+```java
+@AITemporary(expiresOn = "2026-09-01", reason = "Stub until the upstream rate-limit fix ships.")
+public Response retryWithBackoffHack(Request req) { ... }
+```
+
+#### Validation warnings for the v0.9.9 annotations
+
+- `@AISunset` + `@AIDraft` — contradictory (sunset elements must not be actively drafted or expanded)
+- `@AISunset` with a blank `jira` — required attribute missing
+- `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
+- `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
 

@@ -30,10 +30,18 @@ public final class ElementNaming {
 
     /**
      * Returns a fully-qualified path for an element. For FIELD/METHOD/CONSTRUCTOR the enclosing
-     * type's FQN is prepended; otherwise the element's own toString is used.
+     * type's FQN is prepended; for PARAMETER the enclosing executable's path is prepended with a
+     * {@code #} separator (e.g. {@code com.example.Foo.export(java.lang.String)#filePath});
+     * otherwise the element's own toString is used.
      */
     public static String elementPath(Element element) {
         ElementKind kind = element.getKind();
+        if (kind == ElementKind.PARAMETER) {
+            Element executable = element.getEnclosingElement();
+            if (executable != null) {
+                return elementPath(executable) + "#" + element.getSimpleName();
+            }
+        }
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
@@ -45,10 +53,17 @@ public final class ElementNaming {
 
     /**
      * Short display name suitable for llms.txt link text. For FIELD/METHOD/CONSTRUCTOR returns
-     * "EnclosingSimpleName.memberSig"; for types just the simple name.
+     * "EnclosingSimpleName.memberSig"; for PARAMETER the enclosing executable's display name is
+     * prepended with a {@code #} separator; for types just the simple name.
      */
     public static String elementDisplayName(Element element) {
         ElementKind kind = element.getKind();
+        if (kind == ElementKind.PARAMETER) {
+            Element executable = element.getEnclosingElement();
+            if (executable != null) {
+                return elementDisplayName(executable) + "#" + element.getSimpleName();
+            }
+        }
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
