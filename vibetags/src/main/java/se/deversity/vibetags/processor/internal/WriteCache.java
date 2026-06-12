@@ -38,6 +38,14 @@ import java.util.Map;
 )
 public final class WriteCache {
 
+    /**
+     * Format version written into the cache header. Bump when the line format changes.
+     * A cache written by a newer processor (higher version) is discarded wholesale on load —
+     * never mis-parsed — and rebuilt by this run. Caches without a {@code # format:} header
+     * (pre-1.0) use the same line format as version 1 and load normally.
+     */
+    static final int FORMAT_VERSION = 1;
+
     /** Cache record. */
     static final class Entry {
         final String hash;
@@ -199,6 +207,7 @@ public final class WriteCache {
         if (!dirty) return;
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n");
+        sb.append("# format: ").append(FORMAT_VERSION).append('\n');
         if (buildFingerprint != null) {
             sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
         }
@@ -246,6 +255,27 @@ public final class WriteCache {
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
                 if (line.isEmpty()) continue;
                 if (line.charAt(0) == '#') {
+                    // Future-format guard: a cache written by a newer processor may use a line
+                    // format this version cannot parse. Discard it wholesale — the cache is a
+                    // pure optimisation and rebuilds on the next successful write.
+                    String formatPrefix = "# format: ";
+                    if (line.startsWith(formatPrefix)) {
+                        try {
+                            int version = Integer.parseInt(line.substring(formatPrefix.length()).trim());
+                            if (version > FORMAT_VERSION) {
+                                entries.clear();
+                                buildFingerprint = null;
+                                sidecarStamp = null;
+                                return;
+                            }
+                        } catch (NumberFormatException ignored) {
+                            // Unparseable format header — treat as unknown and start over.
+                            entries.clear();
+                            buildFingerprint = null;
+                            sidecarStamp = null;
+                            return;
+                        }
+                    }
                     // Recognise the fingerprint header; ignore other comments.
                     String prefix = "# fingerprint: ";
                     if (line.startsWith(prefix)) {

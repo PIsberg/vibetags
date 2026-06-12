@@ -46,6 +46,17 @@ jobs:
 | `working-directory` | `.` | Directory to build and check from |
 | `warn-only` | `false` | Emit warnings instead of failing the job |
 
+## Report format
+
+`.vibetags-locks` is JSON Lines wrapped in `# VIBETAGS` hash markers. The first JSON record
+declares the report's format version — consumers should skip records whose `type` they do not
+recognise and may reject reports with a `version` they do not support:
+
+```
+{"type":"format","version":1}
+{"type":"locked","element":"com.example.Foo.bar()","kind":"METHOD","file":"src/main/java/com/example/Foo.java","startLine":12,"endLine":18,"reason":"..."}
+```
+
 ## Notes
 
 - Line ranges come from the javac Compiler Tree API. Under non-javac compilers (e.g. ECJ)

@@ -107,7 +107,17 @@ public final class ModuleSidecar {
         }
     }
 
-    /** Loads a sidecar from {@code path}, returning {@code null} if the file is malformed. */
+    /**
+     * Sentinel returned by {@link #load(Path)} for a sidecar written in a newer format than this
+     * processor understands. Distinct from {@code null} (malformed): a future-version sidecar is
+     * owned by a sibling module compiled with a newer processor and must be skipped, not deleted.
+     */
+    static final ModuleSidecar FUTURE_VERSION = new ModuleSidecar("_future_", "");
+
+    /**
+     * Loads a sidecar from {@code path}. Returns {@code null} if the file is malformed, or
+     * {@link #FUTURE_VERSION} if its {@code # version} header is newer than {@link #FORMAT_VERSION}.
+     */
     static @Nullable ModuleSidecar load(Path path) {
         try {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
@@ -115,7 +125,19 @@ public final class ModuleSidecar {
             String modulePath = "";
             Map<String, String> bodies = new LinkedHashMap<>();
             for (String line : lines) {
-                if (line.startsWith("#")) continue; // version header or comment — skip
+                if (line.startsWith("#")) {
+                    // Enforce the format-version header: refuse to (mis-)parse future formats.
+                    if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
+                        try {
+                            int version = Integer.parseInt(
+                                    line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                            if (version > FORMAT_VERSION) return FUTURE_VERSION;
+                        } catch (NumberFormatException malformed) {
+                            return null;
+                        }
+                    }
+                    continue; // other comments — skip
+                }
                 int eq = line.indexOf('=');
                 if (eq < 0) continue;
                 String key = line.substring(0, eq);
@@ -169,6 +191,12 @@ public final class ModuleSidecar {
                       ModuleSidecar s = load(p);
                       if (s == null) {
                           tryDelete(p);
+                          return;
+                      }
+                      if (s == FUTURE_VERSION) {
+                          // Written by a newer processor in a mixed-version build: skip it (its
+                          // module's content is missing from OUR merge, the newer module merges
+                          // everything correctly) but never delete a sibling's valid sidecar.
                           return;
                       }
                       // Stale check: if the module path (relative to root) no longer exists, prune.

@@ -114,6 +114,69 @@ class WriteCacheTest {
     }
 
     @Test
+    void flush_writesFormatVersionHeader(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        Path file = tmp.resolve("foo.md");
+        Files.writeString(file, "hello");
+        cache.recordWrite(file, "hello");
+        cache.flush();
+
+        String content = Files.readString(cachePath, StandardCharsets.UTF_8);
+        assertTrue(content.contains("# format: 1\n"),
+            "flushed cache must carry the format-version header: " + content);
+    }
+
+    @Test
+    void futureFormatVersion_discardsCacheWholesale(@TempDir Path tmp) throws IOException {
+        // Simulate a cache written by a NEWER processor whose line format we may not be
+        // able to parse. The only safe response is to discard it and rebuild.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path file = tmp.resolve("foo.md");
+        Files.writeString(file, "hello");
+
+        // Build a valid v1 entry line, then stamp the file as a future format.
+        WriteCache seed = new WriteCache(cachePath);
+        seed.recordWrite(file, "hello");
+        seed.setBuildFingerprint("cafebabe");
+        seed.flush();
+        String v1 = Files.readString(cachePath, StandardCharsets.UTF_8);
+        Files.writeString(cachePath, v1.replace("# format: 1", "# format: 99"),
+            StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertEquals(0, cache.size(), "future-format cache must be discarded, not parsed");
+        assertNull(cache.getBuildFingerprint(),
+            "fingerprint from a future-format cache must not be trusted");
+        assertFalse(cache.isUnchanged(file, "hello"),
+            "entries from a future-format cache must not produce hits");
+
+        // The cache rebuilds normally from here.
+        cache.recordWrite(file, "hello");
+        assertTrue(cache.isUnchanged(file, "hello"));
+    }
+
+    @Test
+    void legacyCacheWithoutFormatHeader_stillLoads(@TempDir Path tmp) throws IOException {
+        // Pre-1.0 caches have no "# format:" header but use the identical line format;
+        // they must keep loading so the first 1.0 compile doesn't lose the whole cache.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path file = tmp.resolve("foo.md");
+        Files.writeString(file, "hello");
+
+        WriteCache seed = new WriteCache(cachePath);
+        seed.recordWrite(file, "hello");
+        seed.flush();
+        String content = Files.readString(cachePath, StandardCharsets.UTF_8);
+        String legacy = content.replace("# format: 1\n", "");
+        Files.writeString(cachePath, legacy, StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        assertTrue(cache.isUnchanged(file, "hello"),
+            "legacy header-less cache must load as format 1");
+    }
+
+    @Test
     void corruptCacheFile_isIgnoredGracefully(@TempDir Path tmp) throws IOException {
         Path cachePath = tmp.resolve(".vibetags-cache");
         Files.writeString(cachePath,
