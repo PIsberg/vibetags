@@ -82,6 +82,17 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+jar {
+    manifest {
+        attributes(
+            // Stable JPMS module name for modular consumers; changing it after 1.0 is breaking.
+            'Automatic-Module-Name': 'se.deversity.vibetags.annotations',
+            'Implementation-Title': 'vibetags-annotations',
+            'Implementation-Version': version
+        )
+    }
+}
+
 pmd {
     consoleOutput = true
     toolVersion = "7.24.0"
