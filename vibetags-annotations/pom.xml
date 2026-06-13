@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.9</version>
+    <version>1.0.0-RC1</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Annotations</name>
