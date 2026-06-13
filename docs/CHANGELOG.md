@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC1] - 2026-06-13
+
+First release candidate for 1.0. All on-disk machine formats are now version-stamped, the
+build fingerprint folds in the processor version, and the public API surface is frozen ahead
+of the stable 1.0.0 release.
+
 ### Added
 - **`Automatic-Module-Name` in both jar manifests** (`se.deversity.vibetags.annotations`,
   `se.deversity.vibetags.processor`) so JPMS consumers get a stable module name instead of a
@@ -763,7 +769,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.9...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...HEAD
+[1.0.0-RC1]: https://github.com/PIsberg/vibetags/compare/v0.9.9...v1.0.0-RC1
 [0.9.9]: https://github.com/PIsberg/vibetags/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/PIsberg/vibetags/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/PIsberg/vibetags/compare/v0.9.5...v0.9.7
