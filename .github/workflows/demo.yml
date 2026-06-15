@@ -11,14 +11,17 @@ on:
       - '.github/workflows/demo.yml'
   workflow_dispatch:
 
+# Least privilege at the top level; the commit/PR job opts into the writes it needs.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   generate-demo:
     name: Record demo and convert to GIF
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the GIF branch
+      pull-requests: write    # open the update PR
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
