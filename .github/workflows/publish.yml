@@ -12,7 +12,7 @@ jobs:
     name: Publish to Maven Central
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # attach signed artifacts to the GitHub release
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -56,3 +56,15 @@ jobs:
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
+      # Attach the GPG-signed jars/poms (and their .asc signatures) to the
+      # GitHub release so Scorecard's Signed-Releases check can verify them.
+      - name: Attach signed artifacts to the GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: |
+            vibetags-annotations/target/*.jar
+            vibetags-annotations/target/*.jar.asc
+            vibetags/target/*.jar
+            vibetags/target/*.jar.asc
+            vibetags-bom/target/*.pom.asc

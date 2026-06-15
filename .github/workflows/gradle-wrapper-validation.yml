@@ -1,0 +1,39 @@
+name: Validate Gradle Wrapper
+
+# Verifies the checked-in gradle-wrapper.jar matches a known-good Gradle
+# release checksum. Scorecard's Binary-Artifacts check treats the wrapper
+# jar as acceptable when this validation workflow is present.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/gradle/wrapper/gradle-wrapper.jar'
+      - '**/gradle/wrapper/gradle-wrapper.properties'
+      - '.github/workflows/gradle-wrapper-validation.yml'
+  pull_request:
+    paths:
+      - '**/gradle/wrapper/gradle-wrapper.jar'
+      - '**/gradle/wrapper/gradle-wrapper.properties'
+      - '.github/workflows/gradle-wrapper-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
