@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Optional `reason` on the eleven marker annotations** — `@AILegacyBridge`, `@AIStrictClasspath`,
+  `@AIInternationalized`, `@AIPublicAPI`, `@AISchemaSafe`, `@AIStrictExceptions`, `@AIStrictTypes`,
+  `@AIParallelTests`, `@AISandboxOnly`, `@AIPure`, `@AIPrototype`. These previously carried no
+  attributes, so they could only emit a canned, generic instruction. They now accept an optional
+  `reason` (defaulting to `""`, so existing usages compile unchanged) that is surfaced in the
+  generated output — appended to the rule text on the markdown/plain-text platforms and as a
+  `<reason>…</reason>` element in `CLAUDE.md`. The point is to **carry the *why* across AI
+  sessions**: a marker preserves only a verdict ("be strict here"), but the rationale ("currency
+  math broke in INC-4412 when a double leaked in") is exactly the non-inferable context a later
+  agent — which no longer has the originating session — needs to weigh or safely override the
+  rule. Nothing is emitted when `reason` is left blank. Covered by `MarkerReasonEndToEndTest`.
+
 ### Performance
 Four changes to the per-round processing and rendering paths, all behaviour-preserving (every one
 of the 1033 unit tests passes unchanged):

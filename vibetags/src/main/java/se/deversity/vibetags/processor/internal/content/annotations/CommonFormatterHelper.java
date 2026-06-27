@@ -12,6 +12,24 @@ final class CommonFormatterHelper {
     private CommonFormatterHelper() {}
 
     /**
+     * Appends the optional rationale to a plain-text/markdown {@code summary} when present, so the
+     * "why" carried by a marker annotation survives into the generated guardrail output (and thus
+     * across AI sessions). Returns {@code summary} unchanged when {@code reason} is blank.
+     */
+    public static String withReason(String summary, String reason) {
+        return (reason == null || reason.isBlank()) ? summary : summary + " Reason: " + reason;
+    }
+
+    /**
+     * Returns an indented {@code <reason>…</reason>} XML fragment for the Claude format when
+     * {@code reason} is present (to be inserted before the element's closing tag), or an empty
+     * string otherwise.
+     */
+    public static String claudeReason(String reason) {
+        return (reason == null || reason.isBlank()) ? "" : "\n      <reason>" + reason + "</reason>";
+    }
+
+    /**
      * Attempts to format standard markdown/plain-text platforms.
      * Returns true if the platform was formatted and handled, false otherwise.
      */

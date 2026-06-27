@@ -300,27 +300,27 @@ An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` t
 | `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
 | `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
 | `@AIArchitecture` | TYPE | `belongsTo: String`, `cannotReference: String[]` |
-| `@AILegacyBridge` | TYPE, METHOD | *(none)* |
-| `@AIStrictClasspath` | TYPE, METHOD | *(none)* |
-| `@AIInternationalized` | TYPE, METHOD | *(none)* |
-| `@AIPublicAPI` | TYPE, METHOD | *(none)* |
-| `@AISchemaSafe` | TYPE, FIELD | *(none)* |
-| `@AIStrictExceptions` | TYPE, METHOD | *(none)* |
-| `@AIStrictTypes` | TYPE, METHOD, FIELD | *(none)* |
-| `@AIParallelTests` | TYPE, METHOD | *(none)* |
+| `@AILegacyBridge` | TYPE, METHOD | `reason: String` |
+| `@AIStrictClasspath` | TYPE, METHOD | `reason: String` |
+| `@AIInternationalized` | TYPE, METHOD | `reason: String` |
+| `@AIPublicAPI` | TYPE, METHOD | `reason: String` |
+| `@AISchemaSafe` | TYPE, FIELD | `reason: String` |
+| `@AIStrictExceptions` | TYPE, METHOD | `reason: String` |
+| `@AIStrictTypes` | TYPE, METHOD, FIELD | `reason: String` |
+| `@AIParallelTests` | TYPE, METHOD | `reason: String` |
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
 | `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
 | `@AISecure` | TYPE, METHOD | `aspect: String` |
 | `@AICallersOnly` | TYPE, METHOD | `value: String[]` |
-| `@AISandboxOnly` | TYPE, METHOD | *(none)* |
+| `@AISandboxOnly` | TYPE, METHOD | `reason: String` |
 | `@AIMemoryBudget` | TYPE, METHOD | `value: AllocationPolicy` |
-| `@AIPure` | METHOD | *(none)* |
+| `@AIPure` | METHOD | `reason: String` |
 | `@AIDomainModel` | TYPE | `allow: String[]` |
 | `@AIExtensible` | TYPE | `value: Strategy` |
 | `@AIInputSanitized` | PARAMETER, FIELD | `value: SanitizerType[]` |
 | `@AISecureLogging` | FIELD, PARAMETER | `value: MaskingPolicy` |
 | `@AIExplain` | TYPE, METHOD | `value: ComplexityLevel` |
-| `@AIPrototype` | TYPE | *(none)* |
+| `@AIPrototype` | TYPE | `reason: String` |
 | `@AISunset` | TYPE, METHOD, FIELD | `jira: String`, `replacement: Class<?>` |
 | `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
 
