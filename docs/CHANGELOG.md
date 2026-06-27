@@ -8,14 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **`AGENTS.md` sole-file fallback.** `AGENTS.md` (the `codex` service) is now only generated when
-  it is the *only* AI config file present. Because `AGENTS.md` doubles as a near-universal
-  agent-instructions file that teams often keep as a thin pointer to another tool's file (e.g.
-  `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file has opted in —
-  which also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`). Keep only
-  `AGENTS.md` to have VibeTags manage it. Covered by `AgentsMdSoleFallbackTest` (both the sole-file
-  write and the coexisting-skip directions); the example now ships `AGENTS.md` as a hand-authored
-  pointer to demonstrate the rule.
+- **`AGENTS.md` is now only generated when it is the *sole* AI config file present.** When
+  `AGENTS.md` coexists with any other opted-in AI config file (e.g. `CLAUDE.md`, `.cursorrules`),
+  the `codex` service is dropped during `resolveActiveServices()` and `AGENTS.md` is left
+  untouched — which also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`)
+  it would otherwise drive.
+
+  **Why this changed:**
+  - `AGENTS.md` is no longer Codex-specific — it has become a *de facto cross-tool standard* that
+    many agents read. Unlike a tool-specific file such as `.cursorrules`, its mere presence is a
+    weak signal of intent: it does not tell us *which* tool put it there or what it is for.
+  - In practice, once a repo adopts more than one AI tool, teams routinely reduce `AGENTS.md` to a
+    thin **pointer** — `See CLAUDE.md` or an `@import` — so a single source of truth lives in one
+    file and the rest reference it. VibeTags writes between `# VIBETAGS-START/END` markers, but a
+    hand-authored pointer typically has no markers, so the previous behaviour appended a full
+    generated block to it and effectively buried the human's pointer.
+  - The opt-in model elsewhere relies on a file being *unambiguously* tied to one platform. For
+    `AGENTS.md` that assumption no longer holds, so "file exists ⇒ manage it" was too aggressive.
+    The narrower rule — *manage it only when nothing else has opted in* — keeps the convenience for
+    single-tool projects (where `AGENTS.md` clearly is the guardrail file) while refusing to clobber
+    a likely pointer in multi-tool projects. Users who genuinely want VibeTags to own `AGENTS.md`
+    can still get that by opting in to `AGENTS.md` alone.
+  - The Codex sidecar (`.codex/*`) is gated on the same `codex` activation, so it follows
+    `AGENTS.md`: skipping the prose pointer while still rewriting Codex's operational config would
+    be an inconsistent half-active state, so the whole Codex platform is treated as one unit.
+
+  Covered by `AgentsMdSoleFallbackTest` in both directions (sole-file → written, coexisting →
+  skipped); the example now ships `AGENTS.md` as a hand-authored pointer to `CLAUDE.md` to
+  demonstrate the rule, and CI asserts it is left untouched.
 
 ### Added
 - **10 new generated platform targets** (43 platforms total), all opt-in via the existing
