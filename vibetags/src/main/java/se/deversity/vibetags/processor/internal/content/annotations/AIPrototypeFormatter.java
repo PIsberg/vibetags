@@ -15,7 +15,9 @@ public final class AIPrototypeFormatter implements AnnotationFormatter {
         AIPrototype prototype = element.getAnnotation(AIPrototype.class);
         if (prototype == null) return;
         String className = ElementNaming.elementPath(element);
-        String summary = "Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it.";
+        String reason = prototype.reason();
+        String summary = CommonFormatterHelper.withReason(
+            "Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it.", reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -23,7 +25,7 @@ public final class AIPrototypeFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <status>Experimental Prototype</status>\n    </file>\n");
+                sb.append("    <file path=\"").append(className).append("\">\n      <status>Experimental Prototype</status>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Scope**: Experimental Prototype. Bypasses strict validation rules.\n\n");

@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 // CPD-OFF
 
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,7 +15,10 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
     @Override
     public void format(Element element, StringBuilder sb, Platform platform) {
         String className = ElementNaming.elementPath(element);
-        String summary = "Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.";
+        AISchemaSafe ann = element.getAnnotation(AISchemaSafe.class);
+        String reason = ann == null ? "" : ann.reason();
+        String summary = CommonFormatterHelper.withReason(
+            "Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.", reason);
 
         switch (platform) {
             case CURSOR:
@@ -22,7 +26,7 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <schema>safe</schema>\n    </element>\n");
+                sb.append("    <element path=\"").append(className).append("\">\n      <schema>safe</schema>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(summary).append("\n");

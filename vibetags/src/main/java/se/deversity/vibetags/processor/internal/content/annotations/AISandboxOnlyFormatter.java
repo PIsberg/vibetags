@@ -15,7 +15,9 @@ public final class AISandboxOnlyFormatter implements AnnotationFormatter {
         AISandboxOnly sandboxOnly = element.getAnnotation(AISandboxOnly.class);
         if (sandboxOnly == null) return;
         String className = ElementNaming.elementPath(element);
-        String summary = "Strictly sandbox or test environment only. Production code must never import or invoke.";
+        String reason = sandboxOnly.reason();
+        String summary = CommonFormatterHelper.withReason(
+            "Strictly sandbox or test environment only. Production code must never import or invoke.", reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -23,7 +25,7 @@ public final class AISandboxOnlyFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <policy>Sandbox or test only. Do not invoke from production.</policy>\n    </file>\n");
+                sb.append("    <file path=\"").append(className).append("\">\n      <policy>Sandbox or test only. Do not invoke from production.</policy>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Scope**: Sandbox/testing environments only. Never use in production.\n\n");
