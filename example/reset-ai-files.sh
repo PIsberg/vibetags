@@ -9,7 +9,9 @@ AI_FILES=(
   ".cursorrules"
   "CLAUDE.md"
   ".aiexclude"
-  "AGENTS.md"
+  # NOTE: AGENTS.md is intentionally NOT reset. Because this example ships other AI config
+  # files, VibeTags treats AGENTS.md as a hand-authored pointer (sole-file fallback rule) and
+  # never regenerates it — clearing it here would permanently blank the pointer.
   "QWEN.md"
   ".qwenignore"
   ".qwen/settings.json"
@@ -21,8 +23,6 @@ AI_FILES=(
   ".cursorignore"
   ".claudeignore"
   ".copilotignore"
-  ".codex/config.toml"
-  ".codex/rules/vibetags.rules"
   "CONVENTIONS.md"
   ".aiderignore"
   ".windsurfrules"

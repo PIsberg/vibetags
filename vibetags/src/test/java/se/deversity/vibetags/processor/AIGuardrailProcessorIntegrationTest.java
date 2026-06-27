@@ -20,11 +20,18 @@ class AIGuardrailProcessorIntegrationTest {
     @TempDir
     static Path tempDir;
 
+    @TempDir
+    static Path agentsDir;
+
     private static ProcessorTestHarness harness;
+    // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule), so
+    // the all-platforms harness skips it; this harness opts in to AGENTS.md only.
+    private static ProcessorTestHarness agentsHarness;
 
     @BeforeAll
     static void setUp() throws IOException {
         harness = ProcessorTestHarness.withExampleSources(tempDir);
+        agentsHarness = ProcessorTestHarness.withExampleSourcesSoleOptIn(agentsDir, "AGENTS.md");
     }
 
     @AfterAll
@@ -74,7 +81,7 @@ class AIGuardrailProcessorIntegrationTest {
 
     @Test
     void testCodexAgentsContainsAuditSection() throws Exception {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
 
         assertTrue(content.contains("MANDATORY SECURITY AUDITS"),
             "Should contain security audit section");
@@ -104,7 +111,8 @@ class AIGuardrailProcessorIntegrationTest {
     void testLockedFilesAppearInAllOutputs() throws Exception {
         String cursorRules = harness.readFile(".cursorrules");
         String claudeMd = harness.readFile("CLAUDE.md");
-        String codexAgents = harness.readFile("AGENTS.md");
+        // AGENTS.md is skipped when other AI files exist, so read it from the sole-opt-in harness.
+        String codexAgents = agentsHarness.readFile("AGENTS.md");
 
         assertTrue(cursorRules.contains("PaymentProcessor"),
             "Cursor rules should mention PaymentProcessor");
@@ -131,14 +139,14 @@ class AIGuardrailProcessorIntegrationTest {
 
     @Test
     void testCodexConfigHasCorrectSettings() throws Exception {
-        String content = harness.readFile(".codex/config.toml");
+        String content = agentsHarness.readFile(".codex/config.toml");
         assertTrue(content.contains("model = \"o3-mini\""));
         assertTrue(content.contains("approval_policy = \"on-request\""));
     }
 
     @Test
     void testCodexRulesHasStarlarkContent() throws Exception {
-        String content = harness.readFile(".codex/rules/vibetags.rules");
+        String content = agentsHarness.readFile(".codex/rules/vibetags.rules");
         assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
         assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
     }
@@ -148,9 +156,10 @@ class AIGuardrailProcessorIntegrationTest {
         assertFalse(harness.readFile(".cursorrules").isEmpty());
         assertFalse(harness.readFile("CLAUDE.md").isEmpty());
         assertFalse(harness.readFile(".aiexclude").isEmpty());
-        assertFalse(harness.readFile("AGENTS.md").isEmpty());
-        assertFalse(harness.readFile(".codex/config.toml").isEmpty());
-        assertFalse(harness.readFile(".codex/rules/vibetags.rules").isEmpty());
+        // AGENTS.md + Codex sidecar are skipped when other AI files exist; check the sole harness.
+        assertFalse(agentsHarness.readFile("AGENTS.md").isEmpty());
+        assertFalse(agentsHarness.readFile(".codex/config.toml").isEmpty());
+        assertFalse(agentsHarness.readFile(".codex/rules/vibetags.rules").isEmpty());
         assertFalse(harness.readFile("gemini_instructions.md").isEmpty());
     }
 
@@ -176,7 +185,7 @@ class AIGuardrailProcessorIntegrationTest {
 
     @Test
     void testCodexAgentsContainsIgnoredFiles() throws Exception {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain IGNORED ELEMENTS section");
         assertTrue(content.contains("GeneratedMetadata"),

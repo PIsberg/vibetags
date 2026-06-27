@@ -86,10 +86,10 @@ jobs:
           cd example
           echo "Checking generated files exist and contain content..."
           for f in \
-            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
+            .cursorrules CLAUDE.md .aiexclude QWEN.md .qwenignore \
             .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
             .github/copilot-instructions.md llms.txt llms-full.txt \
-            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
+            CONVENTIONS.md .aiderignore \
             .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
             .cursor/rules/com-example-payment-PaymentProcessor.mdc \
             .cursor/rules/com-example-database-DatabaseConnector.mdc \
@@ -124,8 +124,11 @@ jobs:
           echo "OK Gemini audit requirements"
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
           echo "OK GEMINI.md audit requirements"
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
-          echo "OK Codex audit guardrails"
+          # AGENTS.md must be left untouched (sole-file fallback rule): it ships as a hand-authored
+          # pointer alongside other AI config files, so VibeTags must not generate into it.
+          if grep -q "VIBETAGS-START" AGENTS.md; then echo "FAIL AGENTS.md was generated — sole-file fallback rule broken"; exit 1; fi
+          grep -q "VibeTags only auto-manages" AGENTS.md || { echo "FAIL AGENTS.md pointer was overwritten"; exit 1; }
+          echo "OK AGENTS.md left untouched (sole-file fallback)"
           grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
           echo "OK Qwen audit guardrails"
           grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }
@@ -311,10 +314,10 @@ jobs:
           cd example
           echo "Checking generated files exist and contain content..."
           for f in \
-            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
+            .cursorrules CLAUDE.md .aiexclude QWEN.md .qwenignore \
             .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
             .github/copilot-instructions.md llms.txt llms-full.txt \
-            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
+            CONVENTIONS.md .aiderignore \
             .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
             .cursor/rules/com-example-payment-PaymentProcessor.mdc \
             .cursor/rules/com-example-database-DatabaseConnector.mdc \
@@ -349,8 +352,11 @@ jobs:
           echo "OK Gemini audit requirements"
           grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
           echo "OK GEMINI.md audit requirements"
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
-          echo "OK Codex audit guardrails"
+          # AGENTS.md must be left untouched (sole-file fallback rule): it ships as a hand-authored
+          # pointer alongside other AI config files, so VibeTags must not generate into it.
+          if grep -q "VIBETAGS-START" AGENTS.md; then echo "FAIL AGENTS.md was generated — sole-file fallback rule broken"; exit 1; fi
+          grep -q "VibeTags only auto-manages" AGENTS.md || { echo "FAIL AGENTS.md pointer was overwritten"; exit 1; }
+          echo "OK AGENTS.md left untouched (sole-file fallback)"
           grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
           echo "OK Qwen audit guardrails"
           grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }

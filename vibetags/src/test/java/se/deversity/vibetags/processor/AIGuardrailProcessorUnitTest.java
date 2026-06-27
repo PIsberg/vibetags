@@ -198,8 +198,10 @@ class AIGuardrailProcessorUnitTest {
         });
         Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
         Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        // Note: "codex" (AGENTS.md) is intentionally absent — when other AI config files are
+        // present it is treated as a pointer and left untouched (sole-file fallback rule).
         Set<String> expected = Set.of(
-            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+            "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
@@ -226,6 +228,18 @@ class AIGuardrailProcessorUnitTest {
             "locks_report"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
+        assertFalse(active.contains("codex"),
+            "AGENTS.md (codex) must be skipped when other AI config files are present");
+    }
+
+    @Test
+    void testResolveActiveServices_agentsMdAlone_codexActive(@TempDir Path tempDir) throws IOException {
+        // Sole-file fallback: AGENTS.md by itself activates the codex service.
+        Files.createFile(tempDir.resolve("AGENTS.md"));
+        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        assertEquals(Set.of("codex"), active,
+            "AGENTS.md alone must activate exactly the codex service");
     }
 
     // --- annotation removal ---

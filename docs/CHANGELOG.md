@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`AGENTS.md` sole-file fallback.** `AGENTS.md` (the `codex` service) is now only generated when
+  it is the *only* AI config file present. Because `AGENTS.md` doubles as a near-universal
+  agent-instructions file that teams often keep as a thin pointer to another tool's file (e.g.
+  `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file has opted in —
+  which also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`). Keep only
+  `AGENTS.md` to have VibeTags manage it. Covered by `AgentsMdSoleFallbackTest` (both the sole-file
+  write and the coexisting-skip directions); the example now ships `AGENTS.md` as a hand-authored
+  pointer to demonstrate the rule.
+
 ### Added
 - **10 new generated platform targets** (43 platforms total), all opt-in via the existing
   file-presence model and adding zero overhead to projects that don't enable them:

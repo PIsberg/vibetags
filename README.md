@@ -235,7 +235,7 @@ Generated configuration files work out-of-the-box with **43 AI platforms**:
 - **Antigravity AI** (`.antigravityignore`)
 - **Claude** (`CLAUDE.md`, `.claudeignore`)
 - **Cline** (`.clinerules`)
-- **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
+- **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
@@ -276,6 +276,12 @@ Generated configuration files work out-of-the-box with **43 AI platforms**:
 - **Trae** (`.trae/rules/*.md`)
 - **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
 - **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
+
+> † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because
+> `AGENTS.md` is a near-universal agent file that teams often keep as a thin pointer to another
+> tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
+> is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
+> managed.
 
 ## 📁 Project Structure
 
