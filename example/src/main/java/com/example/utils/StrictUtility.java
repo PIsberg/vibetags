@@ -7,7 +7,7 @@ import se.deversity.vibetags.annotations.AIStrictClasspath;
  * Enforces strict compile-time dependency and classpath constraints.
  * Prohibits dynamic class loading, custom classloaders, or runtime reflection hacks.
  */
-@AIStrictClasspath
+@AIStrictClasspath(reason = "Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime")
 public class StrictUtility {
     
     public static String computeSecureHash(String input) {

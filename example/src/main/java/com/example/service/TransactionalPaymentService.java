@@ -7,7 +7,7 @@ import se.deversity.vibetags.annotations.AIStrictExceptions;
  * Enforces precise, robust exception handling.
  * Prohibits catching or throwing generic Exceptions/Throwables.
  */
-@AIStrictExceptions
+@AIStrictExceptions(reason = "A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle")
 public class TransactionalPaymentService {
     
     public void processTransaction(String accountId, double amount) throws IllegalArgumentException {

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Single source of truth for the project counts.** The README "At a glance" line now states the
+  two headline numbers once — **39 annotations**, **37 AI platforms** — and every other doc links
+  back to it instead of restating them. Fixed stale/contradictory figures that had drifted across
+  the README, `docs/ARCHITECTURE.md`, and `example/README.md` (variously claiming 15/24/27 annotations
+  and 27/40+/43 platforms). New `ProjectFactsConsistencyTest` enforces both: the documented annotation
+  count must equal the number of `@interface` types, and the documented platform count must equal the
+  number of distinct platforms enumerated in the README list — so the docs can no longer silently
+  drift from the code.
+- **The example now passes a `reason` to all eleven marker annotations** (`@AIStrictTypes`,
+  `@AIPublicAPI`, `@AIPure`, `@AISandboxOnly`, `@AILegacyBridge`, `@AISchemaSafe`,
+  `@AIStrictExceptions`, `@AIStrictClasspath`, `@AIInternationalized`, `@AIParallelTests`,
+  `@AIPrototype`), showcasing the cross-session rationale capability. The example already exercises
+  all 39 annotations.
+
 ### Added
 - **Optional `reason` on the eleven marker annotations** — `@AILegacyBridge`, `@AIStrictClasspath`,
   `@AIInternationalized`, `@AIPublicAPI`, `@AISchemaSafe`, `@AIStrictExceptions`, `@AIStrictTypes`,

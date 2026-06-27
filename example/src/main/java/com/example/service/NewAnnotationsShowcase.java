@@ -29,7 +29,7 @@ public final class NewAnnotationsShowcase {
      * Restricts sandbox helper utilities strictly to mock, dev, or test environments.
      * Prevents the AI from importing or referencing sandbox utilities in production pathways.
      */
-    @AISandboxOnly
+    @AISandboxOnly(reason = "Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging")
     public static class SandboxTestHelper {
         public static void setupLocalMockDatabase() {
             System.out.println("Local mock database configured for unit/integration testing.");
@@ -54,7 +54,7 @@ public final class NewAnnotationsShowcase {
      * AIPure declares that a method is a side-effect-free, deterministic mathematical function.
      */
     @AIMemoryBudget(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION)
-    @AIPure
+    @AIPure(reason = "Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers")
     public static int calculateFastFibonacci(int n) {
         if (n <= 1) return n;
         int prev = 0, curr = 1;
@@ -135,7 +135,7 @@ public final class NewAnnotationsShowcase {
      * Declares a rapid framework prototype spike.
      * Relaxes standard quality rules (such as i18n, coverage) but prevents it from leaking into stable production code.
      */
-    @AIPrototype
+    @AIPrototype(reason = "Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it")
     public static class DraftKafkaIntegrationSpike {
         public static void testConnection() {
             System.out.println("Kafka sandbox prototype connection success.");

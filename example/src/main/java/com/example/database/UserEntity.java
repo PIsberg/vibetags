@@ -7,7 +7,7 @@ import se.deversity.vibetags.annotations.AISchemaSafe;
  * Guarantees schema and serialization safety.
  * Restricts changing data formats, fields, columns, or serialization formats.
  */
-@AISchemaSafe
+@AISchemaSafe(reason = "Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first")
 public class UserEntity {
     
     private final String userId;

@@ -140,12 +140,12 @@ The following elements implement specific compliance clauses. Any change MUST do
 ## 🧪 STRICT TEST ISOLATION
 The following elements must be strictly isolated when generating or modifying tests. No shared mutable state or resource conflicts are permitted.
 
-* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts.
+* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts. Reason: Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated
 
 ## 🌉 LEGACY COMPATIBILITY BRIDGE
 The following elements are legacy compatibility bridges. Do not attempt to modernize or refactor their structural patterns; only modify internal business logic as explicitly requested.
 
-* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested. Reason: Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023
 
 ## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
 The following elements have strict layering constraints. Prohibit imports or references that cross boundaries.
@@ -155,32 +155,32 @@ The following elements have strict layering constraints. Prohibit imports or ref
 ## 🔌 PUBLIC API SURFACE PROTECTION
 The following elements are public-facing API surfaces. Always preserve public signatures, Javadoc, and backwards compatibility.
 
-* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability. Reason: Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead
 
 ## 🚨 STRICT EXCEPTION HANDLING
 The following elements have strict exception constraints. Prohibit catching or throwing generic Exception/Throwable.
 
-* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited. Reason: A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle
 
 ## 🏷️ STRICT TYPE SAFETY
 The following elements prohibit loose typing such as Object or Map<String, Object>. Strong type safety is required.
 
-* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety. Reason: Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map
 
 ## 🌐 INTERNATIONALIZATION MANDATE
 The following elements implement i18n requirements. Prohibit hardcoded user-facing strings.
 
-* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources. Reason: Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle
 
 ## 🛡️ STRICT CLASSPATH INTEGRITY
 The following elements prohibit dynamic runtime class loading, reflections, or loading of unverified dynamic code.
 
-* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited. Reason: Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime
 
 ## 🗄️ SCHEMA & SERIALIZATION SAFETY
 The following elements have schema safety constraints. Restrict changing formats/fields without a backward-compatible migration plan.
 
-* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan. Reason: Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first
 
 ## ♻️ IDEMPOTENCY GUARANTEES
 The following operations are idempotent. Multiple invocations MUST produce the same result as a single invocation. Never introduce side effects that break this guarantee.
@@ -205,7 +205,7 @@ The following elements have strict caller access limits. AI must not invoke them
 ## 🛡️ SANDBOX & TEST HARNESS EXCLUSION
 The following elements are strictly sandbox/test code. Production code must never import or reference them.
 
-* `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` - Strictly sandbox or test environment only. Production code must never import or invoke.
+* `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` - Strictly sandbox or test environment only. Production code must never import or invoke. Reason: Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging
 
 ## ⚡ MEMORY ALLOCATION BUDGETS
 The following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.
@@ -215,7 +215,7 @@ The following elements have strict heap allocation, autoboxing, or garbage budge
 ## 🧠 DETERMINISTIC PURE FUNCTIONS
 The following elements must remain pure functions without side effects or mutations.
 
-* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
+* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Must remain a pure function. Forbid assignments to enclosing state, fields, or static members. Reason: Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers
 
 ## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES
 The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
@@ -246,7 +246,7 @@ Any change made to these elements requires a step-by-step mathematical/architect
 ## 🛠️ EXPERIMENTAL PROTOTYPE STUBS
 Strict QA constraints and tests are relaxed for these elements, but production classes must never import them.
 
-* `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` - Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it.
+* `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` - Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it. Reason: Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it
 
 ## ⚠️ SUNSET DEPRACTED APIs
 Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.

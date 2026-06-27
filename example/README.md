@@ -22,7 +22,7 @@ This is a sample e-commerce application that shows all fifteen VibeTags annotati
 - **`@AIObservability`** — Names metrics/traces/logs the AI must not remove or rename silently
 - **`@AIRegulation`** — Ties code to a specific compliance clause (GDPR, PCI-DSS, HIPAA, …)
 
-When compiled, the VibeTags annotation processor automatically generates AI configuration files for 43 platforms.
+When compiled, the VibeTags annotation processor automatically generates AI configuration files for every supported platform (see the [project facts](../README.md#project-facts) in the main README).
 
 > **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../README.md).
 
@@ -179,7 +179,7 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
 | *(and more)* | |
 
-See the [main README](../README.md) for the complete list of 43 supported platforms.
+See the [main README](../README.md#supported-ai-platforms) for the complete list of supported platforms.
 
 ---
 
@@ -992,7 +992,7 @@ The processor uses `Paths.get("")` which resolves to the JVM working directory. 
 
 ## 📚 Resources
 
-- **Main README:** [`../README.md`](../README.md) — installation, all 27 platforms, architecture overview
+- **Main README:** [`../README.md`](../README.md) — installation, the full platform list, architecture overview
 - **Architecture:** [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) — deep-dive into processor internals
 - **Issue Tracker:** [GitHub Issues](https://github.com/PIsberg/vibetags/issues)
 

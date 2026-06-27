@@ -138,12 +138,12 @@ These elements implement compliance clauses — document compliance impact and n
 ## 🧪 STRICT TEST ISOLATION
 Tests must run in complete thread isolation without shared mutable state:
 
-* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts.
+* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts. Reason: Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated
 
 ## 🌉 LEGACY COMPATIBILITY BRIDGE
 Modernization/structural refactoring is prohibited for these elements:
 
-* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested. Reason: Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023
 
 ## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
 Strict layered architecture constraints apply to these elements:
@@ -153,32 +153,32 @@ Strict layered architecture constraints apply to these elements:
 ## 🔌 PUBLIC API SURFACE PROTECTION
 Public API surface. Signatures and backwards compatibility must be strictly preserved:
 
-* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability. Reason: Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead
 
 ## 🚨 STRICT EXCEPTION HANDLING
 Generic exception throwing/catching is strictly prohibited for these elements:
 
-* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited. Reason: A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle
 
 ## 🏷️ STRICT TYPE SAFETY
 Loose typing is strictly prohibited for these elements:
 
-* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety. Reason: Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map
 
 ## 🌐 INTERNATIONALIZATION MANDATE
 Hardcoding user-facing strings is strictly prohibited for these elements:
 
-* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources. Reason: Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle
 
 ## 🛡️ STRICT CLASSPATH INTEGRITY
 Dynamic runtime class loading is strictly prohibited for these elements:
 
-* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited. Reason: Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime
 
 ## 🗄️ SCHEMA & SERIALIZATION SAFETY
 Modifying schema or data formats without explicit migration plans is prohibited:
 
-* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan. Reason: Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first
 
 ## ♻️ IDEMPOTENCY GUARANTEES
 Multiple invocations of these operations must produce the same result:
