@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@AIStrictExceptions`, `@AIStrictClasspath`, `@AIInternationalized`, `@AIParallelTests`,
   `@AIPrototype`), showcasing the cross-session rationale capability. The example already exercises
   all 39 annotations.
+- **The `vibetags-usage` skill now demonstrates `reason` on every marker annotation** (its examples
+  previously showed the bare markers).
+- **Added an ArchUnit badge** to the README, linking to `ArchitectureRulesTest` (the architecture
+  fitness functions run as part of the standard build).
+- **Closed gaps in the example's CI verification.** Cline (`.clinerules`), JetBrains Junie
+  (`.junie/guidelines.md`), and Firebase AI (`.idx/airules.md`) were opted-in/generatable but not
+  checked by the `build.yml` "Verify Generated AI Config Files" step — and Firebase's output was
+  never even committed. The Firebase output is now committed and all three are added to the verify
+  list (both the Maven and Gradle legs). The granular per-class platforms remain verified via one
+  representative file each.
 
 ### Added
 - **Optional `reason` on the eleven marker annotations** — `@AILegacyBridge`, `@AIStrictClasspath`,

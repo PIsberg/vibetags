@@ -105,7 +105,8 @@ jobs:
             .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
             GEMINI.md .antigravityignore \
             .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
-            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes; do
+            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
+            .clinerules .junie/guidelines.md .idx/airules.md; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -333,7 +334,8 @@ jobs:
             .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
             GEMINI.md .antigravityignore \
             .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
-            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes; do
+            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
+            .clinerules .junie/guidelines.md .idx/airules.md; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
