@@ -224,6 +224,16 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
+| `.void/rules.md` | Void Editor | Markdown |
+| `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
+| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
+| `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
+| `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
+| `.repomixignore` | Repomix (context packer) | Glob patterns |
+| `.gitingestignore` | Gitingest (context packer) | Glob patterns |
+| `.gptignore` | GPT context packer | Glob patterns |
+| `.ghostcoderignore` | Ghostcoder | Glob patterns |
+| `.piecesignore` | Pieces for Developers | Glob patterns |
 | `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
 
 #### Granular rules
@@ -449,6 +459,7 @@ All tests live in `vibetags/src/test`.
 | `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
 | `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
+| `NewPlatformsV4EndToEndTest` | AI PR reviewers (`.coderabbit.yaml`, `.pr_agent.toml`, `ellipsis.yaml`), context-packer ignore files (`.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore`), Void (`.void/rules.md`), and Roo modes (`.roomodes`) |
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |

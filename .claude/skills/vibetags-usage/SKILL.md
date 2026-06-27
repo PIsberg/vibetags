@@ -66,6 +66,10 @@ touch .clinerules                          # Cline AI assistant
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
+touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
+mkdir -p .void && touch .void/rules.md     # Void Editor
+touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
@@ -1036,3 +1040,13 @@ tasks.withType(JavaCompile) {
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
+| `.void/rules.md` | Void Editor |
+| `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
+| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
+| `ellipsis.yaml` | Ellipsis (AI PR reviewer) |
+| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
+| `.repomixignore` | Repomix (context packer) |
+| `.gitingestignore` | Gitingest (context packer) |
+| `.gptignore` | GPT context packer |
+| `.ghostcoderignore` | Ghostcoder |
+| `.piecesignore` | Pieces for Developers |

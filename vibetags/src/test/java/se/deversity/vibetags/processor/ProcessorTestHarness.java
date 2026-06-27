@@ -91,6 +91,19 @@ class ProcessorTestHarness {
         touch(".clinerules");
         touch(".junie/guidelines.md");
         touch(".kiro/steering/.vibetags");
+        // Context-packer ignore files
+        touch(".repomixignore");
+        touch(".gitingestignore");
+        touch(".gptignore");
+        touch(".ghostcoderignore");
+        touch(".piecesignore");
+        // AI pull-request reviewers
+        touch(".coderabbit.yaml");
+        touch(".pr_agent.toml");
+        touch("ellipsis.yaml");
+        // Editors & modes
+        touch(".void/rules.md");
+        touch(".roomodes");
         // Machine-readable @AILocked report
         touch(".vibetags-locks");
     }

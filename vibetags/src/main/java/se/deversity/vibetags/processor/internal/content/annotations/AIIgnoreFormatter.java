@@ -68,6 +68,11 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case CODEIUM_IGNORE:
             case ANTIGRAVITY_IGNORE:
             case AIDER_IGNORE:
+            case REPOMIX_IGNORE:
+            case GITINGEST_IGNORE:
+            case GPT_IGNORE:
+            case GHOSTCODER_IGNORE:
+            case PIECES_IGNORE:
                 sb.append(globPattern);
                 break;
             default:

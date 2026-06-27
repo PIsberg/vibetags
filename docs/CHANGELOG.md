@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **10 new generated platform targets** (43 platforms total), all opt-in via the existing
+  file-presence model and adding zero overhead to projects that don't enable them:
+  - **AI pull-request reviewers** — `.coderabbit.yaml` (CodeRabbit `reviews.path_instructions`),
+    `.pr_agent.toml` (Qodo/Codium PR-Agent `extra_instructions`), and `ellipsis.yaml`
+    (one `pr_review.rules` entry per guardrail). These flag PRs that violate VibeTags guardrails
+    even when a local agent ignores them.
+  - **Context-packer ignore files** — `.repomixignore`, `.gitingestignore`, `.gptignore`,
+    `.ghostcoderignore`, `.piecesignore` (reuse the existing `IgnoreFileRenderer`).
+  - **Void Editor** — `.void/rules.md` (mirrors the `.cursorrules` markdown layout).
+  - **Roo Code custom mode** — `.roomodes` defining a "VibeTags Architect" mode whose
+    `customInstructions` carry the project guardrails.
+  - The reviewer/mode configs share a `GuardrailInstructionBlock` helper that reuses the
+    existing per-annotation formatters, so their content stays in lock-step with the rest of
+    the generated guardrails. New `NewPlatformsV4EndToEndTest` covers all ten; CI now resets,
+    regenerates, and verifies them in the example project on both the Maven and Gradle legs.
+
+### Documentation
+- Updated the platform lists and counts (now **43 platforms**) across `README.md`, root
+  `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/WORKFLOW.md`, `example/README.md`, and the
+  `vibetags-usage` skill (opt-in commands + Supported Output Files table).
+
 ## [1.0.0-RC1] - 2026-06-13
 
 First release candidate for 1.0. All on-disk machine formats are now version-stamped, the

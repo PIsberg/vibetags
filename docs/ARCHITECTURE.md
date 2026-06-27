@@ -32,7 +32,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Zero runtime dependency**: No VibeTags classes in production artifacts
 - **File-existence opt-in**: Only generates files that already exist on disk
 - **Write-if-changed**: Only updates files when content actually differs
-- **Multi-platform**: Generates configs for 12+ AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, and more)
+- **Multi-platform**: Generates configs for 40+ AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, AI PR reviewers like CodeRabbit/PR-Agent/Ellipsis, context packers, and more)
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
 ### Published Artifacts
@@ -522,6 +522,12 @@ Generation phase (once, on the round where processingOver() == true):
 | `.roo/rules/<Class>.md` | Markdown | Roo Code | Per-class granular rules |
 | `llms.txt` | Markdown | Windsurf Cascade, all LLM agents | Concise map/directory (llms.txt standard) |
 | `llms-full.txt` | Markdown | Windsurf Cascade, large-context LLMs | Full expanded reference book (llms.txt standard) |
+| `.void/rules.md` | Markdown | Void Editor | Same guardrail content as `.cursorrules` |
+| `.coderabbit.yaml` | YAML | CodeRabbit (AI PR reviewer) | `reviews.path_instructions` enforcing guardrails on review |
+| `.pr_agent.toml` | TOML | Qodo/Codium PR-Agent | `extra_instructions` for the reviewer and code-suggestion tools |
+| `ellipsis.yaml` | YAML | Ellipsis (AI PR reviewer) | One `pr_review.rules` entry per guardrail |
+| `.roomodes` | YAML | Roo Code | "VibeTags Architect" custom mode carrying the guardrails |
+| `.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore` | Glob patterns | Context packers | Standalone exclusion lists |
 
 ### Generated Output Files
 

@@ -216,6 +216,12 @@ class AIGuardrailProcessorUnitTest {
             "cline", "junie", "kiro_granular",
             // Firebase AI
             "firebase",
+            // Context-packer ignore files
+            "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+            // AI pull-request reviewers
+            "coderabbit", "pr_agent", "ellipsis",
+            // Editors & modes
+            "void", "roo_modes",
             // Machine-readable @AILocked report
             "locks_report"
         );
