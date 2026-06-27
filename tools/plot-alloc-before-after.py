@@ -50,8 +50,9 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.3))
     fig.suptitle(
         "VibeTags 1.0.0-RC1 — processor allocation overhead, baseline vs optimized\n"
-        "(skip absent-annotation scans + skip unused Tree API position resolution)",
-        fontsize=11,
+        "(skip absent-annotation scans in collect + validate, skip unused Tree API "
+        "position resolution, pre-size renderer buffers)",
+        fontsize=10,
     )
 
     # Panel 1 — absolute overhead

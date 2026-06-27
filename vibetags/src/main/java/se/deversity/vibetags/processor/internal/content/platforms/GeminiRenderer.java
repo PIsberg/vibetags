@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class GeminiRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        StringBuilder sb = new StringBuilder(4096);
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append("\n");
 
         if (!collector.locked().isEmpty()) {

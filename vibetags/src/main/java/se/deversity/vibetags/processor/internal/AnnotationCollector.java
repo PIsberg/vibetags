@@ -316,4 +316,25 @@ public final class AnnotationCollector {
     public Set<Element> temporary()        { return Collections.unmodifiableSet(temporaryElements); }
 
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
+
+    /**
+     * Total number of annotated references across every annotation bucket (an element carrying two
+     * annotations counts twice — it is rendered in two sections). Used to pre-size renderer output
+     * buffers so large projects avoid repeated StringBuilder grow-and-copy reallocation.
+     */
+    public int totalAnnotatedReferences() {
+        return lockedElements.size() + contextElements.size() + ignoreElements.size()
+            + auditElements.size() + draftElements.size() + privacyElements.size()
+            + coreElements.size() + performanceElements.size() + contractElements.size()
+            + testDrivenElements.size() + threadSafeElements.size() + immutableElements.size()
+            + deprecatedElements.size() + observabilityElements.size() + regulationElements.size()
+            + parallelTestsElements.size() + legacyBridgeElements.size() + architectureElements.size()
+            + publicApiElements.size() + strictExceptionsElements.size() + strictTypesElements.size()
+            + internationalizedElements.size() + strictClasspathElements.size() + schemaSafeElements.size()
+            + idempotentElements.size() + featureFlagElements.size() + secureElements.size()
+            + callersOnlyElements.size() + sandboxOnlyElements.size() + memoryBudgetElements.size()
+            + pureElements.size() + domainModelElements.size() + extensibleElements.size()
+            + inputSanitizedElements.size() + secureLoggingElements.size() + explainElements.size()
+            + prototypeElements.size() + sunsetElements.size() + temporaryElements.size();
+    }
 }

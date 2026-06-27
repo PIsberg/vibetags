@@ -30,6 +30,8 @@ import se.deversity.vibetags.annotations.AISecureLogging;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
 
+import org.jspecify.annotations.Nullable;
+
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -37,6 +39,8 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.tools.Diagnostic;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * Compile-time consistency checks for VibeTags annotations. Emits compiler warnings for
@@ -50,8 +54,22 @@ public final class AnnotationValidator {
      * Runs all validations against the given round environment, emitting warnings via the messager.
      */
     public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
+        validate(messager, roundEnv, processingEnv, null);
+    }
+
+    /**
+     * Runs all validations, querying javac only for the annotation types reported present this
+     * round. {@code presentFqns} is the set of fully-qualified annotation names from the
+     * {@code annotations} argument of {@code process()}; when non-null, the per-type
+     * {@code getElementsAnnotatedWith} scan is skipped for any type absent from it (the scan would
+     * return empty anyway). Passing {@code null} queries every type (used by direct unit tests
+     * that mock {@code getElementsAnnotatedWith} without populating {@code annotations}).
+     */
+    public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv,
+                                @Nullable Set<String> presentFqns) {
+        final Set<String> present = presentFqns;
         // Contradiction: @AIDraft + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
+        for (Element element : elementsOf(roundEnv, present,AILocked.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -61,7 +79,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AIDraft + @AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIDraft.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIDraft.class)) {
             if (element.getAnnotation(AIIgnore.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -74,7 +92,7 @@ public final class AnnotationValidator {
         }
 
         // No-op: @AIContext with both focus and avoids blank
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIContext.class)) {
             AIContext ctx = element.getAnnotation(AIContext.class);
             if (ctx.focus().isBlank() && ctx.avoids().isBlank()) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -85,7 +103,7 @@ public final class AnnotationValidator {
         }
 
         // Empty audit: @AIAudit with no checkFor
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIAudit.class)) {
             AIAudit audit = element.getAnnotation(AIAudit.class);
             if (audit.checkFor().length == 0) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -96,7 +114,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AIPrivacy + @AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIPrivacy.class)) {
             if (element.getAnnotation(AIIgnore.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -107,7 +125,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AIContract + @AIDraft
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIContract.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIContract.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -119,7 +137,7 @@ public final class AnnotationValidator {
         }
 
         // Overlap: @AIContract + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIContract.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIContract.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -131,7 +149,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AITestDriven + @AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+        for (Element element : elementsOf(roundEnv, present,AITestDriven.class)) {
             if (element.getAnnotation(AIIgnore.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -144,7 +162,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AITestDriven + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+        for (Element element : elementsOf(roundEnv, present,AITestDriven.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -156,7 +174,7 @@ public final class AnnotationValidator {
         }
 
         // Invalid coverage goal
-        for (Element element : roundEnv.getElementsAnnotatedWith(AITestDriven.class)) {
+        for (Element element : elementsOf(roundEnv, present,AITestDriven.class)) {
             AITestDriven td = element.getAnnotation(AITestDriven.class);
             if (td.coverageGoal() < 0 || td.coverageGoal() > 100) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -168,7 +186,7 @@ public final class AnnotationValidator {
         }
 
         // @AIImmutable on a type with non-final instance fields
-        for (Element type : roundEnv.getElementsAnnotatedWith(AIImmutable.class)) {
+        for (Element type : elementsOf(roundEnv, present,AIImmutable.class)) {
             for (Element enclosed : type.getEnclosedElements()) {
                 if (enclosed.getKind() != ElementKind.FIELD) continue;
                 if (enclosed.getModifiers().contains(Modifier.STATIC)) continue;
@@ -183,7 +201,7 @@ public final class AnnotationValidator {
         }
 
         // No replacement target: @AIDeprecated with blank replacedBy
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIDeprecated.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIDeprecated.class)) {
             AIDeprecated dep = element.getAnnotation(AIDeprecated.class);
             if (dep.replacedBy().isBlank()) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -196,7 +214,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AIDeprecated + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIDeprecated.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIDeprecated.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -208,7 +226,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AIThreadSafe + @AIImmutable.IMMUTABLE strategy on the same type is redundant
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIThreadSafe.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIThreadSafe.class)) {
             AIThreadSafe ts = element.getAnnotation(AIThreadSafe.class);
             if (ts.strategy() == AIThreadSafe.Strategy.IMMUTABLE
                     && element.getAnnotation(AIImmutable.class) != null) {
@@ -221,7 +239,7 @@ public final class AnnotationValidator {
         }
 
         // @AIObservability with no metrics, traces, or logs is a no-op
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIObservability.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIObservability.class)) {
             AIObservability obs = element.getAnnotation(AIObservability.class);
             if (obs.metrics().length == 0 && obs.traces().length == 0 && obs.logs().length == 0) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -232,7 +250,7 @@ public final class AnnotationValidator {
         }
 
         // @AIRegulation with blank standard
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIRegulation.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIRegulation.class)) {
             AIRegulation reg = element.getAnnotation(AIRegulation.class);
             if (reg.standard() == null || reg.standard().isBlank()) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -244,7 +262,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AILegacyBridge + @AIDraft
-        for (Element element : roundEnv.getElementsAnnotatedWith(AILegacyBridge.class)) {
+        for (Element element : elementsOf(roundEnv, present,AILegacyBridge.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -254,7 +272,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AIPublicAPI + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIPublicAPI.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIPublicAPI.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -265,7 +283,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AIParallelTests + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIParallelTests.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIParallelTests.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -276,7 +294,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AISchemaSafe + @AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISchemaSafe.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISchemaSafe.class)) {
             if (element.getAnnotation(AIIgnore.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -287,7 +305,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AIStrictClasspath + @AILocked
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIStrictClasspath.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -298,7 +316,7 @@ public final class AnnotationValidator {
         }
 
         // Empty config warning: @AIArchitecture with blank belongsTo
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIArchitecture.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIArchitecture.class)) {
             AIArchitecture arch = element.getAnnotation(AIArchitecture.class);
             if (arch.belongsTo() == null || arch.belongsTo().isBlank()) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -353,7 +371,7 @@ public final class AnnotationValidator {
         }
 
         // @AIFeatureFlag + @AILocked — contradictory
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIFeatureFlag.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIFeatureFlag.class)) {
             if (element.getAnnotation(AILocked.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -371,7 +389,7 @@ public final class AnnotationValidator {
         }
 
         // @AISecure with blank aspect — advisory warning
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISecure.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISecure.class)) {
             AISecure sec = element.getAnnotation(AISecure.class);
             if (sec != null && (sec.aspect() == null || sec.aspect().isBlank())) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -391,7 +409,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AIIdempotent + @AIDraft
-        for (Element element : roundEnv.getElementsAnnotatedWith(AIIdempotent.class)) {
+        for (Element element : elementsOf(roundEnv, present,AIIdempotent.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -402,7 +420,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AISandboxOnly + @AIDomainModel
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISandboxOnly.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISandboxOnly.class)) {
             if (element.getAnnotation(AIDomainModel.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -413,7 +431,7 @@ public final class AnnotationValidator {
         }
 
         // Contradiction: @AISunset + @AIDraft
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISunset.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISunset.class)) {
             if (element.getAnnotation(AIDraft.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -424,7 +442,7 @@ public final class AnnotationValidator {
         }
 
         // Redundancy: @AISecureLogging + @AIIgnore
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISecureLogging.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISecureLogging.class)) {
             if (element.getAnnotation(AIIgnore.class) != null) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: " + element.toString()
@@ -435,7 +453,7 @@ public final class AnnotationValidator {
         }
 
         // Empty JIRA or missing attributes: @AISunset
-        for (Element element : roundEnv.getElementsAnnotatedWith(AISunset.class)) {
+        for (Element element : elementsOf(roundEnv, present,AISunset.class)) {
             AISunset sunset = element.getAnnotation(AISunset.class);
             if (sunset != null && (sunset.jira() == null || sunset.jira().isBlank())) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
@@ -446,7 +464,7 @@ public final class AnnotationValidator {
         }
 
         // Verification and expiry: @AITemporary
-        for (Element element : roundEnv.getElementsAnnotatedWith(AITemporary.class)) {
+        for (Element element : elementsOf(roundEnv, present,AITemporary.class)) {
             AITemporary temp = element.getAnnotation(AITemporary.class);
             if (temp != null) {
                 if (temp.expiresOn() == null || temp.expiresOn().isBlank()) {
@@ -481,5 +499,18 @@ public final class AnnotationValidator {
                 }
             }
         }
+    }
+
+    /**
+     * Returns elements annotated with {@code type} this round, or an empty set (skipping the javac
+     * scan) when {@code present} is non-null and does not contain the type's FQN — i.e. javac
+     * reported the annotation as absent, so the scan would return empty anyway.
+     */
+    private static Set<? extends Element> elementsOf(RoundEnvironment roundEnv, @Nullable Set<String> present,
+                                                     Class<? extends java.lang.annotation.Annotation> type) {
+        if (present != null && !present.contains(type.getName())) {
+            return Collections.emptySet();
+        }
+        return roundEnv.getElementsAnnotatedWith(type);
     }
 }

@@ -190,7 +190,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     collector.recordLockedPosition(e, positionResolver.resolve(e));
                 }
             }
-            validateAnnotations(processingEnv.getMessager(), roundEnv);
+            validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns);
         } catch (RuntimeException e) {
             if (checkMode) {
                 getSafeMessager().printMessage(Diagnostic.Kind.ERROR,
@@ -542,6 +542,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
         AnnotationValidator.validate(messager, roundEnv, processingEnv);
+    }
+
+    void validateAnnotations(Messager messager, RoundEnvironment roundEnv, @Nullable Set<String> presentFqns) {
+        AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns);
     }
 
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {

@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class CursorRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        StringBuilder sb = new StringBuilder(4096);
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("# AUTO-GENERATED AI RULES\n").append(context.getGeneratedHeader()).append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
 
         for (Element e : collector.locked()) {

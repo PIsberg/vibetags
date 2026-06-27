@@ -46,8 +46,10 @@ class ProcessorFailureGuardTest {
     @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
     @SupportedSourceVersion(SourceVersion.RELEASE_17)
     static final class FaultyProcessor extends AIGuardrailProcessor {
+        // process() calls the 3-arg overload (passing the present-annotation FQNs); override that
+        // one so the fault fires inside the guarded region.
         @Override
-        void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
+        void validateAnnotations(Messager messager, RoundEnvironment roundEnv, java.util.Set<String> presentFqns) {
             throw new IllegalStateException(BOOM);
         }
     }
