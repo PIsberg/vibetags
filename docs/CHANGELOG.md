@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+Four changes to the per-round processing and rendering paths, all behaviour-preserving (every one
+of the 1033 unit tests passes unchanged):
+
+- **Skip `getElementsAnnotatedWith` for annotation types that aren't present** — in both
+  `AnnotationCollector.collect()` *and* `AnnotationValidator.validate()`. Both consult the set of
+  annotation types javac reports present this round (the `annotations` argument of `process()`) and
+  query only those. Previously every round scanned all root elements ~39 times in collect and a
+  further ~30 times in validate; for a project that uses a handful of annotation types, ~60 of those
+  scans returned empty. Querying an absent type returns empty, so skipping it is equivalent.
+- **Skip Tree API position resolution unless the lock report is enabled.** Source positions for
+  `@AILocked` elements (javac Compiler Tree API) are consumed only by the `.vibetags-locks` report;
+  when it isn't opted in, that per-element work is skipped entirely.
+- **Pre-size renderer output buffers from the collected element count.** The nine large O(N) prose
+  renderers (Cursor, Claude, Gemini, Qwen, Copilot, Windsurf, Zed, Aider, llms.txt/-full) now start
+  their `StringBuilder` at an estimate derived from the element count instead of a fixed 4 KB,
+  avoiding repeated grow-and-copy reallocation on large projects.
+
+- **Measured impact** (`MemoryVolumeStressTest`, original 1.0.0-RC1 vs optimized, captured
+  back-to-back on the same machine — see `load-tests/results/1.0.0-RC1/`): processor-attributable
+  **allocation overhead drops ~4–5 % at N ≥ 500 annotated classes** (211.5 → 202.1 MB at N = 1000,
+  ≈ 9 MB less heap pressure per 1000-class module) and 16–37 % at small N where the avoided
+  per-round work dominates. The deterministic allocation win is driven mainly by the Tree API skip
+  and the collect-scan skip; the validator-scan skip is primarily a *CPU / scan-count* reduction
+  (~60 → ~k full element scans per round) and the buffer pre-sizing trims resize churn — neither
+  adds much to the byte count. Wall-clock overhead is unchanged within run-to-run variance: on
+  commodity hardware the synthetic `processorTime − baselineTime` delta is noise-dominated (baseline
+  runs occasionally even measured negative overhead), so deterministic allocation is the metric of
+  record.
+
+  ![Allocation overhead, baseline vs optimized](../load-tests/results/_plots/alloc-before-after-1.0.0-RC1.png)
+
 ### Changed
 - **`AGENTS.md` is now only generated when it is the *sole* AI config file present.** When
   `AGENTS.md` coexists with any other opted-in AI config file (e.g. `CLAUDE.md`, `.cursorrules`),

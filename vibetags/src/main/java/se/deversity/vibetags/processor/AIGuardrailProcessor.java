@@ -23,6 +23,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -82,6 +83,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private boolean checkMode;
 
+    /**
+     * Whether the machine-readable lock report ({@code .vibetags-locks}) is opted in. Source
+     * positions for {@code @AILocked} elements are only consumed by that report, so when it is
+     * absent we skip the (allocation-heavy) Tree API position resolution entirely.
+     */
+    private boolean locksReportEnabled;
+
     /** Best-effort source line resolution for {@code @AILocked} elements (javac Tree API). */
     private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
@@ -117,6 +125,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
         this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
+        // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
+        // scanning, no per-element allocation) unless that opt-in file is present.
+        this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv);
 
         String useCache = options.getOrDefault("vibetags.cache", "true");
@@ -158,13 +169,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
             if (processed.get()) return false;
 
-            collector.collect(roundEnv);
-            // Positions must be resolved while the round is live — the Tree API cannot map
-            // elements back to source once processing is over.
-            for (Element e : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
-                collector.recordLockedPosition(e, positionResolver.resolve(e));
+            // The annotation types javac reports as present this round. Lets AnnotationCollector
+            // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
+            // such query would scan every root element only to return empty). Empty/unknown →
+            // null → query every type (preserves behaviour for tests that don't populate it).
+            Set<String> presentFqns = null;
+            if (!annotations.isEmpty()) {
+                presentFqns = new java.util.HashSet<>(annotations.size() * 2);
+                for (TypeElement te : annotations) {
+                    presentFqns.add(te.getQualifiedName().toString());
+                }
             }
-            validateAnnotations(processingEnv.getMessager(), roundEnv);
+
+            collector.collect(roundEnv, presentFqns);
+            // Positions must be resolved while the round is live — the Tree API cannot map
+            // elements back to source once processing is over. Only needed for the .vibetags-locks
+            // report; skip when it isn't opted in, or when no @AILocked is present this round.
+            if (locksReportEnabled && (presentFqns == null || presentFqns.contains(AILocked.class.getName()))) {
+                for (Element e : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
+                    collector.recordLockedPosition(e, positionResolver.resolve(e));
+                }
+            }
+            validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns);
         } catch (RuntimeException e) {
             if (checkMode) {
                 getSafeMessager().printMessage(Diagnostic.Kind.ERROR,
@@ -516,6 +542,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
         AnnotationValidator.validate(messager, roundEnv, processingEnv);
+    }
+
+    void validateAnnotations(Messager messager, RoundEnvironment roundEnv, @Nullable Set<String> presentFqns) {
+        AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns);
     }
 
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {

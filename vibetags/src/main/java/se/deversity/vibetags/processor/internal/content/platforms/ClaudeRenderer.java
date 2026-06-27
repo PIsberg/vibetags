@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class ClaudeRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        StringBuilder sb = new StringBuilder(4096);
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("<!-- ").append(context.getGeneratedHeader().trim()).append(" -->\n<project_guardrails>\n  <locked_files>\n");
 
         for (Element e : collector.locked()) {

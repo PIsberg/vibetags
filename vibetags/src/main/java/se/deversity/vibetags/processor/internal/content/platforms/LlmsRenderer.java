@@ -15,7 +15,9 @@ public final class LlmsRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         boolean full = (platform == Platform.LLMS_FULL);
-        StringBuilder sb = new StringBuilder(8192);
+        // llms-full ("the book") renders more per element than this hint assumes; under-sizing
+        // only costs a couple of growths, far fewer than starting from a small fixed buffer.
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
 
         // Header
         if (full) {

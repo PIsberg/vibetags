@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class ZedRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        StringBuilder sb = new StringBuilder(4096);
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("# AUTO-GENERATED AI RULES\n")
           .append(context.getGeneratedHeader())
           .append("# Do not edit manually.\n\n## Locked Files (Do Not Modify)\n");

@@ -160,7 +160,11 @@ public final class GuardrailContentBuilder {
     public Result build() {
         initBuilders();
 
-        RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices);
+        // Pre-size renderer output buffers from the collected element count: ~160 bytes of rendered
+        // content per annotated reference plus a fixed preamble allowance. Avoids repeated
+        // grow-and-copy reallocation of the per-platform StringBuilders on large projects.
+        int estimatedContentSize = collector.totalAnnotatedReferences() * 160 + 2048;
+        RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize);
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
 
         // Render each active service (excluding granular directories and special-case exclusions)
