@@ -129,47 +129,63 @@ public final class AnnotationCollector {
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */
     public boolean collect(RoundEnvironment roundEnv) {
-        lockedElements.addAll(roundEnv.getElementsAnnotatedWith(AILocked.class));
-        contextElements.addAll(roundEnv.getElementsAnnotatedWith(AIContext.class));
-        ignoreElements.addAll(roundEnv.getElementsAnnotatedWith(AIIgnore.class));
-        auditElements.addAll(roundEnv.getElementsAnnotatedWith(AIAudit.class));
-        draftElements.addAll(roundEnv.getElementsAnnotatedWith(AIDraft.class));
-        privacyElements.addAll(roundEnv.getElementsAnnotatedWith(AIPrivacy.class));
-        coreElements.addAll(roundEnv.getElementsAnnotatedWith(AICore.class));
-        performanceElements.addAll(roundEnv.getElementsAnnotatedWith(AIPerformance.class));
-        contractElements.addAll(roundEnv.getElementsAnnotatedWith(AIContract.class));
-        testDrivenElements.addAll(roundEnv.getElementsAnnotatedWith(AITestDriven.class));
-        threadSafeElements.addAll(roundEnv.getElementsAnnotatedWith(AIThreadSafe.class));
-        immutableElements.addAll(roundEnv.getElementsAnnotatedWith(AIImmutable.class));
-        deprecatedElements.addAll(roundEnv.getElementsAnnotatedWith(AIDeprecated.class));
-        observabilityElements.addAll(roundEnv.getElementsAnnotatedWith(AIObservability.class));
-        regulationElements.addAll(roundEnv.getElementsAnnotatedWith(AIRegulation.class));
-        parallelTestsElements.addAll(roundEnv.getElementsAnnotatedWith(AIParallelTests.class));
-        legacyBridgeElements.addAll(roundEnv.getElementsAnnotatedWith(AILegacyBridge.class));
-        architectureElements.addAll(roundEnv.getElementsAnnotatedWith(AIArchitecture.class));
-        publicApiElements.addAll(roundEnv.getElementsAnnotatedWith(AIPublicAPI.class));
-        strictExceptionsElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictExceptions.class));
-        strictTypesElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictTypes.class));
-        internationalizedElements.addAll(roundEnv.getElementsAnnotatedWith(AIInternationalized.class));
-        strictClasspathElements.addAll(roundEnv.getElementsAnnotatedWith(AIStrictClasspath.class));
-        schemaSafeElements.addAll(roundEnv.getElementsAnnotatedWith(AISchemaSafe.class));
-        idempotentElements.addAll(roundEnv.getElementsAnnotatedWith(AIIdempotent.class));
-        featureFlagElements.addAll(roundEnv.getElementsAnnotatedWith(AIFeatureFlag.class));
-        secureElements.addAll(roundEnv.getElementsAnnotatedWith(AISecure.class));
+        return collect(roundEnv, null);
+    }
+
+    /**
+     * Drains the round environment into our per-annotation sets, querying javac only for the
+     * annotation types actually present this round.
+     *
+     * <p>{@code presentAnnotationFqns} is the set of fully-qualified annotation names javac reports
+     * as present (built from the {@code annotations} argument of {@code process()}). When non-null,
+     * {@link RoundEnvironment#getElementsAnnotatedWith} is skipped for any annotation type not in the
+     * set — those queries would scan every root element only to return empty, so skipping the
+     * ~33 absent types is a large allocation/time saving on big compilation units. Passing
+     * {@code null} restores the original behaviour of querying every type (used by direct unit
+     * tests that mock {@code getElementsAnnotatedWith} without populating {@code annotations}).
+     */
+    public boolean collect(RoundEnvironment roundEnv, @Nullable Set<String> presentAnnotationFqns) {
+        collectInto(lockedElements, AILocked.class, roundEnv, presentAnnotationFqns);
+        collectInto(contextElements, AIContext.class, roundEnv, presentAnnotationFqns);
+        collectInto(ignoreElements, AIIgnore.class, roundEnv, presentAnnotationFqns);
+        collectInto(auditElements, AIAudit.class, roundEnv, presentAnnotationFqns);
+        collectInto(draftElements, AIDraft.class, roundEnv, presentAnnotationFqns);
+        collectInto(privacyElements, AIPrivacy.class, roundEnv, presentAnnotationFqns);
+        collectInto(coreElements, AICore.class, roundEnv, presentAnnotationFqns);
+        collectInto(performanceElements, AIPerformance.class, roundEnv, presentAnnotationFqns);
+        collectInto(contractElements, AIContract.class, roundEnv, presentAnnotationFqns);
+        collectInto(testDrivenElements, AITestDriven.class, roundEnv, presentAnnotationFqns);
+        collectInto(threadSafeElements, AIThreadSafe.class, roundEnv, presentAnnotationFqns);
+        collectInto(immutableElements, AIImmutable.class, roundEnv, presentAnnotationFqns);
+        collectInto(deprecatedElements, AIDeprecated.class, roundEnv, presentAnnotationFqns);
+        collectInto(observabilityElements, AIObservability.class, roundEnv, presentAnnotationFqns);
+        collectInto(regulationElements, AIRegulation.class, roundEnv, presentAnnotationFqns);
+        collectInto(parallelTestsElements, AIParallelTests.class, roundEnv, presentAnnotationFqns);
+        collectInto(legacyBridgeElements, AILegacyBridge.class, roundEnv, presentAnnotationFqns);
+        collectInto(architectureElements, AIArchitecture.class, roundEnv, presentAnnotationFqns);
+        collectInto(publicApiElements, AIPublicAPI.class, roundEnv, presentAnnotationFqns);
+        collectInto(strictExceptionsElements, AIStrictExceptions.class, roundEnv, presentAnnotationFqns);
+        collectInto(strictTypesElements, AIStrictTypes.class, roundEnv, presentAnnotationFqns);
+        collectInto(internationalizedElements, AIInternationalized.class, roundEnv, presentAnnotationFqns);
+        collectInto(strictClasspathElements, AIStrictClasspath.class, roundEnv, presentAnnotationFqns);
+        collectInto(schemaSafeElements, AISchemaSafe.class, roundEnv, presentAnnotationFqns);
+        collectInto(idempotentElements, AIIdempotent.class, roundEnv, presentAnnotationFqns);
+        collectInto(featureFlagElements, AIFeatureFlag.class, roundEnv, presentAnnotationFqns);
+        collectInto(secureElements, AISecure.class, roundEnv, presentAnnotationFqns);
 
         // Collect new annotations
-        callersOnlyElements.addAll(roundEnv.getElementsAnnotatedWith(AICallersOnly.class));
-        sandboxOnlyElements.addAll(roundEnv.getElementsAnnotatedWith(AISandboxOnly.class));
-        memoryBudgetElements.addAll(roundEnv.getElementsAnnotatedWith(AIMemoryBudget.class));
-        pureElements.addAll(roundEnv.getElementsAnnotatedWith(AIPure.class));
-        domainModelElements.addAll(roundEnv.getElementsAnnotatedWith(AIDomainModel.class));
-        extensibleElements.addAll(roundEnv.getElementsAnnotatedWith(AIExtensible.class));
-        inputSanitizedElements.addAll(roundEnv.getElementsAnnotatedWith(AIInputSanitized.class));
-        secureLoggingElements.addAll(roundEnv.getElementsAnnotatedWith(AISecureLogging.class));
-        explainElements.addAll(roundEnv.getElementsAnnotatedWith(AIExplain.class));
-        prototypeElements.addAll(roundEnv.getElementsAnnotatedWith(AIPrototype.class));
-        sunsetElements.addAll(roundEnv.getElementsAnnotatedWith(AISunset.class));
-        temporaryElements.addAll(roundEnv.getElementsAnnotatedWith(AITemporary.class));
+        collectInto(callersOnlyElements, AICallersOnly.class, roundEnv, presentAnnotationFqns);
+        collectInto(sandboxOnlyElements, AISandboxOnly.class, roundEnv, presentAnnotationFqns);
+        collectInto(memoryBudgetElements, AIMemoryBudget.class, roundEnv, presentAnnotationFqns);
+        collectInto(pureElements, AIPure.class, roundEnv, presentAnnotationFqns);
+        collectInto(domainModelElements, AIDomainModel.class, roundEnv, presentAnnotationFqns);
+        collectInto(extensibleElements, AIExtensible.class, roundEnv, presentAnnotationFqns);
+        collectInto(inputSanitizedElements, AIInputSanitized.class, roundEnv, presentAnnotationFqns);
+        collectInto(secureLoggingElements, AISecureLogging.class, roundEnv, presentAnnotationFqns);
+        collectInto(explainElements, AIExplain.class, roundEnv, presentAnnotationFqns);
+        collectInto(prototypeElements, AIPrototype.class, roundEnv, presentAnnotationFqns);
+        collectInto(sunsetElements, AISunset.class, roundEnv, presentAnnotationFqns);
+        collectInto(temporaryElements, AITemporary.class, roundEnv, presentAnnotationFqns);
 
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
@@ -193,6 +209,20 @@ public final class AnnotationCollector {
                      || !sunsetElements.isEmpty() || !temporaryElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
+    }
+
+    /**
+     * Adds all elements annotated with {@code type} in this round to {@code bucket}, but skips the
+     * javac query entirely when {@code present} is non-null and does not contain the type's FQN
+     * (i.e. javac reported the annotation as absent this round, so the query would return empty).
+     */
+    private static void collectInto(Set<Element> bucket,
+                                    Class<? extends java.lang.annotation.Annotation> type,
+                                    RoundEnvironment roundEnv,
+                                    @Nullable Set<String> present) {
+        if (present == null || present.contains(type.getName())) {
+            bucket.addAll(roundEnv.getElementsAnnotatedWith(type));
+        }
     }
 
     public void reset() {

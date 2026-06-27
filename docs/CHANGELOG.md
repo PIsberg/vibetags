@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **Skip annotation scans for types that aren't present, and Tree API position resolution when
+  the lock report isn't enabled.** Two changes to the per-round processing path:
+  - `AnnotationCollector.collect()` now consults the set of annotation types javac reports as
+    present this round (built from the `annotations` argument of `process()`) and only calls
+    `RoundEnvironment.getElementsAnnotatedWith()` for those. Previously all ~39 VibeTags annotation
+    types were queried every round; for a project that uses a handful of annotations, ~33 of those
+    queries scanned every root element only to return empty.
+  - Source-position resolution (javac Compiler Tree API) for `@AILocked` elements now runs only
+    when the machine-readable `.vibetags-locks` report is opted in — its sole consumer. When the
+    report is absent the per-element Tree API work is skipped entirely.
+- **Measured impact** (`MemoryVolumeStressTest`, baseline vs optimized captured back-to-back on the
+  same machine — see `load-tests/results/1.0.0-RC1/`): processor-attributable **allocation overhead
+  drops ~4–5 % at N ≥ 500 annotated classes** (e.g. 211.5 → 202.3 MB at N = 1000, ≈ 9 MB less heap
+  pressure per 1000-class module) and more at smaller N where the avoided per-round work is a larger
+  share. Wall-clock overhead is unchanged within run-to-run variance — on commodity hardware the
+  synthetic `processorTime − baselineTime` delta is noise-dominated, so deterministic allocation is
+  the metric of record. All 1033 unit tests pass unchanged; behaviour is identical (querying an
+  absent annotation type returns empty, so skipping it is equivalent).
+
+  ![Allocation overhead, baseline vs optimized](../load-tests/results/_plots/alloc-before-after-1.0.0-RC1.png)
+
 ### Changed
 - **`AGENTS.md` is now only generated when it is the *sole* AI config file present.** When
   `AGENTS.md` coexists with any other opted-in AI config file (e.g. `CLAUDE.md`, `.cursorrules`),
