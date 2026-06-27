@@ -39,6 +39,12 @@ public final class ServiceRegistry {
         "cline", "junie", "kiro_granular",
         // Firebase AI
         "firebase",
+        // Context-packer ignore files
+        "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+        // AI pull-request reviewers
+        "coderabbit", "pr_agent", "ellipsis",
+        // Editors & modes
+        "void", "roo_modes",
         // Machine-readable @AILocked report for CI diff guards
         "locks_report"
     );
@@ -100,6 +106,19 @@ public final class ServiceRegistry {
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
         map.put("firebase",      root.resolve(".idx/airules.md"));
+        // Context-packer ignore files
+        map.put("repomix_ignore",    root.resolve(".repomixignore"));
+        map.put("gitingest_ignore",  root.resolve(".gitingestignore"));
+        map.put("gpt_ignore",        root.resolve(".gptignore"));
+        map.put("ghostcoder_ignore", root.resolve(".ghostcoderignore"));
+        map.put("pieces_ignore",     root.resolve(".piecesignore"));
+        // AI pull-request reviewers
+        map.put("coderabbit",    root.resolve(".coderabbit.yaml"));
+        map.put("pr_agent",      root.resolve(".pr_agent.toml"));
+        map.put("ellipsis",      root.resolve("ellipsis.yaml"));
+        // Editors & modes
+        map.put("void",          root.resolve(".void/rules.md"));
+        map.put("roo_modes",     root.resolve(".roomodes"));
         // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
         map.put("locks_report",  root.resolve(".vibetags-locks"));
         return map;

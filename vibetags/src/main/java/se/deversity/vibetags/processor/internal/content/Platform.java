@@ -36,6 +36,19 @@ public enum Platform {
     CLINE("cline"),
     JUNIE("junie"),
     FIREBASE("firebase"),
+    // Context-packer ignore files
+    REPOMIX_IGNORE("repomix_ignore"),
+    GITINGEST_IGNORE("gitingest_ignore"),
+    GPT_IGNORE("gpt_ignore"),
+    GHOSTCODER_IGNORE("ghostcoder_ignore"),
+    PIECES_IGNORE("pieces_ignore"),
+    // AI pull-request reviewers
+    CODERABBIT("coderabbit"),
+    PR_AGENT("pr_agent"),
+    ELLIPSIS("ellipsis"),
+    // Editors & modes
+    VOID("void"),
+    ROO_MODES("roo_modes"),
     CODEX_CONFIG("codex_config"),
     CODEX_RULES("codex_rules"),
     QWEN_SETTINGS("qwen_settings"),

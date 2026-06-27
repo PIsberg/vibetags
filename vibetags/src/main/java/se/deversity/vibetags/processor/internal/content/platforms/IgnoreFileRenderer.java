@@ -37,6 +37,11 @@ public final class IgnoreFileRenderer implements PlatformRenderer {
             case CODEIUM_IGNORE:     return "Codeium";
             case ANTIGRAVITY_IGNORE: return "Antigravity AI";
             case AIDER_IGNORE:       return "Aider";
+            case REPOMIX_IGNORE:     return "Repomix";
+            case GITINGEST_IGNORE:   return "Gitingest";
+            case GPT_IGNORE:         return "GPT context packer";
+            case GHOSTCODER_IGNORE:  return "Ghostcoder";
+            case PIECES_IGNORE:      return "Pieces for Developers";
             default:                 return "AI Platform";
         }
     }

@@ -228,7 +228,7 @@ The 39 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **33 AI platforms**:
+Generated configuration files work out-of-the-box with **43 AI platforms**:
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
@@ -250,7 +250,20 @@ Generated configuration files work out-of-the-box with **33 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
+- **Void Editor** (`.void/rules.md`)
 - **Windsurf IDE** (`.windsurfrules`)
+
+#### AI pull-request reviewers
+- **CodeRabbit** (`.coderabbit.yaml`) — `reviews.path_instructions` that flag PRs violating guardrails
+- **Qodo / Codium PR-Agent** (`.pr_agent.toml`) — `extra_instructions` for the reviewer and code-suggestion tools
+- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail
+
+#### Context packers (ignore files)
+- **Repomix** (`.repomixignore`)
+- **Gitingest** (`.gitingestignore`)
+- **GPT context packer** (`.gptignore`)
+- **Ghostcoder** (`.ghostcoderignore`)
+- **Pieces for Developers** (`.piecesignore`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
@@ -258,7 +271,7 @@ Generated configuration files work out-of-the-box with **33 AI platforms**:
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
 - **Amazon Kiro** (`.kiro/steering/*.md`)
-- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`, plus a `.roomodes` "VibeTags Architect" custom mode)
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
 - **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)

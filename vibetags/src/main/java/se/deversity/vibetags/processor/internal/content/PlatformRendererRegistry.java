@@ -27,6 +27,11 @@ public final class PlatformRendererRegistry {
     private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
+    private static final CodeRabbitRenderer CODERABBIT_RENDERER = new CodeRabbitRenderer();
+    private static final PrAgentRenderer PR_AGENT_RENDERER = new PrAgentRenderer();
+    private static final EllipsisRenderer ELLIPSIS_RENDERER = new EllipsisRenderer();
+    private static final VoidRenderer VOID_RENDERER = new VoidRenderer();
+    private static final RooModesRenderer ROO_MODES_RENDERER = new RooModesRenderer();
     private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
 
@@ -74,6 +79,11 @@ public final class PlatformRendererRegistry {
             case DOUBLE_IGNORE:
             case CODEIUM_IGNORE:
             case ANTIGRAVITY_IGNORE:
+            case REPOMIX_IGNORE:
+            case GITINGEST_IGNORE:
+            case GPT_IGNORE:
+            case GHOSTCODER_IGNORE:
+            case PIECES_IGNORE:
                 return IGNORE_FILE_RENDERER;
             case WINDSURF:
                 return WINDSURF_RENDERER;
@@ -95,6 +105,16 @@ public final class PlatformRendererRegistry {
                 return JUNIE_RENDERER;
             case FIREBASE:
                 return FIREBASE_RENDERER;
+            case CODERABBIT:
+                return CODERABBIT_RENDERER;
+            case PR_AGENT:
+                return PR_AGENT_RENDERER;
+            case ELLIPSIS:
+                return ELLIPSIS_RENDERER;
+            case VOID:
+                return VOID_RENDERER;
+            case ROO_MODES:
+                return ROO_MODES_RENDERER;
             case LOCKS_REPORT:
                 return LOCKS_REPORT_RENDERER;
             case CURSOR_GRANULAR:
