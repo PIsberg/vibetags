@@ -37,8 +37,24 @@ class ProcessorTestHarness {
     private final List<JavaFileObject> sources = new ArrayList<>();
 
     ProcessorTestHarness(Path tempDir) throws IOException {
+        this(tempDir, true);
+    }
+
+    /**
+     * @param createDefaults when {@code true}, all opt-in signal files are created so every
+     *                       service activates; when {@code false}, no opt-in files are created —
+     *                       the caller opts in explicitly via {@link #touchOptIn(String)}.
+     */
+    ProcessorTestHarness(Path tempDir, boolean createDefaults) throws IOException {
         this.root = tempDir;
-        createOptInFiles();
+        if (createDefaults) {
+            createOptInFiles();
+        }
+    }
+
+    /** Creates a single empty opt-in signal file (relative to the temp root). */
+    void touchOptIn(String relative) throws IOException {
+        touch(relative);
     }
 
     /** Creates empty opt-in signal files so the processor activates all services. */
@@ -218,7 +234,25 @@ class ProcessorTestHarness {
      */
     static ProcessorTestHarness withExampleSources(Path tempDir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(tempDir);
+        addExampleSources(h);
+        h.compile();
+        return h;
+    }
 
+    /**
+     * Same annotated sources as {@link #withExampleSources(Path)} but opting in to only the given
+     * signal files (no others). Used to exercise the AGENTS.md "sole-file fallback" rule, where
+     * AGENTS.md is only managed when it is the only AI config file present.
+     */
+    static ProcessorTestHarness withExampleSourcesSoleOptIn(Path tempDir, String optInFile) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        h.touchOptIn(optInFile);
+        addExampleSources(h);
+        h.compile();
+        return h;
+    }
+
+    private static void addExampleSources(ProcessorTestHarness h) {
         h.addSource("com.example.payment.PaymentProcessor",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -283,9 +317,6 @@ class ProcessorTestHarness {
             "    @AIContract(reason = \"External payment gateway API — breaking changes will violate SLA\")\n" +
             "    double charge(String customerId, double amount);\n" +
             "}\n");
-
-        h.compile();
-        return h;
     }
 
     // -----------------------------------------------------------------------

@@ -127,6 +127,13 @@ public final class ServiceRegistry {
     /**
      * Resolves which primary services should have their files written. Only "signal" files
      * (e.g. CLAUDE.md, .cursorrules) are checked; their presence is the opt-in.
+     *
+     * <p>Special case for {@code AGENTS.md} (the {@code codex} service): it doubles as a
+     * near-universal agent-instructions file, and projects that use several AI tools frequently
+     * keep {@code AGENTS.md} only as a thin pointer to another tool's file (e.g. {@code CLAUDE.md}).
+     * To avoid clobbering such a pointer, {@code AGENTS.md} is treated as a write target only when
+     * it is the <em>sole</em> AI config file present. If any other service opted in, {@code codex}
+     * is dropped here, which also disables the Codex sidecar config it would otherwise drive.
      */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
         Set<String> active = new HashSet<>();
@@ -137,6 +144,15 @@ public final class ServiceRegistry {
                 active.add(key);
             }
         });
+
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc).
+        if (active.contains("codex") && active.size() > 1) {
+            active.remove("codex");
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: AGENTS.md left untouched because other AI config files are present; "
+                + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
+                + "(remove the other AI config files) to have VibeTags manage it.");
+        }
 
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(

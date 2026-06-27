@@ -233,19 +233,27 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToAgentsMd() throws Exception {
-        withCwdSignalFiles(List.of("AGENTS.md"), () -> {
-            CapturingProcessor processor = makeCapturingProcessor();
-            processor.process(Set.of(), contractRoundEnv("com.example.OrderApi.placeOrder", "Mobile app contract"));
-            triggerGeneration(processor);
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule),
+        // so use an isolated root that opts in to AGENTS.md only.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-contract");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.OrderApi",
+            "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AIContract;\n"
+            + "public interface OrderApi {\n"
+            + "    @AIContract(reason = \"Mobile app contract\")\n"
+            + "    void placeOrder();\n"
+            + "}\n");
+        h.compile();
 
-            String content = processor.contentFor("AGENTS.md");
-            assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
-                "AGENTS.md must have contract-frozen section");
-            assertTrue(content.contains("com.example.OrderApi.placeOrder"),
-                "AGENTS.md must list the annotated element");
-            assertTrue(content.contains("Mobile app contract"),
-                "AGENTS.md must include the contract reason");
-        });
+        String content = h.readFile("AGENTS.md");
+        assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
+            "AGENTS.md must have contract-frozen section");
+        assertTrue(content.contains("com.example.OrderApi.placeOrder"),
+            "AGENTS.md must list the annotated element");
+        assertTrue(content.contains("Mobile app contract"),
+            "AGENTS.md must include the contract reason");
     }
 
     @Test

@@ -20,11 +20,18 @@ class AnnotationProcessorEndToEndTest {
     @TempDir
     static Path tempDir;
 
+    @TempDir
+    static Path agentsDir;
+
     private static ProcessorTestHarness harness;
+    // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule).
+    // The all-platforms `harness` therefore skips it; this harness opts in to AGENTS.md only.
+    private static ProcessorTestHarness agentsHarness;
 
     @BeforeAll
     static void setUp() throws IOException {
         harness = ProcessorTestHarness.withExampleSources(tempDir);
+        agentsHarness = ProcessorTestHarness.withExampleSourcesSoleOptIn(agentsDir, "AGENTS.md");
     }
 
     @AfterAll
@@ -114,7 +121,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCodexAgentsHasSecurityAudits() throws IOException {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
 
         assertTrue(content.contains("MANDATORY SECURITY AUDITS"),
             "Should contain mandatory security audits section");
@@ -166,7 +173,8 @@ class AnnotationProcessorEndToEndTest {
     void testLockedFilesAppearInAllOutputs() throws IOException {
         String cursorRules = harness.readFile(".cursorrules");
         String claudeMd = harness.readFile("CLAUDE.md");
-        String codexAgents = harness.readFile("AGENTS.md");
+        // AGENTS.md is skipped when other AI files exist, so check it via the sole-opt-in harness.
+        String codexAgents = agentsHarness.readFile("AGENTS.md");
 
         assertTrue(cursorRules.contains("PaymentProcessor"),
             "Cursor rules should mention PaymentProcessor");
@@ -174,6 +182,17 @@ class AnnotationProcessorEndToEndTest {
             "Claude.md should mention PaymentProcessor");
         assertTrue(codexAgents.contains("PaymentProcessor"),
             "Codex AGENTS.md should mention PaymentProcessor");
+    }
+
+    @Test
+    void testAgentsMdSkippedWhenOtherAiFilesPresent() throws IOException {
+        // The all-platforms harness has CLAUDE.md, .cursorrules, etc. — so AGENTS.md is treated
+        // as a pointer and left untouched, even though its placeholder file exists.
+        assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md placeholder should still exist");
+        assertTrue(harness.readFile("AGENTS.md").isEmpty(),
+            "AGENTS.md must be left untouched when other AI config files are present");
+        assertTrue(harness.readFile(".codex/config.toml").isEmpty(),
+            "Codex sidecar config must be skipped along with AGENTS.md");
     }
 
     @Test
@@ -202,9 +221,11 @@ class AnnotationProcessorEndToEndTest {
         assertFalse(harness.readFile(".cursorrules").isEmpty());
         assertFalse(harness.readFile("CLAUDE.md").isEmpty());
         assertFalse(harness.readFile(".aiexclude").isEmpty());
-        assertFalse(harness.readFile("AGENTS.md").isEmpty());
-        assertFalse(harness.readFile(".codex/config.toml").isEmpty());
-        assertFalse(harness.readFile(".codex/rules/vibetags.rules").isEmpty());
+        // AGENTS.md and the Codex sidecar are skipped when other AI files exist (sole-file rule),
+        // so they are exercised via the dedicated sole-opt-in harness instead.
+        assertFalse(agentsHarness.readFile("AGENTS.md").isEmpty());
+        assertFalse(agentsHarness.readFile(".codex/config.toml").isEmpty());
+        assertFalse(agentsHarness.readFile(".codex/rules/vibetags.rules").isEmpty());
         assertFalse(harness.readFile("gemini_instructions.md").isEmpty());
         assertFalse(harness.readFile(".github/copilot-instructions.md").isEmpty());
     }
@@ -267,7 +288,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCodexConfigHasCorrectSettings() throws IOException {
-        String content = harness.readFile(".codex/config.toml");
+        String content = agentsHarness.readFile(".codex/config.toml");
         assertTrue(content.contains("model = \"o3-mini\""));
         assertTrue(content.contains("approval_policy = \"on-request\""));
     }
@@ -300,14 +321,14 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.readFile(".cursorrules").contains(attribution));
         assertTrue(harness.readFile("CLAUDE.md").contains(attribution));
         assertTrue(harness.readFile(".aiexclude").contains(attribution));
-        assertTrue(harness.readFile("AGENTS.md").contains(attribution));
+        assertTrue(agentsHarness.readFile("AGENTS.md").contains(attribution));
         assertTrue(harness.readFile("gemini_instructions.md").contains(attribution));
         assertTrue(harness.readFile(".github/copilot-instructions.md").contains(attribution));
     }
 
     @Test
     void testCodexRulesHasStarlarkContent() throws IOException {
-        String content = harness.readFile(".codex/rules/vibetags.rules");
+        String content = agentsHarness.readFile(".codex/rules/vibetags.rules");
         assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
         assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
     }
@@ -341,7 +362,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testCodexAgentsHasIgnoredFiles() throws IOException {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain Ignored Elements section");
         assertTrue(content.contains("GeneratedMetadata"),
@@ -607,7 +628,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAICoreAppearsInCodex() throws IOException {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
         assertTrue(content.contains("CriticalService"), "AGENTS.md must mention @AICore CriticalService");
         assertTrue(content.contains("CORE FUNCTIONALITY"), "AGENTS.md must have a CORE FUNCTIONALITY section");
     }
@@ -653,7 +674,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAIPerformanceAppearsInCodex() throws IOException {
-        String content = harness.readFile("AGENTS.md");
+        String content = agentsHarness.readFile("AGENTS.md");
         assertTrue(content.contains("HotPathRouter"), "AGENTS.md must mention @AIPerformance HotPathRouter");
         assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), "AGENTS.md must have PERFORMANCE CONSTRAINTS section");
     }

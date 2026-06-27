@@ -41,7 +41,7 @@ mkdir -p .roo/rules                        # Roo Code (per-class rules)
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
-touch AGENTS.md                            # Codex CLI
+touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
 touch .windsurfrules                       # Windsurf IDE (traditional)
@@ -73,6 +73,12 @@ touch .roomodes                            # Roo Code ("VibeTags Architect" cust
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
+
+> **`AGENTS.md` is special:** it is only generated when it is the **sole** AI config file in the
+> project. Since `AGENTS.md` is a near-universal agent file often kept as a pointer to another
+> tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
+> is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
+> managed.
 
 ### 3. Annotate your Java code
 

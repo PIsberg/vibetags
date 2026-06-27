@@ -328,17 +328,25 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToAgentsMd() throws Exception {
-        withCwdSignalFiles(List.of("AGENTS.md"), () -> {
-            CapturingProcessor processor = makeCapturingProcessor();
-            processor.process(Set.of(), testDrivenRoundEnv("com.example.BillingService.invoice", 100, "JUNIT_5", ""));
-            triggerGeneration(processor);
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule),
+        // so use an isolated root that opts in to AGENTS.md only.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-testdriven");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.BillingService",
+            "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AITestDriven;\n"
+            + "public class BillingService {\n"
+            + "    @AITestDriven(coverageGoal = 100)\n"
+            + "    public void invoice() {}\n"
+            + "}\n");
+        h.compile();
 
-            String content = processor.contentFor("AGENTS.md");
-            assertTrue(content.contains("TEST-DRIVEN"),
-                "AGENTS.md must have test-driven section");
-            assertTrue(content.contains("com.example.BillingService.invoice"),
-                "AGENTS.md must list the annotated element");
-        });
+        String content = h.readFile("AGENTS.md");
+        assertTrue(content.contains("TEST-DRIVEN"),
+            "AGENTS.md must have test-driven section");
+        assertTrue(content.contains("com.example.BillingService.invoice"),
+            "AGENTS.md must list the annotated element");
     }
 
     @Test

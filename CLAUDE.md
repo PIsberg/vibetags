@@ -84,6 +84,16 @@ mvn compile
 
 To deactivate, delete the file — it will never come back.
 
+#### AGENTS.md sole-file fallback
+
+`AGENTS.md` (the `codex` service) is a special case. Because it doubles as a near-universal
+agent-instructions file and is frequently kept only as a thin pointer to another tool's file
+(e.g. `CLAUDE.md`), `resolveActiveServices()` treats it as a write target **only when it is the
+sole AI config file present**. If any other opt-in service is active, `codex` is dropped — which
+also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`) it would otherwise
+drive — and `AGENTS.md` is left untouched. Keep only `AGENTS.md` (remove the other AI config
+files) to have VibeTags manage it.
+
 ### Marker-based updates
 
 Generated content is written between markers so the file can contain hand-authored content alongside generated guardrails:
