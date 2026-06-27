@@ -45,6 +45,19 @@ AI_FILES=(
   ".junie/guidelines.md"
   # Firebase AI
   ".idx/airules.md"
+  # Context-packer ignore files
+  ".repomixignore"
+  ".gitingestignore"
+  ".gptignore"
+  ".ghostcoderignore"
+  ".piecesignore"
+  # AI pull-request reviewers
+  ".coderabbit.yaml"
+  ".pr_agent.toml"
+  "ellipsis.yaml"
+  # Editors & modes
+  ".void/rules.md"
+  ".roomodes"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"

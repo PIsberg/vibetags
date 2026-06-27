@@ -22,7 +22,7 @@ This is a sample e-commerce application that shows all fifteen VibeTags annotati
 - **`@AIObservability`** — Names metrics/traces/logs the AI must not remove or rename silently
 - **`@AIRegulation`** — Ties code to a specific compliance clause (GDPR, PCI-DSS, HIPAA, …)
 
-When compiled, the VibeTags annotation processor automatically generates AI configuration files for 33 platforms.
+When compiled, the VibeTags annotation processor automatically generates AI configuration files for 43 platforms.
 
 > **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../README.md).
 
@@ -124,6 +124,12 @@ touch .doubleignore .codeiumignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
 mkdir -p .junie && touch .junie/guidelines.md
 mkdir -p .idx && touch .idx/airules.md
+
+# AI PR reviewers, context packers, and editors
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml
+touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore
+mkdir -p .void && touch .void/rules.md
+touch .roomodes
 ```
 
 The `reset-ai-files.sh` script does the same thing and can be used to clear generated content for a clean rebuild:
@@ -168,9 +174,12 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.cursor/rules/*.mdc` | Cursor (granular, per-class) |
 | `.pearai/rules/*.md` | PearAI (granular, per-class) |
+| `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml` | AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis) |
+| `.void/rules.md` | Void Editor |
+| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
 | *(and more)* | |
 
-See the [main README](../README.md) for the complete list of 27 supported platforms.
+See the [main README](../README.md) for the complete list of 43 supported platforms.
 
 ---
 

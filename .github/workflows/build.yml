@@ -103,7 +103,9 @@ jobs:
             .pearai/rules/com-example-payment-PaymentProcessor.md \
             .mentatconfig.json sweep.yaml .plandex.yaml \
             .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
-            GEMINI.md .antigravityignore; do
+            GEMINI.md .antigravityignore \
+            .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
+            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
@@ -326,7 +328,9 @@ jobs:
             .pearai/rules/com-example-payment-PaymentProcessor.md \
             .mentatconfig.json sweep.yaml .plandex.yaml \
             .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
-            GEMINI.md .antigravityignore; do
+            GEMINI.md .antigravityignore \
+            .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
+            .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes; do
             if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
             if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
             echo "OK $f"
