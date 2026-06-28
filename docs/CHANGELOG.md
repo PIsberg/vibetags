@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC2] - 2026-06-28
+
+Second release candidate for 1.0. Rolls up everything since RC1: ten new AI platforms (43 → see
+project facts), the `AGENTS.md` sole-file fallback, optional `reason` on the eleven marker
+annotations, processing-path performance work, and a documentation consistency pass with an
+enforced single source of truth for the project counts.
+
 ### Documentation
 - **Single source of truth for the project counts.** The README "At a glance" line now states the
   two headline numbers once — **39 annotations**, **37 AI platforms** — and every other doc links
@@ -891,7 +898,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...HEAD
+[1.0.0-RC2]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...v1.0.0-RC2
 [1.0.0-RC1]: https://github.com/PIsberg/vibetags/compare/v0.9.9...v1.0.0-RC1
 [0.9.9]: https://github.com/PIsberg/vibetags/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/PIsberg/vibetags/compare/v0.9.7...v0.9.8
