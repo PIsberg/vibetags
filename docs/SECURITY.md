@@ -37,7 +37,9 @@ Two considerations are specific to this kind of tool and worth understanding:
   structure to break, and the JSON config files that *do* exist statically (`.qwen/settings.json`,
   `.cody/config.json`) interpolate no annotation values. Output file paths are fixed relative paths,
   and per-class file names are sanitised to `[A-Za-z0-9-]`, so a hostile class name cannot cause
-  path traversal. (Regression-tested by `OutputEscapingSecurityTest`.)
+  path traversal. Writes are staged through a securely-created random temp file (`O_EXCL`) in the
+  target directory, so a pre-planted symlink cannot redirect a write. (Regression-tested by
+  `OutputEscapingSecurityTest` and `GuardrailFileWriterEdgeCaseTest`.)
 
 ## Reporting a Vulnerability
 

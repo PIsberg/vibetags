@@ -450,12 +450,25 @@ public final class GuardrailFileWriter {
     }
 
     private void writeContentWithBackup(Path filePath, String finalContent) throws IOException {
-        Path tmp = Paths.get(filePath.toString() + ".vibetags-tmp");
-        Files.writeString(tmp, finalContent, StandardCharsets.UTF_8);
+        // Create the staging file with a fresh random name in the TARGET directory (so the atomic
+        // move stays on the same filesystem). Files.createTempFile creates it atomically with
+        // O_EXCL semantics, so it cannot follow or clobber a pre-planted symlink at a predictable
+        // temp path — defeating a local symlink/TOCTOU write-redirect. The parent already exists
+        // (the caller created it before any write).
+        Path parent = filePath.getParent();
+        Path tmp = (parent != null)
+            ? Files.createTempFile(parent, ".vibetags-", ".tmp")
+            : Files.createTempFile(".vibetags-", ".tmp");
         try {
-            Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-            Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
+            Files.writeString(tmp, finalContent, StandardCharsets.UTF_8);
+            try {
+                Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            // A successful move consumes tmp; clean it up only if a failure left it behind.
+            Files.deleteIfExists(tmp);
         }
     }
 

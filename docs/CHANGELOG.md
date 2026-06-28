@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   containing `]`, `,`, or `"` cannot break out of the sequence.
 - **Hardened the locked-files GitHub Action** against git option-injection: reject a base ref that
   starts with `-` and terminate the `git diff` argument list with `--`.
+- **Atomic writes now use a secure random staging file.** `GuardrailFileWriter` previously staged
+  output at the predictable path `<file>.vibetags-tmp` and followed symlinks, so a pre-planted
+  symlink there (local workspace write access) could redirect a write to an arbitrary file. It now
+  stages via `Files.createTempFile` (random name, `O_EXCL` creation) in the target directory and
+  cleans up on failure.
 - **Documented the threat model** in `docs/SECURITY.md` (compile-time only, no runtime surface;
   generated files are AI instructions derived from source annotations — review annotation text as
   code) and refreshed the supported-versions table to 1.0.x.
