@@ -4,6 +4,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIExplain;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -24,7 +25,7 @@ public final class AIExplainFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <explanation_required>").append(level.name()).append("</explanation_required>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <explanation_required>").append(Escape.xml(level.name())).append("</explanation_required>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Explanation Needed**: Yes, Chain-of-Thought (Complexity: ").append(level.name()).append(")\n\n");

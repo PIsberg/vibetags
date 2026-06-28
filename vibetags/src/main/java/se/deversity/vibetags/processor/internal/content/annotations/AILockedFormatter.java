@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,7 +26,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </file>\n");
                 break;
             case AI_EXCLUDE:
                 sb.append("**/").append(element.getSimpleName()).append(".java\n");
@@ -56,13 +57,13 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(reason).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"reason\": \"").append(reason).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"reason\": \"").append(Escape.json(reason)).append("\"},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Do not modify ").append(className).append(": ").append(reason).append("\"\n");
+                sb.append("  - \"Do not modify ").append(Escape.json(className)).append(": ").append(Escape.json(reason)).append("\"\n");
                 break;
             case PLANDEX:
-                sb.append("    - path: \"").append(className).append("\"\n      reason: \"").append(reason).append("\"\n");
+                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      reason: \"").append(Escape.json(reason)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (locked): ").append(reason).append("\n");

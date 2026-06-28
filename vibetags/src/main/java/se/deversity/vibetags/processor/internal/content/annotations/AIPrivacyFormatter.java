@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,7 +26,7 @@ public final class AIPrivacyFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(reason).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <reason>").append(reason).append("</reason>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- `").append(className).append("`: ").append(reason).append("\n");
@@ -53,10 +54,10 @@ public final class AIPrivacyFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(reason).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"reason\": \"").append(reason).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"reason\": \"").append(Escape.json(reason)).append("\"},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"PII protection required for ").append(className).append(": never log or expose runtime values\"\n");
+                sb.append("  - \"PII protection required for ").append(Escape.json(className)).append(": never log or expose runtime values\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (privacy): ").append(reason).append("\n");

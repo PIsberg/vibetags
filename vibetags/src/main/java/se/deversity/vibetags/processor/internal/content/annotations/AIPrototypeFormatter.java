@@ -4,6 +4,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,7 +26,7 @@ public final class AIPrototypeFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <status>Experimental Prototype</status>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <status>Experimental Prototype</status>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Scope**: Experimental Prototype. Bypasses strict validation rules.\n\n");

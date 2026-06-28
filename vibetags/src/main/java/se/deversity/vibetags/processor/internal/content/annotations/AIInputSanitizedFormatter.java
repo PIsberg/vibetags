@@ -4,6 +4,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIInputSanitized;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -29,7 +30,7 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <sanitization_types>").append(typeList).append("</sanitization_types>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <sanitization_types>").append(Escape.xml(typeList)).append("</sanitization_types>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sanitization Requirement**: ").append(typeList).append("\n\n");

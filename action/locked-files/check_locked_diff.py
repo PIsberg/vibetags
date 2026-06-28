@@ -125,6 +125,10 @@ def main():
     warn_only = os.environ.get("VIBETAGS_WARN_ONLY", "false").strip().lower() == "true"
     if not base_ref:
         raise SystemExit("VIBETAGS_BASE_REF is not set -- pass the PR base ref/SHA")
+    # Option-injection guard: refs/SHAs never start with '-'. Reject so an attacker-influenced
+    # base ref cannot be reinterpreted as a git option by `git merge-base`.
+    if base_ref.startswith("-"):
+        raise SystemExit("VIBETAGS_BASE_REF must not start with '-'")
 
     repo_root = run_git("rev-parse", "--show-toplevel").strip()
     merge_base = run_git("merge-base", base_ref, "HEAD").strip()
@@ -138,7 +142,8 @@ def main():
     print(f"VibeTags locked-files guard: {len(locks)} locked element(s) "
           f"from {len(reports)} report(s); diffing against {merge_base[:12]}")
 
-    diff_text = run_git("diff", "--unified=0", "--no-color", merge_base, "HEAD")
+    # Trailing "--" terminates options/refs so no value can be reinterpreted as a pathspec/flag.
+    diff_text = run_git("diff", "--unified=0", "--no-color", merge_base, "HEAD", "--")
     kind = "warning" if warn_only else "error"
     violations = 0
 

@@ -5,6 +5,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -23,7 +24,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` \n");
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\"/>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\"/>\n");
                 break;
             case CODEX:
                 sb.append("- `").append(className).append("` \n");
@@ -51,7 +52,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("` \n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\"},\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent\n");

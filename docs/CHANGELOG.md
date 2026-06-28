@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Escape interpolated values in all structured outputs.** Annotation attribute text (`reason`,
+  `note`, `focus`, …) and element paths are now escaped per format before being written into the
+  structured guardrail files — XML (`CLAUDE.md`), JSON (`.mentatconfig.json`, `.vibetags-locks`),
+  and double-quoted YAML (`sweep.yaml`, `.plandex.yaml`, `ellipsis.yaml`) — via a new
+  `content.Escape` helper. Previously a value containing `<`, `"`, `\`, or a newline (whether from a
+  hostile annotation or simply a method signature with generics such as `Map<String, Object>`)
+  could break out of the document structure or forge entries (e.g. a fake `<file>` in `CLAUDE.md`,
+  which AI agents read as a locked-file directive). Markdown/plain-text outputs are unchanged
+  (free text, no structure to break). New `OutputEscapingSecurityTest` proves a hostile reason
+  cannot break out of the XML/JSON/YAML structure. This also fixes a latent correctness bug where
+  generic signatures produced malformed XML in `CLAUDE.md`. YAML flow-list items (e.g. the
+  `@AIAudit` `checkFor` list in `.plandex.yaml`) are now individually quoted and escaped so an item
+  containing `]`, `,`, or `"` cannot break out of the sequence.
+- **Hardened the locked-files GitHub Action** against git option-injection: reject a base ref that
+  starts with `-` and terminate the `git diff` argument list with `--`.
+- **Atomic writes now use a secure random staging file.** `GuardrailFileWriter` previously staged
+  output at the predictable path `<file>.vibetags-tmp` and followed symlinks, so a pre-planted
+  symlink there (local workspace write access) could redirect a write to an arbitrary file. It now
+  stages via `Files.createTempFile` (random name, `O_EXCL` creation) in the target directory and
+  cleans up on failure.
+- **Documented the threat model** in `docs/SECURITY.md` (compile-time only, no runtime surface;
+  generated files are AI instructions derived from source annotations — review annotation text as
+  code) and refreshed the supported-versions table to 1.0.x.
+
 ## [1.0.0-RC2] - 2026-06-28
 
 Second release candidate for 1.0. Rolls up everything since RC1: ten new AI platforms (43 → see

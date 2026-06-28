@@ -6,6 +6,7 @@ import javax.lang.model.type.TypeMirror;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -38,7 +39,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <sunset_ticket>").append(jira).append("</sunset_ticket>\n      <replacement_target>").append(replacementName).append("</replacement_target>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <sunset_ticket>").append(Escape.xml(jira)).append("</sunset_ticket>\n      <replacement_target>").append(Escape.xml(replacementName)).append("</replacement_target>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sunset Status**: Active (Forbid new calls)\n- **JIRA Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");

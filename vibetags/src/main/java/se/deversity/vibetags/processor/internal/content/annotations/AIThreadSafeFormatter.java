@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,9 +27,9 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <strategy>").append(strategy).append("</strategy>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <strategy>").append(Escape.xml(strategy)).append("</strategy>\n");
                 if (!note.isEmpty()) {
-                    sb.append("      <note>").append(note).append("</note>\n");
+                    sb.append("      <note>").append(Escape.xml(note)).append("</note>\n");
                 }
                 sb.append("    </element>\n");
                 break;

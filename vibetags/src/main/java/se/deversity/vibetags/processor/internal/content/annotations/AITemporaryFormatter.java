@@ -4,6 +4,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,7 +26,7 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <temporary_expiration>").append(expiresOn).append("</temporary_expiration>\n      <temporary_reason>").append(reason).append("</temporary_reason>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <temporary_expiration>").append(Escape.xml(expiresOn)).append("</temporary_expiration>\n      <temporary_reason>").append(Escape.xml(reason)).append("</temporary_reason>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Temporal Expiration**: ").append(expiresOn).append("\n- **Reason**: ").append(reason).append("\n\n");

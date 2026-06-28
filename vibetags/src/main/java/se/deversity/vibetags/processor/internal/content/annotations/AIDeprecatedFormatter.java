@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIDeprecated;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -35,13 +36,13 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!replacedBy.isEmpty()) {
-                    sb.append("      <replaced_by>").append(replacedBy).append("</replaced_by>\n");
+                    sb.append("      <replaced_by>").append(Escape.xml(replacedBy)).append("</replaced_by>\n");
                 }
-                sb.append("      <migration_guide>").append(migrationGuide).append("</migration_guide>\n");
+                sb.append("      <migration_guide>").append(Escape.xml(migrationGuide)).append("</migration_guide>\n");
                 if (!deadline.isEmpty()) {
-                    sb.append("      <deadline>").append(deadline).append("</deadline>\n");
+                    sb.append("      <deadline>").append(Escape.xml(deadline)).append("</deadline>\n");
                 }
                 sb.append("    </element>\n");
                 break;

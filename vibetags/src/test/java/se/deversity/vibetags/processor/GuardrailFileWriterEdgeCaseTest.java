@@ -271,4 +271,26 @@ class GuardrailFileWriterEdgeCaseTest {
         assertTrue(remaining.contains("human notes here"), "human prefix must be preserved");
         assertFalse(remaining.contains("VIBETAGS-START"), "generated section must be removed");
     }
+
+    // ------------------------------------------------------------------
+    // Security: the staging file must NOT use the predictable "<file>.vibetags-tmp"
+    // path (a pre-planted symlink there could otherwise redirect the write). We use a
+    // secure random temp instead, so a file sitting at that predictable path is untouched.
+    // ------------------------------------------------------------------
+
+    @Test
+    void doesNotWriteToPredictableTempPath(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        Path target = tmp.resolve("CLAUDE.md");
+        Path predictableTmp = tmp.resolve("CLAUDE.md.vibetags-tmp");
+        String sentinel = "DO-NOT-CLOBBER\n";
+        Files.writeString(predictableTmp, sentinel);
+
+        boolean wrote = writer.writeFileIfChanged(target.toString(), "new rules\n", true);
+
+        assertTrue(wrote, "target should be written");
+        assertTrue(Files.readString(target).contains("new rules"), "target must have the new content");
+        assertEquals(sentinel, Files.readString(predictableTmp),
+            "writer must not use the predictable <file>.vibetags-tmp path (symlink-clobber guard)");
+    }
 }

@@ -4,10 +4,42 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.9.x   | :white_check_mark: |
-| < 0.9   | :x:                |
+| 1.0.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
-Only the latest minor release within the current major version receives security updates.
+Only the latest release within the current major version receives security updates.
+
+## Threat Model
+
+VibeTags is a **compile-time** annotation processor with `RetentionPolicy.SOURCE` — it adds **zero
+runtime code** to the consuming application, so there is no runtime attack surface. The processor
+runs inside the consumer's `javac` during compilation and writes generated guardrail files to the
+project. The trust boundary is therefore **whoever controls the source annotations and the build
+configuration** — there is no remote/network input.
+
+Two considerations are specific to this kind of tool and worth understanding:
+
+- **Generated files are AI instructions.** By design, text from annotation attributes (`reason`,
+  `note`, `focus`, `avoids`, `instructions`, …) is written into files (`CLAUDE.md`, `.cursorrules`,
+  `llms.txt`, …) that AI coding agents read **as instructions**. A hostile annotation can therefore
+  attempt to inject directives into an agent's context (a prompt-injection vector). This requires
+  the attacker to already control source code (a malicious pull request, a compromised dependency
+  that ships annotations, or an insider). **Mitigation:** treat annotation text as code in review —
+  the generated files are committed, so any injected text appears in the pull-request diff. Review
+  annotation strings the same way you review code from untrusted contributors.
+
+- **Structured output is escaped, not trusted.** Annotation values interpolated into the structured
+  formats are escaped per format so a value containing `<`, `"`, `\`, or newlines cannot break out
+  of the document structure or forge additional entries: **XML** (`CLAUDE.md`), **JSON**
+  (`.mentatconfig.json`, `.vibetags-locks`), and **double-quoted YAML** (`sweep.yaml`,
+  `.plandex.yaml`, `ellipsis.yaml`). The literal-block-scalar configs (`.coderabbit.yaml`,
+  `.roomodes`, the interpreter profile) embed text as indented literal blocks where there is no
+  structure to break, and the JSON config files that *do* exist statically (`.qwen/settings.json`,
+  `.cody/config.json`) interpolate no annotation values. Output file paths are fixed relative paths,
+  and per-class file names are sanitised to `[A-Za-z0-9-]`, so a hostile class name cannot cause
+  path traversal. Writes are staged through a securely-created random temp file (`O_EXCL`) in the
+  target directory, so a pre-planted symlink cannot redirect a write. (Regression-tested by
+  `OutputEscapingSecurityTest` and `GuardrailFileWriterEdgeCaseTest`.)
 
 ## Reporting a Vulnerability
 

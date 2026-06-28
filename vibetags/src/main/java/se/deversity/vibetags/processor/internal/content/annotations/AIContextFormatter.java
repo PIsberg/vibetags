@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,7 +27,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <focus>").append(focus).append("</focus>\n      <avoids>").append(avoids).append("</avoids>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <focus>").append(Escape.xml(focus)).append("</focus>\n      <avoids>").append(Escape.xml(avoids)).append("</avoids>\n    </file>\n");
                 break;
             case CODEX:
                 sb.append("- `").append(className).append("`: Focus on ").append(focus).append(". Avoid ").append(avoids).append(".\n");

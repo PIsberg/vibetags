@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -29,9 +30,9 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!flag.isEmpty()) {
-                    sb.append("      <flag>").append(flag).append("</flag>\n");
+                    sb.append("      <flag>").append(Escape.xml(flag)).append("</flag>\n");
                 }
                 sb.append("      <default_value>").append(defaultValue).append("</default_value>\n");
                 sb.append("    </element>\n");
@@ -63,7 +64,7 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Feature flag gate for ").append(className).append(": ").append(summary).append("\"\n");
+                sb.append("  - \"Feature flag gate for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (feature-flag): ").append(summary).append("\n");
