@@ -41,7 +41,7 @@ As of 0.6.0, VibeTags ships as three coordinates on Maven Central:
 
 | Artifact | Purpose | Goes on | Depends on |
 |---|---|---|---|
-| `se.deversity.vibetags:vibetags-annotations` | The 8 `@interface` classes | Consumer's compile classpath | nothing |
+| `se.deversity.vibetags:vibetags-annotations` | The 39 `@interface` classes (see [project facts](../README.md#project-facts)) | Consumer's compile classpath | nothing |
 | `se.deversity.vibetags:vibetags-processor` | `AIGuardrailProcessor` + `VibeTagsLogger` (slf4j/logback) | Annotation-processor path only | `vibetags-annotations` |
 | `se.deversity.vibetags:vibetags-bom` (pom-only) | Manages versions of the two jars above | `<dependencyManagement>` import / Gradle `platform(...)` | — |
 
@@ -128,7 +128,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
-- `AnnotationCollector` — owns the ten `LinkedHashSet<Element>` accumulators that aggregate annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
+- `AnnotationCollector` — owns one `LinkedHashSet<Element>` accumulator per annotation type, aggregating annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
 - `AnnotationValidator` — emits compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap, `@AITestDriven`+`@AIIgnore` contradiction, `@AITestDriven`+`@AILocked` contradiction, invalid `@AITestDriven.coverageGoal`)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
@@ -153,7 +153,7 @@ This split keeps each helper around 50–600 lines, well-tested in isolation, an
 **Phase 1: Element Accumulation (every round)**
 ```java
 lockedElements.addAll(roundEnv.getElementsAnnotatedWith(AILocked.class));
-// ... repeat for all 8 annotation types
+// ... repeat for every annotation type
 validateAnnotations(processingEnv.getMessager(), roundEnv);
 return false; // do not claim annotations
 ```
@@ -624,30 +624,8 @@ vibetags/
 │   ├── src/main/java/se/deversity/vibetags/annotations/
 │   │   ├── AILocked.java
 │   │   ├── AIContext.java
-│   │   ├── AIDraft.java
-│   │   ├── AIAudit.java
-│   │   ├── AIIgnore.java
-│   │   ├── AIPrivacy.java
-│   │   ├── AICore.java
-│   │   ├── AIPerformance.java
-│   │   ├── AIContract.java
-│   │   ├── AITestDriven.java
-│   │   ├── AIThreadSafe.java
-│   │   ├── AIImmutable.java
-│   │   ├── AIDeprecated.java
-│   │   ├── AIObservability.java
-│   │   ├── AIRegulation.java
-│   │   ├── AIParallelTests.java
-│   │   ├── AILegacyBridge.java
-│   │   ├── AIArchitecture.java
-│   │   ├── AIPublicAPI.java
-│   │   ├── AIStrictExceptions.java
-│   │   ├── AIStrictTypes.java
-│   │   ├── AIInternationalized.java
-│   │   ├── AIStrictClasspath.java
-│   │   ├── AISchemaSafe.java
-│   │   ├── AIIdempotent.java
-│   │   └── AIFeatureFlag.java
+│   │   ├── ...                          # 39 annotation @interface files in total — see ../README.md#project-facts
+│   │   └── AITemporary.java
 │   ├── pom.xml
 │   └── build.gradle
 │
@@ -658,7 +636,7 @@ vibetags/
 │   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   │   └── internal/                     # Single-responsibility helpers
-│   │   │   │       ├── AnnotationCollector.java       # 24 LinkedHashSets per round
+│   │   │   │       ├── AnnotationCollector.java       # one LinkedHashSet per annotation type, per round
 │   │   │   │       ├── AnnotationValidator.java       # Compile-time consistency warnings
 │   │   │   │       ├── OrphanWarner.java              # "annotation used but ignore-file missing"
 │   │   │   │       ├── ServiceRegistry.java           # Service map + file-existence opt-in
@@ -972,7 +950,7 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 To run all 724+ unit and integration tests concurrently without static resource conflicts, the VibeTags test suite leverages a thread-isolated execution architecture under JUnit 5.
 
 #### 1. JUnit 5 Parallel Test Execution
-Tests are run fully concurrently at both the class and method levels. This is configured in [junit-platform.properties](file:///c:/dev/private/vibetags/vibetags/src/test/resources/junit-platform.properties):
+Tests are run fully concurrently at both the class and method levels. This is configured in [junit-platform.properties](../vibetags/src/test/resources/junit-platform.properties):
 ```properties
 junit.jupiter.execution.parallel.enabled = true
 junit.jupiter.execution.parallel.mode.default = concurrent
@@ -1285,4 +1263,4 @@ Informational paragraph.             ← optional, key details for the LLM
 
 ---
 
-*Last updated: 2026-05-19 — added the 9 new AI guardrail annotations (bringing the total to 24) and implemented isolated parallel testing; see `processor/internal/` for the helper split.*
+*Last updated: 2026-06-28 — refreshed counts to the current 39 annotations / 37 platforms (see [project facts](../README.md#project-facts)) and fixed a broken `file://` link to `junit-platform.properties`.*
