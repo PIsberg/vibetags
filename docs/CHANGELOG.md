@@ -18,7 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which AI agents read as a locked-file directive). Markdown/plain-text outputs are unchanged
   (free text, no structure to break). New `OutputEscapingSecurityTest` proves a hostile reason
   cannot break out of the XML/JSON/YAML structure. This also fixes a latent correctness bug where
-  generic signatures produced malformed XML in `CLAUDE.md`.
+  generic signatures produced malformed XML in `CLAUDE.md`. YAML flow-list items (e.g. the
+  `@AIAudit` `checkFor` list in `.plandex.yaml`) are now individually quoted and escaped so an item
+  containing `]`, `,`, or `"` cannot break out of the sequence.
 - **Hardened the locked-files GitHub Action** against git option-injection: reject a base ref that
   starts with `-` and terminate the `git diff` argument list with `--`.
 - **Documented the threat model** in `docs/SECURITY.md` (compile-time only, no runtime surface;

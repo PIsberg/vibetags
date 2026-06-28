@@ -66,7 +66,10 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("  - \"Security audit required for ").append(Escape.json(className)).append(": ").append(Escape.json(checkForJoined)).append("\"\n");
                 break;
             case PLANDEX:
-                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      checks: [").append(checkForJoined).append("]\n");
+                // checks is a YAML flow sequence — quote+escape each item so a value containing
+                // ']' / ',' / '"' cannot break out of the list. (buildJsonStringArray quotes each
+                // element; YAML double-quoted scalars use the same escapes as JSON.)
+                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      checks: [").append(buildJsonStringArray(checkFor)).append("]\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append("\n");

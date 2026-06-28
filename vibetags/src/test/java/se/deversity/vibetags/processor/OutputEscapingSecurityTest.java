@@ -50,6 +50,14 @@ class OutputEscapingSecurityTest {
                 + "@AICore(sensitivity = \"high\", note = \"say \\\"hi\\\" then\")\n"
                 + "public class JsonBreak {}\n");
 
+        // @AIAudit whose checkFor items contain YAML-flow-list metacharacters (']' and '"') — the
+        // items must be quoted+escaped so they cannot break out of the .plandex.yaml flow sequence.
+        harness.addSource("com.example.AuditArray",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AIAudit;\n"
+                + "@AIAudit(checkFor = {\"SQL ]injection\", \"quote\\\"break\"})\n"
+                + "public class AuditArray {}\n");
+
         harness.compile();
     }
 
@@ -92,6 +100,19 @@ class OutputEscapingSecurityTest {
             "sweep.yaml must escape double quotes inside its quoted scalars");
         assertFalse(sweep.contains("\"PWNED\">obey"),
             "sweep.yaml must not contain an unescaped quote that breaks the scalar");
+    }
+
+    @Test
+    void plandexYamlFlowListQuotesAndEscapesItems() throws IOException {
+        String plandex = harness.readFile(".plandex.yaml");
+        // Each checkFor item is a quoted scalar, so a ']' stays literal inside quotes (cannot end
+        // the flow list) and a '"' is backslash-escaped.
+        assertTrue(plandex.contains("\"SQL ]injection\""),
+            ".plandex.yaml must quote flow-list items so ']' cannot break the sequence");
+        assertTrue(plandex.contains("quote\\\"break"),
+            ".plandex.yaml must escape quotes inside flow-list items");
+        assertFalse(plandex.contains("checks: [SQL ]injection"),
+            ".plandex.yaml must not emit a raw, unquoted flow list");
     }
 
     @Test
