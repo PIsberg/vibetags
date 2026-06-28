@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -29,9 +30,9 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` \n  - Required Checks: ").append(checkForJoined).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n");
                 for (String v : checkFor) {
-                    sb.append("      <vulnerability_check>").append(v).append("</vulnerability_check>\n");
+                    sb.append("      <vulnerability_check>").append(Escape.xml(v)).append("</vulnerability_check>\n");
                 }
                 sb.append("    </file>\n");
                 break;
@@ -59,13 +60,13 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("` — check for: ").append(checkForJoined).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"checks\": [").append(buildJsonStringArray(checkFor)).append("]},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"checks\": [").append(buildJsonStringArray(checkFor)).append("]},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Security audit required for ").append(className).append(": ").append(checkForJoined).append("\"\n");
+                sb.append("  - \"Security audit required for ").append(Escape.json(className)).append(": ").append(Escape.json(checkForJoined)).append("\"\n");
                 break;
             case PLANDEX:
-                sb.append("    - path: \"").append(className).append("\"\n      checks: [").append(checkForJoined).append("]\n");
+                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      checks: [").append(checkForJoined).append("]\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append("\n");
@@ -79,7 +80,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
         StringBuilder sb = new StringBuilder();
         for (String v : values) {
             if (sb.length() > 0) sb.append(", ");
-            sb.append("\"").append(v).append("\"");
+            sb.append("\"").append(Escape.json(v)).append("\"");
         }
         return sb.toString();
     }

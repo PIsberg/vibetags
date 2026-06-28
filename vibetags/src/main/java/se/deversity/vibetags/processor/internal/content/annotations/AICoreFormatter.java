@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,7 +27,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <sensitivity>").append(sensitivity).append("</sensitivity>\n      <note>").append(note).append("</note>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <sensitivity>").append(Escape.xml(sensitivity)).append("</sensitivity>\n      <note>").append(Escape.xml(note)).append("</note>\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
@@ -54,10 +55,10 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"sensitivity\": \"").append(sensitivity).append("\", \"note\": \"").append(note).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"sensitivity\": \"").append(Escape.json(sensitivity)).append("\", \"note\": \"").append(Escape.json(note)).append("\"},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Core functionality (change with caution): ").append(className).append(" [sensitivity: ").append(sensitivity).append("]\"\n");
+                sb.append("  - \"Core functionality (change with caution): ").append(Escape.json(className)).append(" [sensitivity: ").append(Escape.json(sensitivity)).append("]\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");

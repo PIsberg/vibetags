@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -28,9 +29,9 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <belongs_to>").append(belongsTo).append("</belongs_to>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <belongs_to>").append(Escape.xml(belongsTo)).append("</belongs_to>\n");
                 for (String r : cannotRef) {
-                    sb.append("      <cannot_reference>").append(r).append("</cannot_reference>\n");
+                    sb.append("      <cannot_reference>").append(Escape.xml(r)).append("</cannot_reference>\n");
                 }
                 sb.append("    </element>\n");
                 break;

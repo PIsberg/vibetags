@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIInternationalized;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,7 +27,7 @@ public final class AIInternationalizedFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <i18n>required</i18n>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <i18n>required</i18n>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(summary).append("\n");

@@ -4,6 +4,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIDomainModel;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,9 +27,9 @@ public final class AIDomainModelFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <domain_model_boundary>Pure Domain Model</domain_model_boundary>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <domain_model_boundary>Pure Domain Model</domain_model_boundary>\n");
                 if (allow.length > 0) {
-                    sb.append("      <allowed_imports>").append(allowedStr).append("</allowed_imports>\n");
+                    sb.append("      <allowed_imports>").append(Escape.xml(allowedStr)).append("</allowed_imports>\n");
                 }
                 sb.append("    </file>\n");
                 break;

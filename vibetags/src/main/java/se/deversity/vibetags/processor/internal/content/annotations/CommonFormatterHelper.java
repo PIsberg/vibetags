@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -26,7 +27,7 @@ final class CommonFormatterHelper {
      * string otherwise.
      */
     public static String claudeReason(String reason) {
-        return (reason == null || reason.isBlank()) ? "" : "\n      <reason>" + reason + "</reason>";
+        return (reason == null || reason.isBlank()) ? "" : "\n      <reason>" + Escape.xml(reason) + "</reason>";
     }
 
     /**

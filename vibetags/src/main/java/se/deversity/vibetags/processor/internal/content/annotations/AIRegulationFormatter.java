@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -27,11 +28,11 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <standard>").append(standard).append("</standard>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <standard>").append(Escape.xml(standard)).append("</standard>\n");
                 if (!clause.isEmpty()) {
-                    sb.append("      <clause>").append(clause).append("</clause>\n");
+                    sb.append("      <clause>").append(Escape.xml(clause)).append("</clause>\n");
                 }
-                sb.append("      <description>").append(description).append("</description>\n    </element>\n");
+                sb.append("      <description>").append(Escape.xml(description)).append("</description>\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(summary).append("\n");

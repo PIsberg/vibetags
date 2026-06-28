@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,7 +26,7 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(constraint).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <constraint>").append(constraint).append("</constraint>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <constraint>").append(Escape.xml(constraint)).append("</constraint>\n    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(constraint).append("\n");
@@ -53,10 +54,10 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(constraint).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"constraint\": \"").append(constraint).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"constraint\": \"").append(Escape.json(constraint)).append("\"},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Performance constraint for ").append(className).append(": ").append(constraint).append("\"\n");
+                sb.append("  - \"Performance constraint for ").append(Escape.json(className)).append(": ").append(Escape.json(constraint)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (performance): ").append(constraint).append("\n");

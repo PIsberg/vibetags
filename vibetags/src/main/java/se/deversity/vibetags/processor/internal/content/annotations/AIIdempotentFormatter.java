@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -27,9 +28,9 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n      <idempotent>true</idempotent>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <idempotent>true</idempotent>\n");
                 if (!reason.isEmpty()) {
-                    sb.append("      <reason>").append(reason).append("</reason>\n");
+                    sb.append("      <reason>").append(Escape.xml(reason)).append("</reason>\n");
                 }
                 sb.append("    </element>\n");
                 break;
@@ -64,7 +65,7 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Idempotency requirement for ").append(className).append(": ").append(summary).append("\"\n");
+                sb.append("  - \"Idempotency requirement for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (idempotent): ").append(summary).append("\n");

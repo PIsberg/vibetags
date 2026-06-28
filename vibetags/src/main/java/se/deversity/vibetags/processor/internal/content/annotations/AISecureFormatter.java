@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -27,9 +28,9 @@ public final class AISecureFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!aspect.isEmpty()) {
-                    sb.append("      <aspect>").append(aspect).append("</aspect>\n");
+                    sb.append("      <aspect>").append(Escape.xml(aspect)).append("</aspect>\n");
                 }
                 sb.append("    </element>\n");
                 break;
@@ -65,7 +66,7 @@ public final class AISecureFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Security-critical: ").append(className).append(" [").append(aspect.isEmpty() ? "general" : aspect).append("]. Do not weaken security.\"\n");
+                sb.append("  - \"Security-critical: ").append(Escape.json(className)).append(" [").append(Escape.json(aspect.isEmpty() ? "general" : aspect)).append("]. Do not weaken security.\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (security-critical): ").append(summary).append("\n");

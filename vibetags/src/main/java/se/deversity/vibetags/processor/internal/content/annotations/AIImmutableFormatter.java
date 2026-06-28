@@ -6,6 +6,7 @@ import javax.lang.model.element.Element;
 import se.deversity.vibetags.annotations.AIImmutable;
 import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -25,9 +26,9 @@ public final class AIImmutableFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <type path=\"").append(className).append("\">\n");
+                sb.append("    <type path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!note.isEmpty()) {
-                    sb.append("      <note>").append(note).append("</note>\n");
+                    sb.append("      <note>").append(Escape.xml(note)).append("</note>\n");
                 }
                 sb.append("    </type>\n");
                 break;
