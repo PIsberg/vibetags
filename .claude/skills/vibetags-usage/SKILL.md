@@ -441,14 +441,14 @@ Declares which architectural layer this class belongs to and which layers it mus
 Use on: **class, method**
 
 ```java
-@AILegacyBridge
+@AILegacyBridge(reason = "Mirrors a v1 payment-SDK quirk; 'cleaning it up' broke the gateway in 2023")
 public class LegacyPaymentAdapter {
     // Works around a quirk in the v1 payment provider SDK — must not be "cleaned up"
     public String formatAmount(double amount) { ... }
 }
 ```
 
-Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed.
+Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed. The optional `reason` records *why* across AI sessions and is surfaced in the generated output.
 
 When to use: SDK adapter shims, workarounds for upstream library bugs, compatibility wrappers kept alive for old API clients.
 
@@ -459,7 +459,7 @@ When to use: SDK adapter shims, workarounds for upstream library bugs, compatibi
 Use on: **class, method**
 
 ```java
-@AIStrictClasspath
+@AIStrictClasspath(reason = "Runs in the locked-down sandbox where the SecurityManager throws on reflection")
 public class DataParser {
     // Must only use JDK and existing compile-time classpath — no runtime class loading
 }
@@ -476,7 +476,7 @@ When to use: security-sensitive execution environments, GraalVM native-image tar
 Use on: **class, method**
 
 ```java
-@AIInternationalized
+@AIInternationalized(reason = "Ships in 11 locales; a hardcoded English string failed the l10n audit last quarter")
 public class NotificationTemplateRenderer {
     // All user-visible text must come from message bundles — never hardcoded
 }
@@ -493,7 +493,7 @@ When to use: UI components, REST error responses, email templates, notification 
 Use on: **class, method**
 
 ```java
-@AIPublicAPI
+@AIPublicAPI(reason = "Consumed by three external partner integrations pinned to v1")
 public class ProductSearchClient {
     public List<Product> search(String query, int maxResults) { ... }
 }
@@ -512,7 +512,7 @@ When to use: SDK entry points, REST controller response shapes, message schema c
 Use on: **class, field**
 
 ```java
-@AISchemaSafe
+@AISchemaSafe(reason = "Replicated to the billing read-model; column changes need a backward-compatible migration")
 @Entity
 public class UserEntity {
     @Column(name = "email", nullable = false)
@@ -531,7 +531,7 @@ When to use: JPA/Hibernate entities, Avro/Protobuf schema classes, JSON serializ
 Use on: **class, method**
 
 ```java
-@AIStrictExceptions
+@AIStrictExceptions(reason = "A bare catch(Exception) once swallowed a rollback and double-charged customers")
 public class PaymentGatewayClient {
     public Receipt charge(Money amount) throws PaymentDeclinedException { ... }
 }
@@ -548,7 +548,7 @@ When to use: external integrations, retry boundaries, error-handling layers, cod
 Use on: **class, method, field**
 
 ```java
-@AIStrictTypes
+@AIStrictTypes(reason = "Currency math broke in INC-4412 when a double leaked into the amount")
 public class PricingCalculator {
     // Use BigDecimal for money, Instant/ZonedDateTime for time — never double or String
     public BigDecimal calculateDiscount(Money basePrice, Percentage rate) { ... }
@@ -566,7 +566,7 @@ When to use: financial calculations, time/date handling, any domain model where 
 Use on: **class, method**
 
 ```java
-@AIParallelTests
+@AIParallelTests(reason = "A shared static counter caused flaky CI in build #4471 — keep cases isolated")
 public class OrderServiceTest {
     // Tests must not share mutable state or bind to fixed ports
 }
@@ -673,7 +673,7 @@ Restricts which packages or classes are permitted to invoke this method or class
 Use on: **class, method**
 
 ```java
-@AISandboxOnly
+@AISandboxOnly(reason = "Seeds fake credentials; a prod hotfix once imported it and leaked test data to staging")
 public class SandboxTestHelper { ... }
 ```
 
@@ -705,7 +705,7 @@ Restricts heap allocations, autoboxing, or object instantiation inside high-perf
 Use on: **method**
 
 ```java
-@AIPure
+@AIPure(reason = "Memoized by callers that assume referential transparency — no logging or caching side effects")
 public static int add(int a, int b) { return a + b; }
 ```
 
@@ -796,7 +796,7 @@ Enforces step-by-step mathematical/architectural Chain-of-Thought (CoT) explanat
 Use on: **class**
 
 ```java
-@AIPrototype
+@AIPrototype(reason = "Throwaway Q3 Kafka spike — no error handling on purpose; production must not depend on it")
 public class DraftKafkaIntegrationSpike { ... }
 ```
 

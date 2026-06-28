@@ -269,6 +269,7 @@
   <test_isolation_elements>
     <element path="com.example.config.ParallelTestSettings">
       <isolation>strict</isolation>
+      <reason>Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated</reason>
     </element>
   </test_isolation_elements>
 
@@ -276,6 +277,7 @@
   <legacy_bridge_elements>
     <element path="com.example.legacy.LegacyBridgeService">
       <refactor>prohibited</refactor>
+      <reason>Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023</reason>
     </element>
   </legacy_bridge_elements>
 
@@ -292,6 +294,7 @@
   <public_api_elements>
     <element path="com.example.service.PublicPaymentController">
       <api>public</api>
+      <reason>Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead</reason>
     </element>
   </public_api_elements>
 
@@ -299,6 +302,7 @@
   <strict_exceptions_elements>
     <element path="com.example.service.TransactionalPaymentService">
       <exceptions>strict</exceptions>
+      <reason>A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle</reason>
     </element>
   </strict_exceptions_elements>
 
@@ -306,6 +310,7 @@
   <strict_types_elements>
     <element path="com.example.payment.PaymentDetails">
       <types>strict</types>
+      <reason>Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map</reason>
     </element>
   </strict_types_elements>
 
@@ -313,6 +318,7 @@
   <internationalized_elements>
     <element path="com.example.utils.I18nMessageHelper">
       <i18n>required</i18n>
+      <reason>Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle</reason>
     </element>
   </internationalized_elements>
 
@@ -320,6 +326,7 @@
   <strict_classpath_elements>
     <element path="com.example.utils.StrictUtility">
       <classpath>strict</classpath>
+      <reason>Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime</reason>
     </element>
   </strict_classpath_elements>
 
@@ -327,6 +334,7 @@
   <schema_safe_elements>
     <element path="com.example.database.UserEntity">
       <schema>safe</schema>
+      <reason>Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first</reason>
     </element>
   </schema_safe_elements>
 
@@ -364,6 +372,7 @@
   <sandbox_only_elements>
     <file path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper">
       <policy>Sandbox or test only. Do not invoke from production.</policy>
+      <reason>Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging</reason>
     </file>
   </sandbox_only_elements>
 
@@ -378,6 +387,7 @@
   <pure_functions>
     <file path="com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)">
       <policy>Pure function: no side effects, deterministic.</policy>
+      <reason>Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers</reason>
     </file>
   </pure_functions>
 
@@ -424,6 +434,7 @@
   <prototype_elements>
     <file path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike">
       <status>Experimental Prototype</status>
+      <reason>Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it</reason>
     </file>
   </prototype_elements>
 

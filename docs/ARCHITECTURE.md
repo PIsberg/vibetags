@@ -32,7 +32,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Zero runtime dependency**: No VibeTags classes in production artifacts
 - **File-existence opt-in**: Only generates files that already exist on disk
 - **Write-if-changed**: Only updates files when content actually differs
-- **Multi-platform**: Generates configs for 40+ AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, AI PR reviewers like CodeRabbit/PR-Agent/Ellipsis, context packers, and more)
+- **Multi-platform**: Generates configs for all supported AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, AI PR reviewers like CodeRabbit/PR-Agent/Ellipsis, context packers, and more — see the [project facts](../README.md#project-facts))
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
 ### Published Artifacts
@@ -92,7 +92,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 
 **Key Components:**
 
-**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (24 annotations total):
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (39 annotations total — see the [project facts](../README.md#project-facts)):
 - `@AILocked` - Prevents AI modifications (reason: String)
 - `@AIContext` - Guides AI behavior (focus: String, avoids: String)
 - `@AIDraft` - Requests AI implementation (instructions: String)
@@ -938,7 +938,7 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 
 | Test Class | Tests | Purpose |
 |---|---|---|
-| `AnnotationDefinitionsTest` | 40 | Verify annotation structure, retention policies, targets, defaults — all 9 annotations including @AICore, @AIPerformance, and @AIContract |
+| `AnnotationDefinitionsTest` | 40 | Verify annotation structure, retention policies, targets, and defaults (the original annotation set; newer annotations are covered by the `NewAnnotations*` definition tests) |
 | `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
 | `AIGuardrailProcessorUnitTest` | 40 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations, stripLegacyVibeTagsBlock basics |
 | `AIGuardrailProcessorProcessTest` | 64 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in |

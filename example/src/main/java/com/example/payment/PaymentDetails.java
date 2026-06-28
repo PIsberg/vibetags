@@ -8,7 +8,7 @@ import java.math.BigDecimal;
  * Prohibits loose typing (using Object, raw types, or Maps) where well-defined,
  * strongly-typed models must be used.
  */
-@AIStrictTypes
+@AIStrictTypes(reason = "Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map")
 public class PaymentDetails {
     
     private final String accountHolder;

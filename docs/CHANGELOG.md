@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Single source of truth for the project counts.** The README "At a glance" line now states the
+  two headline numbers once — **39 annotations**, **37 AI platforms** — and every other doc links
+  back to it instead of restating them. Fixed stale/contradictory figures that had drifted across
+  the README, `docs/ARCHITECTURE.md`, and `example/README.md` (variously claiming 15/24/27 annotations
+  and 27/40+/43 platforms). New `ProjectFactsConsistencyTest` enforces both: the documented annotation
+  count must equal the number of `@interface` types, and the documented platform count must equal the
+  number of distinct platforms enumerated in the README list — so the docs can no longer silently
+  drift from the code.
+- **The example now passes a `reason` to all eleven marker annotations** (`@AIStrictTypes`,
+  `@AIPublicAPI`, `@AIPure`, `@AISandboxOnly`, `@AILegacyBridge`, `@AISchemaSafe`,
+  `@AIStrictExceptions`, `@AIStrictClasspath`, `@AIInternationalized`, `@AIParallelTests`,
+  `@AIPrototype`), showcasing the cross-session rationale capability. The example already exercises
+  all 39 annotations.
+- **The `vibetags-usage` skill now demonstrates `reason` on every marker annotation** (its examples
+  previously showed the bare markers).
+- **Added an ArchUnit badge** to the README, linking to `ArchitectureRulesTest` (the architecture
+  fitness functions run as part of the standard build).
+- **Closed gaps in the example's CI verification.** Cline (`.clinerules`), JetBrains Junie
+  (`.junie/guidelines.md`), and Firebase AI (`.idx/airules.md`) were opted-in/generatable but not
+  checked by the `build.yml` "Verify Generated AI Config Files" step — and Firebase's output was
+  never even committed. The Firebase output is now committed and all three are added to the verify
+  list (both the Maven and Gradle legs). The granular per-class platforms remain verified via one
+  representative file each.
+
 ### Added
 - **Optional `reason` on the eleven marker annotations** — `@AILegacyBridge`, `@AIStrictClasspath`,
   `@AIInternationalized`, `@AIPublicAPI`, `@AISchemaSafe`, `@AIStrictExceptions`, `@AIStrictTypes`,

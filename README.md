@@ -6,6 +6,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13275/badge)](https://www.bestpractices.dev/projects/13275)
 [![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![ArchUnit](https://img.shields.io/badge/ArchUnit-passing-brightgreen?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/blob/main/vibetags/src/test/java/se/deversity/vibetags/processor/ArchitectureRulesTest.java)
 [![Java 21 | 25 | 26](https://img.shields.io/badge/Java-21%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
@@ -16,7 +17,9 @@
 [![Error Prone](https://img.shields.io/badge/Error%20Prone-passing-brightgreen)](https://errorprone.info/)
 [![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen)](https://checkstyle.org/)
 
-**VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
+**VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
+
+> <a name="project-facts"></a>**At a glance:** **39 annotations** → guardrails for **37 AI platforms**. These two numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. (Counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -167,7 +170,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Key Features
 
-The 39 annotations group into six categories by intent. Within each category they are listed alphabetically.
+The [39 annotations](#project-facts) group into six categories by intent. Within each category they are listed alphabetically.
 
 #### 🛡️ Protection & Access Control — keep AI away from code
 
@@ -228,7 +231,7 @@ The 39 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **43 AI platforms**:
+Generated configuration files work out-of-the-box with the [**37 AI platforms**](#project-facts) below (Cursor and Windsurf each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
@@ -488,7 +491,7 @@ public class PricingService {
 | Resource | What it covers |
 |---|---|
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
-| **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 15 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Example Project](example/README.md)** | A runnable e-commerce demo that exercises all [39 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
