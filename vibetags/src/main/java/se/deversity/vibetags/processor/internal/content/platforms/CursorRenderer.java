@@ -1,6 +1,5 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import javax.lang.model.element.Element;
 import java.util.List;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
@@ -40,36 +39,17 @@ public final class CursorRenderer implements PlatformRenderer {
         of("\n## 🗄️ SCHEMA & SERIALIZATION SAFETY\nThe following elements have schema safety constraints. Restrict changing formats/fields without a backward-compatible migration plan.\n\n", AnnotationCollector::schemaSafe, FormatterRegistry.schemaSafe()),
         of("\n## ♻️ IDEMPOTENCY GUARANTEES\nThe following operations are idempotent. Multiple invocations MUST produce the same result as a single invocation. Never introduce side effects that break this guarantee.\n\n", AnnotationCollector::idempotent, FormatterRegistry.idempotent()),
         of("\n## 🚩 FEATURE FLAG GATED CODE\nThe following elements are gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check.\n\n", AnnotationCollector::featureFlag, FormatterRegistry.featureFlag()),
-        of("\n## 🔐 SECURITY-CRITICAL CODE\nThe following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.\n\n", AnnotationCollector::secure, FormatterRegistry.secure()),
-        of("\n## 🚫 ACCESS & CALLS LIMITATIONS\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n", AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
-        of("\n## 🛡️ SANDBOX & TEST HARNESS EXCLUSION\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n", AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        of("\n## ⚡ MEMORY ALLOCATION BUDGETS\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n", AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
-        of("\n## 🧠 DETERMINISTIC PURE FUNCTIONS\nThe following elements must remain pure functions without side effects or mutations.\n\n", AnnotationCollector::pure, FormatterRegistry.pure()),
-        of("\n## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n", AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
-        of("\n## ❄️ open-closed EXTENSION PATTERNS\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n", AnnotationCollector::extensible, FormatterRegistry.extensible()),
-        of("\n## 🚨 MANDATORY INPUT SANITIZATION\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n", AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
-        of("\n## 🔒 SECURE LOGGING MASKING\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n", AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
-        of("\n## 📋 REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n", AnnotationCollector::explain, FormatterRegistry.explain()),
-        of("\n## 🛠️ EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n", AnnotationCollector::prototype, FormatterRegistry.prototype()),
-        of("\n## ⚠️ SUNSET DEPRACTED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n", AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        of("\n## 🚧 TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n", AnnotationCollector::temporary, FormatterRegistry.temporary())
+        of("\n## 🔐 SECURITY-CRITICAL CODE\nThe following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.\n\n", AnnotationCollector::secure, FormatterRegistry.secure())
     );
+
+    private static final List<AnnotationSections.Section> ALL_SECTIONS =
+        AnnotationSections.concat(SECTIONS, AnnotationSections.EMOJI_STYLE_NEWEST_ANNOTATIONS);
 
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
-        sb.append("# AUTO-GENERATED AI RULES\n").append(context.getGeneratedHeader()).append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
-
-        for (Element e : collector.locked()) {
-            FormatterRegistry.locked().format(e, sb, Platform.CURSOR);
-        }
-
-        sb.append("\n## CONTEXTUAL RULES\n");
-        for (Element e : collector.context()) {
-            FormatterRegistry.context().format(e, sb, Platform.CURSOR);
-        }
-
-        AnnotationSections.render(sb, collector, Platform.CURSOR, SECTIONS);
+        AnnotationSections.renderLockedAndContextPreamble(sb, collector, Platform.CURSOR, context.getGeneratedHeader());
+        AnnotationSections.render(sb, collector, Platform.CURSOR, ALL_SECTIONS);
 
         return sb.toString();
     }
