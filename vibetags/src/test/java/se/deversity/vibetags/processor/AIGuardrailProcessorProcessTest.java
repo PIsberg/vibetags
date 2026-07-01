@@ -125,6 +125,37 @@ class AIGuardrailProcessorProcessTest {
     }
 
     @Test
+    void init_withUnrecognizedVibetagsOption_emitsWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        when(env.getOptions()).thenReturn(Map.of("vibetags.chek", "true"));
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("vibetags.chek")),
+            "Should warn about the unrecognized 'vibetags.chek' option (likely a typo of vibetags.check)");
+    }
+
+    @Test
+    void init_withUnrelatedForeignOption_emitsNoWarning() {
+        List<String> warnings = new ArrayList<>();
+        Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getMessager()).thenReturn(messager);
+        // javac forwards every -A option to every processor in the compilation; an option
+        // belonging to some other annotation processor must not trigger our typo warning.
+        when(env.getOptions()).thenReturn(Map.of("lombok.anyConstructor.addConstructorProperties", "true"));
+
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(env);
+
+        assertTrue(warnings.isEmpty(), "Should not warn about options outside the vibetags.* namespace");
+    }
+
+    @Test
     void process_withContradictoryAnnotations_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);

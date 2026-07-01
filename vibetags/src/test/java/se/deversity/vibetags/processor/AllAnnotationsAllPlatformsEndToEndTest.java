@@ -274,6 +274,32 @@ class AllAnnotationsAllPlatformsEndToEndTest {
     }
 
     @Test
+    void sharedInstructionBlockPlatformsIncludeNewestAnnotations() throws IOException {
+        // Regression test: GuardrailInstructionBlock (shared by CodeRabbit, Ellipsis, PR-Agent,
+        // and Roo modes) once stopped after @AISecure and silently dropped the twelve newest
+        // annotations. Assert each of those twelve is reachable from every platform that embeds
+        // the shared instruction block.
+        String[] newestAnnotationElements = {
+            "Callers",     // @AICallersOnly
+            "MarkerBag",   // @AISandboxOnly, @AIPrototype
+            "Budgeted",    // @AIMemoryBudget
+            "Members",     // @AIPure, @AISecureLogging, @AIInputSanitized
+            "Domain",      // @AIDomainModel
+            "Extending",   // @AIExtensible
+            "Explained",   // @AIExplain
+            "Sunsetting",  // @AISunset
+            "Temp",        // @AITemporary
+        };
+
+        for (String file : new String[]{".coderabbit.yaml", "ellipsis.yaml", ".pr_agent.toml", ".roomodes"}) {
+            String content = harness.readFile(file);
+            for (String element : newestAnnotationElements) {
+                assertTrue(content.contains(element), file + " must mention " + element);
+            }
+        }
+    }
+
+    @Test
     void generatedFilesPreserveHandAuthoredContentMarkers() throws IOException {
         // Sanity: marker-based files keep generated content fenced, never empty.
         String cursor = harness.readFile(".cursorrules");
