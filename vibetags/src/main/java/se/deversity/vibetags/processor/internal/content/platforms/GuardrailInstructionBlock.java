@@ -56,6 +56,18 @@ final class GuardrailInstructionBlock {
         for (Element e : collector.idempotent()) FormatterRegistry.idempotent().format(e, sb, p);
         for (Element e : collector.featureFlag()) FormatterRegistry.featureFlag().format(e, sb, p);
         for (Element e : collector.secure()) FormatterRegistry.secure().format(e, sb, p);
+        for (Element e : collector.callersOnly()) FormatterRegistry.callersOnly().format(e, sb, p);
+        for (Element e : collector.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, sb, p);
+        for (Element e : collector.memoryBudget()) FormatterRegistry.memoryBudget().format(e, sb, p);
+        for (Element e : collector.pure()) FormatterRegistry.pure().format(e, sb, p);
+        for (Element e : collector.domainModel()) FormatterRegistry.domainModel().format(e, sb, p);
+        for (Element e : collector.extensible()) FormatterRegistry.extensible().format(e, sb, p);
+        for (Element e : collector.inputSanitized()) FormatterRegistry.inputSanitized().format(e, sb, p);
+        for (Element e : collector.secureLogging()) FormatterRegistry.secureLogging().format(e, sb, p);
+        for (Element e : collector.explain()) FormatterRegistry.explain().format(e, sb, p);
+        for (Element e : collector.prototype()) FormatterRegistry.prototype().format(e, sb, p);
+        for (Element e : collector.sunset()) FormatterRegistry.sunset().format(e, sb, p);
+        for (Element e : collector.temporary()) FormatterRegistry.temporary().format(e, sb, p);
         return sb.toString();
     }
 

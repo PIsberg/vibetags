@@ -12,6 +12,7 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
+import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
@@ -53,7 +54,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Public constructor for the service loader. */
     public AIGuardrailProcessor() {}
 
-    static final String VERSION = "1.0.0-RC2";
+    static final String VERSION = ProcessorVersion.get();
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
 
     /** Header written into every generated file — no version so bumping the dep never creates spurious diffs. */
@@ -117,6 +118,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Messager messager = getSafeMessager();
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root resolved: " + this.root);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir:      " + System.getProperty("user.dir"));
+
+        // javac forwards every -A option to every processor in the compilation, so only flag
+        // keys under our own "vibetags." namespace — anything else may belong to a sibling
+        // processor sharing the same javac invocation.
+        Set<String> supportedOptions = getSupportedOptions();
+        for (String key : options.keySet()) {
+            if (key.startsWith("vibetags.") && !supportedOptions.contains(key)) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: unrecognized option '" + key + "' (possible typo) — supported options: " + supportedOptions);
+            }
+        }
 
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
 
