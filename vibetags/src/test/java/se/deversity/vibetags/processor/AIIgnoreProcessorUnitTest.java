@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -76,9 +78,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsGatedByServiceFilePresence(@TempDir Path tempDir) throws IOException {
         // When no service files exist the active set is empty - @AIIgnore output is never written
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.isEmpty(),
             "No service files → active set must be empty, so @AIIgnore content is not written");
     }
@@ -86,9 +88,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsWrittenWhenClaudeMdExists(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve("CLAUDE.md"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("claude"),
             "claude service must be active when CLAUDE.md exists");
     }
@@ -96,9 +98,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsWrittenWhenCursorRulesExists(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve(".cursorrules"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("cursor"),
             "cursor service must be active when .cursorrules exists");
     }
@@ -107,9 +109,9 @@ class AIIgnoreProcessorUnitTest {
     void testIgnoreOutputIsWrittenWhenCopilotInstructionsExists(@TempDir Path tempDir) throws IOException {
         Files.createDirectories(tempDir.resolve(".github"));
         Files.createFile(tempDir.resolve(".github/copilot-instructions.md"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("copilot"),
             "copilot service must be active when .github/copilot-instructions.md exists");
     }
@@ -117,9 +119,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsWrittenWhenCursorIgnoreExists(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve(".cursorignore"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("cursor_ignore"),
             "cursor_ignore service must be active when .cursorignore exists");
     }
@@ -127,9 +129,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsWrittenWhenCopilotIgnoreExists(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve(".copilotignore"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("copilot_ignore"),
             "copilot_ignore service must be active when .copilotignore exists");
     }
@@ -137,9 +139,9 @@ class AIIgnoreProcessorUnitTest {
     @Test
     void testIgnoreOutputIsWrittenWhenClaudeIgnoreExists(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve(".claudeignore"));
-        java.util.Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         java.util.Set<String> active =
-            AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.contains("claude_ignore"),
             "claude_ignore service must be active when .claudeignore exists");
     }

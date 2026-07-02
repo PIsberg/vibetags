@@ -47,12 +47,22 @@ import java.util.stream.Collectors;
     note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
 )
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache", "vibetags.check"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
     public AIGuardrailProcessor() {}
+
+    /**
+     * Reports the latest source version the running javac understands, instead of pinning a
+     * fixed {@code @SupportedSourceVersion}. The library builds/tests against Java 21; a fixed
+     * {@code RELEASE_17} would make javac emit a "supported source version" warning on every
+     * newer JDK a consumer compiles with.
+     */
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
 
     static final String VERSION = ProcessorVersion.get();
     private static final String GITHUB_URL = "https://github.com/PIsberg/vibetags";
@@ -500,44 +510,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (log == null) return;
         log.info("Active services ({}): {}", activeServices.size(),
             activeServices.stream().sorted().collect(Collectors.joining(", ")));
-        logSet("@AILocked",      collector.locked());
-        logSet("@AIContext",     collector.context());
-        logSet("@AIIgnore",      collector.ignore());
-        logSet("@AIAudit",       collector.audit());
-        logSet("@AIDraft",       collector.draft());
-        logSet("@AIPrivacy",     collector.privacy());
-        logSet("@AICore",        collector.core());
-        logSet("@AIPerformance", collector.performance());
-        logSet("@AIContract",     collector.contract());
-        logSet("@AITestDriven",   collector.testDriven());
-        logSet("@AIThreadSafe",   collector.threadSafe());
-        logSet("@AIImmutable",    collector.immutable());
-        logSet("@AIDeprecated",   collector.deprecated());
-        logSet("@AIObservability", collector.observability());
-        logSet("@AIRegulation",   collector.regulation());
-        logSet("@AIParallelTests", collector.parallelTests());
-        logSet("@AILegacyBridge", collector.legacyBridge());
-        logSet("@AIArchitecture", collector.architecture());
-        logSet("@AIPublicAPI",    collector.publicApi());
-        logSet("@AIStrictExceptions", collector.strictExceptions());
-        logSet("@AIStrictTypes",  collector.strictTypes());
-        logSet("@AIInternationalized", collector.internationalized());
-        logSet("@AIStrictClasspath", collector.strictClasspath());
-        logSet("@AISchemaSafe",   collector.schemaSafe());
-
-        // New annotations logging
-        logSet("@AICallersOnly",  collector.callersOnly());
-        logSet("@AISandboxOnly",  collector.sandboxOnly());
-        logSet("@AIMemoryBudget", collector.memoryBudget());
-        logSet("@AIPure",         collector.pure());
-        logSet("@AIDomainModel",  collector.domainModel());
-        logSet("@AIExtensible",   collector.extensible());
-        logSet("@AIInputSanitized", collector.inputSanitized());
-        logSet("@AISecureLogging",  collector.secureLogging());
-        logSet("@AIExplain",      collector.explain());
-        logSet("@AIPrototype",    collector.prototype());
-        logSet("@AISunset",       collector.sunset());
-        logSet("@AITemporary",    collector.temporary());
+        collector.labeledSets().forEach(this::logSet);
     }
 
     private void logSet(String label, Set<Element> elements) {
@@ -550,11 +523,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     // ---------------------------------------------------------------------------------------
     // Test-facing delegates (kept on this class so the existing test surface still compiles).
+    //
+    // The three below are NOT deprecated: each is still called from production code on this
+    // class (process() or the @AILocked generateFiles()), so they cannot be reduced to
+    // test-only surface without editing that production call site — which, for
+    // generateFiles(), is explicitly off-limits.
     // ---------------------------------------------------------------------------------------
-
-    void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
-        AnnotationValidator.validate(messager, roundEnv, processingEnv);
-    }
 
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv, @Nullable Set<String> presentFqns) {
         AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns);
@@ -564,26 +538,48 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         OrphanWarner.warnAboutOrphans(messager, log, active, hasLocked, hasIgnore, hasAudit);
     }
 
-    void cleanupGranularDirectory(Path dir, String extension) {
-        fileWriter.cleanupGranularDirectory(dir, extension);
-    }
-
-    void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
-        fileWriter.cleanupGranularDirectory(dir, extension, excludeQNames);
-    }
-
-    public static Map<String, Path> buildServiceFileMap(Path root) {
-        return ServiceRegistry.buildServiceFileMap(root);
-    }
-
-    public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
-        return ServiceRegistry.resolveActiveServices(messager, allServiceFiles);
-    }
-
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         return fileWriter.writeFileIfChanged(path, content, hasNewRules);
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Deprecated test-only delegates. Unused by any production code path on this class; kept
+    // only for external/legacy test-surface compatibility since they've been public (or
+    // package-visible) API since v0.1. Call the internal/ replacement directly instead.
+    // ---------------------------------------------------------------------------------------
+
+    /** @deprecated call {@link AnnotationValidator#validate(Messager, RoundEnvironment, ProcessingEnvironment)} directly. */
+    @Deprecated
+    void validateAnnotations(Messager messager, RoundEnvironment roundEnv) {
+        AnnotationValidator.validate(messager, roundEnv, processingEnv);
+    }
+
+    /** @deprecated call {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String)} directly. */
+    @Deprecated
+    void cleanupGranularDirectory(Path dir, String extension) {
+        fileWriter.cleanupGranularDirectory(dir, extension);
+    }
+
+    /** @deprecated call {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String, Set)} directly. */
+    @Deprecated
+    void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
+        fileWriter.cleanupGranularDirectory(dir, extension, excludeQNames);
+    }
+
+    /** @deprecated call {@link ServiceRegistry#buildServiceFileMap(Path)} directly. */
+    @Deprecated
+    public static Map<String, Path> buildServiceFileMap(Path root) {
+        return ServiceRegistry.buildServiceFileMap(root);
+    }
+
+    /** @deprecated call {@link ServiceRegistry#resolveActiveServices(Messager, Map)} directly. */
+    @Deprecated
+    public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
+        return ServiceRegistry.resolveActiveServices(messager, allServiceFiles);
+    }
+
+    /** @deprecated call {@link GuardrailFileWriter#stripLegacyVibeTagsBlock(String)} directly. */
+    @Deprecated
     String stripLegacyVibeTagsBlock(String before) {
         return fileWriter.stripLegacyVibeTagsBlock(before);
     }

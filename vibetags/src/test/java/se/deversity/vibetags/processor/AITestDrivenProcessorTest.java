@@ -26,6 +26,7 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AITestDriven;
 
 import org.junit.jupiter.api.parallel.Isolated;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -121,7 +122,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenAndIgnore_emitsContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdIgnore = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -136,7 +136,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AIIgnore")),
             "Should warn about @AITestDriven + @AIIgnore combination");
@@ -148,7 +148,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenWithoutIgnore_noContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdAlone = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -163,7 +162,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AIIgnore")),
             "No warning when @AITestDriven is used alone");
@@ -177,7 +176,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenAndLocked_emitsContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdLocked = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -194,7 +192,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AILocked")),
             "Should warn about @AITestDriven + @AILocked combination");
@@ -208,7 +206,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoalAbove100_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdAbove = mockTestDriven(150, "");
         Element element = mock(Element.class);
@@ -224,7 +221,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("coverageGoal") && w.contains("150")),
             "Should warn about coverageGoal > 100");
@@ -234,7 +231,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoalNegative_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdNeg = mockTestDriven(-1, "");
         Element element = mock(Element.class);
@@ -250,7 +246,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("coverageGoal")),
             "Should warn about negative coverageGoal");
@@ -260,7 +256,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoal100_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdValid = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -276,7 +271,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains("coverageGoal")),
             "No coverageGoal warning for valid value 100");

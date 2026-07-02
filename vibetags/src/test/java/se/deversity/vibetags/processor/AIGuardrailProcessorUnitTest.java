@@ -1,6 +1,9 @@
 package se.deversity.vibetags.processor;
 
 import javax.lang.model.element.ElementKind;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -68,12 +71,13 @@ class AIGuardrailProcessorUnitTest {
     @Test
     void testProcessorSupportsCorrectSourceVersion() {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        SupportedSourceVersion versionAnnotation = 
-            AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class);
-        assertNotNull(versionAnnotation);
+        // getSupportedSourceVersion() is overridden to report SourceVersion.latestSupported()
+        // rather than a fixed @SupportedSourceVersion, so the annotation itself is absent.
+        assertNull(AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class));
+        assertEquals(SourceVersion.latestSupported(), processor.getSupportedSourceVersion());
         // Should support Java 11 or higher
         assertTrue(
-            versionAnnotation.value().compareTo(SourceVersion.RELEASE_11) >= 0,
+            processor.getSupportedSourceVersion().compareTo(SourceVersion.RELEASE_11) >= 0,
             "Should support at least Java 11"
         );
     }
@@ -131,8 +135,8 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void testResolveActiveServices_noFilesExist_returnsEmpty(@TempDir Path tempDir) {
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.isEmpty(),
             "No output files present → nothing should be generated");
     }
@@ -142,8 +146,8 @@ class AIGuardrailProcessorUnitTest {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        ServiceRegistry.resolveActiveServices(messager, serviceFiles);
 
         assertEquals(1, notes.size(), "Exactly one NOTE should be emitted");
         String note = notes.get(0);
@@ -162,8 +166,8 @@ class AIGuardrailProcessorUnitTest {
         Files.createFile(tempDir.resolve("CLAUDE.md"));
         Files.createFile(tempDir.resolve(".cursorrules"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertEquals(Set.of("claude", "cursor"), active,
             "Only services with existing files should be active");
     }
@@ -174,15 +178,15 @@ class AIGuardrailProcessorUnitTest {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        ServiceRegistry.resolveActiveServices(messager, serviceFiles);
 
         assertTrue(notes.isEmpty(), "No warning should be emitted when at least one file exists");
     }
 
     @Test
     void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
-        AIGuardrailProcessor.buildServiceFileMap(tempDir).forEach((key, p) -> {
+        ServiceRegistry.buildServiceFileMap(tempDir).forEach((key, p) -> {
             try {
                 if (key.endsWith("_granular")) {
                     Files.createDirectories(p);
@@ -196,8 +200,8 @@ class AIGuardrailProcessorUnitTest {
                 throw new java.io.UncheckedIOException(e);
             }
         });
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         // Note: "codex" (AGENTS.md) is intentionally absent — when other AI config files are
         // present it is treated as a pointer and left untouched (sole-file fallback rule).
         Set<String> expected = Set.of(
@@ -236,8 +240,8 @@ class AIGuardrailProcessorUnitTest {
     void testResolveActiveServices_agentsMdAlone_codexActive(@TempDir Path tempDir) throws IOException {
         // Sole-file fallback: AGENTS.md by itself activates the codex service.
         Files.createFile(tempDir.resolve("AGENTS.md"));
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertEquals(Set.of("codex"), active,
             "AGENTS.md alone must activate exactly the codex service");
     }
@@ -457,21 +461,24 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void stripLegacy_returnsNullSafeForEmpty() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         assertEquals("", p.stripLegacyVibeTagsBlock(""));
         assertNull(p.stripLegacyVibeTagsBlock(null));
     }
 
     @Test
     void stripLegacy_noVibeTagsHeader_unchanged() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         String input = "# My custom heading\n\nSome human content.";
         assertEquals(input, p.stripLegacyVibeTagsBlock(input));
     }
 
     @Test
     void stripLegacy_claudeMdLegacyBlock_keepsHumanContent() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Simulate CLAUDE.md before field: legacy VibeTags block + human content
         String legacy =
             "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
@@ -494,7 +501,8 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void stripLegacy_fullyAutoGeneratedFile_stripsAll() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Simulate .cursorrules entirely generated by old VibeTags (no human content)
         String before =
             "# AUTO-GENERATED AI RULES\n" +
@@ -577,8 +585,7 @@ class AIGuardrailProcessorUnitTest {
         when(element.getAnnotation(AILocked.class)).thenReturn(mock(AILocked.class));
         when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
         
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
         
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIDraft and @AILocked"));
@@ -599,8 +606,7 @@ class AIGuardrailProcessorUnitTest {
         when(audit.checkFor()).thenReturn(new String[0]);
         when(element.getAnnotation(AIAudit.class)).thenReturn(audit);
         
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
         
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("has no 'checkFor' items list"));
@@ -620,8 +626,7 @@ class AIGuardrailProcessorUnitTest {
         when(element.getAnnotation(AIPrivacy.class)).thenReturn(mock(AIPrivacy.class));
         when(element.getAnnotation(AIIgnore.class)).thenReturn(mock(AIIgnore.class));
         
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
         
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIPrivacy and @AIIgnore"));
@@ -681,18 +686,20 @@ class AIGuardrailProcessorUnitTest {
     @Test
     void testCleanupGranularDirectory_NonExistent(@TempDir Path tempDir) {
         Path missing = tempDir.resolve("missing_dir");
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        GuardrailFileWriter writer = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Should not throw when directory doesn't exist
-        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(missing, ".md"));
+        assertDoesNotThrow(() -> writer.cleanupGranularDirectory(missing, ".md"));
     }
 
     @Test
     void testCleanupGranularDirectory_IOException(@TempDir Path tempDir) throws IOException {
         Path fileAsDir = tempDir.resolve("file_as_dir");
         Files.createFile(fileAsDir);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        GuardrailFileWriter writer = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Passing a file where a directory is expected for listing should handle errors gracefully
-        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(fileAsDir, ".md"));
+        assertDoesNotThrow(() -> writer.cleanupGranularDirectory(fileAsDir, ".md"));
     }
 
     @Test

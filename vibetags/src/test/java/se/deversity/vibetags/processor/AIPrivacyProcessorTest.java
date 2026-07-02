@@ -22,6 +22,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
 import org.junit.jupiter.api.parallel.Isolated;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -83,7 +84,6 @@ class AIPrivacyProcessorTest {
     void validateAnnotations_privacyAndIgnore_emitsRedundancyWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.UserProfile.email");
@@ -95,7 +95,7 @@ class AIPrivacyProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size(), "Should emit exactly one warning");
         assertTrue(warnings.get(0).contains("@AIPrivacy and @AIIgnore"),
@@ -108,7 +108,6 @@ class AIPrivacyProcessorTest {
     void validateAnnotations_privacyWithoutIgnore_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.UserProfile.email");
@@ -120,7 +119,7 @@ class AIPrivacyProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIPrivacy is used without @AIIgnore");

@@ -25,5 +25,5 @@ guardrails:
       reason: "Payment processing uses Stripe API v2024.10. Changes require PCI compliance review."
   audit:
     - path: "com.example.database.DatabaseConnector"
-      checks: [SQL Injection, Thread Safety issues]
+      checks: ["SQL Injection", "Thread Safety issues"]
 # VIBETAGS-END

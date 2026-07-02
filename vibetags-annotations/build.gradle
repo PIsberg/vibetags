@@ -57,16 +57,10 @@ publishing {
                 password = System.getenv('GITHUB_TOKEN')
             }
         }
-        maven {
-            name = 'OSSRH'
-            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = System.getenv('OSSRH_USERNAME')
-                password = System.getenv('OSSRH_PASSWORD')
-            }
-        }
+        // Maven Central releases do NOT go through this Gradle publication.
+        // The canonical release path is the Maven `publish` workflow (central-publishing-maven-plugin);
+        // see docs/RELEASING.md. This block previously pointed at the decommissioned
+        // OSSRH host (s01.oss.sonatype.org, shut down mid-2025) and was removed.
     }
 }
 

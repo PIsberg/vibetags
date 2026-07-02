@@ -20,7 +20,7 @@ All third-party actions are pinned by full commit SHA with the version as a trai
 
 ## 1. Build and Test (`build.yml`)
 
-The main CI workflow. Jobs run in parallel except `load-tests`, which waits on `build-maven`.
+The main CI workflow. Jobs run in parallel except `load-tests` and `mutation-testing`, which both wait on `build-maven`.
 
 ### Job: `build-maven`
 
@@ -36,13 +36,15 @@ Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). J
 8. **Build Example Project** — `cd example && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.
 9. **Run Unit Tests (VibeTags Library)** — `cd vibetags && mvn test -B`. The `mvn install` in step 5 already ran them; this re-runs them on their own to surface failures without the install ceremony.
 10. **Run Integration Tests** — `cd vibetags && mvn test -Drun.integration.tests=true -B`. These tests assume the example project has been compiled in step 8 and inspect its generated output.
-11. **Verify Generated AI Config Files** — checks that every expected file under `example/` exists and is non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`, the AI PR-reviewer configs `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml`, the context-packer ignore files `.repomixignore` / `.gitingestignore` / `.gptignore` / `.ghostcoderignore` / `.piecesignore`, and the `.void/rules.md` and `.roomodes` editor/mode files.
-12. **Verify @AIAudit Content** — greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
-13. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Fails CI if the upload fails.
+11. **Verify Generated AI Config Files** — delegates to the local composite action `.github/actions/verify-generated-files` (`working-directory: example`), which checks that every expected file under `example/` exists and is non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`, the AI PR-reviewer configs `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml`, the context-packer ignore files `.repomixignore` / `.gitingestignore` / `.gptignore` / `.ghostcoderignore` / `.piecesignore`, and the `.void/rules.md` and `.roomodes` editor/mode files. The same composite action step also runs the `@AIAudit` content check described next — it is one step in the workflow YAML, not two.
+12. **Verify @AIAudit Content** — the second step inside the composite action greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
+13. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Passes `fail_ci_if_error: false`, so a Codecov outage doesn't fail the build.
+
+The generated-file and `@AIAudit` verification logic used to be duplicated inline in both `build-maven` and `build-gradle`; it now lives once in `.github/actions/verify-generated-files/action.yml` (a local composite action, `working-directory` input defaulting to `example`) and is invoked by both jobs — plus `cross-platform` (see below) — so the three call sites can never drift out of sync.
 
 ### Job: `cross-platform`
 
-Matrix over **`windows-latest`, `macos-latest`** (`fail-fast: false`), JDK 21, `shell: bash`. The main matrix only runs on Linux, but the processor's file handling is OS-sensitive — path separators, CRLF line endings, the marker-aware `GuardrailFileWriter`, and `root.relativize()`. This job installs `async-test-lib` and the annotations jar, then runs the library's self-contained unit tests (`cd vibetags && mvn test -B`) on Windows and macOS. It uses the default `JAVA_HOME` (the Linux-only `JAVA_HOME_21_X64` does not exist on Windows or arm64 macOS) and omits the `harden-runner` step, which only supports Linux runners.
+Matrix over **`windows-latest`, `macos-latest`** (`fail-fast: false`), JDK 21, `shell: bash`. The main matrix only runs on Linux, but the processor's file handling is OS-sensitive — path separators, CRLF line endings, the marker-aware `GuardrailFileWriter`, and `root.relativize()`. This job installs `async-test-lib` and the annotations jar, builds the library, installs the BOM, resets and rebuilds the example project the same way `build-maven` does, and runs the library's self-contained unit tests (`cd vibetags && mvn test -B`) on Windows and macOS. It then calls the same `.github/actions/verify-generated-files` composite action used by `build-maven`/`build-gradle`, so a Windows- or macOS-only regression in the generated output is caught here too — previously this job only ran unit tests and did not build or verify the example project. It uses the default `JAVA_HOME` (the Linux-only `JAVA_HOME_21_X64` does not exist on Windows or arm64 macOS) and omits the `harden-runner` step, which only supports Linux runners.
 
 ### Job: `load-tests`
 
@@ -59,15 +61,24 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differences:
 
 - Uses Gradle dependency cache.
-- `gradle wrapper || echo "Wrapper generation skipped"` runs before each build to generate a wrapper if missing — the `||` swallows the error if a wrapper already exists.
-- Library build: `gradle clean build publishToMavenLocal --no-daemon`.
-- Annotations build: `cd vibetags-annotations && gradle clean build publishToMavenLocal --no-daemon`. Runs first because the processor depends on it.
+- Gradle wrappers (`gradlew`/`gradlew.bat`, Gradle 8.8) are committed in `vibetags-annotations/`, `vibetags/`, and `example/` — copied from `vibetags/`'s pre-existing wrapper. CI invokes `./gradlew` in every subproject; there is no on-the-fly `gradle wrapper` generation step.
+- Annotations build: `cd vibetags-annotations && ./gradlew clean build publishToMavenLocal --no-daemon`. Runs first because the processor depends on it.
+- Library build: `cd vibetags && ./gradlew clean build publishToMavenLocal --no-daemon`.
 - BOM install: `cd vibetags-bom && mvn install -B`. The BOM is Maven-only; Gradle reads it from `mavenLocal()` when resolving `platform('se.deversity.vibetags:vibetags-bom:...')` in `example/build.gradle`. This step runs after the library build and before the example build.
-- Example build: `gradle clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon`.
-- Tests use `gradle test --no-daemon` and `gradle test -Drun.integration.tests=true --no-daemon`.
-- Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml` and uploads under flag `unittests-gradle`.
+- Example build: `cd example && ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon`.
+- Tests use `cd vibetags && ./gradlew test --no-daemon` and `./gradlew test -Drun.integration.tests=true --no-daemon`.
+- Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml`, uploads under flag `unittests-gradle`, and passes `fail_ci_if_error: false`.
 
-The same generated-file and `@AIAudit` verification steps run after the Gradle build, so any divergence between Maven and Gradle output paths is caught.
+The same `.github/actions/verify-generated-files` composite action runs after the Gradle build, so any divergence between Maven and Gradle output paths is caught.
+
+### Job: `mutation-testing`
+
+Single JDK 21 leg, `needs: build-maven`, `continue-on-error: true` — a failing or low-scoring mutation run does not fail the overall workflow. Steps:
+
+1. **Harden runner**, **checkout**, **set up JDK 21** (Maven cache).
+2. **Install async-test-lib** and **Install VibeTags Annotations** — same as `build-maven`.
+3. **Run Mutation Coverage (PIT)** — `cd vibetags && mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage`. The `mutation` Maven profile (in `vibetags/pom.xml`) pulls in `pitest-maven` 1.19.1 and `pitest-junit5-plugin` 1.2.2 and is otherwise inactive — it only runs when `-Pmutation` is passed explicitly, so normal `mvn install`/`mvn test` runs are unaffected.
+4. **Upload PIT mutation report** — `if: always()`. Uploads `vibetags/target/pit-reports/**` as `pitest-report-${{ github.run_id }}`, `if-no-files-found: warn`.
 
 ---
 
@@ -123,4 +134,4 @@ The non-obvious part of `build.yml` is that the example project is the test fixt
 3. `reset-ai-files.sh` is what makes step 8 a meaningful test: without it, the verification steps would pass even if the processor wrote nothing, because the files would still hold content from a previous run.
 4. The `@AIAudit` grep step exists because "file is non-empty" is too weak — a partially broken processor can still emit headers and frontmatter.
 
-Both Maven and Gradle paths run the same verification, so any platform-specific output difference (e.g. a Gradle-only file path bug) is caught.
+Maven, Gradle, and the Windows/macOS `cross-platform` job all call the same `.github/actions/verify-generated-files` composite action, so any platform-specific or OS-specific output difference (e.g. a Gradle-only file path bug, or a Windows CRLF regression) is caught.

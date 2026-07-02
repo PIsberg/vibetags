@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,10 +37,11 @@ class AIGuardrailProcessorTest {
     }
 
     @Test
-    void testProcessorSupportsJava17() {
-        SupportedSourceVersion sourceVersion = 
-            AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class);
-        assertNotNull(sourceVersion);
-        assertEquals(SourceVersion.RELEASE_17, sourceVersion.value());
+    void testProcessorSupportsLatestSourceVersion() {
+        // No fixed @SupportedSourceVersion — the processor reports SourceVersion.latestSupported()
+        // via an override, so it never emits a stale "supported source version" warning on newer
+        // JDKs than whatever release was hardcoded at the annotation's authoring time.
+        assertNull(AIGuardrailProcessor.class.getAnnotation(javax.annotation.processing.SupportedSourceVersion.class));
+        assertEquals(SourceVersion.latestSupported(), processor.getSupportedSourceVersion());
     }
 }

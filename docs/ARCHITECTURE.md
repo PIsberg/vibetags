@@ -124,7 +124,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
 - `VibeTagsLogger` — SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
 - `@SupportedAnnotationTypes("*")` — processes all annotations
-- `@SupportedSourceVersion(RELEASE_11)` — Java 11+ support
+- Overrides `getSupportedSourceVersion()` to return `SourceVersion.latestSupported()` instead of a fixed `@SupportedSourceVersion` — the library builds/tests against Java 21, but pinning e.g. `RELEASE_17` would make javac emit a "supported source version" warning on every newer JDK a consumer compiles with
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
