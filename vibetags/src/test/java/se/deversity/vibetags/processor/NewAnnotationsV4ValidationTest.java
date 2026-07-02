@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AISandboxOnly;
 import se.deversity.vibetags.annotations.AISecureLogging;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
@@ -29,7 +30,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_sandboxOnlyAndDomainModel_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.SandboxMock");
@@ -39,7 +39,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISandboxOnly.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -50,7 +50,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_sunsetAndDraft_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.SunsetClass");
@@ -62,7 +61,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISunset.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -73,7 +72,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_secureLoggingAndIgnore_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.IgnoredField");
@@ -83,7 +81,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISecureLogging.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -94,7 +92,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_sunsetBlankJira_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AISunset sunset = mock(AISunset.class);
         when(sunset.jira()).thenReturn(" "); // blank
@@ -106,7 +103,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AISunset.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -117,7 +114,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_temporaryBlankExpiresOn_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITemporary temp = mock(AITemporary.class);
         when(temp.expiresOn()).thenReturn(""); // blank
@@ -129,7 +125,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -140,7 +136,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_temporaryMalformedDate_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITemporary temp = mock(AITemporary.class);
         when(temp.expiresOn()).thenReturn("2026/05/29"); // invalid format, must be YYYY-MM-DD
@@ -152,7 +147,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);
@@ -163,7 +158,6 @@ class NewAnnotationsV4ValidationTest {
     void validateAnnotations_temporaryExpiredDate_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITemporary temp = mock(AITemporary.class);
         when(temp.expiresOn()).thenReturn("2020-01-01"); // expired date
@@ -176,7 +170,7 @@ class NewAnnotationsV4ValidationTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITemporary.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size());
         String w = warnings.get(0);

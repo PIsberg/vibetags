@@ -391,6 +391,54 @@
             </build>
         </profile>
 
+        <!-- Mutation testing: mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+             pitest-junit5-plugin 1.2.2 is the latest release on Maven Central (Feb 2025); it has not
+             been certified against JUnit 6 by its maintainers, but 1.2.2's fix ("set junit-platform-launcher
+             to provided scope") removed the shaded-classes conflict that caused earlier JUnit-version
+             incompatibilities (see pitest/pitest-junit5-plugin#106), so it now defers to whatever
+             junit-platform-launcher is on this plugin's own classpath instead of bundling one — which is
+             why that artifact is declared explicitly below, pinned to ${junit.version} (6.1.1). -->
+        <profile>
+            <id>mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>1.19.1</version>
+                        <configuration>
+                            <targetClasses>
+                                <param>se.deversity.vibetags.*</param>
+                            </targetClasses>
+                            <targetTests>
+                                <param>se.deversity.vibetags.*</param>
+                            </targetTests>
+                            <outputFormats>
+                                <param>HTML</param>
+                                <param>XML</param>
+                            </outputFormats>
+                            <timestampedReports>false</timestampedReports>
+                        </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>1.2.2</version>
+                            </dependency>
+                            <!-- Explicit, matching ${junit.version}: pitest-junit5-plugin 1.2.2 marks its
+                                 own junit-platform-launcher dependency "provided" rather than shading a
+                                 fixed version, so the host build must supply one on the plugin's classpath. -->
+                            <dependency>
+                                <groupId>org.junit.platform</groupId>
+                                <artifactId>junit-platform-launcher</artifactId>
+                                <version>${junit.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- GPG signing: only active during publishing (CI or explicit local deploy) -->
         <profile>
             <id>sign-artifacts</id>

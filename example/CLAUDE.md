@@ -20,7 +20,7 @@
     <file path="com.example.security.SecurityConfig.validateToken(java.lang.String)">
       <reason>Token validation must match auth server exactly. Changes will break all client authentication</reason>
     </file>
-    <file path="com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)">
+    <file path="com.example.service.OrderService.validateOrder(java.util.Map&lt;java.lang.String,java.lang.Object&gt;)">
       <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
     </file>
     <file path="com.example.service.OrderService.calculateTax(java.lang.String,double)">
@@ -102,9 +102,9 @@
       <instructions>Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.</instructions>
     </task>
     <task path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
-      <instructions>Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
+      <instructions>Implement order status workflow: CREATED -&gt; PAYMENT_PENDING -&gt; PAYMENT_CONFIRMED -&gt; PROCESSING -&gt; SHIPPED -&gt; DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
     </task>
-    <task path="com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)">
+    <task path="com.example.service.OrderService.searchOrders(java.util.Map&lt;java.lang.String,java.lang.String&gt;,int,int)">
       <instructions>Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.</instructions>
     </task>
     <task path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
@@ -177,13 +177,13 @@
       <constraint>HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.</constraint>
     </element>
     <element path="com.example.service.InventoryService.getAvailableStock(java.lang.String)">
-      <constraint>O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
+      <constraint>O(1) lookup required. Must complete in &lt;2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
     </element>
-    <element path="com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)">
+    <element path="com.example.service.InventoryService.bulkRestock(java.util.List&lt;java.util.Map&lt;java.lang.String,java.lang.Object&gt;&gt;)">
       <constraint>Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.</constraint>
     </element>
     <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
-      <constraint>Must complete in <5ms p99. Called on every cart update.</constraint>
+      <constraint>Must complete in &lt;5ms p99. Called on every cart update.</constraint>
     </element>
   </performance_constraints>
 
@@ -195,8 +195,8 @@
     <element path="com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)">
       <reason>Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.</reason>
     </element>
-    <element path="com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)">
-      <reason>B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.</reason>
+    <element path="com.example.service.PricingService.getBulkPricing(java.util.List&lt;java.lang.String&gt;,int)">
+      <reason>B2B portal contract v1.2 — the List&lt;Map&lt;String,Object&gt;&gt; structure is serialized directly to JSON. Changing the return type breaks portal parsing.</reason>
     </element>
   </contract_signatures>
 
@@ -261,7 +261,7 @@
     <element path="com.example.compliance.GdprService.exportUserData(java.lang.String)">
       <standard>GDPR</standard>
       <clause>Art. 20</clause>
-      <description>Right to data portability — exports the user's data in a machine-readable format.</description>
+      <description>Right to data portability — exports the user&#39;s data in a machine-readable format.</description>
     </element>
   </regulatory_elements>
 
@@ -277,7 +277,7 @@
   <legacy_bridge_elements>
     <element path="com.example.legacy.LegacyBridgeService">
       <refactor>prohibited</refactor>
-      <reason>Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023</reason>
+      <reason>Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); &#39;modernizing&#39; it broke the EBCDIC gateway in 2023</reason>
     </element>
   </legacy_bridge_elements>
 
@@ -342,7 +342,7 @@
   <idempotent_elements>
     <element path="com.example.compliance.GdprService.deleteAllUserData(java.lang.String)">
       <idempotent>true</idempotent>
-      <reason>Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.</reason>
+      <reason>Deleting a user&#39;s data multiple times must produce the same result as deleting once — must not throw on second invocation.</reason>
     </element>
   </idempotent_elements>
 

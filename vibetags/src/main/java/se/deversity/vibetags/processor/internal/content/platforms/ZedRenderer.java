@@ -7,9 +7,9 @@ import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SectionCatalog;
 
-import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.Section.headerless;
-import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.Section.of;
+import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.section;
 
 /**
  * PlatformRenderer for generating `.rules` for Zed.
@@ -17,43 +17,43 @@ import static se.deversity.vibetags.processor.internal.content.platforms.Annotat
 public final class ZedRenderer implements PlatformRenderer {
 
     private static final List<AnnotationSections.Section> SECTIONS = List.of(
-        headerless(AnnotationCollector::threadSafe, FormatterRegistry.threadSafe()),
-        headerless(AnnotationCollector::immutable, FormatterRegistry.immutable()),
-        headerless(AnnotationCollector::deprecated, FormatterRegistry.deprecated()),
-        headerless(AnnotationCollector::observability, FormatterRegistry.observability()),
-        headerless(AnnotationCollector::regulation, FormatterRegistry.regulation()),
-        of("\n## Security Audits\nBefore suggesting changes to the following files, audit for the listed vulnerabilities:\n\n", AnnotationCollector::audit, FormatterRegistry.audit()),
-        of("\n## Ignored Elements\nDo not reference or suggest changes to the following:\n\n", AnnotationCollector::ignore, FormatterRegistry.ignore()),
-        of("\n## Implementation Tasks\nThe following elements are drafts that need implementation:\n\n", AnnotationCollector::draft, FormatterRegistry.draft()),
-        of("\n## PII / Privacy Guardrails\nNever log, expose, or suggest code that outputs runtime values of these elements:\n\n", AnnotationCollector::privacy, FormatterRegistry.privacy()),
-        of("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n", AnnotationCollector::core, FormatterRegistry.core()),
-        of("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n", AnnotationCollector::performance, FormatterRegistry.performance()),
-        of("\n## Contract-Frozen Signatures\nInternal logic may be changed; never alter method names, parameter types, order, return types, or checked exceptions:\n\n", AnnotationCollector::contract, FormatterRegistry.contract()),
-        of("\n## Test-Driven Requirements\nChanges to the following elements must be accompanied by matching test code:\n\n", AnnotationCollector::testDriven, FormatterRegistry.testDriven()),
-        of("\n## Strict Test Isolation\nEnforce strict isolation in tests for these elements:\n\n", AnnotationCollector::parallelTests, FormatterRegistry.parallelTests()),
-        of("\n## Legacy Compatibility Bridge\nDo not refactor the structural patterns of these compatibility bridges:\n\n", AnnotationCollector::legacyBridge, FormatterRegistry.legacyBridge()),
-        of("\n## Architectural Constraints\nStrict layered architecture constraints apply to these elements:\n\n", AnnotationCollector::architecture, FormatterRegistry.architecture()),
-        of("\n## Public API Protection\nPublic API surface. Signatures and backwards compatibility must be strictly preserved:\n\n", AnnotationCollector::publicApi, FormatterRegistry.publicApi()),
-        of("\n## Strict Exceptions\nGeneric exception throwing/catching is strictly prohibited for these elements:\n\n", AnnotationCollector::strictExceptions, FormatterRegistry.strictExceptions()),
-        of("\n## Strict Types\nLoose typing is strictly prohibited for these elements:\n\n", AnnotationCollector::strictTypes, FormatterRegistry.strictTypes()),
-        of("\n## Internationalization\nHardcoding user-facing strings is strictly prohibited for these elements:\n\n", AnnotationCollector::internationalized, FormatterRegistry.internationalized()),
-        of("\n## Strict Classpath\nDynamic runtime class loading is strictly prohibited for these elements:\n\n", AnnotationCollector::strictClasspath, FormatterRegistry.strictClasspath()),
-        of("\n## Schema Safety\nModifying schema or data formats without explicit migration plans is prohibited:\n\n", AnnotationCollector::schemaSafe, FormatterRegistry.schemaSafe()),
-        of("\n## Idempotency\nThese operations must remain idempotent:\n\n", AnnotationCollector::idempotent, FormatterRegistry.idempotent()),
-        of("\n## Feature Flags\nThese elements are behind feature flags — never assume always active:\n\n", AnnotationCollector::featureFlag, FormatterRegistry.featureFlag()),
-        of("\n## Security-Critical Code\nNever weaken security properties of these elements:\n\n", AnnotationCollector::secure, FormatterRegistry.secure()),
-        of("\n## Access Limitations\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n", AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
-        of("\n## Sandbox & Test Exclusion\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n", AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        of("\n## Memory Allocation Budgets\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n", AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
-        of("\n## Deterministic Pure Functions\nThe following elements must remain pure functions without side effects or mutations.\n\n", AnnotationCollector::pure, FormatterRegistry.pure()),
-        of("\n## Framework-Free Domain Entities\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n", AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
-        of("\n## open-closed Extension Patterns\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n", AnnotationCollector::extensible, FormatterRegistry.extensible()),
-        of("\n## Mandatory Input Sanitization\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n", AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
-        of("\n## Secure Logging Masking\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n", AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
-        of("\n## Required Chain-of-Thought Explanations\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n", AnnotationCollector::explain, FormatterRegistry.explain()),
-        of("\n## Experimental Prototype Stubs\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n", AnnotationCollector::prototype, FormatterRegistry.prototype()),
-        of("\n## Sunset Deprecated APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n", AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        of("\n## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n", AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.ZED, SectionCatalog.Key.THREAD_SAFE, AnnotationCollector::threadSafe, FormatterRegistry.threadSafe()),
+        section(Platform.ZED, SectionCatalog.Key.IMMUTABLE, AnnotationCollector::immutable, FormatterRegistry.immutable()),
+        section(Platform.ZED, SectionCatalog.Key.DEPRECATED, AnnotationCollector::deprecated, FormatterRegistry.deprecated()),
+        section(Platform.ZED, SectionCatalog.Key.OBSERVABILITY, AnnotationCollector::observability, FormatterRegistry.observability()),
+        section(Platform.ZED, SectionCatalog.Key.REGULATION, AnnotationCollector::regulation, FormatterRegistry.regulation()),
+        section(Platform.ZED, SectionCatalog.Key.AUDIT, AnnotationCollector::audit, FormatterRegistry.audit()),
+        section(Platform.ZED, SectionCatalog.Key.IGNORE, AnnotationCollector::ignore, FormatterRegistry.ignore()),
+        section(Platform.ZED, SectionCatalog.Key.DRAFT, AnnotationCollector::draft, FormatterRegistry.draft()),
+        section(Platform.ZED, SectionCatalog.Key.PRIVACY, AnnotationCollector::privacy, FormatterRegistry.privacy()),
+        section(Platform.ZED, SectionCatalog.Key.CORE, AnnotationCollector::core, FormatterRegistry.core()),
+        section(Platform.ZED, SectionCatalog.Key.PERFORMANCE, AnnotationCollector::performance, FormatterRegistry.performance()),
+        section(Platform.ZED, SectionCatalog.Key.CONTRACT, AnnotationCollector::contract, FormatterRegistry.contract()),
+        section(Platform.ZED, SectionCatalog.Key.TEST_DRIVEN, AnnotationCollector::testDriven, FormatterRegistry.testDriven()),
+        section(Platform.ZED, SectionCatalog.Key.PARALLEL_TESTS, AnnotationCollector::parallelTests, FormatterRegistry.parallelTests()),
+        section(Platform.ZED, SectionCatalog.Key.LEGACY_BRIDGE, AnnotationCollector::legacyBridge, FormatterRegistry.legacyBridge()),
+        section(Platform.ZED, SectionCatalog.Key.ARCHITECTURE, AnnotationCollector::architecture, FormatterRegistry.architecture()),
+        section(Platform.ZED, SectionCatalog.Key.PUBLIC_API, AnnotationCollector::publicApi, FormatterRegistry.publicApi()),
+        section(Platform.ZED, SectionCatalog.Key.STRICT_EXCEPTIONS, AnnotationCollector::strictExceptions, FormatterRegistry.strictExceptions()),
+        section(Platform.ZED, SectionCatalog.Key.STRICT_TYPES, AnnotationCollector::strictTypes, FormatterRegistry.strictTypes()),
+        section(Platform.ZED, SectionCatalog.Key.INTERNATIONALIZED, AnnotationCollector::internationalized, FormatterRegistry.internationalized()),
+        section(Platform.ZED, SectionCatalog.Key.STRICT_CLASSPATH, AnnotationCollector::strictClasspath, FormatterRegistry.strictClasspath()),
+        section(Platform.ZED, SectionCatalog.Key.SCHEMA_SAFE, AnnotationCollector::schemaSafe, FormatterRegistry.schemaSafe()),
+        section(Platform.ZED, SectionCatalog.Key.IDEMPOTENT, AnnotationCollector::idempotent, FormatterRegistry.idempotent()),
+        section(Platform.ZED, SectionCatalog.Key.FEATURE_FLAG, AnnotationCollector::featureFlag, FormatterRegistry.featureFlag()),
+        section(Platform.ZED, SectionCatalog.Key.SECURE, AnnotationCollector::secure, FormatterRegistry.secure()),
+        section(Platform.ZED, SectionCatalog.Key.CALLERS_ONLY, AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.ZED, SectionCatalog.Key.SANDBOX_ONLY, AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.ZED, SectionCatalog.Key.MEMORY_BUDGET, AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.ZED, SectionCatalog.Key.PURE, AnnotationCollector::pure, FormatterRegistry.pure()),
+        section(Platform.ZED, SectionCatalog.Key.DOMAIN_MODEL, AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.ZED, SectionCatalog.Key.EXTENSIBLE, AnnotationCollector::extensible, FormatterRegistry.extensible()),
+        section(Platform.ZED, SectionCatalog.Key.INPUT_SANITIZED, AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.ZED, SectionCatalog.Key.SECURE_LOGGING, AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.ZED, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
+        section(Platform.ZED, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
+        section(Platform.ZED, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
+        section(Platform.ZED, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
     );
 
     @Override

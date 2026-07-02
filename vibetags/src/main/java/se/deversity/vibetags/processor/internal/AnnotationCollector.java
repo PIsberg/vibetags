@@ -47,7 +47,9 @@ import org.jspecify.annotations.Nullable;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -316,6 +318,56 @@ public final class AnnotationCollector {
     public Set<Element> temporary()        { return Collections.unmodifiableSet(temporaryElements); }
 
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
+
+    /**
+     * Every annotation bucket keyed by its {@code @AI...} annotation name, in the same order
+     * {@link #collect} populates them. {@code AIGuardrailProcessor.logSummary()} iterates this
+     * map instead of hand-listing one {@code logSet(...)} call per annotation, so a newly added
+     * bucket only needs the single {@code put} line below — no matching edit anywhere else.
+     */
+    public Map<String, Set<Element>> labeledSets() {
+        Map<String, Set<Element>> labeled = new LinkedHashMap<>();
+        labeled.put("@AILocked", locked());
+        labeled.put("@AIContext", context());
+        labeled.put("@AIIgnore", ignore());
+        labeled.put("@AIAudit", audit());
+        labeled.put("@AIDraft", draft());
+        labeled.put("@AIPrivacy", privacy());
+        labeled.put("@AICore", core());
+        labeled.put("@AIPerformance", performance());
+        labeled.put("@AIContract", contract());
+        labeled.put("@AITestDriven", testDriven());
+        labeled.put("@AIThreadSafe", threadSafe());
+        labeled.put("@AIImmutable", immutable());
+        labeled.put("@AIDeprecated", deprecated());
+        labeled.put("@AIObservability", observability());
+        labeled.put("@AIRegulation", regulation());
+        labeled.put("@AIParallelTests", parallelTests());
+        labeled.put("@AILegacyBridge", legacyBridge());
+        labeled.put("@AIArchitecture", architecture());
+        labeled.put("@AIPublicAPI", publicApi());
+        labeled.put("@AIStrictExceptions", strictExceptions());
+        labeled.put("@AIStrictTypes", strictTypes());
+        labeled.put("@AIInternationalized", internationalized());
+        labeled.put("@AIStrictClasspath", strictClasspath());
+        labeled.put("@AISchemaSafe", schemaSafe());
+        labeled.put("@AIIdempotent", idempotent());
+        labeled.put("@AIFeatureFlag", featureFlag());
+        labeled.put("@AISecure", secure());
+        labeled.put("@AICallersOnly", callersOnly());
+        labeled.put("@AISandboxOnly", sandboxOnly());
+        labeled.put("@AIMemoryBudget", memoryBudget());
+        labeled.put("@AIPure", pure());
+        labeled.put("@AIDomainModel", domainModel());
+        labeled.put("@AIExtensible", extensible());
+        labeled.put("@AIInputSanitized", inputSanitized());
+        labeled.put("@AISecureLogging", secureLogging());
+        labeled.put("@AIExplain", explain());
+        labeled.put("@AIPrototype", prototype());
+        labeled.put("@AISunset", sunset());
+        labeled.put("@AITemporary", temporary());
+        return labeled;
+    }
 
     /**
      * Total number of annotated references across every annotation bucket (an element carrying two

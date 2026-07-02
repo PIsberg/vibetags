@@ -8,6 +8,7 @@ import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.SectionCatalog;
 
 /**
  * Shared driver for the markdown renderers (Cursor, Copilot, Windsurf, Zed) whose bodies are all
@@ -35,6 +36,16 @@ final class AnnotationSections {
         static Section headerless(Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
             return new Section(null, accessor, formatter);
         }
+    }
+
+    /**
+     * Builds a {@link Section} by looking up its header text in {@link SectionCatalog} for the
+     * given platform/key, instead of a renderer hardcoding the string itself. Returns a headerless
+     * section when the catalog says the platform folds this bucket into the previous one.
+     */
+    static Section section(Platform platform, SectionCatalog.Key key, Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
+        String header = SectionCatalog.header(platform, key);
+        return header == null ? Section.headerless(accessor, formatter) : Section.of(header, accessor, formatter);
     }
 
     static void render(StringBuilder sb, AnnotationCollector collector, Platform platform, List<Section> sections) {
@@ -77,21 +88,21 @@ final class AnnotationSections {
 
     /**
      * The twelve newest annotation sections, in the emoji-headed wording shared verbatim by
-     * {@link CursorRenderer} and {@link WindsurfRenderer} — kept in one place so the identical
-     * text isn't duplicated source-side across both files.
+     * {@link CursorRenderer} and {@link WindsurfRenderer} — sourced from {@link SectionCatalog}'s
+     * default (Cursor) wording so the text isn't duplicated source-side across both files.
      */
     static final List<Section> EMOJI_STYLE_NEWEST_ANNOTATIONS = List.of(
-        Section.of("\n## 🚫 ACCESS & CALLS LIMITATIONS\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n", AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
-        Section.of("\n## 🛡️ SANDBOX & TEST HARNESS EXCLUSION\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n", AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        Section.of("\n## ⚡ MEMORY ALLOCATION BUDGETS\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n", AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
-        Section.of("\n## 🧠 DETERMINISTIC PURE FUNCTIONS\nThe following elements must remain pure functions without side effects or mutations.\n\n", AnnotationCollector::pure, FormatterRegistry.pure()),
-        Section.of("\n## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n", AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
-        Section.of("\n## ❄️ open-closed EXTENSION PATTERNS\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n", AnnotationCollector::extensible, FormatterRegistry.extensible()),
-        Section.of("\n## 🚨 MANDATORY INPUT SANITIZATION\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n", AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
-        Section.of("\n## 🔒 SECURE LOGGING MASKING\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n", AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
-        Section.of("\n## 📋 REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n", AnnotationCollector::explain, FormatterRegistry.explain()),
-        Section.of("\n## 🛠️ EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n", AnnotationCollector::prototype, FormatterRegistry.prototype()),
-        Section.of("\n## ⚠️ SUNSET DEPRACTED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n", AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        Section.of("\n## 🚧 TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n", AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.CURSOR, SectionCatalog.Key.CALLERS_ONLY, AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.CURSOR, SectionCatalog.Key.SANDBOX_ONLY, AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.CURSOR, SectionCatalog.Key.MEMORY_BUDGET, AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.CURSOR, SectionCatalog.Key.PURE, AnnotationCollector::pure, FormatterRegistry.pure()),
+        section(Platform.CURSOR, SectionCatalog.Key.DOMAIN_MODEL, AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.CURSOR, SectionCatalog.Key.EXTENSIBLE, AnnotationCollector::extensible, FormatterRegistry.extensible()),
+        section(Platform.CURSOR, SectionCatalog.Key.INPUT_SANITIZED, AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.CURSOR, SectionCatalog.Key.SECURE_LOGGING, AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.CURSOR, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
+        section(Platform.CURSOR, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
+        section(Platform.CURSOR, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
+        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
     );
 }

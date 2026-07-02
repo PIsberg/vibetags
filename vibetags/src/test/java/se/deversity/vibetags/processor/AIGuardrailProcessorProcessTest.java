@@ -25,6 +25,9 @@ import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -334,7 +337,7 @@ class AIGuardrailProcessorProcessTest {
     @Test
     void buildServiceFileMap_containsAllExpectedKeys() {
         Path root = Path.of(System.getProperty("java.io.tmpdir"));
-        Map<String, Path> map = AIGuardrailProcessor.buildServiceFileMap(root);
+        Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
 
         Set<String> expectedKeys = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
@@ -371,7 +374,7 @@ class AIGuardrailProcessorProcessTest {
     @Test
     void buildServiceFileMap_pathsAreUnderRoot() {
         Path root = Path.of("/some/project/root");
-        Map<String, Path> map = AIGuardrailProcessor.buildServiceFileMap(root);
+        Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
 
         for (Map.Entry<String, Path> entry : map.entrySet()) {
             assertTrue(entry.getValue().startsWith(root),
@@ -382,7 +385,7 @@ class AIGuardrailProcessorProcessTest {
     @Test
     void buildServiceFileMap_specificPaths() {
         Path root = Path.of("/proj");
-        Map<String, Path> map = AIGuardrailProcessor.buildServiceFileMap(root);
+        Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
 
         assertEquals(root.resolve(".cursorrules"),                      map.get("cursor"));
         assertEquals(root.resolve("CLAUDE.md"),                         map.get("claude"));
@@ -488,14 +491,12 @@ class AIGuardrailProcessorProcessTest {
     void validateAnnotations_noAnnotations_noWarnings() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(), "No warnings when there are no annotations");
     }
@@ -504,8 +505,6 @@ class AIGuardrailProcessorProcessTest {
     void validateAnnotations_lockedWithoutDraft_noContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.SomeClass");
         AILocked locked = mock(AILocked.class);
@@ -517,7 +516,7 @@ class AIGuardrailProcessorProcessTest {
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No contradiction warning when @AILocked is used without @AIDraft");
@@ -527,8 +526,6 @@ class AIGuardrailProcessorProcessTest {
     void validateAnnotations_auditWithItems_noEmptyWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.SomeClass");
         AIAudit audit = mock(AIAudit.class);
@@ -540,7 +537,7 @@ class AIGuardrailProcessorProcessTest {
         doReturn(java.util.Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(java.util.Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIAudit has non-empty checkFor list");
@@ -553,7 +550,7 @@ class AIGuardrailProcessorProcessTest {
     @Test
     void buildServiceFileMap_llmsPathsAreCorrect() {
         Path root = Path.of("/proj");
-        Map<String, Path> map = AIGuardrailProcessor.buildServiceFileMap(root);
+        Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
 
         assertEquals(root.resolve("llms.txt"),      map.get("llms"),      "llms should resolve to llms.txt");
         assertEquals(root.resolve("llms-full.txt"), map.get("llms_full"), "llms_full should resolve to llms-full.txt");
@@ -563,8 +560,8 @@ class AIGuardrailProcessorProcessTest {
     void resolveActiveServices_llmsTxtPresent_activatesLlms(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve("llms.txt"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertTrue(active.contains("llms"), "llms should be active when llms.txt exists");
         assertFalse(active.contains("llms_full"), "llms_full should not be active without llms-full.txt");
@@ -574,8 +571,8 @@ class AIGuardrailProcessorProcessTest {
     void resolveActiveServices_llmsFullTxtPresent_activatesLlmsFull(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve("llms-full.txt"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertFalse(active.contains("llms"), "llms should not be active without llms.txt");
         assertTrue(active.contains("llms_full"), "llms_full should be active when llms-full.txt exists");
@@ -586,8 +583,8 @@ class AIGuardrailProcessorProcessTest {
         Files.createFile(tempDir.resolve("llms.txt"));
         Files.createFile(tempDir.resolve("llms-full.txt"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertTrue(active.contains("llms"),      "llms should be active when llms.txt exists");
         assertTrue(active.contains("llms_full"), "llms_full should be active when llms-full.txt exists");
@@ -651,8 +648,8 @@ class AIGuardrailProcessorProcessTest {
     void resolveActiveServices_conventionsMdPresent_activatesAider(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve("CONVENTIONS.md"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertTrue(active.contains("aider_conventions"),
             "aider_conventions should be active when CONVENTIONS.md exists");
@@ -662,8 +659,8 @@ class AIGuardrailProcessorProcessTest {
     void resolveActiveServices_aiderIgnorePresent_activatesAiderIgnore(@TempDir Path tempDir) throws IOException {
         Files.createFile(tempDir.resolve(".aiderignore"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertTrue(active.contains("aider_ignore"),
             "aider_ignore should be active when .aiderignore exists");
@@ -766,58 +763,57 @@ class AIGuardrailProcessorProcessTest {
     // stripLegacyVibeTagsBlock — unit coverage
     // -----------------------------------------------------------------------
 
+    private static GuardrailFileWriter newFileWriter() {
+        return new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
+    }
+
     @Test
     void stripLegacyVibeTagsBlock_nullInput_returnsNull() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        assertNull(processor.stripLegacyVibeTagsBlock(null));
+        assertNull(newFileWriter().stripLegacyVibeTagsBlock(null));
     }
 
     @Test
     void stripLegacyVibeTagsBlock_emptyInput_returnsEmpty() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        assertEquals("", processor.stripLegacyVibeTagsBlock(""));
+        assertEquals("", newFileWriter().stripLegacyVibeTagsBlock(""));
     }
 
     @Test
     void stripLegacyVibeTagsBlock_noVibatagsHeader_returnsUnchanged() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
         String input = "# Some human content\nWith no VibeTags header";
-        assertEquals(input, processor.stripLegacyVibeTagsBlock(input));
+        assertEquals(input, newFileWriter().stripLegacyVibeTagsBlock(input));
     }
 
     @Test
     void stripLegacyVibeTagsBlock_withBareHeader_stripsBlock() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // The bare (hash-comment) form of the header as written in non-.md files
         String header = "# Generated by VibeTags | https://github.com/PIsberg/vibetags";
         String input = header + "\n<project_guardrails>\n</rule>\n</project_guardrails>\n<rule>rule1</rule>";
-        String result = processor.stripLegacyVibeTagsBlock(input);
+        String result = newFileWriter().stripLegacyVibeTagsBlock(input);
         assertFalse(result.contains("<project_guardrails>"),
             "Legacy VibeTags XML block should be stripped when bare header is present");
     }
 
     @Test
     void stripLegacyVibeTagsBlock_withHtmlCommentHeader_stripsBlock() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // The HTML-comment form as written into .md files:
         // "<!-- # Generated by VibeTags | <url> -->"
         String header = "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->";
         String input = header + "\n<project_guardrails>\n</rule>\n</project_guardrails>\n<rule>rule1</rule>";
-        String result = processor.stripLegacyVibeTagsBlock(input);
+        String result = newFileWriter().stripLegacyVibeTagsBlock(input);
         assertFalse(result.contains("<project_guardrails>"),
             "Legacy VibeTags XML block should be stripped when HTML-comment header is present");
     }
 
     @Test
     void stripLegacyVibeTagsBlock_humanContentBefore_preserved() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
         String humanContent = "## My Custom Section\nThis is important human content.";
         String vibetagsBlock = "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n# AUTO-GENERATED";
         String input = humanContent + "\n\n" + vibetagsBlock;
 
         // The human content has no XML closer, so the whole rest is treated as legacy
         // but human content before the header should be preserved since it has non-boilerplate content
-        String result = processor.stripLegacyVibeTagsBlock(input);
+        String result = newFileWriter().stripLegacyVibeTagsBlock(input);
         assertTrue(result.contains("My Custom Section"),
             "Human content before VibeTags header must survive");
     }
@@ -901,8 +897,7 @@ class AIGuardrailProcessorProcessTest {
         // File with hash-comment markers and human content BEFORE them
         Files.writeString(file, "# Human header\n\n# VIBETAGS-START\ngenerated content\n# VIBETAGS-END\n");
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".txt", Set.of());
 
         assertTrue(Files.exists(file), "File with human content before markers should survive");
         String content = Files.readString(file);
@@ -919,8 +914,7 @@ class AIGuardrailProcessorProcessTest {
         // Only VibeTags content — should be deleted
         Files.writeString(file, "# VIBETAGS-START\ngenerated\n# VIBETAGS-END\n");
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".txt", Set.of());
 
         assertFalse(Files.exists(file), "File with only VibeTags content should be deleted");
     }
@@ -935,8 +929,7 @@ class AIGuardrailProcessorProcessTest {
             "---\ndescription: \"AI rules for Foo\"\nglobs: [\"**/Foo.java\"]\n---\n" +
             "# VIBETAGS-START\nold rule\n# VIBETAGS-END\n");
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".txt", Set.of());
 
         assertFalse(Files.exists(file),
             "File with only YAML front-matter after stripping hash markers should be deleted");
@@ -950,8 +943,7 @@ class AIGuardrailProcessorProcessTest {
         String initial = "# VIBETAGS-START\nno end marker here\n";
         Files.writeString(file, initial);
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".txt", Set.of());
 
         assertTrue(Files.exists(file), "File without end marker should not be deleted");
         assertEquals(initial, Files.readString(file), "File without end marker should be unmodified");
@@ -965,8 +957,7 @@ class AIGuardrailProcessorProcessTest {
         String content = "# Purely human-written rule\nNo VibeTags markers here.\n";
         Files.writeString(file, content);
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".txt", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".txt", Set.of());
 
         assertTrue(Files.exists(file), "File with no markers should survive");
         assertEquals(content, Files.readString(file), "File content should be unchanged");
@@ -1096,7 +1087,6 @@ class AIGuardrailProcessorProcessTest {
 
     @Test
     void stripLegacyVibeTagsBlock_humanPrefixAndHumanSuffix_returnsBoth() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // Human content before the header, then VibeTags XML block, then more human content
         String humanPrefix = "Human notes written by team."; // non-boilerplate (no #/-/*/<)
         String vibetagsBlock =
@@ -1108,7 +1098,7 @@ class AIGuardrailProcessorProcessTest {
         String humanSuffix = "# Extra section after guardrails";
         String input = humanPrefix + "\n\n" + vibetagsBlock + humanSuffix;
 
-        String result = processor.stripLegacyVibeTagsBlock(input);
+        String result = newFileWriter().stripLegacyVibeTagsBlock(input);
 
         assertTrue(result.contains("Human notes"), "Human prefix must be preserved");
         assertTrue(result.contains("# Extra section"), "Human suffix must be preserved");
@@ -1394,8 +1384,7 @@ class AIGuardrailProcessorProcessTest {
         String initial = "<!-- VIBETAGS-START -->\norphan body with no end marker\n";
         Files.writeString(file, initial);
 
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.cleanupGranularDirectory(rulesDir, ".mdc", Set.of());
+        newFileWriter().cleanupGranularDirectory(rulesDir, ".mdc", Set.of());
 
         assertTrue(Files.exists(file), "File without end marker must survive cleanup");
         assertEquals(initial, Files.readString(file), "Content must be unchanged when end marker is absent");

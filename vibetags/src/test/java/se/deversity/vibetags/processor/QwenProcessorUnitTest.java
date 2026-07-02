@@ -11,6 +11,7 @@ import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -34,7 +35,7 @@ class QwenProcessorUnitTest {
     @Test
     void testQwenServiceFileMapIncludesAllFiles() {
         Path tempDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"));
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
 
         // Verify all Qwen-related files are in the service file map
         assertTrue(serviceFiles.containsKey("qwen"), "Should have 'qwen' service key");
@@ -54,8 +55,8 @@ class QwenProcessorUnitTest {
         // Create only QWEN.md to test Qwen-only opt-in
         Files.createFile(tempDir.resolve("QWEN.md"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertEquals(Set.of("qwen"), active, "Only qwen should be active when only QWEN.md exists");
     }
@@ -65,8 +66,8 @@ class QwenProcessorUnitTest {
         // Create only .qwenignore
         Files.createFile(tempDir.resolve(".qwenignore"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         assertEquals(Set.of("qwen_ignore"), active, "Only qwen_ignore should be active");
     }
@@ -79,8 +80,8 @@ class QwenProcessorUnitTest {
         Files.createDirectories(tempDir.resolve(".qwen"));
         Files.createFile(tempDir.resolve(".qwen/settings.json"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
 
         // Main opt-in keys should include qwen and qwen_ignore
         assertTrue(active.contains("qwen"), "qwen should be active");
@@ -319,7 +320,7 @@ class QwenProcessorUnitTest {
     void testQwenMultiFileExtras_structure() {
         // Verify that Qwen multi-file extras are correctly defined
         Path tempDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"));
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
 
         // Verify Qwen settings path
         Path settingsPath = serviceFiles.get("qwen_settings");

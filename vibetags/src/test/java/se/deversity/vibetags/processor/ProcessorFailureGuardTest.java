@@ -6,8 +6,6 @@ import org.junit.jupiter.api.io.TempDir;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
-import javax.lang.model.SourceVersion;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
@@ -41,10 +39,10 @@ class ProcessorFailureGuardTest {
     private static final String BOOM = "vibetags-fault-injection-boom";
 
     /** A processor that always blows up inside the guarded region of process(). */
-    // @SupportedAnnotationTypes / @SupportedSourceVersion are not @Inherited, so the subclass
-    // must re-declare them or javac never invokes the processor.
+    // @SupportedAnnotationTypes is not @Inherited, so the subclass must re-declare it or javac
+    // never invokes the processor. getSupportedSourceVersion() is a plain method override on
+    // AIGuardrailProcessor (not annotation-driven), so it applies here without restating it.
     @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
-    @SupportedSourceVersion(SourceVersion.RELEASE_17)
     static final class FaultyProcessor extends AIGuardrailProcessor {
         // process() calls the 3-arg overload (passing the present-annotation FQNs); override that
         // one so the fault fires inside the guarded region.

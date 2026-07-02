@@ -59,17 +59,10 @@ publishing {
                 password = System.getenv('GITHUB_TOKEN')
             }
         }
-        // Sonatype OSSRH (Maven Central)
-        maven {
-            name = 'OSSRH'
-            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = System.getenv('OSSRH_USERNAME')
-                password = System.getenv('OSSRH_PASSWORD')
-            }
-        }
+        // Maven Central releases do NOT go through this Gradle publication.
+        // The canonical release path is the Maven `publish` workflow (central-publishing-maven-plugin);
+        // see docs/RELEASING.md. This block previously pointed at the decommissioned
+        // OSSRH host (s01.oss.sonatype.org, shut down mid-2025) and was removed.
     }
 }
 
@@ -90,15 +83,15 @@ dependencies {
     implementation 'org.jspecify:jspecify:1.0.0'
 
     // Logging: SLF4J API + Logback file appender for vibetags.log
-    implementation 'org.slf4j:slf4j-api:2.0.16'
-    implementation 'ch.qos.logback:logback-classic:1.5.12'
+    implementation 'org.slf4j:slf4j-api:2.0.18'
+    implementation 'ch.qos.logback:logback-classic:1.5.37'
 
-    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
-    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.3.0'
-    testImplementation 'org.mockito:mockito-core:5.14.2'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.3'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
+    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.6.0'
+    testImplementation 'org.mockito:mockito-core:5.23.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.1'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -139,7 +132,7 @@ jacocoTestReport {
 
 pmd {
     consoleOutput = true
-    toolVersion = "7.24.0"
+    toolVersion = "7.26.0"
     ignoreFailures = false
     ruleSetFiles = files("${projectDir}/../pmd-ruleset.xml")
 }
