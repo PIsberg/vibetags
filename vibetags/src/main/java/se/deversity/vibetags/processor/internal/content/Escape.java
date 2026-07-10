@@ -64,4 +64,36 @@ public final class Escape {
         }
         return sb.toString();
     }
+
+    /**
+     * Escapes a value for a TOML multi-line basic string (the caller supplies the surrounding
+     * {@code """} delimiters). Used by {@code .pr_agent.toml}. Escapes {@code \} and {@code "} —
+     * every quote, not just runs of three, so no {@code """} can survive to close the string
+     * early. Newlines and tabs are left literal (the format permits them and the body is
+     * multi-line prose); every other control character becomes {@code \\uXXXX}, which a raw
+     * TOML basic string forbids.
+     */
+    public static String tomlMultiline(String s) {
+        if (s == null || s.isEmpty()) {
+            return s;
+        }
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\': sb.append("\\\\"); break;
+                case '"':  sb.append("\\\""); break;
+                case '\n': sb.append('\n'); break;
+                case '\t': sb.append('\t'); break;
+                case '\r': sb.append("\\r"); break;
+                default:
+                    if (c < 0x20 || c == 0x7f) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+            }
+        }
+        return sb.toString();
+    }
 }
