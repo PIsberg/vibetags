@@ -198,7 +198,7 @@ public final class GuardrailFileWriter {
             }
         }
 
-        String wrappedBody = markerStart + "\n" + body.trim() + "\n" + markerEnd;
+        String wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
 
         int start = indexOfMarkerLine(existing, markerStart, 0);
         if (start >= 0) {
@@ -292,6 +292,40 @@ public final class GuardrailFileWriter {
             return null;
         }
         return new String[]{MARKER_START_HASH, MARKER_END_HASH};
+    }
+
+    /**
+     * Defuses any VibeTags delimiter that appears as a standalone line inside the generated body.
+     *
+     * <p>The body is assembled from annotation attribute values, and the markdown platforms emit
+     * those verbatim (there is no XML/JSON structure to escape there). A {@code reason} containing
+     * a marker on its own line would therefore close the managed region early: on the next compile
+     * the true remainder of the block is mistaken for hand-authored content, kept, and re-appended,
+     * so the file grows a stale duplicate of itself on every build.
+     *
+     * <p>A zero-width space after the {@code <!--} / {@code #} keeps the text readable while making
+     * the line no longer equal to a delimiter.
+     */
+    private static String neutraliseMarkers(String body, String[] markers) {
+        String out = body;
+        for (String marker : markers) {
+            if (indexOfMarkerLine(out, marker, 0) < 0) continue;
+            String defused = marker.startsWith("<!--")
+                ? "<!--​" + marker.substring(4)
+                : "#​" + marker.substring(1);
+            StringBuilder sb = new StringBuilder(out.length() + 8);
+            for (int i = 0; i < out.length(); ) {
+                int hit = indexOfMarkerLine(out, marker, i);
+                if (hit < 0) {
+                    sb.append(out, i, out.length());
+                    break;
+                }
+                sb.append(out, i, hit).append(defused);
+                i = hit + marker.length();
+            }
+            out = sb.toString();
+        }
+        return out;
     }
 
     /**
