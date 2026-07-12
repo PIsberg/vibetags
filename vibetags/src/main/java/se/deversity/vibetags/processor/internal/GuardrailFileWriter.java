@@ -314,14 +314,15 @@ public final class GuardrailFileWriter {
                 ? "<!--​" + marker.substring(4)
                 : "#​" + marker.substring(1);
             StringBuilder sb = new StringBuilder(out.length() + 8);
-            for (int i = 0; i < out.length(); ) {
-                int hit = indexOfMarkerLine(out, marker, i);
+            int cursor = 0;
+            while (cursor < out.length()) {
+                int hit = indexOfMarkerLine(out, marker, cursor);
                 if (hit < 0) {
-                    sb.append(out, i, out.length());
+                    sb.append(out, cursor, out.length());
                     break;
                 }
-                sb.append(out, i, hit).append(defused);
-                i = hit + marker.length();
+                sb.append(out, cursor, hit).append(defused);
+                cursor = hit + marker.length();
             }
             out = sb.toString();
         }
