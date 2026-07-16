@@ -198,11 +198,11 @@ public final class GuardrailFileWriter {
             }
         }
 
-        String wrappedBody = markerStart + "\n" + body.trim() + "\n" + markerEnd;
+        String wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
 
-        int start = existing.indexOf(markerStart);
+        int start = indexOfMarkerLine(existing, markerStart, 0);
         if (start >= 0) {
-            int end = existing.indexOf(markerEnd);
+            int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
             if (end == -1) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
@@ -295,6 +295,80 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * Defuses any VibeTags delimiter that appears as a standalone line inside the generated body.
+     *
+     * <p>The body is assembled from annotation attribute values, and the markdown platforms emit
+     * those verbatim (there is no XML/JSON structure to escape there). A {@code reason} containing
+     * a marker on its own line would therefore close the managed region early: on the next compile
+     * the true remainder of the block is mistaken for hand-authored content, kept, and re-appended,
+     * so the file grows a stale duplicate of itself on every build.
+     *
+     * <p>A zero-width space after the {@code <!--} / {@code #} keeps the text readable while making
+     * the line no longer equal to a delimiter.
+     */
+    private static String neutraliseMarkers(String body, String[] markers) {
+        String out = body;
+        for (String marker : markers) {
+            if (indexOfMarkerLine(out, marker, 0) < 0) continue;
+            String defused = marker.startsWith("<!--")
+                ? "<!--​" + marker.substring(4)
+                : "#​" + marker.substring(1);
+            StringBuilder sb = new StringBuilder(out.length() + 8);
+            int cursor = 0;
+            while (cursor < out.length()) {
+                int hit = indexOfMarkerLine(out, marker, cursor);
+                if (hit < 0) {
+                    sb.append(out, cursor, out.length());
+                    break;
+                }
+                sb.append(out, cursor, hit).append(defused);
+                cursor = hit + marker.length();
+            }
+            out = sb.toString();
+        }
+        return out;
+    }
+
+    /**
+     * Finds a VibeTags marker only where it stands alone on its own line — the only form this
+     * writer ever emits ({@code markerStart + "\n" + body + "\n" + markerEnd}).
+     *
+     * <p>A bare {@code indexOf} also matches a marker <em>mentioned</em> in hand-authored prose,
+     * e.g. a CLAUDE.md documenting VibeTags itself:
+     *
+     * <pre>- **HTML comments**: `&lt;!-- VIBETAGS-START --&gt;` / `&lt;!-- VIBETAGS-END --&gt;`</pre>
+     *
+     * <p>Treating that as the managed region cuts the sentence in half and overwrites everything
+     * after it — this repository's own CLAUDE.md was corrupted exactly that way. Requiring the
+     * marker to own its line distinguishes a real delimiter from a citation of one.
+     *
+     * @param content   file content to search
+     * @param marker    the marker literal
+     * @param fromIndex index to start searching at
+     * @return index of the first character of the marker, or {@code -1} if it appears nowhere as a
+     *         standalone line at or after {@code fromIndex}
+     */
+    static int indexOfMarkerLine(String content, String marker, int fromIndex) {
+        if (content == null || content.isEmpty() || marker == null || marker.isEmpty()) return -1;
+        for (int i = content.indexOf(marker, Math.max(0, fromIndex)); i >= 0;
+             i = content.indexOf(marker, i + 1)) {
+            if (ownsItsLine(content, i, marker.length())) return i;
+        }
+        return -1;
+    }
+
+    /** True when only whitespace separates the match from the start and end of its line. */
+    private static boolean ownsItsLine(String content, int start, int length) {
+        for (int i = start - 1; i >= 0 && content.charAt(i) != '\n'; i--) {
+            if (!Character.isWhitespace(content.charAt(i))) return false;
+        }
+        for (int i = start + length; i < content.length() && content.charAt(i) != '\n'; i++) {
+            if (!Character.isWhitespace(content.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    /**
      * Strips a legacy (pre-marker) VibeTags block, preserving genuine human content.
      */
     public String stripLegacyVibeTagsBlock(String before) {
@@ -375,9 +449,9 @@ public final class GuardrailFileWriter {
             String content = Files.readString(p, StandardCharsets.UTF_8);
             boolean updated = false;
 
-            int mdStart = content.indexOf(MARKER_START_MD);
+            int mdStart = indexOfMarkerLine(content, MARKER_START_MD, 0);
             if (mdStart >= 0) {
-                int end = content.indexOf(MARKER_END_MD);
+                int end = indexOfMarkerLine(content, MARKER_END_MD, mdStart + MARKER_START_MD.length());
                 if (end != -1) {
                     String before = content.substring(0, mdStart).stripTrailing();
                     String after = content.substring(end + MARKER_END_MD.length()).stripLeading();
@@ -385,9 +459,9 @@ public final class GuardrailFileWriter {
                     updated = true;
                 }
             } else {
-                int hashStart = content.indexOf(MARKER_START_HASH);
+                int hashStart = indexOfMarkerLine(content, MARKER_START_HASH, 0);
                 if (hashStart >= 0) {
-                    int end = content.indexOf(MARKER_END_HASH);
+                    int end = indexOfMarkerLine(content, MARKER_END_HASH, hashStart + MARKER_START_HASH.length());
                     if (end != -1) {
                         String before = content.substring(0, hashStart).stripTrailing();
                         String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();

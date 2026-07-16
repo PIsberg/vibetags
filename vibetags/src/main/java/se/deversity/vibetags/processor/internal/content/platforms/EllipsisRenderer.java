@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import java.util.List;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -27,14 +28,14 @@ public final class EllipsisRenderer implements PlatformRenderer {
             sb.append("    []\n");
         } else {
             for (String rule : rules) {
-                sb.append("    - \"").append(yamlEscape(rule)).append("\"\n");
+                // YAML 1.2 double-quoted scalars accept the JSON escapes, so the shared escaper is
+                // the right one here — as sweep.yaml and .plandex.yaml already do. The private copy
+                // this replaces handled only \ and ", letting control characters through raw, which
+                // a YAML double-quoted scalar forbids: the file then fails to parse and Ellipsis
+                // silently reviews against nothing.
+                sb.append("    - \"").append(Escape.json(rule)).append("\"\n");
             }
         }
         return sb.toString();
-    }
-
-    /** Escapes a value for a YAML double-quoted scalar. */
-    private static String yamlEscape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
