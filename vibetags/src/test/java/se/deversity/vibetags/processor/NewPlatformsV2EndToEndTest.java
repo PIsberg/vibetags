@@ -200,6 +200,19 @@ class NewPlatformsV2EndToEndTest {
         assertTrue(content.contains("DatabaseConnector"), "Should mention @AIAudit DatabaseConnector");
     }
 
+    @Test
+    void testPlandexYamlHasPrivacySection() throws IOException {
+        String content = harness.readFile(".plandex.yaml");
+
+        // PlandexRenderer builds a privacy section from collector.privacy() — if the
+        // formatter has no PLANDEX case, the loop is a silent no-op and every
+        // @AIPrivacy guardrail is missing from .plandex.yaml.
+        assertTrue(content.contains("privacy:"),
+            "Should have privacy: section — the sources contain @AIPrivacy on UserProfile.email");
+        assertTrue(content.contains("UserProfile"), "Should mention the @AIPrivacy element");
+        assertTrue(content.contains("Contains PII - GDPR protected"), "Should carry the privacy reason");
+    }
+
     // -----------------------------------------------------------------------
     // Double.bot .doubleignore
     // -----------------------------------------------------------------------

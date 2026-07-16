@@ -59,6 +59,11 @@ public final class AIPrivacyFormatter implements AnnotationFormatter {
             case SWEEP:
                 sb.append("  - \"PII protection required for ").append(Escape.json(className)).append(": never log or expose runtime values\"\n");
                 break;
+            case PLANDEX:
+                // Same list-entry shape as AILockedFormatter's PLANDEX case; PlandexRenderer
+                // nests these under its "  privacy:" key.
+                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      reason: \"").append(Escape.json(reason)).append("\"\n");
+                break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (privacy): ").append(reason).append("\n");
                 break;
