@@ -18,6 +18,18 @@ import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AICallersOnly;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIDomainModel;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIPrototype;
+import se.deversity.vibetags.annotations.AISunset;
+import se.deversity.vibetags.annotations.AITemporary;
 
 import javax.lang.model.element.Element;
 import java.util.ArrayList;
@@ -169,6 +181,67 @@ public final class BuildFingerprint {
         appendAnnotationSet(sb, "SEC", collector.secure(), e -> {
             AISecure a = e.getAnnotation(AISecure.class);
             return a == null ? "" : a.aspect();
+        });
+        appendAnnotationSet(sb, "CO", collector.callersOnly(), e -> {
+            AICallersOnly a = e.getAnnotation(AICallersOnly.class);
+            return a == null ? "" : String.join(",", a.value());
+        });
+        appendAnnotationSet(sb, "SO", collector.sandboxOnly(), e -> {
+            AISandboxOnly a = e.getAnnotation(AISandboxOnly.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "MB", collector.memoryBudget(), e -> {
+            AIMemoryBudget a = e.getAnnotation(AIMemoryBudget.class);
+            return a == null ? "" : a.value().name();
+        });
+        appendAnnotationSet(sb, "PU", collector.pure(), e -> {
+            AIPure a = e.getAnnotation(AIPure.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "DM", collector.domainModel(), e -> {
+            AIDomainModel a = e.getAnnotation(AIDomainModel.class);
+            return a == null ? "" : String.join(",", a.allow());
+        });
+        appendAnnotationSet(sb, "EX", collector.extensible(), e -> {
+            AIExtensible a = e.getAnnotation(AIExtensible.class);
+            return a == null ? "" : a.value().name();
+        });
+        appendAnnotationSet(sb, "IZ", collector.inputSanitized(), e -> {
+            AIInputSanitized a = e.getAnnotation(AIInputSanitized.class);
+            if (a == null) return "";
+            StringBuilder types = new StringBuilder();
+            for (AIInputSanitized.SanitizerType t : a.value()) types.append(t.name()).append(',');
+            return types.toString();
+        });
+        appendAnnotationSet(sb, "SL", collector.secureLogging(), e -> {
+            AISecureLogging a = e.getAnnotation(AISecureLogging.class);
+            return a == null ? "" : a.value().name();
+        });
+        appendAnnotationSet(sb, "XP", collector.explain(), e -> {
+            AIExplain a = e.getAnnotation(AIExplain.class);
+            return a == null ? "" : a.value().name();
+        });
+        appendAnnotationSet(sb, "PR", collector.prototype(), e -> {
+            AIPrototype a = e.getAnnotation(AIPrototype.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "SN", collector.sunset(), e -> {
+            AISunset a = e.getAnnotation(AISunset.class);
+            if (a == null) return "";
+            // Class-valued attributes throw MirroredTypeException during annotation processing;
+            // the mirror's toString() is the replacement type's canonical name.
+            String replacement;
+            try {
+                Class<?> c = a.replacement();
+                replacement = c == null ? "" : c.getName();
+            } catch (javax.lang.model.type.MirroredTypeException mte) {
+                replacement = String.valueOf(mte.getTypeMirror());
+            }
+            return a.jira() + "|" + replacement;
+        });
+        appendAnnotationSet(sb, "TM", collector.temporary(), e -> {
+            AITemporary a = e.getAnnotation(AITemporary.class);
+            return a == null ? "" : a.expiresOn() + "|" + a.reason();
         });
 
         sb.append("S{");
