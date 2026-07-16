@@ -165,14 +165,17 @@ public final class VibeTagsLogger {
         if (projectRoot != null) {
             THREAD_PROJECT_ROOTS.get().add(projectRoot);
         }
-        // Resolve the effective log file path
-        Path logFile = resolveLogFile(projectRoot, logPath);
-
-        // Handle OFF level — return no-op immediately, release any previous handle
+        // Handle OFF level BEFORE resolving the log file path: OFF never creates a file,
+        // and resolving would NPE for a null (permitted, @Nullable) projectRoot. Release
+        // only THIS root's previous handle — a global shutdown() here would silently
+        // detach the appenders of other roots' still-active loggers on the same thread.
         if ("OFF".equalsIgnoreCase(level)) {
-            shutdown();
+            detachAppendersFor(projectRoot);
             return NOPLogger.NOP_LOGGER;
         }
+
+        // Resolve the effective log file path
+        Path logFile = resolveLogFile(projectRoot, logPath);
 
         try {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
@@ -211,11 +214,33 @@ public final class VibeTagsLogger {
         }
     }
 
+    /**
+     * Detaches and stops the appenders of the logger belonging to {@code projectRoot} only
+     * (or the base logger when {@code projectRoot} is null), leaving other roots' loggers
+     * on this thread untouched.
+     */
+    private static void detachAppendersFor(@Nullable Path projectRoot) {
+        try {
+            ILoggerFactory factory = LoggerFactory.getILoggerFactory();
+            if (factory instanceof LoggerContext context) {
+                context.getLogger(getLoggerName(projectRoot)).detachAndStopAllAppenders();
+            }
+            if (projectRoot != null) {
+                THREAD_PROJECT_ROOTS.get().remove(projectRoot);
+            }
+        } catch (RuntimeException ignored) {
+            // Never let logging teardown propagate.
+        }
+    }
+
     private static Path resolveLogFile(@Nullable Path projectRoot, @Nullable String logPath) {
+        // projectRoot is @Nullable: fall back to the JVM working directory, matching the
+        // processor's own default root (Paths.get("")).
+        Path base = projectRoot != null ? projectRoot : Paths.get("").toAbsolutePath();
         if (logPath == null || logPath.isBlank()) {
-            return projectRoot.resolve(DEFAULT_LOG_FILE);
+            return base.resolve(DEFAULT_LOG_FILE);
         }
         Path p = Paths.get(logPath);
-        return p.isAbsolute() ? p : projectRoot.resolve(p);
+        return p.isAbsolute() ? p : base.resolve(p);
     }
 }

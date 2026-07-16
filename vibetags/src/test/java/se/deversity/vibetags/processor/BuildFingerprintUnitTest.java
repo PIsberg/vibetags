@@ -190,6 +190,81 @@ class BuildFingerprintUnitTest {
         assertFalse(v.isBlank(), "ProcessorVersion.get() must never return blank");
     }
 
+    /**
+     * Every collected annotation bucket must be part of the fingerprint input. If a bucket is
+     * omitted, adding/removing that annotation leaves the fingerprint unchanged, and the top-level
+     * short-circuit in {@code generateFiles()} skips regeneration — the generated guardrail files
+     * silently go stale. This exercises the 12 newest buckets (v1.1 annotations), which are
+     * rendered by every renderer (LlmsRenderer, ClaudeRenderer, GranularRenderer, ...) and must
+     * therefore invalidate the cache like the original 27.
+     */
+    @Test
+    void compute_everyNewestAnnotationBucket_affectsFingerprint() {
+        String emptyFp = BuildFingerprint.compute(new AnnotationCollector(), Set.of("cursor"), "1.0.0");
+
+        java.util.Map<String, Class<? extends java.lang.annotation.Annotation>> buckets =
+            new java.util.LinkedHashMap<>();
+        buckets.put("callersOnly",    se.deversity.vibetags.annotations.AICallersOnly.class);
+        buckets.put("sandboxOnly",    se.deversity.vibetags.annotations.AISandboxOnly.class);
+        buckets.put("memoryBudget",   se.deversity.vibetags.annotations.AIMemoryBudget.class);
+        buckets.put("pure",           se.deversity.vibetags.annotations.AIPure.class);
+        buckets.put("domainModel",    se.deversity.vibetags.annotations.AIDomainModel.class);
+        buckets.put("extensible",     se.deversity.vibetags.annotations.AIExtensible.class);
+        buckets.put("inputSanitized", se.deversity.vibetags.annotations.AIInputSanitized.class);
+        buckets.put("secureLogging",  se.deversity.vibetags.annotations.AISecureLogging.class);
+        buckets.put("explain",        se.deversity.vibetags.annotations.AIExplain.class);
+        buckets.put("prototype",      se.deversity.vibetags.annotations.AIPrototype.class);
+        buckets.put("sunset",         se.deversity.vibetags.annotations.AISunset.class);
+        buckets.put("temporary",      se.deversity.vibetags.annotations.AITemporary.class);
+
+        for (var entry : buckets.entrySet()) {
+            AnnotationCollector collector = new AnnotationCollector();
+            RoundEnvironment re = mock(RoundEnvironment.class);
+            Element elem = namedElement("com.example." + entry.getKey());
+            doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(entry.getValue());
+            collector.collect(re);
+
+            assertNotEquals(emptyFp,
+                BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+                "An element in the '" + entry.getKey() + "' bucket must change the fingerprint "
+                    + "(otherwise the short-circuit skips regeneration and output goes stale)");
+        }
+    }
+
+    /**
+     * Attribute values of the newest buckets must also be fingerprinted: editing
+     * {@code @AITemporary(expiresOn = ...)} on an already-annotated element changes the rendered
+     * output, so it must change the fingerprint too.
+     */
+    @Test
+    void compute_temporaryAttributeChange_invalidatesFingerprint() {
+        String fpA = fingerprintWithTemporary("2026-01-01", "hotfix A");
+        String fpB = fingerprintWithTemporary("2027-12-31", "hotfix A");
+
+        assertNotEquals(fpA, fpB,
+            "Changing @AITemporary.expiresOn must change the fingerprint — the rendered "
+                + "expiration date differs, so regeneration must not be skipped");
+        assertEquals(fpA, fingerprintWithTemporary("2026-01-01", "hotfix A"),
+            "Identical @AITemporary attributes must stay deterministic");
+    }
+
+    private static String fingerprintWithTemporary(String expiresOn, String reason) {
+        se.deversity.vibetags.annotations.AITemporary ann =
+            mock(se.deversity.vibetags.annotations.AITemporary.class);
+        when(ann.expiresOn()).thenReturn(expiresOn);
+        when(ann.reason()).thenReturn(reason);
+
+        Element elem = namedElement("com.example.TempFix");
+        when(elem.getAnnotation(se.deversity.vibetags.annotations.AITemporary.class)).thenReturn(ann);
+
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AITemporary.class);
+
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.collect(re);
+        return BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0");
+    }
+
     // -----------------------------------------------------------------------
     // Helper
     // -----------------------------------------------------------------------
