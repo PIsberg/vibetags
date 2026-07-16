@@ -60,6 +60,35 @@ class VibeTagsLoggerUnitTest {
         assertSame(NOPLogger.NOP_LOGGER, logger);
     }
 
+    @Test
+    void forRootOffLevel_nullRoot_returnsNopWithoutThrowing() {
+        // projectRoot is declared @Nullable; OFF must not NPE trying to resolve a log
+        // file it will never create.
+        Logger logger = assertDoesNotThrow(() -> VibeTagsLogger.forRoot(null, null, "OFF"),
+            "forRoot(null, null, \"OFF\") must not throw — projectRoot is @Nullable");
+        assertSame(NOPLogger.NOP_LOGGER, logger);
+    }
+
+    @Test
+    void forRootOffLevel_doesNotDetachSiblingRootsActiveLogger(@TempDir Path rootA, @TempDir Path rootB)
+            throws Exception {
+        // Two roots on the same thread (e.g. two modules compiled by the same daemon
+        // thread). Turning logging OFF for root B must only release B's handle — it must
+        // not silently detach the appender of root A's still-active logger.
+        Logger loggerA = VibeTagsLogger.forRoot(rootA, null, "INFO");
+        loggerA.info("before-off");
+
+        VibeTagsLogger.forRoot(rootB, null, "OFF");
+
+        loggerA.info("after-off");
+        VibeTagsLogger.shutdown(rootA);
+
+        String logged = Files.readString(rootA.resolve(VibeTagsLogger.DEFAULT_LOG_FILE));
+        assertTrue(logged.contains("before-off"), "sanity: the first message must be on file");
+        assertTrue(logged.contains("after-off"),
+            "OFF for root B must not detach root A's appender — root A's messages were silently lost");
+    }
+
     // --- resolveLogFile: relative path ---
 
     @Test
