@@ -51,6 +51,14 @@ public final class MentatRenderer implements PlatformRenderer {
         for (Element e : collector.testDriven()) FormatterRegistry.testDriven().format(e, testDriven, Platform.MENTAT);
         appendJsonSection(sb, "test_driven", testDriven);
 
+        // The last section leaves a separator comma behind — strip it, JSON forbids
+        // trailing commas and strict parsers reject the whole file.
+        int len = sb.length();
+        if (len >= 2 && sb.charAt(len - 2) == ',' && sb.charAt(len - 1) == '\n') {
+            sb.setLength(len - 2);
+            sb.append('\n');
+        }
+
         sb.append("  }\n}\n");
         return sb.toString();
     }

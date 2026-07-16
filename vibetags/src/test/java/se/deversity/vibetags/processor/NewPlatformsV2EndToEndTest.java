@@ -92,6 +92,19 @@ class NewPlatformsV2EndToEndTest {
     }
 
     @Test
+    void testMentatConfigHasNoTrailingCommas() throws IOException {
+        String content = harness.readFile(".mentatconfig.json");
+
+        // JSON forbids trailing commas ("...],\n  }" is invalid). A strict parser —
+        // which is what Mentat uses to read its own config — rejects the whole file,
+        // so every guardrail in it is silently ignored.
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(",\\s*[}\\]]").matcher(content);
+        assertFalse(m.find(),
+            "Generated .mentatconfig.json contains a trailing comma before a closing brace/bracket "
+                + "— invalid JSON, strict parsers reject the entire file:\n" + content);
+    }
+
+    @Test
     void testMentatConfigHasLockedFiles() throws IOException {
         String content = harness.readFile(".mentatconfig.json");
 
