@@ -27,6 +27,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -173,6 +174,162 @@ class GuardrailContentBuilderUnitTest {
         when(regAnn.description()).thenReturn("handles PII");
         when(reg.getAnnotation(AIRegulation.class)).thenReturn(regAnn);
         doReturn(Set.of(reg)).when(re).getElementsAnnotatedWith(AIRegulation.class);
+
+        // appendParallelTests/appendLegacyBridge/appendPublicApi/appendStrictExceptions/
+        // appendStrictTypes/appendInternationalized/appendStrictClasspath/appendSchemaSafe/
+        // appendSandboxOnly/appendPure/appendPrototype do not call getAnnotation() — element only.
+        Element parallelTests = namedClassElement("com.example.ParallelTests");
+        doReturn(Set.of(parallelTests)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIParallelTests.class);
+
+        Element legacyBridge = namedClassElement("com.example.LegacyBridge");
+        doReturn(Set.of(legacyBridge)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AILegacyBridge.class);
+
+        Element architecture = namedClassElement("com.example.Architecture");
+        se.deversity.vibetags.annotations.AIArchitecture archAnn =
+            mock(se.deversity.vibetags.annotations.AIArchitecture.class);
+        when(archAnn.belongsTo()).thenReturn("domain");
+        when(archAnn.cannotReference()).thenReturn(new String[]{"infrastructure"});
+        when(architecture.getAnnotation(se.deversity.vibetags.annotations.AIArchitecture.class)).thenReturn(archAnn);
+        doReturn(Set.of(architecture)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIArchitecture.class);
+
+        Element publicApi = namedClassElement("com.example.PublicApi");
+        doReturn(Set.of(publicApi)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIPublicAPI.class);
+
+        Element strictExceptions = namedClassElement("com.example.StrictExceptions");
+        doReturn(Set.of(strictExceptions)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIStrictExceptions.class);
+
+        Element strictTypes = namedClassElement("com.example.StrictTypes");
+        doReturn(Set.of(strictTypes)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIStrictTypes.class);
+
+        Element internationalized = namedClassElement("com.example.Internationalized");
+        doReturn(Set.of(internationalized)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIInternationalized.class);
+
+        Element strictClasspath = namedClassElement("com.example.StrictClasspath");
+        doReturn(Set.of(strictClasspath)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIStrictClasspath.class);
+
+        Element schemaSafe = namedClassElement("com.example.SchemaSafe");
+        doReturn(Set.of(schemaSafe)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AISchemaSafe.class);
+
+        Element idempotent = namedClassElement("com.example.Idempotent");
+        se.deversity.vibetags.annotations.AIIdempotent idemAnn =
+            mock(se.deversity.vibetags.annotations.AIIdempotent.class);
+        when(idemAnn.reason()).thenReturn("must not double-fire");
+        when(idempotent.getAnnotation(se.deversity.vibetags.annotations.AIIdempotent.class)).thenReturn(idemAnn);
+        doReturn(Set.of(idempotent)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIIdempotent.class);
+
+        Element featureFlag = namedClassElement("com.example.FeatureFlag");
+        se.deversity.vibetags.annotations.AIFeatureFlag ffAnn =
+            mock(se.deversity.vibetags.annotations.AIFeatureFlag.class);
+        when(ffAnn.flag()).thenReturn("inventory.push-alerts.enabled");
+        when(ffAnn.defaultValue()).thenReturn(false);
+        when(featureFlag.getAnnotation(se.deversity.vibetags.annotations.AIFeatureFlag.class)).thenReturn(ffAnn);
+        doReturn(Set.of(featureFlag)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIFeatureFlag.class);
+
+        Element secure = namedClassElement("com.example.Secure");
+        se.deversity.vibetags.annotations.AISecure secureAnn =
+            mock(se.deversity.vibetags.annotations.AISecure.class);
+        when(secureAnn.aspect()).thenReturn("authentication");
+        when(secure.getAnnotation(se.deversity.vibetags.annotations.AISecure.class)).thenReturn(secureAnn);
+        doReturn(Set.of(secure)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AISecure.class);
+
+        Element callersOnly = namedClassElement("com.example.CallersOnly");
+        se.deversity.vibetags.annotations.AICallersOnly coAnn =
+            mock(se.deversity.vibetags.annotations.AICallersOnly.class);
+        when(coAnn.value()).thenReturn(new String[]{"com.example.PricingService"});
+        when(callersOnly.getAnnotation(se.deversity.vibetags.annotations.AICallersOnly.class)).thenReturn(coAnn);
+        doReturn(Set.of(callersOnly)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AICallersOnly.class);
+
+        Element sandboxOnly = namedClassElement("com.example.SandboxOnly");
+        doReturn(Set.of(sandboxOnly)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AISandboxOnly.class);
+
+        Element memoryBudget = namedClassElement("com.example.MemoryBudget");
+        se.deversity.vibetags.annotations.AIMemoryBudget mbAnn =
+            mock(se.deversity.vibetags.annotations.AIMemoryBudget.class);
+        when(mbAnn.value()).thenReturn(se.deversity.vibetags.annotations.AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION);
+        when(memoryBudget.getAnnotation(se.deversity.vibetags.annotations.AIMemoryBudget.class)).thenReturn(mbAnn);
+        doReturn(Set.of(memoryBudget)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIMemoryBudget.class);
+
+        Element pure = namedClassElement("com.example.Pure");
+        doReturn(Set.of(pure)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIPure.class);
+
+        Element domainModel = namedClassElement("com.example.DomainModel");
+        se.deversity.vibetags.annotations.AIDomainModel dmAnn =
+            mock(se.deversity.vibetags.annotations.AIDomainModel.class);
+        when(dmAnn.allow()).thenReturn(new String[]{"java.math.BigDecimal"});
+        when(domainModel.getAnnotation(se.deversity.vibetags.annotations.AIDomainModel.class)).thenReturn(dmAnn);
+        doReturn(Set.of(domainModel)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIDomainModel.class);
+
+        Element extensible = namedClassElement("com.example.Extensible");
+        se.deversity.vibetags.annotations.AIExtensible extAnn =
+            mock(se.deversity.vibetags.annotations.AIExtensible.class);
+        when(extAnn.value()).thenReturn(se.deversity.vibetags.annotations.AIExtensible.Strategy.STRATEGY_PATTERN);
+        when(extensible.getAnnotation(se.deversity.vibetags.annotations.AIExtensible.class)).thenReturn(extAnn);
+        doReturn(Set.of(extensible)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIExtensible.class);
+
+        Element inputSanitized = namedClassElement("com.example.InputSanitized");
+        se.deversity.vibetags.annotations.AIInputSanitized isAnn =
+            mock(se.deversity.vibetags.annotations.AIInputSanitized.class);
+        when(isAnn.value()).thenReturn(new se.deversity.vibetags.annotations.AIInputSanitized.SanitizerType[]{
+            se.deversity.vibetags.annotations.AIInputSanitized.SanitizerType.SQL_INJECTION});
+        when(inputSanitized.getAnnotation(se.deversity.vibetags.annotations.AIInputSanitized.class)).thenReturn(isAnn);
+        doReturn(Set.of(inputSanitized)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIInputSanitized.class);
+
+        Element secureLogging = namedClassElement("com.example.SecureLogging");
+        se.deversity.vibetags.annotations.AISecureLogging slAnn =
+            mock(se.deversity.vibetags.annotations.AISecureLogging.class);
+        when(slAnn.value()).thenReturn(se.deversity.vibetags.annotations.AISecureLogging.MaskingPolicy.HASH);
+        when(secureLogging.getAnnotation(se.deversity.vibetags.annotations.AISecureLogging.class)).thenReturn(slAnn);
+        doReturn(Set.of(secureLogging)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AISecureLogging.class);
+
+        Element explain = namedClassElement("com.example.Explain");
+        se.deversity.vibetags.annotations.AIExplain expAnn =
+            mock(se.deversity.vibetags.annotations.AIExplain.class);
+        when(expAnn.value()).thenReturn(se.deversity.vibetags.annotations.AIExplain.ComplexityLevel.HIGH);
+        when(explain.getAnnotation(se.deversity.vibetags.annotations.AIExplain.class)).thenReturn(expAnn);
+        doReturn(Set.of(explain)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIExplain.class);
+
+        Element prototype = namedClassElement("com.example.Prototype");
+        doReturn(Set.of(prototype)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AIPrototype.class);
+
+        Element sunset = namedClassElement("com.example.Sunset");
+        se.deversity.vibetags.annotations.AISunset sunsetAnn =
+            mock(se.deversity.vibetags.annotations.AISunset.class);
+        when(sunsetAnn.jira()).thenReturn("DEBT-742");
+        doReturn(Object.class).when(sunsetAnn).replacement();
+        when(sunset.getAnnotation(se.deversity.vibetags.annotations.AISunset.class)).thenReturn(sunsetAnn);
+        doReturn(Set.of(sunset)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AISunset.class);
+
+        Element temporary = namedClassElement("com.example.Temporary");
+        se.deversity.vibetags.annotations.AITemporary tempAnn =
+            mock(se.deversity.vibetags.annotations.AITemporary.class);
+        when(tempAnn.expiresOn()).thenReturn("2028-12-31");
+        when(tempAnn.reason()).thenReturn("upstream hotfix");
+        when(temporary.getAnnotation(se.deversity.vibetags.annotations.AITemporary.class)).thenReturn(tempAnn);
+        doReturn(Set.of(temporary)).when(re).getElementsAnnotatedWith(
+            se.deversity.vibetags.annotations.AITemporary.class);
 
         collector.collect(re);
         return collector;
@@ -613,5 +770,136 @@ class GuardrailContentBuilderUnitTest {
                 "empty audit section must not produce a JSON key");
         assertFalse(mentat.contains("\"draft\""),
                 "empty draft section must not produce a JSON key");
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Full-fixture content presence — proves every one of the 39 annotation types actually
+    // reaches ClaudeRenderer's and LlmsRenderer's rendered output. ClaudeRenderer hand-rolls one
+    // `if (!collector.X().isEmpty()) {...}` XML block per type; LlmsRenderer hand-rolls one
+    // appendSection(...) call per type with a unique markdown heading. Neither goes through the
+    // declarative AnnotationSections mechanism CursorRenderer uses, so nothing else in the test
+    // suite verifies most of these types individually reach either renderer's output.
+    // -------------------------------------------------------------------------------------------
+
+    private static Map<String, String> claudeXmlTagsByType() {
+        Map<String, String> tags = new java.util.LinkedHashMap<>();
+        tags.put("locked", "<locked_files>");
+        tags.put("context", "<contextual_instructions>");
+        tags.put("audit", "<audit_requirements>");
+        tags.put("ignore", "<ignored_elements>");
+        tags.put("draft", "<implementation_tasks>");
+        tags.put("privacy", "<pii_guardrails>");
+        tags.put("core", "<core_elements>");
+        tags.put("performance", "<performance_constraints>");
+        tags.put("contract", "<contract_signatures>");
+        tags.put("testDriven", "<test_driven_requirements>");
+        tags.put("threadSafe", "<thread_safe_elements>");
+        tags.put("immutable", "<immutable_types>");
+        tags.put("deprecated", "<deprecated_elements>");
+        tags.put("observability", "<observability_instrumentation>");
+        tags.put("regulation", "<regulatory_elements>");
+        tags.put("parallelTests", "<test_isolation_elements>");
+        tags.put("legacyBridge", "<legacy_bridge_elements>");
+        tags.put("architecture", "<architecture_elements>");
+        tags.put("publicApi", "<public_api_elements>");
+        tags.put("strictExceptions", "<strict_exceptions_elements>");
+        tags.put("strictTypes", "<strict_types_elements>");
+        tags.put("internationalized", "<internationalized_elements>");
+        tags.put("strictClasspath", "<strict_classpath_elements>");
+        tags.put("schemaSafe", "<schema_safe_elements>");
+        tags.put("idempotent", "<idempotent_elements>");
+        tags.put("featureFlag", "<feature_flag_elements>");
+        tags.put("secure", "<security_elements>");
+        tags.put("callersOnly", "<access_limitations>");
+        tags.put("sandboxOnly", "<sandbox_only_elements>");
+        tags.put("memoryBudget", "<memory_budget_elements>");
+        tags.put("pure", "<pure_functions>");
+        tags.put("domainModel", "<domain_model_elements>");
+        tags.put("extensible", "<extensible_patterns>");
+        tags.put("inputSanitized", "<sanitization_elements>");
+        tags.put("secureLogging", "<secure_logging_elements>");
+        tags.put("explain", "<explain_elements>");
+        tags.put("prototype", "<prototype_elements>");
+        tags.put("sunset", "<sunset_elements>");
+        tags.put("temporary", "<temporary_workarounds>");
+        return tags;
+    }
+
+    private static Map<String, String> llmsHeadingsByType() {
+        Map<String, String> headings = new java.util.LinkedHashMap<>();
+        headings.put("locked", "## Locked Files");
+        headings.put("context", "## Contextual Rules");
+        headings.put("audit", "## Security Audit Requirements");
+        headings.put("ignore", "## Ignored Elements");
+        headings.put("draft", "## Implementation Tasks");
+        headings.put("privacy", "## PII / Privacy Guardrails");
+        headings.put("core", "Core Functionality");
+        headings.put("performance", "Performance Constraints");
+        headings.put("contract", "Contract-Frozen Signatures");
+        headings.put("testDriven", "Test-Driven Requirements");
+        headings.put("threadSafe", "Thread-Safe by Design");
+        headings.put("immutable", "Immutable Types");
+        headings.put("deprecated", "Deprecated Elements");
+        headings.put("observability", "Observability Instrumentation");
+        headings.put("regulation", "Regulatory Compliance");
+        headings.put("parallelTests", "## Strict Test Isolation");
+        headings.put("legacyBridge", "## Legacy Compatibility Bridge");
+        headings.put("architecture", "## Architectural Boundary Constraints");
+        headings.put("publicApi", "## Public API Surface Protection");
+        headings.put("strictExceptions", "## Strict Exception Handling");
+        headings.put("strictTypes", "## Strict Type Safety");
+        headings.put("internationalized", "## Internationalization Mandate");
+        headings.put("strictClasspath", "## Strict Classpath Integrity");
+        headings.put("schemaSafe", "## Schema & Serialization Safety");
+        headings.put("idempotent", "Idempotency Guarantees");
+        headings.put("featureFlag", "Feature Flag Gated Code");
+        headings.put("secure", "Security-Critical Code");
+        headings.put("callersOnly", "## Access Limitations");
+        headings.put("sandboxOnly", "## Sandbox & Test Exclusion");
+        headings.put("memoryBudget", "## Memory Allocation Budgets");
+        headings.put("pure", "## Deterministic Pure Functions");
+        headings.put("domainModel", "## Framework-Free Domain Entities");
+        headings.put("extensible", "Extension Patterns");
+        headings.put("inputSanitized", "## Mandatory Input Sanitization");
+        headings.put("secureLogging", "## Secure Logging Masking");
+        headings.put("explain", "## Required Chain-of-Thought Explanations");
+        headings.put("prototype", "## Experimental Prototype Stubs");
+        headings.put("sunset", "## Sunset Deprecated APIs");
+        headings.put("temporary", "## Temporary Code Workarounds");
+        return headings;
+    }
+
+    @Test
+    void build_everyAnnotationType_reachesClaudeRendererOutput() {
+        AnnotationCollector collector = buildAllAnnotationTypes();
+        GuardrailContentBuilder builder = new GuardrailContentBuilder(
+                collector, Set.of("claude"), "Test", "");
+        GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
+        String claude = result.contentByService.get("claude");
+        assertNotNull(claude, "claude must appear in contentByService");
+
+        for (var entry : claudeXmlTagsByType().entrySet()) {
+            assertTrue(claude.contains(entry.getValue()),
+                "CLAUDE.md output must contain the '" + entry.getKey() + "' XML tag '"
+                    + entry.getValue() + "' — missing means that annotation type's "
+                    + "if (!collector.X().isEmpty()) block never fired");
+        }
+    }
+
+    @Test
+    void build_everyAnnotationType_reachesLlmsRendererOutput() {
+        AnnotationCollector collector = buildAllAnnotationTypes();
+        GuardrailContentBuilder builder = new GuardrailContentBuilder(
+                collector, Set.of("llms"), "Test", "");
+        GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
+        String llms = result.contentByService.get("llms");
+        assertNotNull(llms, "llms must appear in contentByService");
+
+        for (var entry : llmsHeadingsByType().entrySet()) {
+            assertTrue(llms.contains(entry.getValue()),
+                "llms.txt output must contain the '" + entry.getKey() + "' heading '"
+                    + entry.getValue() + "' — missing means that annotation type's "
+                    + "appendSection(...) call never fired");
+        }
     }
 }

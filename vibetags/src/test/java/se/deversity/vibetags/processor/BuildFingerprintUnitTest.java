@@ -248,6 +248,48 @@ class BuildFingerprintUnitTest {
             "Identical @AITemporary attributes must stay deterministic");
     }
 
+    /**
+     * The 13 "middle batch" buckets that fall between the original 15 (covered by
+     * {@link #compute_nullAnnotationsOnAllTypes_returnsValidFingerprint}) and the newest 12
+     * (covered by {@link #compute_everyNewestAnnotationBucket_affectsFingerprint} above) — added
+     * across v0.9.x releases and never wired into either existing sweep. Same rationale as that
+     * test: an element in any of these buckets must change the fingerprint, otherwise the
+     * top-level short-circuit skips regeneration and the generated files silently go stale.
+     */
+    @Test
+    void compute_everyMiddleBatchAnnotationBucket_affectsFingerprint() {
+        String emptyFp = BuildFingerprint.compute(new AnnotationCollector(), Set.of("cursor"), "1.0.0");
+
+        java.util.Map<String, Class<? extends java.lang.annotation.Annotation>> buckets =
+            new java.util.LinkedHashMap<>();
+        buckets.put("ignore",             se.deversity.vibetags.annotations.AIIgnore.class);
+        buckets.put("parallelTests",      se.deversity.vibetags.annotations.AIParallelTests.class);
+        buckets.put("legacyBridge",       se.deversity.vibetags.annotations.AILegacyBridge.class);
+        buckets.put("architecture",       se.deversity.vibetags.annotations.AIArchitecture.class);
+        buckets.put("publicApi",          se.deversity.vibetags.annotations.AIPublicAPI.class);
+        buckets.put("strictExceptions",   se.deversity.vibetags.annotations.AIStrictExceptions.class);
+        buckets.put("strictTypes",        se.deversity.vibetags.annotations.AIStrictTypes.class);
+        buckets.put("internationalized",  se.deversity.vibetags.annotations.AIInternationalized.class);
+        buckets.put("strictClasspath",    se.deversity.vibetags.annotations.AIStrictClasspath.class);
+        buckets.put("schemaSafe",         se.deversity.vibetags.annotations.AISchemaSafe.class);
+        buckets.put("idempotent",         se.deversity.vibetags.annotations.AIIdempotent.class);
+        buckets.put("featureFlag",        se.deversity.vibetags.annotations.AIFeatureFlag.class);
+        buckets.put("secure",             se.deversity.vibetags.annotations.AISecure.class);
+
+        for (var entry : buckets.entrySet()) {
+            AnnotationCollector collector = new AnnotationCollector();
+            RoundEnvironment re = mock(RoundEnvironment.class);
+            Element elem = namedElement("com.example." + entry.getKey());
+            doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(entry.getValue());
+            collector.collect(re);
+
+            assertNotEquals(emptyFp,
+                BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+                "An element in the '" + entry.getKey() + "' bucket must change the fingerprint "
+                    + "(otherwise the short-circuit skips regeneration and output goes stale)");
+        }
+    }
+
     private static String fingerprintWithTemporary(String expiresOn, String reason) {
         se.deversity.vibetags.annotations.AITemporary ann =
             mock(se.deversity.vibetags.annotations.AITemporary.class);
