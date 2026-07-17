@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC3] - 2026-07-17
+
 ### Security
 - **Escape interpolated values in all structured outputs.** Annotation attribute text (`reason`,
   `note`, `focus`, …) and element paths are now escaped per format before being written into the
@@ -923,7 +925,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC3...HEAD
+[1.0.0-RC3]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...v1.0.0-RC2
 [1.0.0-RC1]: https://github.com/PIsberg/vibetags/compare/v0.9.9...v1.0.0-RC1
 [0.9.9]: https://github.com/PIsberg/vibetags/compare/v0.9.8...v0.9.9
