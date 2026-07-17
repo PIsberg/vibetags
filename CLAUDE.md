@@ -64,6 +64,8 @@ gradle clean build    # Gradle
 
 ## Architecture
 
+For the full technical deep dive (system diagram, data flow, design decisions, limitations), see `docs/ARCHITECTURE.md`. Summary of the load-bearing behaviors:
+
 ### Core processing flow
 
 `AIGuardrailProcessor.process()` runs during `javac` compilation of the **consumer** project (not the library itself — the library disables annotation processing with `-proc:none`):
@@ -108,80 +110,7 @@ Files written by an older version of VibeTags (without markers) are automaticall
 
 ### Output files
 
-| File | Platform | Format |
-|---|---|---|
-| `.cursorrules` | Cursor IDE | Markdown |
-| `.cursor/rules/*.mdc` | Cursor IDE (granular) | YAML front-matter + Markdown |
-| `CLAUDE.md` | Claude | XML + Markdown |
-| `CLAUDE.local.md` | Claude Code (local override) | XML + Markdown |
-| `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
-| `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
-| `.aiexclude` | Gemini | Glob patterns |
-| `AGENTS.md` | Codex CLI | Markdown |
-| `.codex/` | Codex CLI | Config + Starlark |
-| `gemini_instructions.md` | Gemini | Markdown |
-| `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
-| `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
-| `CONVENTIONS.md` | Aider | Markdown |
-| `.aiderignore` | Aider | Glob patterns |
-| `QWEN.md` | Qwen | Markdown |
-| `.qwenignore` | Qwen | Glob patterns |
-| `.qwen/settings.json` | Qwen | JSON config |
-| `.qwen/commands/refactor.md` | Qwen | Markdown command template |
-| `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
-| `.roo/rules/*.md` | Roo Code (granular) | Markdown |
-| `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
-| `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
-| `.windsurfrules` | Windsurf IDE | Markdown |
-| `.windsurf/rules/*.md` | Windsurf IDE (granular) | YAML front-matter + Markdown |
-| `.rules` | Zed Editor | Markdown |
-| `.cody/config.json` | Sourcegraph Cody | JSON (custom commands) |
-| `.codyignore` | Sourcegraph Cody | Glob patterns |
-| `.supermavenignore` | Supermaven | Glob patterns |
-| `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
-| `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
-| `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
-| `.pearai/rules/*.md` | PearAI (granular) | YAML front-matter + Markdown |
-| `.kiro/steering/*.md` | Amazon Kiro (granular) | Markdown |
-| `.mentatconfig.json` | Mentat | JSON config |
-| `sweep.yaml` | Sweep (GitHub App) | YAML rules list |
-| `.plandex.yaml` | Plandex | YAML guardrails |
-| `.doubleignore` | Double.bot | Glob patterns |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
-| `.codeiumignore` | Codeium | Glob patterns |
-| `GEMINI.md` | Google Gemini (official markdown) | Markdown |
-| `.antigravityignore` | Antigravity AI | Glob patterns |
-| `.clinerules` | Cline AI assistant | Markdown |
-| `.junie/guidelines.md` | JetBrains Junie | Markdown |
-| `.idx/airules.md` | Firebase AI | Markdown |
-| `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
-| `.void/rules.md` | Void Editor | Markdown |
-| `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
-| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
-| `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
-| `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
-| `.repomixignore` | Repomix (context packer) | Glob patterns |
-| `.gitingestignore` | Gitingest (context packer) | Glob patterns |
-| `.gptignore` | GPT context packer | Glob patterns |
-| `.ghostcoderignore` | Ghostcoder | Glob patterns |
-| `.piecesignore` | Pieces for Developers | Glob patterns |
-| `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
-
-#### Granular rules
-
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
-
-Claude Code's granular rules (`.claude/rules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
-
-#### llms.txt vs llms-full.txt
-
-VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:
-
-- **`llms.txt`** — The Map: A concise directory listing all guardrail rules with links to the annotated class. Intended for LLM agents (e.g., Windsurf Cascade) to quickly understand the project's AI interaction rules without bloating the context window.
-- **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
-
-Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
+The processor can generate configuration for 50+ AI platforms (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, and more). Full file/platform/format table and granular-rules/llms.txt notes: `docs/PLATFORMS.md`.
 
 ### Processor options
 
@@ -204,114 +133,9 @@ With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `g
 
 An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits one JSON object per `@AILocked` element: element path, kind, source file, 1-based `startLine`/`endLine`, and reason. The first JSON record is `{"type":"format","version":N}` so consumers can reject reports written in a future, incompatible schema (filter on `type == "locked"` to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a `.json` file, so it rides the module-sidecar merge in multi-module builds instead of last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in `process()` while rounds are live); under non-javac compilers entries omit position fields. Consumed by the locked-files GitHub Action in `action/locked-files/`, which fails PRs whose diffs touch locked line ranges, strip `@AILocked` annotations, or delete locked files.
 
-### Annotations (all `RetentionPolicy.SOURCE`)
+### Annotations
 
-| Annotation | Targets | Key Attributes |
-|---|---|---|
-| `@AILocked` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIContext` | TYPE, METHOD | `focus: String`, `avoids: String` |
-| `@AIDraft` | TYPE, METHOD | `instructions: String` |
-| `@AIAudit` | TYPE, METHOD | `checkFor: String[]` |
-| `@AIIgnore` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIPrivacy` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AICore` | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` |
-| `@AIPerformance` | TYPE, METHOD | `constraint: String` |
-| `@AIContract` | TYPE, METHOD | `reason: String` |
-| `@AITestDriven` | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
-| `@AIThreadSafe` | TYPE, METHOD | `strategy: Strategy`, `note: String` |
-| `@AIImmutable` | TYPE | `note: String` |
-| `@AIDeprecated` | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
-| `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
-| `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
-| `@AIArchitecture` | TYPE | `belongsTo: String`, `cannotReference: String[]` |
-| `@AILegacyBridge` | TYPE, METHOD | `reason: String` |
-| `@AIStrictClasspath` | TYPE, METHOD | `reason: String` |
-| `@AIInternationalized` | TYPE, METHOD | `reason: String` |
-| `@AIPublicAPI` | TYPE, METHOD | `reason: String` |
-| `@AISchemaSafe` | TYPE, FIELD | `reason: String` |
-| `@AIStrictExceptions` | TYPE, METHOD | `reason: String` |
-| `@AIStrictTypes` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIParallelTests` | TYPE, METHOD | `reason: String` |
-| `@AIIdempotent` | TYPE, METHOD | `reason: String` |
-| `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
-| `@AISecure` | TYPE, METHOD | `aspect: String` |
-| `@AICallersOnly` | TYPE, METHOD | `value: String[]` |
-| `@AISandboxOnly` | TYPE, METHOD | `reason: String` |
-| `@AIMemoryBudget` | TYPE, METHOD | `value: AllocationPolicy` |
-| `@AIPure` | METHOD | `reason: String` |
-| `@AIDomainModel` | TYPE | `allow: String[]` |
-| `@AIExtensible` | TYPE | `value: Strategy` |
-| `@AIInputSanitized` | PARAMETER, FIELD | `value: SanitizerType[]` |
-| `@AISecureLogging` | FIELD, PARAMETER | `value: MaskingPolicy` |
-| `@AIExplain` | TYPE, METHOD | `value: ComplexityLevel` |
-| `@AIPrototype` | TYPE | `reason: String` |
-| `@AISunset` | TYPE, METHOD, FIELD | `jira: String`, `replacement: Class<?>` |
-| `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
-
-**Annotation semantics:**
-
-- `@AILocked` — code is visible but must not be modified by AI
-- `@AIIgnore` — code is excluded from AI context entirely (treat as non-existent); unlike `@AILocked`, the AI should not even be aware of it
-- `@AIPrivacy` — element handles PII; AI must never include its runtime values in logs, test fixtures, mock data, or API suggestions (GDPR/HIPAA/PCI-DSS use cases)
-- `@AICore` — marks well-tested, sensitive core logic (e.g., months to stabilize); AI is instructed to treat changes with extreme care
-- `@AIPerformance` — enforces strict time/space complexity on hot-path code; AI must not introduce O(n²) or worse solutions
-- `@AIContract` — freezes the public signature (method name, parameter types, parameter order, return type, checked exceptions); AI may change internal logic but must not alter the visible API surface
-- `@AITestDriven` — every change must include a matching test update; declares preferred framework, coverage goal, and mock policy
-- `@AIThreadSafe` — declares an explicit thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`); AI must preserve the synchronization invariant
-- `@AIImmutable` — declares the type immutable; the processor warns if any non-static field is non-final
-- `@AIDeprecated` — actively routes AI toward replacing callers; richer than Java's `@Deprecated` (replacement target, migration guide, removal deadline)
-- `@AIObservability` — names the metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them
-- `@AIRegulation` — ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …); AI must document compliance impact and never weaken the requirement
-- `@AIArchitecture` — declares `belongsTo` layer and forbidden `cannotReference` layers; AI must not introduce cross-layer imports
-- `@AILegacyBridge` — marks compatibility shims for upstream quirks/bugs; AI must not modernize the structure, only internal logic may change
-- `@AIStrictClasspath` — prohibits dynamic class loading, custom `ClassLoader`s, and runtime reflection; all deps must resolve at compile time
-- `@AIInternationalized` — all user-visible text must come from i18n bundles; AI must never hardcode user-facing strings
-- `@AIPublicAPI` — all changes must be additive and backward-compatible; renaming or changing serialization is forbidden
-- `@AISchemaSafe` — maps to persistent storage; destructive schema changes require explicit backward-compatible migrations
-- `@AIStrictExceptions` — prohibits catching/throwing `Exception`/`Throwable`; requires specific types with descriptive messages
-- `@AIStrictTypes` — prohibits loose types (`Object`, raw collections, `double` for money); requires well-typed domain models
-- `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
-- `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
-- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume it is always active
-- `@AISecure` — marks security-critical code; AI must never weaken security properties and must flag every change for security review
-- `@AICallersOnly` — only the listed callers may invoke the element; AI must not introduce calls from outside the allowed boundary
-- `@AISandboxOnly` — sandbox/test-harness code; production code must never import or reference it
-- `@AIMemoryBudget` — strict heap-allocation budget (`ZERO_ALLOCATION`, `NO_AUTOBOXING`, …); AI must optimize allocations and never add per-call garbage
-- `@AIPure` — must remain a pure function: no side effects, no state mutation, deterministic for the same inputs
-- `@AIDomainModel` — framework-free domain entity; AI must not import Spring, JPA/Hibernate, Jackson, or other framework packages (exceptions via `allow`)
-- `@AIExtensible` — extend via the declared polymorphic pattern (`STRATEGY_PATTERN`, `VISITOR_PATTERN`, …); AI must not append branch conditionals
-- `@AIInputSanitized` — parameter/field must pass approved sanitizers (`SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, …) before reaching queries or renderers
-- `@AISecureLogging` — sensitive value; AI must enforce the masking policy (`OMIT`, `HASH`, `MASK_CREDIT_CARD`, …) in any logging it writes
-- `@AIExplain` — changes require a step-by-step proof of correctness in the PR/walkthrough, scaled to the declared complexity level
-- `@AIPrototype` — experimental stub: QA/test constraints are relaxed, but production classes must never import it
-- `@AISunset` — strict deprecation tied to a JIRA ticket; introducing *new* references is forbidden, callers route to `replacement`
-- `@AITemporary` — hotfix/stub with an expiration date (`YYYY-MM-DD`); must be removed before expiry, warned at compile time once exceeded
-
-**Compile-time validation warnings:**
-
-- `@AIDraft` + `@AILocked` on the same element — contradictory (locked but needs drafting)
-- `@AIAudit` with empty `checkFor[]` — no-op; nothing to audit
-- `@AIPrivacy` + `@AIIgnore` on the same element — redundant; ignore already excludes
-- `@AIContract` + `@AIDraft` on the same element — contradictory (signature frozen but needs drafting)
-- `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; `@AIContract` is redundant)
-- `@AITestDriven` + `@AIIgnore` / `@AILocked` — contradictory (cannot enforce tests on excluded or locked code)
-- `@AITestDriven` with `coverageGoal` outside `[0, 100]` — invalid value
-- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
-- `@AIDeprecated` + `@AILocked` on the same element — contradictory (locked preserves; deprecated routes callers away)
-- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
-- `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
-- `@AIRegulation` with a blank `standard` — required attribute missing
-- `@AIIdempotent` + `@AIDraft` on the same element — contradictory (idempotent declares a stable contract; draft marks it as unfinished)
-- `@AIFeatureFlag` + `@AILocked` on the same element — contradictory (locked freezes code; feature flag implies conditional execution)
-- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
-- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
-- `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
-- `@AISunset` + `@AIDraft` on the same element — contradictory (sunset elements must not be actively drafted or expanded)
-- `@AISunset` with a blank `jira` — required attribute missing
-- `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
-- `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
-- `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
-- `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
+39 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
 
 ### Top-level fingerprint short-circuit
 
@@ -337,75 +161,13 @@ The processor is discovered via `META-INF/services/javax.annotation.processing.P
 
 The processor is declared as **aggregating** in `META-INF/gradle/incremental.annotation.processors`. Gradle therefore re-runs it only when annotations change anywhere in the compile unit, not on every unrelated `.java` edit. The category is `aggregating` (not `isolating`) because the generated files (`CLAUDE.md`, `.cursorrules`, `llms.txt`, etc.) are aggregated from annotations across the entire compilation unit — a per-source-file `isolating` declaration would produce stale output.
 
-## Test Structure
+## Reference docs (read on demand)
 
-All tests live in `vibetags/src/test`.
-
-| Class | Coverage |
-|---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (the original 27 annotations; the 12 newest are covered by `NewAnnotationsV4`/`V5` definition tests) |
-| `AIGuardrailProcessorTest` | Processor configuration |
-| `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
-| `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
-| `AIPrivacyProcessorTest` | `@AIPrivacy` annotation definition, validation, and per-platform output |
-| `AIContractProcessorTest` | `@AIContract` annotation definition, validation (contradictory/overlap combinations), and per-platform output |
-| `AIGuardrailProcessorProcessTest` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
-| `AnnotationProcessorEndToEndTest` | Generated file content |
-| `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |
-| `NewPlatformsEndToEndTest` | Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, universal `.ai/rules/` |
-| `NewPlatformsV2EndToEndTest` | PearAI, Mentat, Sweep, Plandex, Double.bot, Open Interpreter, Codeium |
-| `QwenEndToEndTest` | Qwen-specific output |
-| `QwenProcessorUnitTest` | Qwen processor options |
-| `VibeTagsLoggerUnitTest` | File logging |
-| `VibeTagsLoggerAsyncTest` | Async/background logging behaviour |
-| `VibeTagsLoggerConcurrencyTest` | Logger thread-safety under concurrent writes |
-| `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
-| `MultiModuleAggregationTest` | Sidecar aggregation and sub-marker output across multiple modules |
-| `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
-| `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
-| `NewAnnotationsV3DefinitionTest` | Definition-level tests for `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
-| `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |
-| `NewAnnotationsV3MinimalTest` | Minimal smoke tests for v0.9.5 annotation output |
-| `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.5 annotations |
-| `NewAnnotationsV4DefinitionTest` | Definition-level tests for the 9 new annotations (`@AIArchitecture`, `@AILegacyBridge`, etc.) |
-| `NewAnnotationsV4EndToEndTest` | End-to-end generated content for the 9 new annotations across all platforms |
-| `NewAnnotationsV4ValidationTest` | Compile-time validation warnings for the 9 new annotations |
-| `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
-| `BuildFingerprintUnitTest` | `BuildFingerprint.compute()` determinism and collision properties |
-| `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged |
-| `CheckModeTest` | Opt-in check mode (`-Avibetags.check=true`): pass/fail verdicts, zero writes, multi-module merge parity, dry-run `GuardrailFileWriter` |
-| `LocksReportEndToEndTest` | `.vibetags-locks` machine-readable lock report: class/method positions via the javac Tree API, JSON escaping, opt-in behaviour |
-| `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
-| `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
-| `GuardrailContentBuilderUnitTest` | Per-annotation content generation for each platform |
-| `GuardrailFileWriterCoverageTest` | `GuardrailFileWriter` branch coverage |
-| `GuardrailFileWriterEdgeCaseTest` | Edge cases: empty content, missing parent dir, read-only file |
-| `GranularRulesWriterUnitTest` | Per-class rule file writes and cleanup ordering |
-| `CleanupGranularDirectoryTest` | Orphan granular file removal after annotation deletion |
-| `AnnotationCollectorUnitTest` | `AnnotationCollector` accumulation across multiple rounds |
-| `AnnotationValidatorUnitTest` | All compile-time validation warning combinations |
-| `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
-| `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |
-| `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
-| `WriteCacheProcessorIntegrationTest` | Cache integration: created on first compile, stable mtimes on second, rewrite on external edit |
-| `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
-| `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
-| `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
-| `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
-| `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
-| `NewPlatformsV4EndToEndTest` | AI PR reviewers (`.coderabbit.yaml`, `.pr_agent.toml`, `ellipsis.yaml`), context-packer ignore files (`.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore`), Void (`.void/rules.md`), and Roo modes (`.roomodes`) |
-| `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
-| `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
-| `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
-| `ParallelFileWriteTest` | Parallel file-write correctness: 50+ active services written via `ForkJoinPool.commonPool()` without corruption (v0.9.7) |
-| `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
-| `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |
-| `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
-| `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
-| `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
-| `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
-| `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |
-| `CopilotGranularEndToEndTest` | `.github/instructions/*.instructions.md` granular rule generation for GitHub Copilot, including `applyTo:` frontmatter |
+- `docs/ANNOTATIONS.md` — adding or changing an annotation? Full annotation table, semantics, and validation warnings.
+- `docs/PLATFORMS.md` — adding a platform, or a question about a specific output file.
+- `docs/TESTS.md` — which test class covers what.
+- `docs/ARCHITECTURE.md` — deep dive: system diagram, data flow, design decisions, limitations.
+- `USAGE.md` — consumer-facing usage (how to add VibeTags to a project).
 
 ## Pre-commit Hooks
 
