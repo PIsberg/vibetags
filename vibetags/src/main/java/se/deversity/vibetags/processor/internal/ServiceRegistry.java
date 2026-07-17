@@ -39,6 +39,8 @@ public final class ServiceRegistry {
         "cline", "junie", "kiro_granular",
         // Firebase AI
         "firebase",
+        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+        "claude_local", "claude_skill", "claude_granular", "copilot_granular",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -106,6 +108,11 @@ public final class ServiceRegistry {
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
         map.put("firebase",      root.resolve(".idx/airules.md"));
+        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+        map.put("claude_local",     root.resolve("CLAUDE.local.md"));
+        map.put("claude_skill",     root.resolve(".claude/skills/vibetags-guardrails/SKILL.md"));
+        map.put("claude_granular",  root.resolve(".claude/rules"));
+        map.put("copilot_granular", root.resolve(".github/instructions"));
         // Context-packer ignore files
         map.put("repomix_ignore",    root.resolve(".repomixignore"));
         map.put("gitingest_ignore",  root.resolve(".gitingestignore"));

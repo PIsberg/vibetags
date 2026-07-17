@@ -113,11 +113,15 @@ Files written by an older version of VibeTags (without markers) are automaticall
 | `.cursorrules` | Cursor IDE | Markdown |
 | `.cursor/rules/*.mdc` | Cursor IDE (granular) | YAML front-matter + Markdown |
 | `CLAUDE.md` | Claude | XML + Markdown |
+| `CLAUDE.local.md` | Claude Code (local override) | XML + Markdown |
+| `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
+| `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
 | `.aiexclude` | Gemini | Glob patterns |
 | `AGENTS.md` | Codex CLI | Markdown |
 | `.codex/` | Codex CLI | Config + Starlark |
 | `gemini_instructions.md` | Gemini | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
+| `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
 | `CONVENTIONS.md` | Aider | Markdown |
 | `.aiderignore` | Aider | Glob patterns |
 | `QWEN.md` | Qwen | Markdown |
@@ -166,7 +170,9 @@ Files written by an older version of VibeTags (without markers) are automaticall
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+
+Claude Code's granular rules (`.claude/rules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
 #### llms.txt vs llms-full.txt
 
@@ -396,6 +402,10 @@ All tests live in `vibetags/src/test`.
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |
 | `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
+| `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
+| `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
+| `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |
+| `CopilotGranularEndToEndTest` | `.github/instructions/*.instructions.md` granular rule generation for GitHub Copilot, including `applyTo:` frontmatter |
 
 ## Pre-commit Hooks
 

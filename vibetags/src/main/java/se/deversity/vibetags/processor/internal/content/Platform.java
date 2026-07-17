@@ -39,6 +39,8 @@ public enum Platform {
     CLINE("cline"),
     JUNIE("junie"),
     FIREBASE("firebase"),
+    CLAUDE_LOCAL("claude_local"),
+    CLAUDE_SKILL("claude_skill"),
     // Context-packer ignore files
     REPOMIX_IGNORE("repomix_ignore"),
     GITINGEST_IGNORE("gitingest_ignore"),
@@ -69,7 +71,9 @@ public enum Platform {
     AMAZONQ_GRANULAR("amazonq_granular"),
     AI_RULES_GRANULAR("ai_rules_granular"),
     PEARAI_GRANULAR("pearai_granular"),
-    KIRO_GRANULAR("kiro_granular");
+    KIRO_GRANULAR("kiro_granular"),
+    CLAUDE_GRANULAR("claude_granular"),
+    COPILOT_GRANULAR("copilot_granular");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

@@ -34,6 +34,9 @@ VibeTags **never creates files** — it only updates files that already exist. C
 
 ```bash
 touch CLAUDE.md .claudeignore              # Claude / Claude Code
+touch CLAUDE.local.md                      # Claude Code (local override)
+mkdir -p .claude/rules                     # Claude Code (granular per-class rules)
+mkdir -p .claude/skills/vibetags-guardrails && touch .claude/skills/vibetags-guardrails/SKILL.md  # Claude Code (Skill)
 touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
@@ -43,6 +46,7 @@ touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
+mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
 touch .windsurfrules                       # Windsurf IDE (traditional)
 mkdir -p .windsurf/rules                   # Windsurf IDE (granular per-class rules)
@@ -917,6 +921,8 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 
 | Directory | Platform | Format |
 |---|---|---|
+| `.claude/rules/*.md` | Claude Code | YAML front-matter (`paths:`) + Markdown |
+| `.github/instructions/*.instructions.md` | GitHub Copilot | YAML front-matter (`applyTo:`) + Markdown |
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
@@ -933,6 +939,7 @@ Enable by creating the directories:
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
 mkdir -p .kiro/steering
+mkdir -p .claude/rules .github/instructions
 ```
 
 ---
@@ -1014,6 +1021,9 @@ tasks.withType(JavaCompile) {
 | File(s) | Platform |
 |---|---|
 | `CLAUDE.md`, `.claudeignore` | Claude / Claude Code |
+| `CLAUDE.local.md` | Claude Code (local override) |
+| `.claude/rules/*.md` | Claude Code (granular per-class rules) |
+| `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |
 | `.cursorrules`, `.cursorignore` | Cursor (traditional) |
 | `.cursor/rules/*.mdc` | Cursor (granular per-class rules) |
 | `.windsurfrules` | Windsurf IDE (traditional) |
@@ -1026,6 +1036,7 @@ tasks.withType(JavaCompile) {
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
+| `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
 | `.cody/config.json`, `.codyignore` | Sourcegraph Cody |
 | `.supermavenignore` | Supermaven |

@@ -38,7 +38,10 @@ runs:
           GEMINI.md .antigravityignore \
           .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
           .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
-          .clinerules .junie/guidelines.md .idx/airules.md; do
+          .clinerules .junie/guidelines.md .idx/airules.md \
+          CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
+          .claude/rules/com-example-payment-PaymentProcessor.md \
+          .github/instructions/com-example-payment-PaymentProcessor.instructions.md; do
           if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
           if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
           echo "OK $f"

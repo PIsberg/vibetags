@@ -50,10 +50,13 @@ public final class GranularRulesWriter {
         boolean aiRulesGranular   = activeServices.contains("ai_rules_granular");
         boolean pearaiGranular    = activeServices.contains("pearai_granular");
         boolean kiroGranular      = activeServices.contains("kiro_granular");
+        boolean claudeGranular    = activeServices.contains("claude_granular");
+        boolean copilotGranular   = activeServices.contains("copilot_granular");
         if (!cursorGranular && !traeGranular && !rooGranular
                 && !windsurfGranular && !continueGranular
                 && !tabnineGranular && !amazonqGranular && !aiRulesGranular
-                && !pearaiGranular && !kiroGranular) return writtenQNames;
+                && !pearaiGranular && !kiroGranular
+                && !claudeGranular && !copilotGranular) return writtenQNames;
 
         elementRules.forEach((element, builder) -> {
             String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
@@ -144,6 +147,24 @@ public final class GranularRulesWriter {
                 fileWriter.writeFileIfChanged(
                     serviceFiles.get("kiro_granular").resolve(qName + ".md").toString(), md, true);
             }
+            if (claudeGranular) {
+                String md = "---\n"
+                    + "paths: [\"" + glob + "\"]\n"
+                    + "---\n\n"
+                    + "# Rules for " + simpleName + "\n\n"
+                    + rulesContent;
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get("claude_granular").resolve(qName + ".md").toString(), md, true);
+            }
+            if (copilotGranular) {
+                String md = "---\n"
+                    + "applyTo: \"" + glob + "\"\n"
+                    + "---\n\n"
+                    + "# Copilot Instructions for " + simpleName + "\n\n"
+                    + rulesContent;
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get("copilot_granular").resolve(qName + ".instructions.md").toString(), md, true);
+            }
         });
         return writtenQNames;
     }
@@ -163,5 +184,7 @@ public final class GranularRulesWriter {
         if (activeServices.contains("ai_rules_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("ai_rules_granular"), ".md",  excludeQNames);
         if (activeServices.contains("pearai_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("pearai_granular"),   ".md",  excludeQNames);
         if (activeServices.contains("kiro_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("kiro_granular"),     ".md",  excludeQNames);
+        if (activeServices.contains("claude_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("claude_granular"),   ".md",  excludeQNames);
+        if (activeServices.contains("copilot_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("copilot_granular"),  ".instructions.md", excludeQNames);
     }
 }

@@ -486,7 +486,7 @@ Generation phase (once, on the round where processingOver() == true):
 5. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
 6. GuardrailContentBuilder.build() lazily allocates the platform StringBuilders via `initBuilders()`, then delegates file rendering to modular, stateless `PlatformRenderer` implementations (under `se.deversity.vibetags.processor.internal.content.platforms.*`). Renderers orchestrate formatters from `FormatterRegistry` to build precise Markdown, XML, TOML, or Starlark files, and return the final service-key → content map. No I/O.
 7. GuardrailFileWriter.writeFileIfChanged(...) for each active service — three-layer fast path (WriteCache hit → streaming byte-compare → readString + strip-equals); marker-aware updates, YAML front-matter preservation, atomic tmp+move writes; on success records the new fingerprint in WriteCache
-8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / .ai/rules
+8. GranularRulesWriter.writeAll(...) — per-class .mdc/.md for Cursor / Trae / Roo / Windsurf / Continue / Tabnine / Amazon Q / Amazon Kiro / .ai/rules / Claude Code / GitHub Copilot
 9. GranularRulesWriter.cleanupAll(...) — remove orphaned granular files (skipping the names just written, to avoid delete-then-recreate cycles; invalidates the WriteCache entry for any file it deletes or rewrites)
 10. OrphanWarner.warnAboutOrphans(...) — warn if annotations used without the corresponding ignore-file (e.g. @AIIgnore without .cursorignore)
 11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar (no-op if no entries changed this build)
@@ -505,6 +505,9 @@ Generation phase (once, on the round where processingOver() == true):
 | `.cursor/rules/<Class>.mdc` | YAML front-matter + Markdown | Cursor | Per-class granular rules |
 | `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<audit_requirements>`, `<rule>` elements |
 | `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
+| `CLAUDE.local.md` | XML + Markdown | Claude Code (local override) | Same guardrail content as `CLAUDE.md` |
+| `.claude/rules/<Class>.md` | YAML front-matter + Markdown | Claude Code | Per-class granular rules; `paths:` front-matter glob list |
+| `.claude/skills/vibetags-guardrails/SKILL.md` | YAML front-matter + Markdown | Claude Code (Skill) | Same guardrail body as `.cursorrules`, with required `name`/`description` Skill frontmatter |
 | `.aiexclude` | Glob patterns | Gemini/Codex | Binary blocklist of locked/ignored files |
 | `AGENTS.md` | Markdown | Codex | Locked files, context rules, security guardrails |
 | `.codex/config.toml` | TOML | Codex | Model and tool configuration |
@@ -516,6 +519,7 @@ Generation phase (once, on the round where processingOver() == true):
 | `.junie/guidelines.md` | Markdown | JetBrains Junie | Same guardrail content as `.cursorrules` with Junie-specific heading |
 | `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
 | `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
+| `.github/instructions/<Class>.instructions.md` | YAML front-matter + Markdown | GitHub Copilot | Per-class granular rules; `applyTo:` front-matter glob |
 | `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |
 | `.aiderignore` | Glob patterns | Aider | Standalone exclusion list |
 | `.trae/rules/<Class>.md` | YAML front-matter + Markdown | Trae IDE | Per-class granular rules |

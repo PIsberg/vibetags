@@ -236,7 +236,7 @@ Generated configuration files work out-of-the-box with the [**37 AI platforms**]
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Antigravity AI** (`.antigravityignore`)
-- **Claude** (`CLAUDE.md`, `.claudeignore`)
+- **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
 - **Cline** (`.clinerules`)
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
@@ -270,8 +270,10 @@ Generated configuration files work out-of-the-box with the [**37 AI platforms**]
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
+- **Claude** (`.claude/rules/*.md` — YAML front-matter (`paths:`) + Markdown)
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
+- **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
 - **Amazon Kiro** (`.kiro/steering/*.md`)
 - **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`, plus a `.roomodes` "VibeTags Architect" custom mode)

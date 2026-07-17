@@ -145,6 +145,26 @@ class CleanupGranularDirectoryTest {
     }
 
     @Test
+    void respectsExcludeQNames_withMultiDotExtension(@TempDir Path dir) throws IOException {
+        // Regression test: cleanupGranularDirectory used to derive qName via lastIndexOf('.'),
+        // which mis-parses a multi-dot extension like ".instructions.md" (Copilot's granular
+        // format) as "com-example-Keep.instructions" instead of "com-example-Keep" — never
+        // matching excludeQNames, so a file just written would be immediately scrubbed.
+        Path keep = dir.resolve("com-example-Keep.instructions.md");
+        Files.writeString(keep,
+            "<!-- VIBETAGS-START -->\nfresh rule\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        GuardrailFileWriter p = newFileWriter();
+        p.cleanupGranularDirectory(dir, ".instructions.md", Set.of("com-example-Keep"));
+
+        assertTrue(Files.exists(keep), "File whose qName is in excludeQNames must survive a multi-dot extension");
+        assertEquals("<!-- VIBETAGS-START -->\nfresh rule\n<!-- VIBETAGS-END -->\n",
+            Files.readString(keep, StandardCharsets.UTF_8),
+            "Excluded file must not even be read or rewritten");
+    }
+
+    @Test
     void handlesEmptyDirectory(@TempDir Path dir) throws IOException {
         GuardrailFileWriter p = newFileWriter();
         assertDoesNotThrow(() -> p.cleanupGranularDirectory(dir, ".md"));

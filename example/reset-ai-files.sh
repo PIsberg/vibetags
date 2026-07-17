@@ -58,6 +58,9 @@ AI_FILES=(
   # Editors & modes
   ".void/rules.md"
   ".roomodes"
+  # Claude Code local override and Skill
+  "CLAUDE.local.md"
+  ".claude/skills/vibetags-guardrails/SKILL.md"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
@@ -80,7 +83,7 @@ fi
 find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
 
 # Cleanup granular rules in directories
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +
