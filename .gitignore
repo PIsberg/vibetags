@@ -30,3 +30,19 @@ load-tests/dependency-reduced-pom.xml
 # generated, but kept ignored so any straggler from an old checkout doesn't
 # get re-committed by accident.
 *.bak
+# Mutation/stress reports downloaded from CI runs
+pitest-report-*/
+stress-results-*/
+# Processor test residue: the processor writes to the JVM working dir, so a
+# stray opt-in file in vibetags/ gets filled with com.example test-fixture
+# guardrails. These must never live in vibetags/ itself — backstop ignores so
+# they can't be re-committed if a test regenerates them.
+vibetags/CLAUDE.md
+vibetags/AGENTS.md
+vibetags/QWEN.md
+vibetags/GEMINI.md
+vibetags/.cursorrules
+vibetags/llms.txt
+vibetags/llms-full.txt
+vibetags/.codex/
+vibetags/.qwen/
