@@ -31,6 +31,7 @@ Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vib
 - [docs/vibetags-in-practice.md](docs/vibetags-in-practice.md): worked real-world examples
 - [docs/proposed-annotations.md](docs/proposed-annotations.md): annotation ideas not yet implemented
 - [docs/CONCEPT_PLUGIN.md](docs/CONCEPT_PLUGIN.md): IDE/build-plugin concept notes
+- [docs/PLAN.md](docs/PLAN.md): historical roadmap, superseded — see docs/CHANGELOG.md for what shipped
 - [load-tests/](load-tests/README.md): benchmark harness comparing processor versions
 
 <!-- VIBETAGS-START -->

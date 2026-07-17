@@ -92,33 +92,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 
 **Key Components:**
 
-**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (39 annotations total — see the [project facts](../README.md#project-facts)):
-- `@AILocked` - Prevents AI modifications (reason: String)
-- `@AIContext` - Guides AI behavior (focus: String, avoids: String)
-- `@AIDraft` - Requests AI implementation (instructions: String)
-- `@AIAudit` - Triggers security audits (checkFor: String[])
-- `@AIIgnore` - Excludes from AI context (reason: String)
-- `@AIPrivacy` - Marks PII-handling elements; AI must never log or expose their values (reason: String)
-- `@AICore` - Marks sensitive core logic; AI must change with extreme caution (sensitivity: String, note: String)
-- `@AIPerformance` - Hot-path constraint; AI must not introduce O(n²) complexity (constraint: String)
-- `@AIContract` - Freezes the public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions (reason: String)
-- `@AITestDriven` - Enforces Red-Green-Refactor; AI must provide matching test updates alongside any logic changes (testLocation: String, coverageGoal: int, framework: Framework[], mockPolicy: String)
-- `@AIThreadSafe` - Declares thread-safety strategy (strategy: Strategy, note: String)
-- `@AIImmutable` - Declares a class immutable (note: String)
-- `@AIDeprecated` - Rich deprecation (replacedBy: String, migrationGuide: String, deadline: String)
-- `@AIObservability` - Names metrics/traces/logs (metrics: String[], traces: String[], logs: String[], note: String)
-- `@AIRegulation` - Compliance standard mapping (standard: String, clause: String, description: String)
-- `@AIParallelTests` - Enforces strict test isolation in generated/modified tests
-- `@AILegacyBridge` - Protects legacy compatibility helpers from modernization/refactoring
-- `@AIArchitecture` - Defines boundary and package layering constraints (belongsTo: String, cannotReference: String[])
-- `@AIPublicAPI` - Exposes public API surface and demands backwards-compatibility
-- `@AIStrictExceptions` - Enforces precise, robust exception handling
-- `@AIStrictTypes` - Prohibits loose typing where strongly typed models are required
-- `@AIInternationalized` - Prohibits hardcoding of user-facing strings
-- `@AIStrictClasspath` - Restricts imports to standard JDK and existing classpath
-- `@AISchemaSafe` - Guarantees persistent schema and serialization safety
-- `@AIIdempotent` - Declares that an operation must remain idempotent (reason: String)
-- `@AIFeatureFlag` - Marks code gated behind a feature flag (flag: String, defaultValue: boolean)
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (39 annotations total — see the [project facts](../README.md#project-facts)). Full list, targets, attributes, and semantics: [docs/ANNOTATIONS.md](ANNOTATIONS.md).
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
@@ -389,75 +363,7 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
 
 All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at compile time and are stripped from final bytecode.
 
-| Annotation | Targets | Attributes | Purpose |
-|---|---|---|---|
-| **`@AILocked`** | TYPE, METHOD, FIELD | `reason: String` | Protects critical code from AI modifications |
-| **`@AIContext`** | TYPE, METHOD | `focus: String`, `avoids: String` | Guides AI behavior with positive/negative instructions |
-| **`@AIDraft`** | TYPE, METHOD | `instructions: String` | Marks incomplete code needing AI implementation |
-| **`@AIAudit`** | TYPE, METHOD | `checkFor: String[]` | Triggers mandatory security vulnerability checks |
-| **`@AIIgnore`** | TYPE, METHOD, FIELD | `reason: String` | Excludes element from AI context entirely |
-| **`@AIPrivacy`** | TYPE, METHOD, FIELD | `reason: String` | Marks PII-handling elements; AI must never log or expose their values |
-| **`@AICore`** | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` | Marks well-tested core logic; AI must change with extreme caution |
-| **`@AIPerformance`** | TYPE, METHOD, FIELD | `constraint: String` | Hot-path constraint; AI must not introduce O(n²) or worse complexity |
-| **`@AIContract`** | TYPE, METHOD | `reason: String` | Freezes public signature; AI may change internal logic but must not alter method name, parameter types/order, return type, or checked exceptions |
-| **`@AITestDriven`** | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` | Enforces Red-Green-Refactor: AI must not propose changes without also providing the matching test update |
-| **`@AIThreadSafe`** | TYPE, METHOD | `strategy: Strategy`, `note: String` | Declares thread-safety strategy used to guarantee correctness under concurrent access |
-| **`@AIImmutable`** | TYPE | `note: String` | Declares a class structurally immutable; state cannot be modified |
-| **`@AIDeprecated`** | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` | Provides migration details for deprecated classes or methods |
-| **`@AIObservability`** | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` | Specifies requirements for logs, metrics, and traces instrumentation |
-| **`@AIRegulation`** | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` | Links elements directly to regulatory compliance standards (e.g. GDPR, PCI) |
-| **`@AIParallelTests`** | TYPE, METHOD | — | Enforces strict test isolation in generated/modified tests |
-| **`@AILegacyBridge`** | TYPE, METHOD | — | Protects legacy compatibility helpers from modernization/refactoring |
-| **`@AIArchitecture`** | TYPE | `belongsTo: String`, `cannotReference: String[]` | Defines boundary and package layering constraints |
-| **`@AIPublicAPI`** | TYPE, METHOD | — | Exposes public API surface and demands backwards-compatibility |
-| **`@AIStrictExceptions`** | TYPE, METHOD | — | Enforces precise, robust exception handling |
-| **`@AIStrictTypes`** | TYPE, METHOD, FIELD | — | Prohibits loose typing where strongly typed models are required |
-| **`@AIInternationalized`** | TYPE, METHOD | — | Prohibits hardcoding of user-facing strings |
-| **`@AIStrictClasspath`** | TYPE, METHOD | — | Restricts imports to standard JDK and existing classpath |
-| **`@AISchemaSafe`** | TYPE, FIELD | — | Guarantees persistent schema and serialization safety |
-| **`@AIIdempotent`** | TYPE, METHOD | `reason: String` | Declares that an operation must remain idempotent |
-| **`@AIFeatureFlag`** | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` | Marks code gated behind a feature flag |
-| **`@AISecure`** | TYPE, METHOD | `aspect: String` | Marks security-critical code; AI must not weaken security properties and must flag changes for security review |
-
-**Annotation semantics compared:**
-- `@AILocked` — visible to AI but must not be modified
-- `@AIIgnore` — removed from AI context completely; AI should not reference it
-- `@AIPrivacy` — visible to AI but runtime values are strictly confidential; never log, expose in suggestions, test fixtures, or external API calls
-- `@AICore` — visible, modifiable, but AI must treat changes with extreme caution and verify test coverage
-- `@AIPerformance` — visible, modifiable, but AI must never introduce O(n²) or worse complexity
-- `@AIContract` — visible, modifiable internally, but the public signature (name, param types/order, return type, checked exceptions) is immutable
-- `@AITestDriven` — visible, modifiable, but any change must be accompanied by a matching test update in the same response; the AI is the "accountability officer" that enforces the test suite
-- `@AIParallelTests` — any test code generated or edited must be strictly thread-isolated, sharing no mutable state
-- `@AILegacyBridge` — tells the AI this is an intentional compatibility layer, bypassing modernization rules
-- `@AIArchitecture` — enforces rigid package/dependency layout; must never import forbidden layers
-- `@AIPublicAPI` — tells the AI the class represents a stable public entry point; changes must maintain exact backwards-compatibility
-- `@AIStrictExceptions` — demands structured exceptions (e.g. no catching/throwing raw Exception or RuntimeException)
-- `@AIStrictTypes` — demands explicit typing (e.g. no Map<String, Object> or raw Object for data transfers)
-- `@AIInternationalized` — mandates externalizing user-facing copy (e.g. to property bundles, never hardcoded strings)
-- `@AIStrictClasspath` — restricts additions to the standard JDK or already defined classpath elements; no external dependencies
-- `@AISchemaSafe` — protects persistent schemas (database models or serialization) against structural breaking changes
-- `@AIIdempotent` — declares the operation must remain idempotent; AI must not introduce side effects that cause repeated calls to produce different results
-- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
-- `@AISecure` — marks security-critical code (crypto, auth, session management); AI must not weaken security properties and must flag any change for security review
-
-**Invalid combinations that trigger compiler WARNINGs:**
-- `@AIPrivacy` + `@AIIgnore` — redundant; `@AIIgnore` already hides the element from AI entirely
-- `@AIContract` + `@AIDraft` — contradictory; a frozen signature that also needs drafting is logically inconsistent
-- `@AIContract` + `@AILocked` — overlapping; `@AILocked` already prohibits all modifications, making `@AIContract`'s "logic is changeable" carve-out meaningless
-- `@AITestDriven` + `@AIIgnore` — contradictory; enforcing test coverage on an ignored element is logically inconsistent
-- `@AITestDriven` + `@AILocked` — contradictory; `@AILocked` prohibits all modifications while `@AITestDriven` permits changes when tests are provided
-- `@AITestDriven` with `coverageGoal` outside 0–100 — invalid; must be a valid percentage
-- `@AILegacyBridge` + `@AIDraft` — contradictory; legacy bridges are locked from refactoring and cannot be drafted
-- `@AIPublicAPI` + `@AILocked` — redundant; `@AILocked` already bans modifications, superseding public API compatibility rules
-- `@AIParallelTests` + `@AILocked` — redundant; locked tests don't need parallel isolation advice since they cannot be modified
-- `@AISchemaSafe` + `@AIIgnore` — redundant; ignored items are not part of generated AI schemas or interactions
-- `@AIIdempotent` + `@AIDraft` — contradictory; idempotent declares a stable contract while draft marks the element as unfinished
-- `@AIFeatureFlag` + `@AILocked` — contradictory; locked freezes code while feature flag implies conditional execution
-- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
-- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
-- `@AISecure` + `@AIIgnore` — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
-- `@AIStrictClasspath` + `@AILocked` — redundant; locked items cannot have their imports changed
-- `@AIArchitecture` with empty layer attributes — invalid config; specifying `@AIArchitecture` without `belongsTo` or `cannotReference` has no effect
+The full table of all 39 annotations (targets, attributes, semantics) and every compile-time validation warning the processor emits now live in one place: **[docs/ANNOTATIONS.md](ANNOTATIONS.md)**.
 
 ### Annotation Processor
 
@@ -492,46 +398,7 @@ Generation phase (once, on the round where processingOver() == true):
 11. WriteCache.flush() — atomically persist the .vibetags-cache sidecar (no-op if no entries changed this build)
 ```
 
-**Output File Generation:**
-
-| File | Format | Platform | Content |
-|---|---|---|---|
-| `QWEN.md` | Markdown | Qwen | Project context, locked files, rules, audits, ignored elements |
-| `.qwen/settings.json` | JSON | Qwen | Model config (qwen3-coder-plus), MCP settings |
-| `.qwen/commands/refactor.md` | Markdown | Qwen | Custom `/refactor` command |
-| `.qwenignore` | Glob patterns | Qwen | Standalone exclusion list |
-| `.cursorrules` | Markdown | Cursor | Locked files, context rules, security audits |
-| `.cursorignore` | Glob patterns | Cursor | Standalone exclusion list |
-| `.cursor/rules/<Class>.mdc` | YAML front-matter + Markdown | Cursor | Per-class granular rules |
-| `CLAUDE.md` | XML + Markdown | Claude | `<locked_files>`, `<audit_requirements>`, `<rule>` elements |
-| `.claudeignore` | Glob patterns | Claude | Standalone exclusion list |
-| `CLAUDE.local.md` | XML + Markdown | Claude Code (local override) | Same guardrail content as `CLAUDE.md` |
-| `.claude/rules/<Class>.md` | YAML front-matter + Markdown | Claude Code | Per-class granular rules; `paths:` front-matter glob list |
-| `.claude/skills/vibetags-guardrails/SKILL.md` | YAML front-matter + Markdown | Claude Code (Skill) | Same guardrail body as `.cursorrules`, with required `name`/`description` Skill frontmatter |
-| `.aiexclude` | Glob patterns | Gemini/Codex | Binary blocklist of locked/ignored files |
-| `AGENTS.md` | Markdown | Codex | Locked files, context rules, security guardrails |
-| `.codex/config.toml` | TOML | Codex | Model and tool configuration |
-| `.codex/rules/vibetags.rules` | Starlark | Codex | Command permissions |
-| `gemini_instructions.md` | Markdown | Gemini | Continuous audit requirements |
-| `GEMINI.md` | Markdown | Gemini (official markdown) | Identical guardrail content to gemini_instructions.md |
-| `.antigravityignore` | Glob patterns | Antigravity AI | Standalone exclusion list |
-| `.clinerules` | Markdown | Cline AI assistant | Same guardrail content as `.cursorrules` |
-| `.junie/guidelines.md` | Markdown | JetBrains Junie | Same guardrail content as `.cursorrules` with Junie-specific heading |
-| `.github/copilot-instructions.md` | Markdown | Copilot | Locked files, context guidelines |
-| `.copilotignore` | Glob patterns | Copilot | Standalone exclusion list |
-| `.github/instructions/<Class>.instructions.md` | YAML front-matter + Markdown | GitHub Copilot | Per-class granular rules; `applyTo:` front-matter glob |
-| `CONVENTIONS.md` | Markdown | Aider | All guardrail rules as coding conventions |
-| `.aiderignore` | Glob patterns | Aider | Standalone exclusion list |
-| `.trae/rules/<Class>.md` | YAML front-matter + Markdown | Trae IDE | Per-class granular rules |
-| `.roo/rules/<Class>.md` | Markdown | Roo Code | Per-class granular rules |
-| `llms.txt` | Markdown | Windsurf Cascade, all LLM agents | Concise map/directory (llms.txt standard) |
-| `llms-full.txt` | Markdown | Windsurf Cascade, large-context LLMs | Full expanded reference book (llms.txt standard) |
-| `.void/rules.md` | Markdown | Void Editor | Same guardrail content as `.cursorrules` |
-| `.coderabbit.yaml` | YAML | CodeRabbit (AI PR reviewer) | `reviews.path_instructions` enforcing guardrails on review |
-| `.pr_agent.toml` | TOML | Qodo/Codium PR-Agent | `extra_instructions` for the reviewer and code-suggestion tools |
-| `ellipsis.yaml` | YAML | Ellipsis (AI PR reviewer) | One `pr_review.rules` entry per guardrail |
-| `.roomodes` | YAML | Roo Code | "VibeTags Architect" custom mode carrying the guardrails |
-| `.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore` | Glob patterns | Context packers | Standalone exclusion lists |
+**Output File Generation:** the processor writes one file per active service; the full file ↔ platform ↔ format table (65 output paths as of this writing) is maintained in one place: **[docs/PLATFORMS.md](PLATFORMS.md)**.
 
 ### Generated Output Files
 
@@ -1110,38 +977,7 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 
 ## Build Commands
 
-### Maven
-
-```bash
-# Build library — order matters: annotations first, then processor, then BOM
-cd vibetags-annotations && mvn install
-cd ../vibetags && mvn clean install
-cd ../vibetags-bom && mvn install
-
-# Build example (generates AI config files)
-cd ../example && mvn clean compile
-
-# Run tests
-cd ../vibetags && mvn test
-
-# Run integration tests
-cd vibetags && mvn test -Drun.integration.tests=true
-```
-
-### Gradle
-
-```bash
-# Build library — annotations first, then processor; BOM is Maven-only
-cd vibetags-annotations && gradle clean build publishToMavenLocal
-cd ../vibetags && gradle clean build publishToMavenLocal
-cd ../vibetags-bom && mvn install   # Gradle reads it from mavenLocal()
-
-# Build example (generates AI config files)
-cd ../example && gradle clean build
-
-# Run tests
-cd ../vibetags && gradle test
-```
+Build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example`, for both Maven and Gradle. The full command sequences (build, test, single-test-class) are maintained in one place: **[../CLAUDE.md#build-commands](../CLAUDE.md#build-commands)** (agent briefing) and the "Building from Source" section of [../README.md](../README.md).
 
 ---
 
@@ -1153,40 +989,7 @@ cd ../vibetags && gradle test
 
 **Behavior:** Qwen reads `QWEN.md` as comprehensive project context, including locked files, contextual rules, security audit requirements, and ignored elements. The `.qwen/settings.json` configures the model (typically `qwen3-coder-plus`) and enables MCP (Model Context Protocol) for enhanced capabilities.
 
-**QWEN.md Structure:**
-```markdown
-# PROJECT CONTEXT
-## LOCKED FILES (DO NOT EDIT)
-* `com.example.PaymentProcessor` — Reason here
-
-## CONTEXTUAL RULES
-* `com.example.StringParser`
-  * Focus: Optimize for memory usage
-  * Avoid: java.util.regex, String.split()
-
-## 🛡️ MANDATORY SECURITY AUDITS
-* `com.example.DatabaseConnector`
-  - Required Checks: SQL Injection, Thread Safety
-
-## IGNORED ELEMENTS
-* `com.example.GeneratedMetadata`
-```
-
-**.qwen/settings.json Structure:**
-```json
-{
-  "project": {
-    "model": "qwen3-coder-plus",
-    "mcp": {
-      "enabled": true
-    }
-  }
-}
-```
-
-**.qwen/commands/refactor.md:** Defines a custom `/refactor` command that instructs Qwen to refactor code while following the project's contextual rules defined in `QWEN.md`.
-
-**.qwenignore:** Standard glob patterns to exclude files from Qwen's context window.
+Sample `QWEN.md` / `.qwen/settings.json` output and the `.qwen/commands/refactor.md` / `.qwenignore` roles are documented in one place: [USAGE.md § Qwen Configuration](../USAGE.md#-qwen-configuration).
 
 ### Cursor
 
@@ -1222,48 +1025,9 @@ cd ../vibetags && gradle test
 
 **Files:** `llms.txt` + `llms-full.txt`
 
-**Standard:** [llms.txt](https://llmstxt.org/) — a Markdown-based format analogous to `robots.txt` but for content rather than crawling rules. Instead of parsing HTML, LLM agents read a clean Markdown file that tells them what the project contains and where to look.
+**Standard:** [llms.txt](https://llmstxt.org/) — a Markdown-based format analogous to `robots.txt` but for content rather than crawling rules. Instead of parsing HTML, LLM agents read a clean Markdown file that tells them what the project contains and where to look. `llms.txt` is the **map** (concise directory); `llms-full.txt` is the **book** (fully expanded reference).
 
-**Behavior:**
-- `llms.txt` is the **map**: agents read it first to understand the project's guardrail structure, then decide what to fetch. Concise bullet links (`[SimpleClassName](FQN): detail`) keep the context window lean.
-- `llms-full.txt` is the **book**: large-context models (Claude 4.6, Gemini 1.5 Pro, Windsurf Cascade) load the entire file in one shot to search across all rules at once.
-
-**Format hierarchy (both files):**
-
-```markdown
-# ProjectName                        ← H1, required (set via vibetags.project option)
-
-> Summary blockquote                 ← optional, brief description
-
-Informational paragraph.             ← optional, key details for the LLM
-
-## Locked Files                      ← H2 section
-- [ClassName](FQN): reason
-
-## Contextual Rules
-- [ClassName](FQN): Focus — ... Avoid — ...
-
-## Security Audit Requirements
-- [ClassName](FQN): check for vulnerability1, vulnerability2
-
-## Ignored Elements
-- [ClassName](FQN): excluded from AI context
-
-## Implementation Tasks
-- [ClassName](FQN): instructions
-
-## PII / Privacy Guardrails
-- [ClassName](FQN): reason
-```
-
-**`llms-full.txt` expands each entry into `###` sub-sections with bold labels:**
-
-```markdown
-### com.example.database.DatabaseConnector
-- **Required Checks**: SQL Injection, Thread Safety issues
-```
-
-**Project name option:** Pass `-Avibetags.project=MyProject` (Maven `<compilerArg>`, Gradle `annotationProcessorArgs`) to set the `# H1` title. Defaults to `"This Project"`.
+The format hierarchy, a sample `llms.txt` output, opt-in commands, and the `vibetags.project` naming option are documented in one place: [USAGE.md § llms.txt Standard](../USAGE.md#-llmstxt-standard-windsurf-cascade--llm-agents).
 
 ---
 
