@@ -208,6 +208,192 @@ class AnnotationCollectorUnitTest {
     }
 
     // ------------------------------------------------------------------
+    // Middle-batch annotations (v0.9.x) — added across several releases and never covered by
+    // a per-bucket check here; each collectInto(...) call in collect() must be independently
+    // verified, otherwise PIT can delete the call for any of these types undetected.
+    // ------------------------------------------------------------------
+
+    @Test
+    void collect_onlyLockedAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AILocked.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.locked().isEmpty());
+    }
+
+    @Test
+    void collect_onlyIgnoreAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIIgnore.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.ignore().isEmpty());
+    }
+
+    @Test
+    void collect_onlyContractAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIContract.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.contract().isEmpty());
+    }
+
+    @Test
+    void collect_onlyTestDrivenAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AITestDriven.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.testDriven().isEmpty());
+    }
+
+    @Test
+    void collect_onlyThreadSafeAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIThreadSafe.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.threadSafe().isEmpty());
+    }
+
+    @Test
+    void collect_onlyObservabilityAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIObservability.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.observability().isEmpty());
+    }
+
+    @Test
+    void collect_onlyParallelTestsAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIParallelTests.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.parallelTests().isEmpty());
+    }
+
+    @Test
+    void collect_onlyLegacyBridgeAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AILegacyBridge.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.legacyBridge().isEmpty());
+    }
+
+    @Test
+    void collect_onlyArchitectureAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIArchitecture.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.architecture().isEmpty());
+    }
+
+    @Test
+    void collect_onlyPublicApiAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIPublicAPI.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.publicApi().isEmpty());
+    }
+
+    @Test
+    void collect_onlyStrictExceptionsAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIStrictExceptions.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.strictExceptions().isEmpty());
+    }
+
+    @Test
+    void collect_onlyStrictTypesAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIStrictTypes.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.strictTypes().isEmpty());
+    }
+
+    @Test
+    void collect_onlyInternationalizedAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIInternationalized.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.internationalized().isEmpty());
+    }
+
+    @Test
+    void collect_onlyStrictClasspathAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIStrictClasspath.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.strictClasspath().isEmpty());
+    }
+
+    @Test
+    void collect_onlySchemaSafeAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AISchemaSafe.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.schemaSafe().isEmpty());
+    }
+
+    @Test
+    void collect_onlyIdempotentAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIIdempotent.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.idempotent().isEmpty());
+    }
+
+    @Test
+    void collect_onlyFeatureFlagAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AIFeatureFlag.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.featureFlag().isEmpty());
+    }
+
+    @Test
+    void collect_onlySecureAnnotation_returnsTrue() {
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = reWithOnly(AISecure.class);
+        boolean added = collector.collect(re);
+        assertTrue(added);
+        assertTrue(collector.anyAnnotationsFound());
+        assertFalse(collector.secure().isEmpty());
+    }
+
+    // ------------------------------------------------------------------
     // Position 16+: New annotations
     // ------------------------------------------------------------------
 
