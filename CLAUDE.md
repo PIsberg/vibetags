@@ -153,6 +153,16 @@ Beyond what the VibeTags-generated section below describes, three additional int
 - `ElementNaming` — constructs fully-qualified element paths (e.g., `com.example.Foo.bar`) for use in generated output; handles TYPE, METHOD, FIELD, and PACKAGE kinds
 - `OrphanWarner` — emits warnings when an annotation is present but the corresponding platform opt-in file is absent (e.g., `@AIIgnore` with no `.cursorignore`)
 
+### Content rendering subsystem (`internal/content/`)
+
+`GuardrailContentBuilder` delegates all content generation to `internal/content/`:
+
+- `Platform` (enum) + `PlatformRendererRegistry` — one entry per output file; the registry maps each platform to its `PlatformRenderer` implementation in `content/platforms/` (~30 renderers, e.g. `ClaudeRenderer`, `CursorRenderer`, `IgnoreFileRenderer`, `GranularRenderer`)
+- `AnnotationFormatter` + `FormatterRegistry` — one `AI*Formatter` per annotation in `content/annotations/`; renderers pull per-annotation text from here rather than formatting inline
+- `SectionCatalog` / `AnnotationSections` — shared driver that walks annotation buckets into titled sections, so most markdown-style renderers don't hand-roll their layout
+
+Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches a formatter + registry + any bespoke renderers. Step-by-step checklists: the `add-platform` and `add-annotation` skills in `.claude/skills/`.
+
 ### SPI registration
 
 The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("*")` means new annotations are picked up automatically without touching the processor configuration.
