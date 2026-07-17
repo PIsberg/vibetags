@@ -418,6 +418,10 @@
                                 <param>XML</param>
                             </outputFormats>
                             <timestampedReports>false</timestampedReports>
+                            <!-- PIT defaults to a single thread; GitHub-hosted ubuntu-latest runners
+                                 provide 4 vCPUs, so running mutants in parallel cuts wall-clock time
+                                 roughly proportionally without changing what gets analyzed. -->
+                            <threads>4</threads>
                         </configuration>
                         <dependencies>
                             <dependency>
