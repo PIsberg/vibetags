@@ -122,6 +122,11 @@ class ProcessorTestHarness {
         touch(".roomodes");
         // Machine-readable @AILocked report
         touch(".vibetags-locks");
+        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+        touch("CLAUDE.local.md");
+        touch(".claude/skills/vibetags-guardrails/SKILL.md");
+        touch(".claude/rules/.vibetags");
+        touch(".github/instructions/.vibetags");
     }
 
     private void touch(String relative) throws IOException {

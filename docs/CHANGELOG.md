@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Four new AI-platform outputs**: `CLAUDE.local.md` (Claude Code local override, same content as
+  `CLAUDE.md`), `.claude/rules/*.md` (Claude Code granular rules, `paths:` frontmatter),
+  `.claude/skills/vibetags-guardrails/SKILL.md` (a Claude Code Skill with required `name`/
+  `description` frontmatter), and `.github/instructions/*.instructions.md` (GitHub Copilot granular
+  rules, `applyTo:` frontmatter). All four are new formats of already-supported platforms, so the
+  documented AI-platform count is unchanged.
+
+### Fixed
+- **`GuardrailFileWriter.cleanupGranularDirectory()` mishandled multi-dot extensions.** It derived a
+  granular file's qName via `lastIndexOf('.')`, which is wrong for extensions like `.instructions.md`
+  (two dots) — it would strip only the last segment and never match the write round's exclude set,
+  so a file just written could be immediately scrubbed as orphaned on the same compile. Fixed to
+  strip the known extension length instead; added a regression test.
+
 ## [1.0.0-RC3] - 2026-07-17
 
 ### Security

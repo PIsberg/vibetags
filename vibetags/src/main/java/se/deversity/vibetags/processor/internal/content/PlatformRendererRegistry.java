@@ -27,6 +27,8 @@ public final class PlatformRendererRegistry {
     private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
+    private static final ClaudeLocalRenderer CLAUDE_LOCAL_RENDERER = new ClaudeLocalRenderer();
+    private static final ClaudeSkillRenderer CLAUDE_SKILL_RENDERER = new ClaudeSkillRenderer();
     private static final CodeRabbitRenderer CODERABBIT_RENDERER = new CodeRabbitRenderer();
     private static final PrAgentRenderer PR_AGENT_RENDERER = new PrAgentRenderer();
     private static final EllipsisRenderer ELLIPSIS_RENDERER = new EllipsisRenderer();
@@ -105,6 +107,10 @@ public final class PlatformRendererRegistry {
                 return JUNIE_RENDERER;
             case FIREBASE:
                 return FIREBASE_RENDERER;
+            case CLAUDE_LOCAL:
+                return CLAUDE_LOCAL_RENDERER;
+            case CLAUDE_SKILL:
+                return CLAUDE_SKILL_RENDERER;
             case CODERABBIT:
                 return CODERABBIT_RENDERER;
             case PR_AGENT:
@@ -127,6 +133,8 @@ public final class PlatformRendererRegistry {
             case AI_RULES_GRANULAR:
             case PEARAI_GRANULAR:
             case KIRO_GRANULAR:
+            case CLAUDE_GRANULAR:
+            case COPILOT_GRANULAR:
                 return GRANULAR_RENDERER;
             default:
                 throw new IllegalArgumentException("Unsupported platform: " + platform);

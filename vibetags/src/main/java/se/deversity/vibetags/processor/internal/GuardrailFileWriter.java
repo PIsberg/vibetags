@@ -429,10 +429,13 @@ public final class GuardrailFileWriter {
                   .filter(p -> p.toString().endsWith(extension))
                   .filter(p -> {
                       // Path.getFileName() returns null only for root paths — guard for correctness.
+                      // The stream is already filtered to names ending in `extension` above, so
+                      // stripping exactly that suffix is safe — unlike lastIndexOf('.'), it handles
+                      // multi-dot extensions (e.g. ".instructions.md") correctly too.
                       Path fn = p.getFileName();
                       String name = fn != null ? fn.toString() : "";
-                      int dot = name.lastIndexOf('.');
-                      return !excludeQNames.contains(dot >= 0 ? name.substring(0, dot) : name);
+                      String qName = name.substring(0, name.length() - extension.length());
+                      return !excludeQNames.contains(qName);
                   })
                   .forEach(this::scrubGranularFile);
         } catch (IOException ignored) {
