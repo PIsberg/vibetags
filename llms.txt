@@ -1,0 +1,37 @@
+# VibeTags
+
+> Compile-time Java annotation processor (JSR 269) that generates AI-platform guardrail configuration files — CLAUDE.md, .cursorrules, llms.txt, and 50+ others — from `@AI*` annotations in Java source. Zero runtime overhead; all annotations are `RetentionPolicy.SOURCE`.
+
+Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example`; output files are opt-in by file existence (the processor never creates a file that doesn't already exist); generated content lives between `VIBETAGS-START`/`VIBETAGS-END` markers and hand-authored content outside them is preserved.
+
+## Docs
+
+- [CLAUDE.md](CLAUDE.md): agent briefing — build commands, load-bearing architecture invariants, project guardrails (tool-neutral despite the name)
+- [README.md](README.md): project intro, quick start, supported platforms
+- [USAGE.md](USAGE.md): consumer guide — every annotation with usage examples
+- [SPEC.md](SPEC.md): behavior and output-format specification
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): technical deep dive — system diagram, data flow, design decisions
+- [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md): all 39 annotations — attribute table, semantics, compile-time validation warnings
+- [docs/PLATFORMS.md](docs/PLATFORMS.md): generated file ↔ platform ↔ format table, granular-rules notes
+- [docs/TESTS.md](docs/TESTS.md): which test class covers what
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): contribution workflow
+- [docs/RELEASING.md](docs/RELEASING.md): release process
+- [docs/CHANGELOG.md](docs/CHANGELOG.md): version history
+
+## Source
+
+- [vibetags-annotations/](vibetags-annotations/): the 39 `@interface` classes (zero dependencies, consumer compile classpath)
+- [vibetags/](vibetags/): the annotation processor — `AIGuardrailProcessor` plus `internal/` (writer, cache, fingerprint, sidecar, content renderers)
+- [vibetags-bom/](vibetags-bom/): Maven BOM managing annotation + processor versions
+- [example/](example/README.md): demo consumer app showing every generated output file in situ
+- [action/locked-files/](action/locked-files/): GitHub Action that fails PRs touching `@AILocked` line ranges
+
+## Optional
+
+- [docs/vibetags-in-practice.md](docs/vibetags-in-practice.md): worked real-world examples
+- [docs/proposed-annotations.md](docs/proposed-annotations.md): annotation ideas not yet implemented
+- [docs/CONCEPT_PLUGIN.md](docs/CONCEPT_PLUGIN.md): IDE/build-plugin concept notes
+- [load-tests/](load-tests/README.md): benchmark harness comparing processor versions
+
+<!-- VIBETAGS-START -->
+<!-- VIBETAGS-END -->
