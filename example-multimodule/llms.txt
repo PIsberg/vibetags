@@ -1,0 +1,63 @@
+<!-- VIBETAGS-START -->
+<!-- VIBETAGS-MODULE: cli -->
+# VibeTags Multi-Module Example
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+
+## Security Audit Requirements
+- [MultiModuleCli](com.example.multimodule.cli.MultiModuleCli): check for Path Traversal
+
+## 🔐 Contract-Frozen Signatures
+- [MultiModuleCli.run(java.lang.String[])](com.example.multimodule.cli.MultiModuleCli.run(java.lang.String[])): Public CLI surface; flags are documented downstream
+
+## 🧪 Test-Driven Requirements
+- [MultiModuleCli](com.example.multimodule.cli.MultiModuleCli): Coverage goal: 100%. Framework: JUNIT_5. Test file: src/test/java/com/example/multimodule/cli.
+
+## ♻️ Idempotency Guarantees
+- [MultiModuleCli.outputPath(java.lang.String,java.lang.String)](com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Derives output path from inputs only
+
+## Deterministic Pure Functions
+- [MultiModuleCli.outputPath(java.lang.String,java.lang.String)](com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)): Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
+<!-- VIBETAGS-MODULE-END: cli -->
+<!-- VIBETAGS-MODULE: core -->
+# VibeTags Multi-Module Example
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [IrNode](com.example.multimodule.core.IrNode): Core IR node: structural changes break every downstream module
+
+## Contextual Rules
+
+## ❄️ Immutable Types
+- [IrGraph](com.example.multimodule.core.IrGraph): immutable type
+
+## Framework-Free Domain Entities
+- [IrNode](com.example.multimodule.core.IrNode): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. No external framework imports permitted.
+<!-- VIBETAGS-MODULE-END: core -->
+<!-- VIBETAGS-MODULE: engine -->
+# VibeTags Multi-Module Example
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+
+## 🧵 Thread-Safe by Design
+- [LayoutEngine](com.example.multimodule.engine.LayoutEngine): Strategy: SYNCHRONIZED. Note: Stateless; safe to share across render threads
+
+## open-closed Extension Patterns
+- [LayoutEngine](com.example.multimodule.engine.LayoutEngine): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
+<!-- VIBETAGS-MODULE-END: engine -->
+<!-- VIBETAGS-END -->

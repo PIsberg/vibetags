@@ -262,7 +262,7 @@ class MultiModuleAggregationTest {
     void sidecar_corruptBase64_prunedOnLoad(@TempDir Path root) throws IOException {
         // Write a syntactically valid sidecar file but with corrupt Base64 in a body line.
         Path sidecarFile = root.resolve(".vibetags-mod-" + "corrupt");
-        Files.writeString(sidecarFile, "moduleId=corrupt\nmodulePath=\ncursor=!!!NOT_BASE64!!!\n");
+        Files.writeString(sidecarFile, "# version=2\nmoduleId=corrupt\nmodulePath=\ncursor=!!!NOT_BASE64!!!\n");
 
         // readAll should silently discard the malformed sidecar and delete the file.
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
@@ -336,7 +336,8 @@ class MultiModuleAggregationTest {
         String encoded = java.util.Base64.getEncoder()
             .encodeToString("## rules".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Files.writeString(sidecarFile,
-            "moduleId=skiptest\n"
+            "# version=2\n"
+            + "moduleId=skiptest\n"
             + "modulePath=\n"
             + "THIS_LINE_HAS_NO_EQUALS_SIGN\n"
             + "cursor=" + encoded + "\n");
@@ -355,7 +356,8 @@ class MultiModuleAggregationTest {
         String encoded = java.util.Base64.getEncoder()
             .encodeToString("content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Files.writeString(sidecarFile,
-            "modulePath=\n"
+            "# version=2\n"
+            + "modulePath=\n"
             + "cursor=" + encoded + "\n");
 
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);

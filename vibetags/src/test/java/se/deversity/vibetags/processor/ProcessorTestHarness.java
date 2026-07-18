@@ -35,6 +35,7 @@ class ProcessorTestHarness {
 
     private final Path root;
     private final List<JavaFileObject> sources = new ArrayList<>();
+    private final List<Path> fileSources = new ArrayList<>();
 
     ProcessorTestHarness(Path tempDir) throws IOException {
         this(tempDir, true);
@@ -174,6 +175,34 @@ class ProcessorTestHarness {
     }
 
     /**
+     * Queues a Java source file that exists on disk. Unlike {@link #addSource}, the compiled
+     * source has a real {@code file:} URI, so {@code ModuleRootResolver} can walk up from it to
+     * a build file — required for multi-module identity tests. The file is compiled as-is; the
+     * caller is responsible for writing it (see {@link #writeSourceFile}).
+     */
+    void addSourceFile(Path file) {
+        fileSources.add(file);
+    }
+
+    /**
+     * Writes {@code content} to {@code relativePath} under the temp root (creating parent
+     * directories) and queues it for compilation as a file-backed source.
+     */
+    Path writeSourceFile(String relativePath, String content) throws IOException {
+        Path p = root.resolve(relativePath);
+        Files.createDirectories(p.getParent());
+        Files.writeString(p, content, StandardCharsets.UTF_8);
+        addSourceFile(p);
+        return p;
+    }
+
+    /** Clears all queued sources so the harness can run a second, different compilation. */
+    void clearSources() {
+        sources.clear();
+        fileSources.clear();
+    }
+
+    /**
      * Runs {@link AIGuardrailProcessor} via the Java compiler against the queued sources.
      * The processor option {@code -Avibetags.root} is set to {@link #root} so that all
      * generated AI config files land in the temp directory.
@@ -202,8 +231,12 @@ class ProcessorTestHarness {
             ));
             options.addAll(List.of(extraOptions));
 
+            List<JavaFileObject> units = new ArrayList<>(sources);
+            if (!fileSources.isEmpty()) {
+                fm.getJavaFileObjectsFromPaths(fileSources).forEach(units::add);
+            }
             JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics, options, null, sources
+                null, fm, diagnostics, options, null, units
             );
             task.setProcessors(List.of(new AIGuardrailProcessor()));
             task.call();

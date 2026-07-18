@@ -143,7 +143,11 @@ The processor records a fingerprint of the build inputs — the processor versio
 
 ### Multi-module safety
 
-In multi-module builds, if a module has **no new annotations**, the processor skips updating shared files (`.cursorrules`, `llms.txt`, etc.) to avoid overwriting annotations contributed by sibling modules.
+In multi-module reactor builds every module contributes to the shared marker files via per-module sidecars (`.vibetags-mod-<moduleId>` at the VibeTags root): each compile persists its own rendered bodies, reads all sibling sidecars, and merges them into the shared files with `VIBETAGS-MODULE: <id>` sub-markers. Module identity comes from `ModuleRootResolver` — it walks up from the compiled sources to the nearest `pom.xml`/`build.gradle(.kts)` — **not** from the JVM working directory, which is the reactor root for every module of an in-process Maven/Gradle build (issue #278: last-writer-wins). Sidecars are format v2; v1 files carry the broken working-directory identity and are pruned on read.
+
+Two preservation guards keep compiles with **no annotations** (e.g. Maven's test-compile pass) from destroying content: the module's sidecar is only saved when annotations were found, and shared-file writes with no contributions preserve the existing file content. Consequence: removing *all* annotations from a module leaves its last contribution in place until its `.vibetags-mod-*` file is deleted (or the module directory disappears).
+
+`example-multimodule/` is a three-module reactor demonstrating this end-to-end (built and asserted in CI).
 
 ### Internal class responsibilities
 

@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Multi-module reactor builds no longer lose sibling modules' guardrails (last-writer-wins).**
+  ([#278](https://github.com/PIsberg/vibetags/issues/278)) Module identity for sidecar aggregation
+  was derived from the JVM working directory, which in an in-process Maven/Gradle reactor build is
+  the reactor root for *every* module — all modules collapsed onto one `_root_` sidecar and the
+  monolithic outputs (`CLAUDE.md`, `.cursorrules`, `llms.txt`, …) only kept the last module
+  compiled. A new `ModuleRootResolver` now derives the identity from the compiled sources (walking
+  up from a source file to the nearest `pom.xml`/`build.gradle(.kts)`, javac Tree API, graceful
+  fallback to the working directory under other compilers). Additionally, compiles that see no
+  annotations (Maven's test-compile pass) no longer overwrite the module's sidecar, and the sidecar
+  format was bumped to v2 so stale v1 files with the broken identity are pruned automatically on
+  the first build after upgrading.
+
 ### Added
+- **`example-multimodule/`** — a three-module Maven reactor (core → engine → cli, annotation
+  processor active in every module, shared VibeTags root via
+  `${maven.multiModuleProjectDirectory}`) demonstrating cross-module guardrail aggregation; CI
+  builds it and asserts all modules' entries survive in the merged output.
 - **Four new AI-platform outputs**: `CLAUDE.local.md` (Claude Code local override, same content as
   `CLAUDE.md`), `.claude/rules/*.md` (Claude Code granular rules, `paths:` frontmatter),
   `.claude/skills/vibetags-guardrails/SKILL.md` (a Claude Code Skill with required `name`/
