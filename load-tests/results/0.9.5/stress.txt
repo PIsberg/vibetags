@@ -1,8 +1,8 @@
 VibeTags Annotation-Volume Stress Test Results
 ======================================================================
-Classes    ProcessorTime(ms)  BaselineTime(ms)   Overhead(ms)       OutputSize(B) 
+Classes    ProcessorTime(ms)  BaselineTime(ms)   Overhead(ms)       OutputSize(B)
 ----------------------------------------------------------------------
-10         654                147                507                17156         
-100        606                331                275                122555        
-500        1337               769                568                599895        
-1000       1350               893                457                1196918       
+10         654                147                507                17156
+100        606                331                275                122555
+500        1337               769                568                599895
+1000       1350               893                457                1196918

@@ -24,14 +24,14 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      
+
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: maven
-      
+
       - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
         run: |
           git clone --depth 1 --branch v1.6.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
@@ -92,12 +92,12 @@ jobs:
         run: |
           cd vibetags
           mvn test -B
-      
+
       - name: Run Integration Tests (requires compiled example)
         run: |
           cd vibetags
           mvn test -Drun.integration.tests=true -B
-      
+
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:
@@ -244,14 +244,14 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      
+
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: gradle
-      
+
       - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
         run: |
           git clone --depth 1 --branch v1.6.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
@@ -292,7 +292,7 @@ jobs:
         run: |
           cd vibetags
           ./gradlew test -Drun.integration.tests=true --no-daemon
-      
+
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:

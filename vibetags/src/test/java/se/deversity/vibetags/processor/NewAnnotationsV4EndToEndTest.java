@@ -21,7 +21,7 @@ class NewAnnotationsV4EndToEndTest {
     @Test
     void testNewAnnotationsRendering_Cursor() {
         AnnotationCollector collector = mock(AnnotationCollector.class);
-        
+
         // Mock AICallersOnly
         Element callersOnlyElement = mock(Element.class);
         when(callersOnlyElement.toString()).thenReturn("com.example.SecureUtil");
@@ -95,7 +95,7 @@ class NewAnnotationsV4EndToEndTest {
     @Test
     void testNewAnnotationsRendering_Claude() {
         AnnotationCollector collector = mock(AnnotationCollector.class);
-        
+
         // Mock AISandboxOnly
         Element sandboxOnlyElement = mock(Element.class);
         when(sandboxOnlyElement.toString()).thenReturn("com.example.MockGateway");

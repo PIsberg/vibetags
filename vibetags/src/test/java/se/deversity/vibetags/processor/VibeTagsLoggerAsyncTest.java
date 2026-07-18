@@ -44,7 +44,7 @@ class VibeTagsLoggerAsyncTest {
         // Verify that the log file was created and contains ONLY this thread's logs
         assertTrue(Files.exists(logFile), "Log file should exist for thread " + threadId);
         String content = Files.readString(logFile);
-        
+
         assertTrue(content.contains(helloMsg), "Log file must contain hello message");
         assertTrue(content.contains(goodbyeMsg), "Log file must contain goodbye message");
 

@@ -32,7 +32,7 @@ class MultiModuleStabilityTest {
         Files.writeString(claudeFile, existingContent);
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         // Simulate a run with NO annotations found (hasNewRules = false)
         boolean changed = processor.writeFileIfChanged(claudeFile.toString(), "boiler plate", false);
 
@@ -49,7 +49,7 @@ class MultiModuleStabilityTest {
         Files.writeString(claudeFile, existingContent);
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         // Simulate a run WITH annotations (hasNewRules = true)
         boolean changed = processor.writeFileIfChanged(claudeFile.toString(), "NEW CONTENT", true);
 
@@ -67,7 +67,7 @@ class MultiModuleStabilityTest {
         Files.createFile(claudeFile); // empty file
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         // Even if no annotations found, if the file is empty, we write the markers
         boolean changed = processor.writeFileIfChanged(claudeFile.toString(), "empty rules", false);
 
