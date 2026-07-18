@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
@@ -104,6 +105,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Best-effort source line resolution for {@code @AILocked} elements (javac Tree API). */
     private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
+    /**
+     * Root directory of the module being compiled, resolved from the sources of the first
+     * non-empty processing round (see {@link ModuleRootResolver}). {@code null} until resolved —
+     * and stays {@code null} under non-javac compilers or in-memory compilation, in which case
+     * the JVM working directory is used as before. This is the module identity for multi-module
+     * sidecar aggregation; the working directory is NOT usable for that, because reactor builds
+     * compile every module in-process with the working directory pinned at the reactor root
+     * (issue #278: last-writer-wins on shared guardrail files).
+     */
+    private @Nullable Path moduleRoot;
+
     private final AnnotationCollector collector = new AnnotationCollector();
     // Only the three sets actually read in generateFiles() are kept as fields.
     // The rest (contextElements, draftElements, privacyElements, coreElements,
@@ -163,6 +175,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Reset for potential reuse (tests reuse the processor instance via init).
         this.processed.set(false);
+        this.moduleRoot = null;
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
     }
@@ -190,6 +203,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 return false;
             }
             if (processed.get()) return false;
+
+            // Resolve the module root from this round's sources (first success wins). Must run
+            // while rounds are live — the Tree API cannot map elements back to source afterwards.
+            if (moduleRoot == null) {
+                moduleRoot = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+            }
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
             // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
@@ -227,6 +246,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return false; // allow other processors to see the same annotations
     }
 
+    /**
+     * The directory identifying the module being compiled: the module root resolved from this
+     * compilation's sources when available, else the JVM working directory (previous behavior —
+     * correct for single-module builds and non-javac compilers).
+     */
+    private Path compilationRoot() {
+        return moduleRoot != null ? moduleRoot : Paths.get("").toAbsolutePath();
+    }
+
     @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")
     private void generateFiles() {
         if (log != null) {
@@ -238,7 +266,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
         // Compute module identity for multi-module aggregation.
-        Path compilationRoot = Paths.get("").toAbsolutePath();
+        Path compilationRoot = compilationRoot();
         String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
 
@@ -278,11 +306,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 mySidecar.putBody(service, body);
             }
         });
-        try {
-            mySidecar.save(root);
-        } catch (IOException e) {
-            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: Could not save module sidecar (" + e.getMessage() + "); multi-module aggregation disabled.");
+        // Only persist the sidecar when this compilation actually saw annotations. Maven runs
+        // the processor again for test-compile (and other source sets) under the SAME module
+        // identity but usually with zero annotations — an unconditional save would overwrite the
+        // main compile's sidecar with an empty one, dropping this module from the merged output.
+        // Mirrors the hasNewRules guard in GuardrailFileWriter for the single-module case.
+        if (collector.anyAnnotationsFound()) {
+            try {
+                mySidecar.save(root);
+            } catch (IOException e) {
+                getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                    "VibeTags: Could not save module sidecar (" + e.getMessage() + "); multi-module aggregation disabled.");
+            }
         }
 
         // Read all sidecars (this module + any siblings that have already compiled).
@@ -407,8 +442,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, String> contentByService = built.contentByService;
 
         // Simulate this module's sidecar save in memory: the merge below must reflect the
-        // freshly built bodies, not whatever a previous compile persisted to disk.
-        Path compilationRoot = Paths.get("").toAbsolutePath();
+        // freshly built bodies, not whatever a previous compile persisted to disk. Skipped when
+        // this compilation saw no annotations, mirroring the conditional save in generateFiles()
+        // (a test-compile pass must not evict the main compile's contribution from the merge).
+        Path compilationRoot = compilationRoot();
         String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
         ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
@@ -421,19 +458,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         });
         List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.readAll(root));
-        boolean replaced = false;
-        for (int i = 0; i < allSidecars.size(); i++) {
-            if (allSidecars.get(i).getModuleId().equals(moduleId)) {
-                allSidecars.set(i, mySidecar);
-                replaced = true;
-                break;
+        if (collector.anyAnnotationsFound()) {
+            boolean replaced = false;
+            for (int i = 0; i < allSidecars.size(); i++) {
+                if (allSidecars.get(i).getModuleId().equals(moduleId)) {
+                    allSidecars.set(i, mySidecar);
+                    replaced = true;
+                    break;
+                }
             }
-        }
-        if (!replaced) {
-            // readAll() returns sidecars sorted by filename (= moduleId); keep that ordering
-            // so the merged sub-marker sequence matches what generateFiles() would produce.
-            allSidecars.add(mySidecar);
-            allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
+            if (!replaced) {
+                // readAll() returns sidecars sorted by filename (= moduleId); keep that ordering
+                // so the merged sub-marker sequence matches what generateFiles() would produce.
+                allSidecars.add(mySidecar);
+                allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
+            }
         }
         // CPD-OFF — intentional mirror of the merge block in generateFiles(): a check verdict
         // is only trustworthy if it reproduces generation exactly, and generateFiles() is

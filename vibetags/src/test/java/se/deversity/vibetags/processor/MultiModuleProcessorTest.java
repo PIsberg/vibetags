@@ -169,7 +169,7 @@ class MultiModuleProcessorTest {
         // Distinct from the future-version case: a sidecar with no moduleId is garbage from
         // any version's perspective and keeps the existing delete-on-malformed behaviour.
         Path malformed = tmp.resolve(".vibetags-mod-broken");
-        Files.writeString(malformed, "# version=1\nno-module-id-here=x\n");
+        Files.writeString(malformed, "# version=2\nno-module-id-here=x\n");
 
         ModuleSidecar.readAll(tmp);
         assertFalse(Files.exists(malformed), "malformed sidecar must be pruned");

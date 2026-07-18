@@ -39,8 +39,20 @@ import java.util.stream.Stream;
 public final class ModuleSidecar {
 
     static final String SIDECAR_PREFIX = ".vibetags-mod-";
-    /** Format version written into every sidecar header. Bump when the format changes. */
-    static final int FORMAT_VERSION = 1;
+    /**
+     * Format version written into every sidecar header. Bump when the format changes.
+     *
+     * <p>Version history:
+     * <ul>
+     *   <li>1 — original format. Module identity was derived from the JVM working directory,
+     *       which is the reactor root for every module of an in-process Maven/Gradle build, so
+     *       v1 sidecars from reactor builds carry a wrong, shared {@code _root_} identity
+     *       (issue #278). They cannot be trusted and are pruned on read.</li>
+     *   <li>2 — identical file layout; module identity now derived from the compiled sources
+     *       (see {@code ModuleRootResolver}). The bump exists purely to invalidate v1 files.</li>
+     * </ul>
+     */
+    static final int FORMAT_VERSION = 2;
     private static final String KEY_FORMAT_VERSION = "# version";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
@@ -115,23 +127,30 @@ public final class ModuleSidecar {
     static final ModuleSidecar FUTURE_VERSION = new ModuleSidecar("_future_", "");
 
     /**
-     * Loads a sidecar from {@code path}. Returns {@code null} if the file is malformed, or
-     * {@link #FUTURE_VERSION} if its {@code # version} header is newer than {@link #FORMAT_VERSION}.
+     * Loads a sidecar from {@code path}. Returns {@code null} if the file is malformed or was
+     * written in an older format than {@link #FORMAT_VERSION} (stale — see the version history
+     * on {@code FORMAT_VERSION}; the caller prunes it), or {@link #FUTURE_VERSION} if its
+     * {@code # version} header is newer than {@link #FORMAT_VERSION} (owned by a newer sibling —
+     * skipped but never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
         try {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
             String modulePath = "";
+            boolean sawCurrentVersion = false;
             Map<String, String> bodies = new LinkedHashMap<>();
             for (String line : lines) {
                 if (line.startsWith("#")) {
-                    // Enforce the format-version header: refuse to (mis-)parse future formats.
+                    // Enforce the format-version header: refuse to (mis-)parse future formats,
+                    // and treat older formats (or a missing header) as stale.
                     if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
                         try {
                             int version = Integer.parseInt(
                                     line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
                             if (version > FORMAT_VERSION) return FUTURE_VERSION;
+                            if (version < FORMAT_VERSION) return null;
+                            sawCurrentVersion = true;
                         } catch (NumberFormatException malformed) {
                             return null;
                         }
@@ -151,7 +170,7 @@ public final class ModuleSidecar {
                         new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8));
                 }
             }
-            if (moduleId == null) return null;
+            if (moduleId == null || !sawCurrentVersion) return null;
             ModuleSidecar s = new ModuleSidecar(moduleId, modulePath);
             s.bodies.putAll(bodies);
             return s;

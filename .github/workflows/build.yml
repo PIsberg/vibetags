@@ -71,6 +71,23 @@ jobs:
           cd example
           mvn clean compile -B -Dvibetags.log.path=../vibetags.log
 
+      - name: Build Multi-Module Example (Maven reactor)
+        run: |
+          cd example-multimodule
+          mvn clean verify -B
+
+      - name: Verify Multi-Module Aggregation (issue #278)
+        run: |
+          cd example-multimodule
+          for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
+                       "com.example.multimodule.core.IrNode" \
+                       "com.example.multimodule.engine.LayoutEngine" \
+                       "com.example.multimodule.cli.MultiModuleCli"; do
+            grep -qF "$token" CLAUDE.md || { echo "MISSING in CLAUDE.md: $token"; exit 1; }
+            grep -qF "$token" .cursorrules || { echo "MISSING in .cursorrules: $token"; exit 1; }
+          done
+          echo "All reactor modules present in merged guardrail files."
+
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags
@@ -150,6 +167,14 @@ jobs:
         run: |
           cd example
           mvn -B clean compile
+
+      - name: Build Multi-Module Example (Maven reactor)
+        run: |
+          cd example-multimodule
+          mvn clean verify -B
+          grep -qF "VIBETAGS-MODULE: core" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: engine" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: cli" CLAUDE.md
 
       - name: Run Unit Tests (VibeTags Library)
         run: |

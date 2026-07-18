@@ -223,7 +223,7 @@ class CheckModeTest {
     private static void writeSiblingSidecar(Path root, String moduleId, String service, String body)
             throws IOException {
         String encoded = Base64.getEncoder().encodeToString(body.getBytes(StandardCharsets.UTF_8));
-        String content = "# version=1\n"
+        String content = "# version=2\n"
             + "moduleId=" + moduleId + "\n"
             + "modulePath=\n"
             + service + "=" + encoded + "\n";
