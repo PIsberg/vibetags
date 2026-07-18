@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * Order processing service.
- * 
+ *
  * Demonstrates mixed usage of @AILocked, @AIContext, and @AIDraft
  * within the same class to show fine-grained control.
  */
@@ -20,7 +20,7 @@ import java.util.Map;
     avoids = "Raw SQL queries, direct database connections without connection pooling"
 )
 public class OrderService {
-    
+
     /**
      * LOCKED: Order validation logic.
      * This method implements complex business rules that took months to get right.
@@ -30,7 +30,7 @@ public class OrderService {
         // Complex validation - DO NOT CHANGE
         return orderData != null && orderData.containsKey("items");
     }
-    
+
     /**
      * LOCKED: Tax calculation.
      * Integrates with external tax service API.
@@ -40,7 +40,7 @@ public class OrderService {
         // External API call - DO NOT CHANGE
         return subtotal * 0.08; // Simplified for example
     }
-    
+
     /**
      * DRAFT: Order discount logic.
      * AI is encouraged to help implement various discount strategies.
@@ -71,7 +71,7 @@ public class OrderService {
         // @AIDraft: Implement status tracking
         return "CREATED";
     }
-    
+
     /**
      * DRAFT: Order search and filtering.
      */
@@ -80,7 +80,7 @@ public class OrderService {
         // @AIDraft: Implement search logic
         return null;
     }
-    
+
     /**
      * LOCKED: Payment integration.
      */
@@ -89,7 +89,7 @@ public class OrderService {
         // Stripe integration - DO NOT CHANGE
         return true;
     }
-    
+
     /**
      * DRAFT: Order confirmation generation.
      */

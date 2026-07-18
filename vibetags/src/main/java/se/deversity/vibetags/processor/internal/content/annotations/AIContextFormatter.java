@@ -33,10 +33,10 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: Focus on ").append(focus).append(". Avoid ").append(avoids).append(".\n");
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` \n  - Focus: ").append(focus).append("\n  - Avoid: ").append(avoids).append("\n");
+                sb.append("- `").append(className).append("`\n  - Focus: ").append(focus).append("\n  - Avoid: ").append(avoids).append("\n");
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` \n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append("\n");
+                sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append("\n");
                 break;
             case GEMINI:
             case GEMINI_MD:

@@ -43,4 +43,3 @@ java.io.IOException: Failed to delete temp directory C:\Users\isber\AppData\Loca
 		... 13 more
 		Suppressed: java.nio.file.FileSystemException: C:\Users\isber\AppData\Local\Temp\junit12572372727859138231\shared-project\vibetags.log: The process cannot access the file because it is being used by another process
 			... 21 more
-

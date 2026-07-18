@@ -9,7 +9,7 @@ import se.deversity.vibetags.annotations.AILegacyBridge;
  */
 @AILegacyBridge(reason = "Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023")
 public class LegacyBridgeService {
-    
+
     public String adaptLegacyCall(String key, String value) {
         // AI must preserve this legacy formatting quirk to prevent upstream breakage.
         return "KEY=" + key + ";VAL=" + value;

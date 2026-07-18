@@ -13,7 +13,7 @@ import se.deversity.vibetags.annotations.AIContext;
     avoids = "java.util.regex, String.split(), StringBuilder in loops"
 )
 public class StringParser {
-    
+
     /**
      * Parse a delimited string into components.
      * Implementation should use character-by-character scanning to avoid regex overhead.
@@ -23,7 +23,7 @@ public class StringParser {
         // Hint: Count delimiters first, allocate array once, then fill
         return null;
     }
-    
+
     /**
      * Extract substrings without creating garbage.
      * Consider using a custom CharSequence wrapper instead of substring().
@@ -32,7 +32,7 @@ public class StringParser {
         // @AIDraft: Implement zero-allocation substring extraction
         return null;
     }
-    
+
     /**
      * Validate string format efficiently.
      * Avoid regex - use manual character validation.

@@ -18,7 +18,7 @@ public final class AIDomainModelFormatter implements AnnotationFormatter {
         String className = ElementNaming.elementPath(element);
         String[] allow = domainModel.allow();
         String allowedStr = String.join(", ", allow);
-        String summary = "Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. " 
+        String summary = "Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. "
             + (allow.length > 0 ? "Allowed imports: [" + allowedStr + "]" : "No external framework imports permitted.");
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {

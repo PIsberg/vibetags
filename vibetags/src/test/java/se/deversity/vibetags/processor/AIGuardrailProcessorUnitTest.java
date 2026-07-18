@@ -58,7 +58,7 @@ class AIGuardrailProcessorUnitTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // The processor should support all four annotation types
         // This is configured via @SupportedAnnotationTypes annotation
-        SupportedAnnotationTypes annotation = 
+        SupportedAnnotationTypes annotation =
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(annotation);
         assertArrayEquals(
@@ -87,10 +87,10 @@ class AIGuardrailProcessorUnitTest {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
-        
+
         assertEquals(3, warnings.size(), "Should have 3 warnings (cursor, claude, and qwen ignore missing)");
         assertTrue(warnings.get(0).contains(".cursorignore"));
         assertTrue(warnings.get(1).contains(".claudeignore"));
@@ -102,10 +102,10 @@ class AIGuardrailProcessorUnitTest {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         Set<String> active = Set.of("gemini");
         processor.checkOrphanedAnnotations(messager, active, true, true, false);
-        
+
         // Should have 2 warnings for @AIIgnore and @AILocked about .aiexclude
         assertEquals(2, warnings.size(), "Should have 2 warnings (gemini ignore and locked missing .aiexclude)");
         assertTrue(warnings.get(0).contains(".aiexclude"));
@@ -579,16 +579,16 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.TestClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        
+
         // Mock presence of both annotations
         when(element.getAnnotation(AILocked.class)).thenReturn(mock(AILocked.class));
         when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
-        
+
         AnnotationValidator.validate(messager, roundEnv, null);
-        
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIDraft and @AILocked"));
     }
@@ -600,16 +600,16 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.TestClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        
+
         AIAudit audit = mock(AIAudit.class);
         when(audit.checkFor()).thenReturn(new String[0]);
         when(element.getAnnotation(AIAudit.class)).thenReturn(audit);
-        
+
         AnnotationValidator.validate(messager, roundEnv, null);
-        
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("has no 'checkFor' items list"));
     }
@@ -621,15 +621,15 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.PrivacyClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
-        
+
         when(element.getAnnotation(AIPrivacy.class)).thenReturn(mock(AIPrivacy.class));
         when(element.getAnnotation(AIIgnore.class)).thenReturn(mock(AIIgnore.class));
-        
+
         AnnotationValidator.validate(messager, roundEnv, null);
-        
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIPrivacy and @AIIgnore"));
     }
@@ -642,15 +642,15 @@ class AIGuardrailProcessorUnitTest {
         when(processingEnv.getOptions()).thenReturn(options);
         when(processingEnv.getMessager()).thenReturn(noopMessager());
         processor.init(processingEnv);
-        
+
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
-        
+
         Element coreElement = mock(Element.class);
         Element perfElement = mock(Element.class);
-        
+
         doReturn(Set.of(coreElement)).when(roundEnv).getElementsAnnotatedWith(AICore.class);
         doReturn(Set.of(perfElement)).when(roundEnv).getElementsAnnotatedWith(AIPerformance.class);
-        
+
         // Also need to return empty sets for other annotations to avoid NullPointerException or issues
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AIContext.class);
@@ -660,7 +660,7 @@ class AIGuardrailProcessorUnitTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         boolean result = processor.process(Set.of(), roundEnv);
-        
+
         // process should return false as it allows other processors to see the annotations
         assertFalse(result);
     }
@@ -708,12 +708,12 @@ class AIGuardrailProcessorUnitTest {
     void testMessager_MiscellaneousOverloads() {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
-        
+
         // These are mostly to cover the proxy calls in the anonymous messager class
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class));
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class));
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class), mock(javax.lang.model.element.AnnotationValue.class));
-        
+
         assertEquals(3, notes.size());
     }
 
@@ -721,10 +721,10 @@ class AIGuardrailProcessorUnitTest {
     void testOptions_ComplexPaths(@TempDir Path tempDir) throws IOException {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         ProcessingEnvironment processingEnv = mock(ProcessingEnvironment.class);
-        
+
         Path rootPath = tempDir.resolve("my-root").toAbsolutePath();
         Files.createDirectories(rootPath);
-        
+
         Map<String, String> options = Map.of(
             "vibetags.root", rootPath.toString(),
             "vibetags.project", "My Special Project",
@@ -732,9 +732,9 @@ class AIGuardrailProcessorUnitTest {
         );
         when(processingEnv.getOptions()).thenReturn(options);
         when(processingEnv.getMessager()).thenReturn(noopMessager());
-        
+
         processor.init(processingEnv);
-        
+
         // Internal state is hard to check, but we verify it doesn't crash
         assertNotNull(processor);
     }
@@ -757,11 +757,11 @@ class AIGuardrailProcessorUnitTest {
         when(element.toString()).thenReturn("com.example.pkg");
         when(element.getSimpleName()).thenReturn(mock(javax.lang.model.element.Name.class));
         when(element.getSimpleName().toString()).thenReturn("pkg");
-        
+
         AILocked locked = mock(AILocked.class);
         when(locked.reason()).thenReturn("pkg locked");
         when(element.getAnnotation(AILocked.class)).thenReturn(locked);
-        
+
         doReturn(Set.of(element)).when(re).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIContext.class);
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIIgnore.class);
@@ -772,11 +772,11 @@ class AIGuardrailProcessorUnitTest {
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIPerformance.class);
 
         processor.process(Set.of(), re);
-        
+
         // Final round
         when(re.processingOver()).thenReturn(true);
         processor.process(Set.of(), re);
-        
+
         // Check if package-specific glob is generated: "**/pkg/**/*.java"
         Path mdcFile = granularDir.resolve("com-example-pkg.mdc");
         assertTrue(Files.exists(mdcFile), "Granular rule file should exist for package");

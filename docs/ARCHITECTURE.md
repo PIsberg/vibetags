@@ -205,7 +205,7 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
     AILocked locked = element.getAnnotation(AILocked.class);
     String className = element.toString();
     String reason = locked.reason();
-    
+
     // Append to all platforms
     cursorRules.append("* `").append(className).append("` - Reason: ").append(reason).append("\n");
     qwenMd.append("* `").append(className).append("` — ").append(reason).append("\n");
@@ -218,7 +218,7 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
 for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
     AIContext context = element.getAnnotation(AIContext.class);
     String className = element.toString();
-    
+
     // Platform-specific formatting
     cursorRules.append("* `").append(className).append("`\n")
                .append("  * Focus: ").append(context.focus())
@@ -230,10 +230,10 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AIContext.class)) {
 ```java
 for (Element element : roundEnv.getElementsAnnotatedWith(AIIgnore.class)) {
     String className = element.toString();
-    
+
     // Write to ignore sections
     qwenIgnore.append("* `").append(className).append("`\n");
-    
+
     // Write glob patterns to standalone ignore files
     String globPattern = "**/"+ element.getSimpleName() + ".java\n";
     qwenIgnoreFile.append(globPattern);
@@ -246,7 +246,7 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AIAudit.class)) {
     AIAudit audit = element.getAnnotation(AIAudit.class);
     String className = element.toString();
     String[] checkFor = audit.checkFor();
-    
+
     // Platform-specific audit format
     qwenAudit.append("* `").append(className).append("`\n");
     qwenAudit.append("  - Required Checks: ").append(String.join(", ", checkFor)).append("\n");

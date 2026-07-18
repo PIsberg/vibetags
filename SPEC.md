@@ -19,13 +19,13 @@ To enable parallel test execution, we must isolate Logback logger configurations
 graph TD
     A[Test Thread 1] -->|init processor| B[Root: TempDir1]
     C[Test Thread 2] -->|init processor| D[Root: TempDir2]
-    
+
     B -->|get logger| E[VibeTagsLogger.forRoot]
     D -->|get logger| F[VibeTagsLogger.forRoot]
-    
+
     E -->|suffix with TempDir1 hash| G[Logback Logger: se.deversity.vibetags.198327]
     F -->|suffix with TempDir2 hash| H[Logback Logger: se.deversity.vibetags.459273]
-    
+
     G -->|isolated appender| I[TempDir1/vibetags.log]
     H -->|isolated appender| J[TempDir2/vibetags.log]
 ```

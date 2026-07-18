@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC4] - 2026-07-18
+
 ### Fixed
 - **Multi-module reactor builds no longer lose sibling modules' guardrails (last-writer-wins).**
   ([#278](https://github.com/PIsberg/vibetags/issues/278)) Module identity for sidecar aggregation
@@ -19,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotations (Maven's test-compile pass) no longer overwrite the module's sidecar, and the sidecar
   format was bumped to v2 so stale v1 files with the broken identity are pruned automatically on
   the first build after upgrading.
+- **`GuardrailFileWriter.cleanupGranularDirectory()` mishandled multi-dot extensions.** It derived a
+  granular file's qName via `lastIndexOf('.')`, which is wrong for extensions like `.instructions.md`
+  (two dots) — it would strip only the last segment and never match the write round's exclude set,
+  so a file just written could be immediately scrubbed as orphaned on the same compile. Fixed to
+  strip the known extension length instead; added a regression test.
+- **Generated markdown outputs no longer contain trailing whitespace.** The `@AIAudit`,
+  `@AIContext`, and `@AIIgnore` formatters emitted a trailing space before the newline on list
+  items (e.g. ``* `com.example.Foo` ``), which made whitespace-normalizing tools (pre-commit
+  hooks, editors) fight the generator over committed output files.
 
 ### Added
 - **`example-multimodule/`** — a three-module Maven reactor (core → engine → cli, annotation
@@ -31,13 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `description` frontmatter), and `.github/instructions/*.instructions.md` (GitHub Copilot granular
   rules, `applyTo:` frontmatter). All four are new formats of already-supported platforms, so the
   documented AI-platform count is unchanged.
-
-### Fixed
-- **`GuardrailFileWriter.cleanupGranularDirectory()` mishandled multi-dot extensions.** It derived a
-  granular file's qName via `lastIndexOf('.')`, which is wrong for extensions like `.instructions.md`
-  (two dots) — it would strip only the last segment and never match the write round's exclude set,
-  so a file just written could be immediately scrubbed as orphaned on the same compile. Fixed to
-  strip the known extension length instead; added a regression test.
 
 ## [1.0.0-RC3] - 2026-07-17
 
@@ -957,7 +961,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC3...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC4...HEAD
+[1.0.0-RC4]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC3...v1.0.0-RC4
 [1.0.0-RC3]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...v1.0.0-RC3
 [1.0.0-RC2]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...v1.0.0-RC2
 [1.0.0-RC1]: https://github.com/PIsberg/vibetags/compare/v0.9.9...v1.0.0-RC1

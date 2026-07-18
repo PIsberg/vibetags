@@ -19,7 +19,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
         if (sunset == null) return;
         String className = ElementNaming.elementPath(element);
         String jira = sunset.jira();
-        
+
         // replacement attribute has Class value, which throws MirroredTypeException during compilation/processing
         String replacementName = "java.lang.Object";
         try {
@@ -30,7 +30,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
                 replacementName = mirror.toString();
             }
         }
-        
+
         String summary = "Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: " + jira + ". Replacement: `" + replacementName + "`";
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {

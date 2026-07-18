@@ -100,7 +100,7 @@ class GranularRulesEndToEndTest {
 
         // 2. Run the processor in this directory
         ProcessorTestHarness h = new ProcessorTestHarness(cleanupDir);
-        h.addSource("com.example.Legit", 
+        h.addSource("com.example.Legit",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
             "@AILocked(reason=\"ok\") public class Legit {}");

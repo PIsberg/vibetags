@@ -6,7 +6,7 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 
 /**
  * User notification service.
- * 
+ *
  * This service handles email, SMS, and push notifications.
  * AI is encouraged to help implement the delivery methods.
  */
@@ -15,7 +15,7 @@ import se.deversity.vibetags.annotations.AIPrivacy;
     avoids = "Hard-coded credentials, synchronous blocking calls"
 )
 public class NotificationService {
-    
+
     /**
      * Send an email notification.
      */
@@ -25,7 +25,7 @@ public class NotificationService {
         // @AIDraft: Implement this
         return false;
     }
-    
+
     /**
      * Send an SMS notification.
      */
@@ -35,7 +35,7 @@ public class NotificationService {
         // @AIDraft: Implement this
         return false;
     }
-    
+
     /**
      * Send a push notification to mobile devices.
      */
@@ -44,7 +44,7 @@ public class NotificationService {
         // @AIDraft: Implement this
         return false;
     }
-    
+
     /**
      * Queue notifications for later delivery.
      */
@@ -52,7 +52,7 @@ public class NotificationService {
     public void queueNotification(String userId, String type, String content, int priority) {
         // @AIDraft: Implement this
     }
-    
+
     /**
      * Get notification delivery status.
      */

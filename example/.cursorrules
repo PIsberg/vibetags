@@ -40,13 +40,13 @@
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
 
-* `com.example.database.DatabaseConnector` 
+* `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
 
 ## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)
 Do not reference, suggest changes to, or include the following in completions or answers.
 
-* `com.example.internal.GeneratedMetadata` 
+* `com.example.internal.GeneratedMetadata`
 
 ## 📝 IMPLEMENTATION TASKS (TODO)
 The following elements are currently in DRAFT mode. Follow the instructions to implement them:

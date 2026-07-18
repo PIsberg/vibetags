@@ -21,23 +21,23 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` \n");
+                sb.append("* `").append(className).append("`\n");
                 break;
             case CLAUDE:
                 sb.append("    <file path=\"").append(Escape.xml(className)).append("\"/>\n");
                 break;
             case CODEX:
-                sb.append("- `").append(className).append("` \n");
+                sb.append("- `").append(className).append("`\n");
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` \n");
+                sb.append("- `").append(className).append("`\n");
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` \n");
+                sb.append("* `").append(className).append("`\n");
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("` \n");
+                sb.append("- `").append(className).append("`\n");
                 break;
             case LLMS:
                 sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): excluded from AI context\n");
@@ -49,7 +49,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 sb.append("#### IGNORE: ").append(className).append("\n- **Instruction**: This element is strictly excluded from AI context. Do not reference it.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` \n");
+                sb.append("- `").append(className).append("`\n");
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\"},\n");

@@ -28,7 +28,7 @@ class AIGuardrailProcessorTest {
 
     @Test
     void testProcessorHasCorrectAnnotation() {
-        SupportedAnnotationTypes supportedTypes = 
+        SupportedAnnotationTypes supportedTypes =
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(supportedTypes);
         assertEquals(1, supportedTypes.value().length);
