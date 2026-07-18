@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- BOM is the single source of truth for vibetags-* versions. Bumping this one
              value rolls the processor and any future vibetags-* artifact in lockstep. -->
-        <vibetags.bom.version>1.0.0-RC3</vibetags.bom.version>
+        <vibetags.bom.version>1.0.0-RC4</vibetags.bom.version>
         <vibetags.log.path>vibetags.log</vibetags.log.path>
     </properties>
 
