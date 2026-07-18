@@ -30,24 +30,9 @@ graph TD
     H -->|isolated appender| J[TempDir2/vibetags.log]
 ```
 
-#### Implementation details:
-1. **Dynamic Logger Resolution**:
-   ```java
-   private static String getLoggerName(Path projectRoot) {
-       if (projectRoot == null) {
-           return LOGGER_NAME;
-       }
-       // Suffix the logger name with an absolute path hash to isolate test threads
-       return LOGGER_NAME + "." + Math.abs(projectRoot.toAbsolutePath().normalize().hashCode());
-   }
-   ```
-2. **Targeted Appender Management**: `detachAndStopAllAppenders()` and `shutdown()` will only affect the logger instance corresponding to the unique project root path.
-3. **JUnit 5 Parallel Configuration**: Create a `junit-platform.properties` in `vibetags/src/test/resources` to enable concurrent execution:
-   ```properties
-   junit.jupiter.execution.parallel.enabled = true
-   junit.jupiter.execution.parallel.mode.default = concurrent
-   junit.jupiter.execution.parallel.mode.classes.default = concurrent
-   ```
+#### Implementation details
+
+This design shipped as specified. The as-built logger-name-suffixing code, the committed `junit-platform.properties`, and the verification test are documented in one place: [docs/ARCHITECTURE.md § Concurrency & Thread-Isolated Logging](docs/ARCHITECTURE.md#concurrency--thread-isolated-logging).
 
 ---
 
