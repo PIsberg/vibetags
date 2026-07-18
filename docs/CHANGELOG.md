@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (two dots) — it would strip only the last segment and never match the write round's exclude set,
   so a file just written could be immediately scrubbed as orphaned on the same compile. Fixed to
   strip the known extension length instead; added a regression test.
+- **Generated markdown outputs no longer contain trailing whitespace.** The `@AIAudit`,
+  `@AIContext`, and `@AIIgnore` formatters emitted a trailing space before the newline on list
+  items (e.g. ``* `com.example.Foo` ``), which made whitespace-normalizing tools (pre-commit
+  hooks, editors) fight the generator over committed output files.
 
 ### Added
 - **`example-multimodule/`** — a three-module Maven reactor (core → engine → cli, annotation

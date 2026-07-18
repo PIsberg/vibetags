@@ -11,7 +11,7 @@
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
 
-* `com.example.multimodule.cli.MultiModuleCli` 
+* `com.example.multimodule.cli.MultiModuleCli`
   - Required Checks: Path Traversal
 
 ## 🔐 CONTRACT-FROZEN SIGNATURES

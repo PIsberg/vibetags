@@ -15,38 +15,38 @@
 * `com.example.service.OrderService.processPayment(java.lang.String,double)` - Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 
 ## CONTEXTUAL RULES
-* `com.example.security.SecurityConfig` 
+* `com.example.security.SecurityConfig`
   * Focus: This class is READ-ONLY for AI assistants. Do not suggest modifications.
   * Avoid: Any changes to encryption algorithms, key sizes, or validation logic
-* `com.example.service.InventoryService` 
+* `com.example.service.InventoryService`
   * Focus: Maintain inventory consistency across concurrent requests. All stock updates must be atomic.
   * Avoid: Non-atomic read-modify-write sequences, unsynchronized shared state
-* `com.example.service.NotificationService` 
+* `com.example.service.NotificationService`
   * Focus: Implement notification delivery with retry logic and error handling
   * Avoid: Hard-coded credentials, synchronous blocking calls
-* `com.example.service.OrderService` 
+* `com.example.service.OrderService`
   * Focus: Maintain transactional integrity. All database operations must use proper transaction management.
   * Avoid: Raw SQL queries, direct database connections without connection pooling
-* `com.example.service.PricingService` 
+* `com.example.service.PricingService`
   * Focus: Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.
   * Avoid: Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
-* `com.example.strategy.PaymentStrategy` 
+* `com.example.strategy.PaymentStrategy`
   * Focus: Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.
   * Avoid: Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
-* `com.example.utils.StringParser` 
+* `com.example.utils.StringParser`
   * Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
   * Avoid: java.util.regex, String.split(), StringBuilder in loops
 
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.
 
-* `com.example.database.DatabaseConnector` 
+* `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
 
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI's memory and context:
 
-* `com.example.internal.GeneratedMetadata` 
+* `com.example.internal.GeneratedMetadata`
 
 ## IMPLEMENTATION TASKS
 The following elements are drafts that need implementation:

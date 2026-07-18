@@ -37,7 +37,7 @@ Before suggesting changes to the following files, audit for the listed vulnerabi
 ## Ignored Elements
 Do not reference or suggest changes to the following:
 
-- `com.example.internal.GeneratedMetadata` 
+- `com.example.internal.GeneratedMetadata`
 
 ## Implementation Tasks
 The following elements are drafts that need implementation:

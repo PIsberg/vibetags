@@ -7,7 +7,7 @@ import se.deversity.vibetags.annotations.AIDraft;
  */
 @AIDraft(instructions = "Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.")
 public class NotificationService {
-    
+
     /**
      * Send a notification to a specific user.
      */

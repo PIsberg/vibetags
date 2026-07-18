@@ -9,7 +9,7 @@ import se.deversity.vibetags.annotations.AIArchitecture;
  */
 @AIArchitecture(belongsTo = "domain", cannotReference = {"infrastructure", "ui"})
 public class LayeredDomainService {
-    
+
     public void processCoreDomainLogic() {
         System.out.println("Processing clean domain logic...");
     }
