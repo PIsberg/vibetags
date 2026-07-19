@@ -14,6 +14,8 @@ import se.deversity.vibetags.processor.internal.content.platforms.IgnoreFileRend
 import se.deversity.vibetags.processor.internal.content.platforms.MentatRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.PlandexRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.InterpreterRenderer;
+import se.deversity.vibetags.processor.internal.content.platforms.AiderConventionsRenderer;
+import se.deversity.vibetags.processor.internal.content.platforms.LlmsRenderer;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -348,5 +350,318 @@ class RendererBranchCoverageTest {
             collector, Set.of("cursor"));
         assertNotNull(fp);
         assertEquals(8, fp.length());
+    }
+
+    @Test
+    void interpreterRenderer_emptyCollector_omitsGuardrailsSection() {
+        // Kills the "changed conditional boundary" mutant on `if (rules.length() > 0)`:
+        // with an empty collector the rules buffer is empty, so the
+        // "## Project Guardrails" header must NOT be emitted. A `>= 0` mutant would
+        // emit the header for zero-length rules and this assertion catches it.
+        InterpreterRenderer renderer = new InterpreterRenderer();
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        when(re.getElementsAnnotatedWith(any(Class.class))).thenReturn(Set.of());
+        collector.collect(re);
+
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
+        String result = renderer.render(collector, Platform.INTERPRETER, ctx);
+        assertNotNull(result);
+        assertFalse(result.contains("Project Guardrails"),
+            "empty collector must not emit the Project Guardrails section");
+    }
+
+    // ------------------------------------------------------------------
+    // Direct render() coverage for InterpreterRenderer + AiderConventionsRenderer.
+    //
+    // These renderers stream 27 annotation buckets into their output, one distinct
+    // formatter call per bucket. PIT's "removed call to <Formatter>::format" mutants
+    // survived the end-to-end tests because those tests generate the files in a
+    // @BeforeAll fixture that PIT does NOT re-run per mutation — so the assertions
+    // only ever saw output from the unmutated renderer. Calling render() directly
+    // inside the @Test body re-executes the mutated code per mutation, so deleting
+    // any single formatter call drops its marker and fails the matching assertion.
+    // ------------------------------------------------------------------
+
+    private static <A extends java.lang.annotation.Annotation> void register(
+            RoundEnvironment re, Class<A> type, String fqn, A ann) {
+        Element el = mockEl(fqn);
+        when(el.getAnnotation(type)).thenReturn(ann);
+        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(type);
+    }
+
+    /** Builds a collector holding one element for every annotation the two renderers emit. */
+    private static AnnotationCollector everyRenderedAnnotation() {
+        RoundEnvironment re = mock(RoundEnvironment.class);
+
+        AILocked locked = mock(AILocked.class);
+        when(locked.reason()).thenReturn("core logic");
+        register(re, AILocked.class, "com.ex.Locked", locked);
+
+        AIContext context = mock(AIContext.class);
+        when(context.focus()).thenReturn("auth flow");
+        when(context.avoids()).thenReturn("reflection");
+        register(re, AIContext.class, "com.ex.Ctx", context);
+
+        AIIgnore ignore = mock(AIIgnore.class);
+        when(ignore.reason()).thenReturn("generated");
+        register(re, AIIgnore.class, "com.ex.Ignored", ignore);
+
+        AIAudit audit = mock(AIAudit.class);
+        when(audit.checkFor()).thenReturn(new String[]{"SQL Injection"});
+        register(re, AIAudit.class, "com.ex.Audited", audit);
+
+        AIDraft draft = mock(AIDraft.class);
+        when(draft.instructions()).thenReturn("implement SMTP");
+        register(re, AIDraft.class, "com.ex.Drafted", draft);
+
+        AIPrivacy privacy = mock(AIPrivacy.class);
+        when(privacy.reason()).thenReturn("PII");
+        register(re, AIPrivacy.class, "com.ex.Private", privacy);
+
+        AICore core = mock(AICore.class);
+        when(core.sensitivity()).thenReturn("high");
+        when(core.note()).thenReturn("battle tested");
+        register(re, AICore.class, "com.ex.Core", core);
+
+        AIPerformance perf = mock(AIPerformance.class);
+        when(perf.constraint()).thenReturn("O(1) per call");
+        register(re, AIPerformance.class, "com.ex.Perf", perf);
+
+        AIContract contract = mock(AIContract.class);
+        when(contract.reason()).thenReturn("partner API SLA");
+        register(re, AIContract.class, "com.ex.Contracted", contract);
+
+        AITestDriven testDriven = mock(AITestDriven.class);
+        when(testDriven.coverageGoal()).thenReturn(90);
+        when(testDriven.testLocation()).thenReturn("src/test/java");
+        when(testDriven.mockPolicy()).thenReturn("no mocks");
+        when(testDriven.framework())
+            .thenReturn(new AITestDriven.Framework[]{AITestDriven.Framework.JUNIT_5});
+        register(re, AITestDriven.class, "com.ex.Tested", testDriven);
+
+        AIThreadSafe threadSafe = mock(AIThreadSafe.class);
+        when(threadSafe.strategy()).thenReturn(AIThreadSafe.Strategy.LOCK_FREE);
+        when(threadSafe.note()).thenReturn("CAS backed");
+        register(re, AIThreadSafe.class, "com.ex.Safe", threadSafe);
+
+        AIImmutable immutable = mock(AIImmutable.class);
+        when(immutable.note()).thenReturn("value object");
+        register(re, AIImmutable.class, "com.ex.Frozen", immutable);
+
+        AIDeprecated deprecated = mock(AIDeprecated.class);
+        when(deprecated.replacedBy()).thenReturn("com.ex.NewThing");
+        when(deprecated.migrationGuide()).thenReturn("use NewThing");
+        when(deprecated.deadline()).thenReturn("2030-01-01");
+        register(re, AIDeprecated.class, "com.ex.Old", deprecated);
+
+        AIObservability observability = mock(AIObservability.class);
+        when(observability.metrics()).thenReturn(new String[]{"req.count"});
+        when(observability.traces()).thenReturn(new String[]{"checkout.span"});
+        when(observability.logs()).thenReturn(new String[]{"err.log"});
+        when(observability.note()).thenReturn("critical path");
+        register(re, AIObservability.class, "com.ex.Monitored", observability);
+
+        AIRegulation regulation = mock(AIRegulation.class);
+        when(regulation.standard()).thenReturn("GDPR");
+        when(regulation.clause()).thenReturn("Art.17");
+        when(regulation.description()).thenReturn("erasure");
+        register(re, AIRegulation.class, "com.ex.Regulated", regulation);
+
+        AIParallelTests parallelTests = mock(AIParallelTests.class);
+        when(parallelTests.reason()).thenReturn("isolation");
+        register(re, AIParallelTests.class, "com.ex.Parallel", parallelTests);
+
+        AILegacyBridge legacyBridge = mock(AILegacyBridge.class);
+        when(legacyBridge.reason()).thenReturn("compat");
+        register(re, AILegacyBridge.class, "com.ex.Bridge", legacyBridge);
+
+        AIArchitecture architecture = mock(AIArchitecture.class);
+        when(architecture.belongsTo()).thenReturn("service");
+        when(architecture.cannotReference()).thenReturn(new String[]{"com.ex.infra"});
+        register(re, AIArchitecture.class, "com.ex.Layered", architecture);
+
+        AIPublicAPI publicApi = mock(AIPublicAPI.class);
+        when(publicApi.reason()).thenReturn("public api");
+        register(re, AIPublicAPI.class, "com.ex.Api", publicApi);
+
+        AIStrictExceptions strictExceptions = mock(AIStrictExceptions.class);
+        when(strictExceptions.reason()).thenReturn("no generic exceptions");
+        register(re, AIStrictExceptions.class, "com.ex.StrictExc", strictExceptions);
+
+        AIStrictTypes strictTypes = mock(AIStrictTypes.class);
+        when(strictTypes.reason()).thenReturn("no loose typing");
+        register(re, AIStrictTypes.class, "com.ex.StrictTypes", strictTypes);
+
+        AIInternationalized i18n = mock(AIInternationalized.class);
+        when(i18n.reason()).thenReturn("no hardcoded labels");
+        register(re, AIInternationalized.class, "com.ex.I18n", i18n);
+
+        AIStrictClasspath strictClasspath = mock(AIStrictClasspath.class);
+        when(strictClasspath.reason()).thenReturn("no dynamic loading");
+        register(re, AIStrictClasspath.class, "com.ex.Classpath", strictClasspath);
+
+        AISchemaSafe schemaSafe = mock(AISchemaSafe.class);
+        when(schemaSafe.reason()).thenReturn("no schema drift");
+        register(re, AISchemaSafe.class, "com.ex.Schema", schemaSafe);
+
+        AIIdempotent idempotent = mock(AIIdempotent.class);
+        when(idempotent.reason()).thenReturn("safe to retry");
+        register(re, AIIdempotent.class, "com.ex.Idem", idempotent);
+
+        AIFeatureFlag featureFlag = mock(AIFeatureFlag.class);
+        when(featureFlag.flag()).thenReturn("checkout.v2");
+        when(featureFlag.defaultValue()).thenReturn(true);
+        register(re, AIFeatureFlag.class, "com.ex.Gated", featureFlag);
+
+        AISecure secure = mock(AISecure.class);
+        when(secure.aspect()).thenReturn("authentication");
+        register(re, AISecure.class, "com.ex.Secured", secure);
+
+        // --- The 12 newer annotations (rendered by LlmsRenderer / ClaudeRenderer, ignored by
+        //     the interpreter and aider renderers, so harmless to populate for all of them). ---
+
+        AICallersOnly callersOnly = mock(AICallersOnly.class);
+        when(callersOnly.value()).thenReturn(new String[]{"com.ex.auth"});
+        register(re, AICallersOnly.class, "com.ex.Callers", callersOnly);
+
+        AISandboxOnly sandboxOnly = mock(AISandboxOnly.class);
+        when(sandboxOnly.reason()).thenReturn("test only");
+        register(re, AISandboxOnly.class, "com.ex.Sandbox", sandboxOnly);
+
+        AIMemoryBudget memoryBudget = mock(AIMemoryBudget.class);
+        when(memoryBudget.value()).thenReturn(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION);
+        register(re, AIMemoryBudget.class, "com.ex.Budgeted", memoryBudget);
+
+        AIPure pure = mock(AIPure.class);
+        when(pure.reason()).thenReturn("no side effects");
+        register(re, AIPure.class, "com.ex.Pure", pure);
+
+        AIDomainModel domainModel = mock(AIDomainModel.class);
+        when(domainModel.allow()).thenReturn(new String[]{"java.util"});
+        register(re, AIDomainModel.class, "com.ex.Domain", domainModel);
+
+        AIExtensible extensible = mock(AIExtensible.class);
+        when(extensible.value()).thenReturn(AIExtensible.Strategy.STRATEGY_PATTERN);
+        register(re, AIExtensible.class, "com.ex.Extending", extensible);
+
+        AIInputSanitized inputSanitized = mock(AIInputSanitized.class);
+        when(inputSanitized.value())
+            .thenReturn(new AIInputSanitized.SanitizerType[]{AIInputSanitized.SanitizerType.SQL_INJECTION});
+        register(re, AIInputSanitized.class, "com.ex.Sanitized", inputSanitized);
+
+        AISecureLogging secureLogging = mock(AISecureLogging.class);
+        when(secureLogging.value()).thenReturn(AISecureLogging.MaskingPolicy.HASH);
+        register(re, AISecureLogging.class, "com.ex.Masked", secureLogging);
+
+        AIExplain explain = mock(AIExplain.class);
+        when(explain.value()).thenReturn(AIExplain.ComplexityLevel.HIGH);
+        register(re, AIExplain.class, "com.ex.Explained", explain);
+
+        AIPrototype prototype = mock(AIPrototype.class);
+        when(prototype.reason()).thenReturn("experimental");
+        register(re, AIPrototype.class, "com.ex.Proto", prototype);
+
+        AISunset sunset = mock(AISunset.class);
+        when(sunset.jira()).thenReturn("DEBT-742");
+        doReturn(Object.class).when(sunset).replacement();
+        register(re, AISunset.class, "com.ex.Sunsetting", sunset);
+
+        AITemporary temporary = mock(AITemporary.class);
+        when(temporary.expiresOn()).thenReturn("2030-01-01");
+        when(temporary.reason()).thenReturn("upstream downtime");
+        register(re, AITemporary.class, "com.ex.Temp", temporary);
+
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.collect(re);
+        return collector;
+    }
+
+    private static final String[] INTERPRETER_TAGS = {
+        "(locked):", "(context):", "(excluded):", "(audit):", "(draft):",
+        "(privacy):", "(core, sensitivity:", "(performance):", "(contract):",
+        "(test-driven):", "(thread-safe):", "(immutable)", "(deprecated):",
+        "(observability):", "(regulation):", "(test-isolation):", "(legacy-bridge):",
+        "(architecture):", "(public-api):", "(strict-exceptions):", "(strict-types):",
+        "(i18n):", "(strict-classpath):", "(schema-safe):", "(idempotent):",
+        "(feature-flag):", "(security-critical):",
+    };
+
+    private static final String[] AIDER_HEADERS = {
+        "#### LOCKED:", "#### CONTEXT:", "#### IGNORE:", "#### SECURITY AUDIT:",
+        "#### DRAFT/TODO:", "#### PRIVACY/PII:", "#### CORE FUNCTIONALITY:",
+        "#### PERFORMANCE CONSTRAINTS:", "#### CONTRACT:", "#### TEST-DRIVEN:",
+        "#### THREAD-SAFE:", "#### IMMUTABLE:", "#### DEPRECATED:", "#### OBSERVABILITY:",
+        "#### REGULATORY:", "#### TEST ISOLATION:", "#### LEGACY BRIDGE:",
+        "#### ARCHITECTURE LAYER:", "#### PUBLIC API:", "#### STRICT EXCEPTIONS:",
+        "#### STRICT TYPES:", "#### INTERNATIONALIZED:", "#### STRICT CLASSPATH:",
+        "#### SCHEMA SAFE:", "#### IDEMPOTENT:", "#### FEATURE FLAG:",
+        "#### SECURITY-CRITICAL:",
+    };
+
+    @Test
+    void interpreterRenderer_rendersEveryAnnotationTag() {
+        InterpreterRenderer renderer = new InterpreterRenderer();
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
+        String out = renderer.render(everyRenderedAnnotation(), Platform.INTERPRETER, ctx);
+        for (String tag : INTERPRETER_TAGS) {
+            assertTrue(out.contains(tag),
+                "InterpreterRenderer must emit the " + tag + " tag");
+        }
+    }
+
+    @Test
+    void aiderConventionsRenderer_rendersEveryAnnotationHeader() {
+        AiderConventionsRenderer renderer = new AiderConventionsRenderer();
+        RenderingContext ctx =
+            new RenderingContext("P", "# header\n", Set.of("aider_conventions"));
+        String out = renderer.render(everyRenderedAnnotation(), Platform.AIDER_CONVENTIONS, ctx);
+        for (String header : AIDER_HEADERS) {
+            assertTrue(out.contains(header),
+                "AiderConventionsRenderer must emit the " + header + " section");
+        }
+    }
+
+    /** Every element's fully-qualified path, unique per annotation, as emitted by the collector above. */
+    private static final String[] ALL_ELEMENT_PATHS = {
+        "com.ex.Locked", "com.ex.Ctx", "com.ex.Ignored", "com.ex.Audited", "com.ex.Drafted",
+        "com.ex.Private", "com.ex.Core", "com.ex.Perf", "com.ex.Contracted", "com.ex.Tested",
+        "com.ex.Safe", "com.ex.Frozen", "com.ex.Old", "com.ex.Monitored", "com.ex.Regulated",
+        "com.ex.Parallel", "com.ex.Bridge", "com.ex.Layered", "com.ex.Api", "com.ex.StrictExc",
+        "com.ex.StrictTypes", "com.ex.I18n", "com.ex.Classpath", "com.ex.Schema", "com.ex.Idem",
+        "com.ex.Gated", "com.ex.Secured", "com.ex.Callers", "com.ex.Sandbox", "com.ex.Budgeted",
+        "com.ex.Pure", "com.ex.Domain", "com.ex.Extending", "com.ex.Sanitized", "com.ex.Masked",
+        "com.ex.Explained", "com.ex.Proto", "com.ex.Sunsetting", "com.ex.Temp",
+    };
+
+    @Test
+    void llmsRenderer_llmsFull_rendersEveryAnnotatedElement() {
+        // LlmsRenderer streams all 39 annotation buckets into llms-full.txt, one appendSection
+        // call each. Each element's FQN is unique, so asserting every path appears kills both the
+        // "removed call to <Formatter>::format" mutants (dropping an element's line) and the
+        // section-guard mutants (dropping a whole section). render() runs in the @Test body so
+        // PIT re-executes the mutated code per mutation.
+        LlmsRenderer renderer = new LlmsRenderer();
+        RenderingContext ctx =
+            new RenderingContext("Proj", "# header\n", Set.of("llms", "llms_full"));
+        String out = renderer.render(everyRenderedAnnotation(), Platform.LLMS_FULL, ctx);
+        for (String path : ALL_ELEMENT_PATHS) {
+            assertTrue(out.contains(path),
+                "llms-full.txt must render the annotated element " + path);
+        }
+    }
+
+    @Test
+    void llmsRenderer_llms_rendersEveryAnnotatedElement() {
+        // Same coverage for the compact llms.txt platform path (the other branch of every
+        // `full ? ... : ...` header ternary in LlmsRenderer.render()).
+        LlmsRenderer renderer = new LlmsRenderer();
+        RenderingContext ctx =
+            new RenderingContext("Proj", "# header\n", Set.of("llms", "llms_full"));
+        String out = renderer.render(everyRenderedAnnotation(), Platform.LLMS, ctx);
+        for (String path : ALL_ELEMENT_PATHS) {
+            assertTrue(out.contains(path),
+                "llms.txt must render the annotated element " + path);
+        }
     }
 }

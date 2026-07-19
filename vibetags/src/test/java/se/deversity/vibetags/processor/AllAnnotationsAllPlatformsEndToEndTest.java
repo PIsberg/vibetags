@@ -307,4 +307,50 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         assertTrue(cursor.contains("VIBETAGS-START") || cursor.contains("AUTO-GENERATED"),
             ".cursorrules must carry generated markers/header");
     }
+
+    @Test
+    void interpreterProfileRendersEveryAnnotationTag() throws IOException {
+        // InterpreterRenderer streams 27 annotation buckets into the profile, one distinct
+        // parenthetical tag per formatter. Asserting every tag is present kills the
+        // "removed call to <Formatter>::format" mutants that previously survived because
+        // no test inspected the .interpreter profile body.
+        String profile = harness.readFile(".interpreter/profiles/vibetags.yaml");
+        String[] tags = {
+            "(locked):", "(context):", "(excluded):", "(audit):", "(draft):",
+            "(privacy):", "(core, sensitivity:", "(performance):", "(contract):",
+            "(test-driven):", "(thread-safe):", "(immutable)", "(deprecated):",
+            "(observability):", "(regulation):", "(test-isolation):", "(legacy-bridge):",
+            "(architecture):", "(public-api):", "(strict-exceptions):", "(strict-types):",
+            "(i18n):", "(strict-classpath):", "(schema-safe):", "(idempotent):",
+            "(feature-flag):", "(security-critical):",
+        };
+        for (String tag : tags) {
+            assertTrue(profile.contains(tag),
+                "interpreter profile must render the " + tag + " annotation tag");
+        }
+    }
+
+    @Test
+    void aiderConventionsRendersEveryAnnotationHeader() throws IOException {
+        // AiderConventionsRenderer streams the same 27 buckets into CONVENTIONS.md, one
+        // distinct "#### <HEADER>:" per formatter. Asserting each header is present kills the
+        // "removed call to <Formatter>::format" mutants that survived because no test
+        // inspected the CONVENTIONS.md body.
+        String conventions = harness.readFile("CONVENTIONS.md");
+        String[] headers = {
+            "#### LOCKED:", "#### CONTEXT:", "#### IGNORE:", "#### SECURITY AUDIT:",
+            "#### DRAFT/TODO:", "#### PRIVACY/PII:", "#### CORE FUNCTIONALITY:",
+            "#### PERFORMANCE CONSTRAINTS:", "#### CONTRACT:", "#### TEST-DRIVEN:",
+            "#### THREAD-SAFE:", "#### IMMUTABLE:", "#### DEPRECATED:", "#### OBSERVABILITY:",
+            "#### REGULATORY:", "#### TEST ISOLATION:", "#### LEGACY BRIDGE:",
+            "#### ARCHITECTURE LAYER:", "#### PUBLIC API:", "#### STRICT EXCEPTIONS:",
+            "#### STRICT TYPES:", "#### INTERNATIONALIZED:", "#### STRICT CLASSPATH:",
+            "#### SCHEMA SAFE:", "#### IDEMPOTENT:", "#### FEATURE FLAG:",
+            "#### SECURITY-CRITICAL:",
+        };
+        for (String header : headers) {
+            assertTrue(conventions.contains(header),
+                "CONVENTIONS.md must render the " + header + " section");
+        }
+    }
 }
