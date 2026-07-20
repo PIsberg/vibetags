@@ -112,6 +112,22 @@ Files written by an older version of VibeTags (without markers) are automaticall
 
 The processor can generate configuration for 50+ AI platforms (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, and more). Full file/platform/format table and granular-rules/llms.txt notes: `docs/PLATFORMS.md`.
 
+
+### Aggregate ↔ granular de-duplication (scoped-rules index)
+
+Four platforms have both an always-loaded aggregate file and a glob-scoped granular directory:
+`CLAUDE.md`↔`.claude/rules/`, `.cursorrules`↔`.cursor/rules/`, `.windsurfrules`↔`.windsurf/rules/`,
+`.github/copilot-instructions.md`↔`.github/instructions/`. When **both** are opted in, the aggregate
+renderer (`ClaudeRenderer`/`CursorRenderer`/`WindsurfRenderer`/`CopilotRenderer`) collapses to a
+**scoped-rules index**: it keeps only the always-loaded safety buckets inline (`@AILocked`, `@AICore`,
+`@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and emits one pointer line per element to its
+scoped file (`GranularIndexSection`); every other bucket moves to the granular files. Gating is per
+platform via `GranularIndexSection.governingGranularKey` — `CLAUDE_LOCAL` maps to `claude_granular`
+(so `CLAUDE.local.md` mirrors `CLAUDE.md`), while renderers that reuse the Cursor/Claude format but
+read no scoped directory (Cline, Firebase, Junie, Void, the Claude skill) map to `null` and always
+render in full. Single-opt-in output (aggregate only) is unchanged. The owner set is computed once in
+`GuardrailContentBuilder.build()` and passed on `RenderingContext.granularOwners()`.
+
 ### Processor options
 
 Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Gradle:

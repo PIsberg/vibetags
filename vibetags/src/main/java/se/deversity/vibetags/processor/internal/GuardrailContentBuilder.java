@@ -48,7 +48,19 @@ public final class GuardrailContentBuilder {
         // content per annotated reference plus a fixed preamble allowance. Avoids repeated
         // grow-and-copy reallocation of the per-platform StringBuilders on large projects.
         int estimatedContentSize = collector.totalAnnotatedReferences() * 160 + 2048;
-        RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize);
+
+        // Compute the granular owner set once, before rendering. Aggregate renderers whose granular
+        // sibling is active read it from the RenderingContext to emit a scoped-rules index instead
+        // of duplicating each element's full guardrails inline. renderGranular depends only on the
+        // collector, so ordering it ahead of the per-service loop is safe and avoids a redundant
+        // per-element walk inside each renderer.
+        boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
+        Map<Element, java.lang.StringBuilder> elementRules = granularActive
+                ? PlatformRendererRegistry.granularRenderer().renderGranular(collector)
+                : new java.util.LinkedHashMap<>();
+
+        RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
+                estimatedContentSize, elementRules.keySet());
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
 
         // Render each active service (excluding granular directories and special-case exclusions)
@@ -106,14 +118,7 @@ public final class GuardrailContentBuilder {
             }
         }
 
-        // Handle granular rule mapping
-        boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
-        Map<Element, java.lang.StringBuilder> elementRules;
-        if (granularActive) {
-            elementRules = PlatformRendererRegistry.granularRenderer().renderGranular(collector);
-        } else {
-            elementRules = new java.util.LinkedHashMap<>();
-        }
+        // (granular owner set + elementRules are computed above, before the render loop)
 
         return new Result(contentByService, elementRules);
     }

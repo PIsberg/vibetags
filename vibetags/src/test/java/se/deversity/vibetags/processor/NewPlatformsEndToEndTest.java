@@ -22,9 +22,17 @@ class NewPlatformsEndToEndTest {
 
     private static ProcessorTestHarness harness;
 
+    // Second harness that also opts into .windsurf/rules so the Windsurf granular scoped files are
+    // produced. (The default harness leaves .windsurf/rules off, so .windsurfrules renders in full —
+    // aggregate and its granular sibling can no longer both be exercised on one harness.)
+    @TempDir
+    static Path windsurfGranularDir;
+    private static ProcessorTestHarness windsurfGranularHarness;
+
     @BeforeAll
     static void setUp() throws IOException {
         harness = ProcessorTestHarness.withExampleSources(tempDir);
+        windsurfGranularHarness = ProcessorTestHarness.withExampleSources(windsurfGranularDir, ".windsurf/rules/.vibetags");
     }
 
     @AfterAll
@@ -47,7 +55,7 @@ class NewPlatformsEndToEndTest {
 
     @Test
     void testNewGranularDirectoriesExist() {
-        assertTrue(harness.fileExists(".windsurf/rules/com-example-payment-PaymentProcessor.md"),
+        assertTrue(windsurfGranularHarness.fileExists(".windsurf/rules/com-example-payment-PaymentProcessor.md"),
             ".windsurf/rules should have PaymentProcessor rule");
         assertTrue(harness.fileExists(".continue/rules/com-example-payment-PaymentProcessor.md"),
             ".continue/rules should have PaymentProcessor rule");
@@ -234,7 +242,7 @@ class NewPlatformsEndToEndTest {
 
     @Test
     void testWindsurfGranularRulesHaveYamlFrontMatter() throws IOException {
-        String content = harness.readFile(".windsurf/rules/com-example-payment-PaymentProcessor.md");
+        String content = windsurfGranularHarness.readFile(".windsurf/rules/com-example-payment-PaymentProcessor.md");
 
         assertTrue(content.startsWith("---"), "Should start with YAML front-matter");
         assertTrue(content.contains("description: \"AI rules for com.example.payment.PaymentProcessor\""),
@@ -246,7 +254,7 @@ class NewPlatformsEndToEndTest {
 
     @Test
     void testWindsurfGranularRulesHaveContent() throws IOException {
-        String content = harness.readFile(".windsurf/rules/com-example-payment-PaymentProcessor.md");
+        String content = windsurfGranularHarness.readFile(".windsurf/rules/com-example-payment-PaymentProcessor.md");
 
         assertTrue(content.contains("# Rules for PaymentProcessor"), "Should have rules heading");
         assertTrue(content.contains("Locked Status"), "Should have locked status section");

@@ -28,7 +28,7 @@ class CopilotGranularEndToEndTest {
 
     @BeforeAll
     static void setUp() throws IOException {
-        harness = ProcessorTestHarness.withExampleSources(tempDir);
+        harness = ProcessorTestHarness.withExampleSources(tempDir, ".github/instructions/.vibetags");
     }
 
     @AfterAll

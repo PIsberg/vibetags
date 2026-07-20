@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import javax.lang.model.element.Element;
 
 /**
  * Context containing metadata and configuration options for the current rendering run.
@@ -12,6 +13,7 @@ public final class RenderingContext {
     private final String generatedHeader;
     private final Set<String> activeServices;
     private final int estimatedContentSize;
+    private final Set<Element> granularOwners;
 
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
         this(projectName, generatedHeader, activeServices, 4096);
@@ -24,11 +26,24 @@ public final class RenderingContext {
      */
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                             int estimatedContentSize) {
+        this(projectName, generatedHeader, activeServices, estimatedContentSize, Collections.emptySet());
+    }
+
+    /**
+     * @param estimatedContentSize a capacity hint (bytes) for the top-level {@code StringBuilder} of
+     *        an O(N) renderer, derived from the collected element count so large outputs avoid
+     *        repeated grow-and-copy reallocation. Clamped to a small floor.
+     * @param granularOwners owner elements with granular scoped rule files this run (see
+     *        {@link #granularOwners()}); pass an empty set when no granular service is active.
+     */
+    public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
+                            int estimatedContentSize, Set<Element> granularOwners) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
         // Defensive copy: prevent callers from mutating the set through the stored reference.
         this.activeServices = Collections.unmodifiableSet(new LinkedHashSet<>(activeServices));
         this.estimatedContentSize = Math.max(256, estimatedContentSize);
+        this.granularOwners = Collections.unmodifiableSet(new LinkedHashSet<>(granularOwners));
     }
 
     /** Capacity hint (bytes) for an O(N) renderer's top-level StringBuilder. */
@@ -47,6 +62,15 @@ public final class RenderingContext {
     /** Returns an unmodifiable view of the active-service keys. */
     public Set<String> getActiveServices() {
         return activeServices;
+    }
+
+    /**
+     * Owner elements (class/package) that have granular scoped rule files generated this run.
+     * Empty when no {@code *_granular} service is active. Aggregate renderers use this to emit a
+     * scoped-rules index instead of duplicating each element's full guardrails inline.
+     */
+    public Set<Element> granularOwners() {
+        return granularOwners;
     }
 
     public boolean isActive(Platform platform) {

@@ -79,7 +79,6 @@ class ProcessorTestHarness {
         touch(".qwen/commands/refactor.md");
         touch("CONVENTIONS.md");
         touch(".aiderignore");
-        touch(".cursor/rules/.vibetags"); // Create a hidden file to signal directory existence
         touch(".trae/rules/.vibetags");
         touch(".roo/rules/.vibetags");
         // New platforms
@@ -88,7 +87,6 @@ class ProcessorTestHarness {
         touch(".cody/config.json");
         touch(".codyignore");
         touch(".supermavenignore");
-        touch(".windsurf/rules/.vibetags");
         touch(".continue/rules/.vibetags");
         touch(".tabnine/guidelines/.vibetags");
         touch(".amazonq/rules/.vibetags");
@@ -126,8 +124,12 @@ class ProcessorTestHarness {
         // Claude Code local override, Skill, and granular rules; Copilot granular instructions
         touch("CLAUDE.local.md");
         touch(".claude/skills/vibetags-guardrails/SKILL.md");
-        touch(".claude/rules/.vibetags");
-        touch(".github/instructions/.vibetags");
+        // NOTE: the four granular directories whose platform ALSO has an aggregate file
+        // (.claude/rules ↔ CLAUDE.md, .cursor/rules ↔ .cursorrules, .windsurf/rules ↔ .windsurfrules,
+        // .github/instructions ↔ copilot-instructions.md) are intentionally NOT opted in by default.
+        // Co-activating both would collapse the aggregate to a scoped-rules index; the default harness
+        // represents the common single-opt-in case (full aggregate output). Tests that want the index
+        // behavior opt into the granular sibling explicitly via withExampleSources(dir, extraOptIns…).
     }
 
     private void touch(String relative) throws IOException {
@@ -272,6 +274,22 @@ class ProcessorTestHarness {
      */
     static ProcessorTestHarness withExampleSources(Path tempDir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(tempDir);
+        addExampleSources(h);
+        h.compile();
+        return h;
+    }
+
+    /**
+     * Same as {@link #withExampleSources(Path)} but also opts into {@code extraOptIns} before
+     * compiling — used by granular tests to activate a granular directory whose aggregate sibling
+     * is on by default, so the aggregate collapses to a scoped-rules index and the scoped files are
+     * produced. The single-arg overload is unaffected (non-varargs wins for a lone {@code Path}).
+     */
+    static ProcessorTestHarness withExampleSources(Path tempDir, String... extraOptIns) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir);
+        for (String optIn : extraOptIns) {
+            h.touchOptIn(optIn);
+        }
         addExampleSources(h);
         h.compile();
         return h;

@@ -20,7 +20,7 @@ class GranularRulesEndToEndTest {
 
     @BeforeAll
     static void setUp() throws IOException {
-        harness = ProcessorTestHarness.withExampleSources(tempDir);
+        harness = ProcessorTestHarness.withExampleSources(tempDir, ".cursor/rules/.vibetags");
     }
 
     @AfterAll

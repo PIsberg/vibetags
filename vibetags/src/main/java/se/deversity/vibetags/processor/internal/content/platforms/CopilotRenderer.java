@@ -67,12 +67,19 @@ public final class CopilotRenderer implements PlatformRenderer {
             FormatterRegistry.locked().format(e, sb, Platform.COPILOT);
         }
 
-        sb.append("\n## Contextual Guidelines\n");
-        for (Element e : collector.context()) {
-            FormatterRegistry.context().format(e, sb, Platform.COPILOT);
-        }
+        if (GranularIndexSection.indexActive(platform, context)) {
+            // Granular sibling opted in: keep the always-loaded safety buckets inline and index the
+            // rest to the scoped .github/instructions files (context detail moves there too).
+            AnnotationSections.renderInlineSafetySections(sb, collector, Platform.COPILOT);
+            GranularIndexSection.appendMarkdownIndex(sb, platform, context);
+        } else {
+            sb.append("\n## Contextual Guidelines\n");
+            for (Element e : collector.context()) {
+                FormatterRegistry.context().format(e, sb, Platform.COPILOT);
+            }
 
-        AnnotationSections.render(sb, collector, Platform.COPILOT, SECTIONS);
+            AnnotationSections.render(sb, collector, Platform.COPILOT, SECTIONS);
+        }
 
         return sb.toString();
     }

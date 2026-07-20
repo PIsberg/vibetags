@@ -30,36 +30,6 @@
       <reason>Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.</reason>
     </file>
   </locked_files>
-  <contextual_instructions>
-    <file path="com.example.security.SecurityConfig">
-      <focus>This class is READ-ONLY for AI assistants. Do not suggest modifications.</focus>
-      <avoids>Any changes to encryption algorithms, key sizes, or validation logic</avoids>
-    </file>
-    <file path="com.example.service.InventoryService">
-      <focus>Maintain inventory consistency across concurrent requests. All stock updates must be atomic.</focus>
-      <avoids>Non-atomic read-modify-write sequences, unsynchronized shared state</avoids>
-    </file>
-    <file path="com.example.service.NotificationService">
-      <focus>Implement notification delivery with retry logic and error handling</focus>
-      <avoids>Hard-coded credentials, synchronous blocking calls</avoids>
-    </file>
-    <file path="com.example.service.OrderService">
-      <focus>Maintain transactional integrity. All database operations must use proper transaction management.</focus>
-      <avoids>Raw SQL queries, direct database connections without connection pooling</avoids>
-    </file>
-    <file path="com.example.service.PricingService">
-      <focus>Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.</focus>
-      <avoids>Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility</avoids>
-    </file>
-    <file path="com.example.strategy.PaymentStrategy">
-      <focus>Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.</focus>
-      <avoids>Monolithic if-else chains, hard-coded payment logic, single class handling all payment types</avoids>
-    </file>
-    <file path="com.example.utils.StringParser">
-      <focus>Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.</focus>
-      <avoids>java.util.regex, String.split(), StringBuilder in loops</avoids>
-    </file>
-  </contextual_instructions>
 
   <audit_requirements>
     <file path="com.example.database.DatabaseConnector">
@@ -76,53 +46,6 @@
   </ignored_elements>
 
 <rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
-  <implementation_tasks>
-    <task path="com.example.NotificationService">
-      <instructions>Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.</instructions>
-    </task>
-    <task path="com.example.payment.PaymentProcessor">
-      <instructions>Implement support for new crypto payments without breaking legacy flow.</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
-      <instructions>Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)">
-      <instructions>Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)">
-      <instructions>Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)">
-      <instructions>Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.getDeliveryStatus(java.lang.String)">
-      <instructions>Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.</instructions>
-    </task>
-    <task path="com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)">
-      <instructions>Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.</instructions>
-    </task>
-    <task path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
-      <instructions>Implement order status workflow: CREATED -&gt; PAYMENT_PENDING -&gt; PAYMENT_CONFIRMED -&gt; PROCESSING -&gt; SHIPPED -&gt; DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
-    </task>
-    <task path="com.example.service.OrderService.searchOrders(java.util.Map&lt;java.lang.String,java.lang.String&gt;,int,int)">
-      <instructions>Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.</instructions>
-    </task>
-    <task path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
-      <instructions>Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.</instructions>
-    </task>
-    <task path="com.example.strategy.PaymentStrategy.executePayment(double)">
-      <instructions>Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.</instructions>
-    </task>
-    <task path="com.example.strategy.PaymentStrategy.validatePaymentMethod()">
-      <instructions>Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.</instructions>
-    </task>
-    <task path="com.example.strategy.impl.CreditCardStrategy.executePayment(double)">
-      <instructions>Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.</instructions>
-    </task>
-    <task path="com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()">
-      <instructions>Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.</instructions>
-    </task>
-  </implementation_tasks>
   <pii_guardrails>
     <element path="com.example.database.DatabaseConnector.username">
       <reason>Database credential - never log or include in error messages</reason>
@@ -172,189 +95,6 @@
   </core_elements>
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
-  <performance_constraints>
-    <element path="com.example.payment.PaymentProcessor">
-      <constraint>HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.</constraint>
-    </element>
-    <element path="com.example.service.InventoryService.getAvailableStock(java.lang.String)">
-      <constraint>O(1) lookup required. Must complete in &lt;2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
-    </element>
-    <element path="com.example.service.InventoryService.bulkRestock(java.util.List&lt;java.util.Map&lt;java.lang.String,java.lang.Object&gt;&gt;)">
-      <constraint>Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.</constraint>
-    </element>
-    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
-      <constraint>Must complete in &lt;5ms p99. Called on every cart update.</constraint>
-    </element>
-  </performance_constraints>
-
-<rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>
-  <contract_signatures>
-    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
-      <reason>Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.</reason>
-    </element>
-    <element path="com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)">
-      <reason>Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.</reason>
-    </element>
-    <element path="com.example.service.PricingService.getBulkPricing(java.util.List&lt;java.lang.String&gt;,int)">
-      <reason>B2B portal contract v1.2 — the List&lt;Map&lt;String,Object&gt;&gt; structure is serialized directly to JSON. Changing the return type breaks portal parsing.</reason>
-    </element>
-  </contract_signatures>
-
-<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
-  <test_driven_requirements>
-    <element path="com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)">
-      <coverage_goal>100</coverage_goal>
-      <frameworks>JUNIT_5, ASSERTJ</frameworks>
-      <mock_policy>Use fixed prices — no external pricing calls in unit tests</mock_policy>
-    </element>
-    <element path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
-      <coverage_goal>95</coverage_goal>
-      <frameworks>JUNIT_5, MOCKITO</frameworks>
-      <test_location>src/test/java/com/example/service/OrderServiceTest.java</test_location>
-      <mock_policy>Mock OrderRepository and EventPublisher; use real state machine logic</mock_policy>
-    </element>
-  </test_driven_requirements>
-
-<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>
-  <thread_safe_elements>
-    <element path="com.example.concurrent.SessionCache">
-      <strategy>LOCK_FREE</strategy>
-      <note>All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.</note>
-    </element>
-  </thread_safe_elements>
-
-<rule>Elements listed in <thread_safe_elements> are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning in the change description.</rule>
-  <immutable_types>
-    <type path="com.example.config.AsyncTestConfig">
-      <note>Used by every test runner; safe to share across threads without copies.</note>
-    </type>
-  </immutable_types>
-
-<rule>Types listed in <immutable_types> are immutable by design. Never introduce non-final fields, setters, or methods that mutate instance state.</rule>
-  <deprecated_elements>
-    <element path="com.example.legacy.OldPaymentApi">
-      <replaced_by>com.example.payment.PaymentProcessor</replaced_by>
-      <migration_guide>Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.</migration_guide>
-      <deadline>v2.0 (2026-Q4)</deadline>
-    </element>
-  </deprecated_elements>
-
-<rule>Elements listed in <deprecated_elements> are scheduled for removal. Do not extend them. When working with code that calls them, suggest migrating to the listed replacement.</rule>
-  <observability_instrumentation>
-    <element path="com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)">
-      <metric>orders.placed.total</metric>
-      <metric>orders.placed.failed</metric>
-      <trace>order.place</trace>
-      <log>OrderPlaced</log>
-      <log>OrderPlacementFailed</log>
-      <note>Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).</note>
-    </element>
-  </observability_instrumentation>
-
-<rule>Elements listed in <observability_instrumentation> publish metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the corresponding dashboard update.</rule>
-  <regulatory_elements>
-    <element path="com.example.compliance.GdprService">
-      <standard>GDPR</standard>
-      <clause>Art. 17</clause>
-      <description>Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.</description>
-    </element>
-    <element path="com.example.compliance.GdprService.exportUserData(java.lang.String)">
-      <standard>GDPR</standard>
-      <clause>Art. 20</clause>
-      <description>Right to data portability — exports the user&#39;s data in a machine-readable format.</description>
-    </element>
-  </regulatory_elements>
-
-<rule>Elements listed in <regulatory_elements> implement specific regulatory clauses. Any change MUST document its compliance impact and MUST NOT weaken the requirement.</rule>
-  <test_isolation_elements>
-    <element path="com.example.config.ParallelTestSettings">
-      <isolation>strict</isolation>
-      <reason>Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated</reason>
-    </element>
-  </test_isolation_elements>
-
-<rule>For elements in <test_isolation_elements>, all generated or modified tests MUST run in complete isolation (no shared state, external resource conflicts, or order dependencies).</rule>
-  <legacy_bridge_elements>
-    <element path="com.example.legacy.LegacyBridgeService">
-      <refactor>prohibited</refactor>
-      <reason>Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); &#39;modernizing&#39; it broke the EBCDIC gateway in 2023</reason>
-    </element>
-  </legacy_bridge_elements>
-
-<rule>Do not modernise, elegant-ize, or refactor structural patterns of elements in <legacy_bridge_elements>. Only modify internal business logic as explicitly requested.</rule>
-  <architecture_elements>
-    <element path="com.example.service.LayeredDomainService">
-      <belongs_to>domain</belongs_to>
-      <cannot_reference>infrastructure</cannot_reference>
-      <cannot_reference>ui</cannot_reference>
-    </element>
-  </architecture_elements>
-
-<rule>Respect layered architectural constraints in <architecture_elements>. Boundary crossing references are strictly prohibited.</rule>
-  <public_api_elements>
-    <element path="com.example.service.PublicPaymentController">
-      <api>public</api>
-      <reason>Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead</reason>
-    </element>
-  </public_api_elements>
-
-<rule>Elements in <public_api_elements> expose public API. Preserve public signature, Javadoc, and backwards compatibility without exceptions.</rule>
-  <strict_exceptions_elements>
-    <element path="com.example.service.TransactionalPaymentService">
-      <exceptions>strict</exceptions>
-      <reason>A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle</reason>
-    </element>
-  </strict_exceptions_elements>
-
-<rule>Catching or throwing generic Exception/Throwable is strictly prohibited in <strict_exceptions_elements>. Precise or custom exceptions required.</rule>
-  <strict_types_elements>
-    <element path="com.example.payment.PaymentDetails">
-      <types>strict</types>
-      <reason>Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map</reason>
-    </element>
-  </strict_types_elements>
-
-<rule>Loose typing (Object, Map<String, Object>, raw types) is strictly prohibited in <strict_types_elements>. Enforce type safety.</rule>
-  <internationalized_elements>
-    <element path="com.example.utils.I18nMessageHelper">
-      <i18n>required</i18n>
-      <reason>Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle</reason>
-    </element>
-  </internationalized_elements>
-
-<rule>Do not hardcode user-facing strings in <internationalized_elements>. Resolve all text via localization resource/message bundles.</rule>
-  <strict_classpath_elements>
-    <element path="com.example.utils.StrictUtility">
-      <classpath>strict</classpath>
-      <reason>Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime</reason>
-    </element>
-  </strict_classpath_elements>
-
-<rule>Dynamic class loading, custom classloaders, reflection hacks, or unverified external code are prohibited in <strict_classpath_elements>.</rule>
-  <schema_safe_elements>
-    <element path="com.example.database.UserEntity">
-      <schema>safe</schema>
-      <reason>Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first</reason>
-    </element>
-  </schema_safe_elements>
-
-<rule>Database or contract schema / serialization safety must be preserved in <schema_safe_elements>. Do not alter structures without migration paths.</rule>
-  <idempotent_elements>
-    <element path="com.example.compliance.GdprService.deleteAllUserData(java.lang.String)">
-      <idempotent>true</idempotent>
-      <reason>Deleting a user&#39;s data multiple times must produce the same result as deleting once — must not throw on second invocation.</reason>
-    </element>
-  </idempotent_elements>
-
-<rule>Operations listed in <idempotent_elements> must remain idempotent. Never introduce side effects that cause repeated invocations to produce different results.</rule>
-  <feature_flag_elements>
-    <element path="com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)">
-      <flag>inventory.push-alerts.enabled</flag>
-      <default_value>false</default_value>
-    </element>
-  </feature_flag_elements>
-
-<rule>Elements listed in <feature_flag_elements> are gated by a feature flag. Always preserve the flag check — never assume the flag is always active.</rule>
   <security_elements>
     <element path="com.example.security.SecurityConfig">
       <aspect>authentication</aspect>
@@ -362,99 +102,42 @@
   </security_elements>
 
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
-  <access_limitations>
-    <file path="com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()">
-      <allowed_callers>com.example.service.PricingService, com.example.payment.PaymentProcessor</allowed_callers>
-    </file>
-  </access_limitations>
+  <scoped_rules>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <element path="com.example.payment.PaymentProcessor" rules=".claude/rules/com-example-payment-PaymentProcessor.md"/>
+    <element path="com.example.security.SecurityConfig" rules=".claude/rules/com-example-security-SecurityConfig.md"/>
+    <element path="com.example.service.OrderService" rules=".claude/rules/com-example-service-OrderService.md"/>
+    <element path="com.example.service.InventoryService" rules=".claude/rules/com-example-service-InventoryService.md"/>
+    <element path="com.example.service.NotificationService" rules=".claude/rules/com-example-service-NotificationService.md"/>
+    <element path="com.example.service.PricingService" rules=".claude/rules/com-example-service-PricingService.md"/>
+    <element path="com.example.strategy.PaymentStrategy" rules=".claude/rules/com-example-strategy-PaymentStrategy.md"/>
+    <element path="com.example.utils.StringParser" rules=".claude/rules/com-example-utils-StringParser.md"/>
+    <element path="com.example.internal.GeneratedMetadata" rules=".claude/rules/com-example-internal-GeneratedMetadata.md"/>
+    <element path="com.example.database.DatabaseConnector" rules=".claude/rules/com-example-database-DatabaseConnector.md"/>
+    <element path="com.example.NotificationService" rules=".claude/rules/com-example-NotificationService.md"/>
+    <element path="com.example.strategy.impl.CreditCardStrategy" rules=".claude/rules/com-example-strategy-impl-CreditCardStrategy.md"/>
+    <element path="com.example.concurrent.SessionCache" rules=".claude/rules/com-example-concurrent-SessionCache.md"/>
+    <element path="com.example.config.AsyncTestConfig" rules=".claude/rules/com-example-config-AsyncTestConfig.md"/>
+    <element path="com.example.legacy.OldPaymentApi" rules=".claude/rules/com-example-legacy-OldPaymentApi.md"/>
+    <element path="com.example.metrics.OrderMetrics" rules=".claude/rules/com-example-metrics-OrderMetrics.md"/>
+    <element path="com.example.compliance.GdprService" rules=".claude/rules/com-example-compliance-GdprService.md"/>
+    <element path="com.example.config.ParallelTestSettings" rules=".claude/rules/com-example-config-ParallelTestSettings.md"/>
+    <element path="com.example.legacy.LegacyBridgeService" rules=".claude/rules/com-example-legacy-LegacyBridgeService.md"/>
+    <element path="com.example.service.LayeredDomainService" rules=".claude/rules/com-example-service-LayeredDomainService.md"/>
+    <element path="com.example.service.PublicPaymentController" rules=".claude/rules/com-example-service-PublicPaymentController.md"/>
+    <element path="com.example.service.TransactionalPaymentService" rules=".claude/rules/com-example-service-TransactionalPaymentService.md"/>
+    <element path="com.example.payment.PaymentDetails" rules=".claude/rules/com-example-payment-PaymentDetails.md"/>
+    <element path="com.example.utils.I18nMessageHelper" rules=".claude/rules/com-example-utils-I18nMessageHelper.md"/>
+    <element path="com.example.utils.StrictUtility" rules=".claude/rules/com-example-utils-StrictUtility.md"/>
+    <element path="com.example.database.UserEntity" rules=".claude/rules/com-example-database-UserEntity.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase" rules=".claude/rules/com-example-service-NewAnnotationsShowcase.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md"/>
+  </scoped_rules>
 
-<rule>Do not invoke elements in <access_limitations> from outside their specified allowed caller packages or classes.</rule>
-  <sandbox_only_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper">
-      <policy>Sandbox or test only. Do not invoke from production.</policy>
-      <reason>Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging</reason>
-    </file>
-  </sandbox_only_elements>
-
-<rule>Elements in <sandbox_only_elements> belong exclusively to sandbox or test environments. Never import or invoke them in production code paths.</rule>
-  <memory_budget_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)">
-      <allocation_policy>ZERO_ALLOCATION</allocation_policy>
-    </file>
-  </memory_budget_elements>
-
-<rule>Avoid runtime heap object allocations, autoboxing, or dynamic overhead within classes/methods in <memory_budget_elements>.</rule>
-  <pure_functions>
-    <file path="com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)">
-      <policy>Pure function: no side effects, deterministic.</policy>
-      <reason>Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers</reason>
-    </file>
-  </pure_functions>
-
-<rule>Methods in <pure_functions> must remain mathematically pure. Side effects, mutations of class/static state, or blocking operations are strictly forbidden.</rule>
-  <domain_model_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice">
-      <domain_model_boundary>Pure Domain Model</domain_model_boundary>
-      <allowed_imports>java.math.BigDecimal</allowed_imports>
-    </file>
-  </domain_model_elements>
-
-<rule>Classes in <domain_model_elements> are pure domain models. Do not import or reference database or web framework dependencies (Spring, Hibernate, JPA, Jackson).</rule>
-  <extensible_patterns>
-    <file path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy">
-      <extension_pattern>STRATEGY_PATTERN</extension_pattern>
-    </file>
-  </extensible_patterns>
-
-<rule>Respect extensibility guidelines for elements in <extensible_patterns>. Implement strategy/visitor extensions rather than expanding branch conditional logic.</rule>
-  <sanitization_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput">
-      <sanitization_types>SQL_INJECTION</sanitization_types>
-    </file>
-  </sanitization_elements>
-
-<rule>Strict input sanitization is mandatory for elements in <sanitization_elements>. Raw input must pass through approved filters before hitting queries or renderers.</rule>
-  <secure_logging_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw">
-      <logging_policy>HASH</logging_policy>
-    </file>
-    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber">
-      <logging_policy>MASK_CREDIT_CARD</logging_policy>
-    </file>
-  </secure_logging_elements>
-
-<rule>Sensitive variables in <secure_logging_elements> must never be printed or logged in raw form. Enforce secure masking or hashing.</rule>
-  <explain_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])">
-      <explanation_required>HIGH</explanation_required>
-    </file>
-  </explain_elements>
-
-<rule>Any modification to elements in <explain_elements> requires an explicit, structured Chain-of-Thought markdown description of changes and complexity analysis.</rule>
-  <prototype_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike">
-      <status>Experimental Prototype</status>
-      <reason>Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it</reason>
-    </file>
-  </prototype_elements>
-
-<rule>Classes in <prototype_elements> are experimental prototypes. Strict rules are relaxed locally, but production classes must never import or depend on them.</rule>
-  <sunset_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)">
-      <sunset_ticket>DEBT-742</sunset_ticket>
-      <replacement_target>com.example.service.PricingService</replacement_target>
-    </file>
-  </sunset_elements>
-
-<rule>Do not introduce *new* references or calls to sunset elements in <sunset_elements>. Migrate callers to their modern replacements.</rule>
-  <temporary_workarounds>
-    <file path="com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()">
-      <temporary_expiration>2028-12-31</temporary_expiration>
-      <temporary_reason>Hotfix workaround until upstream payment provider updates their API.</temporary_reason>
-    </file>
-  </temporary_workarounds>
-
-<rule>Elements in <temporary_workarounds> are short-lived stubs or hotfixes that must be refactored or deleted before their designated expiration date.</rule>
+<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
