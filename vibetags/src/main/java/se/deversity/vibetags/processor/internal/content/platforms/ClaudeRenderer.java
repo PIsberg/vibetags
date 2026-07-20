@@ -97,12 +97,10 @@ public final class ClaudeRenderer implements PlatformRenderer {
 
         if (!collector.testDriven().isEmpty()) {
             StringBuilder sec = new StringBuilder("  <test_driven_requirements>\n");
-            for (Element e : collector.testDriven()) {
-                FormatterRegistry.testDriven().format(e, sec, Platform.CLAUDE);
-            }
+            ClaudeTestDrivenSection.render(collector.testDriven(), sec);
             sec.append("  </test_driven_requirements>\n");
             sb.append(sec);
-            sb.append("\n<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed.</rule>\n");
+            sb.append("\n<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed. Every name under <applies-to> in a <test_driven_default> block inherits that block's coverage goal, frameworks, and test-location convention (with {path} standing for the element's package path).</rule>\n");
         }
 
         if (!collector.threadSafe().isEmpty()) {

@@ -11,6 +11,7 @@ import javax.lang.model.element.Name;
 import javax.tools.Diagnostic;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -541,6 +542,43 @@ class AITestDrivenProcessorTest {
             String content = processor.contentFor(".cursorrules");
             assertTrue(content.contains("com.example.OrderService.calculateDiscount"), "Must list first element");
             assertTrue(content.contains("com.example.BillingService.invoice"), "Must list second element");
+        });
+    }
+
+    @Test
+    void process_multipleIdenticalTestDrivenElements_coalescedInClaudeMd() throws Exception {
+        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+            Element el1 = testDrivenElement("com.example.diag.AlphaDetector", 80, "");
+            Element el2 = testDrivenElement("com.example.diag.BetaDetector", 80, "");
+            Element el3 = testDrivenElement("com.example.diag.GammaDetector", 80, "");
+
+            RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+            when(roundEnv.processingOver()).thenReturn(false);
+            doReturn(new LinkedHashSet<>(List.of(el1, el2, el3)))
+                .when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AICore.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPerformance.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
+
+            CapturingProcessor processor = makeCapturingProcessor();
+            processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
+
+            String content = processor.contentFor("CLAUDE.md");
+            assertTrue(content.contains("<test_driven_default coverage_goal=\"80\" frameworks=\"JUNIT_5\">"),
+                "identical elements collapse into a single <test_driven_default> block");
+            assertTrue(content.contains("com.example.diag.AlphaDetector")
+                    && content.contains("com.example.diag.BetaDetector")
+                    && content.contains("com.example.diag.GammaDetector"),
+                "every element is named under <applies-to>");
+            assertFalse(content.contains("<coverage_goal>"),
+                "coalesced members must not each repeat the per-element coverage_goal stanza");
         });
     }
 
