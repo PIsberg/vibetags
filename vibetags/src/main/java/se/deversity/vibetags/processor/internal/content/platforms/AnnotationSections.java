@@ -62,20 +62,45 @@ final class AnnotationSections {
     }
 
     /**
-     * The "# AUTO-GENERATED AI RULES ... LOCKED FILES ... CONTEXTUAL RULES" opening shared
-     * verbatim by {@link CursorRenderer} and {@link WindsurfRenderer}.
+     * The "# AUTO-GENERATED AI RULES ... LOCKED FILES" opening (locked entries only, no contextual
+     * rules). Used by {@link CursorRenderer} and {@link WindsurfRenderer} in scoped-index mode,
+     * where {@code @AIContext} detail moves to the scoped rule files rather than the aggregate.
      */
-    static void renderLockedAndContextPreamble(StringBuilder sb, AnnotationCollector collector, Platform platform, String generatedHeader) {
+    static void renderLockedPreamble(StringBuilder sb, AnnotationCollector collector, Platform platform, String generatedHeader) {
         sb.append("# AUTO-GENERATED AI RULES\n")
           .append(generatedHeader)
           .append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
         for (Element e : collector.locked()) {
             FormatterRegistry.locked().format(e, sb, platform);
         }
+    }
+
+    /**
+     * The "# AUTO-GENERATED AI RULES ... LOCKED FILES ... CONTEXTUAL RULES" opening shared
+     * verbatim by {@link CursorRenderer} and {@link WindsurfRenderer}.
+     */
+    static void renderLockedAndContextPreamble(StringBuilder sb, AnnotationCollector collector, Platform platform, String generatedHeader) {
+        renderLockedPreamble(sb, collector, platform, generatedHeader);
         sb.append("\n## CONTEXTUAL RULES\n");
         for (Element e : collector.context()) {
             FormatterRegistry.context().format(e, sb, platform);
         }
+    }
+
+    /**
+     * The always-inline safety buckets an aggregate keeps even when it collapses to a scoped-rules
+     * index: audit, ignore, privacy, core, secure (locked is rendered by the preamble). Every other
+     * bucket moves to the scoped files. Headers use the given platform's own wording, so these
+     * sections read identically to full mode.
+     */
+    static void renderInlineSafetySections(StringBuilder sb, AnnotationCollector collector, Platform platform) {
+        render(sb, collector, platform, List.of(
+            section(platform, SectionCatalog.Key.AUDIT, AnnotationCollector::audit, FormatterRegistry.audit()),
+            section(platform, SectionCatalog.Key.IGNORE, AnnotationCollector::ignore, FormatterRegistry.ignore()),
+            section(platform, SectionCatalog.Key.PRIVACY, AnnotationCollector::privacy, FormatterRegistry.privacy()),
+            section(platform, SectionCatalog.Key.CORE, AnnotationCollector::core, FormatterRegistry.core()),
+            section(platform, SectionCatalog.Key.SECURE, AnnotationCollector::secure, FormatterRegistry.secure())
+        ));
     }
 
     /** Appends {@code tail} after {@code head} into one immutable list. */

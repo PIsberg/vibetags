@@ -208,7 +208,10 @@ class NewAnnotationsV3MinimalTest {
         // SharedCache has @AILocked + @AIThreadSafe → appendToGranular called twice for
         // the same owner → the sb.length() > 0 branch in appendToGranular fires.
         // GranularRulesWriter converts '.' to '-' in the filename.
-        String content = harness.readFile(".cursor/rules/com-example-core-SharedCache.mdc");
+        // Read a granular platform that has no aggregate sibling (Trae), so it stays opted-in on the
+        // default harness and is unaffected by the aggregate scoped-index behavior. This test is about
+        // appendToGranular's two-annotation branch, which is platform-agnostic.
+        String content = harness.readFile(".trae/rules/com-example-core-SharedCache.md");
         assertFalse(content.isBlank(),
             "Granular rule file for SharedCache must not be empty when two annotations are present");
     }

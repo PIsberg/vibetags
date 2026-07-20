@@ -29,6 +29,17 @@ public final class ElementNaming {
     }
 
     /**
+     * Derives the granular rule filename stem (minus extension) for an element: its FQN with every
+     * character outside {@code [A-Za-z0-9-]} replaced by {@code -} (dots included). This is the
+     * single source of truth shared by {@link GranularRulesWriter} (which names the scoped files)
+     * and the aggregate scoped-rules index (which must point at exactly those filenames) — keeping
+     * both in lock-step so a pointer can never drift from the file it references.
+     */
+    public static String granularQName(Element element) {
+        return element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+    }
+
+    /**
      * Returns a fully-qualified path for an element. For FIELD/METHOD/CONSTRUCTOR the enclosing
      * type's FQN is prepended; for PARAMETER the enclosing executable's path is prepended with a
      * {@code #} separator (e.g. {@code com.example.Foo.export(java.lang.String)#filePath});

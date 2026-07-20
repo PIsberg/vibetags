@@ -49,8 +49,16 @@ public final class CursorRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
-        AnnotationSections.renderLockedAndContextPreamble(sb, collector, Platform.CURSOR, context.getGeneratedHeader());
-        AnnotationSections.render(sb, collector, Platform.CURSOR, ALL_SECTIONS);
+        if (GranularIndexSection.indexActive(platform, context)) {
+            // Granular sibling opted in: keep only the always-loaded safety buckets inline and point
+            // at the scoped rule files for everything else (see GranularIndexSection).
+            AnnotationSections.renderLockedPreamble(sb, collector, Platform.CURSOR, context.getGeneratedHeader());
+            AnnotationSections.renderInlineSafetySections(sb, collector, Platform.CURSOR);
+            GranularIndexSection.appendMarkdownIndex(sb, platform, context);
+        } else {
+            AnnotationSections.renderLockedAndContextPreamble(sb, collector, Platform.CURSOR, context.getGeneratedHeader());
+            AnnotationSections.render(sb, collector, Platform.CURSOR, ALL_SECTIONS);
+        }
 
         return sb.toString();
     }

@@ -31,6 +31,18 @@ class RefactorAnnotatedElementTest {
         VibeTagsLogger.shutdown();
     }
 
+    /**
+     * Builds a default harness that ALSO opts into {@code .cursor/rules}, so the Cursor granular
+     * scoped files are produced. The aggregate ({@code .cursorrules} / {@code CLAUDE.md}) therefore
+     * collapses to a scoped-rules index: refactor tracking is asserted via the index owner FQNs
+     * (locked and privacy detail stays inline; per-method contract detail lives in the scoped file).
+     */
+    private static ProcessorTestHarness granularHarness(Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir);
+        h.touchOptIn(".cursor/rules/.vibetags");
+        return h;
+    }
+
     // -----------------------------------------------------------------------
     // Rename an annotated class
     // -----------------------------------------------------------------------
@@ -38,7 +50,7 @@ class RefactorAnnotatedElementTest {
     @Test
     void renamingAnnotatedClass_movesGranularFileAndUpdatesSharedRules(@TempDir Path dir) throws Exception {
         // --- before: class is named PaymentProcessor ---
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.payment.PaymentProcessor",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -55,7 +67,7 @@ class RefactorAnnotatedElementTest {
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: developer renames the class to PaymentService ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.payment.PaymentService",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -82,7 +94,7 @@ class RefactorAnnotatedElementTest {
     @Test
     void movingAnnotatedClassToNewPackage_relocatesGranularFileAndUpdatesFqn(@TempDir Path dir) throws Exception {
         // --- before: com.example.payment.OrderManager ---
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.payment.OrderManager",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -99,7 +111,7 @@ class RefactorAnnotatedElementTest {
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: same class, moved to com.example.billing ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.billing.OrderManager",
             "package com.example.billing;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -126,7 +138,7 @@ class RefactorAnnotatedElementTest {
     @Test
     void renamingAnnotatedMethod_updatesContractPathInSharedAndGranularFiles(@TempDir Path dir) throws Exception {
         // --- before: @AIContract on PaymentGateway.charge ---
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.api.PaymentGateway",
             "package com.example.api;\n" +
             "import se.deversity.vibetags.annotations.AIContract;\n" +
@@ -136,14 +148,16 @@ class RefactorAnnotatedElementTest {
             "}\n");
         before.compile();
 
-        assertTrue(before.readFile("CLAUDE.md").contains("PaymentGateway.charge"),
-            "CLAUDE.md contract signatures must reference the original method name");
+        assertTrue(before.readFile(".cursor/rules/com-example-api-PaymentGateway.mdc").contains("charge"),
+            "Cursor granular rule must reference the original method name");
+        assertTrue(before.readFile("CLAUDE.md").contains("com.example.api.PaymentGateway"),
+            "CLAUDE.md scoped-rules index must reference the class that owns the contract");
 
         VibeTagsLogger.shutdown();
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: charge() renamed to settle() ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.api.PaymentGateway",
             "package com.example.api;\n" +
             "import se.deversity.vibetags.annotations.AIContract;\n" +
@@ -153,15 +167,15 @@ class RefactorAnnotatedElementTest {
             "}\n");
         after.compile();
 
-        // The granular file is keyed on the (unchanged) class name, so it stays put but its body updates.
+        // Aggregate CLAUDE.md is a scoped-rules index (granular sibling opted in), so per-method
+        // contract detail lives in the scoped file; the index references only the owning class.
         String granular = after.readFile(".cursor/rules/com-example-api-PaymentGateway.mdc");
         assertFalse(granular.isEmpty(), "Granular rule for the class must still exist after a method rename");
+        assertTrue(granular.contains("settle"), "Granular rule must reference the renamed method");
+        assertFalse(granular.contains("charge"), "Granular rule must no longer reference the old method name");
 
-        String claudeMd = after.readFile("CLAUDE.md");
-        assertTrue(claudeMd.contains("PaymentGateway.settle"),
-            "CLAUDE.md must reference the renamed method");
-        assertFalse(claudeMd.contains("PaymentGateway.charge"),
-            "CLAUDE.md must no longer reference the old method name");
+        assertTrue(after.readFile("CLAUDE.md").contains("com.example.api.PaymentGateway"),
+            "CLAUDE.md scoped-rules index must still reference the contract's owning class");
     }
 
     // -----------------------------------------------------------------------
@@ -171,7 +185,7 @@ class RefactorAnnotatedElementTest {
     @Test
     void renamingAnnotatedField_updatesPrivacyElementPath(@TempDir Path dir) throws Exception {
         // --- before: @AIPrivacy on UserProfile.ssn ---
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.UserProfile",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AIPrivacy;\n" +
@@ -188,7 +202,7 @@ class RefactorAnnotatedElementTest {
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: field ssn renamed to taxId (non-overlapping names) ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.UserProfile",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AIPrivacy;\n" +
@@ -213,7 +227,7 @@ class RefactorAnnotatedElementTest {
     void removingAnnotationFromClass_cleansGranularFileAndDropsFromSharedRules(@TempDir Path dir) throws Exception {
         // A sibling stays annotated throughout so the module always has rules and shared
         // files keep regenerating (a module with zero annotations is intentionally skipped).
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.LegacyCache",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -235,7 +249,7 @@ class RefactorAnnotatedElementTest {
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: developer deletes the @AILocked annotation from LegacyCache ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.LegacyCache",
             "package com.example;\n" +
             "public class LegacyCache {}\n");
@@ -257,7 +271,7 @@ class RefactorAnnotatedElementTest {
 
     @Test
     void deletingAnnotatedClass_cleansUpItsGranularFile(@TempDir Path dir) throws Exception {
-        ProcessorTestHarness before = new ProcessorTestHarness(dir);
+        ProcessorTestHarness before = granularHarness(dir);
         before.addSource("com.example.TempExperiment",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
@@ -277,7 +291,7 @@ class RefactorAnnotatedElementTest {
         ProcessorTestHarness.awaitFilesystemTick(dir);
 
         // --- after: the whole TempExperiment class is deleted; Keeper survives ---
-        ProcessorTestHarness after = new ProcessorTestHarness(dir);
+        ProcessorTestHarness after = granularHarness(dir);
         after.addSource("com.example.Keeper",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +

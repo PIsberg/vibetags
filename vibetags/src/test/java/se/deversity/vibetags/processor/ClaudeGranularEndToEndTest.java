@@ -27,7 +27,7 @@ class ClaudeGranularEndToEndTest {
 
     @BeforeAll
     static void setUp() throws IOException {
-        harness = ProcessorTestHarness.withExampleSources(tempDir);
+        harness = ProcessorTestHarness.withExampleSources(tempDir, ".claude/rules/.vibetags");
     }
 
     @AfterAll

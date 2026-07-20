@@ -13,6 +13,11 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class ClaudeRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
+        if (GranularIndexSection.indexActive(platform, context)) {
+            // Granular sibling (.claude/rules/) opted in: collapse the per-element buckets to a
+            // scoped-rules index, keeping only the always-loaded safety guardrails inline.
+            return renderIndexed(collector, platform, context);
+        }
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("<!-- ").append(context.getGeneratedHeader().trim()).append(" -->\n<project_guardrails>\n  <locked_files>\n");
 
@@ -26,25 +31,9 @@ public final class ClaudeRenderer implements PlatformRenderer {
         }
         sb.append("  </contextual_instructions>\n");
 
-        if (!collector.audit().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <audit_requirements>\n");
-            for (Element e : collector.audit()) {
-                FormatterRegistry.audit().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </audit_requirements>\n");
-            sb.append("\n").append(sec);
-            sb.append("\n<rule>\n  If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.\n</rule>\n");
-        }
+        appendAuditSection(sb, collector);
 
-        if (!collector.ignore().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <ignored_elements>\n");
-            for (Element e : collector.ignore()) {
-                FormatterRegistry.ignore().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </ignored_elements>\n");
-            sb.append(sec);
-            sb.append("\n<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>\n");
-        }
+        appendIgnoreSection(sb, collector);
 
         if (!collector.draft().isEmpty()) {
             StringBuilder sec = new StringBuilder("  <implementation_tasks>\n");
@@ -55,25 +44,9 @@ public final class ClaudeRenderer implements PlatformRenderer {
             sb.append(sec);
         }
 
-        if (!collector.privacy().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <pii_guardrails>\n");
-            for (Element e : collector.privacy()) {
-                FormatterRegistry.privacy().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </pii_guardrails>\n");
-            sb.append(sec);
-            sb.append("\n<rule>\n  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.\n</rule>\n");
-        }
+        appendPrivacySection(sb, collector);
 
-        if (!collector.core().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <core_elements>\n");
-            for (Element e : collector.core()) {
-                FormatterRegistry.core().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </core_elements>\n");
-            sb.append(sec);
-            sb.append("\n<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>\n");
-        }
+        appendCoreSection(sb, collector);
 
         if (!collector.performance().isEmpty()) {
             StringBuilder sec = new StringBuilder("  <performance_constraints>\n");
@@ -263,15 +236,7 @@ public final class ClaudeRenderer implements PlatformRenderer {
             sb.append("\n<rule>Elements listed in <feature_flag_elements> are gated by a feature flag. Always preserve the flag check — never assume the flag is always active.</rule>\n");
         }
 
-        if (!collector.secure().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <security_elements>\n");
-            for (Element e : collector.secure()) {
-                FormatterRegistry.secure().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </security_elements>\n");
-            sb.append(sec);
-            sb.append("\n<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>\n");
-        }
+        appendSecureSection(sb, collector);
 
         // New annotations formatting sections for Claude
         if (!collector.callersOnly().isEmpty()) {
@@ -397,6 +362,100 @@ public final class ClaudeRenderer implements PlatformRenderer {
         sb.append("</project_guardrails>\n");
         sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
+        return sb.toString();
+    }
+
+    // --- Always-inline safety sections, shared by the full render() and the scoped-index variant.
+    //     Extracted so the two code paths cannot drift; render() emits identical bytes to before. ---
+
+    private static void appendAuditSection(StringBuilder sb, AnnotationCollector collector) {
+        if (collector.audit().isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <audit_requirements>\n");
+        for (Element e : collector.audit()) {
+            FormatterRegistry.audit().format(e, sec, Platform.CLAUDE);
+        }
+        sec.append("  </audit_requirements>\n");
+        sb.append("\n").append(sec);
+        sb.append("\n<rule>\n  If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.\n</rule>\n");
+    }
+
+    private static void appendIgnoreSection(StringBuilder sb, AnnotationCollector collector) {
+        if (collector.ignore().isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <ignored_elements>\n");
+        for (Element e : collector.ignore()) {
+            FormatterRegistry.ignore().format(e, sec, Platform.CLAUDE);
+        }
+        sec.append("  </ignored_elements>\n");
+        sb.append(sec);
+        sb.append("\n<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>\n");
+    }
+
+    private static void appendPrivacySection(StringBuilder sb, AnnotationCollector collector) {
+        if (collector.privacy().isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <pii_guardrails>\n");
+        for (Element e : collector.privacy()) {
+            FormatterRegistry.privacy().format(e, sec, Platform.CLAUDE);
+        }
+        sec.append("  </pii_guardrails>\n");
+        sb.append(sec);
+        sb.append("\n<rule>\n  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.\n</rule>\n");
+    }
+
+    private static void appendCoreSection(StringBuilder sb, AnnotationCollector collector) {
+        if (collector.core().isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <core_elements>\n");
+        for (Element e : collector.core()) {
+            FormatterRegistry.core().format(e, sec, Platform.CLAUDE);
+        }
+        sec.append("  </core_elements>\n");
+        sb.append(sec);
+        sb.append("\n<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>\n");
+    }
+
+    private static void appendSecureSection(StringBuilder sb, AnnotationCollector collector) {
+        if (collector.secure().isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <security_elements>\n");
+        for (Element e : collector.secure()) {
+            FormatterRegistry.secure().format(e, sec, Platform.CLAUDE);
+        }
+        sec.append("  </security_elements>\n");
+        sb.append(sec);
+        sb.append("\n<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>\n");
+    }
+
+    /**
+     * Scoped-index variant of {@link #render}: emitted when Claude's granular sibling
+     * ({@code .claude/rules/}) is also opted in. Keeps only the always-loaded safety guardrails
+     * inline (locked, audit, ignore, privacy, core, secure) and points at the scoped rule files for
+     * every other element via {@link GranularIndexSection#appendXmlIndex}. The scoped files carry
+     * the full per-element detail, so nothing is lost — it just stops being duplicated in the
+     * always-on file.
+     */
+    private static String renderIndexed(AnnotationCollector collector, Platform platform, RenderingContext context) {
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
+        sb.append("<!-- ").append(context.getGeneratedHeader().trim()).append(" -->\n<project_guardrails>\n  <locked_files>\n");
+        for (Element e : collector.locked()) {
+            FormatterRegistry.locked().format(e, sb, Platform.CLAUDE);
+        }
+        sb.append("  </locked_files>\n");
+        appendAuditSection(sb, collector);
+        appendIgnoreSection(sb, collector);
+        appendPrivacySection(sb, collector);
+        appendCoreSection(sb, collector);
+        appendSecureSection(sb, collector);
+        GranularIndexSection.appendXmlIndex(sb, platform, context);
+        sb.append("</project_guardrails>\n");
+        sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
         return sb.toString();
     }
 }

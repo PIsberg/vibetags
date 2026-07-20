@@ -59,7 +59,7 @@ public final class GranularRulesWriter {
                 && !claudeGranular && !copilotGranular) return writtenQNames;
 
         elementRules.forEach((element, builder) -> {
-            String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+            String qName = ElementNaming.granularQName(element);
             writtenQNames.add(qName);
             String simpleName = element.getSimpleName().toString();
             String rulesContent = builder.toString().trim();

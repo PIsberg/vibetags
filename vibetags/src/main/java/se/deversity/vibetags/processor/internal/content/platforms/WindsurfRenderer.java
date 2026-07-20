@@ -49,8 +49,14 @@ public final class WindsurfRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
-        AnnotationSections.renderLockedAndContextPreamble(sb, collector, Platform.WINDSURF, context.getGeneratedHeader());
-        AnnotationSections.render(sb, collector, Platform.WINDSURF, ALL_SECTIONS);
+        if (GranularIndexSection.indexActive(platform, context)) {
+            AnnotationSections.renderLockedPreamble(sb, collector, Platform.WINDSURF, context.getGeneratedHeader());
+            AnnotationSections.renderInlineSafetySections(sb, collector, Platform.WINDSURF);
+            GranularIndexSection.appendMarkdownIndex(sb, platform, context);
+        } else {
+            AnnotationSections.renderLockedAndContextPreamble(sb, collector, Platform.WINDSURF, context.getGeneratedHeader());
+            AnnotationSections.render(sb, collector, Platform.WINDSURF, ALL_SECTIONS);
+        }
 
         return sb.toString();
     }

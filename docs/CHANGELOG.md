@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Aggregate files collapse to a scoped-rules index when their granular sibling is also opted in.**
+  When a project opts into both a platform's always-loaded aggregate file **and** its glob-scoped
+  granular directory — `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`,
+  `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`
+  — the aggregate no longer duplicates every element's full guardrails. Instead it keeps only the
+  always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit`, `@AISecure`) and emits a lightweight **scoped-rules index**: one pointer line per
+  element to its scoped rule file. The scoped files carry the full per-element detail, so nothing is
+  lost — it stops being rendered twice, which keeps the high-value always-on guardrails from being
+  diluted in the model's context window. `CLAUDE.local.md` follows `CLAUDE.md`'s state (it mirrors
+  it). Platforms that merely reuse a renderer's format but read no scoped directory (Cline, Firebase,
+  Junie, Void, the Claude skill) are unaffected and always render in full. **Opting into only the
+  aggregate (the common case) is byte-for-byte unchanged** — the index appears only under dual
+  opt-in.
+
 ### Changed
 - **Generated `CLAUDE.md` coalesces repeated identical `@AITestDriven` stanzas.**
   ([#283](https://github.com/PIsberg/vibetags/issues/283)) When two or more `@AITestDriven`
