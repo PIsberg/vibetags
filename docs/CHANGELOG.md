@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Generated `CLAUDE.md` coalesces repeated identical `@AITestDriven` stanzas.**
+  ([#283](https://github.com/PIsberg/vibetags/issues/283)) When two or more `@AITestDriven`
+  elements share the same guardrail values, the `<test_driven_requirements>` section now emits a
+  single `<test_driven_default …>` block plus an `<applies-to>` member list instead of one full
+  `<element>` stanza per class. Mirror-convention test locations render as a
+  `test_location="src/test/java/{path}Test.java"` template; elements whose values diverge keep
+  their individual stanza. Same guardrail semantics, far fewer tokens spent on boilerplate — so
+  the high-value guardrails aren't diluted in the AI's context window.
+
 ## [1.0.0-RC4] - 2026-07-18
 
 ### Fixed

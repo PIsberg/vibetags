@@ -324,6 +324,17 @@ for (Element element : roundEnv.getElementsAnnotatedWith(AIPrivacy.class)) {
 <rule>Never propose edits to locked files.</rule>
 ```
 
+**Stanza coalescing (`ClaudeTestDrivenSection`).** To keep the file's signal-to-noise
+ratio high (issue #283), the `<test_driven_requirements>` section collapses two or more
+`@AITestDriven` elements that share identical guardrail values into a single
+`<test_driven_default coverage_goal="…" frameworks="…" [test_location="…"] [mock_policy="…"]>`
+block with an `<applies-to>` member list, instead of repeating a full `<element>` stanza
+per class. A mirror-convention `testLocation` (`src/test/java/<pkg>/<Class>Test.java` on a
+TYPE) is rendered as the `test_location="src/test/java/{path}Test.java"` template; empty
+locations omit the attribute. Elements whose values diverge — or any set smaller than the
+threshold — keep their individual stanza. Grouping follows the collector's insertion order,
+so the output stays deterministic (byte-stable) for the fingerprint short-circuit.
+
 **Cursor (.cursorrules)** - Markdown with Emoji:
 ```markdown
 # AUTO-GENERATED AI RULES
