@@ -131,8 +131,6 @@ public final class GuardrailFileWriter {
             }
             byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
             int contentByteLen = contentBytes.length;
-            boolean nonMarkerSizeMismatch = !supportsMarkers && fileExists
-                && Math.abs(existingSize - contentByteLen) > 64;
 
             // Phase-2 streaming fast path: for non-marker files where the on-disk size matches
             // the new content size exactly, stream-compare bytes with early-exit on first
@@ -155,14 +153,18 @@ public final class GuardrailFileWriter {
                 return true;
             }
 
-            String existing = (fileExists && !nonMarkerSizeMismatch)
+            // Read the existing file whenever it exists so the compare-before-write below can treat
+            // a line-ending-only difference (LF vs CRLF, e.g. a git core.autocrlf checkout on
+            // Windows) as a no-op instead of rewriting the file — see issue #282. The common
+            // unchanged case is already handled allocation-free by the exact-size byte fast path above.
+            String existing = fileExists
                 ? Files.readString(filePath, StandardCharsets.UTF_8)
                 : "";
 
             if (supportsMarkers) {
                 return writeWithMarkers(filePath, fileName, path, content, existing, hasNewRules, markers);
             }
-            return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, nonMarkerSizeMismatch, hasNewRules);
+            return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules);
         } catch (IOException e) {
             messager.printMessage(Diagnostic.Kind.WARNING,
                 "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
@@ -208,7 +210,7 @@ public final class GuardrailFileWriter {
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
                 String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
-                if (existing.strip().equals(finalContent.strip())) return false;
+                if (contentMatches(existing, finalContent)) return false;
                 writeAndCache(filePath, finalContent, content);
                 return true;
             }
@@ -222,7 +224,7 @@ public final class GuardrailFileWriter {
             if (!after.isEmpty()) sb.append("\n\n").append(after);
             String finalContent = sb.toString().trim() + "\n";
 
-            if (existing.strip().equals(finalContent.strip())) return false;
+            if (contentMatches(existing, finalContent)) return false;
 
             if (!hasNewRules && !existing.isEmpty()) {
                 skipUpdateMsg(fileName);
@@ -235,7 +237,7 @@ public final class GuardrailFileWriter {
         } else if (!existing.isEmpty() && existing.contains(generatedHeaderTrim)) {
             // Legacy file (no markers but has VibeTags header): upgrade to markers
             String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
-            if (existing.strip().equals(finalContent.strip())) return false;
+            if (contentMatches(existing, finalContent)) return false;
 
             if (!hasNewRules) {
                 skipUpdateMsg(fileName);
@@ -250,7 +252,7 @@ public final class GuardrailFileWriter {
             String updated = existing.isEmpty()
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                 : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
-            if (existing.strip().equals(updated.strip())) return false;
+            if (contentMatches(existing, updated)) return false;
 
             if (!hasNewRules && !existing.isEmpty()) {
                 skipUpdateMsg(fileName);
@@ -265,9 +267,9 @@ public final class GuardrailFileWriter {
     }
 
     private boolean writeWithoutMarkers(Path filePath, String fileName, String content, String existing,
-                                        boolean fileExists, long existingSize, boolean nonMarkerSizeMismatch,
+                                        boolean fileExists, long existingSize,
                                         boolean hasNewRules) throws IOException {
-        if (!nonMarkerSizeMismatch && existing.strip().equals(content.strip())) return false;
+        if (contentMatches(existing, content)) return false;
 
         if (!hasNewRules && fileExists && existingSize > 0) {
             skipUpdateMsg(fileName);
@@ -277,6 +279,26 @@ public final class GuardrailFileWriter {
         writeAndCache(filePath, content, content);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
+    }
+
+    /**
+     * Compares two rendered documents for equality, ignoring line-ending differences
+     * (CRLF or lone CR vs LF) in addition to outer whitespace.
+     *
+     * <p>VibeTags always emits LF. A file that git checked out with CRLF (the default
+     * {@code core.autocrlf} on Windows) is byte-different from the freshly rendered LF body yet
+     * semantically identical — rewriting it would flip CRLF→LF and dirty the working tree with
+     * line-ending-only churn on every build. Treating that as unchanged makes regeneration a true
+     * no-op. See issue #282.
+     */
+    static boolean contentMatches(String a, String b) {
+        return normaliseLineEndings(a).strip().equals(normaliseLineEndings(b).strip());
+    }
+
+    /** Collapses CRLF and lone CR to LF. Returns the argument unchanged when it contains no CR. */
+    private static String normaliseLineEndings(String s) {
+        if (s.indexOf('\r') < 0) return s;
+        return s.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     /**
