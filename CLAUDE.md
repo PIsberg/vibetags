@@ -165,6 +165,19 @@ Two preservation guards keep compiles with **no annotations** (e.g. Maven's test
 
 `example-multimodule/` is a three-module reactor demonstrating this end-to-end (built and asserted in CI).
 
+#### Per-module (nested) output
+
+The sidecar/merge above produces the **root** files. Independently, a module can opt into a guardrail
+file or granular dir **inside its own directory** (`touch module-a/CLAUDE.md`), and `ModuleOutputWriter`
+writes that module's own guardrails there — scoped to that module's annotations, with **no sidecar and
+no merge**. It simply re-runs the single-module pipeline (`ServiceRegistry` → `GuardrailContentBuilder`
+→ `GuardrailFileWriter`/`GranularRulesWriter`) against `compilationRoot()` with the module dir's own
+file-existence opt-ins, so the scoped-rules index composes per-module too. Called as a terminal step in
+`generateFiles()`/`checkFiles()`; **gated on `moduleRoot != null` and `!compilationRoot.equals(root)`**
+so in-memory/non-javac compiles (which fall back to the JVM working dir) never write there. The module's
+own opt-in set is folded into the `BuildFingerprint` input so a freshly-touched module file isn't skipped
+by the short-circuit. The sidecar remains untouched and serves only the root aggregate.
+
 ### Internal class responsibilities
 
 Beyond what the VibeTags-generated section below describes, three additional internal classes handle cross-cutting concerns:

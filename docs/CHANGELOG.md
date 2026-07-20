@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Per-module (nested) output for multi-module reactor builds.** Opt into a guardrail file (or a
+  granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and
+  VibeTags writes that module's own guardrails there, scoped to that module's annotations, alongside
+  the merged reactor-root file. This is the idiomatic, context-optimal layout for tools that
+  auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules, Copilot `applyTo`).
+  Covers both aggregate files and granular directories, so a module can be fully self-contained; the
+  scoped-rules index composes per-module too (a module that opts into both its aggregate and its
+  granular dir gets an indexed aggregate). The reactor-**root** files and the per-module sidecar
+  aggregation are **unchanged and orthogonal** — the sidecar still merges every module into the root
+  file; per-module files are written directly from each module's own content, with no sidecar and no
+  cross-module merge. Opt-in is file/dir existence in the module directory, exactly like the root;
+  the module's own opt-in set is folded into the build fingerprint so a freshly-touched module file
+  isn't skipped by the short-circuit. Nothing is written for a module that doesn't opt in, and
+  single-module builds are unaffected. `example-multimodule/` demonstrates it end-to-end (its `cli`
+  module carries its own `CLAUDE.md`) and CI asserts the module file is module-scoped while the root
+  still merges all modules.
 - **Aggregate files collapse to a scoped-rules index when their granular sibling is also opted in.**
   When a project opts into both a platform's always-loaded aggregate file **and** its glob-scoped
   granular directory — `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`,

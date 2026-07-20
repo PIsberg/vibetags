@@ -152,6 +152,7 @@ gradle compileJava
 - [Project Structure](#-project-structure)
 - [Installation](#-quick-start)
 - [How It Works](#-how-it-works)
+- [Organizing Context Files](#-organizing-context-files-for-optimal-context)
 - [Documentation](#-documentation)
 - [Building from Source](#-building-both-projects)
 - [Performance & Load Tests](#-performance--load-tests)
@@ -489,6 +490,39 @@ public class PricingService {
     }
 }
 ```
+
+
+## 🗂️ Organizing Context Files for Optimal Context
+
+AI tools work best when guardrails are **scoped to where you're working**, not dumped into one ever-growing file. VibeTags lets you opt into three layers that compose and de-duplicate automatically — here using **Claude Code** as the example:
+
+| Layer | Opt in by creating | When Claude loads it |
+|---|---|---|
+| **Project-wide** | `CLAUDE.md` (repo root) | Always in context |
+| **Per-file (glob-scoped)** | `.claude/rules/` (directory) | When it opens a matching source file |
+| **Per-module (nested)** | `module-a/CLAUDE.md` | When working inside that module |
+
+The layers never duplicate content:
+
+- **Root + granular together** → the root `CLAUDE.md` keeps only the always-on safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest with a one-line **index** pointing at the scoped `.claude/rules/*.md` files. Verbose per-element detail (context, contracts, performance, …) is pulled in only when Claude opens that file — keeping your always-loaded context lean and the high-value rules undiluted.
+- **Per-module `CLAUDE.md`** → holds only *that module's* guardrails, so Claude gets focused rules while working in the module, while the repo-root `CLAUDE.md` still carries the whole picture.
+
+### Recommended layout for a multi-module project
+
+```text
+my-app/
+├── CLAUDE.md                     # always loaded: safety guardrails + index to the rest
+├── .claude/rules/                # per-file detail, auto-loaded for matching files
+│   ├── com-example-PaymentProcessor.md
+│   └── …
+├── payments/
+│   ├── CLAUDE.md                 # loaded when working in payments/
+│   └── .claude/rules/            # payments-scoped per-file detail
+└── billing/
+    └── CLAUDE.md                 # loaded when working in billing/
+```
+
+Activate any layer by creating the file or directory and compiling — VibeTags never creates opt-in files for you, and deleting one turns that layer off. The same pattern works for **Cursor** (`.cursorrules` + `.cursor/rules/`), **Windsurf** (`.windsurfrules` + `.windsurf/rules/`), and **Copilot** (`.github/copilot-instructions.md` + `.github/instructions/`).
 
 ## 📚 Documentation
 
