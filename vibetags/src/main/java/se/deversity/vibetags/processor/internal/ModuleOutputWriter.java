@@ -45,6 +45,7 @@ public final class ModuleOutputWriter {
                              AnnotationCollector collector,
                              String projectName,
                              String generatedHeader,
+                             RoleConfig roles,
                              GuardrailFileWriter writer,
                              Messager messager) {
         if (moduleRoot == null || moduleRoot.equals(vibetagsRoot) || moduleActive.isEmpty()) {
@@ -72,7 +73,7 @@ public final class ModuleOutputWriter {
 
         // Per-class granular rule files under the module directory; cleanup runs after write.
         GranularRulesWriter granular = new GranularRulesWriter(writer);
-        Set<String> writtenQNames = granular.writeAll(built.elementRules, moduleFiles, moduleActive);
+        Set<String> writtenQNames = granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles);
         granular.cleanupAll(moduleFiles, moduleActive, writtenQNames);
 
         if (written > 0 && messager != null) {

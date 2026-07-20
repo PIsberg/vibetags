@@ -74,6 +74,16 @@ Claude Code's granular rules (`.claude/rules/*.md`) scope with a `paths:` front-
 
 **Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
 
+**Role/topic-based grouping (`.vibetags-roles`).** By default each annotated class becomes one granular file (FQN-named, single-class glob). Drop a `.vibetags-roles` config at the repo (or module) root to group elements into a few human-named topic files by glob instead — `name = comma-separated globs and/or fully-qualified names`, one role per line:
+
+```
+api-endpoints     = **/*Controller.java
+database-models   = **/*Entity.java
+external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
+```
+
+Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module.
+
 #### llms.txt vs llms-full.txt
 
 VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:

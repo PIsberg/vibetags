@@ -178,6 +178,19 @@ so in-memory/non-javac compiles (which fall back to the JVM working dir) never w
 own opt-in set is folded into the `BuildFingerprint` input so a freshly-touched module file isn't skipped
 by the short-circuit. The sidecar remains untouched and serves only the root aggregate.
 
+
+#### Role/topic-based granular rules (`RoleConfig` / `.vibetags-roles`)
+
+`RoleConfig.load(root)` reads an optional `.vibetags-roles` (name → globs/FQNs, one role per line; null
+when absent). `GranularRulesWriter.writeAll(..., roles)` then partitions the granular owners: an owner
+matching a role (first-match, config order — glob matched against the FQN-reconstructed path, or exact
+FQN) is grouped into one human-named file `<role>.<ext>` with the role's globs in the platform
+frontmatter; owners matching no role keep their per-class file (non-lossy). Loaded at the root in
+`generateFiles()`/`checkFiles()` and per module in `ModuleOutputWriter`; the config's `contentHash()` is
+folded into the fingerprint set so edits regenerate. The 12 per-platform frontmatter shapes are unified
+in `GranularRulesWriter.GranularFormat` — the single-glob (per-class, roles-off) path stays
+byte-for-byte identical.
+
 ### Internal class responsibilities
 
 Beyond what the VibeTags-generated section below describes, three additional internal classes handle cross-cutting concerns:

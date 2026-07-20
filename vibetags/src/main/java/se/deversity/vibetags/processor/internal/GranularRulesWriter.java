@@ -4,20 +4,28 @@ import se.deversity.vibetags.annotations.AIContext;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
- * Writes per-class granular rule files for Cursor (.mdc), Trae (.md), and Roo (.md).
- * Each annotated class/package becomes one file in the platform's rules directory.
+ * Writes granular rule files for Cursor (.mdc), Claude, Windsurf, Copilot, Trae, Roo, and similar
+ * platforms. By default each annotated class/package becomes one file in the platform's rules
+ * directory. When a {@link RoleConfig} is supplied (a {@code .vibetags-roles} config is present),
+ * elements matching a role are instead grouped into one human-named file per role (e.g.
+ * {@code api-endpoints.md}); elements matching no role keep their per-class file.
  *
- * <p>Returns the set of qNames written so the caller can pass them to
+ * <p>Returns the set of qNames/role-stems written so the caller can pass them to
  * {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String, Set)} as the exclude list,
  * preventing a delete-then-recreate cycle on each compile.
  */
 @AIContext(
-    focus = "Writes per-class granular rule files for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles",
+    focus = "Writes granular rule files (per-class, or role-grouped when .vibetags-roles is present) for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles",
     avoids = "Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools"
 )
 public final class GranularRulesWriter {
@@ -28,163 +36,176 @@ public final class GranularRulesWriter {
         this.fileWriter = fileWriter;
     }
 
+    /** Per-class granular writing (no role routing). */
+    public Set<String> writeAll(Map<Element, StringBuilder> elementRules,
+                                Map<String, Path> serviceFiles,
+                                Set<String> activeServices) {
+        return writeAll(elementRules, serviceFiles, activeServices, null);
+    }
+
     /**
-     * Writes per-class granular rule files for all active platforms.
+     * Writes granular rule files for all active platforms.
      *
      * @param elementRules    map of owning class/package element → accumulated rules markdown
      * @param serviceFiles    service-key → directory path map
      * @param activeServices  currently-active services (controls which platforms get files)
-     * @return qNames (filename minus extension) of files just written
+     * @param roles           role routing config, or {@code null}/empty for per-class behavior
+     * @return qNames (per-class) and role stems (filename minus extension) of files just written
      */
     public Set<String> writeAll(Map<Element, StringBuilder> elementRules,
                                 Map<String, Path> serviceFiles,
-                                Set<String> activeServices) {
+                                Set<String> activeServices,
+                                RoleConfig roles) {
         Set<String> writtenQNames = new LinkedHashSet<>();
-        boolean cursorGranular    = activeServices.contains("cursor_granular");
-        boolean traeGranular      = activeServices.contains("trae_granular");
-        boolean rooGranular       = activeServices.contains("roo_granular");
-        boolean windsurfGranular  = activeServices.contains("windsurf_granular");
-        boolean continueGranular  = activeServices.contains("continue_granular");
-        boolean tabnineGranular   = activeServices.contains("tabnine_granular");
-        boolean amazonqGranular   = activeServices.contains("amazonq_granular");
-        boolean aiRulesGranular   = activeServices.contains("ai_rules_granular");
-        boolean pearaiGranular    = activeServices.contains("pearai_granular");
-        boolean kiroGranular      = activeServices.contains("kiro_granular");
-        boolean claudeGranular    = activeServices.contains("claude_granular");
-        boolean copilotGranular   = activeServices.contains("copilot_granular");
-        if (!cursorGranular && !traeGranular && !rooGranular
-                && !windsurfGranular && !continueGranular
-                && !tabnineGranular && !amazonqGranular && !aiRulesGranular
-                && !pearaiGranular && !kiroGranular
-                && !claudeGranular && !copilotGranular) return writtenQNames;
+        List<GranularFormat> formats = new ArrayList<>();
+        for (GranularFormat f : FORMATS) {
+            if (activeServices.contains(f.serviceKey)) {
+                formats.add(f);
+            }
+        }
+        if (formats.isEmpty()) {
+            return writtenQNames;
+        }
 
-        elementRules.forEach((element, builder) -> {
-            String qName = ElementNaming.granularQName(element);
-            writtenQNames.add(qName);
-            String simpleName = element.getSimpleName().toString();
-            String rulesContent = builder.toString().trim();
-            String glob = element.getKind() == ElementKind.PACKAGE
-                ? "**/" + simpleName + "/**/*.java"
-                : "**/" + simpleName + ".java";
+        boolean rolesActive = roles != null && !roles.isEmpty();
 
-            if (cursorGranular) {
-                String mdc = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("cursor_granular").resolve(qName + ".mdc").toString(), mdc, true);
-            }
-            if (traeGranular) {
-                String md = "---\n"
-                    + "alwaysApply: false\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("trae_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (rooGranular) {
-                String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("roo_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (windsurfGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("windsurf_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (continueGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("continue_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (tabnineGranular) {
-                String md = "# AI Guidelines for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("tabnine_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (amazonqGranular) {
-                String md = "# Amazon Q Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("amazonq_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (aiRulesGranular) {
-                String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("ai_rules_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (pearaiGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("pearai_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (kiroGranular) {
-                String md = "# Amazon Kiro Steering: " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("kiro_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (claudeGranular) {
-                String md = "---\n"
-                    + "paths: [\"" + glob + "\"]\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("claude_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (copilotGranular) {
-                String md = "---\n"
-                    + "applyTo: \"" + glob + "\"\n"
-                    + "---\n\n"
-                    + "# Copilot Instructions for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("copilot_granular").resolve(qName + ".instructions.md").toString(), md, true);
+        // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
+        // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
+        Map<String, List<Element>> roleMembers = new LinkedHashMap<>();
+        Map<Element, StringBuilder> unmatched = new LinkedHashMap<>();
+        elementRules.forEach((owner, body) -> {
+            String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
+            if (role != null) {
+                roleMembers.computeIfAbsent(role, k -> new ArrayList<>()).add(owner);
+            } else {
+                unmatched.put(owner, body);
             }
         });
+
+        // Unmatched elements → one file per class/package (unchanged output).
+        unmatched.forEach((owner, body) -> {
+            String qName = ElementNaming.granularQName(owner);
+            writtenQNames.add(qName);
+            String simpleName = owner.getSimpleName().toString();
+            String description = "AI rules for " + owner;
+            List<String> globs = List.of(defaultGlob(owner));
+            String content = body.toString().trim();
+            for (GranularFormat f : formats) {
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get(f.serviceKey).resolve(qName + f.extension).toString(),
+                    f.render(description, simpleName, globs, content), true);
+            }
+        });
+
+        // Role members → one grouped, human-named file per role.
+        roleMembers.forEach((roleName, members) -> {
+            String stem = sanitize(roleName);
+            writtenQNames.add(stem);
+            List<String> globs = roles.globsFor(roleName);
+            if (globs.isEmpty()) {
+                // Role defined only by FQNs — derive globs from the members' own class/package globs.
+                Set<String> derived = new LinkedHashSet<>();
+                for (Element m : members) {
+                    derived.add(defaultGlob(m));
+                }
+                globs = new ArrayList<>(derived);
+            }
+            StringBuilder body = new StringBuilder();
+            for (Element m : members) {
+                if (body.length() > 0) {
+                    body.append("\n\n");
+                }
+                body.append("## ").append(m).append("\n\n").append(elementRules.get(m).toString().trim());
+            }
+            String description = "AI rules for role " + roleName;
+            String content = body.toString();
+            for (GranularFormat f : formats) {
+                fileWriter.writeFileIfChanged(
+                    serviceFiles.get(f.serviceKey).resolve(stem + f.extension).toString(),
+                    f.render(description, roleName, globs, content), true);
+            }
+        });
+
         return writtenQNames;
     }
 
+    private static String defaultGlob(Element owner) {
+        String simpleName = owner.getSimpleName().toString();
+        return owner.getKind() == ElementKind.PACKAGE
+            ? "**/" + simpleName + "/**/*.java"
+            : "**/" + simpleName + ".java";
+    }
+
+    /** Role names are user-authored; keep filenames to filesystem-safe characters. */
+    private static String sanitize(String roleName) {
+        return roleName.replaceAll("[^a-zA-Z0-9._-]", "-");
+    }
+
+    private static String arr(List<String> globs) {
+        return "[\"" + String.join("\", \"", globs) + "\"]";
+    }
+
     /**
-     * Removes orphaned granular files for the three platforms, skipping {@code excludeQNames}
-     * (typically the names just written this round).
+     * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
+     * (the per-class qNames and role stems just written this round).
      */
     public void cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
-        if (activeServices.contains("cursor_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("cursor_granular"),   ".mdc", excludeQNames);
-        if (activeServices.contains("trae_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("trae_granular"),     ".md",  excludeQNames);
-        if (activeServices.contains("roo_granular"))      fileWriter.cleanupGranularDirectory(serviceFiles.get("roo_granular"),      ".md",  excludeQNames);
-        if (activeServices.contains("windsurf_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("windsurf_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("continue_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("continue_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("tabnine_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("tabnine_granular"),  ".md",  excludeQNames);
-        if (activeServices.contains("amazonq_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("amazonq_granular"),  ".md",  excludeQNames);
-        if (activeServices.contains("ai_rules_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("ai_rules_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("pearai_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("pearai_granular"),   ".md",  excludeQNames);
-        if (activeServices.contains("kiro_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("kiro_granular"),     ".md",  excludeQNames);
-        if (activeServices.contains("claude_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("claude_granular"),   ".md",  excludeQNames);
-        if (activeServices.contains("copilot_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("copilot_granular"),  ".instructions.md", excludeQNames);
+        for (GranularFormat f : FORMATS) {
+            if (activeServices.contains(f.serviceKey)) {
+                fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames);
+            }
+        }
     }
+
+    /**
+     * Per-platform granular file format: extension, frontmatter builder (from description + glob
+     * list), and heading builder. A file is {@code frontmatter + heading + body}; the single-glob
+     * case reproduces the historical per-class output byte-for-byte.
+     */
+    private static final class GranularFormat {
+        final String serviceKey;
+        final String extension;
+        private final BiFunction<String, List<String>, String> frontmatter;
+        private final Function<String, String> heading;
+
+        GranularFormat(String serviceKey, String extension,
+                       BiFunction<String, List<String>, String> frontmatter,
+                       Function<String, String> heading) {
+            this.serviceKey = serviceKey;
+            this.extension = extension;
+            this.frontmatter = frontmatter;
+            this.heading = heading;
+        }
+
+        String render(String description, String displayName, List<String> globs, String body) {
+            return frontmatter.apply(description, globs) + heading.apply(displayName) + body;
+        }
+    }
+
+    // YAML-frontmatter builders, keyed by the shape each platform uses.
+    private static final BiFunction<String, List<String>, String> FM_DESC_GLOBS_APPLY =
+        (desc, globs) -> "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
+    private static final BiFunction<String, List<String>, String> FM_NONE = (desc, globs) -> "";
+
+    // Order = historical per-class write order.
+    private static final List<GranularFormat> FORMATS = List.of(
+        new GranularFormat("cursor_granular", ".mdc", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("trae_granular", ".md",
+            (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
+            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("roo_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("windsurf_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("continue_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("tabnine_granular", ".md", FM_NONE, n -> "# AI Guidelines for " + n + "\n\n"),
+        new GranularFormat("amazonq_granular", ".md", FM_NONE, n -> "# Amazon Q Rules for " + n + "\n\n"),
+        new GranularFormat("ai_rules_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("pearai_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("kiro_granular", ".md", FM_NONE, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
+        new GranularFormat("claude_granular", ".md",
+            (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
+            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("copilot_granular", ".instructions.md",
+            (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
+            n -> "# Copilot Instructions for " + n + "\n\n")
+    );
 }
