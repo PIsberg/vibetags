@@ -88,6 +88,22 @@ jobs:
           done
           echo "All reactor modules present in merged guardrail files."
 
+
+      - name: Verify Per-Module (nested) Output
+        run: |
+          cd example-multimodule
+          # cli/ opts into its own CLAUDE.md, so it must carry ONLY cli's guardrails...
+          grep -qF "com.example.multimodule.cli.MultiModuleCli" cli/CLAUDE.md \
+            || { echo "MISSING in cli/CLAUDE.md: cli guardrail"; exit 1; }
+          for foreign in "com.example.multimodule.core.IrNode" "com.example.multimodule.engine.LayoutEngine"; do
+            if grep -qF "$foreign" cli/CLAUDE.md; then
+              echo "LEAKED into cli/CLAUDE.md (should be module-scoped): $foreign"; exit 1
+            fi
+          done
+          # ...and the reactor-root file is unchanged: still merges every module.
+          grep -qF "com.example.multimodule.core.IrNode" CLAUDE.md \
+            || { echo "root CLAUDE.md must still merge all modules"; exit 1; }
+          echo "Per-module output is module-scoped; reactor root still merges all modules."
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags

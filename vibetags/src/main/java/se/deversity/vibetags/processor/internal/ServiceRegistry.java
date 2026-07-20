@@ -143,18 +143,12 @@ public final class ServiceRegistry {
      * is dropped here, which also disables the Codex sidecar config it would otherwise drive.
      */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
-        Set<String> active = new HashSet<>();
+        boolean codexOptedIn = allServiceFiles.containsKey("codex") && Files.exists(allServiceFiles.get("codex"));
+        Set<String> active = resolveActiveServices(allServiceFiles);
 
-        allServiceFiles.forEach((key, path) -> {
-            if (!OPT_IN_KEYS.contains(key)) return;
-            if (Files.exists(path)) {
-                active.add(key);
-            }
-        });
-
-        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc).
-        if (active.contains("codex") && active.size() > 1) {
-            active.remove("codex");
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc); the
+        // quiet overload dropped it, so re-emit the explanatory note here for the root resolution.
+        if (codexOptedIn && !active.contains("codex")) {
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: AGENTS.md left untouched because other AI config files are present; "
                 + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
@@ -171,6 +165,26 @@ public final class ServiceRegistry {
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
 
+        return active;
+    }
+
+    /**
+     * Quiet resolution — same file-existence opt-in and AGENTS.md sole-file logic as
+     * {@link #resolveActiveServices(Messager, Map)}, but emits no diagnostics. Used for per-module
+     * output scans, where a module directory with no opt-in files is the common case and must not
+     * spam a "nothing will be generated" note for every module in a reactor.
+     */
+    public static Set<String> resolveActiveServices(Map<String, Path> allServiceFiles) {
+        Set<String> active = new HashSet<>();
+        allServiceFiles.forEach((key, path) -> {
+            if (OPT_IN_KEYS.contains(key) && Files.exists(path)) {
+                active.add(key);
+            }
+        });
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc).
+        if (active.contains("codex") && active.size() > 1) {
+            active.remove("codex");
+        }
         return active;
     }
 }

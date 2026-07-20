@@ -11,6 +11,7 @@ import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
+import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
@@ -270,11 +271,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
 
+        // Per-module (nested) output: resolve this module's own opt-in files quietly. Non-opted
+        // modules are the common case in a reactor and must not spam diagnostics. Empty for
+        // single-module builds where the compilation root IS the VibeTags root.
+        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
+        Set<String> moduleActiveServices = (moduleRoot == null || compilationRoot.equals(root))
+            ? java.util.Set.of()
+            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
+
         // Top-level fingerprint short-circuit: if neither the annotation set, active services, nor
         // any sibling sidecar have changed since the last run, AND every file we wrote then is
         // still byte-stable on disk, skip the entire content-build + per-file-compare phase.
-        // The sidecar stamp is stored separately so the fingerprint stays 8 hex chars.
-        String fingerprint = BuildFingerprint.compute(collector, activeServices);
+        // The sidecar stamp is stored separately so the fingerprint stays 8 hex chars. The module's
+        // own opt-in set is folded in so a freshly-touched module file is not skipped here.
+        Set<String> fingerprintServices = activeServices;
+        if (!moduleActiveServices.isEmpty()) {
+            fingerprintServices = new java.util.LinkedHashSet<>(activeServices);
+            fingerprintServices.addAll(moduleActiveServices);
+        }
+        String fingerprint = BuildFingerprint.compute(collector, fingerprintServices);
         String sidecarStampHex = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
         if (writeCache != null
                 && fingerprint.equals(writeCache.getBuildFingerprint())
@@ -404,6 +419,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices);
         granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
+        // Per-module (nested) output — write this module's own guardrails into its own directory.
+        // Independent of the sidecar aggregation above (which serves only the shared root files):
+        // no sidecar, no cross-module merge, module content only. No-op for single-module builds.
+        ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
+            collector, projectName, GENERATED_HEADER, this.fileWriter, messager);
+
         checkOrphanedAnnotations(messager, activeServices,
             !lockedElements.isEmpty(),
             !ignoreElements.isEmpty(),
@@ -517,6 +538,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
         Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices);
         checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
+
+        // Per-module (nested) output — dry-run so check mode verifies module-scoped files too.
+        // Null messager: the summary note would be misleading in a verification pass.
+        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
+        Set<String> moduleActiveServices = (moduleRoot == null || compilationRoot.equals(root))
+            ? java.util.Set.of()
+            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
+        ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
+            collector, projectName, GENERATED_HEADER, checkWriter, null);
 
         Messager messager = getSafeMessager();
         List<String> drift = checkWriter.dryRunChanges();

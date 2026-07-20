@@ -72,6 +72,8 @@ Claude Code's granular rules (`.claude/rules/*.md`) scope with a `paths:` front-
 
 **Dual opt-in de-duplicates.** Four platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one pointer line per element to its scoped rule file — while the full per-element detail lives in the scoped files. Opting into only the aggregate keeps the complete inline output as before. (`CLAUDE.local.md` follows `CLAUDE.md`; the other eight granular platforms have no aggregate counterpart, so nothing is de-duplicated for them.)
 
+**Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
+
 #### llms.txt vs llms-full.txt
 
 VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:

@@ -68,3 +68,4 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |
 | `CopilotGranularEndToEndTest` | `.github/instructions/*.instructions.md` granular rule generation for GitHub Copilot, including `applyTo:` frontmatter |
 | `GranularIndexEndToEndTest` | Scoped-rules index: dual opt-in (aggregate + granular) collapses the aggregate to a locked/core/safety summary plus a per-element index; single opt-in stays full; reuse renderers (Cline) stay full while `CLAUDE.local.md` mirrors `CLAUDE.md` |
+| `PerModuleOutputEndToEndTest` | Per-module (nested) output: a module that opts into its own `CLAUDE.md`/granular dir gets a module-scoped file (only its own guardrails), the reactor root still merges all modules, the module index composes, and a non-opted module gets nothing |
