@@ -40,19 +40,49 @@ jobs:
           GPG_TTY: /dev/tty
 
       - name: Sign and deploy annotations to Maven Central
-        run: cd vibetags-annotations && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          cd vibetags-annotations
+          log="$(mktemp)"
+          if mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" 2>&1 | tee "$log"; then
+            echo "annotations: deployed."
+          elif grep -q "already exists" "$log"; then
+            echo "::warning title=Already published::vibetags-annotations already exists on Maven Central — treating as success (idempotent re-publish)."
+          else
+            echo "::error title=Deploy failed::annotations deploy failed for a reason other than an already-published component."
+            exit 1
+          fi
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
       - name: Build, sign, and deploy processor to Maven Central
-        run: cd vibetags && mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          cd vibetags
+          log="$(mktemp)"
+          if mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" 2>&1 | tee "$log"; then
+            echo "processor: deployed."
+          elif grep -q "already exists" "$log"; then
+            echo "::warning title=Already published::vibetags-processor already exists on Maven Central — treating as success (idempotent re-publish)."
+          else
+            echo "::error title=Deploy failed::processor deploy failed for a reason other than an already-published component."
+            exit 1
+          fi
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
       - name: Sign and deploy BOM to Maven Central
-        run: cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          cd vibetags-bom
+          log="$(mktemp)"
+          if mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}" 2>&1 | tee "$log"; then
+            echo "bom: deployed."
+          elif grep -q "already exists" "$log"; then
+            echo "::warning title=Already published::vibetags-bom already exists on Maven Central — treating as success (idempotent re-publish)."
+          else
+            echo "::error title=Deploy failed::bom deploy failed for a reason other than an already-published component."
+            exit 1
+          fi
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
