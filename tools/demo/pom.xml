@@ -16,7 +16,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vibetags.bom.version>1.0.0-RC4</vibetags.bom.version>
+        <vibetags.bom.version>1.0.0-RC5</vibetags.bom.version>
     </properties>
 
     <dependencyManagement>
