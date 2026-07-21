@@ -1,0 +1,2 @@
+# domain-model = the core module's domain types → core/.claude/rules/domain-model.md
+domain-model = **/core/*.java

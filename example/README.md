@@ -999,3 +999,17 @@ The processor uses `Paths.get("")` which resolves to the JVM working directory. 
 ## 📝 License
 
 This example project is licensed under the [MIT License](../LICENSE).
+
+
+## VibeTags tiers (single-module)
+
+This is a **single-module** project, so its `.claude/rules/` sits at the **repo root** — and that is
+exactly right: the root *is* the only module, so root granular is simply this project's **Tier-3**
+per-element detail (loaded on demand via each rule's `paths:` glob), alongside the always-loaded
+`CLAUDE.md` (**Tier 1**). Drop a `.vibetags-roles` here to group those per-class files into a few
+human-named topic files.
+
+In a **multi-module reactor** a root `.claude/rules/` can't aggregate across modules — put Tier-3
+rules per module and use an indexed root instead. See
+[`../example-multimodule-indexed`](../example-multimodule-indexed) and the repository README's
+*Organizing Context Files* section ([#295](https://github.com/PIsberg/vibetags/issues/295)).
