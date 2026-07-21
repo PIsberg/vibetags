@@ -15,6 +15,7 @@ import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
+import se.deversity.vibetags.processor.internal.RoleConfig;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
@@ -279,15 +280,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             ? java.util.Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
 
+        // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.
+        RoleConfig rootRoles = RoleConfig.load(root);
+        RoleConfig moduleRoles = (moduleRoot != null && !compilationRoot.equals(root))
+            ? RoleConfig.load(compilationRoot) : null;
+
         // Top-level fingerprint short-circuit: if neither the annotation set, active services, nor
         // any sibling sidecar have changed since the last run, AND every file we wrote then is
         // still byte-stable on disk, skip the entire content-build + per-file-compare phase.
         // The sidecar stamp is stored separately so the fingerprint stays 8 hex chars. The module's
-        // own opt-in set is folded in so a freshly-touched module file is not skipped here.
-        Set<String> fingerprintServices = activeServices;
-        if (!moduleActiveServices.isEmpty()) {
-            fingerprintServices = new java.util.LinkedHashSet<>(activeServices);
-            fingerprintServices.addAll(moduleActiveServices);
+        // own opt-in set and the roles-config hashes are folded in so a freshly-touched module file
+        // or an edited .vibetags-roles is not skipped here.
+        Set<String> fingerprintServices = new java.util.LinkedHashSet<>(activeServices);
+        fingerprintServices.addAll(moduleActiveServices);
+        if (rootRoles != null) {
+            fingerprintServices.add("roles:" + rootRoles.contentHash());
+        }
+        if (moduleRoles != null) {
+            fingerprintServices.add("modroles:" + moduleRoles.contentHash());
         }
         String fingerprint = BuildFingerprint.compute(collector, fingerprintServices);
         String sidecarStampHex = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
@@ -416,14 +426,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
 
         // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans.
-        Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices);
+        Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles);
         granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
         // Per-module (nested) output — write this module's own guardrails into its own directory.
         // Independent of the sidecar aggregation above (which serves only the shared root files):
         // no sidecar, no cross-module merge, module content only. No-op for single-module builds.
         ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
-            collector, projectName, GENERATED_HEADER, this.fileWriter, messager);
+            collector, projectName, GENERATED_HEADER, moduleRoles, this.fileWriter, messager);
 
         checkOrphanedAnnotations(messager, activeServices,
             !lockedElements.isEmpty(),
@@ -535,8 +545,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 : collector.anyAnnotationsFound();
             checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
         }
+        RoleConfig checkRootRoles = RoleConfig.load(root);
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
-        Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices);
+        Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles);
         checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
         // Per-module (nested) output — dry-run so check mode verifies module-scoped files too.
@@ -545,8 +556,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> moduleActiveServices = (moduleRoot == null || compilationRoot.equals(root))
             ? java.util.Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
+        RoleConfig checkModuleRoles = (moduleRoot != null && !compilationRoot.equals(root))
+            ? RoleConfig.load(compilationRoot) : null;
         ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
-            collector, projectName, GENERATED_HEADER, checkWriter, null);
+            collector, projectName, GENERATED_HEADER, checkModuleRoles, checkWriter, null);
 
         Messager messager = getSafeMessager();
         List<String> drift = checkWriter.dryRunChanges();

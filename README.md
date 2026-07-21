@@ -507,6 +507,25 @@ The layers never duplicate content:
 - **Root + granular together** → the root `CLAUDE.md` keeps only the always-on safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest with a one-line **index** pointing at the scoped `.claude/rules/*.md` files. Verbose per-element detail (context, contracts, performance, …) is pulled in only when Claude opens that file — keeping your always-loaded context lean and the high-value rules undiluted.
 - **Per-module `CLAUDE.md`** → holds only *that module's* guardrails, so Claude gets focused rules while working in the module, while the repo-root `CLAUDE.md` still carries the whole picture.
 
+### Grouping rules by role/topic (`.vibetags-roles`)
+
+By default each annotated class gets its own scoped file (`com-example-PaymentProcessor.md`). For the more idiomatic layout — a few human-named topic files, the way Claude's docs recommend — drop a **`.vibetags-roles`** file in the repo (or a module) root:
+
+```
+# .vibetags-roles — name = comma-separated globs and/or fully-qualified names
+api-endpoints     = **/*Controller.java
+database-models   = **/*Entity.java
+external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
+```
+
+On the next compile, `.claude/rules/` (and `.cursor/rules/`, …) contains `api-endpoints.md`, `database-models.md`, `external-webhooks.md` — each with a `paths:` glob list and the grouped guardrails, loaded on-demand when Claude opens a matching file. Three tiers, simplest first:
+
+- **Package scope (zero config)** — annotate a `package-info.java`; that package gets one directory-scoped rule file. Nothing else needed.
+- **Role globs (the power feature)** — the `.vibetags-roles` globs above group elements by naming pattern or directory. An element goes to the **first** matching role (config order); anything matching no role keeps its own per-class file, so nothing is ever lost.
+- **Per-element override** — for the odd class that doesn't fit its glob, add its **fully-qualified name** to a role line (see `com.example.legacy.WeirdEndpoint` above). No annotation required — all routing lives in one file.
+
+`.vibetags-roles` works per module too (drop one in a module root) and composes with the index and per-module layers above.
+
 ### Recommended layout for a multi-module project
 
 ```text

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Role/topic-based granular rules (`.vibetags-roles`).** By default VibeTags writes one scoped
+  rule file per annotated class (FQN-named, single-class glob). Drop a `.vibetags-roles` config at
+  the repo (or module) root — `name = comma-separated globs and/or fully-qualified names` — and
+  matching elements are instead grouped into a few human-named topic files (e.g. `api-endpoints.md`
+  scoping `**/*Controller.java`) with a multi-glob `paths:`/`globs:` frontmatter, which is the layout
+  Claude Code's and Cursor's docs recommend. Routing is **first-match-wins** (config order);
+  elements matching no role keep their per-class file (non-lossy); a class that doesn't fit its glob
+  can be pulled into a role by listing its **FQN** on the role line (no new annotation). Applies to
+  every granular platform, composes with the scoped-rules index, and works per-module. The config's
+  content hash is folded into the build fingerprint so edits regenerate. When `.vibetags-roles` is
+  absent, granular output is byte-for-byte unchanged.
 - **Per-module (nested) output for multi-module reactor builds.** Opt into a guardrail file (or a
   granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and
   VibeTags writes that module's own guardrails there, scoped to that module's annotations, alongside
