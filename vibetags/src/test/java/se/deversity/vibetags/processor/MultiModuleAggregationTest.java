@@ -427,4 +427,121 @@ class MultiModuleAggregationTest {
         List<Path> result = ModuleSidecar.listPaths(tmp);
         assertTrue(result.isEmpty(), ".tmp files must be excluded from listPaths");
     }
+
+    // -----------------------------------------------------------------------
+    // Lean indexed-root aggregate (issue #298): .vibetags-root-index opt-in links
+    // each module's own scoped rules instead of embedding a full second copy.
+    // -----------------------------------------------------------------------
+
+    /** Saves a two-module reactor (graph + cli) with claude bodies and returns the shared root. */
+    private static void seedTwoModuleReactor(Path root) throws IOException {
+        Files.createDirectories(root.resolve("module-graph"));
+        Files.createDirectories(root.resolve("module-cli"));
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("claude", "<locked_files><file path=\"com.example.graph.Node\"/></locked_files>");
+        graph.putBody("gemini_md", "GRAPH GEMINI BODY: com.example.graph.Node");
+        graph.save(root);
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("claude", "<audit_requirements><file path=\"com.example.cli.KartaCli\"/></audit_requirements>");
+        cli.putBody("gemini_md", "CLI GEMINI BODY: com.example.cli.KartaCli");
+        cli.save(root);
+    }
+
+    @Test
+    void indexMode_off_byDefault_embedsFullBodies(@TempDir Path root) throws IOException {
+        seedTwoModuleReactor(root);
+        // Even with per-module .claude/rules present, WITHOUT the opt-in the merge embeds full bodies.
+        Files.createDirectories(root.resolve("module-graph/.claude/rules"));
+        Files.createDirectories(root.resolve("module-cli/.claude/rules"));
+
+        String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
+
+        assertTrue(merged.contains("com.example.graph.Node"), "graph body must be embedded");
+        assertTrue(merged.contains("com.example.cli.KartaCli"), "cli body must be embedded");
+        assertFalse(merged.contains("maintained in that module's own files"),
+            "no pointer text without the .vibetags-root-index opt-in");
+    }
+
+    @Test
+    void indexMode_replacesGranularModuleBodyWithPointer(@TempDir Path root) throws IOException {
+        seedTwoModuleReactor(root);
+        // Each module opts into its own granular dir → its guardrails live there.
+        Files.createDirectories(root.resolve("module-graph/.claude/rules"));
+        Files.createDirectories(root.resolve("module-cli/.claude/rules"));
+        touch(root, ".vibetags-root-index"); // opt in
+
+        String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
+
+        // Full bodies are gone; pointers to each module's scoped dir are present.
+        assertFalse(merged.contains("com.example.graph.Node"), "graph body must NOT be embedded");
+        assertFalse(merged.contains("com.example.cli.KartaCli"), "cli body must NOT be embedded");
+        assertTrue(merged.contains("module-graph/.claude/rules/"), "must link graph's scoped rules");
+        assertTrue(merged.contains("module-cli/.claude/rules/"), "must link cli's scoped rules");
+        // Module sub-markers still frame each pointer for traceability.
+        assertTrue(merged.contains("<!-- VIBETAGS-MODULE: module-graph -->"));
+        assertTrue(merged.contains("<!-- VIBETAGS-MODULE: module-cli -->"));
+    }
+
+    @Test
+    void indexMode_moduleWithAggregateFile_pointerNamesFile(@TempDir Path root) throws IOException {
+        seedTwoModuleReactor(root);
+        // module-graph opts into its own CLAUDE.md (aggregate, no granular dir).
+        touch(root, "module-graph/CLAUDE.md");
+        touch(root, ".vibetags-root-index");
+
+        String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
+
+        assertTrue(merged.contains("module-graph/CLAUDE.md"), "pointer must name graph's own CLAUDE.md");
+        assertFalse(merged.contains("com.example.graph.Node"), "graph body must NOT be embedded");
+        // module-cli has NO own output → its body stays embedded (nothing lost).
+        assertTrue(merged.contains("com.example.cli.KartaCli"),
+            "a module with no per-module output keeps its embedded body");
+    }
+
+    @Test
+    void indexMode_moduleWithoutOwnOutput_staysEmbedded(@TempDir Path root) throws IOException {
+        seedTwoModuleReactor(root);
+        // Opt in, but NO module generates its own output → everything stays embedded (lossless).
+        touch(root, ".vibetags-root-index");
+
+        String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
+
+        assertTrue(merged.contains("com.example.graph.Node"), "graph body stays embedded (no own output)");
+        assertTrue(merged.contains("com.example.cli.KartaCli"), "cli body stays embedded (no own output)");
+        assertFalse(merged.contains("maintained in that module's own files"), "no pointers when nothing is linkable");
+    }
+
+    @Test
+    void indexMode_nonAggregateService_fullMergeUnchanged(@TempDir Path root) throws IOException {
+        seedTwoModuleReactor(root);
+        Files.createDirectories(root.resolve("module-graph/.claude/rules"));
+        Files.createDirectories(root.resolve("module-cli/.claude/rules"));
+        touch(root, ".vibetags-root-index");
+
+        // GEMINI.md has no granular sibling → it must still embed the full merge.
+        String merged = ModuleSidecar.mergeFor("gemini_md", ModuleSidecar.readAll(root), true);
+
+        assertTrue(merged.contains("GRAPH GEMINI BODY"), "gemini_md keeps graph body");
+        assertTrue(merged.contains("CLI GEMINI BODY"), "gemini_md keeps cli body");
+        assertFalse(merged.contains("maintained in that module's own files"), "gemini_md is never linked");
+    }
+
+    @Test
+    void indexMode_rootOwnBodyStaysInline(@TempDir Path root) throws IOException {
+        // A reactor where the root module itself contributes claude content plus one child module.
+        Files.createDirectories(root.resolve("module-graph/.claude/rules"));
+        ModuleSidecar rootMod = new ModuleSidecar("_root_", "");
+        rootMod.putBody("claude", "<core_elements>ROOT LEVEL RULE</core_elements>");
+        rootMod.save(root);
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("claude", "<locked_files><file path=\"com.example.graph.Node\"/></locked_files>");
+        graph.save(root);
+        touch(root, ".vibetags-root-index");
+
+        String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
+
+        assertTrue(merged.contains("ROOT LEVEL RULE"), "the root module's own body must stay inline");
+        assertFalse(merged.contains("com.example.graph.Node"), "the child module is linked, not embedded");
+        assertTrue(merged.contains("module-graph/.claude/rules/"), "child module linked to its scoped rules");
+    }
 }

@@ -179,6 +179,29 @@ own opt-in set is folded into the `BuildFingerprint` input so a freshly-touched 
 by the short-circuit. The sidecar remains untouched and serves only the root aggregate.
 
 
+#### Lean indexed root aggregate (`.vibetags-root-index`)
+
+By default the reactor-root aggregate (`CLAUDE.md`, `.cursorrules`, `.windsurfrules`,
+`.github/copilot-instructions.md`) embeds a full verbatim copy of every module's guardrails via the
+sidecar merge. In a reactor where each module already carries its own scoped rules (`.claude/rules/`
+etc.), that root block is a second copy of content the tool auto-loads from the module files (issue
+#298). Touching `.vibetags-root-index` at the root opts into a **lean index**: for the four
+aggregates that have a granular sibling, the merge replaces each module's embedded body with a short
+pointer to that module's own scoped rules (and/or its own aggregate file), still wrapped in the
+`VIBETAGS-MODULE` sub-markers. The root module's own body stays inline, and aggregates **without** a
+granular sibling (`GEMINI.md`, `AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+
+Losslessness guard: a module is linked only when it actually emits its own per-module output for that
+service (its module dir opted into `.claude/rules/` and/or `CLAUDE.md`); a module with no output of
+its own keeps its embedded body so nothing is dropped. The decision is computed on the filesystem in
+`ModuleSidecar.readAll()` (which has the root) and stashed on the sidecar instances as transient,
+never-persisted state — so `ModuleSidecar.mergeFor()` stays disk-free and its `@AIContract` signature
+is untouched, and the `@AILocked` `generateFiles()` step order is unchanged. The opt-in registers as
+the `root_index` service (`ServiceRegistry`), so its presence folds into the build fingerprint and
+toggling it reliably regenerates. Check mode mirrors it automatically (`checkFiles()` calls the same
+two methods).
+
+
 #### Role/topic-based granular rules (`RoleConfig` / `.vibetags-roles`)
 
 `RoleConfig.load(root)` reads an optional `.vibetags-roles` (name → globs/FQNs, one role per line; null

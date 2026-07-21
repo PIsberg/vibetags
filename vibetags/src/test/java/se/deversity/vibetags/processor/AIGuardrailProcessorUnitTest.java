@@ -231,7 +231,9 @@ class AIGuardrailProcessorUnitTest {
             // Machine-readable @AILocked report
             "locks_report",
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
-            "claude_local", "claude_skill", "claude_granular", "copilot_granular"
+            "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+            // Lean indexed root aggregate opt-in (multi-module)
+            "root_index"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
         assertFalse(active.contains("codex"),

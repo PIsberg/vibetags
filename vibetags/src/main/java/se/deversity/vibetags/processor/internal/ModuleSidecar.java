@@ -69,6 +69,22 @@ public final class ModuleSidecar {
     private final String modulePath;
     private final Map<String, String> bodies = new LinkedHashMap<>();
 
+    // --- Lean indexed-root state (transient; NEVER persisted by save(), so the on-disk sidecar
+    // format is unchanged). Populated by readAll() only when the reactor root opts into the lean
+    // index via a .vibetags-root-index file. ---
+
+    /** True when the reactor root opted into the lean indexed aggregate (see {@code root_index}). */
+    private boolean rootIndexMode = false;
+
+    /**
+     * For a non-root module in index mode: aggregate service key → the pointer text that should
+     * REPLACE this module's embedded body in the reactor-root aggregate. Present only for the four
+     * aggregate services with a granular sibling ({@code claude}/{@code cursor}/{@code windsurf}/
+     * {@code copilot}) AND only when this module actually emits its own per-module output for that
+     * service (so nothing is ever dropped — a module with no own output keeps its embedded body).
+     */
+    private final Map<String, String> indexPointers = new LinkedHashMap<>();
+
     /**
      * @param moduleId   filename-safe identifier (e.g. {@code "module_graph"}, {@code "_root_"})
      * @param modulePath path of the module root relative to the VibeTags root
@@ -229,7 +245,102 @@ public final class ModuleSidecar {
                       result.add(s);
                   });
         } catch (IOException ignored) {}
+        applyRootIndexMode(root, result);
         return result;
+    }
+
+    // -----------------------------------------------------------------------
+    // Lean indexed-root (multi-module): link to per-module rules instead of embedding
+    // -----------------------------------------------------------------------
+
+    /** Aggregate services that have a glob-scoped granular sibling and can therefore be linked. */
+    private static final String[] INDEXABLE_AGGREGATES = {"claude", "cursor", "windsurf", "copilot"};
+
+    /**
+     * When the reactor root opted into the lean index ({@code .vibetags-root-index} present), flags
+     * every sidecar and precomputes, for each non-root module, the pointer text that replaces its
+     * embedded body in the root aggregate. Runs here (not in {@code mergeFor}) because it needs the
+     * filesystem — the module's own opt-in files determine where its guardrails live — keeping
+     * {@code mergeFor} disk-free and its @AIContract signature untouched.
+     */
+    private static void applyRootIndexMode(Path root, List<ModuleSidecar> sidecars) {
+        if (!Files.exists(root.resolve(".vibetags-root-index"))) return;
+        for (ModuleSidecar s : sidecars) {
+            s.rootIndexMode = true;
+            // The root module's own guardrails are not duplicated elsewhere — keep them inline.
+            if (s.modulePath.isEmpty() || "_root_".equals(s.moduleId)) continue;
+            Path moduleDir = root.resolve(s.modulePath);
+            if (!Files.isDirectory(moduleDir)) continue;
+            java.util.Set<String> moduleActive =
+                ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(moduleDir));
+            for (String agg : INDEXABLE_AGGREGATES) {
+                if (!s.bodies.containsKey(agg)) continue; // module contributes nothing for this service
+                String pointer = buildIndexPointer(agg, s.modulePath, moduleActive);
+                if (pointer != null) s.indexPointers.put(agg, pointer);
+            }
+        }
+    }
+
+    /** True when at least one sidecar carries the reactor-root lean-index opt-in. */
+    private static boolean isRootIndexMode(List<ModuleSidecar> sidecars) {
+        for (ModuleSidecar s : sidecars) {
+            if (s.rootIndexMode) return true;
+        }
+        return false;
+    }
+
+    /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
+    private static String aggregateScopedDir(String service) {
+        switch (service) {
+            case "claude":   return ".claude/rules";
+            case "cursor":   return ".cursor/rules";
+            case "windsurf": return ".windsurf/rules";
+            case "copilot":  return ".github/instructions";
+            default:         return null;
+        }
+    }
+
+    /** Granular service key governing an aggregate service (e.g. {@code claude} → {@code claude_granular}). */
+    private static String aggregateGranularKey(String service) {
+        return aggregateScopedDir(service) == null ? null : service + "_granular";
+    }
+
+    /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
+    private static String aggregateFileName(String service) {
+        switch (service) {
+            case "claude":   return "CLAUDE.md";
+            case "cursor":   return ".cursorrules";
+            case "windsurf": return ".windsurfrules";
+            case "copilot":  return ".github/copilot-instructions.md";
+            default:         return null;
+        }
+    }
+
+    /**
+     * Builds the pointer text that replaces a module's embedded aggregate body, or {@code null} when
+     * the module has no per-module output for this service (in which case the body stays embedded so
+     * no guardrails are lost). {@code moduleActive} is the module directory's own file-existence
+     * opt-in set — the pointer names only the files the module actually generates.
+     */
+    private static String buildIndexPointer(String service, String modulePath, java.util.Set<String> moduleActive) {
+        String scopedDir = aggregateScopedDir(service);
+        if (scopedDir == null) return null;
+        boolean hasGranular = moduleActive.contains(aggregateGranularKey(service));
+        boolean hasAggregate = moduleActive.contains(service);
+        if (!hasGranular && !hasAggregate) return null; // module keeps nothing of its own → embed as before
+
+        String mp = modulePath.replace('\\', '/');
+        StringBuilder p = new StringBuilder();
+        p.append("Guardrails for module `").append(mp).append("` are maintained in that module's own files");
+        if (hasGranular) {
+            p.append(", in the scoped rules under `").append(mp).append('/').append(scopedDir)
+             .append("/` (loaded automatically when you open a matching source file)");
+        }
+        if (hasAggregate) {
+            p.append(hasGranular ? " and `" : ", in `").append(mp).append('/').append(aggregateFileName(service)).append('`');
+        }
+        p.append(". Consult those for this module's full guardrails.");
+        return p.toString();
     }
 
     /**
@@ -277,15 +388,27 @@ public final class ModuleSidecar {
      */
     @AIContract(reason = "Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile")
     public static String mergeFor(String serviceKey, List<ModuleSidecar> sidecars, boolean htmlMarkers) {
+        boolean indexMode = isRootIndexMode(sidecars);
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
+        boolean anyPointer = false;
         for (ModuleSidecar s : sidecars) {
             String body = s.bodies.get(serviceKey);
-            if (body != null && !body.isBlank()) {
+            if (body == null || body.isBlank()) continue;
+            // In lean-index mode a module that maintains its own per-module output for this service
+            // contributes a short pointer instead of its full body (see applyRootIndexMode()).
+            String pointer = indexMode ? s.indexPointers.get(serviceKey) : null;
+            if (pointer != null) {
+                anyPointer = true;
+                contributions.add(new AbstractMap.SimpleEntry<>(s.moduleId, pointer));
+            } else {
                 contributions.add(new AbstractMap.SimpleEntry<>(s.moduleId, body.strip()));
             }
         }
         if (contributions.isEmpty()) return "";
-        if (contributions.size() < MULTI_MODULE_THRESHOLD) return contributions.get(0).getValue();
+        // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
+        // returned verbatim (no sub-markers), multiple are wrapped below. When at least one module
+        // was linked, always wrap so every pointer keeps its owning-module sub-marker context.
+        if (!anyPointer && contributions.size() < MULTI_MODULE_THRESHOLD) return contributions.get(0).getValue();
 
         StringBuilder merged = new StringBuilder();
         for (Map.Entry<String, String> entry : contributions) {

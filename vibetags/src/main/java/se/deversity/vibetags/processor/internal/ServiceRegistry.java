@@ -48,7 +48,9 @@ public final class ServiceRegistry {
         // Editors & modes
         "void", "roo_modes",
         // Machine-readable @AILocked report for CI diff guards
-        "locks_report"
+        "locks_report",
+        // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
+        "root_index"
     );
 
     private ServiceRegistry() {}
@@ -128,6 +130,10 @@ public final class ServiceRegistry {
         map.put("roo_modes",     root.resolve(".roomodes"));
         // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
         map.put("locks_report",  root.resolve(".vibetags-locks"));
+        // Lean indexed root aggregate opt-in (multi-module). No renderer: presence only flips the
+        // reactor-root CLAUDE.md/.cursorrules/.windsurfrules/copilot-instructions.md merge from
+        // embedding each module's guardrails to linking the module's own scoped rule files.
+        map.put("root_index",    root.resolve(".vibetags-root-index"));
         return map;
     }
 
@@ -160,7 +166,7 @@ public final class ServiceRegistry {
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             allServiceFiles.entrySet().stream()
-                .filter(e -> OPT_IN_KEYS.contains(e.getKey()))
+                .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
