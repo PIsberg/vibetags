@@ -30,7 +30,7 @@
     <!-- The indexed root (.vibetags-root-index) needs RC6+. The merged-layout sibling
          example pins the last release (RC5); this one pins the in-development version so
          CI resolves it from the freshly-installed reactor build. Bump on release. -->
-    <vibetags.bom.version>1.0.0-RC6-SNAPSHOT</vibetags.bom.version>
+    <vibetags.bom.version>1.0.0-RC6</vibetags.bom.version>
   </properties>
 
   <dependencyManagement>
