@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC6] - 2026-07-22
+
+### Added
+- **Lean indexed root aggregate for multi-module reactors (`.vibetags-root-index`).** By default the
+  reactor-root aggregate files (`CLAUDE.md`, `.cursorrules`, `.windsurfrules`,
+  `.github/copilot-instructions.md`) embed a full verbatim copy of every module's guardrails via the
+  sidecar merge. In a reactor where each module already carries its own scoped rules (`.claude/rules/`,
+  `.cursor/rules/`, …), that root block is a second copy of content the AI tool already auto-loads from
+  the module files. Touch `.vibetags-root-index` at the reactor root to opt into a **lean index**: for
+  the four aggregates that have a granular sibling, the merge replaces each module's embedded body with
+  a short pointer to that module's own scoped rules (and/or its own aggregate file), still wrapped in
+  the `VIBETAGS-MODULE` sub-markers. The root module's own body stays inline, and aggregates without a
+  granular sibling (`GEMINI.md`, `AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+  A losslessness guard links a module only when it actually emits its own per-module output for that
+  service, so a module with no output of its own keeps its embedded body and nothing is dropped. The
+  opt-in registers as the `root_index` service and folds into the build fingerprint, so toggling it
+  reliably regenerates; check mode mirrors it automatically. (#298, #304)
+
 ## [1.0.0-RC5] - 2026-07-21
 
 ### Added
@@ -1016,7 +1034,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC6...HEAD
+[1.0.0-RC6]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...v1.0.0-RC6
 [1.0.0-RC5]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC4...v1.0.0-RC5
 [1.0.0-RC4]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC3...v1.0.0-RC4
 [1.0.0-RC3]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...v1.0.0-RC3
