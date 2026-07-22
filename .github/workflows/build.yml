@@ -104,6 +104,35 @@ jobs:
           grep -qF "com.example.multimodule.core.IrNode" CLAUDE.md \
             || { echo "root CLAUDE.md must still merge all modules"; exit 1; }
           echo "Per-module output is module-scoped; reactor root still merges all modules."
+
+      - name: Build Indexed Multi-Module Example (issue #295)
+        run: |
+          cd example-multimodule-indexed
+          mvn clean compile -B
+
+      - name: Verify Indexed Root (issue #295)
+        run: |
+          cd example-multimodule-indexed
+          # Root CLAUDE.md is a lean INDEX: one pointer per module, no per-element detail inline.
+          for m in core app; do
+            grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md \
+              || { echo "MISSING module pointer in indexed CLAUDE.md: $m"; exit 1; }
+          done
+          grep -qF "maintained in that module" CLAUDE.md \
+            || { echo "indexed CLAUDE.md is not an index (no pointer text)"; exit 1; }
+          for fqn in "com.example.indexed.core.DocumentModel" "com.example.indexed.app.DocumentService"; do
+            if grep -qF "$fqn" CLAUDE.md; then
+              echo "indexed CLAUDE.md must NOT embed per-element detail: $fqn"; exit 1
+            fi
+          done
+          # GEMINI.md has no scoped-rules feature, so it still carries the full MERGED block.
+          for fqn in "com.example.indexed.core.DocumentModel" "com.example.indexed.app.DocumentService"; do
+            grep -qF "$fqn" GEMINI.md || { echo "MISSING in merged GEMINI.md: $fqn"; exit 1; }
+          done
+          # Tier-3 detail lives in per-module scoped rules, grouped by each module's .vibetags-roles.
+          test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
+          test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
+          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present." 
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags
