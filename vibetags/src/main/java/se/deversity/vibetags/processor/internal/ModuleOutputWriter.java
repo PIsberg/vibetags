@@ -53,7 +53,7 @@ public final class ModuleOutputWriter {
         }
 
         GuardrailContentBuilder.Result built =
-            new GuardrailContentBuilder(collector, moduleActive, projectName, generatedHeader).build();
+            new GuardrailContentBuilder(collector, moduleActive, projectName, generatedHeader, roles).build();
 
         boolean hasAnnotations = collector.anyAnnotationsFound();
         int written = 0;

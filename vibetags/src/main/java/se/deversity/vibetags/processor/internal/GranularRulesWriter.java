@@ -99,7 +99,7 @@ public final class GranularRulesWriter {
 
         // Role members → one grouped, human-named file per role.
         roleMembers.forEach((roleName, members) -> {
-            String stem = sanitize(roleName);
+            String stem = RoleConfig.sanitize(roleName);
             writtenQNames.add(stem);
             List<String> globs = roles.globsFor(roleName);
             if (globs.isEmpty()) {
@@ -134,11 +134,6 @@ public final class GranularRulesWriter {
         return owner.getKind() == ElementKind.PACKAGE
             ? "**/" + simpleName + "/**/*.java"
             : "**/" + simpleName + ".java";
-    }
-
-    /** Role names are user-authored; keep filenames to filesystem-safe characters. */
-    private static String sanitize(String roleName) {
-        return roleName.replaceAll("[^a-zA-Z0-9._-]", "-");
     }
 
     private static String arr(List<String> globs) {

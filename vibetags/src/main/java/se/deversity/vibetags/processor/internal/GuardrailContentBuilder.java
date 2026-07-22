@@ -17,17 +17,27 @@ public final class GuardrailContentBuilder {
     private final Set<String> activeServices;
     private final String projectName;
     private final String generatedHeader;
+    private final RoleConfig roles;
 
     public GuardrailContentBuilder(AnnotationCollector collector,
                                    Set<String> activeServices,
                                    String projectName,
                                    String generatedHeader) {
+        this(collector, activeServices, projectName, generatedHeader, null);
+    }
+
+    public GuardrailContentBuilder(AnnotationCollector collector,
+                                   Set<String> activeServices,
+                                   String projectName,
+                                   String generatedHeader,
+                                   RoleConfig roles) {
         this.collector = collector;
         // Defensive copy: callers must not be able to mutate the active-services set
         // through the reference they passed in.
         this.activeServices = new java.util.LinkedHashSet<>(activeServices);
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
+        this.roles = roles;
     }
 
     /**
@@ -60,7 +70,7 @@ public final class GuardrailContentBuilder {
                 : new java.util.LinkedHashMap<>();
 
         RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
-                estimatedContentSize, elementRules.keySet());
+                estimatedContentSize, elementRules.keySet(), roles);
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
 
         // Render each active service (excluding granular directories and special-case exclusions)
