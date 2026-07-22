@@ -137,6 +137,21 @@ public final class RoleConfig {
         return List.of();
     }
 
+    /**
+     * The rule-file stem that {@link GranularRulesWriter} writes for {@code owner}: the sanitized
+     * role name when the element matches a role, otherwise the per-class granular qName. The single
+     * source of truth so a scoped-rules index pointer can never drift from the file it references
+     * (see {@code GranularIndexSection}).
+     */
+    public String granularStemFor(Element owner) {
+        return roleFor(owner).map(RoleConfig::sanitize).orElseGet(() -> ElementNaming.granularQName(owner));
+    }
+
+    /** Role names are user-authored; keep filenames to filesystem-safe characters. */
+    public static String sanitize(String roleName) {
+        return roleName.replaceAll("[^a-zA-Z0-9._-]", "-");
+    }
+
     /** A token is a glob (not an FQN) if it contains any glob metacharacter or a path separator. */
     private static boolean isGlob(String token) {
         return token.indexOf('*') >= 0 || token.indexOf('?') >= 0

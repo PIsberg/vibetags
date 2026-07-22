@@ -316,7 +316,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Build all per-platform content in one pass (current module only).
         GuardrailContentBuilder.Result built =
-            new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER).build();
+            new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, rootRoles).build();
         Map<String, String> contentByService = built.contentByService;
         this.elementRules = built.elementRules;
 
@@ -467,9 +467,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
         Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
+        RoleConfig checkRootRoles = RoleConfig.load(root);
 
         GuardrailContentBuilder.Result built =
-            new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER).build();
+            new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, checkRootRoles).build();
         Map<String, String> contentByService = built.contentByService;
 
         // Simulate this module's sidecar save in memory: the merge below must reflect the
@@ -545,7 +546,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 : collector.anyAnnotationsFound();
             checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
         }
-        RoleConfig checkRootRoles = RoleConfig.load(root);
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
         Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles);
         checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
