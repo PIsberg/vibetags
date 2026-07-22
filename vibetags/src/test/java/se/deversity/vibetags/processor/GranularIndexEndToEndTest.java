@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,6 +83,30 @@ class GranularIndexEndToEndTest {
         // The scoped file carries the detail that left the aggregate.
         assertTrue(h.readFile(".claude/rules/com-example-Gateway.md").contains("charge"),
             "per-method contract detail lives in the scoped file");
+    }
+
+    @Test
+    void claudeDualOptIn_withRoles_indexPointsAtRoleFile(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.touchOptIn(".claude/rules/.vibetags");
+        // A .vibetags-roles config groups the Gateway into a human-named role file. The scoped-rules
+        // index in CLAUDE.md must reference the role-grouped filename that GranularRulesWriter
+        // actually wrote — not the per-class default — or the pointer dangles (issue #295 follow-up).
+        Files.writeString(dir.resolve(".vibetags-roles"), "gateways = **/Gateway.java\n", StandardCharsets.UTF_8);
+        addMixedSources(h);
+        h.compile();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains("<scoped_rules>"), "scoped-rules index present");
+        assertTrue(claude.contains("rules=\".claude/rules/gateways.md\""),
+            "index must point at the role-grouped file when .vibetags-roles routes the element");
+        assertFalse(claude.contains("com-example-Gateway.md"),
+            "index must NOT use the per-class default name once a role remaps the file");
+        assertTrue(h.fileExists(".claude/rules/gateways.md"),
+            "the role-grouped file the index points at must exist");
+        assertFalse(h.fileExists(".claude/rules/com-example-Gateway.md"),
+            "no per-class file once the element is grouped into a role");
     }
 
     @Test

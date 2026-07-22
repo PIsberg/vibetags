@@ -494,13 +494,13 @@ public class PricingService {
 
 ## 🗂️ Organizing Context Files for Optimal Context
 
-AI tools work best when guardrails are **scoped to where you're working**, not dumped into one ever-growing file. VibeTags lets you opt into three layers that compose and de-duplicate automatically — here using **Claude Code** as the example:
+AI tools work best when guardrails are **scoped to where you're working**, not dumped into one ever-growing file. VibeTags lets you opt into three **tiers** (Tier 1–3) that compose and de-duplicate automatically — here using **Claude Code** as the example:
 
-| Layer | Opt in by creating | When Claude loads it |
-|---|---|---|
-| **Project-wide** | `CLAUDE.md` (repo root) | Always in context |
-| **Per-file (glob-scoped)** | `.claude/rules/` (directory) | When it opens a matching source file |
-| **Per-module (nested)** | `module-a/CLAUDE.md` | When working inside that module |
+| Tier | Layer | Opt in by creating | When Claude loads it |
+|---|---|---|---|
+| **Tier 1** | Project | `CLAUDE.md` (repo root); add **`.vibetags-root-index`** for the lean **indexed** root | Always in context |
+| **Tier 2** | Module | `module-a/CLAUDE.md` | When working inside that module |
+| **Tier 3** | Element / topic | `.claude/rules/` (directory; group with `.vibetags-roles`) | When it opens a matching source file |
 
 The layers never duplicate content:
 
@@ -531,7 +531,7 @@ On the next compile, `.claude/rules/` (and `.cursor/rules/`, …) contains `api-
 ```text
 my-app/
 ├── CLAUDE.md                     # always loaded: safety guardrails + index to the rest
-├── .claude/rules/                # per-file detail, auto-loaded for matching files
+├── .claude/rules/                # root-level detail only; per-module detail lives in each module below
 │   ├── com-example-PaymentProcessor.md
 │   └── …
 ├── payments/
@@ -542,6 +542,25 @@ my-app/
 ```
 
 Activate any layer by creating the file or directory and compiling — VibeTags never creates opt-in files for you, and deleting one turns that layer off. The same pattern works for **Cursor** (`.cursorrules` + `.cursor/rules/`), **Windsurf** (`.windsurfrules` + `.windsurf/rules/`), and **Copilot** (`.github/copilot-instructions.md` + `.github/instructions/`).
+
+### When to use a root `.claude/rules/` (root granular)
+
+`.claude/rules/` at the **repo root** is a **single-module** (or non-reactor) mechanism — there the
+root *is* the project, so its scoped rules are simply the project's Tier-3 detail. In a **multi-module
+reactor** a root `.claude/rules/` cannot aggregate across modules (each module overwrites it — see
+[#295](https://github.com/PIsberg/vibetags/issues/295)), so put Tier-3 rules in **each module**
+(`module-a/.claude/rules/`) and let the **indexed** Tier-1 root (`.vibetags-root-index`) point at them.
+Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
+
+| You have | Tier-1 root | Tier-3 detail |
+|---|---|---|
+| **Single module** | `CLAUDE.md` | root `.claude/rules/` ✅ |
+| **Reactor, lean** | `CLAUDE.md` + `.vibetags-root-index` (indexed) | per-module `.claude/rules/` |
+| **Reactor, always-on** | `CLAUDE.md` (merged) | per-module `CLAUDE.md` (Tier 2) |
+
+**Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
+[`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
+[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3).
 
 ## 📚 Documentation
 

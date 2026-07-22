@@ -93,8 +93,14 @@ final class GranularIndexSection {
     }
 
     /** Relative path to the scoped rule file for {@code owner} under {@code platform}'s granular directory. */
-    private static String scopedPath(Platform platform, Element owner) {
-        return scopedDir(platform) + "/" + ElementNaming.granularQName(owner) + scopedSuffix(platform);
+    private static String scopedPath(Platform platform, Element owner, RenderingContext context) {
+        // Name the file GranularRulesWriter actually wrote: the role-grouped stem when a
+        // .vibetags-roles config routes this element, else the per-class qName. Resolving through
+        // the same RoleConfig keeps the pointer from dangling to a file that was never written.
+        String stem = context.roles() != null
+            ? context.roles().granularStemFor(owner)
+            : ElementNaming.granularQName(owner);
+        return scopedDir(platform) + "/" + stem + scopedSuffix(platform);
     }
 
     /**
@@ -111,7 +117,7 @@ final class GranularIndexSection {
         sb.append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>\n");
         for (Element owner : owners) {
             sb.append("    <element path=\"").append(Escape.xml(owner.toString()))
-              .append("\" rules=\"").append(Escape.xml(scopedPath(platform, owner))).append("\"/>\n");
+              .append("\" rules=\"").append(Escape.xml(scopedPath(platform, owner, context))).append("\"/>\n");
         }
         sb.append("  </scoped_rules>\n");
         sb.append("\n<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>\n");
@@ -130,7 +136,7 @@ final class GranularIndexSection {
         sb.append("\n## Scoped Rules Index\n");
         sb.append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:\n\n");
         for (Element owner : owners) {
-            sb.append("- `").append(owner.toString()).append("` → `").append(scopedPath(platform, owner)).append("`\n");
+            sb.append("- `").append(owner.toString()).append("` → `").append(scopedPath(platform, owner, context)).append("`\n");
         }
     }
 }

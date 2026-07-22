@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-bom</artifactId>
-    <version>1.0.0-RC5</version>
+    <version>1.0.0-RC6-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>VibeTags BOM</name>
@@ -66,7 +66,7 @@
         <!-- Single source of truth for the VibeTags artifact set. Bump this when releasing
              a new processor version; all consumers that import this BOM track the bump
              without further changes. -->
-        <vibetags.version>1.0.0-RC5</vibetags.version>
+        <vibetags.version>1.0.0-RC6-SNAPSHOT</vibetags.version>
     </properties>
 
     <dependencyManagement>

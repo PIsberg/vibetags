@@ -367,7 +367,9 @@ class AIGuardrailProcessorProcessTest {
             // Machine-readable @AILocked report
             "locks_report",
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
-            "claude_local", "claude_skill", "claude_granular", "copilot_granular"
+            "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+            // Lean indexed root aggregate opt-in (multi-module)
+            "root_index"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");

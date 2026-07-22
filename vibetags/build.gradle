@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'se.deversity.vibetags'
-version = '1.0.0-RC5'
+version = '1.0.0-RC6-SNAPSHOT'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -20,7 +20,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-processor'
-            version = '1.0.0-RC5'
+            version = '1.0.0-RC6-SNAPSHOT'
             from components.java
 
             pom {
@@ -77,7 +77,7 @@ repositories {
 dependencies {
     // Annotation classes the processor scans for; backwards-compatible transitive
     // dep so existing consumers still get the annotations via vibetags-processor.
-    api 'se.deversity.vibetags:vibetags-annotations:1.0.0-RC5'
+    api 'se.deversity.vibetags:vibetags-annotations:1.0.0-RC6-SNAPSHOT'
 
     // JSpecify null annotations (@NullMarked, @Nullable, @NonNull)
     implementation 'org.jspecify:jspecify:1.0.0'
