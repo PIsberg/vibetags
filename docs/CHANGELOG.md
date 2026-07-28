@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`AGENTS.md` can now opt in explicitly via VibeTags markers.** `AGENTS.md` is still only
+  generated when it is the sole AI config file present, because it is so often kept as a
+  hand-written pointer to another tool's file and clobbering that would be destructive. That rule
+  meant a project using both Claude and Codex could not have a generated `AGENTS.md` at all. An
+  `AGENTS.md` that already contains a `VIBETAGS-START` / `VIBETAGS-END` pair is now treated as an
+  active write target regardless of how many other AI config files exist: the markers prove
+  VibeTags authored the block, and `GuardrailFileWriter` only ever replaces the region between
+  them, so hand-authored content outside the markers is still preserved. Unmarked pointers are
+  left byte-for-byte untouched exactly as before, and the skipped-file NOTE now names the escape
+  hatch.
+
 ## [1.0.0-RC6] - 2026-07-22
 
 ### Added
