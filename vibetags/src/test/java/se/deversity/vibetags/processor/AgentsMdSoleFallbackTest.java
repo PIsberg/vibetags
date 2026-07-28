@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li><b>Coexisting</b> — when {@code AGENTS.md} sits alongside another AI config file
  *       (e.g. {@code CLAUDE.md}), it is treated as a likely pointer and left untouched, while the
  *       other file is still generated.</li>
+ *   <li><b>Marker escape hatch</b> — unless the coexisting {@code AGENTS.md} already carries a
+ *       VibeTags marker pair, which means VibeTags wrote it and can safely refresh it.</li>
  * </ul>
  */
 class AgentsMdSoleFallbackTest {
@@ -32,6 +35,18 @@ class AgentsMdSoleFallbackTest {
         "import se.deversity.vibetags.annotations.AILocked;\n" +
         "@AILocked(reason = \"Core payment logic - do not refactor\")\n" +
         "public class PaymentProcessor {}\n";
+
+    /** Hand-authored text that must survive every regeneration. */
+    private static final String HAND_WRITTEN = "Hand-written preamble that must survive.";
+
+    private static final String MARKED_AGENTS_MD =
+        "# AGENTS.md\n\n"
+        + HAND_WRITTEN + "\n\n"
+        + "<!-- VIBETAGS-START -->\n"
+        + "<!-- VIBETAGS-END -->\n";
+
+    private static final String POINTER_AGENTS_MD =
+        "# AGENTS.md\n\nRead CLAUDE.md — this file is intentionally a pointer.\n";
 
     // -----------------------------------------------------------------------
     // Sole file → AGENTS.md IS written
@@ -86,6 +101,43 @@ class AgentsMdSoleFallbackTest {
             "AGENTS.md must be skipped whenever any other AI config file opts in");
         assertFalse(h.readFile(".cursorrules").isBlank(),
             ".cursorrules must still be generated");
+    }
+
+    /**
+     * Regression guard for the marker escape hatch: a hand-authored pointer with real prose but
+     * <em>no</em> markers must still be protected. Only the marker pair opts a file in.
+     */
+    @Test
+    void handWrittenPointerWithoutMarkersIsStillProtected(@TempDir Path tempDir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        Files.writeString(h.root().resolve("AGENTS.md"), POINTER_AGENTS_MD);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        assertEquals(POINTER_AGENTS_MD, h.readFile("AGENTS.md"),
+            "An unmarked AGENTS.md pointer must be left byte-for-byte untouched");
+        assertFalse(h.readFile("CLAUDE.md").isBlank(), "CLAUDE.md must still be generated");
+    }
+
+    // -----------------------------------------------------------------------
+    // Marker escape hatch → a marked AGENTS.md is managed even alongside CLAUDE.md
+    // -----------------------------------------------------------------------
+
+    @Test
+    void markedAgentsMdIsWrittenAlongsideClaude(@TempDir Path tempDir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        Files.writeString(h.root().resolve("AGENTS.md"), MARKED_AGENTS_MD);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        String agents = h.readFile("AGENTS.md");
+        assertTrue(agents.contains("PaymentProcessor"),
+            "A marked AGENTS.md must be regenerated even when CLAUDE.md is also present");
+        assertTrue(agents.contains(HAND_WRITTEN),
+            "Hand-authored content outside the markers must survive regeneration");
+        assertFalse(h.readFile("CLAUDE.md").isBlank(), "CLAUDE.md must still be generated");
     }
 
     // -----------------------------------------------------------------------

@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import se.deversity.vibetags.annotations.AIContext;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -147,6 +148,16 @@ public final class ServiceRegistry {
      * To avoid clobbering such a pointer, {@code AGENTS.md} is treated as a write target only when
      * it is the <em>sole</em> AI config file present. If any other service opted in, {@code codex}
      * is dropped here, which also disables the Codex sidecar config it would otherwise drive.
+     *
+     * <p><strong>Marker escape hatch.</strong> The sole-file rule exists to protect hand-authored
+     * pointers, not to forbid a generated {@code AGENTS.md} outright — a Claude + Codex project
+     * could not have one at all. A file that already contains a VibeTags block
+     * ({@link GuardrailFileWriter#MARKER_START_MD}) was written by VibeTags in the first place, and
+     * {@code GuardrailFileWriter} only ever replaces the region between the markers, so refreshing
+     * it cannot destroy anything the user wrote by hand. Such a file therefore stays an active
+     * write target even alongside {@code CLAUDE.md}, {@code GEMINI.md} and friends. Paste a
+     * {@code VIBETAGS-START} / {@code VIBETAGS-END} comment pair into {@code AGENTS.md} to opt a
+     * multi-tool project into a generated Codex file.
      */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
         boolean codexOptedIn = allServiceFiles.containsKey("codex") && Files.exists(allServiceFiles.get("codex"));
@@ -158,7 +169,9 @@ public final class ServiceRegistry {
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: AGENTS.md left untouched because other AI config files are present; "
                 + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
-                + "(remove the other AI config files) to have VibeTags manage it.");
+                + "(remove the other AI config files), or paste a "
+                + GuardrailFileWriter.MARKER_START_MD + " / <!-- VIBETAGS-END --> pair into it, "
+                + "to have VibeTags manage it.");
         }
 
         if (active.isEmpty()) {
@@ -187,10 +200,28 @@ public final class ServiceRegistry {
                 active.add(key);
             }
         });
-        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc).
-        if (active.contains("codex") && active.size() > 1) {
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc),
+        // unless it already carries a VibeTags block — a marked file is one VibeTags generated,
+        // so refreshing it cannot clobber a hand-authored pointer.
+        if (active.contains("codex") && active.size() > 1
+                && !carriesGeneratedBlock(allServiceFiles.get("codex"))) {
             active.remove("codex");
         }
         return active;
+    }
+
+    /**
+     * True when {@code path} already contains a VibeTags-generated markdown block. Unreadable
+     * files fall back to {@code false}, i.e. to the conservative sole-file rule.
+     */
+    private static boolean carriesGeneratedBlock(Path path) {
+        if (path == null) {
+            return false;
+        }
+        try {
+            return Files.readString(path).contains(GuardrailFileWriter.MARKER_START_MD);
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
     }
 }

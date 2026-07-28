@@ -83,6 +83,18 @@ To remove a platform: delete its file — VibeTags will never recreate it.
 > tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
 > is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
 > managed.
+>
+> **Escape hatch (marker opt-in):** if you *want* a generated `AGENTS.md` alongside `CLAUDE.md`
+> — a Claude + Codex project, say — paste a marker pair into it:
+>
+> ```markdown
+> <!-- VIBETAGS-START -->
+> <!-- VIBETAGS-END -->
+> ```
+>
+> A file carrying the markers was written by VibeTags in the first place, and only the region
+> between them is ever replaced, so refreshing it cannot clobber your prose. Marked files stay
+> managed no matter how many other AI config files are present.
 
 ### 3. Annotate your Java code
 
