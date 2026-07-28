@@ -38,6 +38,13 @@ import java.util.stream.Stream;
 )
 public final class GuardrailFileWriter {
 
+    /**
+     * Reserved filename prefix for granular rule files a <em>sibling</em> module mirrored into this
+     * directory (issue #312). A module's own cleanup skips these; the source module cleans up its
+     * own namespace via {@link #cleanupGranularDirectory(Path, String, Set, String)}.
+     */
+    public static final String MIRROR_FILE_PREFIX = "mirrored-";
+
     public static final String MARKER_START_MD = "<!-- VIBETAGS-START -->";
     public static final String MARKER_END_MD = "<!-- VIBETAGS-END -->";
     public static final String MARKER_START_HASH = "# VIBETAGS-START";
@@ -445,6 +452,24 @@ public final class GuardrailFileWriter {
      *                       files just written this round, to avoid delete-then-recreate cycles
      */
     public void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
+        cleanupGranularDirectory(dir, extension, excludeQNames, null);
+    }
+
+    /**
+     * Removes orphaned VibeTags sections from granular rule files in {@code dir}, restricted to one
+     * filename namespace.
+     *
+     * @param dir            directory to scan
+     * @param extension      file extension filter (e.g. ".mdc" or ".md")
+     * @param excludeQNames  qualified names (filename without extension) to skip — typically
+     *                       files just written this round, to avoid delete-then-recreate cycles
+     * @param filePrefix     when non-null, only files whose name starts with it are considered
+     *                       (a source module cleaning up its own mirrored files); when null, files
+     *                       carrying the reserved mirror prefix are skipped instead, so a module's
+     *                       own cleanup never deletes rules a sibling mirrored in (issue #312)
+     */
+    public void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
+                                         @Nullable String filePrefix) {
         if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return;
         try (Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
@@ -456,6 +481,10 @@ public final class GuardrailFileWriter {
                       // multi-dot extensions (e.g. ".instructions.md") correctly too.
                       Path fn = p.getFileName();
                       String name = fn != null ? fn.toString() : "";
+                      if (filePrefix != null ? !name.startsWith(filePrefix)
+                                             : name.startsWith(MIRROR_FILE_PREFIX)) {
+                          return false;
+                      }
                       String qName = name.substring(0, name.length() - extension.length());
                       return !excludeQNames.contains(qName);
                   })
@@ -467,6 +496,27 @@ public final class GuardrailFileWriter {
 
     public void cleanupGranularDirectory(Path dir, String extension) {
         cleanupGranularDirectory(dir, extension, Collections.emptySet());
+    }
+
+    /**
+     * Records an <em>input</em> file's current size and mtime in the write cache, so that editing it
+     * invalidates the processor's top-level short-circuit on the next compile.
+     *
+     * <p>The build fingerprint covers the annotations and the active-service set; a config file that
+     * changes what gets written without changing either — {@code .vibetags-mirror}, which lives in a
+     * <em>sibling</em> module and so cannot reach the compiling module's service set — would
+     * otherwise leave the short-circuit believing nothing changed. Registering it as a cached path
+     * makes {@code WriteCache.allCachedFilesStable()} notice the edit.
+     *
+     * <p>No-op in dry-run (check mode must touch nothing) or when caching is disabled.
+     */
+    public void watchInput(Path file) {
+        if (dryRun || writeCache == null || file == null) return;
+        try {
+            writeCache.recordInput(file);
+        } catch (RuntimeException ignored) {
+            // Best-effort: an unwatchable input just means we may re-render unnecessarily.
+        }
     }
 
     private void scrubGranularFile(Path p) {

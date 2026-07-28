@@ -13,15 +13,15 @@ applyTo: "**/PricingService.java"
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must complete in <5ms p99. Called on every cart update.
 
-### Rules for method calculatePrice
+## Contract-Frozen Signature
 - **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.
+
+### Rules for method calculatePrice
 - **Reason**: Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
 
 ### Rules for method applyPromoCode
-- **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.
 - **Reason**: Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
 
 ### Rules for method getBulkPricing
-- **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.
 - **Reason**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
 <!-- VIBETAGS-END -->

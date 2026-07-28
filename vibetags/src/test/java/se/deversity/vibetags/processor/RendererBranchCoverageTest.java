@@ -217,7 +217,7 @@ class RendererBranchCoverageTest {
         GuardrailFileWriter writer = new GuardrailFileWriter("# header\n", null, null);
         GranularRulesWriter granularWriter = new GranularRulesWriter(writer);
 
-        Map<Element, StringBuilder> elementRules = Map.of();
+        Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules = Map.of();
         Map<String, Path> serviceFiles = Map.of();
         // No granular services → the early-return path at L54 fires
         Set<String> noGranularServices = Set.of("cursor", "claude");

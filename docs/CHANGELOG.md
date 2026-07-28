@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Cross-module rule mirroring (`.vibetags-mirror`).** Guardrails are scoped to the module that owns
+  the annotated source, so a reactor that centralises its tests in a separate module left the code
+  actually exercising `@AILocked` bridges and `@AIPrivacy` key material with no rules in reach — and
+  silently, since a host tool that discovers rule directories by walking up from the edited file just
+  finds nothing. The consuming module now opts in by dropping a `.vibetags-mirror` file in its own
+  directory (optionally naming the source modules, and the globs to append); each source module then
+  writes its granular rules into the target's scoped-rules directories. The target needs no `@AI*`
+  annotations of its own; the mirrored file is the source module's rule verbatim with the target's
+  globs added to its frontmatter. Files are namespaced `mirrored-<sourceModuleId>-…`, so modules
+  compiling in separate javac invocations never clean up each other's output nor the target's own
+  rules, and stale mirrors are removed when their annotations go away. The config is registered as a
+  watched input in `.vibetags-cache` — it lives in a module the compiling module's fingerprint cannot
+  see — so editing it reliably regenerates. Check mode reports missing or stale mirrored files as
+  drift. Absent the opt-in, output is byte-for-byte unchanged. Demonstrated end-to-end by
+  `example-multimodule/tests/` and asserted in CI. (#312)
+
 ### Changed
+- **Granular rule files no longer repeat an identical guardrail sentence per element.** For
+  annotations that carry little or no per-element configuration (`@AIPrivacy`, `@AISecure`,
+  `@AIAudit`, …) the rule line is a compile-time constant, so it repeated down the file once per
+  annotated element — and repetition inside an always-loaded file is a good way to make a rule stop
+  registering. Within a section covering two or more elements, the lines every stanza shares are now
+  hoisted once under the section heading and pluralized, with each element keeping only what differs
+  (typically its reason); elements whose whole stanza is shared collapse into a single
+  `- **Applies to**:` list. This works across owners inside a role/topic file — the case the issue
+  measured — where files are now organised by topic with fully-qualified element headings. A section
+  covering a single element, or one whose stanzas share no lines, is emitted byte-for-byte as before.
+  (#313)
 - **`AGENTS.md` can now opt in explicitly via VibeTags markers.** `AGENTS.md` is still only
   generated when it is the sole AI config file present, because it is so often kept as a
   hand-written pointer to another tool's file and clobbering that would be destructive. That rule

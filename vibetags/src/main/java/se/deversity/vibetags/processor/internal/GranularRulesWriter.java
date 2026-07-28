@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
+import se.deversity.vibetags.processor.internal.content.GranularSections;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import java.nio.file.Path;
@@ -37,7 +39,7 @@ public final class GranularRulesWriter {
     }
 
     /** Per-class granular writing (no role routing). */
-    public Set<String> writeAll(Map<Element, StringBuilder> elementRules,
+    public Set<String> writeAll(Map<Element, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices) {
         return writeAll(elementRules, serviceFiles, activeServices, null);
@@ -52,10 +54,39 @@ public final class GranularRulesWriter {
      * @param roles           role routing config, or {@code null}/empty for per-class behavior
      * @return qNames (per-class) and role stems (filename minus extension) of files just written
      */
-    public Set<String> writeAll(Map<Element, StringBuilder> elementRules,
+    public Set<String> writeAll(Map<Element, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices,
                                 RoleConfig roles) {
+        return write(elementRules, serviceFiles, activeServices, roles, "", List.of());
+    }
+
+    /**
+     * Writes {@code elementRules} into <em>another</em> module's granular directories (issue #312).
+     * Identical to {@link #writeAll} except that every filename carries {@code filePrefix} — which
+     * namespaces the source module so two producers mirroring into the same target never collide or
+     * clean up each other's files — and {@code extraGlobs} are appended to each file's frontmatter
+     * so the mirrored rules actually match the target module's own sources.
+     *
+     * @param filePrefix reserved filename prefix, e.g. {@code mirrored-payments-core-}
+     * @param extraGlobs globs appended after the rule's own glob(s)
+     * @return the prefixed stems written, for {@link #cleanupMirrored}
+     */
+    public Set<String> writeMirrored(Map<Element, GranularBody> elementRules,
+                                     Map<String, Path> serviceFiles,
+                                     Set<String> activeServices,
+                                     RoleConfig roles,
+                                     String filePrefix,
+                                     List<String> extraGlobs) {
+        return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs);
+    }
+
+    private Set<String> write(Map<Element, GranularBody> elementRules,
+                              Map<String, Path> serviceFiles,
+                              Set<String> activeServices,
+                              RoleConfig roles,
+                              String filePrefix,
+                              List<String> extraGlobs) {
         Set<String> writtenQNames = new LinkedHashSet<>();
         List<GranularFormat> formats = new ArrayList<>();
         for (GranularFormat f : FORMATS) {
@@ -72,7 +103,7 @@ public final class GranularRulesWriter {
         // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
         // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
         Map<String, List<Element>> roleMembers = new LinkedHashMap<>();
-        Map<Element, StringBuilder> unmatched = new LinkedHashMap<>();
+        Map<Element, GranularBody> unmatched = new LinkedHashMap<>();
         elementRules.forEach((owner, body) -> {
             String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
             if (role != null) {
@@ -84,11 +115,11 @@ public final class GranularRulesWriter {
 
         // Unmatched elements → one file per class/package (unchanged output).
         unmatched.forEach((owner, body) -> {
-            String qName = ElementNaming.granularQName(owner);
+            String qName = filePrefix + ElementNaming.granularQName(owner);
             writtenQNames.add(qName);
             String simpleName = owner.getSimpleName().toString();
             String description = "AI rules for " + owner;
-            List<String> globs = List.of(defaultGlob(owner));
+            List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
             String content = body.toString().trim();
             for (GranularFormat f : formats) {
                 fileWriter.writeFileIfChanged(
@@ -99,7 +130,7 @@ public final class GranularRulesWriter {
 
         // Role members → one grouped, human-named file per role.
         roleMembers.forEach((roleName, members) -> {
-            String stem = RoleConfig.sanitize(roleName);
+            String stem = filePrefix + RoleConfig.sanitize(roleName);
             writtenQNames.add(stem);
             List<String> globs = roles.globsFor(roleName);
             if (globs.isEmpty()) {
@@ -110,15 +141,20 @@ public final class GranularRulesWriter {
                 }
                 globs = new ArrayList<>(derived);
             }
-            StringBuilder body = new StringBuilder();
+            globs = withExtra(globs, extraGlobs);
+            // A role file spans several owners, so its stanzas are re-rendered together in
+            // qualified mode: organised by topic (section) with fully-qualified element headings,
+            // and with each section's shared rule sentence hoisted once instead of repeated per
+            // element (issue #313).
+            List<GranularBody.Entry> stanzas = new ArrayList<>();
             for (Element m : members) {
-                if (body.length() > 0) {
-                    body.append("\n\n");
+                GranularBody memberBody = elementRules.get(m);
+                if (memberBody != null) {
+                    stanzas.addAll(memberBody.entries());
                 }
-                body.append("## ").append(m).append("\n\n").append(elementRules.get(m).toString().trim());
             }
             String description = "AI rules for role " + roleName;
-            String content = body.toString();
+            String content = GranularSections.render(stanzas, true).trim();
             for (GranularFormat f : formats) {
                 fileWriter.writeFileIfChanged(
                     serviceFiles.get(f.serviceKey).resolve(stem + f.extension).toString(),
@@ -127,6 +163,20 @@ public final class GranularRulesWriter {
         });
 
         return writtenQNames;
+    }
+
+    /**
+     * The rule's own globs followed by any mirror globs, de-duplicated and order-preserving. Returns
+     * {@code globs} untouched when there is nothing to add, so the ordinary single-glob per-class
+     * frontmatter stays byte-for-byte identical.
+     */
+    private static List<String> withExtra(List<String> globs, List<String> extraGlobs) {
+        if (extraGlobs.isEmpty()) {
+            return globs;
+        }
+        Set<String> merged = new LinkedHashSet<>(globs);
+        merged.addAll(extraGlobs);
+        return new ArrayList<>(merged);
     }
 
     private static String defaultGlob(Element owner) {
@@ -148,6 +198,21 @@ public final class GranularRulesWriter {
         for (GranularFormat f : FORMATS) {
             if (activeServices.contains(f.serviceKey)) {
                 fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames);
+            }
+        }
+    }
+
+    /**
+     * Removes orphaned <em>mirrored</em> files for one source module, leaving the target module's
+     * own rules and every other source module's mirrors alone. Scoped by {@code filePrefix}, which
+     * is what lets modules of a reactor compile independently without deleting each other's output.
+     */
+    public void cleanupMirrored(Map<String, Path> serviceFiles, Set<String> activeServices,
+                                String filePrefix, Set<String> excludeQNames) {
+        for (GranularFormat f : FORMATS) {
+            if (activeServices.contains(f.serviceKey)) {
+                fileWriter.cleanupGranularDirectory(
+                    serviceFiles.get(f.serviceKey), f.extension, excludeQNames, filePrefix);
             }
         }
     }

@@ -1,14 +1,15 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -24,8 +25,8 @@ public final class GranularRenderer implements PlatformRenderer {
         return null;
     }
 
-    public Map<Element, StringBuilder> renderGranular(AnnotationCollector collector) {
-        Map<Element, StringBuilder> elementRules = new LinkedHashMap<>();
+    public Map<Element, GranularBody> renderGranular(AnnotationCollector collector) {
+        Map<Element, GranularBody> elementRules = new LinkedHashMap<>();
 
         for (Element e : collector.locked()) {
             AILocked locked = e.getAnnotation(AILocked.class);
@@ -258,21 +259,14 @@ public final class GranularRenderer implements PlatformRenderer {
         return elementRules;
     }
 
-    private void appendToGranular(Map<Element, StringBuilder> elementRules, Element element, String title, String content) {
+    /**
+     * Records one stanza for {@code element} under {@code title}. The stanza is kept structured
+     * (see {@link GranularBody}) rather than appended as text, so the file-level renderer can hoist
+     * the constant rule sentence shared by every element in a section instead of repeating it.
+     */
+    private void appendToGranular(Map<Element, GranularBody> elementRules, Element element, String title, String content) {
         Element owner = ElementNaming.owningElement(element);
-        StringBuilder sb = elementRules.computeIfAbsent(owner, k -> new StringBuilder());
-        if (sb.length() > 0) sb.append("\n");
-
-        if (!owner.equals(element)) {
-            ElementKind kind = element.getKind();
-            String kindStr = (kind != null) ? kind.toString().toLowerCase(java.util.Locale.ROOT) : "element";
-            CharSequence name = (kind == ElementKind.PARAMETER)
-                    ? ElementNaming.elementDisplayName(element)
-                    : element.getSimpleName();
-            sb.append("### Rules for ").append(kindStr).append(" ").append(name).append("\n");
-        } else {
-            sb.append("## ").append(title).append("\n");
-        }
-        sb.append(content).append("\n");
+        elementRules.computeIfAbsent(owner, k -> new GranularBody())
+            .add(new GranularBody.Entry(owner, element, title, List.of(content.split("\n", -1))));
     }
 }

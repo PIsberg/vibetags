@@ -386,6 +386,29 @@
                                 </path>
                             </annotationProcessorPaths>
                         </configuration>
+                        <executions>
+                            <!-- The plugin-level override above does NOT reach an execution that
+                                 carries its own <configuration>: default-compile pins -proc:none and
+                                 -Xplugin:ErrorProne, which would keep the processor off and then
+                                 fail outright ("plug-in not found: ErrorProne") once the Error Prone
+                                 path is gone. Override the execution too. -->
+                            <execution>
+                                <id>default-compile</id>
+                                <configuration combine.self="override">
+                                    <compilerArgs>
+                                        <arg>-Avibetags.root=${project.basedir}/..</arg>
+                                        <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                    </compilerArgs>
+                                    <annotationProcessorPaths>
+                                        <path>
+                                            <groupId>se.deversity.vibetags</groupId>
+                                            <artifactId>vibetags-processor</artifactId>
+                                            <version>${project.version}</version>
+                                        </path>
+                                    </annotationProcessorPaths>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

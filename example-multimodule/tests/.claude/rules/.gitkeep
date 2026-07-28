@@ -1,0 +1,3 @@
+# Directory presence is the opt-in for Claude Code scoped rules (.claude/rules/).
+# This module has no annotations of its own; the rule files here are mirrored in from
+# ../core, ../engine and ../cli — see ../.vibetags-mirror.

@@ -21,12 +21,13 @@ paths: ["**/InventoryService.java"]
 - **Sensitivity**: High
 - **Note**: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
 
-### Rules for method getAvailableStock
+## Performance Constraints
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
+
+### Rules for method getAvailableStock
 - **Constraint**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
 
 ### Rules for method bulkRestock
-- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
 
 ### Rules for method sendLowStockAlert

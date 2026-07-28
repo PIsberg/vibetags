@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import javax.lang.model.element.Element;
 import java.util.Map;
 import java.util.Set;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -45,9 +46,9 @@ public final class GuardrailContentBuilder {
      */
     public static final class Result {
         public final Map<String, String> contentByService;
-        public final Map<Element, java.lang.StringBuilder> elementRules;
+        public final Map<Element, GranularBody> elementRules;
 
-        Result(Map<String, String> contentByService, Map<Element, java.lang.StringBuilder> elementRules) {
+        Result(Map<String, String> contentByService, Map<Element, GranularBody> elementRules) {
             this.contentByService = contentByService;
             this.elementRules = elementRules;
         }
@@ -65,7 +66,7 @@ public final class GuardrailContentBuilder {
         // collector, so ordering it ahead of the per-service loop is safe and avoids a redundant
         // per-element walk inside each renderer.
         boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
-        Map<Element, java.lang.StringBuilder> elementRules = granularActive
+        Map<Element, GranularBody> elementRules = granularActive
                 ? PlatformRendererRegistry.granularRenderer().renderGranular(collector)
                 : new java.util.LinkedHashMap<>();
 

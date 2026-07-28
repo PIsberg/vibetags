@@ -24,11 +24,12 @@ applyTo: "**/NotificationService.java"
 ### Rules for method getDeliveryStatus
 - **Instruction**: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
 
+## PII / Privacy Guardrails
+- **Rule**: Never log or expose runtime values of these elements.
+
 ### Rules for method sendEmail
-- **Rule**: Never log or expose runtime values of this element.
 - **Reason**: Email address is PII under GDPR - never log the recipient address
 
 ### Rules for method sendSMS
-- **Rule**: Never log or expose runtime values of this element.
 - **Reason**: Phone number is PII - never log the destination number
 <!-- VIBETAGS-END -->
