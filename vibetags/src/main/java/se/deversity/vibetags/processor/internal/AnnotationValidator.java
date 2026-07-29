@@ -23,6 +23,13 @@ import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
 import se.deversity.vibetags.annotations.AISecure;
 
+// v1.0.0 evidence-based wave imports
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILoadBearing;
+import se.deversity.vibetags.annotations.AIThreadAffinity;
+
 // New annotations imports
 import se.deversity.vibetags.annotations.AISandboxOnly;
 import se.deversity.vibetags.annotations.AIDomainModel;
@@ -497,6 +504,120 @@ public final class AnnotationValidator {
                         }
                     }
                 }
+            }
+        }
+
+        // ---- v1.0.0 evidence-based wave ----
+
+        for (Element element : elementsOf(roundEnv, present, AIGenerated.class)) {
+            // @AIGenerated + @AIIgnore — contradictory. Generated code must stay readable: an agent
+            // that cannot see the type cannot reason about the behaviour it drives.
+            if (element.getAnnotation(AIIgnore.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIGenerated and @AIIgnore. This is contradictory: "
+                        + "@AIGenerated means read but never write, while @AIIgnore hides the element entirely.",
+                    element);
+            }
+            // @AIGenerated + @AIDraft — contradictory: one asks the AI to write the element, the
+            // other guarantees that writing it is pointless.
+            if (element.getAnnotation(AIDraft.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIGenerated and @AIDraft. This is contradictory: "
+                        + "@AIDraft asks the AI to implement the element, but generated code is overwritten on the next build.",
+                    element);
+            }
+            AIGenerated gen = element.getAnnotation(AIGenerated.class);
+            if (gen != null && gen.regenerateWith().isBlank() && gen.editInstead().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIGenerated on " + element.toString()
+                        + " names a source but no route back to it. Set 'regenerateWith' or 'editInstead' "
+                        + "so the guardrail is a redirect rather than a dead end.",
+                    element);
+            }
+        }
+
+        for (Element element : elementsOf(roundEnv, present, AILoadBearing.class)) {
+            AILoadBearing lb = element.getAnnotation(AILoadBearing.class);
+            if (lb != null && lb.breaksIf().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AILoadBearing on " + element.toString()
+                        + " has a blank 'breaksIf' attribute. Naming the concrete failure (crash, leak, "
+                        + "silent desync) is what stops the code being 'simplified' anyway.",
+                    element);
+            }
+            // suppressAudit + @AIAudit — contradictory instructions to the same reviewer.
+            if (lb != null && lb.suppressAudit() && element.getAnnotation(AIAudit.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AILoadBearing(suppressAudit = true) and @AIAudit. "
+                        + "This is contradictory: one suppresses audit findings, the other mandates them.",
+                    element);
+            }
+        }
+
+        for (Element element : elementsOf(roundEnv, present, AIBannedApi.class)) {
+            AIBannedApi banned = element.getAnnotation(AIBannedApi.class);
+            if (banned != null && banned.forbidden().length == 0) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIBannedApi on " + element.toString()
+                        + " lists no forbidden APIs, so it bans nothing. Populate 'forbidden' or remove the annotation.",
+                    element);
+            }
+            if (banned != null && banned.forbidden().length > 0 && banned.useInstead().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIBannedApi on " + element.toString()
+                        + " has a blank 'useInstead' attribute. A ban with no sanctioned route usually "
+                        + "produces a worse substitute rather than the right one.",
+                    element);
+            }
+        }
+
+        for (Element element : elementsOf(roundEnv, present, AIThreadAffinity.class)) {
+            // The headline contradiction this annotation exists to surface: affinity is the inverse
+            // of thread-safety, so claiming both means one of the two statements is false.
+            if (element.getAnnotation(AIThreadSafe.class) != null) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + element.toString()
+                        + " is annotated with both @AIThreadAffinity and @AIThreadSafe. These are opposite "
+                        + "claims: affinity means safe on exactly one thread, thread-safety means safe on any. "
+                        + "Keep whichever is true.",
+                    element);
+            }
+            AIThreadAffinity ta = element.getAnnotation(AIThreadAffinity.class);
+            if (ta != null && ta.value() == AIThreadAffinity.Affinity.NAMED && ta.thread().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIThreadAffinity on " + element.toString()
+                        + " uses Affinity.NAMED but leaves 'thread' blank, so the required thread is unidentifiable. "
+                        + "Name it (e.g. thread = \"Swing EDT\") or use a specific affinity constant.",
+                    element);
+            }
+            if (ta != null && ta.marshalVia().isBlank()) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIThreadAffinity on " + element.toString()
+                        + " has a blank 'marshalVia' attribute. Without it a caller on the wrong thread is told "
+                        + "'no' with no way to comply.",
+                    element);
+            }
+        }
+
+        for (Element element : elementsOf(roundEnv, present, AIKeepInSync.class)) {
+            AIKeepInSync kis = element.getAnnotation(AIKeepInSync.class);
+            if (kis != null && kis.mirrors().length == 0) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: @AIKeepInSync on " + element.toString()
+                        + " lists no mirrors, so nothing is kept in sync. Populate 'mirrors' or remove the annotation.",
+                    element);
+            }
+            // @AIKeepInSync + @AIContract — the element is free to change, but its signature is frozen;
+            // that is a coherent pair only if the mirrors track something other than the signature.
+            if (kis != null && element.getAnnotation(AIContract.class) != null) {
+                messager.printMessage(Diagnostic.Kind.NOTE,
+                    "VibeTags: " + element.toString()
+                        + " carries both @AIKeepInSync and @AIContract. Verify the mirrors track something other "
+                        + "than the frozen signature, which cannot change in the first place.",
+                    element);
             }
         }
     }

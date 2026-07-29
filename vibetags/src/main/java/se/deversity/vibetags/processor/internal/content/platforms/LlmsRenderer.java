@@ -222,6 +222,26 @@ public final class LlmsRenderer implements PlatformRenderer {
             full ? "\n## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n" : "\n## Temporary Code Workarounds\n",
             (e, buf) -> FormatterRegistry.temporary().format(e, buf, platform));
 
+        appendSection(sb, collector.generated(), platform,
+            full ? "\n## Generated Code — Edit The Source\nThese elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them.\n\n" : "\n## Generated Code — Edit The Source\n",
+            (e, buf) -> FormatterRegistry.generated().format(e, buf, platform));
+
+        appendSection(sb, collector.loadBearing(), platform,
+            full ? "\n## Load-Bearing Oddities\nThese look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.\n\n" : "\n## Load-Bearing Oddities\n",
+            (e, buf) -> FormatterRegistry.loadBearing().format(e, buf, platform));
+
+        appendSection(sb, collector.bannedApi(), platform,
+            full ? "\n## Banned APIs\nThe following APIs compile at these elements but are prohibited there. Use the sanctioned replacement.\n\n" : "\n## Banned APIs\n",
+            (e, buf) -> FormatterRegistry.bannedApi().format(e, buf, platform));
+
+        appendSection(sb, collector.threadAffinity(), platform,
+            full ? "\n## Thread Affinity (Not Thread-Safe)\nThese elements are safe on exactly one thread. Do not add locks — marshal the call onto the required thread instead.\n\n" : "\n## Thread Affinity (Not Thread-Safe)\n",
+            (e, buf) -> FormatterRegistry.threadAffinity().format(e, buf, platform));
+
+        appendSection(sb, collector.keepInSync(), platform,
+            full ? "\n## Mirrored Elements\nThese are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.\n\n" : "\n## Mirrored Elements\n",
+            (e, buf) -> FormatterRegistry.keepInSync().format(e, buf, platform));
+
         return sb.toString();
     }
 

@@ -359,6 +359,56 @@ public final class ClaudeRenderer implements PlatformRenderer {
             sb.append("\n<rule>Elements in <temporary_workarounds> are short-lived stubs or hotfixes that must be refactored or deleted before their designated expiration date.</rule>\n");
         }
 
+        if (!collector.generated().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <generated_elements>\n");
+            for (Element e : collector.generated()) {
+                FormatterRegistry.generated().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </generated_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <generated_elements> are machine-generated: read them to understand behavior, but never edit them — changes are silently overwritten. Apply the change to the named source and regenerate instead.</rule>\n");
+        }
+
+        if (!collector.loadBearing().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <load_bearing_elements>\n");
+            for (Element e : collector.loadBearing()) {
+                FormatterRegistry.loadBearing().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </load_bearing_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <load_bearing_elements> look redundant or over-defensive but are deliberate. You may refactor them, but the stated invariant must survive; do not \"clean up\" the oddity itself.</rule>\n");
+        }
+
+        if (!collector.bannedApi().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <banned_apis>\n");
+            for (Element e : collector.bannedApi()) {
+                FormatterRegistry.bannedApi().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </banned_apis>\n");
+            sb.append(sec);
+            sb.append("\n<rule>The APIs listed in <banned_apis> compile at those elements but are prohibited there. Use the stated replacement; if none is given, ask rather than substituting an equivalent.</rule>\n");
+        }
+
+        if (!collector.threadAffinity().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <thread_affinity_elements>\n");
+            for (Element e : collector.threadAffinity()) {
+                FormatterRegistry.threadAffinity().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </thread_affinity_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <thread_affinity_elements> are safe on exactly one thread — the opposite of thread-safe. Never add locks or synchronization to \"make them safe\"; marshal the call onto the required thread instead.</rule>\n");
+        }
+
+        if (!collector.keepInSync().isEmpty()) {
+            StringBuilder sec = new StringBuilder("  <mirrored_elements>\n");
+            for (Element e : collector.keepInSync()) {
+                FormatterRegistry.keepInSync().format(e, sec, Platform.CLAUDE);
+            }
+            sec.append("  </mirrored_elements>\n");
+            sb.append(sec);
+            sb.append("\n<rule>Elements in <mirrored_elements> are duplicated at the listed sites. They may change freely, but every mirror must change in the same commit — a partial edit desyncs silently and no compiler will catch it.</rule>\n");
+        }
+
         sb.append("</project_guardrails>\n");
         sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
 
