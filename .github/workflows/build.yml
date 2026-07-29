@@ -132,7 +132,7 @@ jobs:
           # Tier-3 detail lives in per-module scoped rules, grouped by each module's .vibetags-roles.
           test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
           test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
-          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present." 
+          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present."
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags
