@@ -90,7 +90,7 @@ Gating is per platform via `GranularIndexSection.governingGranularKey` — `CLAU
 
 ### Annotations
 
-39 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
+44 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
 
 ### Internal class responsibilities
 

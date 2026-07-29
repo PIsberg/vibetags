@@ -256,6 +256,59 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
 
+        // v1.0.0 evidence-based wave
+        for (Element e : collector.generated()) {
+            AIGenerated generated = e.getAnnotation(AIGenerated.class);
+            if (generated != null) {
+                String target = generated.editInstead().isEmpty() ? generated.from() : generated.editInstead();
+                appendToGranular(elementRules, e, "Generated — Edit The Source",
+                    "- **Rule**: Machine-generated. Read it, never write it — hand edits are silently overwritten.\n- **Generated from**: "
+                        + generated.from() + "\n- **Edit instead**: " + target
+                        + (generated.regenerateWith().isEmpty() ? "" : "\n- **Regenerate with**: " + generated.regenerateWith()));
+            }
+        }
+        for (Element e : collector.loadBearing()) {
+            AILoadBearing lb = e.getAnnotation(AILoadBearing.class);
+            if (lb != null) {
+                appendToGranular(elementRules, e, "Load-Bearing Oddity",
+                    "- **Rule**: This looks removable but is deliberate. Refactor only while the invariant holds.\n- **Invariant**: "
+                        + lb.invariant()
+                        + (lb.breaksIf().isEmpty() ? "" : "\n- **Breaks if changed**: " + lb.breaksIf())
+                        + (lb.suppressAudit() ? "\n- **Audit**: Not a defect — do not flag." : ""));
+            }
+        }
+        for (Element e : collector.bannedApi()) {
+            AIBannedApi banned = e.getAnnotation(AIBannedApi.class);
+            if (banned != null) {
+                appendToGranular(elementRules, e, "Banned APIs",
+                    "- **Rule**: The following compile here but are prohibited at this element.\n- **Forbidden**: "
+                        + String.join(", ", banned.forbidden())
+                        + (banned.useInstead().isEmpty() ? "" : "\n- **Use instead**: " + banned.useInstead())
+                        + (banned.reason().isEmpty() ? "" : "\n- **Reason**: " + banned.reason()));
+            }
+        }
+        for (Element e : collector.threadAffinity()) {
+            AIThreadAffinity ta = e.getAnnotation(AIThreadAffinity.class);
+            if (ta != null) {
+                appendToGranular(elementRules, e, "Thread Affinity",
+                    "- **Rule**: Safe on exactly one thread. This is NOT thread-safety — never add locks to \"fix\" it; marshal the call instead.\n- **Affinity**: "
+                        + ta.value().name() + (ta.thread().isEmpty() ? "" : " (" + ta.thread() + ")")
+                        + (ta.marshalVia().isEmpty() ? "" : "\n- **Marshal via**: " + ta.marshalVia())
+                        + (ta.symptomIfViolated().isEmpty() ? "" : "\n- **Symptom if violated**: " + ta.symptomIfViolated()));
+            }
+        }
+        for (Element e : collector.keepInSync()) {
+            AIKeepInSync kis = e.getAnnotation(AIKeepInSync.class);
+            if (kis != null) {
+                appendToGranular(elementRules, e, "Mirrored — Keep In Sync",
+                    "- **Rule**: Free to change, but every mirror must change in the same commit.\n- **Mirrors**: "
+                        + String.join(", ", kis.mirrors())
+                        + (kis.reason().isEmpty() ? "" : "\n- **Reason**: " + kis.reason())
+                        + "\n- **Enforced by**: "
+                        + (kis.enforcedBy().isEmpty() ? "nothing — a partial edit desyncs silently" : kis.enforcedBy()));
+            }
+        }
+
         return elementRules;
     }
 

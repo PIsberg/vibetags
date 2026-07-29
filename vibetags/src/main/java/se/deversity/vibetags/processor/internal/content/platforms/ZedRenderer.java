@@ -53,7 +53,12 @@ public final class ZedRenderer implements PlatformRenderer {
         section(Platform.ZED, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
         section(Platform.ZED, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
         section(Platform.ZED, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.ZED, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.ZED, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
+        section(Platform.ZED, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
+        section(Platform.ZED, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.ZED, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.ZED, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.ZED, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
     );
 
     @Override

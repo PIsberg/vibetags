@@ -23,6 +23,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   see — so editing it reliably regenerates. Check mode reports missing or stale mirrored files as
   drift. Absent the opt-in, output is byte-for-byte unchanged. Demonstrated end-to-end by
   `example-multimodule/tests/` and asserted in CI. (#312)
+- **Five evidence-based annotations (39 → 44).** Reverse-engineered from guardrails real maintainers
+  wrote *by hand* across 225 open-source `CLAUDE.md` files: a hand-written AI rule is a constraint
+  someone wished they could express in code, so a rule with no annotation was a gap in the library.
+  Four of the five close the same structural hole — VibeTags owned the *positive* pole of an axis and
+  was missing the *negative* one, and an AI reading the **absence** of a tag reliably does the wrong
+  thing. Evidence, frequency counts, and the candidates that did not make the cut are in
+  `docs/proposed-annotations.md`.
+  - **`@AIGenerated(from, regenerateWith, editInstead)`** — machine-generated code whose hand edits
+    are silently overwritten, plus where the change actually belongs. A *redirect* rather than a
+    wall: `@AILocked` can only say "stop", which makes an agent give up or route around the
+    obstacle, and `@AIIgnore` is wrong in the opposite direction because generated types must stay
+    readable. (35 repos, all 6 batches)
+  - **`@AILoadBearing(invariant, breaksIf, suppressAudit)`** — code that looks wrong, redundant, or
+    over-defensive and is deliberate. Unlike `@AILocked`, edits are welcome while the invariant
+    survives; it also covers the *intentional omission* case nothing else can express. (31 repos)
+  - **`@AIBannedApi(forbidden, useInstead, reason)`** — named symbols forbidden at this element even
+    though they compile. Hosted on the consumer and pointing outward, because the symbols teams ban
+    are stdlib or third-party and cannot be annotated. (27 repos)
+  - **`@AIThreadAffinity(value, thread, marshalVia, symptomIfViolated)`** — safe on *exactly one*
+    thread, the inverse of `@AIThreadSafe`. Closes a genuine correctness hole: the library previously
+    forced either a false statement or silence, and an agent asked to "make this thread-safe" adds a
+    lock — precisely the wrong fix. (12 repos)
+  - **`@AIKeepInSync(mirrors, reason, enforcedBy)`** — duplicated at named sites that must move
+    together; the element is free to change and the failure mode is a *partial* change that desyncs
+    a mirror no compiler checks. The most-written rule in the entire corpus. (41 repos)
+
+  All five are wired through every dispatch point: collector, build fingerprint, formatter registry,
+  the aggregate renderers (Claude XML blocks, Cursor/Windsurf/Zed/Copilot/Gemini sections),
+  granular rule files, `llms.txt`/`llms-full.txt`, Aider, Sweep and Open Interpreter — plus 15 new
+  compile-time validation warnings, plainly including `@AIThreadAffinity` + `@AIThreadSafe` and
+  `@AIGenerated` + `@AIIgnore`.
 
 ### Changed
 - **Granular rule files no longer repeat an identical guardrail sentence per element.** For

@@ -32,6 +32,11 @@ public final class FormatterRegistry {
     private static final AISchemaSafeFormatter SCHEMA_SAFE = new AISchemaSafeFormatter();
     private static final AIIdempotentFormatter IDEMPOTENT = new AIIdempotentFormatter();
     private static final AIFeatureFlagFormatter FEATURE_FLAG = new AIFeatureFlagFormatter();
+    private static final AIGeneratedFormatter GENERATED = new AIGeneratedFormatter();
+    private static final AILoadBearingFormatter LOAD_BEARING = new AILoadBearingFormatter();
+    private static final AIBannedApiFormatter BANNED_API = new AIBannedApiFormatter();
+    private static final AIThreadAffinityFormatter THREAD_AFFINITY = new AIThreadAffinityFormatter();
+    private static final AIKeepInSyncFormatter KEEP_IN_SYNC = new AIKeepInSyncFormatter();
     private static final AISecureFormatter SECURE = new AISecureFormatter();
 
     // New annotation formatters
@@ -76,6 +81,11 @@ public final class FormatterRegistry {
     public static AISchemaSafeFormatter schemaSafe() { return SCHEMA_SAFE; }
     public static AIIdempotentFormatter idempotent() { return IDEMPOTENT; }
     public static AIFeatureFlagFormatter featureFlag() { return FEATURE_FLAG; }
+    public static AIGeneratedFormatter generated() { return GENERATED; }
+    public static AILoadBearingFormatter loadBearing() { return LOAD_BEARING; }
+    public static AIBannedApiFormatter bannedApi() { return BANNED_API; }
+    public static AIThreadAffinityFormatter threadAffinity() { return THREAD_AFFINITY; }
+    public static AIKeepInSyncFormatter keepInSync() { return KEEP_IN_SYNC; }
     public static AISecureFormatter secure() { return SECURE; }
 
     // Getters for new formatters

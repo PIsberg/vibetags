@@ -26,6 +26,11 @@ import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AISchemaSafe;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILoadBearing;
+import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AISecure;
 
 // New annotations
@@ -105,6 +110,13 @@ public final class AnnotationCollector {
     private final Set<Element> prototypeElements        = new LinkedHashSet<>();
     private final Set<Element> sunsetElements           = new LinkedHashSet<>();
     private final Set<Element> temporaryElements        = new LinkedHashSet<>();
+
+    // v1.0.0 evidence-based wave (see docs/proposed-annotations.md)
+    private final Set<Element> generatedElements        = new LinkedHashSet<>();
+    private final Set<Element> loadBearingElements      = new LinkedHashSet<>();
+    private final Set<Element> bannedApiElements        = new LinkedHashSet<>();
+    private final Set<Element> threadAffinityElements   = new LinkedHashSet<>();
+    private final Set<Element> keepInSyncElements       = new LinkedHashSet<>();
 
     private boolean anyAnnotationsFound = false;
 
@@ -189,6 +201,13 @@ public final class AnnotationCollector {
         collectInto(sunsetElements, AISunset.class, roundEnv, presentAnnotationFqns);
         collectInto(temporaryElements, AITemporary.class, roundEnv, presentAnnotationFqns);
 
+        // v1.0.0 evidence-based wave
+        collectInto(generatedElements, AIGenerated.class, roundEnv, presentAnnotationFqns);
+        collectInto(loadBearingElements, AILoadBearing.class, roundEnv, presentAnnotationFqns);
+        collectInto(bannedApiElements, AIBannedApi.class, roundEnv, presentAnnotationFqns);
+        collectInto(threadAffinityElements, AIThreadAffinity.class, roundEnv, presentAnnotationFqns);
+        collectInto(keepInSyncElements, AIKeepInSync.class, roundEnv, presentAnnotationFqns);
+
         boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
                      || !ignoreElements.isEmpty() || !auditElements.isEmpty()
                      || !draftElements.isEmpty() || !privacyElements.isEmpty()
@@ -208,7 +227,10 @@ public final class AnnotationCollector {
                      || !domainModelElements.isEmpty() || !extensibleElements.isEmpty()
                      || !inputSanitizedElements.isEmpty() || !secureLoggingElements.isEmpty()
                      || !explainElements.isEmpty() || !prototypeElements.isEmpty()
-                     || !sunsetElements.isEmpty() || !temporaryElements.isEmpty();
+                     || !sunsetElements.isEmpty() || !temporaryElements.isEmpty()
+                     || !generatedElements.isEmpty() || !loadBearingElements.isEmpty()
+                     || !bannedApiElements.isEmpty() || !threadAffinityElements.isEmpty()
+                     || !keepInSyncElements.isEmpty();
         if (added) anyAnnotationsFound = true;
         return added;
     }
@@ -269,6 +291,14 @@ public final class AnnotationCollector {
         prototypeElements.clear();
         sunsetElements.clear();
         temporaryElements.clear();
+
+        // Clear the v1.0.0 evidence-based wave
+        generatedElements.clear();
+        loadBearingElements.clear();
+        bannedApiElements.clear();
+        threadAffinityElements.clear();
+        keepInSyncElements.clear();
+
         lockedPositions.clear();
         anyAnnotationsFound = false;
     }
@@ -316,6 +346,13 @@ public final class AnnotationCollector {
     public Set<Element> prototype()        { return Collections.unmodifiableSet(prototypeElements); }
     public Set<Element> sunset()           { return Collections.unmodifiableSet(sunsetElements); }
     public Set<Element> temporary()        { return Collections.unmodifiableSet(temporaryElements); }
+
+    // Getters for the v1.0.0 evidence-based wave
+    public Set<Element> generated()        { return Collections.unmodifiableSet(generatedElements); }
+    public Set<Element> loadBearing()      { return Collections.unmodifiableSet(loadBearingElements); }
+    public Set<Element> bannedApi()        { return Collections.unmodifiableSet(bannedApiElements); }
+    public Set<Element> threadAffinity()   { return Collections.unmodifiableSet(threadAffinityElements); }
+    public Set<Element> keepInSync()       { return Collections.unmodifiableSet(keepInSyncElements); }
 
     public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
 
@@ -366,6 +403,11 @@ public final class AnnotationCollector {
         labeled.put("@AIPrototype", prototype());
         labeled.put("@AISunset", sunset());
         labeled.put("@AITemporary", temporary());
+        labeled.put("@AIGenerated", generated());
+        labeled.put("@AILoadBearing", loadBearing());
+        labeled.put("@AIBannedApi", bannedApi());
+        labeled.put("@AIThreadAffinity", threadAffinity());
+        labeled.put("@AIKeepInSync", keepInSync());
         return labeled;
     }
 
@@ -387,6 +429,8 @@ public final class AnnotationCollector {
             + callersOnlyElements.size() + sandboxOnlyElements.size() + memoryBudgetElements.size()
             + pureElements.size() + domainModelElements.size() + extensibleElements.size()
             + inputSanitizedElements.size() + secureLoggingElements.size() + explainElements.size()
-            + prototypeElements.size() + sunsetElements.size() + temporaryElements.size();
+            + prototypeElements.size() + sunsetElements.size() + temporaryElements.size()
+            + generatedElements.size() + loadBearingElements.size() + bannedApiElements.size()
+            + threadAffinityElements.size() + keepInSyncElements.size();
     }
 }

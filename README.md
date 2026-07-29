@@ -21,7 +21,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **39 annotations** → guardrails for **37 AI platforms**. These two numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. (Counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **37 AI platforms**. These two numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. (Counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -173,7 +173,7 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 ### Key Features
 
-The [39 annotations](#project-facts) group into six categories by intent. Within each category they are listed alphabetically.
+The [44 annotations](#project-facts) group into six categories by intent. Within each category they are listed alphabetically.
 
 #### 🛡️ Protection & Access Control — keep AI away from code
 
@@ -186,6 +186,7 @@ The [39 annotations](#project-facts) group into six categories by intent. Within
 #### 🚧 Behavioral Constraints — limit what AI can change
 
 - **🧱 @AIArchitecture** - Enforce layering boundaries (declares `belongsTo` layer and forbidden `cannotReference` layers)
+- **⛔ @AIBannedApi** - Forbid named symbols at this element even though they compile — hosted on the consumer so it reaches stdlib and third-party APIs you cannot annotate, and names the sanctioned replacement
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **💾 @AIMemoryBudget** - Enforce zero-allocation, no-new-objects, or no-autoboxing policies on high-performance paths
 - **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
@@ -199,11 +200,14 @@ The [39 annotations](#project-facts) group into six categories by intent. Within
 - **🔌 @AIExtensible** - Mark classes open for capability extensions using Strategy, Visitor, or Factory patterns instead of if-else spikes
 - **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
 - **🗣️ @AIInternationalized** - Prohibit hardcoded user-facing strings (all visible text must be extracted to i18n bundle message keys)
+- **🔗 @AIKeepInSync** - Name the sites this element is duplicated at; it may change freely, but a *partial* change silently desyncs a mirror no compiler checks
+- **🧩 @AILoadBearing** - Mark code that looks redundant or over-defensive and is deliberate — records the invariant and the concrete failure that "cleaning it up" reintroduces
 - **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
 - **🌐 @AIPublicAPI** - Protect public APIs (all modifications must be additive; forbidden to rename or change serialization formats)
 - **🗄️ @AISchemaSafe** - Protect persistent database entities (forbids destructive changes, column drops, table drops)
 - **🛡️ @AIStrictExceptions** - Enforce strict error handling (forbids swallowing exceptions or throwing generic RuntimeExceptions)
 - **📐 @AIStrictTypes** - Require high-precision or timezone-sensitive data structures (e.g. `BigDecimal` for currency and `Instant`/`ZonedDateTime` for time)
+- **🧵 @AIThreadAffinity** - Declare that an element is safe on *exactly one* thread — the inverse of `@AIThreadSafe`, so an AI asked to "make it thread-safe" marshals the call instead of adding a lock
 - **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
 
 #### 🔐 Security & Compliance — auditing, privacy, and regulation
@@ -220,6 +224,7 @@ The [39 annotations](#project-facts) group into six categories by intent. Within
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **💬 @AIExplain** - Demand Chain-of-Thought (CoT) sequence/class diagrams or mathematical justifications before applying code changes
 - **🚩 @AIFeatureFlag** - Mark code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- **🤖 @AIGenerated** - Mark machine-generated code whose hand edits are overwritten, and *redirect* the change to the true source — unlike `@AILocked`, which can only say "stop"
 - **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
 - **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
 - **🧪 @AIPrototype** - Relax standard strict quality rules (e.g. coverage, i18n) for rapid spikes while preventing leaks into production code
@@ -595,7 +600,7 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 | Resource | What it covers |
 |---|---|
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
-| **[Example Project](example/README.md)** | A runnable e-commerce demo that exercises all [39 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Example Project](example/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |

@@ -100,6 +100,21 @@ public final class AiderConventionsRenderer implements PlatformRenderer {
         for (Element e : collector.secure()) {
             FormatterRegistry.secure().format(e, sb, Platform.AIDER_CONVENTIONS);
         }
+        for (Element e : collector.generated()) {
+            FormatterRegistry.generated().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (Element e : collector.loadBearing()) {
+            FormatterRegistry.loadBearing().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (Element e : collector.bannedApi()) {
+            FormatterRegistry.bannedApi().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (Element e : collector.threadAffinity()) {
+            FormatterRegistry.threadAffinity().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (Element e : collector.keepInSync()) {
+            FormatterRegistry.keepInSync().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
 
         return sb.toString();
     }

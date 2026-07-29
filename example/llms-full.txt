@@ -447,4 +447,60 @@ Temporary stubs or hacks that must be refactored or removed before their expirat
 ### com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()
 - **Temporal Expiration**: 2028-12-31
 - **Reason**: Hotfix workaround until upstream payment provider updates their API.
+
+
+## Generated Code — Edit The Source
+These elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them.
+
+### com.example.service.EvidenceBasedShowcase
+- Machine-generated from `src/main/resources/openapi/checkout.yaml`.
+- Hand edits are silently overwritten on the next regeneration.
+- Edit `src/main/resources/openapi/checkout.yaml` instead.
+- Regenerate with: `mvn generate-sources`
+- Still read this element to understand behaviour — only never write it.
+
+
+## Load-Bearing Oddities
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+### com.example.service.EvidenceBasedShowcase.settledOrderIds
+- This code is deliberate, not accidental.
+- **Invariant**: Settled orders stay in the list until the reconciliation job drains it
+- **Breaks if changed**: Clearing eagerly drops in-flight settlements and silently under-reports revenue
+- Audit tooling should stop reporting this element — the oddity is by design.
+- Edits are allowed as long as the invariant survives.
+
+
+## Banned APIs
+The following APIs compile at these elements but are prohibited there. Use the sanctioned replacement.
+
+### com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)
+- **Banned here**: java.lang.System.out, java.util.Date, java.lang.Double
+- **Sanctioned route**: the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal
+- **Reason**: Console output bypasses structured logging; Date and Double are unsafe for money and time
+- These symbols compile, so the compiler will not stop you. The ban is a project rule.
+
+
+## Thread Affinity (Not Thread-Safe)
+These elements are safe on exactly one thread. Do not add locks — marshal the call onto the required thread instead.
+
+### com.example.service.EvidenceBasedShowcase.refreshCartBadge()
+- **Thread affinity**: the checkout-ui thread only
+- This is the inverse of thread-safety: safe on one thread, unsafe on every other.
+- Do NOT add synchronization to "fix" this — move the call, do not lock it.
+- **Marshal via**: CheckoutDispatcher.runOnUiThread
+- **Symptom if violated**: Cart totals render stale under load; no exception is thrown
+
+
+## Mirrored Elements
+These are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.
+
+### com.example.service.EvidenceBasedShowcase.CATALOG_VERSION
+- **Must stay in sync with**:
+  - pom.xml:<version>
+  - README.md version badge
+  - docs/CHANGELOG.md
+- **Reason**: The release version is duplicated across build config, docs, and the badge
+- **Enforced by**: ProjectFactsConsistencyTest
+- The element itself is free to change; changing only one side is the bug.
 <!-- VIBETAGS-END -->

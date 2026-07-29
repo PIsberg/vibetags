@@ -62,6 +62,9 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |
 | `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
+| `NewAnnotationsV6DefinitionTest` | Definition-level tests for the evidence-based wave (`@AIGenerated`, `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity`, `@AIKeepInSync`): retention, targets, and which attributes are required vs. defaulted |
+| `NewAnnotationsV6EndToEndTest` | End-to-end content for the evidence-based wave — asserts the *wording* each annotation exists to produce (the `@AIGenerated` redirect, the "do not add locks" warning on `@AIThreadAffinity`) across CLAUDE.md's XML blocks, `.cursorrules`, `llms-full.txt`, and granular rules |
+| `NewAnnotationsV6ValidationTest` | The 11 new validation warnings, plus clean fixtures asserting each stays silent when its condition is not met |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
 | `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
 | `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
