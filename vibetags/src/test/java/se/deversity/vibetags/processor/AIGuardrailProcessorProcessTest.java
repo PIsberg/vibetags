@@ -368,6 +368,7 @@ class AIGuardrailProcessorProcessTest {
             "locks_report",
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
             "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+            "gemini_granular",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

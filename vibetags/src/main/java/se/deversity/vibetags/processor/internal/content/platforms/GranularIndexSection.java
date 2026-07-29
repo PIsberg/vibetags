@@ -46,6 +46,8 @@ final class GranularIndexSection {
                 return "windsurf_granular";
             case COPILOT:
                 return "copilot_granular";
+            case GEMINI_MD:
+                return "gemini_granular";
             default:
                 return null;
         }
@@ -74,6 +76,7 @@ final class GranularIndexSection {
             case "cursor_granular":   return ".cursor/rules";
             case "windsurf_granular": return ".windsurf/rules";
             case "copilot_granular":  return ".github/instructions";
+            case "gemini_granular":   return ".gemini/rules";
             default:                  return null;
         }
     }

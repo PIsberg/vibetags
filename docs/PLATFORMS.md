@@ -47,6 +47,7 @@ Every file VibeTags can generate, which AI platform it targets, and its format â
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
 | `.codeiumignore` | Codeium | Glob patterns |
 | `GEMINI.md` | Google Gemini (official markdown) | Markdown |
+| `.gemini/rules/*.md` | Google Gemini (granular, per element) | Markdown |
 | `.antigravityignore` | Antigravity AI | Glob patterns |
 | `.clinerules` | Cline AI assistant | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |

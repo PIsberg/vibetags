@@ -86,6 +86,39 @@ class GranularIndexEndToEndTest {
     }
 
     @Test
+    void geminiSingleOptIn_staysFullyRendered(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("GEMINI.md");
+        addMixedSources(h);
+        h.compile();
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("# GEMINI AI INSTRUCTIONS"), "single opt-in keeps the Gemini header");
+        assertFalse(gemini.contains("## Scoped Rules Index"), "no index without a granular sibling");
+    }
+
+    @Test
+    void geminiDualOptIn_collapsesToIndex(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        addMixedSources(h);
+        h.compile();
+
+        String gemini = h.readFile("GEMINI.md");
+        // Always-inline safety guardrails survive.
+        assertTrue(gemini.contains("LOCKED FILES"), "locked stays inline");
+        // The index is present and points at the real scoped file.
+        assertTrue(gemini.contains("## Scoped Rules Index"), "scoped-rules index present");
+        assertTrue(gemini.contains(".gemini/rules/com-example-Gateway.md"),
+            "index must point at the Gateway scoped file");
+        assertTrue(h.fileExists(".gemini/rules/com-example-Gateway.md"),
+            "the scoped file the index points at must exist");
+        assertTrue(h.readFile(".gemini/rules/com-example-Gateway.md").contains("charge"),
+            "per-method contract detail lives in the scoped file");
+    }
+
+    @Test
     void claudeDualOptIn_withRoles_indexPointsAtRoleFile(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.touchOptIn("CLAUDE.md");
