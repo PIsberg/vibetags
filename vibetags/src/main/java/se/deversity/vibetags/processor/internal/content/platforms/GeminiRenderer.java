@@ -64,6 +64,14 @@ public final class GeminiRenderer implements PlatformRenderer {
     @Override
     public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
+        if (GranularIndexSection.indexActive(platform, context)) {
+            // Both the aggregate and .gemini/rules/ are opted in, so only the always-loaded
+            // safety buckets stay inline and every other bucket moves to the scoped files (#320).
+            AnnotationSections.renderLockedPreamble(sb, collector, platform, context.getGeneratedHeader());
+            AnnotationSections.renderInlineSafetySections(sb, collector, platform);
+            GranularIndexSection.appendMarkdownIndex(sb, platform, context);
+            return sb.toString();
+        }
         sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append("\n");
 
         if (!collector.locked().isEmpty()) {

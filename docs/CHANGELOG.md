@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Gemini granular rules (`.gemini/rules/`), so `GEMINI.md` can stop being a second copy (#320).**
+  Four platforms could already collapse their always-loaded aggregate to a scoped-rules index when a
+  granular sibling was opted in. Gemini could not, because it had no granular service at all, so
+  `GEMINI.md` embedded every module's rules verbatim and grew linearly with the number of annotated
+  elements while `CLAUDE.md` stayed flat. In one consumer that made `GEMINI.md` 72 percent of all
+  always-loaded agent context, with no way to fix it from the consumer side. Creating `.gemini/rules/`
+  now activates per-element rule files and collapses `GEMINI.md` to the same index the other four
+  platforms use: the always-inline safety buckets stay, everything else moves to the scoped files.
+  `gemini_instructions.md` is unaffected, and absent the new directory the output is byte-for-byte
+  unchanged.
+
 ## [1.0.0-RC7] - 2026-07-29
 
 ### Added

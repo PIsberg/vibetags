@@ -261,6 +261,7 @@ public final class GranularRulesWriter {
         new GranularFormat("ai_rules_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("pearai_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("kiro_granular", ".md", FM_NONE, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
+        new GranularFormat("gemini_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", ".md",
             (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),

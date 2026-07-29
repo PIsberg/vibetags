@@ -42,6 +42,8 @@ public final class ServiceRegistry {
         "firebase",
         // Claude Code local override, Skill, and granular rules; Copilot granular instructions
         "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+        // Gemini granular rules (#320): lets GEMINI.md collapse to a scoped-rules index
+        "gemini_granular",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -116,6 +118,7 @@ public final class ServiceRegistry {
         map.put("claude_skill",     root.resolve(".claude/skills/vibetags-guardrails/SKILL.md"));
         map.put("claude_granular",  root.resolve(".claude/rules"));
         map.put("copilot_granular", root.resolve(".github/instructions"));
+        map.put("gemini_granular", root.resolve(".gemini/rules"));
         // Context-packer ignore files
         map.put("repomix_ignore",    root.resolve(".repomixignore"));
         map.put("gitingest_ignore",  root.resolve(".gitingestignore"));
