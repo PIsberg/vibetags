@@ -12,7 +12,7 @@ Do not suggest modifications to the following files:
 Apply the following context when assisting with these files:
 
 - `se.deversity.vibetags.processor.internal.AnnotationCollector`: Focus - Accumulates annotated elements across multiple javac processing rounds; one LinkedHashSet per annotation type preserves insertion order for stable BuildFingerprint output. Avoid - Replacing LinkedHashSet with HashSet — insertion order stability is required for deterministic fingerprints across recompiles
-- `se.deversity.vibetags.processor.internal.GranularRulesWriter`: Focus - Writes per-class granular rule files for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles. Avoid - Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools
+- `se.deversity.vibetags.processor.internal.GranularRulesWriter`: Focus - Writes granular rule files (per-class, or role-grouped when .vibetags-roles is present) for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles. Avoid - Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools
 - `se.deversity.vibetags.processor.internal.ServiceRegistry`: Focus - Maps platform service keys to output file paths; resolves active services by checking file existence on disk. Avoid - Creating output files that do not already exist — file presence on disk is the user's explicit opt-in signal
 
 ## CORE FUNCTIONALITY (EXTREME CAUTION)

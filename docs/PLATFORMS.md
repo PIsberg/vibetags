@@ -84,6 +84,10 @@ external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
 
 Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module.
 
+**Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
+
+**Repeated rule sentences collapse.** Within one granular file, a section covering two or more elements states its constant `- **Rule**:` sentence once (pluralized) and keeps only each element's varying detail beneath — elements whose whole stanza is shared collapse into an `- **Applies to**:` list. A section covering a single element is emitted exactly as before.
+
 #### llms.txt vs llms-full.txt
 
 VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:

@@ -173,7 +173,7 @@ class WriteCacheMutationTest {
         Files.writeString(cp,
             "# VibeTags write cache. Auto-generated. Safe to delete.\n"
             + "early.md\tdeadbeef\t1\t2\n"
-            + "# format: 2\n",   // FORMAT_VERSION is 1; 2 is "newer than this build knows"
+            + "# format: 3\n",   // FORMAT_VERSION is 2; 3 is "newer than this build knows"
             StandardCharsets.UTF_8);
 
         WriteCache c = new WriteCache(cp);

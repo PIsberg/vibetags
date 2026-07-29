@@ -207,7 +207,7 @@ class Coverage1dot0GapTest {
         collector.collect(re);
 
         // Should not throw; all null-guard branches must fire cleanly
-        Map<Element, StringBuilder> result = renderer.renderGranular(collector);
+        Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> result = renderer.renderGranular(collector);
         // Elements with all-null annotations produce no granular output
         assertTrue(result.isEmpty() || result.values().stream().allMatch(sb -> sb.length() == 0),
             "Null annotation guards must produce empty entries, got: " + result);

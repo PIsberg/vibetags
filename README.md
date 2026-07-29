@@ -531,6 +531,34 @@ On the next compile, `.claude/rules/` (and `.cursor/rules/`, …) contains `api-
 
 `.vibetags-roles` works per module too (drop one in a module root) and composes with the index and per-module layers above.
 
+### Reaching a centralised test module (`.vibetags-mirror`)
+
+Guardrails are scoped to the module that owns the annotated source. If your reactor keeps every test
+in one module, the code that actually exercises your `@AILocked` bridges and `@AIPrivacy` key
+material sits in a *sibling* of the rules protecting it — so a tool that discovers rule directories
+by walking up from the edited file finds nothing, silently
+([#312](https://github.com/PIsberg/vibetags/issues/312)).
+
+The consuming module opts in, by dropping a **`.vibetags-mirror`** next to its own `.claude/rules/`:
+
+```
+# payments-tests/.vibetags-mirror
+
+# Source modules, relative to this file. Omit them all to mirror every module.
+../payments-core
+../payments-api
+
+# Globs appended to each mirrored file, so the rules match this module's sources.
+# Defaults to **/payments-tests/**/*.java
+glob = **/payments-tests/src/test/java/**/*.java
+```
+
+The next compile writes `payments-tests/.claude/rules/mirrored-payments-core-*.md` — the source
+module's rule verbatim, with your test globs added. The target needs no `@AI*` annotations of its
+own, mirrored files are namespaced per source module (so modules compiling independently never
+clobber each other), and they are cleaned up like any other generated file when the annotations go
+away. Worked example: [`example-multimodule/tests/`](example-multimodule/tests/).
+
 ### Recommended layout for a multi-module project
 
 ```text

@@ -33,7 +33,10 @@ public final class ModuleOutputWriter {
      * @param vibetagsRoot   the VibeTags output root; when it equals {@code moduleRoot} this is a
      *                       no-op (the module <em>is</em> the root — root output already covers it)
      * @param moduleFiles    service-key → path map rooted at {@code moduleRoot}
-     * @param moduleActive   services opted-in within {@code moduleRoot} (resolved quietly by caller)
+     * @param moduleActive   services opted-in within {@code moduleRoot} (resolved quietly by caller).
+     *                       An empty set skips this module's own output but <em>not</em>
+     *                       {@link MirrorWriter}: a module with no opt-in of its own can still have
+     *                       guardrails another module asked to receive
      * @param collector      this compilation's annotated elements (module-scoped)
      * @param writer         the shared marker-aware, cache-backed file writer (dry-run in check mode)
      * @param messager       for a single summary note; may be a no-op in check mode
@@ -48,6 +51,12 @@ public final class ModuleOutputWriter {
                              RoleConfig roles,
                              GuardrailFileWriter writer,
                              Messager messager) {
+        // Cross-module mirroring runs first and independently of this module's own opt-ins: a module
+        // that contributes only to the reactor-root aggregate still has guardrails worth mirroring
+        // into a test module that asked for them (issue #312).
+        MirrorWriter.write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader,
+            roles, writer, messager);
+
         if (moduleRoot == null || moduleRoot.equals(vibetagsRoot) || moduleActive.isEmpty()) {
             return; // module is the root, or nothing opted in here
         }

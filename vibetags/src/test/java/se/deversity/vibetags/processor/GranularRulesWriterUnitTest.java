@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -40,6 +41,13 @@ class GranularRulesWriterUnitTest {
         return e;
     }
 
+    /** A one-stanza body for {@code owner}, equivalent to the old {@code "## Locked\n- reason: test"}. */
+    private static GranularBody lockedBody(Element owner) {
+        GranularBody body = new GranularBody();
+        body.add(new GranularBody.Entry(owner, owner, "Locked", java.util.List.of("- reason: test")));
+        return body;
+    }
+
     // ------------------------------------------------------------------
     // L51 AND chain: all conditions true → early return
     // ------------------------------------------------------------------
@@ -54,9 +62,9 @@ class GranularRulesWriterUnitTest {
         GuardrailFileWriter fileWriter = new GuardrailFileWriter("# VibeTags\n", null, null, null);
         GranularRulesWriter writer = new GranularRulesWriter(fileWriter);
 
-        Map<Element, StringBuilder> rules = new LinkedHashMap<>();
-        rules.put(namedClassElement("com.example.Foo"),
-                  new StringBuilder("## Locked\n- reason: test\n"));
+        Map<Element, GranularBody> rules = new LinkedHashMap<>();
+        Element foo = namedClassElement("com.example.Foo");
+        rules.put(foo, lockedBody(foo));
 
         // Empty activeServices → all !serviceGranular are true → AND chain true → early return
         Set<String> written = writer.writeAll(rules, Map.of(), Set.of());
@@ -106,8 +114,8 @@ class GranularRulesWriterUnitTest {
             GranularRulesWriter writer = new GranularRulesWriter(fileWriter);
 
             Element elem = namedClassElement("com.example.Bar");
-            Map<Element, StringBuilder> rules = new LinkedHashMap<>();
-            rules.put(elem, new StringBuilder("## Locked\n- reason: test\n"));
+            Map<Element, GranularBody> rules = new LinkedHashMap<>();
+            rules.put(elem, lockedBody(elem));
 
             // Create the service directory so the writer can resolve the path
             Path serviceDir = tmp.resolve(service);

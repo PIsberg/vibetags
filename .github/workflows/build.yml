@@ -105,6 +105,27 @@ jobs:
             || { echo "root CLAUDE.md must still merge all modules"; exit 1; }
           echo "Per-module output is module-scoped; reactor root still merges all modules."
 
+      - name: Verify Cross-Module Mirroring (issue #312)
+        run: |
+          cd example-multimodule
+          # tests/ has no @AI* annotations of its own; it opted in via .vibetags-mirror, so each
+          # source module's scoped rules must be mirrored there under its own namespace.
+          for f in mirrored-core-com-example-multimodule-core-IrNode.md \
+                   mirrored-engine-com-example-multimodule-engine-LayoutEngine.md \
+                   mirrored-cli-com-example-multimodule-cli-MultiModuleCli.md; do
+            test -f "tests/.claude/rules/$f" || { echo "MISSING mirrored rule: $f"; exit 1; }
+          done
+          # A mirrored file carries the source rule verbatim, with the target's globs appended.
+          grep -qF "Core IR node" tests/.claude/rules/mirrored-core-com-example-multimodule-core-IrNode.md \
+            || { echo "mirrored rule lost the source module's guardrail"; exit 1; }
+          grep -qF '"**/tests/src/test/java/**/*.java"' tests/.claude/rules/mirrored-core-com-example-multimodule-core-IrNode.md \
+            || { echo "mirrored rule is not scoped to the target module's sources"; exit 1; }
+          # Mirroring must not disturb the reactor root: tests/ contributes no annotations.
+          if grep -qF "VIBETAGS-MODULE: tests" CLAUDE.md; then
+            echo "a mirror target with no annotations must not appear in the root merge"; exit 1
+          fi
+          echo "Sibling module rules mirrored into the centralised test module."
+
       - name: Build Indexed Multi-Module Example (issue #295)
         run: |
           cd example-multimodule-indexed
@@ -132,7 +153,7 @@ jobs:
           # Tier-3 detail lives in per-module scoped rules, grouped by each module's .vibetags-roles.
           test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
           test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
-          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present." 
+          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present."
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags

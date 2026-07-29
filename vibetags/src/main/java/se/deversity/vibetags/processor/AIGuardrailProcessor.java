@@ -127,7 +127,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private final Set<Element> auditElements  = collector.audit();
 
     /** Per-element granular rule sections, populated by GuardrailContentBuilder.build(). */
-    private Map<Element, StringBuilder> elementRules = new java.util.LinkedHashMap<>();
+    private Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules =
+        new java.util.LinkedHashMap<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {

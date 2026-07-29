@@ -123,7 +123,7 @@ class WriteCacheTest {
         cache.flush();
 
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        assertTrue(content.contains("# format: 1\n"),
+        assertTrue(content.contains("# format: 2\n"),
             "flushed cache must carry the format-version header: " + content);
     }
 
@@ -141,7 +141,7 @@ class WriteCacheTest {
         seed.setBuildFingerprint("cafebabe");
         seed.flush();
         String v1 = Files.readString(cachePath, StandardCharsets.UTF_8);
-        Files.writeString(cachePath, v1.replace("# format: 1", "# format: 99"),
+        Files.writeString(cachePath, v1.replace("# format: 2", "# format: 99"),
             StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
@@ -168,7 +168,7 @@ class WriteCacheTest {
         seed.recordWrite(file, "hello");
         seed.flush();
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        String legacy = content.replace("# format: 1\n", "");
+        String legacy = content.replace("# format: 2\n", "");
         Files.writeString(cachePath, legacy, StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
@@ -474,5 +474,51 @@ class WriteCacheTest {
             "a file on a different drive must miss the cache, not crash");
         assertDoesNotThrow(() -> cache.invalidate(onAnotherDrive),
             "invalidate must tolerate a different-drive path");
+    }
+
+    // ------------------------------------------------------------------
+    // Watched inputs (config files VibeTags reads but never writes)
+    // ------------------------------------------------------------------
+
+    @Test
+    void recordedInput_makesTheCacheUnstableWhenEdited(@TempDir Path tmp) throws Exception {
+        Path config = tmp.resolve(".vibetags-mirror");
+        Files.writeString(config, "../core\n", StandardCharsets.UTF_8);
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+
+        cache.recordInput(config);
+        assertTrue(cache.allCachedFilesStable(), "a freshly recorded input is stable");
+
+        Files.setLastModifiedTime(config, java.nio.file.attribute.FileTime.fromMillis(
+            Files.getLastModifiedTime(config).toMillis() + 5_000));
+        assertFalse(cache.allCachedFilesStable(),
+            "editing a watched input must invalidate the short-circuit");
+    }
+
+    @Test
+    void deletedInput_invalidatesOnceThenStopsBlockingTheShortCircuit(@TempDir Path tmp) throws Exception {
+        Path config = tmp.resolve(".vibetags-mirror");
+        Files.writeString(config, "", StandardCharsets.UTF_8);
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        cache.recordInput(config);
+
+        Files.delete(config);
+
+        assertFalse(cache.allCachedFilesStable(),
+            "removing the opt-in must force one regeneration");
+        assertTrue(cache.allCachedFilesStable(),
+            "…and then be pruned: nothing will ever re-record it, so it must not block forever");
+        assertEquals(0, cache.size(), "the stale input entry is dropped");
+    }
+
+    @Test
+    void recordedInput_isNeverMistakenForAWrittenBody(@TempDir Path tmp) throws Exception {
+        Path config = tmp.resolve(".vibetags-mirror");
+        Files.writeString(config, "../core\n", StandardCharsets.UTF_8);
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        cache.recordInput(config);
+
+        assertFalse(cache.isUnchanged(config, "../core\n"),
+            "an input entry must never satisfy a write-skip check");
     }
 }

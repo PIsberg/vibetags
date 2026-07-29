@@ -332,7 +332,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AITestDriven.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
 
         assertFalse(result.isEmpty(), "renderGranular must produce output for AITestDriven element");
@@ -362,7 +362,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIThreadSafe.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
         assertFalse(result.isEmpty());
         assertTrue(result.values().iterator().next().toString().contains("uses CAS operations"),
@@ -387,7 +387,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIDeprecated.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
         assertFalse(result.isEmpty());
         String out = result.values().iterator().next().toString();
@@ -414,7 +414,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIObservability.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
         assertFalse(result.isEmpty());
         String out = result.values().iterator().next().toString();
@@ -441,7 +441,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIRegulation.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
         assertFalse(result.isEmpty());
         String out = result.values().iterator().next().toString();
@@ -465,7 +465,7 @@ class FormatterBranchCoverageTest {
         doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIArchitecture.class);
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
         assertFalse(result.isEmpty());
         String out = result.values().iterator().next().toString();
@@ -1374,7 +1374,7 @@ class FormatterBranchCoverageTest {
 
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
 
         assertFalse(result.isEmpty());
@@ -1416,7 +1416,7 @@ class FormatterBranchCoverageTest {
 
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
 
         assertFalse(result.isEmpty());
@@ -1441,7 +1441,7 @@ class FormatterBranchCoverageTest {
 
         collector.collect(re);
 
-        java.util.Map<javax.lang.model.element.Element, StringBuilder> result =
+        java.util.Map<javax.lang.model.element.Element, se.deversity.vibetags.processor.internal.content.GranularBody> result =
             renderer.renderGranular(collector);
 
         assertFalse(result.isEmpty());
