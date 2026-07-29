@@ -68,6 +68,11 @@ final class GuardrailInstructionBlock {
         for (Element e : collector.prototype()) FormatterRegistry.prototype().format(e, sb, p);
         for (Element e : collector.sunset()) FormatterRegistry.sunset().format(e, sb, p);
         for (Element e : collector.temporary()) FormatterRegistry.temporary().format(e, sb, p);
+        for (Element e : collector.generated()) FormatterRegistry.generated().format(e, sb, p);
+        for (Element e : collector.loadBearing()) FormatterRegistry.loadBearing().format(e, sb, p);
+        for (Element e : collector.bannedApi()) FormatterRegistry.bannedApi().format(e, sb, p);
+        for (Element e : collector.threadAffinity()) FormatterRegistry.threadAffinity().format(e, sb, p);
+        for (Element e : collector.keepInSync()) FormatterRegistry.keepInSync().format(e, sb, p);
         return sb.toString();
     }
 

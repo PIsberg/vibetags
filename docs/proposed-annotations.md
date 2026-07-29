@@ -1,7 +1,14 @@
 # Proposed Annotations — Evidence from 225 Open-Source `CLAUDE.md` Files
 
-> **Status:** proposal, nothing implemented. Numbers below are counts of *distinct
-> open-source repositories* whose hand-written `CLAUDE.md` states the rule.
+> **Status:** the five in [Suggested order](#suggested-order) — `@AIGenerated`, `@AILoadBearing`,
+> `@AIBannedApi`, `@AIThreadAffinity`, `@AIKeepInSync` — **shipped** in v1.0.0 (39 → 44
+> annotations). The remaining nine candidates are still proposals. Numbers below are counts of
+> *distinct open-source repositories* whose hand-written `CLAUDE.md` states the rule.
+>
+> One piece of `@AIKeepInSync` is deliberately **not** implemented: the `.vibetags-mirrors` report
+> plus GitHub Action that would *enforce* mirror parity, rather than describe it. The annotation
+> names its mirrors and reports whether an `enforcedBy` check exists; making VibeTags itself the
+> check is a separate capability and a separate design decision.
 
 ## Method
 

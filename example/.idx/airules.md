@@ -257,4 +257,29 @@ Strictly sunset under deprecation. Introducing *new* references or calls to thes
 Temporary stubs or hacks that must be refactored or removed before their expiration limit.
 
 * `com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()` - Temporary logic/workaround. Expires on: 2028-12-31. Reason: Hotfix workaround until upstream payment provider updates their API.
+
+## 🤖 GENERATED CODE — EDIT THE SOURCE
+These elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them. Change the named source and regenerate.
+
+* `com.example.service.EvidenceBasedShowcase` - Generated from `src/main/resources/openapi/checkout.yaml`. Hand edits are overwritten — edit `src/main/resources/openapi/checkout.yaml` instead, then run `mvn generate-sources`.
+
+## 🧩 LOAD-BEARING ODDITIES
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+* `com.example.service.EvidenceBasedShowcase.settledOrderIds` - Looks removable but is deliberate. Invariant: Settled orders stay in the list until the reconciliation job drains it Breaks if changed: Clearing eagerly drops in-flight settlements and silently under-reports revenue Not a defect — do not flag.
+
+## ⛔ BANNED APIs AT THIS ELEMENT
+The following APIs compile here but are prohibited. Use the sanctioned replacement instead.
+
+* `com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)` - Must not use: java.lang.System.out, java.util.Date, java.lang.Double. Use the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal instead. (Console output bypasses structured logging; Date and Double are unsafe for money and time)
+
+## 🧵 THREAD AFFINITY (NOT THREAD-SAFE)
+These elements are safe on exactly one thread. Do NOT add locks to "make them thread-safe" — marshal the call onto the required thread instead.
+
+* `com.example.service.EvidenceBasedShowcase.refreshCartBadge()` - Pinned to the checkout-ui thread only. NOT thread-safe — adding a lock is the wrong fix. Marshal via CheckoutDispatcher.runOnUiThread. If violated: Cart totals render stale under load; no exception is thrown
+
+## 🔗 MIRRORED — EDIT ALL SITES TOGETHER
+These elements are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.
+
+* `com.example.service.EvidenceBasedShowcase.CATALOG_VERSION` - Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
 <!-- VIBETAGS-END -->

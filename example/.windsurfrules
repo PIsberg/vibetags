@@ -84,4 +84,5 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md`
 - `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md`
 - `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md`
+- `com.example.service.EvidenceBasedShowcase` → `.windsurf/rules/com-example-service-EvidenceBasedShowcase.md`
 # VIBETAGS-END

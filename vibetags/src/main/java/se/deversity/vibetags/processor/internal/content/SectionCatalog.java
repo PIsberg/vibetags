@@ -23,7 +23,8 @@ public final class SectionCatalog {
 
     /** One entry per annotation bucket that carries a section header in at least one renderer. */
     public enum Key {
-        AUDIT, IGNORE, DRAFT, PRIVACY, CORE, PERFORMANCE, CONTRACT, TEST_DRIVEN, THREAD_SAFE, IMMUTABLE, DEPRECATED, OBSERVABILITY, REGULATION, PARALLEL_TESTS, LEGACY_BRIDGE, ARCHITECTURE, PUBLIC_API, STRICT_EXCEPTIONS, STRICT_TYPES, INTERNATIONALIZED, STRICT_CLASSPATH, SCHEMA_SAFE, IDEMPOTENT, FEATURE_FLAG, SECURE, CALLERS_ONLY, SANDBOX_ONLY, MEMORY_BUDGET, PURE, DOMAIN_MODEL, EXTENSIBLE, INPUT_SANITIZED, SECURE_LOGGING, EXPLAIN, PROTOTYPE, SUNSET, TEMPORARY
+        AUDIT, IGNORE, DRAFT, PRIVACY, CORE, PERFORMANCE, CONTRACT, TEST_DRIVEN, THREAD_SAFE, IMMUTABLE, DEPRECATED, OBSERVABILITY, REGULATION, PARALLEL_TESTS, LEGACY_BRIDGE, ARCHITECTURE, PUBLIC_API, STRICT_EXCEPTIONS, STRICT_TYPES, INTERNATIONALIZED, STRICT_CLASSPATH, SCHEMA_SAFE, IDEMPOTENT, FEATURE_FLAG, SECURE, CALLERS_ONLY, SANDBOX_ONLY, MEMORY_BUDGET, PURE, DOMAIN_MODEL, EXTENSIBLE, INPUT_SANITIZED, SECURE_LOGGING, EXPLAIN, PROTOTYPE, SUNSET, TEMPORARY,
+        GENERATED, LOAD_BEARING, BANNED_API, THREAD_AFFINITY, KEEP_IN_SYNC
     }
 
     private SectionCatalog() {}
@@ -70,6 +71,11 @@ public final class SectionCatalog {
         DEFAULT.put(Key.PROTOTYPE, "\n## 🛠️ EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n");
         DEFAULT.put(Key.SUNSET, "\n## ⚠️ SUNSET DEPRACTED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n");
         DEFAULT.put(Key.TEMPORARY, "\n## 🚧 TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n");
+        DEFAULT.put(Key.GENERATED, "\n## 🤖 GENERATED CODE — EDIT THE SOURCE\nThese elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them. Change the named source and regenerate.\n\n");
+        DEFAULT.put(Key.LOAD_BEARING, "\n## 🧩 LOAD-BEARING ODDITIES\nThese look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.\n\n");
+        DEFAULT.put(Key.BANNED_API, "\n## ⛔ BANNED APIs AT THIS ELEMENT\nThe following APIs compile here but are prohibited. Use the sanctioned replacement instead.\n\n");
+        DEFAULT.put(Key.THREAD_AFFINITY, "\n## 🧵 THREAD AFFINITY (NOT THREAD-SAFE)\nThese elements are safe on exactly one thread. Do NOT add locks to \"make them thread-safe\" — marshal the call onto the required thread instead.\n\n");
+        DEFAULT.put(Key.KEEP_IN_SYNC, "\n## 🔗 MIRRORED — EDIT ALL SITES TOGETHER\nThese elements are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.\n\n");
 
         Map<Key, String> windsurfOverrides = new EnumMap<>(Key.class);
         windsurfOverrides.put(Key.AUDIT, "\n## 🛡️ MANDATORY SECURITY AUDITS\nWhen proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code.\n\n");

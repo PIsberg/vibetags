@@ -1,6 +1,6 @@
 # Annotation Reference
 
-Full list of the 39 `@AI*` annotations, their semantics, and the compile-time validation warnings the processor emits; the Javadoc on each `@interface` in `vibetags-annotations/` is the source of truth — this is a convenience index.
+Full list of the 44 `@AI*` annotations, their semantics, and the compile-time validation warnings the processor emits; the Javadoc on each `@interface` in `vibetags-annotations/` is the source of truth — this is a convenience index.
 
 ### Annotations (all `RetentionPolicy.SOURCE`)
 
@@ -45,6 +45,11 @@ Full list of the 39 `@AI*` annotations, their semantics, and the compile-time va
 | `@AIPrototype` | TYPE | `reason: String` |
 | `@AISunset` | TYPE, METHOD, FIELD | `jira: String`, `replacement: Class<?>` |
 | `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
+| `@AIGenerated` | TYPE, METHOD, FIELD | `from: String`, `regenerateWith: String`, `editInstead: String` |
+| `@AILoadBearing` | TYPE, METHOD, FIELD, PARAMETER | `invariant: String`, `breaksIf: String`, `suppressAudit: boolean` |
+| `@AIBannedApi` | TYPE, METHOD | `forbidden: String[]`, `useInstead: String`, `reason: String` |
+| `@AIThreadAffinity` | TYPE, METHOD | `value: Affinity`, `thread: String`, `marshalVia: String`, `symptomIfViolated: String` |
+| `@AIKeepInSync` | TYPE, METHOD, FIELD | `mirrors: String[]`, `reason: String`, `enforcedBy: String` |
 
 **Annotation semantics:**
 
@@ -84,6 +89,11 @@ Full list of the 39 `@AI*` annotations, their semantics, and the compile-time va
 - `@AIPrototype` — experimental stub: QA/test constraints are relaxed, but production classes must never import it
 - `@AISunset` — strict deprecation tied to a JIRA ticket; introducing *new* references is forbidden, callers route to `replacement`
 - `@AITemporary` — hotfix/stub with an expiration date (`YYYY-MM-DD`); must be removed before expiry, warned at compile time once exceeded
+- `@AIGenerated` — machine-generated; hand edits are silently overwritten. A **redirect**, not a wall: unlike `@AILocked` it names where the change belongs, and unlike `@AIIgnore` the element stays readable (an agent must understand generated behaviour, just never write it)
+- `@AILoadBearing` — looks wrong, redundant, or over-defensive but is deliberate; records the failure that "cleaning it up" reintroduces. Edits are allowed while the `invariant` survives, which is what separates it from `@AILocked`. Also covers the *intentional omission* case, hosted on the enclosing element
+- `@AIBannedApi` — named symbols are forbidden *at this element* even though they compile. Hosted on the consumer and pointing outward, because the banned symbols (stdlib, third-party) usually cannot be annotated themselves; `@AIArchitecture(cannotReference)` bans a layer rather than a symbol and carries no replacement
+- `@AIThreadAffinity` — safe on **exactly one** thread; the inverse of `@AIThreadSafe`, which promises safety from any. Prevents the specific failure of an agent "fixing" affinity by adding a lock
+- `@AIKeepInSync` — duplicated at named `mirrors` that must move together; the element is free to change, and the failure mode is a *partial* change that desyncs a mirror no compiler checks. `enforcedBy` names the parity test, if one exists
 
 **Compile-time validation warnings:**
 
@@ -108,5 +118,17 @@ Full list of the 39 `@AI*` annotations, their semantics, and the compile-time va
 - `@AISunset` with a blank `jira` — required attribute missing
 - `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
 - `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
+- `@AIGenerated` + `@AIIgnore` on the same element — contradictory; generated code must stay readable (read but never write) while `@AIIgnore` hides it entirely
+- `@AIGenerated` + `@AIDraft` on the same element — contradictory; draft asks the AI to implement it, but generated code is overwritten on the next build
+- `@AIGenerated` with blank `regenerateWith` **and** blank `editInstead` — names a source but no route back to it, leaving a dead end rather than a redirect
+- `@AILoadBearing` with a blank `breaksIf` — advisory; naming the concrete failure is what stops the code being "simplified" anyway
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory; one suppresses audit findings, the other mandates them
+- `@AIBannedApi` with empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no sanctioned route usually produces a worse substitute
+- `@AIThreadAffinity` + `@AIThreadSafe` on the same element — contradictory; these are opposite claims (safe on exactly one thread vs. safe on any), so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; a caller on the wrong thread is told "no" with no way to comply
+- `@AIKeepInSync` with empty `mirrors[]` — no-op; nothing is kept in sync
+- `@AIKeepInSync` + `@AIContract` on the same element — NOTE; verify the mirrors track something other than the frozen signature
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active

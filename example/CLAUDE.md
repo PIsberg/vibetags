@@ -135,6 +135,7 @@
     <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md"/>
     <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md"/>
     <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md"/>
+    <element path="com.example.service.EvidenceBasedShowcase" rules=".claude/rules/com-example-service-EvidenceBasedShowcase.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

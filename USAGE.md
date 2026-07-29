@@ -18,6 +18,7 @@
 - [Design-Intent Annotations (v0.9.8)](#-new-in-v098-five-design-intent-annotations)
 - [Platform Guardrail Annotations (v0.9.8)](#️-new-in-v098-continued-nine-platform-guardrail-annotations)
 - [Precision Guardrail Annotations (v0.9.9)](#-new-in-v099-twelve-precision-guardrail-annotations)
+- [Evidence-Based Annotations (v1.0.0)](#-new-in-v100-five-evidence-based-annotations)
 
 For the full annotation table, processor options, and output-file formats, see also [CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -1053,3 +1054,101 @@ public Response retryWithBackoffHack(Request req) { ... }
 - `@AISunset` with a blank `jira` — required attribute missing
 - `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
 - `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
+
+### 🆕 New in v1.0.0: Five Evidence-Based Annotations
+
+These five were reverse-engineered from guardrails real maintainers wrote **by hand** in 225
+open-source `CLAUDE.md` files — a hand-written AI rule is a constraint someone wished they could
+express in code, so where one had no annotation, that was a gap in the library. Full evidence,
+frequency counts, and the candidates that did *not* make the cut: [`docs/proposed-annotations.md`](docs/proposed-annotations.md).
+
+Four of the five close the same structural gap: VibeTags owned the *positive* pole of an axis and
+was missing the *negative* one — and an AI reading the **absence** of a tag reliably does the wrong
+thing.
+
+#### 🤖 `@AIGenerated(from, regenerateWith, editInstead)`
+
+Machine-generated code whose hand edits are silently overwritten — and, crucially, **where the change
+belongs instead**. `@AILocked` can only say "stop", which makes an agent give up or route around the
+obstacle; this says "stop, and here is the route". `@AIIgnore` is wrong here in the opposite
+direction: an agent must still *read* generated types to understand behaviour, it must only never
+*write* them.
+
+```java
+@AIGenerated(from = "src/main/resources/openapi/orders.yaml",
+             regenerateWith = "mvn generate-sources",
+             editInstead = "src/main/resources/openapi/orders.yaml")
+public class OrdersApiStub { ... }
+```
+
+#### 🧩 `@AILoadBearing(invariant, breaksIf, suppressAudit)`
+
+Code that *looks* wrong, redundant, or over-defensive and is deliberate. Unlike `@AILocked`, edits
+are welcome — as long as the stated invariant survives. Naming the concrete failure in `breaksIf` is
+what actually stops the tidy-up; `suppressAudit = true` tells scanners the oddity is not a defect.
+
+```java
+@AILoadBearing(invariant = "Sessions are never deallocated while the dispatch source is live",
+               breaksIf = "Freeing here reintroduces a use-after-free crash under load (#412)",
+               suppressAudit = true)
+private final List<Session> retained = new ArrayList<>();
+```
+
+#### ⛔ `@AIBannedApi(forbidden, useInstead, reason)`
+
+Named APIs that compile at this element but are prohibited there. The constraint is hosted on the
+**consumer** and points outward, because the symbols teams actually ban — `java.util.Date`,
+`System.out`, a framework's `@Scheduled` — are stdlib or third-party and cannot be annotated at all.
+
+```java
+@AIBannedApi(forbidden = {"java.lang.System.out", "java.lang.System.err"},
+             useInstead = "the injected org.slf4j.Logger",
+             reason = "Console output bypasses structured logging")
+public class OrderService { ... }
+```
+
+#### 🧵 `@AIThreadAffinity(value, thread, marshalVia, symptomIfViolated)`
+
+Safe on **exactly one** thread — the inverse of `@AIThreadSafe`, which promises safety from any. The
+gap between them is a correctness hole, not a documentation nicety: tagging an EDT-pinned method
+`@AIThreadSafe` states something false, and leaving it untagged invites "let's move this off the main
+thread". An agent asked to make it thread-safe adds a lock, which is precisely the wrong fix.
+
+```java
+@AIThreadAffinity(value = AIThreadAffinity.Affinity.NAMED,
+                  thread = "Swing EDT",
+                  marshalVia = "SwingUtilities.invokeLater",
+                  symptomIfViolated = "Silent repaint corruption; no exception on most JDKs")
+public void refreshTable() { ... }
+```
+
+#### 🔗 `@AIKeepInSync(mirrors, reason, enforcedBy)`
+
+The most-written rule in the whole corpus. This element is duplicated at named sites that must move
+together; it is free to change, and the failure mode is a *partial* change that desyncs a mirror no
+compiler checks. `enforcedBy` names the parity test if one exists — and its absence tells an agent
+the drift will **not** be caught.
+
+```java
+@AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
+              reason = "The release version is asserted in three places and drifts silently",
+              enforcedBy = "ProjectFactsConsistencyTest")
+public static final String VERSION = "1.0.0";
+```
+
+Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them — it cannot
+verify them the way `@AIImmutable` is checked against final fields.
+
+#### Validation warnings for the v1.0.0 annotations
+
+- `@AIGenerated` + `@AIIgnore` — contradictory; generated code must stay readable
+- `@AIGenerated` + `@AIDraft` — contradictory; drafting output that gets overwritten is pointless
+- `@AIGenerated` with neither `regenerateWith` nor `editInstead` — a dead end rather than a redirect
+- `@AILoadBearing` with a blank `breaksIf` — advisory; the failure mode is what makes the rule stick
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory instructions to the same reviewer
+- `@AIBannedApi` with an empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no route invites a worse substitute
+- `@AIThreadAffinity` + `@AIThreadSafe` — contradictory; opposite claims, so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; the caller is told "no" with no way to comply
+- `@AIKeepInSync` with an empty `mirrors[]` — no-op; nothing is kept in sync

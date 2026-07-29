@@ -53,7 +53,12 @@ public final class CopilotRenderer implements PlatformRenderer {
         section(Platform.COPILOT, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
         section(Platform.COPILOT, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
         section(Platform.COPILOT, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
+        section(Platform.COPILOT, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
+        section(Platform.COPILOT, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.COPILOT, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.COPILOT, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.COPILOT, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
     );
 
     @Override

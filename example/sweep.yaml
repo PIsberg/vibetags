@@ -53,4 +53,9 @@ rules:
   - "Idempotency requirement for com.example.compliance.GdprService.deleteAllUserData(java.lang.String): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation."
   - "Feature flag gate for com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int): Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on."
   - "Security-critical: com.example.security.SecurityConfig [authentication]. Do not weaken security."
+  - "Generated code: com.example.service.EvidenceBasedShowcase comes from src/main/resources/openapi/checkout.yaml. Edit src/main/resources/openapi/checkout.yaml instead of the generated file."
+  - "Load-bearing: com.example.service.EvidenceBasedShowcase.settledOrderIds must preserve: Settled orders stay in the list until the reconciliation job drains it"
+  - "Banned in com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal): java.lang.System.out, java.util.Date, java.lang.Double. Use the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal"
+  - "Thread affinity: com.example.service.EvidenceBasedShowcase.refreshCartBadge() runs only on the checkout-ui thread only. Do not add locks."
+  - "Keep in sync: editing com.example.service.EvidenceBasedShowcase.CATALOG_VERSION requires the same edit at pom.xml:<version>, README.md version badge, docs/CHANGELOG.md"
 # VIBETAGS-END

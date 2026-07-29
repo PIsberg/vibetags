@@ -86,4 +86,5 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.mdc`
 - `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.mdc`
 - `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.mdc`
+- `com.example.service.EvidenceBasedShowcase` → `.cursor/rules/com-example-service-EvidenceBasedShowcase.mdc`
 # VIBETAGS-END

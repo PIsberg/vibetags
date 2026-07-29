@@ -53,7 +53,12 @@ public final class GeminiRenderer implements PlatformRenderer {
         section(Platform.GEMINI, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
         section(Platform.GEMINI, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
         section(Platform.GEMINI, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.GEMINI, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.GEMINI, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
+        section(Platform.GEMINI, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
+        section(Platform.GEMINI, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.GEMINI, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.GEMINI, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.GEMINI, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
     );
 
     @Override

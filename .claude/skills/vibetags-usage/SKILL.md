@@ -1,6 +1,6 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary annotations, or wants to control how AI tools interact with Java code.
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
 version: 1.0.0-RC6
 ---
 
@@ -867,6 +867,140 @@ Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilat
 
 ---
 
+### `@AIGenerated` — Redirect edits to the true source
+
+Use on: **class, method, field**
+
+```java
+@AIGenerated(from = "src/main/resources/openapi/orders.yaml",
+             regenerateWith = "mvn generate-sources",
+             editInstead = "src/main/resources/openapi/orders.yaml")
+public class OrdersApiStub { ... }
+```
+
+A **redirect**, not a wall. `@AILocked` can only say "stop", which makes an agent give up or route around the obstacle; this names where the change belongs. `@AIIgnore` is wrong in the opposite direction — an agent must still *read* generated types to understand behavior, it must only never *write* them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `from` | `String` | *(required)* | The schema, template, IDL, or upstream repo this is generated from |
+| `regenerateWith` | `String` | `""` | Command that regenerates it (e.g. `"mvn generate-sources"`) |
+| `editInstead` | `String` | `""` | The file a human should actually change, when it differs from `from` |
+
+**Compile-time warnings:**
+
+- `@AIGenerated` + `@AIIgnore` — contradictory; generated code must stay readable
+- `@AIGenerated` + `@AIDraft` — contradictory; drafting output that gets overwritten is pointless
+- `@AIGenerated` with neither `regenerateWith` nor `editInstead` — a dead end rather than a redirect
+
+---
+
+### `@AILoadBearing` — "This looks wrong and is deliberate"
+
+Use on: **class, method, field, parameter**
+
+```java
+@AILoadBearing(invariant = "Sessions are never deallocated while the dispatch source is live",
+               breaksIf = "Freeing here reintroduces a use-after-free crash under load (#412)",
+               suppressAudit = true)
+private final List<Session> retained = new ArrayList<>();
+```
+
+Unlike `@AILocked`, edits are welcome — as long as the invariant survives. Also covers the **intentional omission** case (a decorator deliberately not applied), which nothing else can express because there is no element to annotate for something that is not there.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `invariant` | `String` | *(required)* | What must remain true after any change |
+| `breaksIf` | `String` | `""` | The concrete failure — crash, leak, silent desync |
+| `suppressAudit` | `boolean` | `false` | Tells reviewers and scanners the oddity is not a defect |
+
+**Compile-time warnings:**
+
+- `@AILoadBearing` with a blank `breaksIf` — advisory; the failure mode is what makes the rule stick
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory instructions to the same reviewer
+
+---
+
+### `@AIBannedApi` — Forbid symbols you cannot annotate
+
+Use on: **class, method**
+
+```java
+@AIBannedApi(forbidden = {"java.lang.System.out", "java.lang.System.err"},
+             useInstead = "the injected org.slf4j.Logger",
+             reason = "Console output bypasses structured logging")
+public class OrderService { ... }
+```
+
+Hosted on the **consumer** and pointing outward, because the symbols teams actually ban — `java.util.Date`, `System.out`, a framework's `@Scheduled` — are stdlib or third-party and cannot be annotated at all. `@AIArchitecture(cannotReference)` bans a *layer*, not a *symbol*, and carries no replacement.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `forbidden` | `String[]` | *(required)* | The forbidden symbols, types, or packages |
+| `useInstead` | `String` | `""` | The sanctioned replacement |
+| `reason` | `String` | `""` | Why the API is banned here |
+
+**Compile-time warnings:**
+
+- `@AIBannedApi` with an empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no route invites a worse substitute
+
+---
+
+### `@AIThreadAffinity` — Safe on exactly one thread
+
+Use on: **class, method**
+
+```java
+@AIThreadAffinity(value = AIThreadAffinity.Affinity.NAMED,
+                  thread = "Swing EDT",
+                  marshalVia = "SwingUtilities.invokeLater",
+                  symptomIfViolated = "Silent repaint corruption; no exception on most JDKs")
+public void refreshTable() { ... }
+```
+
+The inverse of `@AIThreadSafe`, which promises safety from *any* thread. These are opposite claims: tagging an EDT-pinned method `@AIThreadSafe` states something false, and leaving it untagged invites "let's move this off the main thread". An AI asked to make it thread-safe adds a lock — precisely the wrong fix, because the requirement is not mutual exclusion but *which* thread runs the call.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Affinity` | *(required)* | `MAIN_ONLY`, `NEVER_MAIN`, `BACKGROUND_ONLY`, or `NAMED` |
+| `thread` | `String` | `""` | The thread's name when `value` is `NAMED` |
+| `marshalVia` | `String` | `""` | How a caller on the wrong thread hands work across |
+| `symptomIfViolated` | `String` | `""` | What going wrong looks like — usually only under load |
+
+**Compile-time warnings:**
+
+- `@AIThreadAffinity` + `@AIThreadSafe` — contradictory; opposite claims, so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; the caller is told "no" with no way to comply
+
+---
+
+### `@AIKeepInSync` — Duplicated at sites that must move together
+
+Use on: **class, method, field**
+
+```java
+@AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
+              reason = "The release version is asserted in three places and drifts silently",
+              enforcedBy = "ProjectFactsConsistencyTest")
+public static final String VERSION = "1.0.0";
+```
+
+The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `mirrors` | `String[]` | *(required)* | The sites that must move together with this element |
+| `reason` | `String` | `""` | Why the duplication exists and what desync would break |
+| `enforcedBy` | `String` | `""` | The parity test or CI check; its absence means drift is not caught |
+
+**Compile-time warnings:**
+
+- `@AIKeepInSync` with an empty `mirrors[]` — no-op; nothing is kept in sync
+- `@AIKeepInSync` + `@AIContract` — NOTE; verify the mirrors track something other than the frozen signature
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -880,6 +1014,12 @@ Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilat
 | `@AILocked` + `@AIDraft` | **Warning**: contradictory — don't combine |
 | `@AIIgnore` + `@AIPrivacy` | **Warning**: redundant — `@AIIgnore` already excludes |
 | `@AIContract` + `@AIDraft` | **Warning**: contradictory — frozen signature can't need drafting |
+| `@AIGenerated` + `@AILocked` | Belt-and-braces on generated output; `@AIGenerated` alone is usually better, since it redirects instead of dead-ending |
+| `@AILoadBearing` + `@AIExplain` | Supply the rationale AND require one back for any change |
+| `@AIBannedApi` + `@AIArchitecture` | Ban specific symbols AND the layers they live in |
+| `@AIThreadAffinity` + `@AIThreadSafe` | **Warning**: contradictory — opposite claims, one is false |
+| `@AIGenerated` + `@AIIgnore` | **Warning**: contradictory — generated code must stay readable |
+| `@AILoadBearing(suppressAudit)` + `@AIAudit` | **Warning**: contradictory — one suppresses findings, the other mandates them |
 | `@AIContract` + `@AILocked` | **Warning**: overlapping intent — consider using only `@AILocked` |
 | `@AITestDriven` + `@AIContext` | Enforce TDD workflow AND guide implementation style |
 | `@AITestDriven` + `@AIPerformance` | Any change must include tests AND meet complexity constraints |

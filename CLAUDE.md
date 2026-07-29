@@ -151,7 +151,7 @@ An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` t
 
 ### Annotations
 
-39 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
+44 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
 
 ### Top-level fingerprint short-circuit
 

@@ -271,4 +271,34 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### SECURITY-CRITICAL: com.example.security.SecurityConfig
 - **Aspect**: authentication
 - **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.
+
+#### GENERATED: com.example.service.EvidenceBasedShowcase
+- **Source**: src/main/resources/openapi/checkout.yaml
+- **Edit instead**: src/main/resources/openapi/checkout.yaml
+- **Regenerate with**: mvn generate-sources
+- **Rule**: Never hand-edit. Change the source and regenerate.
+
+#### LOAD-BEARING: com.example.service.EvidenceBasedShowcase.settledOrderIds
+- **Invariant**: Settled orders stay in the list until the reconciliation job drains it
+- **Breaks if changed**: Clearing eagerly drops in-flight settlements and silently under-reports revenue
+- **Audit**: Not a defect. Do not flag.
+- **Rule**: Refactor freely, but preserve the invariant.
+
+#### BANNED APIs: com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)
+- **Forbidden**: java.lang.System.out, java.util.Date, java.lang.Double
+- **Use instead**: the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal
+- **Reason**: Console output bypasses structured logging; Date and Double are unsafe for money and time
+- **Rule**: These compile but are prohibited at this element.
+
+#### THREAD AFFINITY: com.example.service.EvidenceBasedShowcase.refreshCartBadge()
+- **Pinned to**: the checkout-ui thread only
+- **Marshal via**: CheckoutDispatcher.runOnUiThread
+- **Symptom if violated**: Cart totals render stale under load; no exception is thrown
+- **Rule**: Not thread-safe. Do not add locks; call it from the correct thread.
+
+#### KEEP IN SYNC: com.example.service.EvidenceBasedShowcase.CATALOG_VERSION
+- **Mirrors**: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md
+- **Reason**: The release version is duplicated across build config, docs, and the badge
+- **Enforced by**: ProjectFactsConsistencyTest
+- **Rule**: Change all sites in the same commit, or none.
 <!-- VIBETAGS-END -->

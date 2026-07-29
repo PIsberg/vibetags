@@ -17,6 +17,11 @@ import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILoadBearing;
+import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.annotations.AICallersOnly;
 import se.deversity.vibetags.annotations.AISandboxOnly;
@@ -242,6 +247,27 @@ public final class BuildFingerprint {
         appendAnnotationSet(sb, "TM", collector.temporary(), e -> {
             AITemporary a = e.getAnnotation(AITemporary.class);
             return a == null ? "" : a.expiresOn() + "|" + a.reason();
+        });
+        appendAnnotationSet(sb, "GEN", collector.generated(), e -> {
+            AIGenerated a = e.getAnnotation(AIGenerated.class);
+            return a == null ? "" : a.from() + "|" + a.regenerateWith() + "|" + a.editInstead();
+        });
+        appendAnnotationSet(sb, "LB", collector.loadBearing(), e -> {
+            AILoadBearing a = e.getAnnotation(AILoadBearing.class);
+            return a == null ? "" : a.invariant() + "|" + a.breaksIf() + "|" + a.suppressAudit();
+        });
+        appendAnnotationSet(sb, "BA", collector.bannedApi(), e -> {
+            AIBannedApi a = e.getAnnotation(AIBannedApi.class);
+            return a == null ? "" : String.join(",", a.forbidden()) + "|" + a.useInstead() + "|" + a.reason();
+        });
+        appendAnnotationSet(sb, "TA", collector.threadAffinity(), e -> {
+            AIThreadAffinity a = e.getAnnotation(AIThreadAffinity.class);
+            return a == null ? "" : a.value().name() + "|" + a.thread() + "|" + a.marshalVia()
+                + "|" + a.symptomIfViolated();
+        });
+        appendAnnotationSet(sb, "KIS", collector.keepInSync(), e -> {
+            AIKeepInSync a = e.getAnnotation(AIKeepInSync.class);
+            return a == null ? "" : String.join(",", a.mirrors()) + "|" + a.reason() + "|" + a.enforcedBy();
         });
 
         sb.append("S{");

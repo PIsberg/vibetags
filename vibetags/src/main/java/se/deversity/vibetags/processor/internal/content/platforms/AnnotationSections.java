@@ -128,6 +128,11 @@ final class AnnotationSections {
         section(Platform.CURSOR, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
         section(Platform.CURSOR, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
         section(Platform.CURSOR, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary())
+        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
+        section(Platform.CURSOR, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
+        section(Platform.CURSOR, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.CURSOR, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.CURSOR, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.CURSOR, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
     );
 }
