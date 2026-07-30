@@ -117,4 +117,53 @@ class GuardrailFileWriterLogContractTest {
                 .toList(),
             "INFO is the operator's budget: a routine write must not spend it");
     }
+
+    /**
+     * Placeholder integrity, asserted at runtime because nothing can assert it statically.
+     *
+     * <p>Every event this writer emits goes through {@code debug(String event, Object... args)},
+     * whose format string is a <em>parameter</em>, not a literal. Checkers that count {@code {}}
+     * against arguments — codekoll's CK-SLF4J-PLACEHOLDER, SpotBugs' SLF4J detectors — only ever
+     * see that forwarding call and skip it, because they require a constant format. So a mismatch
+     * in any caller reaches the log with no tool objecting: a surplus {@code {}} prints literally,
+     * and a surplus argument is dropped without a word. The wrapper is worth keeping (it is what
+     * makes the level guard and the null-logger check single-sited), so the check moves here.
+     */
+    @Test
+    @DisplayName("every DEBUG event balances its {} placeholders against its arguments")
+    void placeholdersMatchArguments(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("AGENTS.md");
+        String body = HEADER + "\nrule one\n";
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        // Exercise each distinct event shape: a commit, an identical-bytes skip, an empty round.
+        writer.writeFileIfChanged(file.toString(), body, true);
+        writer.writeFileIfChanged(file.toString(), body, true);
+        writer.writeFileIfChanged(file.toString(), HEADER + "\nrule two\n", false);
+
+        assertFalse(appender.list.isEmpty(), "the narrative must actually have run");
+
+        for (ILoggingEvent event : appender.list) {
+            Object[] args = event.getArgumentArray();
+            int supplied = args == null ? 0 : args.length;
+            // SLF4J convention: a trailing Throwable is the stack trace, not a substitution.
+            if (supplied > 0 && args[supplied - 1] instanceof Throwable) {
+                supplied--;
+            }
+            int placeholders = countPlaceholders(event.getMessage());
+            assertEquals(placeholders, supplied,
+                "'" + event.getMessage() + "' has " + placeholders + " {} but " + supplied
+                    + " argument(s); SLF4J drops the difference silently");
+            assertFalse(event.getFormattedMessage().contains("{}"),
+                "an unsubstituted {} reached the log: " + event.getFormattedMessage());
+        }
+    }
+
+    private static int countPlaceholders(String format) {
+        int count = 0;
+        for (int i = format.indexOf("{}"); i >= 0; i = format.indexOf("{}", i + 2)) {
+            count++;
+        }
+        return count;
+    }
 }
