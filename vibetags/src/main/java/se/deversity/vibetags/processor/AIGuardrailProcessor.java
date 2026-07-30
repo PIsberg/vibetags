@@ -310,7 +310,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             m.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: inputs unchanged since last run (fingerprint " + fingerprint
                     + "), skipping content build and writes.");
-            if (log != null) log.info("Inputs unchanged (fingerprint {}). Skipping generate phase.", fingerprint);
+            if (log != null) {
+                log.info("Inputs unchanged (fingerprint {}). Skipping generate phase.", fingerprint);
+                log.debug("round.skip reason=fingerprint-match fingerprint={} sidecarStamp={} services={}",
+                    fingerprint, sidecarStampHex, activeServices.size());
+            }
             VibeTagsLogger.shutdown(root);
             return;
         }
@@ -394,6 +398,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         java.util.Queue<String[]> statusQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
         int parallelism = Math.min(Runtime.getRuntime().availableProcessors(),
                                    Math.max(1, effectiveContent.size()));
+        if (log != null && log.isDebugEnabled()) {
+            log.debug("round.write files={} workers={} multiModule={} services={}",
+                effectiveContent.size(), parallelism, multiModule, effectiveContent.keySet());
+        }
         java.util.concurrent.ForkJoinPool pool = new java.util.concurrent.ForkJoinPool(parallelism);
         try {
             pool.submit(() -> effectiveContent.entrySet().parallelStream().forEach(entry -> {
