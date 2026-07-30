@@ -39,6 +39,7 @@ import se.deversity.vibetags.annotations.AITemporary;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.regex.Pattern;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -54,6 +55,12 @@ import java.util.Set;
  * contradictory or no-op combinations so the developer notices at build time.
  */
 public final class AnnotationValidator {
+
+    /**
+     * ISO date for {@code @AITemporary.expiresOn}. Hoisted so the pattern compiles once per
+     * compilation rather than once per annotated element.
+     */
+    private static final Pattern ISO_DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
     private AnnotationValidator() {}
 
@@ -481,7 +488,7 @@ public final class AnnotationValidator {
                         element);
                 } else {
                     String expiresOn = temp.expiresOn().trim();
-                    if (!expiresOn.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                    if (!ISO_DATE.matcher(expiresOn).matches()) {
                         messager.printMessage(Diagnostic.Kind.WARNING,
                             "VibeTags: @AITemporary on " + element.toString()
                                 + " has an invalid 'expiresOn' date format: '" + expiresOn + "'. Must be YYYY-MM-DD.",
