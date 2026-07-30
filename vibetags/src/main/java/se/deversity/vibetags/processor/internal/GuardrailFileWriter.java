@@ -111,6 +111,7 @@ public final class GuardrailFileWriter {
             // Fast-path: if our cache says we wrote this exact body to this file and the file
             // is byte-stable since (size + mtime unchanged), skip the read/diff/write entirely.
             if (writeCache != null && writeCache.isUnchanged(filePath, content)) {
+                debug("write.skip file={} reason=cache-unchanged bytes={}", name(filePath), content.length());
                 return false;
             }
 
@@ -147,14 +148,18 @@ public final class GuardrailFileWriter {
                     // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
                     // the cheap WriteCache fast path even on the very first build.
                     if (writeCache != null) writeCache.recordWrite(filePath, content);
+                    debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
                     return false;
                 }
                 // Sizes match but bytes differ — write directly. No need for readString or
                 // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
                 if (!hasNewRules && existingSize > 0) {
+                    debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
                     skipUpdateMsg(fileName);
                     return false;
                 }
+                debug("write.update file={} reason=size-differs oldBytes={} newBytes={} markers=false",
+                    fileName, existingSize, contentByteLen);
                 writeAndCache(filePath, content, content);
                 messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
                 return true;
@@ -168,6 +173,8 @@ public final class GuardrailFileWriter {
                 ? Files.readString(filePath, StandardCharsets.UTF_8)
                 : "";
 
+            debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
+                fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
             if (supportsMarkers) {
                 return writeWithMarkers(filePath, fileName, path, content, existing, hasNewRules, markers);
             }
@@ -179,12 +186,34 @@ public final class GuardrailFileWriter {
         }
     }
 
+    /**
+     * DEBUG narrative: one structured event per decision this writer takes, so a build can be
+     * replayed from the log without a debugger. Guarded, so a disabled level costs nothing and
+     * no argument is formatted. INFO stays reserved for what an operator asked for.
+     *
+     * @param event structured message, {@code domain.event key={} ...}
+     * @param args  the values behind the decision
+     */
+    private void debug(String event, Object... args) {
+        if (log != null && log.isDebugEnabled()) {
+            log.debug(event, args);
+        }
+    }
+
+    /** File name for log events; never the absolute path, which is noise in a build log. */
+    private static String name(Path filePath) {
+        Path fileName = filePath.getFileName();
+        return fileName != null ? fileName.toString() : filePath.toString();
+    }
+
     /** Writes {@code finalContent} atomically and, if a write cache is wired, records the body we wrote. */
     private void writeAndCache(Path filePath, String finalContent, String bodyForCache) throws IOException {
         if (dryRun) {
+            debug("write.skip file={} reason=dry-run bytes={}", name(filePath), finalContent.length());
             dryRunChanges.add(filePath.toString());
             return;
         }
+        debug("write.commit file={} bytes={}", name(filePath), finalContent.length());
         writeContentWithBackup(filePath, finalContent);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache);
@@ -217,7 +246,12 @@ public final class GuardrailFileWriter {
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
                 String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
-                if (contentMatches(existing, finalContent)) return false;
+                if (contentMatches(existing, finalContent)) {
+                    debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
+                    return false;
+                }
+                debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
+                    fileName, finalContent.length());
                 writeAndCache(filePath, finalContent, content);
                 return true;
             }
@@ -231,25 +265,37 @@ public final class GuardrailFileWriter {
             if (!after.isEmpty()) sb.append("\n\n").append(after);
             String finalContent = sb.toString().trim() + "\n";
 
-            if (contentMatches(existing, finalContent)) return false;
+            if (contentMatches(existing, finalContent)) {
+                debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
+                    fileName, finalContent.length());
+                return false;
+            }
 
             if (!hasNewRules && !existing.isEmpty()) {
                 skipUpdateMsg(fileName);
                 return false;
             }
 
+            debug("write.update file={} reason=marker-block-differs oldBytes={} newBytes={} markers=true",
+                fileName, existing.length(), finalContent.length());
             writeAndCache(filePath, finalContent, content);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
         } else if (!existing.isEmpty() && existing.contains(generatedHeaderTrim)) {
             // Legacy file (no markers but has VibeTags header): upgrade to markers
             String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
-            if (contentMatches(existing, finalContent)) return false;
+            if (contentMatches(existing, finalContent)) {
+                debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
+                    fileName, finalContent.length());
+                return false;
+            }
 
             if (!hasNewRules) {
                 skipUpdateMsg(fileName);
                 return false;
             }
+            debug("write.update file={} reason=legacy-upgrade oldBytes={} newBytes={} markers=legacy",
+                fileName, existing.length(), finalContent.length());
 
             writeAndCache(filePath, finalContent, content);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
@@ -624,7 +670,9 @@ public final class GuardrailFileWriter {
     private void skipUpdateMsg(String fileName) {
         String msg = "VibeTags: Skipping update of " + fileName + " (no annotations found in this module, preserving existing rules)";
         messager.printMessage(Diagnostic.Kind.NOTE, msg);
-        if (log != null) log.info("Skipping update of {} — no annotations found", fileName);
+        // The user-facing NOTE above is the operator's channel. In the log this is a routine
+        // per-file decision, so it belongs in the DEBUG narrative rather than in the INFO budget.
+        debug("write.skip file={} reason=no-new-rules", fileName);
     }
 
     /** Visible for testing — verifies the all-overloads no-op contract. */

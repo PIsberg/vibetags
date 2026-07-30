@@ -122,8 +122,12 @@ public final class GranularRulesWriter {
             List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
             String content = body.toString().trim();
             for (GranularFormat f : formats) {
+                Path serviceDir = serviceFiles.get(f.serviceKey);
+                if (serviceDir == null) {
+                    continue;  // service not configured for this run: nothing to write
+                }
                 fileWriter.writeFileIfChanged(
-                    serviceFiles.get(f.serviceKey).resolve(qName + f.extension).toString(),
+                    serviceDir.resolve(qName + f.extension).toString(),
                     f.render(description, simpleName, globs, content), true);
             }
         });
@@ -156,8 +160,12 @@ public final class GranularRulesWriter {
             String description = "AI rules for role " + roleName;
             String content = GranularSections.render(stanzas, true).trim();
             for (GranularFormat f : formats) {
+                Path serviceDir = serviceFiles.get(f.serviceKey);
+                if (serviceDir == null) {
+                    continue;  // service not configured for this run: nothing to write
+                }
                 fileWriter.writeFileIfChanged(
-                    serviceFiles.get(f.serviceKey).resolve(stem + f.extension).toString(),
+                    serviceDir.resolve(stem + f.extension).toString(),
                     f.render(description, roleName, globs, content), true);
             }
         });

@@ -365,7 +365,7 @@ public final class WriteCache {
                     // Skip corrupt rows — fresh entries replace them on next write.
                 }
             }
-        } catch (NoSuchFileException nsfe) {
+        } catch (NoSuchFileException ignored) {
             // First run — empty cache is fine.
         } catch (IOException ioe) {
             entries.clear(); // Corrupt or unreadable — start over.

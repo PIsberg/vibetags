@@ -63,8 +63,10 @@ public final class ModuleRootResolver {
                 Path sourceDir = Paths.get(uri).toAbsolutePath().normalize().getParent();
                 Path moduleRoot = nearestBuildFileAncestor(sourceDir);
                 if (moduleRoot != null) return moduleRoot;
-            } catch (RuntimeException e) {
+            } catch (RuntimeException ignored) {
                 // Malformed URI or unexpected tree state — try the next root element.
+                // The miss itself is the interesting part, and it is recorded by the caller
+                // through module.root: an empty result there means every root element failed.
             }
         }
         return null;
