@@ -102,7 +102,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
-- `AnnotationCollector` — owns one `LinkedHashSet<Element>` accumulator per annotation type, aggregating annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check
+- `AnnotationCollector` — owns one `LinkedHashSet<Element>` accumulator per annotation type (keyed by annotation class, driven by `model.GuardrailAnnotations.ALL`), aggregating annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check. `model()` snapshots the accumulators into the compiler-free `GuardrailModel` the rendering layer reads — memoized until the next `collect()`/`reset()`. Buckets are created once and only cleared **in place**, because the processor holds three of them as fields
 - `AnnotationValidator` — emits compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap, `@AITestDriven`+`@AIIgnore` contradiction, `@AITestDriven`+`@AILocked` contradiction, invalid `@AITestDriven.coverageGoal`)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
@@ -114,7 +114,17 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - `ModuleSidecar` — per-module rendered-body store (`.vibetags-mod-<moduleId>` files at the VibeTags root) enabling multi-module aggregation: every module persists its own contribution, and each compile merges all sidecars into the shared marker files using `VIBETAGS-MODULE:` sub-markers. Sidecar format v2; v1 files (written by processors that derived module identity from the working directory — issue #278) are pruned on read.
 - `ModuleRootResolver` — resolves the compiled module's root directory by walking up from a source file of a live round (javac Tree API) to the nearest `pom.xml`/`build.gradle(.kts)`; this is the module identity fed to `ModuleSidecar`. Falls back to the JVM working directory under non-javac compilers or in-memory compilation.
 - `ModuleOutputWriter` — per-module (nested) output: writes a module's own guardrails into that module's own directory (opt-in by file/dir existence there), by re-running the single-module pipeline scoped to the module. Orthogonal to `ModuleSidecar` — it does not read or write a sidecar and does not merge across modules; the reactor-root files are unaffected.
-- `RoleConfig` — parses a `.vibetags-roles` config (name → globs/FQNs) and routes annotated owners into human-named topic files via `GranularRulesWriter`; first-match wins, unmatched owners keep their per-class file. Glob matching is done against a path reconstructed from the element FQN (separator-independent), so it works under non-javac/in-memory compilation. Null when the file is absent (per-class behavior); its content hash is folded into the build fingerprint.
+- `RoleConfig` — parses a `.vibetags-roles` config (name → globs/FQNs) and routes annotated owners into human-named topic files via `GranularRulesWriter`; first-match wins, unmatched owners keep their per-class file. Glob matching is done against a path reconstructed from the element FQN (separator-independent), so it works under non-javac/in-memory compilation. Null when the file is absent (per-class behavior); its content hash is folded into the build fingerprint. Lives in `processor.model` because the rendering layer reads it through `RenderingContext.roles()`.
+
+**The model** — package `se.deversity.vibetags.processor.model` (the compiler-free seam between the javac-facing half and the rendering half):
+- `GuardrailModel` — the immutable snapshot every `PlatformRenderer` reads: one insertion-ordered bucket of `TaggedElement` per annotation type, plus the `@AILocked` source positions and the `anyAnnotationsFound` flag
+- `TaggedElement` — one annotated element as plain data: the five precomputed name forms (`path`, `qualifiedName`, `simpleName`, `displayName`, `granularQName`), its `ElementTag` kind, its owning type/package, and the `@AI*` annotation instances themselves. Equality is by path + kind — a value identity, so a granular-rules map can key on it without pinning javac's object graph past the round that produced it
+- `ElementTag` — a name-for-name mirror of `javax.lang.model.element.ElementKind`, plus `UNKNOWN` for "the compiler reported no kind". The names are a published contract (the `kind` field in `.vibetags-locks`, and lower-cased granular headings), pinned by `ElementTagMappingTest`
+- `GuardrailAnnotations` — the single ordered registry of collected annotation types; adding a guardrail annotation is one line here
+- `SourceLocation` — file + 1-based inclusive line range for `.vibetags-locks`; best-effort, absent under non-javac compilers
+- `ContentHash` — the 8-hex content hash shared by `BuildFingerprint`, `RoleConfig`, and `MirrorConfig`
+
+Nothing in this package may import `javax.lang.model`, `javax.annotation.processing`, `javax.tools`, or `com.sun.source`, and nothing in it may depend on the processor or its internals. `ArchitectureRulesTest` enforces both directions, along with the matching rule for the content layer. See `docs/LOAD-BEARING.md` for why the seam exists — chiefly that an `Element` is only valid while its round is live, and the parallel write phase runs after the last one closes.
 
 This split keeps each helper around 50–600 lines, well-tested in isolation, and makes the orchestrator's `generateFiles()` method a 50-line read.
 
@@ -395,7 +405,7 @@ The full table of all 39 annotations (targets, attributes, semantics) and every 
 
 ```
 Accumulation phase (every round, until processingOver() == true):
-1. AnnotationCollector.collect(roundEnv) — drains the round into the LinkedHashSet<Element> accumulators (one per annotation type)
+1. AnnotationCollector.collect(roundEnv) — drains the round into the LinkedHashSet<Element> accumulators (one per annotation type). The Elements stay here; AnnotationCollector.model() snapshots them into the compiler-free GuardrailModel at generate time, because an Element is only valid while its round is live
 2. AnnotationValidator.validate(messager, roundEnv) — compile-time checks:
    - Contradiction checks (e.g. @AIDraft + @AILocked, @AILegacyBridge + @AIDraft)
    - Redundancy checks (e.g. @AIPrivacy + @AIIgnore, @AIPublicAPI + @AILocked, @AIParallelTests + @AILocked)
@@ -523,16 +533,27 @@ vibetags/
 │   │   │   ├── java/se/deversity/vibetags/processor/
 │   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
-│   │   │   │   └── internal/                     # Single-responsibility helpers
-│   │   │   │       ├── AnnotationCollector.java       # one LinkedHashSet per annotation type, per round
-│   │   │   │       ├── AnnotationValidator.java       # Compile-time consistency warnings
-│   │   │   │       ├── OrphanWarner.java              # "annotation used but ignore-file missing"
-│   │   │   │       ├── ServiceRegistry.java           # Service map + file-existence opt-in
-│   │   │   │       ├── ElementNaming.java             # elementPath / displayName helpers
-│   │   │   │       ├── GuardrailContentBuilder.java   # Thin coordinator delegating to PlatformRenderers
-│   │   │   │       ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare
-│   │   │   │       ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
-│   │   │   │       └── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)
+│   │   │   │   ├── internal/                     # javac-facing helpers
+│   │   │   │   │   ├── AnnotationCollector.java       # one LinkedHashSet per annotation type; model() snapshots them
+│   │   │   │   │   ├── AnnotationValidator.java       # Compile-time consistency warnings
+│   │   │   │   │   ├── OrphanWarner.java              # "annotation used but ignore-file missing"
+│   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
+│   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers
+│   │   │   │   │   ├── GuardrailContentBuilder.java   # Thin coordinator delegating to PlatformRenderers
+│   │   │   │   │   ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare
+│   │   │   │   │   ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
+│   │   │   │   │   ├── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)
+│   │   │   │   │   └── content/                       # Rendering — compiler-free, reads the model only
+│   │   │   │   │       ├── annotations/               # one AI*Formatter per annotation
+│   │   │   │   │       └── platforms/                 # one PlatformRenderer per output file
+│   │   │   │   └── model/                        # The compiler-free seam: internal → model ← content
+│   │   │   │       ├── GuardrailModel.java            # immutable snapshot the renderers read
+│   │   │   │       ├── TaggedElement.java             # one annotated element as plain data
+│   │   │   │       ├── ElementTag.java                # name-for-name mirror of ElementKind
+│   │   │   │       ├── GuardrailAnnotations.java      # the single ordered annotation registry
+│   │   │   │       ├── RoleConfig.java                # .vibetags-roles routing
+│   │   │   │       ├── SourceLocation.java            # file + line range for .vibetags-locks
+│   │   │   │       └── ContentHash.java               # the shared 8-hex content hash
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
 │   │   └── test/                      # Unit + integration tests (424 tests total)

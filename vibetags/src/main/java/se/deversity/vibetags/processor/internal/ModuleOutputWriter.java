@@ -3,6 +3,8 @@ package se.deversity.vibetags.processor.internal;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
+import se.deversity.vibetags.processor.model.RoleConfig;
+
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
 

@@ -1,6 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -15,7 +15,7 @@ public final class ClaudeLocalRenderer implements PlatformRenderer {
     private static final ClaudeRenderer CLAUDE_RENDERER = new ClaudeRenderer();
 
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        return CLAUDE_RENDERER.render(collector, platform, context);
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+        return CLAUDE_RENDERER.render(model, platform, context);
     }
 }

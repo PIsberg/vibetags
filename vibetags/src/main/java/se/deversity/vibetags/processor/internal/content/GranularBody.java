@@ -3,7 +3,7 @@ package se.deversity.vibetags.processor.internal.content;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 /**
  * The guardrail stanzas rendered for one granular-rule owner (a class or a package), kept
@@ -26,7 +26,7 @@ public final class GranularBody implements CharSequence {
      * One rendered stanza: the element it describes, the section it belongs to, and its body
      * lines (the markdown between the heading and the next stanza, already fully formatted).
      */
-    public record Entry(Element owner, Element element, String title, List<String> lines) {
+    public record Entry(TaggedElement owner, TaggedElement element, String title, List<String> lines) {
 
         /** Defensive copy so a stanza can never be mutated after it has been recorded. */
         public Entry {

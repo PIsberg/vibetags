@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AILocked;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AILockedFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AILocked locked = element.getAnnotation(AILocked.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AILocked locked = element.annotation(AILocked.class);
         if (locked == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String reason = locked.reason();
 
         switch (platform) {
@@ -29,7 +28,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </file>\n");
                 break;
             case AI_EXCLUDE:
-                sb.append("**/").append(element.getSimpleName()).append(".java\n");
+                sb.append("**/").append(element.simpleName()).append(".java\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(reason).append("\n");
@@ -45,7 +44,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(reason).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");

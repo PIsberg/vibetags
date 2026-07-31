@@ -19,6 +19,7 @@ import se.deversity.vibetags.processor.internal.content.platforms.LlmsRenderer;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import java.io.IOException;
@@ -94,7 +95,7 @@ class RendererBranchCoverageTest {
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
         AnnotationCollector collector = new AnnotationCollector();
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("cursor_ignore"));
-        String result = renderer.render(collector, Platform.CURSOR_IGNORE, ctx);
+        String result = renderer.render(collector.model(), Platform.CURSOR_IGNORE, ctx);
         assertTrue(result.contains("Cursor"), "CURSOR_IGNORE must produce 'Cursor' in output");
     }
 
@@ -105,7 +106,7 @@ class RendererBranchCoverageTest {
         AnnotationCollector collector = new AnnotationCollector();
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("firebase"));
         // Call with a platform that falls to default branch
-        String result = renderer.render(collector, Platform.FIREBASE, ctx);
+        String result = renderer.render(collector.model(), Platform.FIREBASE, ctx);
         assertTrue(result.contains("AI Platform"),
             "Default platform branch must produce 'AI Platform' in IgnoreFileRenderer");
     }
@@ -128,7 +129,7 @@ class RendererBranchCoverageTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("mentat"));
-        String result = renderer.render(collector, Platform.MENTAT, ctx);
+        String result = renderer.render(collector.model(), Platform.MENTAT, ctx);
         assertNotNull(result);
         // The body of appendJsonSection ends with ",\n" from the formatter,
         // so the trim branch fires (L61 true branch = remove trailing comma).
@@ -156,7 +157,7 @@ class RendererBranchCoverageTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("plandex"));
-        String result = renderer.render(collector, Platform.PLANDEX, ctx);
+        String result = renderer.render(collector.model(), Platform.PLANDEX, ctx);
         assertNotNull(result);
         assertTrue(result.contains("locked"), "Plandex output must contain locked section when @AILocked elements exist");
         // Verify privacy section is absent when no @AIPrivacy elements exist
@@ -178,7 +179,7 @@ class RendererBranchCoverageTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("plandex"));
-        String result = renderer.render(collector, Platform.PLANDEX, ctx);
+        String result = renderer.render(collector.model(), Platform.PLANDEX, ctx);
         assertNotNull(result);
         // AIAuditFormatter handles PLANDEX via the default case — so audit content depends on formatter
         assertNotNull(result, "PlandexRenderer must produce non-null output");
@@ -203,7 +204,7 @@ class RendererBranchCoverageTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String result = renderer.render(collector, Platform.INTERPRETER, ctx);
+        String result = renderer.render(collector.model(), Platform.INTERPRETER, ctx);
         assertNotNull(result);
         assertTrue(result.contains("com.example.Locked"), "InterpreterRenderer must include locked class");
     }
@@ -217,7 +218,7 @@ class RendererBranchCoverageTest {
         GuardrailFileWriter writer = new GuardrailFileWriter("# header\n", null, null);
         GranularRulesWriter granularWriter = new GranularRulesWriter(writer);
 
-        Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules = Map.of();
+        Map<TaggedElement, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules = Map.of();
         Map<String, Path> serviceFiles = Map.of();
         // No granular services → the early-return path at L54 fires
         Set<String> noGranularServices = Set.of("cursor", "claude");
@@ -239,7 +240,7 @@ class RendererBranchCoverageTest {
         when(el.getAnnotation(AIAudit.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
         // Platform.FIREBASE is not a case in AIAuditFormatter → default: break
-        fmt.format(el, sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output from AIAuditFormatter");
     }
 
@@ -255,7 +256,7 @@ class RendererBranchCoverageTest {
         when(ann.aspect()).thenReturn("authentication");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.AIDER_CONVENTIONS);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.AIDER_CONVENTIONS);
         String out = sb.toString();
         assertTrue(out.contains("authentication"),
             "AIDER_CONVENTIONS output must include the security aspect");
@@ -271,7 +272,7 @@ class RendererBranchCoverageTest {
         when(ann.aspect()).thenReturn("");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.AIDER_CONVENTIONS);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.AIDER_CONVENTIONS);
         assertFalse(sb.toString().contains("**Aspect**"),
             "AIDER_CONVENTIONS must omit Aspect line when aspect is empty");
     }
@@ -288,7 +289,7 @@ class RendererBranchCoverageTest {
         when(ann.reason()).thenReturn("safe-to-retry-on-timeout");
         when(el.getAnnotation(AIIdempotent.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CODEX);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CODEX);
         assertTrue(sb.toString().contains("safe-to-retry-on-timeout"),
             "Non-empty reason must appear in CODEX output summary");
     }
@@ -306,7 +307,7 @@ class RendererBranchCoverageTest {
         when(ann.defaultValue()).thenReturn(false);
         when(el.getAnnotation(AIFeatureFlag.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output from AIFeatureFlagFormatter");
     }
 
@@ -365,7 +366,7 @@ class RendererBranchCoverageTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String result = renderer.render(collector, Platform.INTERPRETER, ctx);
+        String result = renderer.render(collector.model(), Platform.INTERPRETER, ctx);
         assertNotNull(result);
         assertFalse(result.contains("Project Guardrails"),
             "empty collector must not emit the Project Guardrails section");
@@ -603,7 +604,7 @@ class RendererBranchCoverageTest {
     void interpreterRenderer_rendersEveryAnnotationTag() {
         InterpreterRenderer renderer = new InterpreterRenderer();
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String out = renderer.render(everyRenderedAnnotation(), Platform.INTERPRETER, ctx);
+        String out = renderer.render(everyRenderedAnnotation().model(), Platform.INTERPRETER, ctx);
         for (String tag : INTERPRETER_TAGS) {
             assertTrue(out.contains(tag),
                 "InterpreterRenderer must emit the " + tag + " tag");
@@ -615,7 +616,7 @@ class RendererBranchCoverageTest {
         AiderConventionsRenderer renderer = new AiderConventionsRenderer();
         RenderingContext ctx =
             new RenderingContext("P", "# header\n", Set.of("aider_conventions"));
-        String out = renderer.render(everyRenderedAnnotation(), Platform.AIDER_CONVENTIONS, ctx);
+        String out = renderer.render(everyRenderedAnnotation().model(), Platform.AIDER_CONVENTIONS, ctx);
         for (String header : AIDER_HEADERS) {
             assertTrue(out.contains(header),
                 "AiderConventionsRenderer must emit the " + header + " section");
@@ -644,7 +645,7 @@ class RendererBranchCoverageTest {
         LlmsRenderer renderer = new LlmsRenderer();
         RenderingContext ctx =
             new RenderingContext("Proj", "# header\n", Set.of("llms", "llms_full"));
-        String out = renderer.render(everyRenderedAnnotation(), Platform.LLMS_FULL, ctx);
+        String out = renderer.render(everyRenderedAnnotation().model(), Platform.LLMS_FULL, ctx);
         for (String path : ALL_ELEMENT_PATHS) {
             assertTrue(out.contains(path),
                 "llms-full.txt must render the annotated element " + path);
@@ -658,7 +659,7 @@ class RendererBranchCoverageTest {
         LlmsRenderer renderer = new LlmsRenderer();
         RenderingContext ctx =
             new RenderingContext("Proj", "# header\n", Set.of("llms", "llms_full"));
-        String out = renderer.render(everyRenderedAnnotation(), Platform.LLMS, ctx);
+        String out = renderer.render(everyRenderedAnnotation().model(), Platform.LLMS, ctx);
         for (String path : ALL_ELEMENT_PATHS) {
             assertTrue(out.contains(path),
                 "llms.txt must render the annotated element " + path);

@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIMemoryBudget;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIMemoryBudgetFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIMemoryBudget memoryBudget = element.getAnnotation(AIMemoryBudget.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIMemoryBudget memoryBudget = element.annotation(AIMemoryBudget.class);
         if (memoryBudget == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         AIMemoryBudget.AllocationPolicy policy = memoryBudget.value();
         String summary = "Strict memory budget policy: " + policy.name() + ". Minimize or prevent runtime allocations.";
 

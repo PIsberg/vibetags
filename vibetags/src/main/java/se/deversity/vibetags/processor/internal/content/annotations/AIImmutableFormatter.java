@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIImmutable;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIImmutableFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIImmutable im = element.getAnnotation(AIImmutable.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIImmutable im = element.annotation(AIImmutable.class);
         if (im == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String note = im.note();
         String summary = note.isEmpty() ? "immutable type" : note;
 
@@ -46,7 +45,7 @@ public final class AIImmutableFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): immutable type").append(note.isEmpty() ? "" : " — " + note).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): immutable type").append(note.isEmpty() ? "" : " — " + note).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Immutable type — never introduce non-final fields, setters, or mutating methods.\n");

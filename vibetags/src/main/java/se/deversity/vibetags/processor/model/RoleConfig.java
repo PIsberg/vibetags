@@ -1,4 +1,6 @@
-package se.deversity.vibetags.processor.internal;
+package se.deversity.vibetags.processor.model;
+
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,8 +12,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 
 /**
  * Role/topic-based routing for granular rule files, read from a {@code .vibetags-roles} config at
@@ -50,7 +50,7 @@ public final class RoleConfig {
      * Loads {@code <root>/.vibetags-roles} if present, else returns {@code null} (roles disabled —
      * granular writing keeps its per-class behavior). Unreadable files are treated as absent.
      */
-    public static RoleConfig load(Path root) {
+    public static @Nullable RoleConfig load(Path root) {
         Path file = root.resolve(FILE_NAME);
         if (!Files.isRegularFile(file)) {
             return null;
@@ -94,7 +94,7 @@ public final class RoleConfig {
                 parsed.add(new Role(name, globs, globPatterns, fqns));
             }
         }
-        return new RoleConfig(parsed, BuildFingerprint.fingerprint(content));
+        return new RoleConfig(parsed, ContentHash.of(content));
     }
 
     /** True when there are no usable roles (parsing produced nothing) — treat as roles-off. */
@@ -111,9 +111,9 @@ public final class RoleConfig {
      * The first role (config order) whose glob or FQN matchers match {@code owner}, or empty when
      * the element belongs to no role and should keep its per-class file.
      */
-    public Optional<String> roleFor(Element owner) {
+    public Optional<String> roleFor(TaggedElement owner) {
         String path = ownerPath(owner);
-        String fqn = owner.toString();
+        String fqn = owner.qualifiedName();
         for (Role role : roles) {
             if (role.fqns().contains(fqn)) {
                 return Optional.of(role.name());
@@ -138,13 +138,13 @@ public final class RoleConfig {
     }
 
     /**
-     * The rule-file stem that {@link GranularRulesWriter} writes for {@code owner}: the sanitized
+     * The rule-file stem that {@code GranularRulesWriter} writes for {@code owner}: the sanitized
      * role name when the element matches a role, otherwise the per-class granular qName. The single
      * source of truth so a scoped-rules index pointer can never drift from the file it references
      * (see {@code GranularIndexSection}).
      */
-    public String granularStemFor(Element owner) {
-        return roleFor(owner).map(RoleConfig::sanitize).orElseGet(() -> ElementNaming.granularQName(owner));
+    public String granularStemFor(TaggedElement owner) {
+        return roleFor(owner).map(RoleConfig::sanitize).orElseGet(owner::granularQName);
     }
 
     /** Role names are user-authored; keep filenames to filesystem-safe characters. */
@@ -182,9 +182,9 @@ public final class RoleConfig {
     }
 
     /** Reconstructs a path from the element's FQN: {@code a.b.Foo} → {@code a/b/Foo.java}; a package → {@code a/b/pkg/}. */
-    private static String ownerPath(Element owner) {
-        String slashed = owner.toString().replace('.', '/');
-        return owner.getKind() == ElementKind.PACKAGE ? slashed + "/" : slashed + ".java";
+    private static String ownerPath(TaggedElement owner) {
+        String slashed = owner.qualifiedName().replace('.', '/');
+        return owner.kind() == ElementTag.PACKAGE ? slashed + "/" : slashed + ".java";
     }
 
     /**

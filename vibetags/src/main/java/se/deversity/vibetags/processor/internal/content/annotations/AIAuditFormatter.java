@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIAudit;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,12 +13,12 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIAuditFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIAudit audit = element.getAnnotation(AIAudit.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIAudit audit = element.annotation(AIAudit.class);
         if (audit == null) return;
         String[] checkFor = audit.checkFor();
         if (checkFor.length == 0) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String checkForJoined = String.join(", ", checkFor);
 
         switch (platform) {
@@ -48,7 +47,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("\n\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): check for ").append(checkForJoined).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): check for ").append(checkForJoined).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");

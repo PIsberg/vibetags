@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIPure;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIPureFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIPure pure = element.getAnnotation(AIPure.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIPure pure = element.annotation(AIPure.class);
         if (pure == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String reason = pure.reason();
         String summary = CommonFormatterHelper.withReason(
             "Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.", reason);

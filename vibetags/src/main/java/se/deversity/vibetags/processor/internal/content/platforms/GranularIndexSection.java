@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
 import java.util.Set;
-import javax.lang.model.element.Element;
-import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -19,7 +18,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * points at the scoped files for everything else via this index. When the sibling is <em>not</em>
  * active the aggregate renders in full, exactly as before.
  *
- * <p>The index path for each owner element is derived from {@link ElementNaming#granularQName} — the
+ * <p>The index path for each owner element is derived from {@code TaggedElement.granularQName()} — the
  * same transform {@code GranularRulesWriter} uses to name the files — so a pointer can never drift
  * from the file it references.
  */
@@ -96,13 +95,13 @@ final class GranularIndexSection {
     }
 
     /** Relative path to the scoped rule file for {@code owner} under {@code platform}'s granular directory. */
-    private static String scopedPath(Platform platform, Element owner, RenderingContext context) {
+    private static String scopedPath(Platform platform, TaggedElement owner, RenderingContext context) {
         // Name the file GranularRulesWriter actually wrote: the role-grouped stem when a
         // .vibetags-roles config routes this element, else the per-class qName. Resolving through
         // the same RoleConfig keeps the pointer from dangling to a file that was never written.
         String stem = context.roles() != null
             ? context.roles().granularStemFor(owner)
-            : ElementNaming.granularQName(owner);
+            : owner.granularQName();
         return scopedDir(platform) + "/" + stem + scopedSuffix(platform);
     }
 
@@ -112,13 +111,13 @@ final class GranularIndexSection {
      * no owners.
      */
     static void appendXmlIndex(StringBuilder sb, Platform platform, RenderingContext context) {
-        Set<Element> owners = context.granularOwners();
+        Set<TaggedElement> owners = context.granularOwners();
         if (owners.isEmpty()) {
             return;
         }
         sb.append("  <scoped_rules>\n");
         sb.append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>\n");
-        for (Element owner : owners) {
+        for (TaggedElement owner : owners) {
             sb.append("    <element path=\"").append(Escape.xml(owner.toString()))
               .append("\" rules=\"").append(Escape.xml(scopedPath(platform, owner, context))).append("\"/>\n");
         }
@@ -132,13 +131,13 @@ final class GranularIndexSection {
      * matching the convention of the other markdown renderers. Emits nothing when there are no owners.
      */
     static void appendMarkdownIndex(StringBuilder sb, Platform platform, RenderingContext context) {
-        Set<Element> owners = context.granularOwners();
+        Set<TaggedElement> owners = context.granularOwners();
         if (owners.isEmpty()) {
             return;
         }
         sb.append("\n## Scoped Rules Index\n");
         sb.append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:\n\n");
-        for (Element owner : owners) {
+        for (TaggedElement owner : owners) {
             sb.append("- `").append(owner.toString()).append("` → `").append(scopedPath(platform, owner, context)).append("`\n");
         }
     }

@@ -1,6 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
@@ -13,8 +13,8 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  */
 public final class PrAgentRenderer implements PlatformRenderer {
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        String block = GuardrailInstructionBlock.build(collector).strip();
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+        String block = GuardrailInstructionBlock.build(model).strip();
         String instructions = block.isBlank()
             ? "No VibeTags guardrails are currently declared."
             : "Enforce the following VibeTags guardrails. Flag any change that violates them:\n" + block;

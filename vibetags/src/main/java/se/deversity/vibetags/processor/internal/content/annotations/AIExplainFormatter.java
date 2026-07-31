@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIExplain;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIExplainFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIExplain explain = element.getAnnotation(AIExplain.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIExplain explain = element.annotation(AIExplain.class);
         if (explain == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         AIExplain.ComplexityLevel level = explain.value();
         String summary = "Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: " + level.name();
 

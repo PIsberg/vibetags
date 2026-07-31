@@ -5,10 +5,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AITestDriven;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -22,7 +21,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  * before.
  *
  * <p>The section wrapper tags and the trailing {@code <rule>} stay in {@link ClaudeRenderer};
- * this class only produces the inner body. Grouping and member order follow the collector's
+ * this class only produces the inner body. Grouping and member order follow the model's
  * insertion order, so the output is deterministic across recompiles.
  */
 final class ClaudeTestDrivenSection {
@@ -49,13 +48,13 @@ final class ClaudeTestDrivenSection {
      * value-identical elements exists) followed by individual stanzas for every remaining element —
      * to {@code sb}.
      *
-     * @param elements the {@code @AITestDriven} elements, in collector insertion order
+     * @param elements the {@code @AITestDriven} elements, in model insertion order
      * @param sb       the destination buffer
      */
-    static void render(Collection<Element> elements, StringBuilder sb) {
-        Map<Signature, List<Element>> groups = new LinkedHashMap<>();
-        for (Element e : elements) {
-            AITestDriven td = e.getAnnotation(AITestDriven.class);
+    static void render(Collection<TaggedElement> elements, StringBuilder sb) {
+        Map<Signature, List<TaggedElement>> groups = new LinkedHashMap<>();
+        for (TaggedElement e : elements) {
+            AITestDriven td = e.annotation(AITestDriven.class);
             if (td == null) {
                 continue;
             }
@@ -66,7 +65,7 @@ final class ClaudeTestDrivenSection {
         // iteration order) via the strict > comparison, keeping the choice deterministic.
         Signature defaultSig = null;
         int best = 0;
-        for (Map.Entry<Signature, List<Element>> entry : groups.entrySet()) {
+        for (Map.Entry<Signature, List<TaggedElement>> entry : groups.entrySet()) {
             if (entry.getValue().size() > best) {
                 best = entry.getValue().size();
                 defaultSig = entry.getKey();
@@ -78,8 +77,8 @@ final class ClaudeTestDrivenSection {
             appendDefaultBlock(defaultSig, groups.get(defaultSig), sb);
         }
 
-        for (Element e : elements) {
-            AITestDriven td = e.getAnnotation(AITestDriven.class);
+        for (TaggedElement e : elements) {
+            AITestDriven td = e.annotation(AITestDriven.class);
             if (td == null) {
                 continue;
             }
@@ -90,7 +89,7 @@ final class ClaudeTestDrivenSection {
         }
     }
 
-    private static void appendDefaultBlock(Signature sig, List<Element> members, StringBuilder sb) {
+    private static void appendDefaultBlock(Signature sig, List<TaggedElement> members, StringBuilder sb) {
         sb.append("    <test_driven_default coverage_goal=\"").append(sig.coverageGoal())
           .append("\" frameworks=\"").append(Escape.xml(sig.frameworks())).append('"');
 
@@ -106,7 +105,7 @@ final class ClaudeTestDrivenSection {
 
         sb.append("      <applies-to>\n");
         for (int i = 0; i < members.size(); i++) {
-            sb.append("        ").append(Escape.xml(ElementNaming.elementPath(members.get(i))));
+            sb.append("        ").append(Escape.xml(members.get(i).path()));
             if (i < members.size() - 1) {
                 sb.append(',');
             }
@@ -116,7 +115,7 @@ final class ClaudeTestDrivenSection {
         sb.append("    </test_driven_default>\n");
     }
 
-    private static Signature signature(Element e, AITestDriven td) {
+    private static Signature signature(TaggedElement e, AITestDriven td) {
         String loc = td.testLocation();
         LocationKind kind;
         String literal = "";
@@ -144,12 +143,12 @@ final class ClaudeTestDrivenSection {
     }
 
     /** True when {@code loc} is the Maven mirror-convention test path for a TYPE element. */
-    private static boolean isConventionPath(Element e, String loc) {
-        ElementKind kind = e.getKind();
+    private static boolean isConventionPath(TaggedElement e, String loc) {
+        ElementTag kind = e.kind();
         if (!kind.isClass() && !kind.isInterface()) {
             return false;
         }
-        String fqnPath = ElementNaming.elementPath(e).replace('.', '/');
+        String fqnPath = e.path().replace('.', '/');
         return loc.equals("src/test/java/" + fqnPath + "Test.java");
     }
 }

@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIGenerated;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -18,10 +17,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIGeneratedFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIGenerated generated = element.getAnnotation(AIGenerated.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIGenerated generated = element.annotation(AIGenerated.class);
         if (generated == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String from = generated.from();
         String regenerateWith = generated.regenerateWith();
         String editInstead = generated.editInstead();
@@ -60,7 +59,7 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Machine-generated from `").append(from).append("`.\n");

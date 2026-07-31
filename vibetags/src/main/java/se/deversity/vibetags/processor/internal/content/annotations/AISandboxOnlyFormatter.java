@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AISandboxOnly;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISandboxOnlyFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AISandboxOnly sandboxOnly = element.getAnnotation(AISandboxOnly.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AISandboxOnly sandboxOnly = element.annotation(AISandboxOnly.class);
         if (sandboxOnly == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String reason = sandboxOnly.reason();
         String summary = CommonFormatterHelper.withReason(
             "Strictly sandbox or test environment only. Production code must never import or invoke.", reason);

@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.GranularSections;
 
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import java.util.List;
@@ -34,7 +35,7 @@ class GranularSectionsTest {
         return e;
     }
 
-    private static Element field(Element owner, String simple) {
+    private static TaggedElement field(Element owner, String simple) {
         Element e = mock(Element.class);
         when(e.toString()).thenReturn(simple);
         when(e.getKind()).thenReturn(ElementKind.FIELD);
@@ -42,11 +43,11 @@ class GranularSectionsTest {
         Name name = mock(Name.class);
         when(name.toString()).thenReturn(simple);
         when(e.getSimpleName()).thenReturn(name);
-        return e;
+        return TaggedElements.tagged(e);
     }
 
-    private static GranularBody.Entry privacy(Element owner, Element element, String reason) {
-        return new GranularBody.Entry(owner, element, "PII / Privacy Guardrails",
+    private static GranularBody.Entry privacy(Element owner, TaggedElement element, String reason) {
+        return new GranularBody.Entry(TaggedElements.tagged(owner), element, "PII / Privacy Guardrails",
             List.of(PRIVACY_RULE, "- **Reason**: " + reason));
     }
 
@@ -57,7 +58,7 @@ class GranularSectionsTest {
     @Test
     void singleMemberStanza_rendersHistoricalFormatByteForByte() {
         Element owner = type("com.example.KeyBundle");
-        Element f = field(owner, "privateKey");
+        TaggedElement f = field(owner, "privateKey");
 
         String out = GranularSections.render(List.of(privacy(owner, f, "key material")), false);
 
@@ -69,9 +70,9 @@ class GranularSectionsTest {
     @Test
     void twoStanzasWithNothingInCommon_keepHistoricalFormat() {
         Element owner = type("com.example.Foo");
-        GranularBody.Entry a = new GranularBody.Entry(owner, field(owner, "a"), "Locked Status",
+        GranularBody.Entry a = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "a"), "Locked Status",
             List.of("- **Reason**: one"));
-        GranularBody.Entry b = new GranularBody.Entry(owner, field(owner, "b"), "Locked Status",
+        GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "b"), "Locked Status",
             List.of("- **Reason**: two"));
 
         String out = GranularSections.render(List.of(a, b), false);
@@ -104,8 +105,8 @@ class GranularSectionsTest {
     void stanzasThatAreEntirelyShared_collapseToAnAppliesToList() {
         Element owner = type("com.example.Calc");
         String pureRule = "- **Rule**: Must remain a pure function. Forbid state modifications and side effects.";
-        GranularBody.Entry a = new GranularBody.Entry(owner, field(owner, "add"), "Mathematical Purity", List.of(pureRule));
-        GranularBody.Entry b = new GranularBody.Entry(owner, field(owner, "mul"), "Mathematical Purity", List.of(pureRule));
+        GranularBody.Entry a = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "add"), "Mathematical Purity", List.of(pureRule));
+        GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "mul"), "Mathematical Purity", List.of(pureRule));
 
         String out = GranularSections.render(List.of(a, b), false);
 
@@ -118,9 +119,9 @@ class GranularSectionsTest {
         // @AIFeatureFlag puts its varying line first and the constant rule second.
         Element owner = type("com.example.Gate");
         String rule = "- **Rule**: This code is gated behind a feature flag. Preserve the flag check.";
-        GranularBody.Entry a = new GranularBody.Entry(owner, field(owner, "x"), "Feature Flag Gate",
+        GranularBody.Entry a = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "x"), "Feature Flag Gate",
             List.of("- **Flag**: 'alpha' (default: false)", rule));
-        GranularBody.Entry b = new GranularBody.Entry(owner, field(owner, "y"), "Feature Flag Gate",
+        GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "y"), "Feature Flag Gate",
             List.of("- **Flag**: 'beta' (default: true)", rule));
 
         String out = GranularSections.render(List.of(a, b), false);
@@ -137,7 +138,7 @@ class GranularSectionsTest {
         String out = GranularSections.render(List.of(
             privacy(owner, field(owner, "a"), "one"),
             privacy(owner, field(owner, "b"), "two"),
-            new GranularBody.Entry(owner, field(owner, "c"), "Locked Status", List.of("- **Reason**: solo"))), false);
+            new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "c"), "Locked Status", List.of("- **Reason**: solo"))), false);
 
         assertEquals(1, count(out, "Never log or expose runtime values"));
         assertTrue(out.contains("### Rules for field c\n- **Reason**: solo\n"),

@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIKeepInSync;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -18,10 +17,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIKeepInSyncFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIKeepInSync keepInSync = element.getAnnotation(AIKeepInSync.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIKeepInSync keepInSync = element.annotation(AIKeepInSync.class);
         if (keepInSync == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String mirrors = String.join(", ", keepInSync.mirrors());
         String reason = keepInSync.reason();
         String enforcedBy = keepInSync.enforcedBy();
@@ -63,7 +62,7 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Must stay in sync with**:\n");

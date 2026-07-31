@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIContract;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIContractFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIContract contract = element.getAnnotation(AIContract.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIContract contract = element.annotation(AIContract.class);
         if (contract == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String reason = contract.reason();
 
         switch (platform) {
@@ -42,7 +41,7 @@ public final class AIContractFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(reason).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(reason).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");

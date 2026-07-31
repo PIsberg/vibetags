@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ import se.deversity.vibetags.annotations.AITestDriven;
  */
 class ClaudeTestDrivenSectionTest {
 
-    private static String render(List<Element> elements) {
+    private static String render(List<TaggedElement> elements) {
         StringBuilder sb = new StringBuilder();
         ClaudeTestDrivenSection.render(elements, sb);
         return sb.toString();
@@ -31,7 +32,7 @@ class ClaudeTestDrivenSectionTest {
         return "src/test/java/" + fqn.replace('.', '/') + "Test.java";
     }
 
-    private static Element td(String fqn, ElementKind kind, int coverage, String mockPolicy,
+    private static TaggedElement td(String fqn, ElementKind kind, int coverage, String mockPolicy,
                               String testLocation, AITestDriven.Framework... frameworks) {
         Element e = mock(Element.class);
         when(e.toString()).thenReturn(fqn);
@@ -49,11 +50,11 @@ class ClaudeTestDrivenSectionTest {
             : frameworks;
         doReturn(fw).when(a).framework();
         when(e.getAnnotation(AITestDriven.class)).thenReturn(a);
-        return e;
+        return se.deversity.vibetags.processor.TaggedElements.tagged(e);
     }
 
     /** Convenience: a TYPE element with the default JUnit-5 framework and no explicit location. */
-    private static Element type(String fqn, int coverage) {
+    private static TaggedElement type(String fqn, int coverage) {
         return td(fqn, ElementKind.CLASS, coverage, "", "");
     }
 
@@ -184,7 +185,7 @@ class ClaudeTestDrivenSectionTest {
 
     @Test
     void render_isDeterministic() {
-        List<Element> elements = List.of(
+        List<TaggedElement> elements = List.of(
             type("com.example.A", 80),
             type("com.example.B", 80),
             type("com.example.Outlier", 95));

@@ -259,7 +259,7 @@ class GuardrailInstructionBlockTest {
     void build_everyAnnotationType_producesItsDistinctiveTag() {
         AnnotationCollector collector = buildFullCollector();
 
-        String output = GuardrailInstructionBlock.build(collector);
+        String output = GuardrailInstructionBlock.build(collector.model());
 
         for (Map.Entry<String, String> entry : tagsByType().entrySet()) {
             assertTrue(output.contains(entry.getValue()),
@@ -273,7 +273,7 @@ class GuardrailInstructionBlockTest {
     void lines_everyAnnotationType_isNonBlankAndTagged() {
         AnnotationCollector collector = buildFullCollector();
 
-        var lines = GuardrailInstructionBlock.lines(collector);
+        var lines = GuardrailInstructionBlock.lines(collector.model());
 
         assertTrue(lines.size() >= tagsByType().size(),
             "lines() must return at least one line per annotation type (" + tagsByType().size()

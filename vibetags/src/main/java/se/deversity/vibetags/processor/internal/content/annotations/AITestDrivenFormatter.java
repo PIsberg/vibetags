@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AITestDriven;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AITestDrivenFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AITestDriven td = element.getAnnotation(AITestDriven.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AITestDriven td = element.annotation(AITestDriven.class);
         if (td == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         int coverageGoal = td.coverageGoal();
         String testLocation = td.testLocation();
         String mockPolicy = td.mockPolicy();
@@ -64,7 +63,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append("\n");

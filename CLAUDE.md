@@ -61,9 +61,15 @@ kept here because breaking one of them fails silently:
 - **When a platform has both an aggregate and a granular directory opted in, the aggregate collapses
   to a scoped-rules index:** only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`,
   `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline. Gating is `GranularIndexSection.governingGranularKey`.
+- **The rendering layer must stay compiler-free.** `processor/internal/` talks to javac;
+  `processor/model/` is plain data (`GuardrailModel`, `TaggedElement`); `processor/internal/content/`
+  renders and must never import `javax.lang.model`, `javax.annotation.processing` or
+  `com.sun.source`. An `Element` is only valid while its round is live, and the parallel write phase
+  runs after the last one closes — `AnnotationCollector.model()` snapshots once, which is what makes
+  reading it afterwards safe. `ArchitectureRulesTest` enforces the direction.
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
-  annotation** touches a formatter + `FormatterRegistry`. Use the `add-platform` / `add-annotation`
-  skills rather than improvising.
+  annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
+  `add-platform` / `add-annotation` skills rather than improvising.
 
 This repo dogfoods the index: the block at the bottom of this file is a scoped-rules index, and the
 per-element detail lives in `.claude/rules/`, loaded on demand by glob.
