@@ -93,9 +93,8 @@ class RendererBranchCoverageTest {
     @Test
     void ignoreFileRenderer_withCursorIgnorePlatform_producesCursorName() {
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("cursor_ignore"));
-        String result = renderer.render(collector.model(), Platform.CURSOR_IGNORE, ctx);
+        String result = renderer.render(oneIgnoredElement().model(), Platform.CURSOR_IGNORE, ctx);
         assertTrue(result.contains("Cursor"), "CURSOR_IGNORE must produce 'Cursor' in output");
     }
 
@@ -103,12 +102,37 @@ class RendererBranchCoverageTest {
     void ignoreFileRenderer_withFirebasePlatform_producesDefaultName() {
         // Platform.FIREBASE is not in any specific case → default: return "AI Platform"
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
         RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("firebase"));
-        // Call with a platform that falls to default branch
-        String result = renderer.render(collector.model(), Platform.FIREBASE, ctx);
+        String result = renderer.render(oneIgnoredElement().model(), Platform.FIREBASE, ctx);
         assertTrue(result.contains("AI Platform"),
             "Default platform branch must produce 'AI Platform' in IgnoreFileRenderer");
+    }
+
+    /**
+     * A module with nothing to ignore emits nothing at all, so that its boilerplate header is not
+     * wrapped in module sub-markers and repeated once per module in a reactor's merged file.
+     */
+    @Test
+    void ignoreFileRenderer_withNothingIgnored_emitsNothing() {
+        IgnoreFileRenderer renderer = new IgnoreFileRenderer();
+        AnnotationCollector empty = new AnnotationCollector();
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("claude_ignore"));
+
+        String result = renderer.render(empty.model(), Platform.CLAUDE_IGNORE, ctx);
+
+        assertTrue(result.isEmpty(),
+            "a module with no @AIIgnore must contribute an empty body, not a lone header");
+    }
+
+    /** Collector holding a single {@code @AIIgnore} element, so the renderer has something to say. */
+    private static AnnotationCollector oneIgnoredElement() {
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        AIIgnore ignore = mock(AIIgnore.class);
+        when(ignore.reason()).thenReturn("generated");
+        register(re, AIIgnore.class, "com.ex.Ignored", ignore);
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.collect(re);
+        return collector;
     }
 
     // -----------------------------------------------------------------------

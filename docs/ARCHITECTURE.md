@@ -52,6 +52,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - [System Architecture](#system-architecture)
 - [Component Diagram](#component-diagram)
 - [Class Diagram](#class-diagram)
+- [Parsed diagrams (code-karta)](#parsed-diagrams-code-karta)
 - [Build Sequence](#build-sequence)
 - [Data Flow](#data-flow)
 - [Platform Output Formats](#platform-output-formats)
@@ -89,6 +90,35 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 ![Class Diagram](diagrams/class-diagram.png)
 
 *Figure 2: Class architecture showing annotation definitions and processor*
+
+### Parsed diagrams (code-karta)
+
+The PlantUML diagrams above are hand-drawn: they say what the design *intends*. The SVGs
+under [`diagrams/codekarta/`](diagrams/codekarta/) are parsed from the source by
+[code-karta](https://github.com/PIsberg/codekarta) and say what the code currently *is*.
+Keeping both is deliberate — when they disagree, that gap is real drift, and it is the kind
+nothing else in the build reports.
+
+| Diagram | Scope | What it answers |
+|---------|-------|-----------------|
+| [`codekarta/class-diagram.svg`](diagrams/codekarta/class-diagram.svg) | `processor` | How the orchestrator, the internals and the model relate |
+| [`codekarta/model/class-diagram.svg`](diagrams/codekarta/model/class-diagram.svg) | `processor.model` | The compiler-free data model the rendering layer reads |
+
+Regenerate with:
+
+```bash
+sh tools/generate-architecture-diagrams.sh
+```
+
+The CLI is resolved from Maven Central, so only the first run needs a network and nothing
+is vendored into the repository.
+
+Both diagrams are scoped to one package on purpose. A stitched call graph over
+`processor.internal` produced 986 nodes across roughly 36000×43700 pixels — technically a
+diagram, practically a data dump — and `--max-depth` does not help, because the fan-out is
+horizontal rather than deep. Scope the input instead. The script also pins `--layout elk`:
+the default engine lays every node of one BFS depth into a single unbounded row, which for
+this processor renders about 19500px wide against ELK's 2300px.
 
 **Key Components:**
 

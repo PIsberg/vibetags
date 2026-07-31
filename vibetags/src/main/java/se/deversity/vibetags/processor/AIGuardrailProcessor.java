@@ -353,39 +353,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Read all sidecars (this module + any siblings that have already compiled).
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
-        // The merge path also owns lean-index pointer substitution, so a root that opted into the
-        // lean index must take it even with a single sidecar — a reactor where one module holds all
-        // the annotations produces exactly one, and gating purely on size would silently ignore the
-        // opt-in — it would be read, reported as an active service, and then do nothing.
-        boolean multiModule = allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
-
-        // Merge per-service content: in multi-module builds, combine every sibling's contribution
-        // into the shared output files using module sub-markers.
-        final Map<String, String> effectiveContent;
-        if (multiModule) {
-            Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
-            for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
-                String service = entry.getKey();
-                if (!contentByService.containsKey(service)) continue;
-                Path filePath = entry.getValue();
-                String[] markers = GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString());
-                if (markers == null) continue; // JSON/TOML: keep current-module content as-is
-                boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
-                String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
-                if (!mergedBody.isBlank()) {
-                    merged.put(service, mergedBody);
-                }
-            }
-            effectiveContent = merged;
-        } else {
-            effectiveContent = contentByService;
-        }
+        final Map<String, String> effectiveContent =
+                mergeAcrossModules(contentByService, serviceFiles, allSidecars);
 
         Messager messager = getSafeMessager();
         messager.printMessage(Diagnostic.Kind.NOTE,
             "VibeTags: Generating files (v" + VERSION + ") for " + effectiveContent.size()
                 + " active services: " + String.join(", ", effectiveContent.keySet())
-                + (multiModule ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
+                + (isMultiModule(allSidecars) ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
 
         // Write the per-platform content files in parallel on a VibeTags-owned, bounded
         // ForkJoinPool — NOT the shared commonPool. The processor runs inside the consumer's
@@ -405,7 +380,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                                    Math.max(1, effectiveContent.size()));
         if (log != null && log.isDebugEnabled()) {
             log.debug("round.write files={} workers={} multiModule={} services={}",
-                effectiveContent.size(), parallelism, multiModule, effectiveContent.keySet());
+                effectiveContent.size(), parallelism, isMultiModule(allSidecars), effectiveContent.keySet());
         }
         java.util.concurrent.ForkJoinPool pool = new java.util.concurrent.ForkJoinPool(parallelism);
         try {
@@ -415,7 +390,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 Path filePath = serviceFiles.get(service);
                 boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
                 // hasNewRules: true if any module (not just this one) contributed to this service.
-                boolean anyContributed = multiModule
+                boolean anyContributed = isMultiModule(allSidecars)
                     ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
                     : collector.anyAnnotationsFound();
                 boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
@@ -520,33 +495,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
             }
         }
-        // CPD-OFF — intentional mirror of the merge block in generateFiles(): a check verdict
-        // is only trustworthy if it reproduces generation exactly, and generateFiles() is
-        // @AILocked (its step order is load-bearing), so the shared block cannot be extracted.
-        boolean multiModule = allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
-
-        final Map<String, String> effectiveContent;
-        if (multiModule) {
-            Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
-            for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
-                String service = entry.getKey();
-                if (!contentByService.containsKey(service)) continue;
-                // Path.getFileName() returns null only for root paths — guard for correctness.
-                Path fileName = entry.getValue().getFileName();
-                if (fileName == null) continue;
-                String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
-                if (markers == null) continue; // JSON/TOML: keep current-module content as-is
-                boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
-                String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
-                if (!mergedBody.isBlank()) {
-                    merged.put(service, mergedBody);
-                }
-            }
-            effectiveContent = merged;
-        } else {
-            effectiveContent = contentByService;
-        }
-        // CPD-ON
+        // A check verdict is only trustworthy if it reproduces generation exactly, which is why
+        // this calls the same function generateFiles() calls rather than mirroring its body.
+        final Map<String, String> effectiveContent =
+                mergeAcrossModules(contentByService, serviceFiles, allSidecars);
 
         // Dry-run writer: null messager (per-file "Updated" notes would be misleading here),
         // null cache (a verification verdict must come from real file compares, never the cache).
@@ -555,7 +507,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             String service = entry.getKey();
             Path filePath = serviceFiles.get(service);
             boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
-            boolean anyContributed = multiModule
+            boolean anyContributed = isMultiModule(allSidecars)
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
                 : collector.anyAnnotationsFound();
             checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
@@ -687,6 +639,54 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Messager getSafeMessager() {
         return processingEnv.getMessager();
+    }
+
+    /**
+     * Combines every sibling module's contribution into the shared output files.
+     *
+     * <p>Called by both {@code generateFiles} and {@code checkFiles}. It used to be a block copied
+     * into each, marked {@code CPD-OFF} and justified on the grounds that {@code generateFiles} is
+     * {@code @AILocked} so nothing could be lifted out of it. That reasoning does not survive
+     * contact: the lock is on the <em>step order</em> of {@code generateFiles}, and calling a pure
+     * function where the block used to sit preserves that order exactly. What the copy actually
+     * bought was drift — the check copy grew a null guard on {@code getFileName()} that the
+     * generate copy never got, so the two differed in precisely the way the comment promised they
+     * would not, and a check verdict is worthless the moment it stops reproducing generation.
+     *
+     * <p>Multi-module here means more than one sidecar <em>or</em> a reactor root that opted into
+     * the lean index: the merge path also owns pointer substitution, and a reactor where one module
+     * holds all the annotations produces exactly one sidecar, so gating purely on count would
+     * silently ignore the opt-in.
+     *
+     * @return the per-service content to write; {@code contentByService} unchanged when this is not
+     *         a multi-module build
+     */
+    static boolean isMultiModule(List<ModuleSidecar> allSidecars) {
+        return allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
+    }
+
+    static Map<String, String> mergeAcrossModules(Map<String, String> contentByService,
+                                                  Map<String, Path> serviceFiles,
+                                                  List<ModuleSidecar> allSidecars) {
+        if (!isMultiModule(allSidecars)) {
+            return contentByService;
+        }
+        Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
+        for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
+            String service = entry.getKey();
+            if (!contentByService.containsKey(service)) continue;
+            // Path.getFileName() returns null only for root paths — guard for correctness.
+            Path fileName = entry.getValue().getFileName();
+            if (fileName == null) continue;
+            String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
+            if (markers == null) continue; // JSON/TOML: keep current-module content as-is
+            boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
+            String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
+            if (!mergedBody.isBlank()) {
+                merged.put(service, mergedBody);
+            }
+        }
+        return merged;
     }
 
     /**
