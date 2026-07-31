@@ -18,6 +18,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   platforms use: the always-inline safety buckets stay, everything else moves to the scoped files.
   `gemini_instructions.md` is unaffected, and absent the new directory the output is byte-for-byte
   unchanged.
+- **`-Avibetags.module=<name>`** names the compiling module explicitly, for builds where it cannot be
+  read off the compiled sources. A build that has to fall back to a content hash while named sidecars
+  already exist now emits a `[WARNING]` naming both, instead of silently filing itself as a new
+  module. (#331)
+
+### Fixed
+- **The `test-compile` round no longer deletes a module's main-source guardrails (#330).** `compile`
+  and `test-compile` are two javac invocations over disjoint sources, and both mapped to one module
+  identity — so for any module with an annotated test class, the test round rewrote the module's whole
+  region from what it alone saw and orphan-cleaned every main-source rule file. In one 5-module
+  reactor a module went from 12 scoped rule files to 1, and `mvn compile` and `mvn test` produced
+  different `CLAUDE.md` files from identical sources. Silently: the build succeeded and the output
+  stayed well-formed. Each source set now owns its own sidecar (`.vibetags-mod-core__test`) but shares
+  the module's *region* id, so one module still renders as one `VIBETAGS-MODULE` region and a
+  single-module project with annotated tests keeps its historical sub-marker-free output. Every
+  sidecar records the granular stems it wrote, and each cleanup pass spares every other sidecar's —
+  which also stops one module from deleting another module's rule files in a shared scoped directory.
+  A module's own nested `CLAUDE.md` merges across its source sets the same way.
+- **Gradle identifies modules by name again, instead of appending a duplicate content-hash region
+  (#331).** VibeTags declares itself an `aggregating` incremental processor, so Gradle hands it a
+  wrapped `ProcessingEnvironment` — and `Trees.instance` accepts only javac's own. The Tree API was
+  therefore *never* available under Gradle, module resolution returned nothing for every module, and
+  they all collapsed onto the JVM working directory (`~/.gradle/workers`, under neither the module nor
+  the reactor). A dual-build project got a second complete set of regions under a hash id, restored on
+  every later build from a gitignored sidecar so `git checkout` could not fix it. Identity now falls
+  back to `Elements.getFileObjectOf` (Java 18+), which survives the wrapper, so Gradle and Maven agree
+  on module names and produce byte-identical output.
+- **The lean indexed reactor root keeps the always-on safety tier inline (#332).** The README promises
+  that when granular rules are on, the root keeps `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit` and `@AISecure` inline and indexes only the rest. In the reactor-lean layout
+  (`.vibetags-root-index` + per-module `.claude/rules/`) it kept *nothing*: every module's region
+  collapsed to a single pointer sentence, so a locked file's guardrail only loaded once the agent
+  opened the very file it protects — by which point it has become a comment. Each module now
+  contributes its safety digest inline, followed by the pointer; the verbose per-element tier still
+  lives only in the scoped files. A module with nothing in the safety tier contributes just the
+  pointer, so no empty shell appears. The context saving is largely preserved (one real reactor went
+  85 → 141 lines, against 537 for the fully merged root).
 
 ## [1.0.0-RC7] - 2026-07-29
 

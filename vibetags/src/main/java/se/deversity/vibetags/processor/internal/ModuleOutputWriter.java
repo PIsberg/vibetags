@@ -1,8 +1,12 @@
 package se.deversity.vibetags.processor.internal;
 
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.RoleConfig;
 
 import javax.annotation.processing.Messager;
@@ -17,8 +21,15 @@ import javax.tools.Diagnostic;
  * single-module pipeline ({@link ServiceRegistry} → {@link GuardrailContentBuilder} →
  * {@link GuardrailFileWriter} / {@link GranularRulesWriter}) against the module's own directory,
  * using only this compilation's annotations and the module directory's own file-existence opt-ins.
- * There is no sidecar and no cross-module merge — a module's file contains exactly that module's
- * guardrails. The reactor-root files and the sidecar aggregation are untouched and orthogonal.
+ * There is no cross-<em>module</em> merge — a module's file contains exactly that module's
+ * guardrails.
+ *
+ * <p>It does merge across <em>source sets</em>, though. A module is compiled once per source set,
+ * and a {@code test-compile} round cannot see any main source; writing this module's files from
+ * that round alone would delete every main-source guardrail it just wrote
+ * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>). Each source set
+ * persists its own sidecar, and the bodies of all sidecars sharing this module's region id are
+ * concatenated here, main first.
  *
  * <p>Because the content is built with the <em>module's</em> active-services set, the scoped-rules
  * index composes naturally: a module that opts into both its aggregate file and its granular
@@ -27,6 +38,21 @@ import javax.tools.Diagnostic;
 public final class ModuleOutputWriter {
 
     private ModuleOutputWriter() {}
+
+    /** Single-module / no-sidecar entry point: builds the module's content and writes it as-is. */
+    public static void write(Path moduleRoot,
+                             Path vibetagsRoot,
+                             Map<String, Path> moduleFiles,
+                             Set<String> moduleActive,
+                             AnnotationCollector collector,
+                             String projectName,
+                             String generatedHeader,
+                             RoleConfig roles,
+                             GuardrailFileWriter writer,
+                             Messager messager) {
+        write(moduleRoot, vibetagsRoot, moduleFiles, moduleActive, collector, null, projectName,
+            generatedHeader, roles, writer, messager, List.of(), null, null);
+    }
 
     /**
      * Writes {@code collector}'s guardrails to the opted-in files under {@code moduleRoot}.
@@ -40,19 +66,30 @@ public final class ModuleOutputWriter {
      *                       {@link MirrorWriter}: a module with no opt-in of its own can still have
      *                       guardrails another module asked to receive
      * @param collector      this compilation's annotated elements (module-scoped)
+     * @param prebuilt       the module-scoped content the caller already rendered (so it could put
+     *                       it in the sidecar); {@code null} to build it here
      * @param writer         the shared marker-aware, cache-backed file writer (dry-run in check mode)
      * @param messager       for a single summary note; may be a no-op in check mode
+     * @param sidecars       every known sidecar, for the cross-source-set merge and for cleanup
+     *                       exclusions; empty when there is no sidecar aggregation
+     * @param regionId       this module's region id, or {@code null} to skip the merge
+     * @param moduleId       this compilation's own sidecar id, excluded from the cleanup exclusions
+     *                       it contributes (they are already covered by what was just written)
      */
     public static void write(Path moduleRoot,
                              Path vibetagsRoot,
                              Map<String, Path> moduleFiles,
                              Set<String> moduleActive,
                              AnnotationCollector collector,
+                             GuardrailContentBuilder.@Nullable Result prebuilt,
                              String projectName,
                              String generatedHeader,
                              RoleConfig roles,
                              GuardrailFileWriter writer,
-                             Messager messager) {
+                             Messager messager,
+                             List<ModuleSidecar> sidecars,
+                             @Nullable String regionId,
+                             @Nullable String moduleId) {
         // Cross-module mirroring runs first and independently of this module's own opt-ins: a module
         // that contributes only to the reactor-root aggregate still has guardrails worth mirroring
         // into a test module that asked for them (issue #312).
@@ -63,8 +100,8 @@ public final class ModuleOutputWriter {
             return; // module is the root, or nothing opted in here
         }
 
-        GuardrailContentBuilder.Result built =
-            new GuardrailContentBuilder(collector, moduleActive, projectName, generatedHeader, roles).build();
+        GuardrailContentBuilder.Result built = prebuilt != null ? prebuilt
+            : new GuardrailContentBuilder(collector, moduleActive, projectName, generatedHeader, roles).build();
 
         boolean hasAnnotations = collector.anyAnnotationsFound();
         int written = 0;
@@ -74,18 +111,30 @@ public final class ModuleOutputWriter {
             if (filePath == null) {
                 continue;
             }
+            String content = entry.getValue();
+            if (regionId != null) {
+                // Every source set of this module contributed a body; concatenate them so a
+                // test-only round adds to the module's file instead of replacing it.
+                String merged = ModuleSidecar.mergeModuleBodies(service, sidecars, regionId);
+                if (!merged.isBlank()) {
+                    content = merged;
+                }
+            }
             // Ignore-files always overwrite; other files only carry the "hasNewRules" flag when this
             // module actually had annotations (mirrors the single-module guard in generateFiles()).
             boolean isIgnoreFile = service.endsWith("_ignore")
                 || "aider_ignore".equals(service) || "aiexclude".equals(service);
-            writer.writeFileIfChanged(filePath.toString(), entry.getValue(), hasAnnotations || isIgnoreFile);
+            writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
             written++;
         }
 
-        // Per-class granular rule files under the module directory; cleanup runs after write.
+        // Per-class granular rule files under the module directory; cleanup runs after write, and
+        // spares the stems other source sets of this same module recorded in their sidecars.
         GranularRulesWriter granular = new GranularRulesWriter(writer);
-        Set<String> writtenQNames = granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles);
-        granular.cleanupAll(moduleFiles, moduleActive, writtenQNames);
+        Set<String> keep = new LinkedHashSet<>(
+            granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles));
+        keep.addAll(ModuleSidecar.granularStemsFrom(sidecars, moduleId, regionId));
+        granular.cleanupAll(moduleFiles, moduleActive, keep);
 
         if (written > 0 && messager != null) {
             messager.printMessage(Diagnostic.Kind.NOTE,

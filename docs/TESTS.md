@@ -23,6 +23,8 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
 | `MultiModuleAggregationTest` | Sidecar aggregation and sub-marker output across multiple modules |
 | `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
+| `SourceSetIsolationEndToEndTest` | `compile` and `test-compile` are separate rounds over the same module: neither erases the other's guardrails or rule files, two source sets still render as one region, and a module's own aggregate merges across them (#330) |
+| `WrappedProcessingEnvironmentTest` | Module identity survives a wrapped `ProcessingEnvironment` (Gradle's incremental decorator, where the javac Tree API is unavailable) instead of collapsing onto one content hash (#331) |
 | `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
 | `NewAnnotationsV3DefinitionTest` | Definition-level tests for `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
 | `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |
@@ -73,6 +75,7 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |
 | `CopilotGranularEndToEndTest` | `.github/instructions/*.instructions.md` granular rule generation for GitHub Copilot, including `applyTo:` frontmatter |
 | `GranularIndexEndToEndTest` | Scoped-rules index: dual opt-in (aggregate + granular) collapses the aggregate to a locked/core/safety summary plus a per-element index; single opt-in stays full; reuse renderers (Cline) stay full while `CLAUDE.local.md` mirrors `CLAUDE.md` |
+| `LeanIndexedRootEndToEndTest` | Lean indexed reactor root (`.vibetags-root-index`): modules are linked rather than embedded, the safety tier stays inline per module (#332), aggregates without a granular sibling keep the full merge, and the no-opt-in shape is unchanged |
 | `PerModuleOutputEndToEndTest` | Per-module (nested) output: a module that opts into its own `CLAUDE.md`/granular dir gets a module-scoped file (only its own guardrails), the reactor root still merges all modules, the module index composes, and a non-opted module gets nothing |
 | `RoleConfigTest` | `.vibetags-roles` parsing, glob→regex (stars/braces), first-match routing, exact-FQN matchers, package/directory globs, content hash |
 | `RoleBasedGranularEndToEndTest` | Role/topic grouping: matching classes grouped into `<role>` files with multi-glob frontmatter; unmatched class keeps its per-class file; FQN override; first-match-wins; roles-off stays per-class; per-module `.vibetags-roles` |

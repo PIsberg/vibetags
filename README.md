@@ -512,6 +512,7 @@ The layers never duplicate content:
 
 - **Root + granular together** → the root `CLAUDE.md` keeps only the always-on safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest with a one-line **index** pointing at the scoped `.claude/rules/*.md` files. Verbose per-element detail (context, contracts, performance, …) is pulled in only when Claude opens that file — keeping your always-loaded context lean and the high-value rules undiluted.
 - **Per-module `CLAUDE.md`** → holds only *that module's* guardrails, so Claude gets focused rules while working in the module, while the repo-root `CLAUDE.md` still carries the whole picture.
+- **Indexed reactor root** (`.vibetags-root-index` + per-module `.claude/rules/`) → the same split, one level up: each module's region in the root `CLAUDE.md` keeps that module's safety guardrails inline and points at `module-a/.claude/rules/` for everything else. A module with nothing in the safety tier contributes only the pointer.
 
 ### Grouping rules by role/topic (`.vibetags-roles`)
 

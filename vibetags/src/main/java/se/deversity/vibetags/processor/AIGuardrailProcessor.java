@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
@@ -51,7 +52,7 @@ import java.util.stream.Collectors;
     note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
 )
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
-@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache", "vibetags.check"})
+@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache", "vibetags.check", "vibetags.module"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -109,15 +110,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
     /**
-     * Root directory of the module being compiled, resolved from the sources of the first
-     * non-empty processing round (see {@link ModuleRootResolver}). {@code null} until resolved —
-     * and stays {@code null} under non-javac compilers or in-memory compilation, in which case
-     * the JVM working directory is used as before. This is the module identity for multi-module
-     * sidecar aggregation; the working directory is NOT usable for that, because reactor builds
-     * compile every module in-process with the working directory pinned at the reactor root
-     * (issue #278: last-writer-wins on shared guardrail files).
+     * Module root directory <em>and</em> source set of the compilation being processed, resolved
+     * from the sources of the first non-empty processing round (see {@link ModuleRootResolver}).
+     * {@code null} until resolved — and stays {@code null} when no compiler API exposes the source
+     * file or the sources are in-memory, in which case the JVM working directory is used as before.
+     *
+     * <p>This is the module identity for multi-module sidecar aggregation; the working directory is
+     * NOT usable for that, because reactor builds compile every module in-process with the working
+     * directory pinned at the reactor root (issue #278: last-writer-wins on shared guardrail files).
+     * The source set half keeps {@code compile} and {@code test-compile} — two javac invocations
+     * over disjoint sources of the same module — in separate sidecars (issue #330).
      */
-    private @Nullable Path moduleRoot;
+    private @Nullable ModuleIdentity moduleIdentity;
+
+    /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
+    private @Nullable String moduleIdOverride;
 
     private final AnnotationCollector collector = new AnnotationCollector();
     // Only the three sets actually read in generateFiles() are kept as fields.
@@ -158,6 +165,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
 
+        // Explicit module name. Only needed when the build cannot be read off the sources — for
+        // instance a compiler that exposes neither the Tree API nor Elements.getFileObjectOf, or a
+        // layout with no build file above the sources. Named so it reads next to -Avibetags.root.
+        String moduleOption = options.get("vibetags.module");
+        this.moduleIdOverride = (moduleOption != null && !moduleOption.isBlank())
+            ? ModuleSidecar.sanitizeId(moduleOption.trim()) : null;
+
         String logPath = options.get("vibetags.log.path");
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
@@ -179,7 +193,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Reset for potential reuse (tests reuse the processor instance via init).
         this.processed.set(false);
-        this.moduleRoot = null;
+        this.moduleIdentity = null;
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
     }
@@ -210,8 +224,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             // Resolve the module root from this round's sources (first success wins). Must run
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
-            if (moduleRoot == null) {
-                moduleRoot = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+            if (moduleIdentity == null) {
+                moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
             }
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
@@ -256,7 +270,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * correct for single-module builds and non-javac compilers).
      */
     private Path compilationRoot() {
-        return moduleRoot != null ? moduleRoot : Paths.get("").toAbsolutePath();
+        return moduleIdentity != null ? moduleIdentity.root() : Paths.get("").toAbsolutePath();
     }
 
     @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")
@@ -269,22 +283,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
         Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
 
-        // Compute module identity for multi-module aggregation.
+        // Compute module identity for multi-module aggregation. regionId names the module's region
+        // in the shared files; moduleId additionally carries the source set, so this compilation
+        // owns its own sidecar file and cannot overwrite a sibling source set's (issue #330).
         Path compilationRoot = compilationRoot();
-        String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
+        String regionId = moduleIdOverride != null
+            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
+        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
+        String moduleId = ModuleSidecar.scopedModuleId(regionId, sourceSet);
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
+        warnIfModuleUnidentifiable(compilationRoot, regionId);
 
         // Per-module (nested) output: resolve this module's own opt-in files quietly. Non-opted
         // modules are the common case in a reactor and must not spam diagnostics. Empty for
         // single-module builds where the compilation root IS the VibeTags root.
         Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
-        Set<String> moduleActiveServices = (moduleRoot == null || compilationRoot.equals(root))
+        Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
             ? java.util.Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
 
         // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.
         RoleConfig rootRoles = RoleConfig.load(root);
-        RoleConfig moduleRoles = (moduleRoot != null && !compilationRoot.equals(root))
+        RoleConfig moduleRoles = (moduleIdentity != null && !compilationRoot.equals(root))
             ? RoleConfig.load(compilationRoot) : null;
 
         // Top-level fingerprint short-circuit: if neither the annotation set, active services, nor
@@ -326,17 +346,37 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Map<String, String> contentByService = built.contentByService;
         this.elementRules = built.elementRules;
 
+        // This module's own (nested) output, rendered here rather than inside ModuleOutputWriter so
+        // it can be persisted alongside the root bodies below — that is what lets a module's own
+        // CLAUDE.md survive a test-compile round that saw none of its main sources (issue #330).
+        GuardrailContentBuilder.Result moduleBuilt = moduleActiveServices.isEmpty() ? null
+            : new GuardrailContentBuilder(collector, moduleActiveServices, projectName, GENERATED_HEADER, moduleRoles).build();
+
         logSummary(activeServices);
 
         // --- Multi-module aggregation ---
         // Write this module's rendered bodies to its sidecar file so siblings can pick them up.
-        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
+        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
         contentByService.forEach((service, body) -> {
             Path filePath = serviceFiles.get(service);
             if (filePath != null && GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString()) != null) {
                 mySidecar.putBody(service, body);
             }
         });
+        if (moduleBuilt != null) {
+            moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
+        }
+        // Granular filenames go in before they are written: siblings read them as cleanup
+        // exclusions, so no round deletes rule files it simply could not see (issue #330).
+        Set<String> myStems = new java.util.LinkedHashSet<>(
+            GranularRulesWriter.stemsFor(built.elementRules, rootRoles));
+        if (moduleBuilt != null) {
+            myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, moduleRoles));
+        }
+        mySidecar.setGranularStems(myStems);
+        // Safety-tier digest for the lean indexed reactor root: without it the root keeps NOTHING
+        // of a module inline, and @AILocked/@AICore/@AIAudit stop being always-on (issue #332).
+        buildSafetyDigests(activeServices, rootRoles).forEach(mySidecar::putIndexDigest);
         // Only persist the sidecar when this compilation actually saw annotations. Maven runs
         // the processor again for test-compile (and other source sets) under the SAME module
         // identity but usually with zero annotations — an unconditional save would overwrite the
@@ -360,7 +400,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         messager.printMessage(Diagnostic.Kind.NOTE,
             "VibeTags: Generating files (v" + VERSION + ") for " + effectiveContent.size()
                 + " active services: " + String.join(", ", effectiveContent.keySet())
-                + (isMultiModule(allSidecars) ? " [multi-module: " + allSidecars.size() + " modules]" : ""));
+                + (isMultiModule(allSidecars)
+                    ? " [multi-module: " + ModuleSidecar.regionCount(allSidecars) + " modules]" : ""));
 
         // Write the per-platform content files in parallel on a VibeTags-owned, bounded
         // ForkJoinPool — NOT the shared commonPool. The processor runs inside the consumer's
@@ -414,15 +455,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (log != null) log.info("{} — {}", entry[0], entry[1]);
         }
 
-        // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans.
-        Set<String> writtenQNames = granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles);
+        // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans. The exclusion
+        // list carries every OTHER sidecar's stems as well, so this round leaves alone the rule
+        // files written by another module or another source set of this one (issue #330).
+        Set<String> writtenQNames = new java.util.LinkedHashSet<>(
+            granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles));
+        writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
         granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
         // Per-module (nested) output — write this module's own guardrails into its own directory.
-        // Independent of the sidecar aggregation above (which serves only the shared root files):
-        // no sidecar, no cross-module merge, module content only. No-op for single-module builds.
+        // Independent of the cross-module aggregation above (which serves only the shared root
+        // files): module content only, merged across this module's source sets. No-op for
+        // single-module builds.
         ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
-            collector, projectName, GENERATED_HEADER, moduleRoles, this.fileWriter, messager);
+            collector, moduleBuilt, projectName, GENERATED_HEADER, moduleRoles, this.fileWriter,
+            messager, allSidecars, regionId, moduleId);
 
         checkOrphanedAnnotations(messager, activeServices,
             !lockedElements.isEmpty(),
@@ -467,9 +514,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // this compilation saw no annotations, mirroring the conditional save in generateFiles()
         // (a test-compile pass must not evict the main compile's contribution from the merge).
         Path compilationRoot = compilationRoot();
-        String moduleId = ModuleSidecar.computeModuleId(compilationRoot, root);
+        String regionId = moduleIdOverride != null
+            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
+        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
+        String moduleId = ModuleSidecar.scopedModuleId(regionId, sourceSet);
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
-        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath);
+
+        // This module's own opt-ins and content, resolved here rather than just before the nested
+        // write, because the simulated sidecar below has to carry them (as generateFiles does).
+        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
+        Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
+            ? java.util.Set.of()
+            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
+        RoleConfig checkModuleRoles = (moduleIdentity != null && !compilationRoot.equals(root))
+            ? RoleConfig.load(compilationRoot) : null;
+        GuardrailContentBuilder.Result moduleBuilt = moduleActiveServices.isEmpty() ? null
+            : new GuardrailContentBuilder(collector, moduleActiveServices, projectName, GENERATED_HEADER, checkModuleRoles).build();
+
+        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
         contentByService.forEach((service, body) -> {
             Path filePath = serviceFiles.get(service);
             // Path.getFileName() returns null only for root paths — guard for correctness.
@@ -478,6 +540,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 mySidecar.putBody(service, body);
             }
         });
+        if (moduleBuilt != null) {
+            moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
+        }
+        Set<String> myStems = new java.util.LinkedHashSet<>(
+            GranularRulesWriter.stemsFor(built.elementRules, checkRootRoles));
+        if (moduleBuilt != null) {
+            myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, checkModuleRoles));
+        }
+        mySidecar.setGranularStems(myStems);
+        buildSafetyDigests(activeServices, checkRootRoles).forEach(mySidecar::putIndexDigest);
         List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.readAll(root));
         if (collector.anyAnnotationsFound()) {
             boolean replaced = false;
@@ -494,6 +566,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 allSidecars.add(mySidecar);
                 allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
             }
+            // The substituted sidecar is fresh out of memory and carries none of the lean-index
+            // state readAll() derives from disk, so re-derive it for the whole list. Without this
+            // a lean indexed reactor embeds this module's body where generation would have linked
+            // it, and check mode reports drift that a real compile would never produce.
+            ModuleSidecar.applyRootIndexModeTo(root, allSidecars);
         }
         // A check verdict is only trustworthy if it reproduces generation exactly, which is why
         // this calls the same function generateFiles() calls rather than mirroring its body.
@@ -513,19 +590,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
         }
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
-        Set<String> writtenQNames = checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles);
+        Set<String> writtenQNames = new java.util.LinkedHashSet<>(
+            checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles));
+        writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
         checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
 
         // Per-module (nested) output — dry-run so check mode verifies module-scoped files too.
         // Null messager: the summary note would be misleading in a verification pass.
-        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
-        Set<String> moduleActiveServices = (moduleRoot == null || compilationRoot.equals(root))
-            ? java.util.Set.of()
-            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
-        RoleConfig checkModuleRoles = (moduleRoot != null && !compilationRoot.equals(root))
-            ? RoleConfig.load(compilationRoot) : null;
         ModuleOutputWriter.write(compilationRoot, root, moduleServiceFiles, moduleActiveServices,
-            collector, projectName, GENERATED_HEADER, checkModuleRoles, checkWriter, null);
+            collector, moduleBuilt, projectName, GENERATED_HEADER, checkModuleRoles, checkWriter,
+            null, allSidecars, regionId, moduleId);
 
         Messager messager = getSafeMessager();
         List<String> drift = checkWriter.dryRunChanges();
@@ -552,6 +626,82 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
         }
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Renders each indexable aggregate's safety tier on its own, for the lean indexed reactor root.
+     *
+     * <p>The root cannot carry this module's scoped-rules index — those files live under the module
+     * directory — so it gets a pointer sentence instead. That alone moved {@code @AILocked},
+     * {@code @AICore} and {@code @AIAudit} out of always-on context and into "loads when you open
+     * the very file it protects", which is the point at which a guardrail has become a comment
+     * (issue #332). This digest is what the root keeps inline beside the pointer.
+     *
+     * <p>Empty unless the root opted into the index, this is a non-root module, and the module has
+     * something in the safety tier at all — an empty digest would be a bare container element.
+     */
+    private Map<String, String> buildSafetyDigests(Set<String> activeServices, RoleConfig roles) {
+        if (!activeServices.contains("root_index") || moduleIdentity == null
+                || compilationRoot().equals(root) || !hasSafetyTierAnnotations()) {
+            return Map.of();
+        }
+        Map<String, String> digests = new java.util.LinkedHashMap<>();
+        for (String aggregate : ModuleSidecar.INDEXABLE_AGGREGATES) {
+            if (!activeServices.contains(aggregate)) continue;
+            // Rendering with the granular sibling "active" is what selects each renderer's indexed
+            // variant (safety inline, detail elsewhere); safetyDigest() then drops the index list.
+            Set<String> digestServices = new java.util.LinkedHashSet<>();
+            digestServices.add(aggregate);
+            digestServices.add(aggregate + "_granular");
+            String body = new GuardrailContentBuilder(collector, digestServices, projectName,
+                    GENERATED_HEADER, roles).safetyDigest().build().contentByService.get(aggregate);
+            if (body != null && !body.isBlank()) {
+                digests.put(aggregate, body);
+            }
+        }
+        return digests;
+    }
+
+    /** True when anything in the always-on safety tier was annotated this compilation. */
+    private boolean hasSafetyTierAnnotations() {
+        return !collector.locked().isEmpty()
+            || !collector.core().isEmpty()
+            || !collector.privacy().isEmpty()
+            || !collector.ignore().isEmpty()
+            || !collector.audit().isEmpty()
+            || !collector.secure().isEmpty();
+    }
+
+    /**
+     * Warns when the module could only be identified by a content hash while the project already
+     * has named regions. An unrecognised id in a file that already carries named ones is far more
+     * likely to be a mis-identified module than a genuinely new one, and the symptom — a duplicate
+     * set of regions that survives {@code git checkout} because it is restored from a gitignored
+     * sidecar — does not point at its cause (issue #331).
+     */
+    private void warnIfModuleUnidentifiable(Path compilationRoot, String moduleId) {
+        // -Avibetags.module is the documented remedy; having taken it, the user does not need the
+        // lecture.
+        if (moduleIdOverride != null) return;
+        if (!ModuleSidecar.isUnidentifiableModule(compilationRoot, root)) return;
+        List<String> named = new java.util.ArrayList<>();
+        for (ModuleSidecar existing : ModuleSidecar.readAll(root)) {
+            if (!existing.getModuleId().equals(moduleId)) {
+                named.add(existing.getModuleId());
+            }
+        }
+        if (named.isEmpty()) return;
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: could not identify the compiling module (its sources are not under "
+                + root + "), so it is filed under the content hash '" + moduleId
+                + "' alongside the existing module(s) " + String.join(", ", named)
+                + ". If that hash is really one of them under another name, the shared guardrail"
+                + " files will gain a duplicate set of regions. Pass -Avibetags.module=<name> to"
+                + " name it, or -Avibetags.root so the module resolves under the root.");
+        if (log != null) {
+            log.warn("module.unidentified id={} root={} compilationRoot={} existing={}",
+                moduleId, root, compilationRoot, named);
+        }
     }
 
     private void logSummary(Set<String> activeServices) {
@@ -662,6 +812,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *         a multi-module build
      */
     static boolean isMultiModule(List<ModuleSidecar> allSidecars) {
+        // Counts sidecar FILES, because this gates the merge, and two source sets of one module are
+        // two sidecars whose bodies still have to be combined — otherwise the test-compile round
+        // writes its own content over the main round's (issue #330). Whether the merged output
+        // gains VIBETAGS-MODULE sub-markers is the separate question mergeFor() answers per region,
+        // so a lone module compiled twice keeps its historical sub-marker-free shape.
         return allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
     }
 

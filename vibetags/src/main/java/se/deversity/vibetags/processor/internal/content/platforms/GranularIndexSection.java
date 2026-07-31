@@ -112,7 +112,7 @@ final class GranularIndexSection {
      */
     static void appendXmlIndex(StringBuilder sb, Platform platform, RenderingContext context) {
         Set<TaggedElement> owners = context.granularOwners();
-        if (owners.isEmpty()) {
+        if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
         sb.append("  <scoped_rules>\n");
@@ -132,7 +132,7 @@ final class GranularIndexSection {
      */
     static void appendMarkdownIndex(StringBuilder sb, Platform platform, RenderingContext context) {
         Set<TaggedElement> owners = context.granularOwners();
-        if (owners.isEmpty()) {
+        if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
         sb.append("\n## Scoped Rules Index\n");

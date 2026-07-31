@@ -14,8 +14,10 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -26,6 +28,14 @@ import java.util.stream.Stream;
  * output that spans the entire project, avoiding the last-writer-wins overwrite problem.
  *
  * <p>File pattern: {@code <root>/.vibetags-mod-<moduleId>}
+ *
+ * <p><strong>Module id vs. region id.</strong> A module is compiled once per <em>source set</em> —
+ * Maven's {@code compile} and {@code test-compile} are two javac invocations that see disjoint
+ * sources. Each gets its own sidecar file ({@code .vibetags-mod-core}, {@code
+ * .vibetags-mod-core__test}) so neither can overwrite the other's contribution
+ * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>), but both carry the
+ * same <em>region</em> id and are merged back into one {@code VIBETAGS-MODULE} region, so the
+ * shared guardrail files still show one region per module.
  *
  * <p>Staleness: a sidecar whose {@code modulePath} no longer resolves to an existing directory
  * under {@code root} is automatically deleted by {@link #readAll(Path)} and excluded from the
@@ -51,11 +61,31 @@ public final class ModuleSidecar {
      *   <li>2 — identical file layout; module identity now derived from the compiled sources
      *       (see {@code ModuleRootResolver}). The bump exists purely to invalidate v1 files.</li>
      * </ul>
+     *
+     * <p>Still 2 as of the source-set split (issue #330) and the safety-digest addition (issue
+     * #332): both only add <em>keys</em> to the same {@code key=value} layout. A sidecar written
+     * by an older processor simply carries none of them and degrades to the previous behaviour,
+     * and an older processor reading a newer sidecar sees the extra keys as service bodies whose
+     * names ({@code ~...}) match no service and are therefore never rendered. Bumping would have
+     * discarded every sibling's contribution on the first mixed-version build for no gain.
      */
     static final int FORMAT_VERSION = 2;
     private static final String KEY_FORMAT_VERSION = "# version";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
+    private static final String KEY_REGION_ID = "regionId";
+
+    /** Reserved body-key prefix; never a service key, so older readers ignore these entries. */
+    private static final String RESERVED_PREFIX = "~";
+    /** Key holding the granular rule stems this module+source-set wrote (newline separated). */
+    private static final String KEY_GRANULAR_STEMS = "~granular";
+    /** Key prefix for a module's own (nested) per-service body. */
+    private static final String KEY_MODULE_BODY_PREFIX = "~mod~";
+    /** Key prefix for the safety-tier digest used by the lean indexed reactor root. */
+    private static final String KEY_INDEX_DIGEST_PREFIX = "~idx~";
+
+    /** Separator between a module id and its non-primary source set. */
+    static final String SOURCE_SET_SEPARATOR = "__";
 
     private static final int MULTI_MODULE_THRESHOLD = 2;
 
@@ -67,7 +97,24 @@ public final class ModuleSidecar {
 
     private final String moduleId;
     private final String modulePath;
+    private final String regionId;
     private final Map<String, String> bodies = new LinkedHashMap<>();
+
+    /** This module+source-set's own nested output bodies (service key → rendered body). */
+    private final Map<String, String> moduleBodies = new LinkedHashMap<>();
+
+    /**
+     * Safety-tier-only renderings of the aggregate services, kept inline in the lean indexed
+     * reactor root next to the pointer (issue #332). Empty unless the root opted into the index.
+     */
+    private final Map<String, String> indexDigests = new LinkedHashMap<>();
+
+    /**
+     * Granular rule stems (filename minus extension) this module+source-set wrote. Sibling
+     * compilations read them so orphan cleanup never deletes a file it simply could not see —
+     * neither another module's, nor another source set's (issue #330).
+     */
+    private final Set<String> granularStems = new LinkedHashSet<>();
 
     // --- Lean indexed-root state (transient; NEVER persisted by save(), so the on-disk sidecar
     // format is unchanged). Populated by readAll() only when the reactor root opts into the lean
@@ -91,8 +138,17 @@ public final class ModuleSidecar {
      *                   (e.g. {@code "module-graph"}); {@code ""} for the root module
      */
     public ModuleSidecar(String moduleId, String modulePath) {
+        this(moduleId, modulePath, moduleId);
+    }
+
+    /**
+     * @param regionId the id under which this sidecar's body is merged into the shared files.
+     *                 Several sidecars (one per source set) share one region id.
+     */
+    public ModuleSidecar(String moduleId, String modulePath, String regionId) {
         this.moduleId = moduleId;
         this.modulePath = modulePath;
+        this.regionId = regionId;
     }
 
     /** Stores the rendered body for {@code serviceKey} if non-blank. */
@@ -102,8 +158,34 @@ public final class ModuleSidecar {
         }
     }
 
+    /** Stores this module's own (nested output) rendered body for {@code serviceKey} if non-blank. */
+    public void putModuleBody(String serviceKey, String body) {
+        if (body != null && !body.isBlank()) {
+            moduleBodies.put(serviceKey, body);
+        }
+    }
+
+    /** Stores the safety-tier digest kept inline beside the lean root's pointer for this module. */
+    public void putIndexDigest(String serviceKey, String body) {
+        if (body != null && !body.isBlank()) {
+            indexDigests.put(serviceKey, body);
+        }
+    }
+
+    /** Records the granular rule stems this module+source-set wrote this run. */
+    public void setGranularStems(Set<String> stems) {
+        granularStems.clear();
+        if (stems != null) {
+            granularStems.addAll(stems);
+        }
+    }
+
     public String getModuleId() { return moduleId; }
+    public String getModulePath() { return modulePath; }
+    public String getRegionId() { return regionId; }
     public Map<String, String> getBodies() { return Collections.unmodifiableMap(bodies); }
+    public Map<String, String> getModuleBodies() { return Collections.unmodifiableMap(moduleBodies); }
+    public Set<String> getGranularStems() { return Collections.unmodifiableSet(granularStems); }
 
     /** Returns true when this sidecar has at least one non-empty body. */
     public boolean hasContent() { return !bodies.isEmpty(); }
@@ -121,10 +203,18 @@ public final class ModuleSidecar {
         sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n');
         sb.append(KEY_MODULE_ID).append('=').append(moduleId).append('\n');
         sb.append(KEY_MODULE_PATH).append('=').append(modulePath).append('\n');
+        sb.append(KEY_REGION_ID).append('=').append(regionId).append('\n');
         for (Map.Entry<String, String> entry : bodies.entrySet()) {
-            String encoded = Base64.getEncoder().encodeToString(
-                    entry.getValue().getBytes(StandardCharsets.UTF_8));
-            sb.append(entry.getKey()).append('=').append(encoded).append('\n');
+            appendEncoded(sb, entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, String> entry : moduleBodies.entrySet()) {
+            appendEncoded(sb, KEY_MODULE_BODY_PREFIX + entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, String> entry : indexDigests.entrySet()) {
+            appendEncoded(sb, KEY_INDEX_DIGEST_PREFIX + entry.getKey(), entry.getValue());
+        }
+        if (!granularStems.isEmpty()) {
+            appendEncoded(sb, KEY_GRANULAR_STEMS, String.join("\n", granularStems));
         }
 
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
@@ -133,6 +223,12 @@ public final class ModuleSidecar {
         } catch (java.nio.file.AtomicMoveNotSupportedException e) {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    private static void appendEncoded(StringBuilder sb, String key, String value) {
+        sb.append(key).append('=')
+          .append(Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8)))
+          .append('\n');
     }
 
     /**
@@ -154,8 +250,12 @@ public final class ModuleSidecar {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
             String modulePath = "";
+            String regionId = null;
             boolean sawCurrentVersion = false;
             Map<String, String> bodies = new LinkedHashMap<>();
+            Map<String, String> moduleBodies = new LinkedHashMap<>();
+            Map<String, String> indexDigests = new LinkedHashMap<>();
+            Set<String> granularStems = new LinkedHashSet<>();
             for (String line : lines) {
                 if (line.startsWith("#")) {
                     // Enforce the format-version header: refuse to (mis-)parse future formats,
@@ -181,18 +281,39 @@ public final class ModuleSidecar {
                     moduleId = val;
                 } else if (KEY_MODULE_PATH.equals(key)) {
                     modulePath = val;
+                } else if (KEY_REGION_ID.equals(key)) {
+                    regionId = val;
+                } else if (KEY_GRANULAR_STEMS.equals(key)) {
+                    for (String stem : decode(val).split("\n")) {
+                        if (!stem.isBlank()) granularStems.add(stem);
+                    }
+                } else if (key.startsWith(KEY_MODULE_BODY_PREFIX)) {
+                    moduleBodies.put(key.substring(KEY_MODULE_BODY_PREFIX.length()), decode(val));
+                } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
+                    indexDigests.put(key.substring(KEY_INDEX_DIGEST_PREFIX.length()), decode(val));
+                } else if (key.startsWith(RESERVED_PREFIX)) {
+                    continue; // reserved key from a newer processor — ignore, never render
                 } else {
-                    bodies.put(key,
-                        new String(Base64.getDecoder().decode(val), StandardCharsets.UTF_8));
+                    bodies.put(key, decode(val));
                 }
             }
             if (moduleId == null || !sawCurrentVersion) return null;
-            ModuleSidecar s = new ModuleSidecar(moduleId, modulePath);
+            // Sidecars written before the source-set split carry no regionId; their module id IS
+            // the region id, which is exactly what they meant.
+            ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
+                    regionId != null && !regionId.isBlank() ? regionId : moduleId);
             s.bodies.putAll(bodies);
+            s.moduleBodies.putAll(moduleBodies);
+            s.indexDigests.putAll(indexDigests);
+            s.granularStems.addAll(granularStems);
             return s;
         } catch (IOException | IllegalArgumentException e) {
             return null;
         }
+    }
+
+    private static String decode(String base64) {
+        return new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8);
     }
 
     /**
@@ -245,7 +366,7 @@ public final class ModuleSidecar {
                       result.add(s);
                   });
         } catch (IOException ignored) {}
-        applyRootIndexMode(root, result);
+        applyRootIndexModeTo(root, result);
         return result;
     }
 
@@ -254,7 +375,7 @@ public final class ModuleSidecar {
     // -----------------------------------------------------------------------
 
     /** Aggregate services that have a glob-scoped granular sibling and can therefore be linked. */
-    private static final String[] INDEXABLE_AGGREGATES = {"claude", "cursor", "windsurf", "copilot"};
+    public static final List<String> INDEXABLE_AGGREGATES = List.of("claude", "cursor", "windsurf", "copilot");
 
     /**
      * When the reactor root opted into the lean index ({@code .vibetags-root-index} present), flags
@@ -263,7 +384,7 @@ public final class ModuleSidecar {
      * filesystem — the module's own opt-in files determine where its guardrails live — keeping
      * {@code mergeFor} disk-free and its @AIContract signature untouched.
      */
-    private static void applyRootIndexMode(Path root, List<ModuleSidecar> sidecars) {
+    public static void applyRootIndexModeTo(Path root, List<ModuleSidecar> sidecars) {
         if (!Files.exists(root.resolve(".vibetags-root-index"))) return;
         for (ModuleSidecar s : sidecars) {
             s.rootIndexMode = true;
@@ -390,6 +511,9 @@ public final class ModuleSidecar {
      *       each module's guardrails and humans can trace which module set which rule.</li>
      * </ul>
      *
+     * <p>Sidecars are grouped by <em>region</em> first, so a module's several source sets share one
+     * sub-marker pair instead of masquerading as separate modules (issue #330).
+     *
      * @param serviceKey  e.g. {@code "cursor"}, {@code "claude"}
      * @param sidecars    all known module sidecars (current + siblings)
      * @param htmlMarkers {@code true} for {@code <!-- -->} style, {@code false} for {@code #} style
@@ -399,18 +523,30 @@ public final class ModuleSidecar {
         boolean indexMode = isRootIndexMode(sidecars);
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
         boolean anyPointer = false;
-        for (ModuleSidecar s : sidecars) {
-            String body = s.bodies.get(serviceKey);
-            if (body == null || body.isBlank()) continue;
-            // In lean-index mode a module that maintains its own per-module output for this service
-            // contributes a short pointer instead of its full body (see applyRootIndexMode()).
-            String pointer = indexMode ? s.indexPointers.get(serviceKey) : null;
+        for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
+            List<String> parts = new ArrayList<>();
+            String pointer = null;
+            for (ModuleSidecar s : region.getValue()) {
+                String body = s.bodies.get(serviceKey);
+                if (body == null || body.isBlank()) continue;
+                // In lean-index mode a module that maintains its own per-module output for this
+                // service contributes its safety-tier digest plus a short pointer instead of its
+                // full body (see applyRootIndexMode() and issue #332).
+                String p = indexMode ? s.indexPointers.get(serviceKey) : null;
+                if (p != null) {
+                    pointer = p;
+                    String digest = s.indexDigests.get(serviceKey);
+                    if (digest != null && !digest.isBlank()) parts.add(digest.strip());
+                } else {
+                    parts.add(body.strip());
+                }
+            }
             if (pointer != null) {
                 anyPointer = true;
-                contributions.add(new AbstractMap.SimpleEntry<>(s.moduleId, pointer));
-            } else {
-                contributions.add(new AbstractMap.SimpleEntry<>(s.moduleId, body.strip()));
+                parts.add(pointer); // one pointer per module, after every source set's digest
             }
+            if (parts.isEmpty()) continue;
+            contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), String.join("\n\n", parts)));
         }
         if (contributions.isEmpty()) return "";
         // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
@@ -435,6 +571,64 @@ public final class ModuleSidecar {
             merged.append('\n');
         }
         return merged.toString().strip();
+    }
+
+    /**
+     * Merges the <em>module's own</em> nested output for {@code serviceKey} across the source sets
+     * of one region, main first (sidecars arrive sorted by filename, and the main source set's id
+     * carries no suffix). Returns {@code ""} when no sidecar in the region has a body — the caller
+     * then falls back to this compilation's freshly built content.
+     */
+    public static String mergeModuleBodies(String serviceKey, List<ModuleSidecar> sidecars, String regionId) {
+        List<String> parts = new ArrayList<>();
+        for (ModuleSidecar s : sidecars) {
+            if (!s.regionId.equals(regionId)) continue;
+            String body = s.moduleBodies.get(serviceKey);
+            if (body != null && !body.isBlank()) parts.add(body.strip());
+        }
+        return String.join("\n\n", parts);
+    }
+
+    /**
+     * Granular rule stems recorded by every sidecar except {@code excludeModuleId} (this
+     * compilation's own, which the caller already knows). Used as extra cleanup exclusions so a
+     * round never deletes rule files belonging to a module or source set it could not see.
+     *
+     * @param sameRegionOnly when non-null, only sidecars carrying that region id are considered —
+     *                       the right scope for a module's own {@code .claude/rules} directory
+     */
+    public static Set<String> granularStemsFrom(List<ModuleSidecar> sidecars,
+                                                String excludeModuleId,
+                                                @Nullable String sameRegionOnly) {
+        Set<String> stems = new LinkedHashSet<>();
+        for (ModuleSidecar s : sidecars) {
+            if (s.moduleId.equals(excludeModuleId)) continue;
+            if (sameRegionOnly != null && !s.regionId.equals(sameRegionOnly)) continue;
+            stems.addAll(s.granularStems);
+        }
+        return stems;
+    }
+
+    /** Sidecars grouped by region id, preserving the (filename-sorted) encounter order. */
+    private static Map<String, List<ModuleSidecar>> groupByRegion(List<ModuleSidecar> sidecars) {
+        Map<String, List<ModuleSidecar>> byRegion = new LinkedHashMap<>();
+        for (ModuleSidecar s : sidecars) {
+            byRegion.computeIfAbsent(s.regionId, k -> new ArrayList<>()).add(s);
+        }
+        return byRegion;
+    }
+
+    /**
+     * Number of distinct modules represented by {@code sidecars}. Counts <em>regions</em>, not
+     * files: a single-module project whose test sources are annotated too has two sidecars but is
+     * still one module, and must keep its historical sub-marker-free output.
+     */
+    public static int regionCount(List<ModuleSidecar> sidecars) {
+        Set<String> regions = new LinkedHashSet<>();
+        for (ModuleSidecar s : sidecars) {
+            regions.add(s.regionId);
+        }
+        return regions.size();
     }
 
     // -----------------------------------------------------------------------
@@ -465,11 +659,45 @@ public final class ModuleSidecar {
             if (rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString())) {
                 return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
             }
-            return relStr.replace(java.io.File.separatorChar, '_').replaceAll("[^a-zA-Z0-9._-]", "_");
+            return sanitizeId(relStr.replace(java.io.File.separatorChar, '_'));
         } catch (IllegalArgumentException e) {
             // Different filesystem roots (e.g., Windows different drives)
             return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
         }
+    }
+
+    /**
+     * True when {@code computeModuleId} could only produce a content hash — the compilation root
+     * is not under the VibeTags root, so nothing about the module's location identifies it. The
+     * caller warns, because an unrecognised id in a file that already carries named regions is far
+     * more likely to be a mis-identified module than a genuinely new one (issue #331).
+     */
+    public static boolean isUnidentifiableModule(Path compilationRoot, Path vibetagsRoot) {
+        if (compilationRoot.equals(vibetagsRoot)) return false;
+        try {
+            Path rel = vibetagsRoot.relativize(compilationRoot);
+            return rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString());
+        } catch (IllegalArgumentException e) {
+            return true;
+        }
+    }
+
+    /** Strips anything that has no business in a filename. */
+    public static String sanitizeId(String raw) {
+        return raw.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /**
+     * The sidecar id for one source set of a module: the module id itself for the primary source
+     * set, and {@code <moduleId>__<sourceSet>} for any other. Keeping them in separate files is
+     * what stops the {@code test-compile} round from overwriting what {@code compile} wrote
+     * (issue #330); they are merged back under one region id when the shared files are written.
+     */
+    public static String scopedModuleId(String moduleId, String sourceSet) {
+        if (sourceSet == null || sourceSet.isBlank() || ModuleIdentity.MAIN.equals(sourceSet)) {
+            return moduleId;
+        }
+        return moduleId + SOURCE_SET_SEPARATOR + sanitizeId(sourceSet);
     }
 
     /**

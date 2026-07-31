@@ -11,6 +11,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 |---|---|---|
 | `vibetags.project` | `"This Project"` | Sets the `# H1` project name in llms.txt and llms-full.txt |
 | `vibetags.root` | JVM working directory | Override the output directory for all generated files |
+| `vibetags.module` | resolved from the sources | Name this module explicitly in multi-module output. Only needed when the module cannot be read off the compiled sources (no build file above them, or a compiler exposing neither the Tree API nor `Elements.getFileObjectOf`) — the processor warns when it has to fall back to a content hash |
 | `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
 | `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
 | `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |

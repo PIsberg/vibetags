@@ -21,6 +21,7 @@ public final class GuardrailContentBuilder {
     private final String projectName;
     private final String generatedHeader;
     private final RoleConfig roles;
+    private boolean safetyDigest;
 
     public GuardrailContentBuilder(AnnotationCollector collector,
                                    Set<String> activeServices,
@@ -41,6 +42,15 @@ public final class GuardrailContentBuilder {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
         this.roles = roles;
+    }
+
+    /**
+     * Renders the safety tier only, with no scoped-rules index — the shape a module contributes to
+     * a lean indexed reactor root (issue #332). Fluent so the ordinary call sites are untouched.
+     */
+    public GuardrailContentBuilder safetyDigest() {
+        this.safetyDigest = true;
+        return this;
     }
 
     /**
@@ -75,6 +85,9 @@ public final class GuardrailContentBuilder {
 
         RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
                 estimatedContentSize, elementRules.keySet(), roles);
+        if (safetyDigest) {
+            context = context.asSafetyDigest();
+        }
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
 
         // Render each active service (excluding granular directories and special-case exclusions)

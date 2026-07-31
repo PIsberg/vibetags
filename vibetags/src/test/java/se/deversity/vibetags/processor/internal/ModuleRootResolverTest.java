@@ -60,6 +60,26 @@ class ModuleRootResolverTest {
     }
 
     @Test
+    void sourceSetOf_readsTheSegmentAfterSrc(@TempDir Path tmp) {
+        Path module = tmp.resolve("module-core");
+        assertEquals("main", ModuleRootResolver.sourceSetOf(module, module.resolve("src/main/java/com/example")));
+        assertEquals("test", ModuleRootResolver.sourceSetOf(module, module.resolve("src/test/java/com/example")));
+        // Gradle's extra source sets are first-class, not special-cased against a fixed list.
+        assertEquals("integrationTest",
+            ModuleRootResolver.sourceSetOf(module, module.resolve("src/integrationTest/java")));
+    }
+
+    @Test
+    void sourceSetOf_offConventionLayout_returnsNull(@TempDir Path tmp) {
+        Path module = tmp.resolve("module-core");
+        // Generated sources live outside src/ — the caller then falls back to "main", preserving
+        // the behaviour of every project that does not follow the convention.
+        assertNull(ModuleRootResolver.sourceSetOf(module,
+            module.resolve("target/generated-sources/annotations/com/example")));
+        assertNull(ModuleRootResolver.sourceSetOf(module, module.resolve("src")));
+    }
+
+    @Test
     void nearestBuildFileAncestor_buildFileIsDirectory_notTreatedAsMarker(@TempDir Path tmp) throws IOException {
         // A DIRECTORY named pom.xml must not mark a module root (isRegularFile check).
         Path odd = tmp.resolve("odd");
