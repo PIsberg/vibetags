@@ -142,6 +142,52 @@ class LeanIndexedRootEndToEndTest {
         assertTrue(claude.contains("com.example.cli.KartaCli"), "without opt-in, root embeds module-cli fully");
     }
 
+    /**
+     * Regression: the opt-in must engage when only ONE module contributes a sidecar.
+     *
+     * <p>A module writes a sidecar only when its compilation actually saw annotations, so a reactor
+     * whose annotations all live in one module produces exactly one. The merge path — which owns
+     * pointer substitution — used to be gated on {@code allSidecars.size() > 1}, so for those
+     * projects {@code .vibetags-root-index} was read, logged as an active service, and then had no
+     * effect at all. Real-world case: async-test-lib, where only the library module is annotated
+     * and the agent/analysis modules are not.
+     */
+    @Test
+    void indexedRoot_collapsesWhenOnlyOneModuleContributes() throws IOException {
+        setUpIndexedReactor();
+        // module-cli is part of the reactor but has no annotated sources, so it writes no sidecar.
+        compileModule("module-core", "com.example.core.IrNode", CORE_SOURCE);
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"));
+        assertTrue(claude.contains("module-core/.claude/rules/"),
+            "the sole contributing module must still be linked, not embedded");
+        assertFalse(claude.contains("com.example.core.IrNode"),
+            "the lean root must not embed the sole module's guardrails verbatim");
+        assertTrue(claude.contains("<!-- VIBETAGS-MODULE: module-core -->"),
+            "the pointer keeps its owning-module sub-marker even when it is the only one");
+
+        // The module's own scoped rules remain the source of truth.
+        assertTrue(moduleRulesContain(reactorRoot.resolve("module-core/.claude/rules"), "Core IR node"),
+            "module-core's own scoped rules must still carry its @AILocked guardrail");
+    }
+
+    /**
+     * The single-sidecar case with NO opt-in must keep the historical shape: one contribution is
+     * returned verbatim and without sub-markers, exactly as a single-module project always was.
+     */
+    @Test
+    void singleModuleWithoutOptIn_staysVerbatimAndUnmarked() throws IOException {
+        Files.createDirectories(reactorRoot.resolve("module-core").resolve(".claude/rules"));
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        compileModule("module-core", "com.example.core.IrNode", CORE_SOURCE);
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"));
+        assertTrue(claude.contains("com.example.core.IrNode"),
+            "without the opt-in a lone module is embedded as before");
+        assertFalse(claude.contains("<!-- VIBETAGS-MODULE:"),
+            "a lone contribution must not gain module sub-markers");
+    }
+
     private static boolean moduleRulesContain(Path rulesDir, String needle) throws IOException {
         if (!Files.isDirectory(rulesDir)) return false;
         try (Stream<Path> files = Files.walk(rulesDir)) {

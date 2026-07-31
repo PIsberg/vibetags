@@ -281,8 +281,16 @@ public final class ModuleSidecar {
         }
     }
 
-    /** True when at least one sidecar carries the reactor-root lean-index opt-in. */
-    private static boolean isRootIndexMode(List<ModuleSidecar> sidecars) {
+    /**
+     * True when at least one sidecar carries the reactor-root lean-index opt-in.
+     *
+     * <p>Public because the merge path is otherwise gated on there being more than one sidecar, and
+     * a reactor can legitimately have exactly one: a module contributes a sidecar only when it has
+     * annotations, so a project where a single module holds all of them produces one. Without this
+     * the opt-in would be read, reported as an active service, and then silently skipped — see
+     * {@code AIGuardrailProcessor.generateFiles}.
+     */
+    public static boolean isRootIndexMode(List<ModuleSidecar> sidecars) {
         for (ModuleSidecar s : sidecars) {
             if (s.rootIndexMode) return true;
         }
