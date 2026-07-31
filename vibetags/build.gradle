@@ -80,18 +80,18 @@ dependencies {
     api 'se.deversity.vibetags:vibetags-annotations:1.0.0-RC7'
 
     // JSpecify null annotations (@NullMarked, @Nullable, @NonNull)
-    implementation 'org.jspecify:jspecify:1.0.0'
+    implementation 'org.jspecify:jspecify:1.0.1'
 
     // Logging: SLF4J API + Logback file appender for vibetags.log
     implementation 'org.slf4j:slf4j-api:2.0.18'
-    implementation 'ch.qos.logback:logback-classic:1.5.37'
+    implementation 'ch.qos.logback:logback-classic:1.6.1'
 
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.1'
-    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.6.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
+    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.0'
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 
 tasks.withType(JavaCompile).configureEach {

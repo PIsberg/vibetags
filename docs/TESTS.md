@@ -25,6 +25,10 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
 | `SourceSetIsolationEndToEndTest` | `compile` and `test-compile` are separate rounds over the same module: neither erases the other's guardrails or rule files, two source sets still render as one region, and a module's own aggregate merges across them (#330) |
 | `WrappedProcessingEnvironmentTest` | Module identity survives a wrapped `ProcessingEnvironment` (Gradle's incremental decorator, where the javac Tree API is unavailable) instead of collapsing onto one content hash (#331) |
+| `DestructiveRewriteWarningTest` | The diagnostics that make a silently-shrinking guardrail file visible: a wholesale element replacement, and a sweep that removes more than it writes — and, equally important, silence on ordinary work |
+| `DetachedModuleWarningTest` | A module compiling as its own root while a Maven `<module>`/Gradle `include` above declares it (#296), and the guards that keep a nested standalone project quiet |
+| `IndexedRootCopilotEndToEndTest` | Indexed root with Copilot's aggregate and granular directory at the ROOT (#319): collapse, cross-module survival of the shared granular directory, and no empty heading per module |
+| `EnforcingModeEndToEndTest` | Opt-in enforcement (#284): baseline recording, signature-change failure, silence when not asked for, unrecorded-baseline warning, and the refusal of families it cannot prove |
 | `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
 | `NewAnnotationsV3DefinitionTest` | Definition-level tests for `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
 | `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |

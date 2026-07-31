@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.DestructiveRewriteWarner;
 import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
+import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
@@ -54,7 +55,9 @@ import java.util.stream.Collectors;
     note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
 )
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
-@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level", "vibetags.cache", "vibetags.check", "vibetags.module"})
+@SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level",
+                   "vibetags.cache", "vibetags.check", "vibetags.module",
+                   "vibetags.enforce", "vibetags.baseline.update"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -128,6 +131,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
 
+    /**
+     * Guardrail families the build enforces against {@code .vibetags-baseline}
+     * ({@code -Avibetags.enforce}). Empty — the default — leaves every guardrail advisory, which is
+     * the whole product's posture; enforcement is something a team opts into per family (#284).
+     */
+    private Set<String> enforceFamilies = Set.of();
+
+    /** {@code -Avibetags.baseline.update=true}: record the current shapes instead of checking them. */
+    private boolean baselineUpdate;
+
     private final AnnotationCollector collector = new AnnotationCollector();
     // Only the three sets actually read in generateFiles() are kept as fields.
     // The rest (contextElements, draftElements, privacyElements, coreElements,
@@ -179,6 +192,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
         this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
+        this.baselineUpdate = "true".equalsIgnoreCase(options.getOrDefault("vibetags.baseline.update", "false"));
+        this.enforceFamilies = new GuardrailEnforcer(messager, log).parseFamilies(options.get("vibetags.enforce"));
         // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
@@ -214,6 +229,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // compareAndSet guarantees exactly one thread enters generateFiles() even if
                 // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
                 if (processed.compareAndSet(false, true)) {
+                    // Enforcement runs BEFORE generation, and outside generateFiles(), for two
+                    // reasons: generateFiles() has a fingerprint short-circuit that would let an
+                    // unchanged-inputs build skip the check silently, and its step order is locked.
+                    enforceGuardrails();
                     if (checkMode) {
                         checkFiles();
                     } else {
@@ -677,6 +696,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return digests;
+    }
+
+    /**
+     * Runs the opt-in enforcing mode (issue #284). A no-op unless {@code -Avibetags.enforce} names
+     * at least one family, so the advisory default is completely untouched.
+     */
+    private void enforceGuardrails() {
+        if (enforceFamilies.isEmpty() && !baselineUpdate) {
+            return;
+        }
+        GuardrailEnforcer enforcer = new GuardrailEnforcer(getSafeMessager(), log);
+        Set<String> families = enforceFamilies.isEmpty()
+            // -Avibetags.baseline.update on its own means "record everything enforceable", so a
+            // first-time adopter does not have to name the families twice.
+            ? enforcer.parseFamilies(GuardrailEnforcer.ALL)
+            : enforceFamilies;
+        Path compilationRoot = compilationRoot();
+        String regionId = moduleIdOverride != null
+            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
+        String moduleId = ModuleSidecar.scopedModuleId(regionId,
+            moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN);
+        enforcer.enforce(collector.model(), families, root, moduleId, baselineUpdate);
     }
 
     /** Reports rounds that remove guardrails rather than add them (see the class javadoc there). */

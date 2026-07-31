@@ -22,6 +22,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   read off the compiled sources. A build that has to fall back to a content hash while named sidecars
   already exist now emits a `[WARNING]` naming both, instead of silently filing itself as a new
   module. (#331)
+- **Opt-in enforcing mode (`-Avibetags.enforce`) (#284).** Guardrails stay advisory by default —
+  that is the product's posture and it is unchanged. For the families whose promise the processor can
+  *prove* from the javac element model, naming them turns "the AI was told not to" into "the build
+  will not let it": `locked`, `contract` and `publicapi` are checked against a committed
+  `.vibetags-baseline`, recorded with `-Avibetags.baseline.update=true`. Signatures are stored in
+  full and sorted, so the approval shows up as a reviewable diff rather than a hash. Method bodies,
+  comments, formatting and private members are invisible to it, so reformatting a locked file is not
+  a violation; changing a contract-frozen parameter type is. `@AICallersOnly`, `@AIStrictClasspath`,
+  `@AIThreadSafe` and `@AITestDriven` are *not* enforceable — they need call-graph or body analysis a
+  processor cannot do portably — and naming one is reported rather than silently ignored. The
+  baseline is keyed by module id, so a reactor's modules merge into it instead of overwriting each
+  other. Enforcement runs before generation, so the fingerprint short-circuit cannot skip it.
+- **Warnings on destructive rewrites.** Every multi-module defect VibeTags has shipped failed the
+  same way — well-formed output, green build, guardrails quietly gone. Two diagnostics now make that
+  class of failure announce itself: a module whose recorded elements are replaced by a *disjoint*
+  set, and a round that removes more scoped rule files than it writes. Both are deliberately narrow —
+  editing an annotation, or deleting one of many, trips neither — because a warning that fires on
+  ordinary work is one people configure away. Every removal is also a NOTE naming what went.
+- **A module that compiles as its own root now says so (#296).** A module that does not inherit
+  `-Avibetags.root` — most often because it overrides the compiler plugin's `compilerArgs` or
+  `annotationProcessorPaths` — generates a complete, correct set of files into its own directory and
+  contributes nothing to the reactor, with no NOTE and no WARNING. When an ancestor's build
+  definition *declares this directory as one of its modules* (a Maven `<module>` entry or a Gradle
+  `include`), that is now a `[WARNING]` naming the reactor root and the option to set. Gated on the
+  build declaring the relationship, so a standalone project nested inside another repository is
+  never told it is detached.
 
 ### Fixed
 - **The `test-compile` round no longer deletes a module's main-source guardrails (#330).** `compile`
@@ -55,6 +81,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lives only in the scoped files. A module with nothing in the safety tier contributes just the
   pointer, so no empty shell appears. The context saving is largely preserved (one real reactor went
   85 → 141 lines, against 537 for the fully merged root).
+- **The lean indexed root no longer bloats `.github/copilot-instructions.md` (#319).** Two things
+  were wrong where a reactor keeps Copilot's aggregate *and* its granular directory at the root while
+  each module keeps its own `.claude/rules/`. The shared `.github/instructions/` only ever retained
+  the last module's files, because cleanup deleted every rule it had not written itself — fixed by
+  the same cross-module exclusion as #330. And every module's contribution repeated its preamble
+  including an empty "Locked Files" heading, so a file whose entire purpose is to be a lean index
+  grew on a version bump. Indexed output now omits the locked section (and Claude's
+  `<locked_files/>`) when nothing is locked. Full, non-indexed output is byte-for-byte unchanged.
+  `example-multimodule-indexed/` now carries this layout so CI covers it.
 
 ## [1.0.0-RC7] - 2026-07-29
 
