@@ -226,12 +226,15 @@ public final class GranularRulesWriter {
      * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
      * (the per-class qNames and role stems just written this round).
      */
-    public void cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
+    public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
+        Set<String> removed = new LinkedHashSet<>();
         for (GranularFormat f : FORMATS) {
             if (activeServices.contains(f.serviceKey)) {
-                fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames);
+                removed.addAll(
+                    fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames));
             }
         }
+        return removed;
     }
 
     /**

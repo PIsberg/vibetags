@@ -83,6 +83,8 @@ public final class ModuleSidecar {
     private static final String KEY_MODULE_BODY_PREFIX = "~mod~";
     /** Key prefix for the safety-tier digest used by the lean indexed reactor root. */
     private static final String KEY_INDEX_DIGEST_PREFIX = "~idx~";
+    /** Key holding the annotated element ids this module+source-set contributed. */
+    private static final String KEY_ELEMENT_IDS = "~elements";
 
     /** Separator between a module id and its non-primary source set. */
     static final String SOURCE_SET_SEPARATOR = "__";
@@ -115,6 +117,15 @@ public final class ModuleSidecar {
      * neither another module's, nor another source set's (issue #330).
      */
     private final Set<String> granularStems = new LinkedHashSet<>();
+
+    /**
+     * Every annotated element this module+source-set contributed, by stable id. Unlike
+     * {@link #granularStems} this is populated whether or not a granular service is active, because
+     * it answers a different question: what did this module record last time? A round whose element
+     * set shares nothing with the previous one is replacing a module's guardrails, not editing them
+     * (see {@code DestructiveRewriteWarner}).
+     */
+    private final Set<String> elementIds = new LinkedHashSet<>();
 
     // --- Lean indexed-root state (transient; NEVER persisted by save(), so the on-disk sidecar
     // format is unchanged). Populated by readAll() only when the reactor root opts into the lean
@@ -180,12 +191,21 @@ public final class ModuleSidecar {
         }
     }
 
+    /** Records the annotated element ids this module+source-set contributed this run. */
+    public void setElementIds(Set<String> ids) {
+        elementIds.clear();
+        if (ids != null) {
+            elementIds.addAll(ids);
+        }
+    }
+
     public String getModuleId() { return moduleId; }
     public String getModulePath() { return modulePath; }
     public String getRegionId() { return regionId; }
     public Map<String, String> getBodies() { return Collections.unmodifiableMap(bodies); }
     public Map<String, String> getModuleBodies() { return Collections.unmodifiableMap(moduleBodies); }
     public Set<String> getGranularStems() { return Collections.unmodifiableSet(granularStems); }
+    public Set<String> getElementIds() { return Collections.unmodifiableSet(elementIds); }
 
     /** Returns true when this sidecar has at least one non-empty body. */
     public boolean hasContent() { return !bodies.isEmpty(); }
@@ -215,6 +235,9 @@ public final class ModuleSidecar {
         }
         if (!granularStems.isEmpty()) {
             appendEncoded(sb, KEY_GRANULAR_STEMS, String.join("\n", granularStems));
+        }
+        if (!elementIds.isEmpty()) {
+            appendEncoded(sb, KEY_ELEMENT_IDS, String.join("\n", elementIds));
         }
 
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
@@ -256,6 +279,7 @@ public final class ModuleSidecar {
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
             Set<String> granularStems = new LinkedHashSet<>();
+            Set<String> elementIds = new LinkedHashSet<>();
             for (String line : lines) {
                 if (line.startsWith("#")) {
                     // Enforce the format-version header: refuse to (mis-)parse future formats,
@@ -287,6 +311,10 @@ public final class ModuleSidecar {
                     for (String stem : decode(val).split("\n")) {
                         if (!stem.isBlank()) granularStems.add(stem);
                     }
+                } else if (KEY_ELEMENT_IDS.equals(key)) {
+                    for (String id : decode(val).split("\n")) {
+                        if (!id.isBlank()) elementIds.add(id);
+                    }
                 } else if (key.startsWith(KEY_MODULE_BODY_PREFIX)) {
                     moduleBodies.put(key.substring(KEY_MODULE_BODY_PREFIX.length()), decode(val));
                 } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
@@ -306,10 +334,26 @@ public final class ModuleSidecar {
             s.moduleBodies.putAll(moduleBodies);
             s.indexDigests.putAll(indexDigests);
             s.granularStems.addAll(granularStems);
+            s.elementIds.addAll(elementIds);
             return s;
         } catch (IOException | IllegalArgumentException e) {
             return null;
         }
+    }
+
+    /**
+     * Loads the sidecar previously persisted for {@code moduleId}, or {@code null} when there is
+     * none (or it is unreadable). Lets a compilation see what it recorded last time <em>before</em>
+     * it overwrites it — the only way to notice that a round is replacing a module's guardrails
+     * wholesale rather than updating them.
+     */
+    public static @Nullable ModuleSidecar loadFor(Path root, String moduleId) {
+        Path path = root.resolve(SIDECAR_PREFIX + moduleId);
+        if (!Files.isRegularFile(path)) {
+            return null;
+        }
+        ModuleSidecar loaded = load(path);
+        return loaded == FUTURE_VERSION ? null : loaded;
     }
 
     private static String decode(String base64) {

@@ -67,7 +67,7 @@ public final class GeminiRenderer implements PlatformRenderer {
         if (GranularIndexSection.indexActive(platform, context)) {
             // Both the aggregate and .gemini/rules/ are opted in, so only the always-loaded
             // safety buckets stay inline and every other bucket moves to the scoped files (#320).
-            AnnotationSections.renderLockedPreamble(sb, model, platform, context.getGeneratedHeader());
+            AnnotationSections.renderIndexedPreamble(sb, model, platform, context.getGeneratedHeader());
             AnnotationSections.renderInlineSafetySections(sb, model, platform);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
             return sb.toString();

@@ -117,6 +117,25 @@ public final class GuardrailModel {
     }
 
     /**
+     * Every annotated element, deduplicated, identified by the same stable name the granular rule
+     * files are named after.
+     *
+     * <p>Persisted per module so the next compilation can tell "this module's annotations changed"
+     * from "this compilation could not see this module's sources" — the difference between an edit
+     * and the silent guardrail loss of issues #278/#330. Deliberately independent of whether any
+     * granular service is active, since the check has to work for aggregate-only projects too.
+     */
+    public Set<String> elementIds() {
+        Set<String> ids = new LinkedHashSet<>();
+        for (Set<TaggedElement> bucket : buckets.values()) {
+            for (TaggedElement element : bucket) {
+                ids.add(element.granularQName());
+            }
+        }
+        return ids;
+    }
+
+    /**
      * Total annotated references across every bucket — an element carrying two annotations counts
      * twice, because it is rendered in two sections. Used to pre-size renderer output buffers so
      * large projects avoid repeated StringBuilder grow-and-copy reallocation.

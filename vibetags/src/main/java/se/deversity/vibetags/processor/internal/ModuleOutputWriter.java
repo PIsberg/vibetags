@@ -131,10 +131,12 @@ public final class ModuleOutputWriter {
         // Per-class granular rule files under the module directory; cleanup runs after write, and
         // spares the stems other source sets of this same module recorded in their sidecars.
         GranularRulesWriter granular = new GranularRulesWriter(writer);
-        Set<String> keep = new LinkedHashSet<>(
-            granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles));
+        Set<String> writtenStems = granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles);
+        Set<String> keep = new LinkedHashSet<>(writtenStems);
         keep.addAll(ModuleSidecar.granularStemsFrom(sidecars, moduleId, regionId));
-        granular.cleanupAll(moduleFiles, moduleActive, keep);
+        Set<String> removed = granular.cleanupAll(moduleFiles, moduleActive, keep);
+        new DestructiveRewriteWarner(messager, null).orphanSweep(
+            vibetagsRoot.relativize(moduleRoot).toString().replace('\\', '/'), removed, writtenStems);
 
         if (written > 0 && messager != null) {
             messager.printMessage(Diagnostic.Kind.NOTE,

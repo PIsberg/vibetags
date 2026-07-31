@@ -7,6 +7,8 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
+import se.deversity.vibetags.processor.internal.DestructiveRewriteWarner;
+import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -374,6 +376,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, moduleRoles));
         }
         mySidecar.setGranularStems(myStems);
+        // The elements themselves, recorded whether or not a granular service is active: this is
+        // what lets the next run tell an edited annotation from a round that never saw the sources.
+        mySidecar.setElementIds(collector.model().elementIds());
         // Safety-tier digest for the lean indexed reactor root: without it the root keeps NOTHING
         // of a module inline, and @AILocked/@AICore/@AIAudit stop being always-on (issue #332).
         buildSafetyDigests(activeServices, rootRoles).forEach(mySidecar::putIndexDigest);
@@ -383,6 +388,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // main compile's sidecar with an empty one, dropping this module from the merged output.
         // Mirrors the hasNewRules guard in GuardrailFileWriter for the single-module case.
         if (collector.anyAnnotationsFound()) {
+            // Compare against what this same id recorded last time BEFORE overwriting it: a module
+            // whose every element has been replaced by a disjoint set did not have its annotations
+            // edited, it had them hidden from this round (issue #330's failure mode).
+            ModuleSidecar previous = ModuleSidecar.loadFor(root, moduleId);
+            if (previous != null) {
+                destructiveWarner().regionReplaced(
+                    moduleId, previous.getElementIds(), collector.model().elementIds());
+            }
             try {
                 mySidecar.save(root);
             } catch (IOException e) {
@@ -390,6 +403,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     "VibeTags: Could not save module sidecar (" + e.getMessage() + "); multi-module aggregation disabled.");
             }
         }
+        warnIfDetachedFromReactor(compilationRoot);
 
         // Read all sidecars (this module + any siblings that have already compiled).
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
@@ -461,7 +475,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> writtenQNames = new java.util.LinkedHashSet<>(
             granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles));
         writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
-        granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
+        Set<String> removedQNames = granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
+        destructiveWarner().orphanSweep("the reactor root", removedQNames,
+            GranularRulesWriter.stemsFor(elementRules, rootRoles));
 
         // Per-module (nested) output — write this module's own guardrails into its own directory.
         // Independent of the cross-module aggregation above (which serves only the shared root
@@ -549,6 +565,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, checkModuleRoles));
         }
         mySidecar.setGranularStems(myStems);
+        mySidecar.setElementIds(collector.model().elementIds());
         buildSafetyDigests(activeServices, checkRootRoles).forEach(mySidecar::putIndexDigest);
         List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.readAll(root));
         if (collector.anyAnnotationsFound()) {
@@ -660,6 +677,42 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return digests;
+    }
+
+    /** Reports rounds that remove guardrails rather than add them (see the class javadoc there). */
+    private DestructiveRewriteWarner destructiveWarner() {
+        return new DestructiveRewriteWarner(getSafeMessager(), log);
+    }
+
+    /**
+     * Warns when this compilation generated a complete set of guardrail files as its own root while
+     * an ancestor's build definition names it as one of its modules.
+     *
+     * <p>That is what a module which did not inherit {@code -Avibetags.root} looks like: it renders
+     * correctly into its own directory, contributes nothing to the reactor, and its whole
+     * {@code <project_guardrails>} section is simply absent from the merged root — silently
+     * (<a href="https://github.com/PIsberg/vibetags/issues/296">issue #296</a>). The check is gated
+     * on the reactor <em>declaring</em> this directory as a module, so a standalone project that
+     * merely lives inside another repository never trips it.
+     */
+    private void warnIfDetachedFromReactor(Path compilationRoot) {
+        if (!compilationRoot.equals(root) || !collector.anyAnnotationsFound()) {
+            return; // already sharing a root with siblings, or nothing to contribute anyway
+        }
+        Path reactorRoot = ReactorRootDetector.findReactorRootAbove(root);
+        if (reactorRoot == null) {
+            return;
+        }
+        String moduleName = reactorRoot.relativize(root).toString().replace('\\', '/');
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: module '" + moduleName + "' generated its guardrails as its own root ("
+                + root + "), but " + reactorRoot + " declares it as a module. Its guardrails are"
+                + " NOT part of that reactor's merged files. Pass -Avibetags.root=" + reactorRoot
+                + " for this module — most often it overrides the compiler plugin's compilerArgs or"
+                + " annotationProcessorPaths and so does not inherit the reactor's configuration.");
+        if (log != null) {
+            log.warn("module.detached module={} moduleRoot={} reactorRoot={}", moduleName, root, reactorRoot);
+        }
     }
 
     /** True when anything in the always-on safety tier was annotated this compilation. */

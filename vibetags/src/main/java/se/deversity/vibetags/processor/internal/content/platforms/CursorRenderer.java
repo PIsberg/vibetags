@@ -52,7 +52,7 @@ public final class CursorRenderer implements PlatformRenderer {
         if (GranularIndexSection.indexActive(platform, context)) {
             // Granular sibling opted in: keep only the always-loaded safety buckets inline and point
             // at the scoped rule files for everything else (see GranularIndexSection).
-            AnnotationSections.renderLockedPreamble(sb, model, Platform.CURSOR, context.getGeneratedHeader());
+            AnnotationSections.renderIndexedPreamble(sb, model, Platform.CURSOR, context.getGeneratedHeader());
             AnnotationSections.renderInlineSafetySections(sb, model, Platform.CURSOR);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
         } else {

@@ -493,11 +493,19 @@ public final class ClaudeRenderer implements PlatformRenderer {
      */
     private static String renderIndexed(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
-        sb.append("<!-- ").append(context.getGeneratedHeader().trim()).append(" -->\n<project_guardrails>\n  <locked_files>\n");
-        for (TaggedElement e : model.locked()) {
-            FormatterRegistry.locked().format(e, sb, Platform.CLAUDE);
+        sb.append("<!-- ").append(context.getGeneratedHeader().trim()).append(" -->\n<project_guardrails>\n");
+        // An empty <locked_files/> plus its trailing rule costs three lines. The reactor merge emits
+        // this block once per module, so for a project where most modules lock nothing it is the
+        // bulk of a file whose whole purpose is to be lean (issue #319). Full (non-indexed) output
+        // still emits the element unconditionally, so single-opt-in aggregates are unchanged.
+        boolean anyLocked = !model.locked().isEmpty();
+        if (anyLocked) {
+            sb.append("  <locked_files>\n");
+            for (TaggedElement e : model.locked()) {
+                FormatterRegistry.locked().format(e, sb, Platform.CLAUDE);
+            }
+            sb.append("  </locked_files>\n");
         }
-        sb.append("  </locked_files>\n");
         appendAuditSection(sb, model);
         appendIgnoreSection(sb, model);
         appendPrivacySection(sb, model);
@@ -505,7 +513,9 @@ public final class ClaudeRenderer implements PlatformRenderer {
         appendSecureSection(sb, model);
         GranularIndexSection.appendXmlIndex(sb, platform, context);
         sb.append("</project_guardrails>\n");
-        sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
+        if (anyLocked) {
+            sb.append("\n<rule>Never propose edits to files listed in <locked_files>.</rule>\n");
+        }
         return sb.toString();
     }
 }

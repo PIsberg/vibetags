@@ -50,7 +50,7 @@ public final class WindsurfRenderer implements PlatformRenderer {
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         if (GranularIndexSection.indexActive(platform, context)) {
-            AnnotationSections.renderLockedPreamble(sb, model, Platform.WINDSURF, context.getGeneratedHeader());
+            AnnotationSections.renderIndexedPreamble(sb, model, Platform.WINDSURF, context.getGeneratedHeader());
             AnnotationSections.renderInlineSafetySections(sb, model, Platform.WINDSURF);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
         } else {

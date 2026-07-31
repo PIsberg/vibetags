@@ -496,9 +496,10 @@ public final class GuardrailFileWriter {
      * @param extension      file extension filter (e.g. ".mdc" or ".md")
      * @param excludeQNames  qualified names (filename without extension) to skip — typically
      *                       files just written this round, to avoid delete-then-recreate cycles
+     * @return the qNames whose rules were removed, so the caller can report a destructive sweep
      */
-    public void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
-        cleanupGranularDirectory(dir, extension, excludeQNames, null);
+    public List<String> cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames) {
+        return cleanupGranularDirectory(dir, extension, excludeQNames, null);
     }
 
     /**
@@ -513,10 +514,13 @@ public final class GuardrailFileWriter {
      *                       (a source module cleaning up its own mirrored files); when null, files
      *                       carrying the reserved mirror prefix are skipped instead, so a module's
      *                       own cleanup never deletes rules a sibling mirrored in (issue #312)
+     * @return the qNames whose rules were removed, sorted, so the caller can report a destructive
+     *         sweep. Empty on a healthy build — a non-empty result means guardrails left the repo
      */
-    public void cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
-                                         @Nullable String filePrefix) {
-        if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return;
+    public List<String> cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
+                                                 @Nullable String filePrefix) {
+        List<String> removed = new java.util.ArrayList<>();
+        if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return removed;
         try (Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
                   .filter(p -> p.toString().endsWith(extension))
@@ -534,10 +538,17 @@ public final class GuardrailFileWriter {
                       String qName = name.substring(0, name.length() - extension.length());
                       return !excludeQNames.contains(qName);
                   })
-                  .forEach(this::scrubGranularFile);
+                  .sorted()
+                  .forEach(p -> {
+                      Path fn = p.getFileName();
+                      String name = fn != null ? fn.toString() : "";
+                      scrubGranularFile(p);
+                      removed.add(name.substring(0, Math.max(0, name.length() - extension.length())));
+                  });
         } catch (IOException ignored) {
             // Stay silent during compilation
         }
+        return removed;
     }
 
     public void cleanupGranularDirectory(Path dir, String extension) {
