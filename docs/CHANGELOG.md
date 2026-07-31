@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC8] - 2026-08-01
+
 ### Added
 - **Gemini granular rules (`.gemini/rules/`), so `GEMINI.md` can stop being a second copy (#320).**
   Four platforms could already collapse their always-loaded aggregate to a scoped-rules index when a
@@ -1191,7 +1193,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...HEAD
+[1.0.0-RC8]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...v1.0.0-RC8
 [1.0.0-RC7]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC6...v1.0.0-RC7
 [1.0.0-RC6]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...v1.0.0-RC6
 [1.0.0-RC5]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC4...v1.0.0-RC5

@@ -166,6 +166,8 @@ Update the version in all build files:
 | `vibetags-bom/pom.xml` | `<version>`, `<vibetags.version>`, and the snippet versions in `<description>` |
 | `example/pom.xml` | `<vibetags.bom.version>` |
 | `example/build.gradle` | `platform(...)` version (both lines) |
+| `example-multimodule/pom.xml` | `<vibetags.bom.version>` |
+| `example-multimodule-indexed/pom.xml` | `<vibetags.bom.version>` |
 | `tools/demo/pom.xml` | `<vibetags.bom.version>` |
 | `README.md` | dependency snippets and BOM snippet versions |
 | `.claude/skills/vibetags-usage/SKILL.md` | version in the install snippets |

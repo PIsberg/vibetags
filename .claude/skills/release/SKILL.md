@@ -71,6 +71,8 @@ It deliberately does **not** touch the consumers, which you must update by hand 
 |---|---|
 | `example/pom.xml` | `<vibetags.bom.version>` |
 | `example/build.gradle` | both `platform('se.deversity.vibetags:vibetags-bom:…')` lines |
+| `example-multimodule/pom.xml` | `<vibetags.bom.version>` |
+| `example-multimodule-indexed/pom.xml` | `<vibetags.bom.version>` |
 | `tools/demo/pom.xml` | `<vibetags.bom.version>` |
 | `README.md` | every dependency and BOM snippet (several occurrences — check them all) |
 | `.claude/skills/vibetags-usage/SKILL.md` | version in the install snippets |
