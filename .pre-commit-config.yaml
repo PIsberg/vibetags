@@ -10,5 +10,11 @@ repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.4.0
   hooks:
+  # The code-karta SVGs under docs/diagrams/codekarta/ are generator output, byte for byte.
+  # Letting these hooks reformat them would leave the committed file permanently different
+  # from what tools/generate-architecture-diagrams.sh emits, so every regeneration would
+  # show up as a diff nobody made.
   - id: end-of-file-fixer
+    exclude: ^docs/diagrams/codekarta/
   - id: trailing-whitespace
+    exclude: ^docs/diagrams/codekarta/

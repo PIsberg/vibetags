@@ -14,6 +14,22 @@ Full technical deep dive (system diagram, data flow, design decisions, limitatio
 3. On `processingOver() == true`, calls `resolveActiveServices()` — only files that already exist on disk are regenerated (file presence = opt-in)
 4. Writes to `Paths.get("").toAbsolutePath()` (project root of the consumer), or to `vibetags.root` if set
 
+That is the summary. The literal call order — every method the orchestrator invokes, numbered
+in the order it invokes it — is parsed straight out of `AIGuardrailProcessor.java` into
+[`diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg`](diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg).
+Read it when the question is *what actually runs, and when*, rather than *why*: this file
+answers the second, the diagram answers the first, and neither is a substitute for the other.
+
+It is worth having because `generateFiles()` is under `<locked_files>` for exactly this reason —
+its step order (fingerprint check → sidecar write → sidecar read → merge → file write → cache
+flush) is load-bearing, and reordering two steps produces no error, just silently skipped
+regeneration or corrupted multi-module output. A hand-drawn sequence diagram of that order would
+be a second thing to keep in sync with the code; a parsed one cannot drift, only diff.
+Regenerate with
+[`tools/generate-architecture-diagrams.sh`](../tools/generate-architecture-diagrams.sh); the
+whole parsed set is described in
+[ARCHITECTURE.md](ARCHITECTURE.md#parsed-diagrams-code-karta).
+
 ### File-existence opt-in
 
 The processor never creates new files. To activate a platform, create the file first, then compile:
@@ -69,6 +85,16 @@ as-is), `ElementTag`, `SourceLocation`, `RoleConfig`, `GuardrailAnnotations.ALL`
 `AnnotationFormatter.format(TaggedElement, …)` and `PlatformRenderer.render(GuardrailModel, …)` are
 the only two entry points, so all ~90 formatter and renderer files can be exercised without invoking
 javac.
+
+![The compiler-free model](diagrams/codekarta/model/class-diagram.svg)
+
+*`processor/model/` — the seam itself, parsed from source. Its two useful properties are things
+the picture shows by omission: nothing here imports a compiler type, and nothing here points
+back up at `internal`.* The layer below it,
+[`content/`](diagrams/codekarta/content/class-diagram.svg), is drawn the same way in
+[PLATFORMS.md](PLATFORMS.md#the-rendering-layer); the whole processor, seam included, is in
+[ARCHITECTURE.md](ARCHITECTURE.md#class-diagram). `ArchitectureRulesTest` is what keeps the
+omissions true — the diagrams only make them visible.
 
 Three things make this load-bearing rather than tidy:
 
