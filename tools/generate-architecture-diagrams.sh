@@ -10,6 +10,10 @@
 # The diagrams are committed. Regenerate them when the package structure changes, not on
 # every commit: they describe shape, and shape changes rarely. A diff here means the
 # architecture moved, which is exactly when someone should look.
+#
+# Every diagram this script emits is embedded in a doc. If you add one, link it from the
+# doc whose question it answers, and add a row to the table in
+# docs/ARCHITECTURE.md#parsed-diagrams-code-karta.
 set -eu
 
 CK_VERSION="0.1.0"
@@ -39,7 +43,12 @@ CK_JAR="$M2/se/deversity/codekarta/code-karta-cli/${CK_VERSION}/code-karta-cli-$
 
 mkdir -p "$OUT_DIR"
 
-# Two class diagrams, each scoped to a package that answers one question.
+karta() {
+  java -jar "$CK_JAR" --layout "$LAYOUT" "$@"
+}
+
+# Four class diagrams, each scoped to a package that answers one question, plus one
+# sequence diagram over the orchestrator.
 #
 # There is deliberately no whole-package stitched call graph here. Running --sequence-only
 # over processor.internal yields 986 nodes across roughly 36000x43700 pixels: technically a
@@ -47,16 +56,38 @@ mkdir -p "$OUT_DIR"
 # not rescue it either. Scope beats settings.
 
 echo "Class diagram: the processor as a whole ..."
-java -jar "$CK_JAR" \
-  --input  "vibetags/src/main/java/se/deversity/vibetags/processor" \
-  --output "$OUT_DIR" \
-  --layout "$LAYOUT"
+karta --input  "vibetags/src/main/java/se/deversity/vibetags/processor" \
+      --output "$OUT_DIR"
 
 echo "Class diagram: the compiler-free model ..."
-java -jar "$CK_JAR" \
-  --input  "vibetags/src/main/java/se/deversity/vibetags/processor/model" \
-  --output "$OUT_DIR/model" \
-  --layout "$LAYOUT"
+karta --input  "vibetags/src/main/java/se/deversity/vibetags/processor/model" \
+      --output "$OUT_DIR/model"
+
+echo "Class diagram: the rendering layer ..."
+karta --input  "vibetags/src/main/java/se/deversity/vibetags/processor/internal/content" \
+      --output "$OUT_DIR/content"
+
+echo "Class diagram: the annotation surface ..."
+karta --input  "vibetags-annotations/src/main/java/se/deversity/vibetags/annotations" \
+      --output "$OUT_DIR/annotations"
+
+# The one diagram in the set that shows order rather than shape. AIGuardrailProcessor sits
+# under <locked_files> precisely because the step order in generateFiles() is load-bearing;
+# this is that order, parsed rather than described.
+echo "Sequence diagram: the orchestrator's call order ..."
+karta --input  "vibetags/src/main/java/se/deversity/vibetags/processor/AIGuardrailProcessor.java" \
+      --output "$OUT_DIR/sequence"
+
+# Two of code-karta's modes were tried against this repository and do not fit. Both are
+# recorded here so nobody spends an afternoon rediscovering it:
+#
+#   --modules-only   needs module-info.java. VibeTags ships no JPMS descriptors (the
+#                    processor has to load on whatever classpath a consumer's javac gives
+#                    it), so the parsed graph comes back empty and the CLI skips the file.
+#   --state-machine  reads enum constants as states. The two enums here — content.Platform
+#                    and model.ElementTag — are catalogues, not machines: the generated SVG
+#                    is 60-odd boxes with zero transition edges. A table renders that
+#                    better, and docs/PLATFORMS.md already has one.
 
 echo
 echo "Done. Generated under $OUT_DIR:"

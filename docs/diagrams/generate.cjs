@@ -6,8 +6,10 @@ const http = require('http');
 const diagramsDir = path.join(__dirname);
 const outputDir = path.join(__dirname);
 
+// Hand-drawn diagrams only. The parsed ones under codekarta/ come from
+// tools/generate-architecture-diagrams.sh instead. class-diagram.puml was retired to
+// archive/ once code-karta parsed the same picture from source — see archive/README.md.
 const files = [
-    'class-diagram.puml',
     'component-diagram.puml',
     'build-sequence.puml',
     'data-flow.puml',

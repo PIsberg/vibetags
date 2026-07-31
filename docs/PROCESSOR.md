@@ -31,6 +31,12 @@ byte-stable on disk (size + mtime unchanged), the entire generate phase is skipp
 manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no
 longer matches the cache entry).
 
+Where that check sits relative to everything else the orchestrator does — the fingerprint test
+runs *before* the sidecar write, which runs before the merge, which runs before any file write —
+is visible in the parsed call order,
+[`diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg`](diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg)
+([why it exists](LOAD-BEARING.md#core-processing-flow)).
+
 ### Watched inputs
 
 Config files VibeTags *reads* rather than writes can also gate the short-circuit. `.vibetags-mirror`

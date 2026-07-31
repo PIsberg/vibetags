@@ -87,22 +87,36 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 
 ### Class Diagram
 
-![Class Diagram](diagrams/class-diagram.png)
+![Class Diagram](diagrams/codekarta/class-diagram.svg)
 
-*Figure 2: Class architecture showing annotation definitions and processor*
+*Figure 2: `se.deversity.vibetags.processor` — parsed from source by code-karta*
+
+The hand-drawn PlantUML class diagram that used to stand here is [archived](diagrams/archive/):
+it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 17.
+Hand-maintained structure drifts, and that one had. Both halves of what it showed are parsed
+from source instead — the processor above, and
+[the annotation surface](ANNOTATIONS.md#the-annotation-surface) in the annotation reference.
 
 ### Parsed diagrams (code-karta)
 
-The PlantUML diagrams above are hand-drawn: they say what the design *intends*. The SVGs
-under [`diagrams/codekarta/`](diagrams/codekarta/) are parsed from the source by
-[code-karta](https://github.com/PIsberg/codekarta) and say what the code currently *is*.
-Keeping both is deliberate — when they disagree, that gap is real drift, and it is the kind
-nothing else in the build reports.
+The component, sequence, data-flow and platform-output diagrams in this file are hand-drawn:
+they say what the design *intends*, and they show actors — a developer, Maven, javac — that no
+parser can see. The SVGs under [`diagrams/codekarta/`](diagrams/codekarta/) are parsed from the
+source by [code-karta](https://github.com/PIsberg/codekarta) and say what the code currently
+*is*. Keeping both is deliberate — when they disagree, that gap is real drift, and it is the
+kind nothing else in the build reports.
 
-| Diagram | Scope | What it answers |
-|---------|-------|-----------------|
-| [`codekarta/class-diagram.svg`](diagrams/codekarta/class-diagram.svg) | `processor` | How the orchestrator, the internals and the model relate |
-| [`codekarta/model/class-diagram.svg`](diagrams/codekarta/model/class-diagram.svg) | `processor.model` | The compiler-free data model the rendering layer reads |
+All five are produced by one script,
+[`tools/generate-architecture-diagrams.sh`](../tools/generate-architecture-diagrams.sh), which
+is also where the input scope of each is pinned:
+
+| Diagram | Parsed from | Embedded in | What it answers |
+|---------|-------------|-------------|-----------------|
+| [`class-diagram.svg`](diagrams/codekarta/class-diagram.svg) | [`processor/`](../vibetags/src/main/java/se/deversity/vibetags/processor) | this file, above | How the orchestrator, the internals and the model relate |
+| [`model/class-diagram.svg`](diagrams/codekarta/model/class-diagram.svg) | [`processor/model/`](../vibetags/src/main/java/se/deversity/vibetags/processor/model) | [LOAD-BEARING.md](LOAD-BEARING.md#the-compiler-boundary-internal--model--content) | The compiler-free data model the rendering layer reads |
+| [`content/class-diagram.svg`](diagrams/codekarta/content/class-diagram.svg) | [`internal/content/`](../vibetags/src/main/java/se/deversity/vibetags/processor/internal/content) | [PLATFORMS.md](PLATFORMS.md#the-rendering-layer) | Which renderer, formatter and registry a new platform plugs into |
+| [`annotations/class-diagram.svg`](diagrams/codekarta/annotations/class-diagram.svg) | [`annotations/`](../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations) | [ANNOTATIONS.md](ANNOTATIONS.md#the-annotation-surface) | Every `@AI*` type that actually exists, counted by a parser rather than by hand |
+| [`sequence/aiguardrailprocessor-sequence-diagram.svg`](diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg) | [`AIGuardrailProcessor.java`](../vibetags/src/main/java/se/deversity/vibetags/processor/AIGuardrailProcessor.java) | [Build Sequence](#build-sequence), [LOAD-BEARING.md](LOAD-BEARING.md#core-processing-flow) | The orchestrator's real call order — the thing `<locked_files>` protects |
 
 Regenerate with:
 
@@ -110,15 +124,26 @@ Regenerate with:
 sh tools/generate-architecture-diagrams.sh
 ```
 
-The CLI is resolved from Maven Central, so only the first run needs a network and nothing
-is vendored into the repository.
+The CLI is resolved from Maven Central, so only the first run needs a network and nothing is
+vendored into the repository. The diagrams are committed rather than built in CI: they describe
+shape, shape changes rarely, and a diff in one of them is a signal worth reading in a pull
+request. Adding a diagram means adding it to the script *and* linking it from the doc whose
+question it answers — an unreferenced SVG in a repository is a file nobody regenerates.
 
-Both diagrams are scoped to one package on purpose. A stitched call graph over
-`processor.internal` produced 986 nodes across roughly 36000×43700 pixels — technically a
+**Scope, not settings.** Every diagram is aimed at one package on purpose. A stitched call graph
+over `processor.internal` produced 986 nodes across roughly 36000×43700 pixels — technically a
 diagram, practically a data dump — and `--max-depth` does not help, because the fan-out is
-horizontal rather than deep. Scope the input instead. The script also pins `--layout elk`:
-the default engine lays every node of one BFS depth into a single unbounded row, which for
-this processor renders about 19500px wide against ELK's 2300px.
+horizontal rather than deep. Scope the input instead. The script also pins `--layout elk`: the
+default engine lays every node of one BFS depth into a single unbounded row, which for this
+processor renders about 19500px wide against ELK's 2300px.
+
+**Two of code-karta's modes do not fit this repository**, and the script says so in a comment so
+the experiment isn't repeated. `--modules-only` needs `module-info.java`; VibeTags ships no JPMS
+descriptors, because the processor has to load on whatever classpath a consumer's javac hands
+it, so the parsed graph comes back empty. `--state-machine` reads enum constants as states, and
+the two enums here — `content.Platform` and `model.ElementTag` — are catalogues rather than
+machines: the generated SVG is sixty-odd boxes with zero transition edges. The tables in
+[PLATFORMS.md](PLATFORMS.md) and [ANNOTATIONS.md](ANNOTATIONS.md) render that shape better.
 
 **Key Components:**
 
@@ -165,6 +190,16 @@ This split keeps each helper around 50–600 lines, well-tested in isolation, an
 ![Build Sequence](diagrams/build-sequence.png)
 
 *Figure 3: Sequence diagram of annotation processing during compilation*
+
+This one is hand-drawn, and stays that way: its participants include a developer and a build
+system, which no parser can see. The same story from inside the processor —
+[`sequence/aiguardrailprocessor-sequence-diagram.svg`](diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg),
+[parsed from `AIGuardrailProcessor.java`](#parsed-diagrams-code-karta) — is a numbered call
+order rather than a picture of the flow, and at roughly 9800×7700 pixels it is meant to be
+opened and panned rather than read on a page. Reach for it when you need to know *what actually
+runs and in which order*, particularly around
+`generateFiles()`, whose step order is [load-bearing](LOAD-BEARING.md#core-processing-flow) and
+under `<locked_files>` for that reason.
 
 ### Processing Phases
 
@@ -639,17 +674,22 @@ vibetags/
 │
 ├── docs/                              # Documentation
 │   ├── ARCHITECTURE.md                # This file
-│   └── diagrams/                      # PlantUML source + PNG images
-│       ├── class-diagram.puml
-│       ├── class-diagram.png
-│       ├── build-sequence.puml
-│       ├── build-sequence.png
+│   └── diagrams/                      # Hand-drawn PlantUML + parsed code-karta SVG
+│       ├── build-sequence.puml        # Hand-drawn: PlantUML source
+│       ├── build-sequence.png         #             rendered by generate.cjs
 │       ├── component-diagram.puml
 │       ├── component-diagram.png
 │       ├── data-flow.puml
 │       ├── data-flow.png
 │       ├── platform-output.puml
-│       └── platform-output.png
+│       ├── platform-output.png
+│       ├── codekarta/                 # Parsed: tools/generate-architecture-diagrams.sh
+│       │   ├── class-diagram.svg              # processor
+│       │   ├── model/class-diagram.svg        # processor.model
+│       │   ├── content/class-diagram.svg      # internal.content
+│       │   ├── annotations/class-diagram.svg  # the 44 @AI* types
+│       │   └── sequence/                      # AIGuardrailProcessor call order
+│       └── archive/                   # Superseded hand-drawn diagrams, kept for history
 │
 ├── .gitignore
 ├── README.md
