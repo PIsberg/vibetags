@@ -353,7 +353,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Read all sidecars (this module + any siblings that have already compiled).
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
-        boolean multiModule = allSidecars.size() > 1;
+        // The merge path also owns lean-index pointer substitution, so a root that opted into the
+        // lean index must take it even with a single sidecar — a reactor where one module holds all
+        // the annotations produces exactly one, and gating purely on size would silently ignore the
+        // opt-in — it would be read, reported as an active service, and then do nothing.
+        boolean multiModule = allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
 
         // Merge per-service content: in multi-module builds, combine every sibling's contribution
         // into the shared output files using module sub-markers.
@@ -519,7 +523,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // CPD-OFF — intentional mirror of the merge block in generateFiles(): a check verdict
         // is only trustworthy if it reproduces generation exactly, and generateFiles() is
         // @AILocked (its step order is load-bearing), so the shared block cannot be extracted.
-        boolean multiModule = allSidecars.size() > 1;
+        boolean multiModule = allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
 
         final Map<String, String> effectiveContent;
         if (multiModule) {
