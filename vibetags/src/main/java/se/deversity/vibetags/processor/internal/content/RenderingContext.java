@@ -62,7 +62,7 @@ public final class RenderingContext {
         // builds of identical sources emit byte-different index lines (issue #325). Sorting here
         // rather than at each emit site means every current and future consumer of granularOwners()
         // is deterministic by construction.
-        LinkedHashSet<TaggedElement> sortedOwners = new LinkedHashSet<>();
+        Set<TaggedElement> sortedOwners = new LinkedHashSet<>();
         granularOwners.stream()
                 .sorted(Comparator.comparing(TaggedElement::path)
                                   .thenComparing(o -> String.valueOf(o.kind())))
