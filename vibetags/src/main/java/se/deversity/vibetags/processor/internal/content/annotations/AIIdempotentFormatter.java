@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIIdempotent;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIIdempotentFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIIdempotent idempotent = element.getAnnotation(AIIdempotent.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIIdempotent idempotent = element.annotation(AIIdempotent.class);
         if (idempotent == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String reason = idempotent.reason();
         String summary = "Idempotency guaranteed. Multiple invocations must produce the same result as one."
                        + (reason.isEmpty() ? "" : " Reason: " + reason);
@@ -48,7 +47,7 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.\n");

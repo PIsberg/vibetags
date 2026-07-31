@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIPublicAPI;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,9 +13,9 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIPublicAPIFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        String className = ElementNaming.elementPath(element);
-        AIPublicAPI ann = element.getAnnotation(AIPublicAPI.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        String className = element.path();
+        AIPublicAPI ann = element.annotation(AIPublicAPI.class);
         String reason = ann == null ? "" : ann.reason();
         String summary = CommonFormatterHelper.withReason(
             "Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.", reason);
@@ -43,7 +42,7 @@ public final class AIPublicAPIFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Public API surface. Preserve signature, Javadoc, and behavior without breaking backwards compatibility.\n\n");

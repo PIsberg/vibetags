@@ -1,56 +1,62 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AICallersOnly;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIDeprecated;
+import se.deversity.vibetags.annotations.AIDomainModel;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIIdempotent;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AIImmutable;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AILoadBearing;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
 import se.deversity.vibetags.annotations.AIObservability;
+import se.deversity.vibetags.annotations.AIParallelTests;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
-import se.deversity.vibetags.annotations.AIRegulation;
-import se.deversity.vibetags.annotations.AITestDriven;
-import se.deversity.vibetags.annotations.AIThreadSafe;
-import se.deversity.vibetags.annotations.AIParallelTests;
-import se.deversity.vibetags.annotations.AILegacyBridge;
-import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIRegulation;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
 import se.deversity.vibetags.annotations.AIStrictExceptions;
 import se.deversity.vibetags.annotations.AIStrictTypes;
-import se.deversity.vibetags.annotations.AIInternationalized;
-import se.deversity.vibetags.annotations.AIStrictClasspath;
-import se.deversity.vibetags.annotations.AISchemaSafe;
-import se.deversity.vibetags.annotations.AIIdempotent;
-import se.deversity.vibetags.annotations.AIFeatureFlag;
-import se.deversity.vibetags.annotations.AIBannedApi;
-import se.deversity.vibetags.annotations.AIGenerated;
-import se.deversity.vibetags.annotations.AIKeepInSync;
-import se.deversity.vibetags.annotations.AILoadBearing;
-import se.deversity.vibetags.annotations.AIThreadAffinity;
-import se.deversity.vibetags.annotations.AISecure;
-
-// New annotations
-import se.deversity.vibetags.annotations.AICallersOnly;
-import se.deversity.vibetags.annotations.AISandboxOnly;
-import se.deversity.vibetags.annotations.AIMemoryBudget;
-import se.deversity.vibetags.annotations.AIPure;
-import se.deversity.vibetags.annotations.AIDomainModel;
-import se.deversity.vibetags.annotations.AIExtensible;
-import se.deversity.vibetags.annotations.AIInputSanitized;
-import se.deversity.vibetags.annotations.AISecureLogging;
-import se.deversity.vibetags.annotations.AIExplain;
-import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
-
-import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadAffinity;
+import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.model.SourceLocation;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.TypeMirror;
+import java.lang.annotation.Annotation;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -58,87 +64,64 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Aggregates annotated elements across the multiple processing rounds {@code javac} performs.
- * Each annotation type has its own {@link LinkedHashSet} (insertion-ordered for stable output).
+ * Aggregates annotated elements across the multiple processing rounds {@code javac} performs, then
+ * snapshots them into the compiler-free {@link GuardrailModel} the rendering layer reads.
+ *
+ * <p>This is the only place that holds {@code javax.lang.model} elements between rounds. Each
+ * annotation type gets its own {@link LinkedHashSet} (insertion-ordered for stable output), keyed by
+ * annotation class and driven by {@link GuardrailAnnotations#ALL} — one registry rather than a
+ * hand-listed field, collect call, reset call, getter, label and size term per annotation.
+ *
+ * @see #model()
  */
 @AIContext(
-    focus = "Accumulates annotated elements across multiple javac processing rounds; one LinkedHashSet per annotation type preserves insertion order for stable BuildFingerprint output",
+    focus = "Accumulates annotated elements across multiple javac processing rounds, then snapshots them into a compiler-free GuardrailModel; one LinkedHashSet per annotation type preserves insertion order for stable BuildFingerprint output",
     avoids = "Replacing LinkedHashSet with HashSet — insertion order stability is required for deterministic fingerprints across recompiles"
 )
 public final class AnnotationCollector {
 
-    private final Set<Element> lockedElements      = new LinkedHashSet<>();
-    private final Set<Element> contextElements     = new LinkedHashSet<>();
-    private final Set<Element> ignoreElements      = new LinkedHashSet<>();
-    private final Set<Element> auditElements       = new LinkedHashSet<>();
-    private final Set<Element> draftElements       = new LinkedHashSet<>();
-    private final Set<Element> privacyElements     = new LinkedHashSet<>();
-    private final Set<Element> coreElements        = new LinkedHashSet<>();
-    private final Set<Element> performanceElements  = new LinkedHashSet<>();
-    private final Set<Element> contractElements     = new LinkedHashSet<>();
-    private final Set<Element> testDrivenElements   = new LinkedHashSet<>();
-    private final Set<Element> threadSafeElements    = new LinkedHashSet<>();
-    private final Set<Element> immutableElements     = new LinkedHashSet<>();
-    private final Set<Element> deprecatedElements    = new LinkedHashSet<>();
-    private final Set<Element> observabilityElements = new LinkedHashSet<>();
-    private final Set<Element> regulationElements    = new LinkedHashSet<>();
-    private final Set<Element> parallelTestsElements     = new LinkedHashSet<>();
-    private final Set<Element> legacyBridgeElements     = new LinkedHashSet<>();
-    private final Set<Element> architectureElements     = new LinkedHashSet<>();
-    private final Set<Element> publicApiElements        = new LinkedHashSet<>();
-    private final Set<Element> strictExceptionsElements = new LinkedHashSet<>();
-    private final Set<Element> strictTypesElements      = new LinkedHashSet<>();
-    private final Set<Element> internationalizedElements = new LinkedHashSet<>();
-    private final Set<Element> strictClasspathElements  = new LinkedHashSet<>();
-    private final Set<Element> schemaSafeElements       = new LinkedHashSet<>();
-
-    // v1.0.0 annotations
-    private final Set<Element> idempotentElements       = new LinkedHashSet<>();
-    private final Set<Element> featureFlagElements      = new LinkedHashSet<>();
-    private final Set<Element> secureElements           = new LinkedHashSet<>();
-
-    // New annotations fields
-    private final Set<Element> callersOnlyElements      = new LinkedHashSet<>();
-    private final Set<Element> sandboxOnlyElements      = new LinkedHashSet<>();
-    private final Set<Element> memoryBudgetElements     = new LinkedHashSet<>();
-    private final Set<Element> pureElements             = new LinkedHashSet<>();
-    private final Set<Element> domainModelElements      = new LinkedHashSet<>();
-    private final Set<Element> extensibleElements       = new LinkedHashSet<>();
-    private final Set<Element> inputSanitizedElements   = new LinkedHashSet<>();
-    private final Set<Element> secureLoggingElements    = new LinkedHashSet<>();
-    private final Set<Element> explainElements          = new LinkedHashSet<>();
-    private final Set<Element> prototypeElements        = new LinkedHashSet<>();
-    private final Set<Element> sunsetElements           = new LinkedHashSet<>();
-    private final Set<Element> temporaryElements        = new LinkedHashSet<>();
-
-    // v1.0.0 evidence-based wave (see docs/proposed-annotations.md)
-    private final Set<Element> generatedElements        = new LinkedHashSet<>();
-    private final Set<Element> loadBearingElements      = new LinkedHashSet<>();
-    private final Set<Element> bannedApiElements        = new LinkedHashSet<>();
-    private final Set<Element> threadAffinityElements   = new LinkedHashSet<>();
-    private final Set<Element> keepInSyncElements       = new LinkedHashSet<>();
-
-    private boolean anyAnnotationsFound = false;
+    /**
+     * Insertion-ordered elements per annotation type.
+     *
+     * <p>Every bucket is created up front and never replaced, only cleared in place. That is
+     * load-bearing: {@code AIGuardrailProcessor} holds the sets returned by {@link #locked()},
+     * {@link #ignore()} and {@link #audit()} as fields initialised before the first round, and reads
+     * them after the last one. Swapping a bucket for a new set — or clearing the map instead of its
+     * values — would leave those fields pointing at an empty set that never fills, and the
+     * orphaned-annotation warnings would silently stop firing.
+     */
+    private final Map<Class<? extends Annotation>, Set<Element>> buckets = new LinkedHashMap<>();
 
     /**
      * Source positions of {@code @AILocked} elements, recorded by the processor during the
-     * collection rounds (the Tree API needs a live round). LinkedHashMap so iteration matches
-     * the insertion order of {@link #lockedElements}. Best-effort: elements compile under
-     * non-javac compilers without positions and are simply absent from this map.
+     * collection rounds (the Tree API needs a live round). LinkedHashMap so iteration matches the
+     * insertion order of the locked bucket. Best-effort: elements compile under non-javac compilers
+     * without positions and are simply absent from this map.
      */
-    private final java.util.Map<Element, SourcePositionResolver.Position> lockedPositions =
-        new java.util.LinkedHashMap<>();
+    private final Map<Element, SourceLocation> lockedPositions = new LinkedHashMap<>();
 
-    /** Records the source position of a locked element; null positions are ignored. */
-    public void recordLockedPosition(Element element, SourcePositionResolver.@Nullable Position position) {
-        if (position != null) {
-            lockedPositions.put(element, position);
+    private boolean anyAnnotationsFound;
+
+    /**
+     * The snapshot of the current contents, or {@code null} when it must be rebuilt. A generate or
+     * check phase asks for the model several times (fingerprint, content build, per-module output),
+     * so snapshotting once per round of mutation keeps that from re-walking every element.
+     */
+    private @Nullable GuardrailModel memo;
+
+    /** Creates every bucket up front, in registry order, so no caller can ever see a missing one. */
+    public AnnotationCollector() {
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            buckets.put(type, new LinkedHashSet<>());
         }
     }
 
-    /** Best-effort source position of a locked element, or {@code null} when unknown. */
-    public SourcePositionResolver.@Nullable Position lockedPosition(Element element) {
-        return lockedPositions.get(element);
+    /** Records the source position of a locked element; null positions are ignored. */
+    public void recordLockedPosition(Element element, @Nullable SourceLocation position) {
+        if (position != null) {
+            lockedPositions.put(element, position);
+            memo = null;
+        }
     }
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */
@@ -152,285 +135,229 @@ public final class AnnotationCollector {
      *
      * <p>{@code presentAnnotationFqns} is the set of fully-qualified annotation names javac reports
      * as present (built from the {@code annotations} argument of {@code process()}). When non-null,
-     * {@link RoundEnvironment#getElementsAnnotatedWith} is skipped for any annotation type not in the
-     * set — those queries would scan every root element only to return empty, so skipping the
-     * ~33 absent types is a large allocation/time saving on big compilation units. Passing
-     * {@code null} restores the original behaviour of querying every type (used by direct unit
-     * tests that mock {@code getElementsAnnotatedWith} without populating {@code annotations}).
+     * {@link RoundEnvironment#getElementsAnnotatedWith} is skipped for any annotation type not in
+     * the set — those queries would scan every root element only to return empty, so skipping the
+     * absent types is a large allocation/time saving on big compilation units. Passing {@code null}
+     * restores the original behaviour of querying every type (used by direct unit tests that mock
+     * {@code getElementsAnnotatedWith} without populating {@code annotations}).
+     *
+     * @return true when any bucket is non-empty — including one filled in an earlier round, matching
+     *         the historical contract callers use to decide whether this compilation saw anything
      */
     public boolean collect(RoundEnvironment roundEnv, @Nullable Set<String> presentAnnotationFqns) {
-        collectInto(lockedElements, AILocked.class, roundEnv, presentAnnotationFqns);
-        collectInto(contextElements, AIContext.class, roundEnv, presentAnnotationFqns);
-        collectInto(ignoreElements, AIIgnore.class, roundEnv, presentAnnotationFqns);
-        collectInto(auditElements, AIAudit.class, roundEnv, presentAnnotationFqns);
-        collectInto(draftElements, AIDraft.class, roundEnv, presentAnnotationFqns);
-        collectInto(privacyElements, AIPrivacy.class, roundEnv, presentAnnotationFqns);
-        collectInto(coreElements, AICore.class, roundEnv, presentAnnotationFqns);
-        collectInto(performanceElements, AIPerformance.class, roundEnv, presentAnnotationFqns);
-        collectInto(contractElements, AIContract.class, roundEnv, presentAnnotationFqns);
-        collectInto(testDrivenElements, AITestDriven.class, roundEnv, presentAnnotationFqns);
-        collectInto(threadSafeElements, AIThreadSafe.class, roundEnv, presentAnnotationFqns);
-        collectInto(immutableElements, AIImmutable.class, roundEnv, presentAnnotationFqns);
-        collectInto(deprecatedElements, AIDeprecated.class, roundEnv, presentAnnotationFqns);
-        collectInto(observabilityElements, AIObservability.class, roundEnv, presentAnnotationFqns);
-        collectInto(regulationElements, AIRegulation.class, roundEnv, presentAnnotationFqns);
-        collectInto(parallelTestsElements, AIParallelTests.class, roundEnv, presentAnnotationFqns);
-        collectInto(legacyBridgeElements, AILegacyBridge.class, roundEnv, presentAnnotationFqns);
-        collectInto(architectureElements, AIArchitecture.class, roundEnv, presentAnnotationFqns);
-        collectInto(publicApiElements, AIPublicAPI.class, roundEnv, presentAnnotationFqns);
-        collectInto(strictExceptionsElements, AIStrictExceptions.class, roundEnv, presentAnnotationFqns);
-        collectInto(strictTypesElements, AIStrictTypes.class, roundEnv, presentAnnotationFqns);
-        collectInto(internationalizedElements, AIInternationalized.class, roundEnv, presentAnnotationFqns);
-        collectInto(strictClasspathElements, AIStrictClasspath.class, roundEnv, presentAnnotationFqns);
-        collectInto(schemaSafeElements, AISchemaSafe.class, roundEnv, presentAnnotationFqns);
-        collectInto(idempotentElements, AIIdempotent.class, roundEnv, presentAnnotationFqns);
-        collectInto(featureFlagElements, AIFeatureFlag.class, roundEnv, presentAnnotationFqns);
-        collectInto(secureElements, AISecure.class, roundEnv, presentAnnotationFqns);
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            if (presentAnnotationFqns != null && !presentAnnotationFqns.contains(type.getName())) {
+                continue;  // javac reported it absent this round: the query would only return empty
+            }
+            Set<? extends Element> found = roundEnv.getElementsAnnotatedWith(type);
+            if (!found.isEmpty()) {
+                buckets.get(type).addAll(found);
+            }
+        }
 
-        // Collect new annotations
-        collectInto(callersOnlyElements, AICallersOnly.class, roundEnv, presentAnnotationFqns);
-        collectInto(sandboxOnlyElements, AISandboxOnly.class, roundEnv, presentAnnotationFqns);
-        collectInto(memoryBudgetElements, AIMemoryBudget.class, roundEnv, presentAnnotationFqns);
-        collectInto(pureElements, AIPure.class, roundEnv, presentAnnotationFqns);
-        collectInto(domainModelElements, AIDomainModel.class, roundEnv, presentAnnotationFqns);
-        collectInto(extensibleElements, AIExtensible.class, roundEnv, presentAnnotationFqns);
-        collectInto(inputSanitizedElements, AIInputSanitized.class, roundEnv, presentAnnotationFqns);
-        collectInto(secureLoggingElements, AISecureLogging.class, roundEnv, presentAnnotationFqns);
-        collectInto(explainElements, AIExplain.class, roundEnv, presentAnnotationFqns);
-        collectInto(prototypeElements, AIPrototype.class, roundEnv, presentAnnotationFqns);
-        collectInto(sunsetElements, AISunset.class, roundEnv, presentAnnotationFqns);
-        collectInto(temporaryElements, AITemporary.class, roundEnv, presentAnnotationFqns);
-
-        // v1.0.0 evidence-based wave
-        collectInto(generatedElements, AIGenerated.class, roundEnv, presentAnnotationFqns);
-        collectInto(loadBearingElements, AILoadBearing.class, roundEnv, presentAnnotationFqns);
-        collectInto(bannedApiElements, AIBannedApi.class, roundEnv, presentAnnotationFqns);
-        collectInto(threadAffinityElements, AIThreadAffinity.class, roundEnv, presentAnnotationFqns);
-        collectInto(keepInSyncElements, AIKeepInSync.class, roundEnv, presentAnnotationFqns);
-
-        boolean added = !lockedElements.isEmpty() || !contextElements.isEmpty()
-                     || !ignoreElements.isEmpty() || !auditElements.isEmpty()
-                     || !draftElements.isEmpty() || !privacyElements.isEmpty()
-                     || !coreElements.isEmpty() || !performanceElements.isEmpty()
-                     || !contractElements.isEmpty() || !testDrivenElements.isEmpty()
-                     || !threadSafeElements.isEmpty() || !immutableElements.isEmpty()
-                     || !deprecatedElements.isEmpty() || !observabilityElements.isEmpty()
-                     || !regulationElements.isEmpty() || !parallelTestsElements.isEmpty()
-                     || !legacyBridgeElements.isEmpty() || !architectureElements.isEmpty()
-                     || !publicApiElements.isEmpty() || !strictExceptionsElements.isEmpty()
-                     || !strictTypesElements.isEmpty() || !internationalizedElements.isEmpty()
-                     || !strictClasspathElements.isEmpty() || !schemaSafeElements.isEmpty()
-                     || !idempotentElements.isEmpty() || !featureFlagElements.isEmpty()
-                     || !secureElements.isEmpty()
-                     || !callersOnlyElements.isEmpty() || !sandboxOnlyElements.isEmpty()
-                     || !memoryBudgetElements.isEmpty() || !pureElements.isEmpty()
-                     || !domainModelElements.isEmpty() || !extensibleElements.isEmpty()
-                     || !inputSanitizedElements.isEmpty() || !secureLoggingElements.isEmpty()
-                     || !explainElements.isEmpty() || !prototypeElements.isEmpty()
-                     || !sunsetElements.isEmpty() || !temporaryElements.isEmpty()
-                     || !generatedElements.isEmpty() || !loadBearingElements.isEmpty()
-                     || !bannedApiElements.isEmpty() || !threadAffinityElements.isEmpty()
-                     || !keepInSyncElements.isEmpty();
-        if (added) anyAnnotationsFound = true;
+        boolean added = false;
+        for (Set<Element> bucket : buckets.values()) {
+            if (!bucket.isEmpty()) {
+                added = true;
+                break;
+            }
+        }
+        if (added) {
+            anyAnnotationsFound = true;
+        }
+        memo = null;
         return added;
     }
 
     /**
-     * Adds all elements annotated with {@code type} in this round to {@code bucket}, but skips the
-     * javac query entirely when {@code present} is non-null and does not contain the type's FQN
-     * (i.e. javac reported the annotation as absent this round, so the query would return empty).
+     * Drops everything collected so far, once the generate phase has written its output.
+     *
+     * <p>Clears each bucket in place rather than the map: the processor holds three of these sets as
+     * fields, and replacing or dropping them would leave those references pointing at nothing.
      */
-    private static void collectInto(Set<Element> bucket,
-                                    Class<? extends java.lang.annotation.Annotation> type,
-                                    RoundEnvironment roundEnv,
-                                    @Nullable Set<String> present) {
-        if (present == null || present.contains(type.getName())) {
-            bucket.addAll(roundEnv.getElementsAnnotatedWith(type));
+    public void reset() {
+        buckets.values().forEach(Set::clear);
+        lockedPositions.clear();
+        anyAnnotationsFound = false;
+        memo = null;
+    }
+
+    public boolean anyAnnotationsFound() {
+        return anyAnnotationsFound;
+    }
+
+    /**
+     * The compiler-free snapshot of everything collected so far — the boundary every renderer reads
+     * from. Memoized until the next {@link #collect} or {@link #reset}.
+     *
+     * <p>Snapshotting here rather than lazily inside the renderers is deliberate: an {@code Element}
+     * is only meaningful while its round is live, and the parallel write phase runs after the last
+     * one has closed.
+     */
+    public GuardrailModel model() {
+        GuardrailModel m = memo;
+        if (m == null) {
+            m = snapshot();
+            memo = m;
+        }
+        return m;
+    }
+
+    /** Unmodifiable view of the elements carrying {@code type}; empty when none do. */
+    public Set<Element> elementsOf(Class<? extends Annotation> type) {
+        Set<Element> bucket = buckets.get(type);
+        return bucket == null ? Set.of() : Collections.unmodifiableSet(bucket);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Named bucket accessors — the javac-side view, for callers that need a real Element (and for
+    // the collection tests). Rendering reads model() instead.
+    // -----------------------------------------------------------------------------------------
+
+    public Set<Element> locked()             { return elementsOf(AILocked.class); }
+    public Set<Element> context()            { return elementsOf(AIContext.class); }
+    public Set<Element> ignore()             { return elementsOf(AIIgnore.class); }
+    public Set<Element> audit()              { return elementsOf(AIAudit.class); }
+    public Set<Element> draft()              { return elementsOf(AIDraft.class); }
+    public Set<Element> privacy()            { return elementsOf(AIPrivacy.class); }
+    public Set<Element> core()               { return elementsOf(AICore.class); }
+    public Set<Element> performance()        { return elementsOf(AIPerformance.class); }
+    public Set<Element> contract()           { return elementsOf(AIContract.class); }
+    public Set<Element> testDriven()         { return elementsOf(AITestDriven.class); }
+    public Set<Element> threadSafe()         { return elementsOf(AIThreadSafe.class); }
+    public Set<Element> immutable()          { return elementsOf(AIImmutable.class); }
+    public Set<Element> deprecated()         { return elementsOf(AIDeprecated.class); }
+    public Set<Element> observability()      { return elementsOf(AIObservability.class); }
+    public Set<Element> regulation()         { return elementsOf(AIRegulation.class); }
+    public Set<Element> parallelTests()      { return elementsOf(AIParallelTests.class); }
+    public Set<Element> legacyBridge()       { return elementsOf(AILegacyBridge.class); }
+    public Set<Element> architecture()       { return elementsOf(AIArchitecture.class); }
+    public Set<Element> publicApi()          { return elementsOf(AIPublicAPI.class); }
+    public Set<Element> strictExceptions()   { return elementsOf(AIStrictExceptions.class); }
+    public Set<Element> strictTypes()        { return elementsOf(AIStrictTypes.class); }
+    public Set<Element> internationalized()  { return elementsOf(AIInternationalized.class); }
+    public Set<Element> strictClasspath()    { return elementsOf(AIStrictClasspath.class); }
+    public Set<Element> schemaSafe()         { return elementsOf(AISchemaSafe.class); }
+    public Set<Element> idempotent()         { return elementsOf(AIIdempotent.class); }
+    public Set<Element> featureFlag()        { return elementsOf(AIFeatureFlag.class); }
+    public Set<Element> secure()             { return elementsOf(AISecure.class); }
+    public Set<Element> callersOnly()        { return elementsOf(AICallersOnly.class); }
+    public Set<Element> sandboxOnly()        { return elementsOf(AISandboxOnly.class); }
+    public Set<Element> memoryBudget()       { return elementsOf(AIMemoryBudget.class); }
+    public Set<Element> pure()               { return elementsOf(AIPure.class); }
+    public Set<Element> domainModel()        { return elementsOf(AIDomainModel.class); }
+    public Set<Element> extensible()         { return elementsOf(AIExtensible.class); }
+    public Set<Element> inputSanitized()     { return elementsOf(AIInputSanitized.class); }
+    public Set<Element> secureLogging()      { return elementsOf(AISecureLogging.class); }
+    public Set<Element> explain()            { return elementsOf(AIExplain.class); }
+    public Set<Element> prototype()          { return elementsOf(AIPrototype.class); }
+    public Set<Element> sunset()             { return elementsOf(AISunset.class); }
+    public Set<Element> temporary()          { return elementsOf(AITemporary.class); }
+    public Set<Element> generated()          { return elementsOf(AIGenerated.class); }
+    public Set<Element> loadBearing()        { return elementsOf(AILoadBearing.class); }
+    public Set<Element> bannedApi()          { return elementsOf(AIBannedApi.class); }
+    public Set<Element> threadAffinity()     { return elementsOf(AIThreadAffinity.class); }
+    public Set<Element> keepInSync()         { return elementsOf(AIKeepInSync.class); }
+
+    // -----------------------------------------------------------------------------------------
+    // Snapshotting
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * Materializes one {@link TaggedElement} per distinct element and files it into the same buckets.
+     *
+     * <p>An element carrying five annotations must produce <em>one</em> {@code TaggedElement} shared
+     * by all five buckets, or the granular-rules map would group it five times. That is why the
+     * annotations are gathered per element first and the model assembled second.
+     */
+    private GuardrailModel snapshot() {
+        Map<Element, TaggedElement.Builder> builders = new LinkedHashMap<>();
+        buckets.forEach((type, elements) -> {
+            for (Element e : elements) {
+                record(builders.computeIfAbsent(e, AnnotationCollector::newBuilder), e, type);
+            }
+        });
+
+        Map<Element, TaggedElement> tagged = new LinkedHashMap<>();
+        GuardrailModel.Builder model = GuardrailModel.builder();
+        buckets.forEach((type, elements) -> {
+            for (Element e : elements) {
+                model.add(type, materialize(e, builders, tagged));
+            }
+        });
+        lockedPositions.forEach((e, position) ->
+            model.lockedPosition(materialize(e, builders, tagged), position));
+        return model.build();
+    }
+
+    /**
+     * Builds {@code e}'s snapshot, its owner's first. The recursion is one level deep at most:
+     * {@link ElementNaming#owningElement} returns a type or a package, whose own owner is itself.
+     */
+    private static TaggedElement materialize(Element e,
+                                             Map<Element, TaggedElement.Builder> builders,
+                                             Map<Element, TaggedElement> tagged) {
+        TaggedElement done = tagged.get(e);
+        if (done != null) {
+            return done;
+        }
+        TaggedElement.Builder builder = builders.computeIfAbsent(e, AnnotationCollector::newBuilder);
+        Element ownerElement = ElementNaming.owningElement(e);
+        if (!ownerElement.equals(e)) {
+            builder.owner(materialize(ownerElement, builders, tagged));
+        }
+        TaggedElement result = builder.build();
+        tagged.put(e, result);
+        return result;
+    }
+
+    /** The name forms and kind for {@code e}, computed once here and never derived again. */
+    private static TaggedElement.Builder newBuilder(Element e) {
+        return TaggedElement.builder(ElementNaming.elementPath(e))
+            .names(e.toString(),
+                   ElementNaming.simpleNameOf(e),
+                   ElementNaming.elementDisplayName(e),
+                   ElementNaming.granularQName(e))
+            .kind(tagOf(e));
+    }
+
+    /**
+     * Records the annotation instance of {@code type} carried by {@code e}. Generic so the wildcard
+     * captured from the registry still binds {@code getAnnotation} to that annotation's own type.
+     */
+    private static <A extends Annotation> void record(TaggedElement.Builder builder, Element e, Class<A> type) {
+        A annotation = e.getAnnotation(type);
+        builder.annotation(type, annotation);
+        if (annotation instanceof AISunset sunset) {
+            builder.typeMember("AISunset.replacement", replacementTypeName(sunset));
         }
     }
 
-    public void reset() {
-        lockedElements.clear();
-        contextElements.clear();
-        ignoreElements.clear();
-        auditElements.clear();
-        draftElements.clear();
-        privacyElements.clear();
-        coreElements.clear();
-        performanceElements.clear();
-        contractElements.clear();
-        testDrivenElements.clear();
-        threadSafeElements.clear();
-        immutableElements.clear();
-        deprecatedElements.clear();
-        observabilityElements.clear();
-        regulationElements.clear();
-        parallelTestsElements.clear();
-        legacyBridgeElements.clear();
-        architectureElements.clear();
-        publicApiElements.clear();
-        strictExceptionsElements.clear();
-        strictTypesElements.clear();
-        internationalizedElements.clear();
-        strictClasspathElements.clear();
-        schemaSafeElements.clear();
-        idempotentElements.clear();
-        featureFlagElements.clear();
-        secureElements.clear();
-
-        // Clear new annotations
-        callersOnlyElements.clear();
-        sandboxOnlyElements.clear();
-        memoryBudgetElements.clear();
-        pureElements.clear();
-        domainModelElements.clear();
-        extensibleElements.clear();
-        inputSanitizedElements.clear();
-        secureLoggingElements.clear();
-        explainElements.clear();
-        prototypeElements.clear();
-        sunsetElements.clear();
-        temporaryElements.clear();
-
-        // Clear the v1.0.0 evidence-based wave
-        generatedElements.clear();
-        loadBearingElements.clear();
-        bannedApiElements.clear();
-        threadAffinityElements.clear();
-        keepInSyncElements.clear();
-
-        lockedPositions.clear();
-        anyAnnotationsFound = false;
-    }
-
-    // Unmodifiable views: callers iterate but must not add to these sets.
-    // collect() and reset() operate directly on the internal LinkedHashSet fields.
-    public Set<Element> locked()        { return Collections.unmodifiableSet(lockedElements); }
-    public Set<Element> context()       { return Collections.unmodifiableSet(contextElements); }
-    public Set<Element> ignore()        { return Collections.unmodifiableSet(ignoreElements); }
-    public Set<Element> audit()         { return Collections.unmodifiableSet(auditElements); }
-    public Set<Element> draft()         { return Collections.unmodifiableSet(draftElements); }
-    public Set<Element> privacy()       { return Collections.unmodifiableSet(privacyElements); }
-    public Set<Element> core()          { return Collections.unmodifiableSet(coreElements); }
-    public Set<Element> performance()    { return Collections.unmodifiableSet(performanceElements); }
-    public Set<Element> contract()       { return Collections.unmodifiableSet(contractElements); }
-    public Set<Element> testDriven()     { return Collections.unmodifiableSet(testDrivenElements); }
-    public Set<Element> threadSafe()     { return Collections.unmodifiableSet(threadSafeElements); }
-    public Set<Element> immutable()      { return Collections.unmodifiableSet(immutableElements); }
-    public Set<Element> deprecated()     { return Collections.unmodifiableSet(deprecatedElements); }
-    public Set<Element> observability()  { return Collections.unmodifiableSet(observabilityElements); }
-    public Set<Element> regulation()     { return Collections.unmodifiableSet(regulationElements); }
-    public Set<Element> parallelTests()     { return Collections.unmodifiableSet(parallelTestsElements); }
-    public Set<Element> legacyBridge()     { return Collections.unmodifiableSet(legacyBridgeElements); }
-    public Set<Element> architecture()     { return Collections.unmodifiableSet(architectureElements); }
-    public Set<Element> publicApi()        { return Collections.unmodifiableSet(publicApiElements); }
-    public Set<Element> strictExceptions() { return Collections.unmodifiableSet(strictExceptionsElements); }
-    public Set<Element> strictTypes()      { return Collections.unmodifiableSet(strictTypesElements); }
-    public Set<Element> internationalized() { return Collections.unmodifiableSet(internationalizedElements); }
-    public Set<Element> strictClasspath()  { return Collections.unmodifiableSet(strictClasspathElements); }
-    public Set<Element> schemaSafe()       { return Collections.unmodifiableSet(schemaSafeElements); }
-    public Set<Element> idempotent()       { return Collections.unmodifiableSet(idempotentElements); }
-    public Set<Element> featureFlag()      { return Collections.unmodifiableSet(featureFlagElements); }
-    public Set<Element> secure()           { return Collections.unmodifiableSet(secureElements); }
-
-    // Getters for new annotations
-    public Set<Element> callersOnly()      { return Collections.unmodifiableSet(callersOnlyElements); }
-    public Set<Element> sandboxOnly()      { return Collections.unmodifiableSet(sandboxOnlyElements); }
-    public Set<Element> memoryBudget()     { return Collections.unmodifiableSet(memoryBudgetElements); }
-    public Set<Element> pure()             { return Collections.unmodifiableSet(pureElements); }
-    public Set<Element> domainModel()      { return Collections.unmodifiableSet(domainModelElements); }
-    public Set<Element> extensible()       { return Collections.unmodifiableSet(extensibleElements); }
-    public Set<Element> inputSanitized()   { return Collections.unmodifiableSet(inputSanitizedElements); }
-    public Set<Element> secureLogging()    { return Collections.unmodifiableSet(secureLoggingElements); }
-    public Set<Element> explain()          { return Collections.unmodifiableSet(explainElements); }
-    public Set<Element> prototype()        { return Collections.unmodifiableSet(prototypeElements); }
-    public Set<Element> sunset()           { return Collections.unmodifiableSet(sunsetElements); }
-    public Set<Element> temporary()        { return Collections.unmodifiableSet(temporaryElements); }
-
-    // Getters for the v1.0.0 evidence-based wave
-    public Set<Element> generated()        { return Collections.unmodifiableSet(generatedElements); }
-    public Set<Element> loadBearing()      { return Collections.unmodifiableSet(loadBearingElements); }
-    public Set<Element> bannedApi()        { return Collections.unmodifiableSet(bannedApiElements); }
-    public Set<Element> threadAffinity()   { return Collections.unmodifiableSet(threadAffinityElements); }
-    public Set<Element> keepInSync()       { return Collections.unmodifiableSet(keepInSyncElements); }
-
-    public boolean anyAnnotationsFound() { return anyAnnotationsFound; }
-
     /**
-     * Every annotation bucket keyed by its {@code @AI...} annotation name, in the same order
-     * {@link #collect} populates them. {@code AIGuardrailProcessor.logSummary()} iterates this
-     * map instead of hand-listing one {@code logSet(...)} call per annotation, so a newly added
-     * bucket only needs the single {@code put} line below — no matching edit anywhere else.
+     * {@code AISunset.replacement()} is the one {@code Class}-valued annotation member VibeTags has.
+     * Reading it during annotation processing throws {@link MirroredTypeException} — the class does
+     * not exist as a {@code Class} object yet — so it is resolved to a type name here, at the one
+     * point where the compiler is still in scope, and read back by name downstream.
      */
-    public Map<String, Set<Element>> labeledSets() {
-        Map<String, Set<Element>> labeled = new LinkedHashMap<>();
-        labeled.put("@AILocked", locked());
-        labeled.put("@AIContext", context());
-        labeled.put("@AIIgnore", ignore());
-        labeled.put("@AIAudit", audit());
-        labeled.put("@AIDraft", draft());
-        labeled.put("@AIPrivacy", privacy());
-        labeled.put("@AICore", core());
-        labeled.put("@AIPerformance", performance());
-        labeled.put("@AIContract", contract());
-        labeled.put("@AITestDriven", testDriven());
-        labeled.put("@AIThreadSafe", threadSafe());
-        labeled.put("@AIImmutable", immutable());
-        labeled.put("@AIDeprecated", deprecated());
-        labeled.put("@AIObservability", observability());
-        labeled.put("@AIRegulation", regulation());
-        labeled.put("@AIParallelTests", parallelTests());
-        labeled.put("@AILegacyBridge", legacyBridge());
-        labeled.put("@AIArchitecture", architecture());
-        labeled.put("@AIPublicAPI", publicApi());
-        labeled.put("@AIStrictExceptions", strictExceptions());
-        labeled.put("@AIStrictTypes", strictTypes());
-        labeled.put("@AIInternationalized", internationalized());
-        labeled.put("@AIStrictClasspath", strictClasspath());
-        labeled.put("@AISchemaSafe", schemaSafe());
-        labeled.put("@AIIdempotent", idempotent());
-        labeled.put("@AIFeatureFlag", featureFlag());
-        labeled.put("@AISecure", secure());
-        labeled.put("@AICallersOnly", callersOnly());
-        labeled.put("@AISandboxOnly", sandboxOnly());
-        labeled.put("@AIMemoryBudget", memoryBudget());
-        labeled.put("@AIPure", pure());
-        labeled.put("@AIDomainModel", domainModel());
-        labeled.put("@AIExtensible", extensible());
-        labeled.put("@AIInputSanitized", inputSanitized());
-        labeled.put("@AISecureLogging", secureLogging());
-        labeled.put("@AIExplain", explain());
-        labeled.put("@AIPrototype", prototype());
-        labeled.put("@AISunset", sunset());
-        labeled.put("@AITemporary", temporary());
-        labeled.put("@AIGenerated", generated());
-        labeled.put("@AILoadBearing", loadBearing());
-        labeled.put("@AIBannedApi", bannedApi());
-        labeled.put("@AIThreadAffinity", threadAffinity());
-        labeled.put("@AIKeepInSync", keepInSync());
-        return labeled;
+    private static String replacementTypeName(AISunset sunset) {
+        try {
+            return sunset.replacement().getName();
+        } catch (MirroredTypeException mte) {
+            TypeMirror mirror = mte.getTypeMirror();
+            return mirror != null ? mirror.toString() : "java.lang.Object";
+        }
     }
 
     /**
-     * Total number of annotated references across every annotation bucket (an element carrying two
-     * annotations counts twice — it is rendered in two sections). Used to pre-size renderer output
-     * buffers so large projects avoid repeated StringBuilder grow-and-copy reallocation.
+     * Maps javac's element kind onto the compiler-free tag.
+     *
+     * <p>{@code UNKNOWN} covers both "the compiler reported no kind" (which happens under mocked and
+     * non-javac environments) and "a kind newer than this enum knows" — neither is worth failing a
+     * build over, and {@code ElementTagMappingTest} fails first if the JDK grows a constant.
      */
-    public int totalAnnotatedReferences() {
-        return lockedElements.size() + contextElements.size() + ignoreElements.size()
-            + auditElements.size() + draftElements.size() + privacyElements.size()
-            + coreElements.size() + performanceElements.size() + contractElements.size()
-            + testDrivenElements.size() + threadSafeElements.size() + immutableElements.size()
-            + deprecatedElements.size() + observabilityElements.size() + regulationElements.size()
-            + parallelTestsElements.size() + legacyBridgeElements.size() + architectureElements.size()
-            + publicApiElements.size() + strictExceptionsElements.size() + strictTypesElements.size()
-            + internationalizedElements.size() + strictClasspathElements.size() + schemaSafeElements.size()
-            + idempotentElements.size() + featureFlagElements.size() + secureElements.size()
-            + callersOnlyElements.size() + sandboxOnlyElements.size() + memoryBudgetElements.size()
-            + pureElements.size() + domainModelElements.size() + extensibleElements.size()
-            + inputSanitizedElements.size() + secureLoggingElements.size() + explainElements.size()
-            + prototypeElements.size() + sunsetElements.size() + temporaryElements.size()
-            + generatedElements.size() + loadBearingElements.size() + bannedApiElements.size()
-            + threadAffinityElements.size() + keepInSyncElements.size();
+    private static ElementTag tagOf(Element e) {
+        ElementKind kind = e.getKind();
+        ElementTag tag = ElementTag.fromName(kind != null ? kind.name() : null);
+        return tag != null ? tag : ElementTag.UNKNOWN;
     }
 }

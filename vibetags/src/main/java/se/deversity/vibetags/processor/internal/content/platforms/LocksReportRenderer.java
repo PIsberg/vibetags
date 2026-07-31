@@ -1,14 +1,13 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
 import se.deversity.vibetags.annotations.AILocked;
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
-import se.deversity.vibetags.processor.internal.ElementNaming;
-import se.deversity.vibetags.processor.internal.SourcePositionResolver;
+import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.model.SourceLocation;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 /**
  * Renders the machine-readable lock report ({@code .vibetags-locks}): one JSON object per
@@ -37,20 +36,20 @@ public final class LocksReportRenderer implements PlatformRenderer {
     static final int FORMAT_VERSION = 1;
 
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder();
         sb.append(context.getGeneratedHeader())
           .append("# Machine-readable @AILocked report (JSON Lines; '#' lines are comments).\n")
           .append("{\"type\":\"format\",\"version\":").append(FORMAT_VERSION).append("}\n");
 
-        for (Element e : collector.locked()) {
-            AILocked annotation = e.getAnnotation(AILocked.class);
+        for (TaggedElement e : model.locked()) {
+            AILocked annotation = e.annotation(AILocked.class);
             String reason = annotation != null ? annotation.reason() : "";
-            SourcePositionResolver.Position pos = collector.lockedPosition(e);
+            SourceLocation pos = model.lockedPosition(e);
 
             sb.append("{\"type\":\"locked\"")
-              .append(",\"element\":\"").append(escapeJson(ElementNaming.elementPath(e))).append('"')
-              .append(",\"kind\":\"").append(e.getKind().name()).append('"');
+              .append(",\"element\":\"").append(escapeJson(e.path())).append('"')
+              .append(",\"kind\":\"").append(e.kind().name()).append('"');
             if (pos != null) {
                 sb.append(",\"file\":\"").append(escapeJson(pos.file())).append('"')
                   .append(",\"startLine\":").append(pos.startLine())

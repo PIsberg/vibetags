@@ -2,8 +2,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
-import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -13,9 +12,9 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIIgnoreFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        String className = ElementNaming.elementPath(element);
-        String simpleName = element.getSimpleName().toString();
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        String className = element.path();
+        String simpleName = element.simpleName();
         String globPattern = "**/" + simpleName + ".java\n";
 
         switch (platform) {
@@ -40,7 +39,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): excluded from AI context\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): excluded from AI context\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Excluded from AI context entirely - treat as non-existent\n\n");

@@ -43,7 +43,9 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `GuardrailFileWriterEdgeCaseTest` | Edge cases: empty content, missing parent dir, read-only file |
 | `GranularRulesWriterUnitTest` | Per-class rule file writes and cleanup ordering |
 | `CleanupGranularDirectoryTest` | Orphan granular file removal after annotation deletion |
-| `AnnotationCollectorUnitTest` | `AnnotationCollector` accumulation across multiple rounds |
+| `AnnotationCollectorUnitTest` | `AnnotationCollector` accumulation across multiple rounds — one case per registered annotation type, so a bucket dropped from `GuardrailAnnotations.ALL` fails here |
+| `ArchitectureRulesTest` | Formatter/renderer statelessness, and the compiler boundary: `content` and `model` must not import `javax.lang.model`/`com.sun.source`, `content` must not depend on `internal`, `model` must not depend on either |
+| `ElementTagMappingTest` | `ElementTag` mirrors `ElementKind` name-for-name — fails if a JDK adds a kind, before generated output can report it as `UNKNOWN` |
 | `AnnotationValidatorUnitTest` | All compile-time validation warning combinations |
 | `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
 | `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |

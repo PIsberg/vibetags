@@ -134,7 +134,7 @@ class Coverage1dot0GapTest {
         collector.collect(re);
 
         RenderingContext ctx = new RenderingContext("P", "# h\n", Set.of("firebase"));
-        String result = renderer.render(collector, Platform.FIREBASE, ctx);
+        String result = renderer.render(collector.model(), Platform.FIREBASE, ctx);
         assertNotNull(result, "FirebaseRenderer.render() must not return null when annotations exist");
         assertTrue(result.contains("com.example.Foo"), "Result must contain the annotated class name");
     }
@@ -148,7 +148,7 @@ class Coverage1dot0GapTest {
         GranularRenderer renderer = new GranularRenderer();
         AnnotationCollector collector = new AnnotationCollector();
         RenderingContext ctx = new RenderingContext("P", "# h\n", Set.of("cursor_granular"));
-        assertNull(renderer.render(collector, Platform.CURSOR_GRANULAR, ctx),
+        assertNull(renderer.render(collector.model(), Platform.CURSOR_GRANULAR, ctx),
             "GranularRenderer.render() is a no-op and must always return null");
     }
 
@@ -207,7 +207,7 @@ class Coverage1dot0GapTest {
         collector.collect(re);
 
         // Should not throw; all null-guard branches must fire cleanly
-        Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> result = renderer.renderGranular(collector);
+        Map<se.deversity.vibetags.processor.model.TaggedElement, se.deversity.vibetags.processor.internal.content.GranularBody> result = renderer.renderGranular(collector.model());
         // Elements with all-null annotations produce no granular output
         assertTrue(result.isEmpty() || result.values().stream().allMatch(sb -> sb.length() == 0),
             "Null annotation guards must produce empty entries, got: " + result);
@@ -667,7 +667,7 @@ class Coverage1dot0GapTest {
         Element el = mockClassElement("com.example.Foo");
         when(el.getAnnotation(AILocked.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         assertEquals(0, sb.length(), "Null @AILocked annotation must cause early return");
     }
 
@@ -677,7 +677,7 @@ class Coverage1dot0GapTest {
         Element el = mockClassElement("com.example.Foo");
         when(el.getAnnotation(AIContext.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         assertEquals(0, sb.length(), "Null @AIContext annotation must cause early return");
     }
 
@@ -687,7 +687,7 @@ class Coverage1dot0GapTest {
         Element el = mockClassElement("com.example.Foo");
         when(el.getAnnotation(AISecure.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         assertEquals(0, sb.length(), "Null @AISecure annotation must cause early return");
     }
 
@@ -697,7 +697,7 @@ class Coverage1dot0GapTest {
         Element el = mockClassElement("com.example.Foo");
         when(el.getAnnotation(AIIdempotent.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         assertEquals(0, sb.length(), "Null @AIIdempotent annotation must cause early return");
     }
 
@@ -709,7 +709,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("authentication");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         String out = sb.toString();
         assertTrue(out.contains("com.example.Auth"), "Output must contain class name");
         assertTrue(out.contains("authentication"), "Output must contain aspect");
@@ -723,7 +723,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CURSOR);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CURSOR);
         assertTrue(sb.length() > 0, "Formatter must write content even with empty aspect");
         assertFalse(sb.toString().contains("["), "Empty aspect must not produce bracket notation");
     }
@@ -736,7 +736,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("encryption");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CLAUDE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CLAUDE);
         String out = sb.toString();
         assertTrue(out.contains("<aspect>encryption</aspect>"), "CLAUDE format must include aspect XML element");
     }
@@ -749,7 +749,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.CLAUDE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.CLAUDE);
         assertFalse(sb.toString().contains("<aspect>"),
             "CLAUDE format must omit aspect XML element when aspect is empty");
     }
@@ -762,7 +762,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("authorization");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.LLMS_FULL);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.LLMS_FULL);
         assertTrue(sb.toString().contains("authorization"), "LLMS_FULL must include aspect text");
     }
 
@@ -774,7 +774,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.LLMS_FULL);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.LLMS_FULL);
         assertFalse(sb.toString().contains("(aspect:"),
             "LLMS_FULL must omit (aspect: ...) when aspect is empty");
     }
@@ -787,7 +787,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.SWEEP);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.SWEEP);
         assertTrue(sb.toString().contains("general"),
             "SWEEP platform must use 'general' when aspect is empty");
     }
@@ -800,7 +800,7 @@ class Coverage1dot0GapTest {
         when(ann.aspect()).thenReturn("crypto");
         when(el.getAnnotation(AISecure.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.SWEEP);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.SWEEP);
         assertTrue(sb.toString().contains("crypto"),
             "SWEEP platform must use the actual aspect when provided");
     }
@@ -813,7 +813,7 @@ class Coverage1dot0GapTest {
         when(ann.reason()).thenReturn("safe-to-retry");
         when(el.getAnnotation(AIIdempotent.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.LLMS_FULL);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.LLMS_FULL);
         assertTrue(sb.toString().contains("safe-to-retry"), "LLMS_FULL must include reason");
     }
 
@@ -825,7 +825,7 @@ class Coverage1dot0GapTest {
         when(ann.reason()).thenReturn("");
         when(el.getAnnotation(AIIdempotent.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, Platform.LLMS_FULL);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.LLMS_FULL);
         assertFalse(sb.toString().contains("**Reason**"),
             "LLMS_FULL must omit Reason line when reason is empty");
     }

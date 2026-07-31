@@ -53,21 +53,71 @@ Gating is per platform via `GranularIndexSection.governingGranularKey` — `CLAU
 
 44 `@AI*` annotations, all `RetentionPolicy.SOURCE`. Full table, semantics, and validation-warning list: `docs/ANNOTATIONS.md`.
 
+### The compiler boundary: `internal` → `model` ← `content`
+
+The processor has two halves and one seam between them.
+
+**Above the seam (`processor/internal/`)** is everything that talks to javac: `AnnotationCollector`
+drains `RoundEnvironment`, `ElementNaming` walks the `Element` hierarchy, `SourcePositionResolver`
+reads the Compiler Tree API, `AnnotationValidator` reports through the `Messager`.
+
+**The seam (`processor/model/`)** is plain data: `GuardrailModel` (the buckets), `TaggedElement`
+(one annotated element, with its name forms precomputed and its `@AI*` annotation instances carried
+as-is), `ElementTag`, `SourceLocation`, `RoleConfig`, `GuardrailAnnotations.ALL`.
+
+**Below the seam (`processor/internal/content/`)** is rendering, and it never sees a compiler.
+`AnnotationFormatter.format(TaggedElement, …)` and `PlatformRenderer.render(GuardrailModel, …)` are
+the only two entry points, so all ~90 formatter and renderer files can be exercised without invoking
+javac.
+
+Three things make this load-bearing rather than tidy:
+
+- **An `Element` is only valid while its round is live.** The parallel write phase runs after the
+  last round has closed. Snapshotting once, in `AnnotationCollector.model()`, is what makes reading
+  it afterwards safe; a renderer holding an `Element` is a latent use-after-round.
+- **`AISunset.replacement()` is `Class`-valued**, so reading it during processing throws
+  `MirroredTypeException`. It is resolved to a type name at snapshot time — the one point where the
+  compiler is still in scope — and read back with `TaggedElement.typeMember`. No renderer can
+  resolve it, and none should try.
+- **The dependency runs one way.** `content` used to take `AnnotationCollector` as a parameter,
+  which made `internal ↔ content` a cycle that `ArchitectureRulesTest` had to carve an exception
+  for. It now enforces the boundary instead: `CONTENT_IS_COMPILER_FREE`,
+  `CONTENT_DOES_NOT_DEPEND_ON_INTERNAL`, `MODEL_IS_COMPILER_FREE`,
+  `MODEL_DOES_NOT_DEPEND_ON_THE_PROCESSOR`.
+
+`ElementTag` mirrors `javax.lang.model.element.ElementKind` **by name**, and that is a published
+contract: the `kind` field in `.vibetags-locks` is parsed by the bundled GitHub Action, and granular
+rule-file headings lower-case it. `ElementTagMappingTest` pins the two enums together.
+`ElementTag.UNKNOWN` is VibeTags' own value for "the compiler reported no kind" and renders as the
+word "element", preserving what a null `ElementKind` produced before the enum existed.
+
 ### Internal class responsibilities
 
 Beyond what the generated section below describes:
 
+- `AnnotationCollector` — accumulates elements across rounds into one bucket per annotation type,
+  keyed by annotation class and driven by `GuardrailAnnotations.ALL`; `model()` snapshots them.
+  Buckets are created once in the constructor and only ever cleared **in place**, because
+  `AIGuardrailProcessor` holds three of them as fields initialised before the first round
 - `AnnotationValidator` — all compile-time consistency checks (contradictory combinations, no-op annotations, invalid values); add new warnings here
-- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE
+- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 
 ### Content rendering subsystem (`internal/content/`)
 
-`GuardrailContentBuilder` delegates all content generation here:
+`GuardrailContentBuilder` snapshots the collector once and delegates all content generation here:
 
 - `Platform` (enum) + `PlatformRendererRegistry` — one entry per output file; the registry maps each platform to its `PlatformRenderer` in `content/platforms/` (~30 renderers)
 - `AnnotationFormatter` + `FormatterRegistry` — one `AI*Formatter` per annotation in `content/annotations/`; renderers pull per-annotation text from here rather than formatting inline
 - `SectionCatalog` / `AnnotationSections` — shared driver that walks annotation buckets into titled sections
 - `GranularBody` / `GranularSections` — structured stanzas for granular rule files, so a file hoists the constant rule sentence a section shares instead of repeating it per element
 
-Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches a formatter + registry + any bespoke renderers. Step-by-step checklists: the `add-platform` and `add-annotation` skills in `.claude/skills/`.
+Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches
+`GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + any bespoke renderers. Step-by-step
+checklists: the `add-platform` and `add-annotation` skills in `.claude/skills/`.
+
+`GuardrailAnnotations.ALL` is the single registry of collected annotation types. It fixes the order
+buckets are populated in and therefore the insertion order of every `LinkedHashSet` downstream —
+appending is safe, reordering changes generated files. It is deliberately **not** the order
+`BuildFingerprint` hashes in; that one is pinned separately, in that class, because changing it
+invalidates every consumer's cached fingerprint.

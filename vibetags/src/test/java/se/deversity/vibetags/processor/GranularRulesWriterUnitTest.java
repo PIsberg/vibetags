@@ -9,6 +9,7 @@ import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import java.io.IOException;
@@ -31,18 +32,18 @@ import static org.mockito.Mockito.*;
  */
 class GranularRulesWriterUnitTest {
 
-    private static Element namedClassElement(String fqn) {
+    private static TaggedElement namedClassElement(String fqn) {
         Element e = mock(Element.class);
         when(e.toString()).thenReturn(fqn);
         when(e.getKind()).thenReturn(ElementKind.CLASS);
         Name name = mock(Name.class);
         when(name.toString()).thenReturn(fqn.substring(fqn.lastIndexOf('.') + 1));
         when(e.getSimpleName()).thenReturn(name);
-        return e;
+        return TaggedElements.tagged(e);
     }
 
     /** A one-stanza body for {@code owner}, equivalent to the old {@code "## Locked\n- reason: test"}. */
-    private static GranularBody lockedBody(Element owner) {
+    private static GranularBody lockedBody(TaggedElement owner) {
         GranularBody body = new GranularBody();
         body.add(new GranularBody.Entry(owner, owner, "Locked", java.util.List.of("- reason: test")));
         return body;
@@ -62,8 +63,8 @@ class GranularRulesWriterUnitTest {
         GuardrailFileWriter fileWriter = new GuardrailFileWriter("# VibeTags\n", null, null, null);
         GranularRulesWriter writer = new GranularRulesWriter(fileWriter);
 
-        Map<Element, GranularBody> rules = new LinkedHashMap<>();
-        Element foo = namedClassElement("com.example.Foo");
+        Map<TaggedElement, GranularBody> rules = new LinkedHashMap<>();
+        TaggedElement foo = namedClassElement("com.example.Foo");
         rules.put(foo, lockedBody(foo));
 
         // Empty activeServices → all !serviceGranular are true → AND chain true → early return
@@ -113,8 +114,8 @@ class GranularRulesWriterUnitTest {
                 new GuardrailFileWriter("# VibeTags\n", null, null, null);
             GranularRulesWriter writer = new GranularRulesWriter(fileWriter);
 
-            Element elem = namedClassElement("com.example.Bar");
-            Map<Element, GranularBody> rules = new LinkedHashMap<>();
+            TaggedElement elem = namedClassElement("com.example.Bar");
+            Map<TaggedElement, GranularBody> rules = new LinkedHashMap<>();
             rules.put(elem, lockedBody(elem));
 
             // Create the service directory so the writer can resolve the path

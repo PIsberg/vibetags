@@ -1,10 +1,10 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -28,12 +28,12 @@ final class AnnotationSections {
      * without gating on emptiness (matching the source renderers, where a handful of buckets are
      * appended directly after the contextual-rules preamble).
      */
-    record Section(String header, Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
-        static Section of(String header, Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
+    record Section(String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
+        static Section of(String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
             return new Section(header, accessor, formatter);
         }
 
-        static Section headerless(Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
+        static Section headerless(Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
             return new Section(null, accessor, formatter);
         }
     }
@@ -43,19 +43,19 @@ final class AnnotationSections {
      * given platform/key, instead of a renderer hardcoding the string itself. Returns a headerless
      * section when the catalog says the platform folds this bucket into the previous one.
      */
-    static Section section(Platform platform, SectionCatalog.Key key, Function<AnnotationCollector, Set<Element>> accessor, AnnotationFormatter formatter) {
+    static Section section(Platform platform, SectionCatalog.Key key, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
         String header = SectionCatalog.header(platform, key);
         return header == null ? Section.headerless(accessor, formatter) : Section.of(header, accessor, formatter);
     }
 
-    static void render(StringBuilder sb, AnnotationCollector collector, Platform platform, List<Section> sections) {
+    static void render(StringBuilder sb, GuardrailModel model, Platform platform, List<Section> sections) {
         for (Section s : sections) {
-            Set<Element> elements = s.accessor().apply(collector);
+            Set<TaggedElement> elements = s.accessor().apply(model);
             if (s.header() != null) {
                 if (elements.isEmpty()) continue;
                 sb.append(s.header());
             }
-            for (Element e : elements) {
+            for (TaggedElement e : elements) {
                 s.formatter().format(e, sb, platform);
             }
         }
@@ -66,11 +66,11 @@ final class AnnotationSections {
      * rules). Used by {@link CursorRenderer} and {@link WindsurfRenderer} in scoped-index mode,
      * where {@code @AIContext} detail moves to the scoped rule files rather than the aggregate.
      */
-    static void renderLockedPreamble(StringBuilder sb, AnnotationCollector collector, Platform platform, String generatedHeader) {
+    static void renderLockedPreamble(StringBuilder sb, GuardrailModel model, Platform platform, String generatedHeader) {
         sb.append("# AUTO-GENERATED AI RULES\n")
           .append(generatedHeader)
           .append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
-        for (Element e : collector.locked()) {
+        for (TaggedElement e : model.locked()) {
             FormatterRegistry.locked().format(e, sb, platform);
         }
     }
@@ -79,10 +79,10 @@ final class AnnotationSections {
      * The "# AUTO-GENERATED AI RULES ... LOCKED FILES ... CONTEXTUAL RULES" opening shared
      * verbatim by {@link CursorRenderer} and {@link WindsurfRenderer}.
      */
-    static void renderLockedAndContextPreamble(StringBuilder sb, AnnotationCollector collector, Platform platform, String generatedHeader) {
-        renderLockedPreamble(sb, collector, platform, generatedHeader);
+    static void renderLockedAndContextPreamble(StringBuilder sb, GuardrailModel model, Platform platform, String generatedHeader) {
+        renderLockedPreamble(sb, model, platform, generatedHeader);
         sb.append("\n## CONTEXTUAL RULES\n");
-        for (Element e : collector.context()) {
+        for (TaggedElement e : model.context()) {
             FormatterRegistry.context().format(e, sb, platform);
         }
     }
@@ -93,13 +93,13 @@ final class AnnotationSections {
      * bucket moves to the scoped files. Headers use the given platform's own wording, so these
      * sections read identically to full mode.
      */
-    static void renderInlineSafetySections(StringBuilder sb, AnnotationCollector collector, Platform platform) {
-        render(sb, collector, platform, List.of(
-            section(platform, SectionCatalog.Key.AUDIT, AnnotationCollector::audit, FormatterRegistry.audit()),
-            section(platform, SectionCatalog.Key.IGNORE, AnnotationCollector::ignore, FormatterRegistry.ignore()),
-            section(platform, SectionCatalog.Key.PRIVACY, AnnotationCollector::privacy, FormatterRegistry.privacy()),
-            section(platform, SectionCatalog.Key.CORE, AnnotationCollector::core, FormatterRegistry.core()),
-            section(platform, SectionCatalog.Key.SECURE, AnnotationCollector::secure, FormatterRegistry.secure())
+    static void renderInlineSafetySections(StringBuilder sb, GuardrailModel model, Platform platform) {
+        render(sb, model, platform, List.of(
+            section(platform, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),
+            section(platform, SectionCatalog.Key.IGNORE, GuardrailModel::ignore, FormatterRegistry.ignore()),
+            section(platform, SectionCatalog.Key.PRIVACY, GuardrailModel::privacy, FormatterRegistry.privacy()),
+            section(platform, SectionCatalog.Key.CORE, GuardrailModel::core, FormatterRegistry.core()),
+            section(platform, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
         ));
     }
 
@@ -117,22 +117,22 @@ final class AnnotationSections {
      * default (Cursor) wording so the text isn't duplicated source-side across both files.
      */
     static final List<Section> EMOJI_STYLE_NEWEST_ANNOTATIONS = List.of(
-        section(Platform.CURSOR, SectionCatalog.Key.CALLERS_ONLY, AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.CURSOR, SectionCatalog.Key.SANDBOX_ONLY, AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.CURSOR, SectionCatalog.Key.MEMORY_BUDGET, AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.CURSOR, SectionCatalog.Key.PURE, AnnotationCollector::pure, FormatterRegistry.pure()),
-        section(Platform.CURSOR, SectionCatalog.Key.DOMAIN_MODEL, AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.CURSOR, SectionCatalog.Key.EXTENSIBLE, AnnotationCollector::extensible, FormatterRegistry.extensible()),
-        section(Platform.CURSOR, SectionCatalog.Key.INPUT_SANITIZED, AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.CURSOR, SectionCatalog.Key.SECURE_LOGGING, AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.CURSOR, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
-        section(Platform.CURSOR, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
-        section(Platform.CURSOR, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
-        section(Platform.CURSOR, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
-        section(Platform.CURSOR, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.CURSOR, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.CURSOR, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.CURSOR, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.CURSOR, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.CURSOR, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.CURSOR, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.CURSOR, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
+        section(Platform.CURSOR, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.CURSOR, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
+        section(Platform.CURSOR, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.CURSOR, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.CURSOR, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
+        section(Platform.CURSOR, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
+        section(Platform.CURSOR, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
+        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
+        section(Platform.CURSOR, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
+        section(Platform.CURSOR, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.CURSOR, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.CURSOR, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.CURSOR, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
     );
 }

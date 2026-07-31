@@ -15,7 +15,8 @@ import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
-import se.deversity.vibetags.processor.internal.RoleConfig;
+import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
@@ -127,7 +128,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private final Set<Element> auditElements  = collector.audit();
 
     /** Per-element granular rule sections, populated by GuardrailContentBuilder.build(). */
-    private Map<Element, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules =
+    private Map<TaggedElement, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules =
         new java.util.LinkedHashMap<>();
 
     @Override
@@ -601,13 +602,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (log == null) return;
         log.info("Active services ({}): {}", activeServices.size(),
             activeServices.stream().sorted().collect(Collectors.joining(", ")));
-        collector.labeledSets().forEach(this::logSet);
+        collector.model().labeledSets().forEach(this::logSet);
     }
 
-    private void logSet(String label, Set<Element> elements) {
+    private void logSet(String label, Set<TaggedElement> elements) {
         if (elements.isEmpty()) return;
         String names = elements.stream()
-            .map(e -> e.getSimpleName().toString())
+            .map(TaggedElement::simpleName)
             .collect(Collectors.joining(", "));
         log.info("{}: {} — {}", label, elements.size(), names);
     }

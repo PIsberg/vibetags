@@ -2,9 +2,10 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import se.deversity.vibetags.processor.internal.RoleConfig;
+import se.deversity.vibetags.processor.model.RoleConfig;
 
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,18 +30,18 @@ class RoleConfigTest {
         return RoleConfig.load(dir);
     }
 
-    private static Element type(String fqn) {
+    private static TaggedElement type(String fqn) {
         Element e = mock(Element.class);
         when(e.toString()).thenReturn(fqn);
         when(e.getKind()).thenReturn(ElementKind.CLASS);
-        return e;
+        return TaggedElements.tagged(e);
     }
 
-    private static Element pkg(String fqn) {
+    private static TaggedElement pkg(String fqn) {
         Element e = mock(Element.class);
         when(e.toString()).thenReturn(fqn);
         when(e.getKind()).thenReturn(ElementKind.PACKAGE);
-        return e;
+        return TaggedElements.tagged(e);
     }
 
     @Test

@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AISchemaSafe;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -14,9 +13,9 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISchemaSafeFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        String className = ElementNaming.elementPath(element);
-        AISchemaSafe ann = element.getAnnotation(AISchemaSafe.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        String className = element.path();
+        AISchemaSafe ann = element.annotation(AISchemaSafe.class);
         String reason = ann == null ? "" : ann.reason();
         String summary = CommonFormatterHelper.withReason(
             "Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.", reason);
@@ -43,7 +42,7 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.\n\n");

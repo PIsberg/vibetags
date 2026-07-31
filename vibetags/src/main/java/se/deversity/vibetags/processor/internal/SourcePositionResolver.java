@@ -6,6 +6,7 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -18,9 +19,6 @@ import javax.lang.model.element.Element;
  * {@code null} for every element — callers must treat positions as best-effort metadata.
  */
 public final class SourcePositionResolver {
-
-    /** Source location of an element declaration: file path plus 1-based inclusive line range. */
-    public record Position(String file, long startLine, long endLine) {}
 
     private final @Nullable Trees trees;
 
@@ -50,7 +48,7 @@ public final class SourcePositionResolver {
      * Returns the source position of {@code element}'s declaration (annotations and modifiers
      * included in the range), or {@code null} when it cannot be determined.
      */
-    public @Nullable Position resolve(Element element) {
+    public @Nullable SourceLocation resolve(Element element) {
         if (trees == null) return null;
         try {
             TreePath path = trees.getPath(element);
@@ -65,7 +63,7 @@ public final class SourcePositionResolver {
             long endLine = end >= 0 ? lineMap.getLineNumber(end) : startLine;
             String file = sourceFilePath(unit);
             if (file == null) return null;
-            return new Position(file, startLine, endLine);
+            return new SourceLocation(file, startLine, endLine);
         } catch (RuntimeException e) {
             return null;
         }

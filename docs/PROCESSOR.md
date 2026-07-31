@@ -59,7 +59,13 @@ consumers can reject reports written in a future, incompatible schema (filter on
 to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a
 `.json` file, so it rides the module-sidecar merge in multi-module builds instead of
 last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in
-`process()` while rounds are live); under non-javac compilers entries omit position fields.
+`process()` while rounds are live) as `model.SourceLocation`; under non-javac compilers entries omit
+position fields.
+
+The `kind` field is `ElementTag.name()`, which mirrors `javax.lang.model.element.ElementKind`
+name-for-name (`CLASS`, `METHOD`, `FIELD`, …), plus `UNKNOWN` when the compiler reports no kind.
+Renaming a constant is a breaking change to this format, not a refactor — `ElementTagMappingTest`
+pins the two enums together.
 
 Consumed by the locked-files GitHub Action in `action/locked-files/`, which fails PRs whose diffs
 touch locked line ranges, strip `@AILocked` annotations, or delete locked files.

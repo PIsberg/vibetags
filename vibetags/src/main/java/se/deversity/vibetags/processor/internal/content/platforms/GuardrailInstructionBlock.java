@@ -1,9 +1,9 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.ArrayList;
 import java.util.List;
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
@@ -26,60 +26,60 @@ final class GuardrailInstructionBlock {
      * Renders the guardrail summary as one bullet line per annotated element. Returns an empty
      * string when no annotations were collected.
      */
-    static String build(AnnotationCollector collector) {
+    static String build(GuardrailModel model) {
         StringBuilder sb = new StringBuilder(1024);
         Platform p = Platform.INTERPRETER;
-        for (Element e : collector.locked()) FormatterRegistry.locked().format(e, sb, p);
-        for (Element e : collector.context()) FormatterRegistry.context().format(e, sb, p);
-        for (Element e : collector.ignore()) FormatterRegistry.ignore().format(e, sb, p);
-        for (Element e : collector.audit()) FormatterRegistry.audit().format(e, sb, p);
-        for (Element e : collector.draft()) FormatterRegistry.draft().format(e, sb, p);
-        for (Element e : collector.privacy()) FormatterRegistry.privacy().format(e, sb, p);
-        for (Element e : collector.core()) FormatterRegistry.core().format(e, sb, p);
-        for (Element e : collector.performance()) FormatterRegistry.performance().format(e, sb, p);
-        for (Element e : collector.contract()) FormatterRegistry.contract().format(e, sb, p);
-        for (Element e : collector.testDriven()) FormatterRegistry.testDriven().format(e, sb, p);
-        for (Element e : collector.threadSafe()) FormatterRegistry.threadSafe().format(e, sb, p);
-        for (Element e : collector.immutable()) FormatterRegistry.immutable().format(e, sb, p);
-        for (Element e : collector.deprecated()) FormatterRegistry.deprecated().format(e, sb, p);
-        for (Element e : collector.observability()) FormatterRegistry.observability().format(e, sb, p);
-        for (Element e : collector.regulation()) FormatterRegistry.regulation().format(e, sb, p);
-        for (Element e : collector.parallelTests()) FormatterRegistry.parallelTests().format(e, sb, p);
-        for (Element e : collector.legacyBridge()) FormatterRegistry.legacyBridge().format(e, sb, p);
-        for (Element e : collector.architecture()) FormatterRegistry.architecture().format(e, sb, p);
-        for (Element e : collector.publicApi()) FormatterRegistry.publicApi().format(e, sb, p);
-        for (Element e : collector.strictExceptions()) FormatterRegistry.strictExceptions().format(e, sb, p);
-        for (Element e : collector.strictTypes()) FormatterRegistry.strictTypes().format(e, sb, p);
-        for (Element e : collector.internationalized()) FormatterRegistry.internationalized().format(e, sb, p);
-        for (Element e : collector.strictClasspath()) FormatterRegistry.strictClasspath().format(e, sb, p);
-        for (Element e : collector.schemaSafe()) FormatterRegistry.schemaSafe().format(e, sb, p);
-        for (Element e : collector.idempotent()) FormatterRegistry.idempotent().format(e, sb, p);
-        for (Element e : collector.featureFlag()) FormatterRegistry.featureFlag().format(e, sb, p);
-        for (Element e : collector.secure()) FormatterRegistry.secure().format(e, sb, p);
-        for (Element e : collector.callersOnly()) FormatterRegistry.callersOnly().format(e, sb, p);
-        for (Element e : collector.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, sb, p);
-        for (Element e : collector.memoryBudget()) FormatterRegistry.memoryBudget().format(e, sb, p);
-        for (Element e : collector.pure()) FormatterRegistry.pure().format(e, sb, p);
-        for (Element e : collector.domainModel()) FormatterRegistry.domainModel().format(e, sb, p);
-        for (Element e : collector.extensible()) FormatterRegistry.extensible().format(e, sb, p);
-        for (Element e : collector.inputSanitized()) FormatterRegistry.inputSanitized().format(e, sb, p);
-        for (Element e : collector.secureLogging()) FormatterRegistry.secureLogging().format(e, sb, p);
-        for (Element e : collector.explain()) FormatterRegistry.explain().format(e, sb, p);
-        for (Element e : collector.prototype()) FormatterRegistry.prototype().format(e, sb, p);
-        for (Element e : collector.sunset()) FormatterRegistry.sunset().format(e, sb, p);
-        for (Element e : collector.temporary()) FormatterRegistry.temporary().format(e, sb, p);
-        for (Element e : collector.generated()) FormatterRegistry.generated().format(e, sb, p);
-        for (Element e : collector.loadBearing()) FormatterRegistry.loadBearing().format(e, sb, p);
-        for (Element e : collector.bannedApi()) FormatterRegistry.bannedApi().format(e, sb, p);
-        for (Element e : collector.threadAffinity()) FormatterRegistry.threadAffinity().format(e, sb, p);
-        for (Element e : collector.keepInSync()) FormatterRegistry.keepInSync().format(e, sb, p);
+        for (TaggedElement e : model.locked()) FormatterRegistry.locked().format(e, sb, p);
+        for (TaggedElement e : model.context()) FormatterRegistry.context().format(e, sb, p);
+        for (TaggedElement e : model.ignore()) FormatterRegistry.ignore().format(e, sb, p);
+        for (TaggedElement e : model.audit()) FormatterRegistry.audit().format(e, sb, p);
+        for (TaggedElement e : model.draft()) FormatterRegistry.draft().format(e, sb, p);
+        for (TaggedElement e : model.privacy()) FormatterRegistry.privacy().format(e, sb, p);
+        for (TaggedElement e : model.core()) FormatterRegistry.core().format(e, sb, p);
+        for (TaggedElement e : model.performance()) FormatterRegistry.performance().format(e, sb, p);
+        for (TaggedElement e : model.contract()) FormatterRegistry.contract().format(e, sb, p);
+        for (TaggedElement e : model.testDriven()) FormatterRegistry.testDriven().format(e, sb, p);
+        for (TaggedElement e : model.threadSafe()) FormatterRegistry.threadSafe().format(e, sb, p);
+        for (TaggedElement e : model.immutable()) FormatterRegistry.immutable().format(e, sb, p);
+        for (TaggedElement e : model.deprecated()) FormatterRegistry.deprecated().format(e, sb, p);
+        for (TaggedElement e : model.observability()) FormatterRegistry.observability().format(e, sb, p);
+        for (TaggedElement e : model.regulation()) FormatterRegistry.regulation().format(e, sb, p);
+        for (TaggedElement e : model.parallelTests()) FormatterRegistry.parallelTests().format(e, sb, p);
+        for (TaggedElement e : model.legacyBridge()) FormatterRegistry.legacyBridge().format(e, sb, p);
+        for (TaggedElement e : model.architecture()) FormatterRegistry.architecture().format(e, sb, p);
+        for (TaggedElement e : model.publicApi()) FormatterRegistry.publicApi().format(e, sb, p);
+        for (TaggedElement e : model.strictExceptions()) FormatterRegistry.strictExceptions().format(e, sb, p);
+        for (TaggedElement e : model.strictTypes()) FormatterRegistry.strictTypes().format(e, sb, p);
+        for (TaggedElement e : model.internationalized()) FormatterRegistry.internationalized().format(e, sb, p);
+        for (TaggedElement e : model.strictClasspath()) FormatterRegistry.strictClasspath().format(e, sb, p);
+        for (TaggedElement e : model.schemaSafe()) FormatterRegistry.schemaSafe().format(e, sb, p);
+        for (TaggedElement e : model.idempotent()) FormatterRegistry.idempotent().format(e, sb, p);
+        for (TaggedElement e : model.featureFlag()) FormatterRegistry.featureFlag().format(e, sb, p);
+        for (TaggedElement e : model.secure()) FormatterRegistry.secure().format(e, sb, p);
+        for (TaggedElement e : model.callersOnly()) FormatterRegistry.callersOnly().format(e, sb, p);
+        for (TaggedElement e : model.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, sb, p);
+        for (TaggedElement e : model.memoryBudget()) FormatterRegistry.memoryBudget().format(e, sb, p);
+        for (TaggedElement e : model.pure()) FormatterRegistry.pure().format(e, sb, p);
+        for (TaggedElement e : model.domainModel()) FormatterRegistry.domainModel().format(e, sb, p);
+        for (TaggedElement e : model.extensible()) FormatterRegistry.extensible().format(e, sb, p);
+        for (TaggedElement e : model.inputSanitized()) FormatterRegistry.inputSanitized().format(e, sb, p);
+        for (TaggedElement e : model.secureLogging()) FormatterRegistry.secureLogging().format(e, sb, p);
+        for (TaggedElement e : model.explain()) FormatterRegistry.explain().format(e, sb, p);
+        for (TaggedElement e : model.prototype()) FormatterRegistry.prototype().format(e, sb, p);
+        for (TaggedElement e : model.sunset()) FormatterRegistry.sunset().format(e, sb, p);
+        for (TaggedElement e : model.temporary()) FormatterRegistry.temporary().format(e, sb, p);
+        for (TaggedElement e : model.generated()) FormatterRegistry.generated().format(e, sb, p);
+        for (TaggedElement e : model.loadBearing()) FormatterRegistry.loadBearing().format(e, sb, p);
+        for (TaggedElement e : model.bannedApi()) FormatterRegistry.bannedApi().format(e, sb, p);
+        for (TaggedElement e : model.threadAffinity()) FormatterRegistry.threadAffinity().format(e, sb, p);
+        for (TaggedElement e : model.keepInSync()) FormatterRegistry.keepInSync().format(e, sb, p);
         return sb.toString();
     }
 
     /** The guardrail summary split into non-blank lines (leading "- "/"* " bullet stripped). */
-    static List<String> lines(AnnotationCollector collector) {
+    static List<String> lines(GuardrailModel model) {
         List<String> out = new ArrayList<>();
-        for (String line : build(collector).split("\n", -1)) {
+        for (String line : build(model).split("\n", -1)) {
             String trimmed = line.strip();
             if (trimmed.isEmpty()) continue;
             if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {

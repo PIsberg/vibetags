@@ -36,7 +36,9 @@ import se.deversity.vibetags.annotations.AIPrototype;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.ContentHash;
+import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -85,51 +87,52 @@ public final class BuildFingerprint {
      */
     public static String compute(AnnotationCollector collector, Set<String> activeServices,
                                  String processorVersion) {
+        GuardrailModel model = collector.model();
         StringBuilder sb = new StringBuilder(4096);
 
         sb.append("V{").append(processorVersion).append('}');
 
-        appendAnnotationSet(sb, "L", collector.locked(), e -> {
-            AILocked a = e.getAnnotation(AILocked.class);
+        appendAnnotationSet(sb, "L", model.locked(), e -> {
+            AILocked a = e.annotation(AILocked.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "C", collector.context(), e -> {
-            AIContext a = e.getAnnotation(AIContext.class);
+        appendAnnotationSet(sb, "C", model.context(), e -> {
+            AIContext a = e.annotation(AIContext.class);
             return a == null ? "" : a.focus() + "|" + a.avoids();
         });
-        appendAnnotationSet(sb, "I", collector.ignore(), e -> {
+        appendAnnotationSet(sb, "I", model.ignore(), e -> {
             // @AIIgnore has no attributes that affect output beyond presence + element name,
             // both of which are already captured by the element-path key.
             return "";
         });
-        appendAnnotationSet(sb, "A", collector.audit(), e -> {
-            AIAudit a = e.getAnnotation(AIAudit.class);
+        appendAnnotationSet(sb, "A", model.audit(), e -> {
+            AIAudit a = e.annotation(AIAudit.class);
             if (a == null) return "";
             String[] checkFor = a.checkFor();
             return String.join(",", checkFor);
         });
-        appendAnnotationSet(sb, "D", collector.draft(), e -> {
-            AIDraft a = e.getAnnotation(AIDraft.class);
+        appendAnnotationSet(sb, "D", model.draft(), e -> {
+            AIDraft a = e.annotation(AIDraft.class);
             return a == null ? "" : a.instructions();
         });
-        appendAnnotationSet(sb, "P", collector.privacy(), e -> {
-            AIPrivacy a = e.getAnnotation(AIPrivacy.class);
+        appendAnnotationSet(sb, "P", model.privacy(), e -> {
+            AIPrivacy a = e.annotation(AIPrivacy.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "K", collector.core(), e -> {
-            AICore a = e.getAnnotation(AICore.class);
+        appendAnnotationSet(sb, "K", model.core(), e -> {
+            AICore a = e.annotation(AICore.class);
             return a == null ? "" : a.sensitivity() + "|" + a.note();
         });
-        appendAnnotationSet(sb, "F", collector.performance(), e -> {
-            AIPerformance a = e.getAnnotation(AIPerformance.class);
+        appendAnnotationSet(sb, "F", model.performance(), e -> {
+            AIPerformance a = e.annotation(AIPerformance.class);
             return a == null ? "" : a.constraint();
         });
-        appendAnnotationSet(sb, "T", collector.contract(), e -> {
-            AIContract a = e.getAnnotation(AIContract.class);
+        appendAnnotationSet(sb, "T", model.contract(), e -> {
+            AIContract a = e.annotation(AIContract.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "TD", collector.testDriven(), e -> {
-            AITestDriven a = e.getAnnotation(AITestDriven.class);
+        appendAnnotationSet(sb, "TD", model.testDriven(), e -> {
+            AITestDriven a = e.annotation(AITestDriven.class);
             if (a == null) return "";
             StringBuilder attrs = new StringBuilder();
             attrs.append(a.coverageGoal()).append('|');
@@ -138,135 +141,128 @@ public final class BuildFingerprint {
             attrs.append('|').append(a.mockPolicy());
             return attrs.toString();
         });
-        appendAnnotationSet(sb, "TS", collector.threadSafe(), e -> {
-            AIThreadSafe a = e.getAnnotation(AIThreadSafe.class);
+        appendAnnotationSet(sb, "TS", model.threadSafe(), e -> {
+            AIThreadSafe a = e.annotation(AIThreadSafe.class);
             return a == null ? "" : a.strategy().name() + "|" + a.note();
         });
-        appendAnnotationSet(sb, "IM", collector.immutable(), e -> {
-            AIImmutable a = e.getAnnotation(AIImmutable.class);
+        appendAnnotationSet(sb, "IM", model.immutable(), e -> {
+            AIImmutable a = e.annotation(AIImmutable.class);
             return a == null ? "" : a.note();
         });
-        appendAnnotationSet(sb, "DP", collector.deprecated(), e -> {
-            AIDeprecated a = e.getAnnotation(AIDeprecated.class);
+        appendAnnotationSet(sb, "DP", model.deprecated(), e -> {
+            AIDeprecated a = e.annotation(AIDeprecated.class);
             return a == null ? "" : a.replacedBy() + "|" + a.migrationGuide() + "|" + a.deadline();
         });
-        appendAnnotationSet(sb, "OB", collector.observability(), e -> {
-            AIObservability a = e.getAnnotation(AIObservability.class);
+        appendAnnotationSet(sb, "OB", model.observability(), e -> {
+            AIObservability a = e.annotation(AIObservability.class);
             if (a == null) return "";
             return String.join(",", a.metrics()) + "|"
                  + String.join(",", a.traces()) + "|"
                  + String.join(",", a.logs()) + "|"
                  + a.note();
         });
-        appendAnnotationSet(sb, "RG", collector.regulation(), e -> {
-            AIRegulation a = e.getAnnotation(AIRegulation.class);
+        appendAnnotationSet(sb, "RG", model.regulation(), e -> {
+            AIRegulation a = e.annotation(AIRegulation.class);
             return a == null ? "" : a.standard() + "|" + a.clause() + "|" + a.description();
         });
-        appendAnnotationSet(sb, "PT", collector.parallelTests(), e -> "");
-        appendAnnotationSet(sb, "LB", collector.legacyBridge(), e -> "");
-        appendAnnotationSet(sb, "AR", collector.architecture(), e -> {
-            AIArchitecture a = e.getAnnotation(AIArchitecture.class);
+        appendAnnotationSet(sb, "PT", model.parallelTests(), e -> "");
+        appendAnnotationSet(sb, "LB", model.legacyBridge(), e -> "");
+        appendAnnotationSet(sb, "AR", model.architecture(), e -> {
+            AIArchitecture a = e.annotation(AIArchitecture.class);
             if (a == null) return "";
             return a.belongsTo() + "|" + String.join(",", a.cannotReference());
         });
-        appendAnnotationSet(sb, "PA", collector.publicApi(), e -> "");
-        appendAnnotationSet(sb, "SE", collector.strictExceptions(), e -> "");
-        appendAnnotationSet(sb, "ST", collector.strictTypes(), e -> "");
-        appendAnnotationSet(sb, "IT", collector.internationalized(), e -> "");
-        appendAnnotationSet(sb, "SC", collector.strictClasspath(), e -> "");
-        appendAnnotationSet(sb, "SS", collector.schemaSafe(), e -> "");
-        appendAnnotationSet(sb, "ID", collector.idempotent(), e -> {
-            AIIdempotent a = e.getAnnotation(AIIdempotent.class);
+        appendAnnotationSet(sb, "PA", model.publicApi(), e -> "");
+        appendAnnotationSet(sb, "SE", model.strictExceptions(), e -> "");
+        appendAnnotationSet(sb, "ST", model.strictTypes(), e -> "");
+        appendAnnotationSet(sb, "IT", model.internationalized(), e -> "");
+        appendAnnotationSet(sb, "SC", model.strictClasspath(), e -> "");
+        appendAnnotationSet(sb, "SS", model.schemaSafe(), e -> "");
+        appendAnnotationSet(sb, "ID", model.idempotent(), e -> {
+            AIIdempotent a = e.annotation(AIIdempotent.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "FF", collector.featureFlag(), e -> {
-            AIFeatureFlag a = e.getAnnotation(AIFeatureFlag.class);
+        appendAnnotationSet(sb, "FF", model.featureFlag(), e -> {
+            AIFeatureFlag a = e.annotation(AIFeatureFlag.class);
             return a == null ? "" : a.flag() + "|" + a.defaultValue();
         });
-        appendAnnotationSet(sb, "SEC", collector.secure(), e -> {
-            AISecure a = e.getAnnotation(AISecure.class);
+        appendAnnotationSet(sb, "SEC", model.secure(), e -> {
+            AISecure a = e.annotation(AISecure.class);
             return a == null ? "" : a.aspect();
         });
-        appendAnnotationSet(sb, "CO", collector.callersOnly(), e -> {
-            AICallersOnly a = e.getAnnotation(AICallersOnly.class);
+        appendAnnotationSet(sb, "CO", model.callersOnly(), e -> {
+            AICallersOnly a = e.annotation(AICallersOnly.class);
             return a == null ? "" : String.join(",", a.value());
         });
-        appendAnnotationSet(sb, "SO", collector.sandboxOnly(), e -> {
-            AISandboxOnly a = e.getAnnotation(AISandboxOnly.class);
+        appendAnnotationSet(sb, "SO", model.sandboxOnly(), e -> {
+            AISandboxOnly a = e.annotation(AISandboxOnly.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "MB", collector.memoryBudget(), e -> {
-            AIMemoryBudget a = e.getAnnotation(AIMemoryBudget.class);
+        appendAnnotationSet(sb, "MB", model.memoryBudget(), e -> {
+            AIMemoryBudget a = e.annotation(AIMemoryBudget.class);
             return a == null ? "" : a.value().name();
         });
-        appendAnnotationSet(sb, "PU", collector.pure(), e -> {
-            AIPure a = e.getAnnotation(AIPure.class);
+        appendAnnotationSet(sb, "PU", model.pure(), e -> {
+            AIPure a = e.annotation(AIPure.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "DM", collector.domainModel(), e -> {
-            AIDomainModel a = e.getAnnotation(AIDomainModel.class);
+        appendAnnotationSet(sb, "DM", model.domainModel(), e -> {
+            AIDomainModel a = e.annotation(AIDomainModel.class);
             return a == null ? "" : String.join(",", a.allow());
         });
-        appendAnnotationSet(sb, "EX", collector.extensible(), e -> {
-            AIExtensible a = e.getAnnotation(AIExtensible.class);
+        appendAnnotationSet(sb, "EX", model.extensible(), e -> {
+            AIExtensible a = e.annotation(AIExtensible.class);
             return a == null ? "" : a.value().name();
         });
-        appendAnnotationSet(sb, "IZ", collector.inputSanitized(), e -> {
-            AIInputSanitized a = e.getAnnotation(AIInputSanitized.class);
+        appendAnnotationSet(sb, "IZ", model.inputSanitized(), e -> {
+            AIInputSanitized a = e.annotation(AIInputSanitized.class);
             if (a == null) return "";
             StringBuilder types = new StringBuilder();
             for (AIInputSanitized.SanitizerType t : a.value()) types.append(t.name()).append(',');
             return types.toString();
         });
-        appendAnnotationSet(sb, "SL", collector.secureLogging(), e -> {
-            AISecureLogging a = e.getAnnotation(AISecureLogging.class);
+        appendAnnotationSet(sb, "SL", model.secureLogging(), e -> {
+            AISecureLogging a = e.annotation(AISecureLogging.class);
             return a == null ? "" : a.value().name();
         });
-        appendAnnotationSet(sb, "XP", collector.explain(), e -> {
-            AIExplain a = e.getAnnotation(AIExplain.class);
+        appendAnnotationSet(sb, "XP", model.explain(), e -> {
+            AIExplain a = e.annotation(AIExplain.class);
             return a == null ? "" : a.value().name();
         });
-        appendAnnotationSet(sb, "PR", collector.prototype(), e -> {
-            AIPrototype a = e.getAnnotation(AIPrototype.class);
+        appendAnnotationSet(sb, "PR", model.prototype(), e -> {
+            AIPrototype a = e.annotation(AIPrototype.class);
             return a == null ? "" : a.reason();
         });
-        appendAnnotationSet(sb, "SN", collector.sunset(), e -> {
-            AISunset a = e.getAnnotation(AISunset.class);
+        appendAnnotationSet(sb, "SN", model.sunset(), e -> {
+            AISunset a = e.annotation(AISunset.class);
             if (a == null) return "";
-            // Class-valued attributes throw MirroredTypeException during annotation processing;
-            // the mirror's toString() is the replacement type's canonical name.
-            String replacement;
-            try {
-                Class<?> c = a.replacement();
-                replacement = c == null ? "" : c.getName();
-            } catch (javax.lang.model.type.MirroredTypeException mte) {
-                replacement = String.valueOf(mte.getTypeMirror());
-            }
-            return a.jira() + "|" + replacement;
+            // replacement() is Class-valued, so it is unreadable here — the collector resolved it
+            // to a type name while the compiler was still in scope.
+            return a.jira() + "|" + e.typeMember("AISunset.replacement", "");
         });
-        appendAnnotationSet(sb, "TM", collector.temporary(), e -> {
-            AITemporary a = e.getAnnotation(AITemporary.class);
+        appendAnnotationSet(sb, "TM", model.temporary(), e -> {
+            AITemporary a = e.annotation(AITemporary.class);
             return a == null ? "" : a.expiresOn() + "|" + a.reason();
         });
-        appendAnnotationSet(sb, "GEN", collector.generated(), e -> {
-            AIGenerated a = e.getAnnotation(AIGenerated.class);
+        appendAnnotationSet(sb, "GEN", model.generated(), e -> {
+            AIGenerated a = e.annotation(AIGenerated.class);
             return a == null ? "" : a.from() + "|" + a.regenerateWith() + "|" + a.editInstead();
         });
-        appendAnnotationSet(sb, "LB", collector.loadBearing(), e -> {
-            AILoadBearing a = e.getAnnotation(AILoadBearing.class);
+        appendAnnotationSet(sb, "LB", model.loadBearing(), e -> {
+            AILoadBearing a = e.annotation(AILoadBearing.class);
             return a == null ? "" : a.invariant() + "|" + a.breaksIf() + "|" + a.suppressAudit();
         });
-        appendAnnotationSet(sb, "BA", collector.bannedApi(), e -> {
-            AIBannedApi a = e.getAnnotation(AIBannedApi.class);
+        appendAnnotationSet(sb, "BA", model.bannedApi(), e -> {
+            AIBannedApi a = e.annotation(AIBannedApi.class);
             return a == null ? "" : String.join(",", a.forbidden()) + "|" + a.useInstead() + "|" + a.reason();
         });
-        appendAnnotationSet(sb, "TA", collector.threadAffinity(), e -> {
-            AIThreadAffinity a = e.getAnnotation(AIThreadAffinity.class);
+        appendAnnotationSet(sb, "TA", model.threadAffinity(), e -> {
+            AIThreadAffinity a = e.annotation(AIThreadAffinity.class);
             return a == null ? "" : a.value().name() + "|" + a.thread() + "|" + a.marshalVia()
                 + "|" + a.symptomIfViolated();
         });
-        appendAnnotationSet(sb, "KIS", collector.keepInSync(), e -> {
-            AIKeepInSync a = e.getAnnotation(AIKeepInSync.class);
+        appendAnnotationSet(sb, "KIS", model.keepInSync(), e -> {
+            AIKeepInSync a = e.annotation(AIKeepInSync.class);
             return a == null ? "" : String.join(",", a.mirrors()) + "|" + a.reason() + "|" + a.enforcedBy();
         });
 
@@ -279,7 +275,7 @@ public final class BuildFingerprint {
         return fingerprint(sb.toString());
     }
 
-    private static void appendAnnotationSet(StringBuilder sb, String tag, Set<Element> elements,
+    private static void appendAnnotationSet(StringBuilder sb, String tag, Set<TaggedElement> elements,
                                             AttributeExtractor attrs) {
         sb.append(tag).append('{');
         if (elements.isEmpty()) {
@@ -287,10 +283,10 @@ public final class BuildFingerprint {
             return;
         }
         // Sort by element path so iteration order can't drift between runs.
-        List<Element> sorted = new ArrayList<>(elements);
-        sorted.sort(Comparator.comparing(ElementNaming::elementPath));
-        for (Element e : sorted) {
-            sb.append(ElementNaming.elementPath(e)).append('=').append(attrs.extract(e)).append(';');
+        List<TaggedElement> sorted = new ArrayList<>(elements);
+        sorted.sort(Comparator.comparing(TaggedElement::path));
+        for (TaggedElement e : sorted) {
+            sb.append(e.path()).append('=').append(attrs.extract(e)).append(';');
         }
         sb.append('}');
     }
@@ -303,19 +299,11 @@ public final class BuildFingerprint {
      */
     @AIPerformance(constraint = "O(N) in string length; uses String.hashCode() which HotSpot intrinsifies on x86; must not allocate intermediate byte[]")
     static String fingerprint(String s) {
-        int h = s.hashCode();
-        char[] out = new char[8];
-        for (int i = 7; i >= 0; i--) {
-            out[i] = HEX[h & 0xF];
-            h >>>= 4;
-        }
-        return new String(out);
+        return ContentHash.of(s);
     }
-
-    private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     @FunctionalInterface
     private interface AttributeExtractor {
-        String extract(Element e);
+        String extract(TaggedElement e);
     }
 }

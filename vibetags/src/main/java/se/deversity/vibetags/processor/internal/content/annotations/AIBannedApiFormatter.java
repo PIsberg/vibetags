@@ -2,9 +2,8 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIBannedApi;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -17,10 +16,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIBannedApiFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIBannedApi banned = element.getAnnotation(AIBannedApi.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIBannedApi banned = element.annotation(AIBannedApi.class);
         if (banned == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String forbidden = String.join(", ", banned.forbidden());
         String useInstead = banned.useInstead();
         String reason = banned.reason();
@@ -58,7 +57,7 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Banned here**: ").append(forbidden).append("\n");

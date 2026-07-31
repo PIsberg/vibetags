@@ -3,8 +3,8 @@ package se.deversity.vibetags.processor.internal.content;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import javax.lang.model.element.Element;
-import se.deversity.vibetags.processor.internal.RoleConfig;
+import se.deversity.vibetags.processor.model.TaggedElement;
+import se.deversity.vibetags.processor.model.RoleConfig;
 
 /**
  * Context containing metadata and configuration options for the current rendering run.
@@ -14,7 +14,7 @@ public final class RenderingContext {
     private final String generatedHeader;
     private final Set<String> activeServices;
     private final int estimatedContentSize;
-    private final Set<Element> granularOwners;
+    private final Set<TaggedElement> granularOwners;
     private final RoleConfig roles;
 
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
@@ -39,7 +39,7 @@ public final class RenderingContext {
      *        {@link #granularOwners()}); pass an empty set when no granular service is active.
      */
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
-                            int estimatedContentSize, Set<Element> granularOwners) {
+                            int estimatedContentSize, Set<TaggedElement> granularOwners) {
         this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, null);
     }
 
@@ -49,7 +49,7 @@ public final class RenderingContext {
      *        same files {@code GranularRulesWriter} writes (role-grouped or per-class).
      */
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
-                            int estimatedContentSize, Set<Element> granularOwners, RoleConfig roles) {
+                            int estimatedContentSize, Set<TaggedElement> granularOwners, RoleConfig roles) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
         // Defensive copy: prevent callers from mutating the set through the stored reference.
@@ -82,7 +82,7 @@ public final class RenderingContext {
      * Empty when no {@code *_granular} service is active. Aggregate renderers use this to emit a
      * scoped-rules index instead of duplicating each element's full guardrails inline.
      */
-    public Set<Element> granularOwners() {
+    public Set<TaggedElement> granularOwners() {
         return granularOwners;
     }
 

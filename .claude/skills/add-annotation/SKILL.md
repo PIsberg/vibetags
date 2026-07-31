@@ -1,6 +1,6 @@
 ---
 name: add-annotation
-description: Add a new @AI... guardrail annotation to VibeTags — wire it through AnnotationCollector, every platform renderer, GranularRenderer, BuildFingerprint, and AnnotationValidator, then update all four docs. Use when the user says "add annotation", "new @AI annotation", "add a new guardrail annotation", or wants VibeTags to support a new kind of AI instruction on Java code.
+description: Add a new @AI... guardrail annotation to VibeTags — register it in GuardrailAnnotations, then wire it through every platform renderer, GranularRenderer, BuildFingerprint, and AnnotationValidator, and update all four docs. Use when the user says "add annotation", "new @AI annotation", "add a new guardrail annotation", or wants VibeTags to support a new kind of AI instruction on Java code.
 ---
 
 # Add an Annotation to VibeTags
@@ -24,29 +24,31 @@ New file: `vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/
   `.isBlank()`/`.isEmpty()`, never a null-check.
 - Enum-valued attributes get a nested `enum` inside the `@interface` with a sensible default
   constant (see `AIThreadSafe.Strategy`, `AIExtensible.Strategy`, `AISecureLogging.MaskingPolicy`).
-- Class-valued attributes (`AISunset.replacement`) must be read via `MirroredTypeException` at
-  every consumption site — copy the try/catch pattern from `GranularRenderer.renderGranular()`
-  and `BuildFingerprint.compute()`.
+- Class-valued attributes (`AISunset.replacement`) cannot be read below the model seam at all:
+  calling them during annotation processing throws `MirroredTypeException`. Resolve the value
+  **once**, in `AnnotationCollector.record(...)` — the only place the compiler is still in scope —
+  and store it with `builder.typeMember("AIYourName.attr", …)`. Consumption sites then read
+  `element.typeMember("AIYourName.attr", "<fallback>")`. Copy the `AISunset` pattern; do not
+  reintroduce a try/catch in a formatter or renderer, since `ArchitectureRulesTest` forbids
+  `javax.lang.model` there and the catch would never fire anyway.
 - Full Javadoc on the `@interface` and every attribute — `docs/ANNOTATIONS.md`'s semantics bullet
   and the `vibetags-usage` skill's per-annotation section are meant to summarize it, not invent it.
 
 ## Step 2 — Wire the collection pipeline
 
-`vibetags/.../internal/AnnotationCollector.java` — six edits in this one file:
+**One line**, in `vibetags/.../processor/model/GuardrailAnnotations.java`: append
+`AIYourName.class` to the end of `ALL`.
 
-1. `private final Set<Element> yourNameElements = new LinkedHashSet<>();` — **must** be
-   `LinkedHashSet`; insertion order feeds `BuildFingerprint` determinism (a class-level
-   `@AIContext` javadoc on this file explains why `HashSet` is a correctness bug, not a style
-   nit).
-2. `collectInto(yourNameElements, AIYourName.class, roundEnv, presentAnnotationFqns);` in
-   `collect(...)`.
-3. OR it into the `boolean added = ... || !yourNameElements.isEmpty();` expression right after.
-4. `yourNameElements.clear();` in `reset()`.
-5. `public Set<Element> yourName() { return Collections.unmodifiableSet(yourNameElements); }`.
-6. `labeled.put("@AIYourName", yourName());` in `labeledSets()` — `logSummary()` iterates this
-   map, so no separate edit is needed there — and add its `.size()` to the sum in
-   `totalAnnotatedReferences()` (a `StringBuilder` pre-sizing hint; harmless to miss but keep it
-   complete).
+That registry drives collection, reset, the label map, the size sum, and the model's buckets —
+`AnnotationCollector` and `GuardrailModel` both iterate it, so there is nothing else to edit here.
+**Append, never reorder**: the list order fixes the insertion order of every `LinkedHashSet`
+downstream, and reordering changes generated files for every consumer.
+
+Then add the two named accessors that renderers read as method references:
+
+- `GuardrailModel`: `public Set<TaggedElement> yourName() { return of(AIYourName.class); }`
+- `AnnotationCollector`: `public Set<Element> yourName() { return elementsOf(AIYourName.class); }`
+  — the javac-side view, used by tests and by anything that needs a real `Element`.
 
 ## Step 3 — Formatter (one class, dispatches to every platform)
 
@@ -67,16 +69,16 @@ Two families, different plumbing:
 
 **A. Markdown bucket-walk renderers** (Cursor, Windsurf, Zed, Copilot, Qwen, Codex, Gemini) —
 each owns its own `SECTIONS` list of `AnnotationSections.Section`. Add one line to each of the
-7 files: `section(Platform.X, SectionCatalog.Key.YOUR_NAME, AnnotationCollector::yourName,
+7 files: `section(Platform.X, SectionCatalog.Key.YOUR_NAME, GuardrailModel::yourName,
 FormatterRegistry.yourName())`. If a platform instead folds the newest annotations into a shared
 trailing list (Cursor/Windsurf both reuse `AnnotationSections.EMOJI_STYLE_NEWEST_ANNOTATIONS`),
 add there instead of duplicating a per-file entry.
 
 **B. `ClaudeRenderer` (bespoke XML)** — hand-add a block matching the ~35 already there:
 ```java
-if (!collector.yourName().isEmpty()) {
+if (!model.yourName().isEmpty()) {
     StringBuilder sec = new StringBuilder("  <your_name_elements>\n");
-    for (Element e : collector.yourName()) {
+    for (TaggedElement e : model.yourName()) {
         FormatterRegistry.yourName().format(e, sec, Platform.CLAUDE);
     }
     sec.append("  </your_name_elements>\n");
@@ -93,20 +95,20 @@ Cursor/Windsurf pull by default). Add `OVERRIDES` entries under the existing
 it inherits `DEFAULT` automatically via `SectionCatalog.header()`'s fallback.
 
 **D. `GranularRenderer.renderGranular()`** — add a
-`for (Element e : collector.yourName()) { ... appendToGranular(elementRules, e, "Section Title",
+`for (TaggedElement e : model.yourName()) { ... appendToGranular(elementRules, e, "Section Title",
 "- **Field**: " + a.field()); }` block, or the annotation never appears in any granular rule file
 even while granular platforms are active — this loop is not driven by the SECTIONS lists above.
 
-**E. Every other renderer that walks `collector.xxx()` directly** (`LlmsRenderer`,
+**E. Every other renderer that walks `model.xxx()` directly** (`LlmsRenderer`,
 `AiderConventionsRenderer`, etc., plus any bespoke platform renderer from a previous
-`add-platform` pass) — run `grep -rn "collector\.secure()" vibetags/src/main/java/.../content/
+`add-platform` pass) — run `grep -rn "model\.secure()" vibetags/src/main/java/.../content/
 platforms/` (or any other recent annotation's accessor) to enumerate every call site that needs a
 sibling for your new accessor.
 
 ## Step 5 — BuildFingerprint (do not skip this)
 
 `vibetags/.../internal/BuildFingerprint.java` — add one
-`appendAnnotationSet(sb, "XX", collector.yourName(), e -> { ... join every attribute that affects
+`appendAnnotationSet(sb, "XX", model.yourName(), e -> { ... join every attribute that affects
 rendered output with a delimiter ... });` call, `"XX"` a short tag not already used by a sibling
 call. Skipping this means editing the annotation's attributes on an already-annotated element
 does not change the fingerprint, so the top-level short-circuit in `generateFiles()` (locked —

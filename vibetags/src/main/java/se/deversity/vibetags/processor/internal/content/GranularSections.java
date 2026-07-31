@@ -5,9 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 /**
  * Renders a granular rule file body from structured {@link GranularBody.Entry} stanzas, collapsing
@@ -83,7 +82,7 @@ public final class GranularSections {
         }
         out.append("## ").append(title).append('\n');
         for (GranularBody.Entry e : group) {
-            out.append('\n').append("### ").append(ElementNaming.elementPath(e.element())).append('\n');
+            out.append('\n').append("### ").append(e.element().path()).append('\n');
             out.append(String.join("\n", e.lines())).append('\n');
         }
     }
@@ -118,7 +117,7 @@ public final class GranularSections {
 
         for (GranularBody.Entry e : withDetail) {
             out.append('\n')
-               .append(qualified ? "### " + ElementNaming.elementPath(e.element()) : collapsedHeading(e))
+               .append(qualified ? "### " + e.element().path() : collapsedHeading(e))
                .append('\n')
                .append(String.join("\n", remaining(e, shared)))
                .append('\n');
@@ -186,26 +185,27 @@ public final class GranularSections {
     /** Heading for a stanza that sits under an already-emitted section heading. */
     private static String collapsedHeading(GranularBody.Entry e) {
         return e.ownerLevel()
-            ? "### Rules for " + kindOf(e.element()) + " " + e.element().getSimpleName()
+            ? "### Rules for " + kindOf(e.element()) + " " + e.element().simpleName()
             : memberHeading(e.element());
     }
 
     /** Historical member heading, e.g. {@code ### Rules for field privateKey}. */
-    private static String memberHeading(Element element) {
-        ElementKind kind = element.getKind();
-        CharSequence name = (kind == ElementKind.PARAMETER)
-                ? ElementNaming.elementDisplayName(element)
-                : element.getSimpleName();
+    private static String memberHeading(TaggedElement element) {
+        ElementTag kind = element.kind();
+        CharSequence name = (kind == ElementTag.PARAMETER)
+                ? element.displayName()
+                : element.simpleName();
         return "### Rules for " + kindOf(element) + " " + name;
     }
 
-    private static String kindOf(Element element) {
-        ElementKind kind = element.getKind();
-        return kind != null ? kind.toString().toLowerCase(Locale.ROOT) : "element";
+    /** The kind word in a stanza heading: "field", "method", … or plain "element" when unknown. */
+    private static String kindOf(TaggedElement element) {
+        ElementTag kind = element.kind();
+        return kind == ElementTag.UNKNOWN ? "element" : kind.toString().toLowerCase(Locale.ROOT);
     }
 
-    private static String display(Element element, boolean qualified) {
-        return qualified ? ElementNaming.elementPath(element) : ElementNaming.elementDisplayName(element);
+    private static String display(TaggedElement element, boolean qualified) {
+        return qualified ? element.path() : element.displayName();
     }
 
     /**

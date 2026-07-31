@@ -2,9 +2,10 @@ package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.GranularSections;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,7 +40,7 @@ public final class GranularRulesWriter {
     }
 
     /** Per-class granular writing (no role routing). */
-    public Set<String> writeAll(Map<Element, GranularBody> elementRules,
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices) {
         return writeAll(elementRules, serviceFiles, activeServices, null);
@@ -54,7 +55,7 @@ public final class GranularRulesWriter {
      * @param roles           role routing config, or {@code null}/empty for per-class behavior
      * @return qNames (per-class) and role stems (filename minus extension) of files just written
      */
-    public Set<String> writeAll(Map<Element, GranularBody> elementRules,
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices,
                                 RoleConfig roles) {
@@ -72,7 +73,7 @@ public final class GranularRulesWriter {
      * @param extraGlobs globs appended after the rule's own glob(s)
      * @return the prefixed stems written, for {@link #cleanupMirrored}
      */
-    public Set<String> writeMirrored(Map<Element, GranularBody> elementRules,
+    public Set<String> writeMirrored(Map<TaggedElement, GranularBody> elementRules,
                                      Map<String, Path> serviceFiles,
                                      Set<String> activeServices,
                                      RoleConfig roles,
@@ -81,7 +82,7 @@ public final class GranularRulesWriter {
         return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs);
     }
 
-    private Set<String> write(Map<Element, GranularBody> elementRules,
+    private Set<String> write(Map<TaggedElement, GranularBody> elementRules,
                               Map<String, Path> serviceFiles,
                               Set<String> activeServices,
                               RoleConfig roles,
@@ -102,8 +103,8 @@ public final class GranularRulesWriter {
 
         // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
         // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
-        Map<String, List<Element>> roleMembers = new LinkedHashMap<>();
-        Map<Element, GranularBody> unmatched = new LinkedHashMap<>();
+        Map<String, List<TaggedElement>> roleMembers = new LinkedHashMap<>();
+        Map<TaggedElement, GranularBody> unmatched = new LinkedHashMap<>();
         elementRules.forEach((owner, body) -> {
             String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
             if (role != null) {
@@ -115,9 +116,9 @@ public final class GranularRulesWriter {
 
         // Unmatched elements → one file per class/package (unchanged output).
         unmatched.forEach((owner, body) -> {
-            String qName = filePrefix + ElementNaming.granularQName(owner);
+            String qName = filePrefix + owner.granularQName();
             writtenQNames.add(qName);
-            String simpleName = owner.getSimpleName().toString();
+            String simpleName = owner.simpleName();
             String description = "AI rules for " + owner;
             List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
             String content = body.toString().trim();
@@ -140,7 +141,7 @@ public final class GranularRulesWriter {
             if (globs.isEmpty()) {
                 // Role defined only by FQNs — derive globs from the members' own class/package globs.
                 Set<String> derived = new LinkedHashSet<>();
-                for (Element m : members) {
+                for (TaggedElement m : members) {
                     derived.add(defaultGlob(m));
                 }
                 globs = new ArrayList<>(derived);
@@ -151,7 +152,7 @@ public final class GranularRulesWriter {
             // and with each section's shared rule sentence hoisted once instead of repeated per
             // element (issue #313).
             List<GranularBody.Entry> stanzas = new ArrayList<>();
-            for (Element m : members) {
+            for (TaggedElement m : members) {
                 GranularBody memberBody = elementRules.get(m);
                 if (memberBody != null) {
                     stanzas.addAll(memberBody.entries());
@@ -187,9 +188,9 @@ public final class GranularRulesWriter {
         return new ArrayList<>(merged);
     }
 
-    private static String defaultGlob(Element owner) {
-        String simpleName = owner.getSimpleName().toString();
-        return owner.getKind() == ElementKind.PACKAGE
+    private static String defaultGlob(TaggedElement owner) {
+        String simpleName = owner.simpleName();
+        return owner.kind() == ElementTag.PACKAGE
             ? "**/" + simpleName + "/**/*.java"
             : "**/" + simpleName + ".java";
     }

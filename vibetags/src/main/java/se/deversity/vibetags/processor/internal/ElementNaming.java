@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 
 /**
@@ -72,15 +73,25 @@ public final class ElementNaming {
         if (kind == ElementKind.PARAMETER) {
             Element executable = element.getEnclosingElement();
             if (executable != null) {
-                return elementDisplayName(executable) + "#" + element.getSimpleName();
+                return elementDisplayName(executable) + "#" + simpleNameOf(element);
             }
         }
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
-                return enclosing.getSimpleName() + "." + element.toString();
+                return simpleNameOf(enclosing) + "." + element.toString();
             }
         }
-        return element.getSimpleName().toString();
+        return simpleNameOf(element);
+    }
+
+    /**
+     * The element's simple name as a String, or {@code ""} when the compiler does not supply one.
+     * The empty case is real: unnamed packages have no simple name, and mocked elements in unit
+     * tests return none — neither is worth an NPE inside somebody else's build.
+     */
+    public static String simpleNameOf(Element element) {
+        Name name = element.getSimpleName();
+        return name != null ? name.toString() : "";
     }
 }

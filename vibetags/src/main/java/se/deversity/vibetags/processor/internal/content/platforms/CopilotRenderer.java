@@ -1,8 +1,8 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.List;
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
@@ -17,73 +17,73 @@ import static se.deversity.vibetags.processor.internal.content.platforms.Annotat
 public final class CopilotRenderer implements PlatformRenderer {
 
     private static final List<AnnotationSections.Section> SECTIONS = List.of(
-        section(Platform.COPILOT, SectionCatalog.Key.AUDIT, AnnotationCollector::audit, FormatterRegistry.audit()),
-        section(Platform.COPILOT, SectionCatalog.Key.IGNORE, AnnotationCollector::ignore, FormatterRegistry.ignore()),
-        section(Platform.COPILOT, SectionCatalog.Key.DRAFT, AnnotationCollector::draft, FormatterRegistry.draft()),
-        section(Platform.COPILOT, SectionCatalog.Key.PRIVACY, AnnotationCollector::privacy, FormatterRegistry.privacy()),
-        section(Platform.COPILOT, SectionCatalog.Key.CORE, AnnotationCollector::core, FormatterRegistry.core()),
-        section(Platform.COPILOT, SectionCatalog.Key.PERFORMANCE, AnnotationCollector::performance, FormatterRegistry.performance()),
-        section(Platform.COPILOT, SectionCatalog.Key.CONTRACT, AnnotationCollector::contract, FormatterRegistry.contract()),
-        section(Platform.COPILOT, SectionCatalog.Key.TEST_DRIVEN, AnnotationCollector::testDriven, FormatterRegistry.testDriven()),
-        section(Platform.COPILOT, SectionCatalog.Key.THREAD_SAFE, AnnotationCollector::threadSafe, FormatterRegistry.threadSafe()),
-        section(Platform.COPILOT, SectionCatalog.Key.IMMUTABLE, AnnotationCollector::immutable, FormatterRegistry.immutable()),
-        section(Platform.COPILOT, SectionCatalog.Key.DEPRECATED, AnnotationCollector::deprecated, FormatterRegistry.deprecated()),
-        section(Platform.COPILOT, SectionCatalog.Key.OBSERVABILITY, AnnotationCollector::observability, FormatterRegistry.observability()),
-        section(Platform.COPILOT, SectionCatalog.Key.REGULATION, AnnotationCollector::regulation, FormatterRegistry.regulation()),
-        section(Platform.COPILOT, SectionCatalog.Key.PARALLEL_TESTS, AnnotationCollector::parallelTests, FormatterRegistry.parallelTests()),
-        section(Platform.COPILOT, SectionCatalog.Key.LEGACY_BRIDGE, AnnotationCollector::legacyBridge, FormatterRegistry.legacyBridge()),
-        section(Platform.COPILOT, SectionCatalog.Key.ARCHITECTURE, AnnotationCollector::architecture, FormatterRegistry.architecture()),
-        section(Platform.COPILOT, SectionCatalog.Key.PUBLIC_API, AnnotationCollector::publicApi, FormatterRegistry.publicApi()),
-        section(Platform.COPILOT, SectionCatalog.Key.STRICT_EXCEPTIONS, AnnotationCollector::strictExceptions, FormatterRegistry.strictExceptions()),
-        section(Platform.COPILOT, SectionCatalog.Key.STRICT_TYPES, AnnotationCollector::strictTypes, FormatterRegistry.strictTypes()),
-        section(Platform.COPILOT, SectionCatalog.Key.INTERNATIONALIZED, AnnotationCollector::internationalized, FormatterRegistry.internationalized()),
-        section(Platform.COPILOT, SectionCatalog.Key.STRICT_CLASSPATH, AnnotationCollector::strictClasspath, FormatterRegistry.strictClasspath()),
-        section(Platform.COPILOT, SectionCatalog.Key.SCHEMA_SAFE, AnnotationCollector::schemaSafe, FormatterRegistry.schemaSafe()),
-        section(Platform.COPILOT, SectionCatalog.Key.IDEMPOTENT, AnnotationCollector::idempotent, FormatterRegistry.idempotent()),
-        section(Platform.COPILOT, SectionCatalog.Key.FEATURE_FLAG, AnnotationCollector::featureFlag, FormatterRegistry.featureFlag()),
-        section(Platform.COPILOT, SectionCatalog.Key.SECURE, AnnotationCollector::secure, FormatterRegistry.secure()),
-        section(Platform.COPILOT, SectionCatalog.Key.CALLERS_ONLY, AnnotationCollector::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.COPILOT, SectionCatalog.Key.SANDBOX_ONLY, AnnotationCollector::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.COPILOT, SectionCatalog.Key.MEMORY_BUDGET, AnnotationCollector::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.COPILOT, SectionCatalog.Key.PURE, AnnotationCollector::pure, FormatterRegistry.pure()),
-        section(Platform.COPILOT, SectionCatalog.Key.DOMAIN_MODEL, AnnotationCollector::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.COPILOT, SectionCatalog.Key.EXTENSIBLE, AnnotationCollector::extensible, FormatterRegistry.extensible()),
-        section(Platform.COPILOT, SectionCatalog.Key.INPUT_SANITIZED, AnnotationCollector::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.COPILOT, SectionCatalog.Key.SECURE_LOGGING, AnnotationCollector::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.COPILOT, SectionCatalog.Key.EXPLAIN, AnnotationCollector::explain, FormatterRegistry.explain()),
-        section(Platform.COPILOT, SectionCatalog.Key.PROTOTYPE, AnnotationCollector::prototype, FormatterRegistry.prototype()),
-        section(Platform.COPILOT, SectionCatalog.Key.SUNSET, AnnotationCollector::sunset, FormatterRegistry.sunset()),
-        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, AnnotationCollector::temporary, FormatterRegistry.temporary()),
-        section(Platform.COPILOT, SectionCatalog.Key.GENERATED, AnnotationCollector::generated, FormatterRegistry.generated()),
-        section(Platform.COPILOT, SectionCatalog.Key.LOAD_BEARING, AnnotationCollector::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.COPILOT, SectionCatalog.Key.BANNED_API, AnnotationCollector::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.COPILOT, SectionCatalog.Key.THREAD_AFFINITY, AnnotationCollector::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.COPILOT, SectionCatalog.Key.KEEP_IN_SYNC, AnnotationCollector::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.COPILOT, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),
+        section(Platform.COPILOT, SectionCatalog.Key.IGNORE, GuardrailModel::ignore, FormatterRegistry.ignore()),
+        section(Platform.COPILOT, SectionCatalog.Key.DRAFT, GuardrailModel::draft, FormatterRegistry.draft()),
+        section(Platform.COPILOT, SectionCatalog.Key.PRIVACY, GuardrailModel::privacy, FormatterRegistry.privacy()),
+        section(Platform.COPILOT, SectionCatalog.Key.CORE, GuardrailModel::core, FormatterRegistry.core()),
+        section(Platform.COPILOT, SectionCatalog.Key.PERFORMANCE, GuardrailModel::performance, FormatterRegistry.performance()),
+        section(Platform.COPILOT, SectionCatalog.Key.CONTRACT, GuardrailModel::contract, FormatterRegistry.contract()),
+        section(Platform.COPILOT, SectionCatalog.Key.TEST_DRIVEN, GuardrailModel::testDriven, FormatterRegistry.testDriven()),
+        section(Platform.COPILOT, SectionCatalog.Key.THREAD_SAFE, GuardrailModel::threadSafe, FormatterRegistry.threadSafe()),
+        section(Platform.COPILOT, SectionCatalog.Key.IMMUTABLE, GuardrailModel::immutable, FormatterRegistry.immutable()),
+        section(Platform.COPILOT, SectionCatalog.Key.DEPRECATED, GuardrailModel::deprecated, FormatterRegistry.deprecated()),
+        section(Platform.COPILOT, SectionCatalog.Key.OBSERVABILITY, GuardrailModel::observability, FormatterRegistry.observability()),
+        section(Platform.COPILOT, SectionCatalog.Key.REGULATION, GuardrailModel::regulation, FormatterRegistry.regulation()),
+        section(Platform.COPILOT, SectionCatalog.Key.PARALLEL_TESTS, GuardrailModel::parallelTests, FormatterRegistry.parallelTests()),
+        section(Platform.COPILOT, SectionCatalog.Key.LEGACY_BRIDGE, GuardrailModel::legacyBridge, FormatterRegistry.legacyBridge()),
+        section(Platform.COPILOT, SectionCatalog.Key.ARCHITECTURE, GuardrailModel::architecture, FormatterRegistry.architecture()),
+        section(Platform.COPILOT, SectionCatalog.Key.PUBLIC_API, GuardrailModel::publicApi, FormatterRegistry.publicApi()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_EXCEPTIONS, GuardrailModel::strictExceptions, FormatterRegistry.strictExceptions()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_TYPES, GuardrailModel::strictTypes, FormatterRegistry.strictTypes()),
+        section(Platform.COPILOT, SectionCatalog.Key.INTERNATIONALIZED, GuardrailModel::internationalized, FormatterRegistry.internationalized()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_CLASSPATH, GuardrailModel::strictClasspath, FormatterRegistry.strictClasspath()),
+        section(Platform.COPILOT, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
+        section(Platform.COPILOT, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
+        section(Platform.COPILOT, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
+        section(Platform.COPILOT, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
+        section(Platform.COPILOT, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.COPILOT, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.COPILOT, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.COPILOT, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
+        section(Platform.COPILOT, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.COPILOT, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
+        section(Platform.COPILOT, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.COPILOT, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.COPILOT, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
+        section(Platform.COPILOT, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
+        section(Platform.COPILOT, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
+        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
+        section(Platform.COPILOT, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
+        section(Platform.COPILOT, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.COPILOT, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.COPILOT, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.COPILOT, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
     );
 
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
         sb.append("# GitHub Copilot Instructions\n")
           .append(context.getGeneratedHeader())
           .append("# AUTO-GENERATED BY VIBETAGS. Do not edit manually.\n\n## Locked Files — DO NOT MODIFY\nDo not suggest changes to the following files:\n\n");
 
-        for (Element e : collector.locked()) {
+        for (TaggedElement e : model.locked()) {
             FormatterRegistry.locked().format(e, sb, Platform.COPILOT);
         }
 
         if (GranularIndexSection.indexActive(platform, context)) {
             // Granular sibling opted in: keep the always-loaded safety buckets inline and index the
             // rest to the scoped .github/instructions files (context detail moves there too).
-            AnnotationSections.renderInlineSafetySections(sb, collector, Platform.COPILOT);
+            AnnotationSections.renderInlineSafetySections(sb, model, Platform.COPILOT);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
         } else {
             sb.append("\n## Contextual Guidelines\n");
-            for (Element e : collector.context()) {
+            for (TaggedElement e : model.context()) {
                 FormatterRegistry.context().format(e, sb, Platform.COPILOT);
             }
 
-            AnnotationSections.render(sb, collector, Platform.COPILOT, SECTIONS);
+            AnnotationSections.render(sb, model, Platform.COPILOT, SECTIONS);
         }
 
         return sb.toString();

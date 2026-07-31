@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AISecureLogging;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISecureLoggingFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AISecureLogging secureLogging = element.getAnnotation(AISecureLogging.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AISecureLogging secureLogging = element.annotation(AISecureLogging.class);
         if (secureLogging == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         AISecureLogging.MaskingPolicy policy = secureLogging.value();
         String summary = "Sensitive variable. Forbid direct logging/printing. Enforce masking policy: " + policy.name();
 

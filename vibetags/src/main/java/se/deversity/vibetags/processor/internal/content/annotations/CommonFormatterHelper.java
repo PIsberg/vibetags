@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
-import se.deversity.vibetags.processor.internal.ElementNaming;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
@@ -34,8 +33,8 @@ final class CommonFormatterHelper {
      * Attempts to format standard markdown/plain-text platforms.
      * Returns true if the platform was formatted and handled, false otherwise.
      */
-    public static boolean formatStandardPlatform(Element element, StringBuilder sb, Platform platform, String summary) {
-        String className = ElementNaming.elementPath(element);
+    public static boolean formatStandardPlatform(TaggedElement element, StringBuilder sb, Platform platform, String summary) {
+        String className = element.path();
         switch (platform) {
             case CURSOR:
             case WINDSURF:
@@ -55,7 +54,7 @@ final class CommonFormatterHelper {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 return true;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 return true;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");

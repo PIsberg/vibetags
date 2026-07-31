@@ -48,13 +48,13 @@ will re-locate every dispatch point this skill lists.
    PlatformRenderer`:
    - *Markdown bucket-walk* (Cursor/Windsurf/Zed/Copilot/Qwen/Codex/Gemini style): build a
      `private static final List<AnnotationSections.Section> SECTIONS` using
-     `AnnotationSections.section(Platform.X, SectionCatalog.Key.K, AnnotationCollector::accessor,
+     `AnnotationSections.section(Platform.X, SectionCatalog.Key.K, GuardrailModel::accessor,
      FormatterRegistry.formatter())` per annotation bucket, then `render()` calls
-     `AnnotationSections.render(sb, collector, Platform.X, SECTIONS)`. Reuse
+     `AnnotationSections.render(sb, model, Platform.X, SECTIONS)`. Reuse
      `AnnotationSections.renderLockedAndContextPreamble(...)` for the opening if your preamble
      matches Cursor/Windsurf's "LOCKED FILES / CONTEXTUAL RULES" shape.
    - *Bespoke structured format* (XML/YAML/TOML/JSON): hand-roll like `ClaudeRenderer` /
-     `CodeRabbitRenderer` / `PrAgentRenderer` — walk `collector.xxx()` sets directly and call
+     `CodeRabbitRenderer` / `PrAgentRenderer` — walk `model.xxx()` sets directly and call
      `FormatterRegistry.xxx().format(e, sb, platform)` per element. Every `AnnotationFormatter`
      you rely on then needs a `case YOUR_PLATFORM:` (Step 5).
    - *Ignore-only file*: don't write a renderer — add a `case YOUR_IGNORE:` to

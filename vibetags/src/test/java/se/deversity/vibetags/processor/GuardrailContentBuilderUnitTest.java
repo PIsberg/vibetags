@@ -684,7 +684,8 @@ class GuardrailContentBuilderUnitTest {
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
                 collector, Set.of("cursor", "cursor_granular"), "Test", "");
         GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
-        se.deversity.vibetags.processor.internal.content.GranularBody ownerRules = result.elementRules.get(owner);
+        se.deversity.vibetags.processor.internal.content.GranularBody ownerRules =
+                result.elementRules.get(TaggedElements.tagged(owner));
         assertNotNull(ownerRules, "granular rules for the owner type must exist");
         assertTrue(ownerRules.toString().contains("### Rules for element"),
                 "null kind must fall back to 'element' label: " + ownerRules);

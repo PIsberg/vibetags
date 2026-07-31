@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor.internal;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.Map;
 import java.util.Set;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
@@ -46,28 +48,29 @@ public final class GuardrailContentBuilder {
      */
     public static final class Result {
         public final Map<String, String> contentByService;
-        public final Map<Element, GranularBody> elementRules;
+        public final Map<TaggedElement, GranularBody> elementRules;
 
-        Result(Map<String, String> contentByService, Map<Element, GranularBody> elementRules) {
+        Result(Map<String, String> contentByService, Map<TaggedElement, GranularBody> elementRules) {
             this.contentByService = contentByService;
             this.elementRules = elementRules;
         }
     }
 
     public Result build() {
+        GuardrailModel model = collector.model();
         // Pre-size renderer output buffers from the collected element count: ~160 bytes of rendered
         // content per annotated reference plus a fixed preamble allowance. Avoids repeated
         // grow-and-copy reallocation of the per-platform StringBuilders on large projects.
-        int estimatedContentSize = collector.totalAnnotatedReferences() * 160 + 2048;
+        int estimatedContentSize = model.totalAnnotatedReferences() * 160 + 2048;
 
         // Compute the granular owner set once, before rendering. Aggregate renderers whose granular
         // sibling is active read it from the RenderingContext to emit a scoped-rules index instead
         // of duplicating each element's full guardrails inline. renderGranular depends only on the
-        // collector, so ordering it ahead of the per-service loop is safe and avoids a redundant
+        // model, so ordering it ahead of the per-service loop is safe and avoids a redundant
         // per-element walk inside each renderer.
         boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
-        Map<Element, GranularBody> elementRules = granularActive
-                ? PlatformRendererRegistry.granularRenderer().renderGranular(collector)
+        Map<TaggedElement, GranularBody> elementRules = granularActive
+                ? PlatformRendererRegistry.granularRenderer().renderGranular(model)
                 : new java.util.LinkedHashMap<>();
 
         RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
@@ -85,7 +88,7 @@ public final class GuardrailContentBuilder {
 
             Platform platform = Platform.fromServiceKey(serviceKey);
             if (platform != null) {
-                String content = PlatformRendererRegistry.getRenderer(platform).render(collector, platform, context);
+                String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
                 if (content != null) {
                     contentByService.put(serviceKey, content);
                 }
@@ -94,27 +97,27 @@ public final class GuardrailContentBuilder {
 
         // Implicit platform activations for Codex and Qwen configurations
         if (activeServices.contains("codex")) {
-            String configContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_CONFIG).render(collector, Platform.CODEX_CONFIG, context);
+            String configContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_CONFIG).render(model, Platform.CODEX_CONFIG, context);
             if (configContent != null) {
                 contentByService.put("codex_config", configContent);
             }
-            String rulesContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_RULES).render(collector, Platform.CODEX_RULES, context);
+            String rulesContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_RULES).render(model, Platform.CODEX_RULES, context);
             if (rulesContent != null) {
                 contentByService.put("codex_rules", rulesContent);
             }
         }
         if (activeServices.contains("qwen")) {
-            String settingsContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_SETTINGS).render(collector, Platform.QWEN_SETTINGS, context);
+            String settingsContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_SETTINGS).render(model, Platform.QWEN_SETTINGS, context);
             if (settingsContent != null) {
                 contentByService.put("qwen_settings", settingsContent);
             }
-            String refactorContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_REFACTOR).render(collector, Platform.QWEN_REFACTOR, context);
+            String refactorContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_REFACTOR).render(model, Platform.QWEN_REFACTOR, context);
             if (refactorContent != null) {
                 contentByService.put("qwen_refactor", refactorContent);
             }
         }
         if (activeServices.contains("cody")) {
-            String codyContent = PlatformRendererRegistry.getRenderer(Platform.CODY).render(collector, Platform.CODY, context);
+            String codyContent = PlatformRendererRegistry.getRenderer(Platform.CODY).render(model, Platform.CODY, context);
             if (codyContent != null) {
                 contentByService.put("cody", codyContent);
             }
@@ -123,7 +126,7 @@ public final class GuardrailContentBuilder {
         // Special case for AIExclude platform, which has strict activation criteria
         if (activeServices.contains("aiexclude") && (activeServices.contains("gemini") || activeServices.contains("codex"))) {
             Platform p = Platform.AI_EXCLUDE;
-            String content = PlatformRendererRegistry.getRenderer(p).render(collector, p, context);
+            String content = PlatformRendererRegistry.getRenderer(p).render(model, p, context);
             if (content != null) {
                 contentByService.put("aiexclude", content);
             }

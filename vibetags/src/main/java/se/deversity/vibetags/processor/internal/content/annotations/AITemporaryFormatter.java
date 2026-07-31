@@ -1,8 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AITemporary;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -12,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AITemporaryFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AITemporary temp = element.getAnnotation(AITemporary.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AITemporary temp = element.annotation(AITemporary.class);
         if (temp == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String expiresOn = temp.expiresOn();
         String reason = temp.reason();
         String summary = "Temporary logic/workaround. Expires on: " + expiresOn + ". Reason: " + reason;
