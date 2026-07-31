@@ -191,6 +191,47 @@ class GranularSectionsTest {
             "a sentence with no singular self-reference must pass through untouched");
     }
 
+    // ------------------------------------------------------------------
+    // Determinism: output must not depend on the order stanzas arrive in (issue #325)
+    // ------------------------------------------------------------------
+
+    /**
+     * Stanzas arrive in annotation-processing round order, which the JLS does not constrain and
+     * which differs between Maven and Gradle. Rendering the same set in two different arrival
+     * orders must produce byte-identical output, or a project that builds with both gets a
+     * spurious diff on every alternate build.
+     */
+    @Test
+    void renderIsIndependentOfStanzaArrivalOrder() {
+        Element owner = type("com.example.Reports");
+        TaggedElement junitXml = field(owner, "JUnitXmlReportListener");
+        TaggedElement json = field(owner, "JsonReportListener");
+
+        String forwards = GranularSections.render(
+            List.of(privacy(owner, junitXml, "same"), privacy(owner, json, "same")), false);
+        String backwards = GranularSections.render(
+            List.of(privacy(owner, json, "same"), privacy(owner, junitXml, "same")), false);
+
+        assertEquals(forwards, backwards,
+            "identical stanzas in a different arrival order must render byte-identically");
+    }
+
+    /** The same guarantee for the qualified (role/topic) layout, whose headings carry full paths. */
+    @Test
+    void qualifiedRenderIsIndependentOfStanzaArrivalOrder() {
+        Element owner = type("com.example.Reports");
+        TaggedElement junitXml = field(owner, "JUnitXmlReportListener");
+        TaggedElement json = field(owner, "JsonReportListener");
+
+        String forwards = GranularSections.render(
+            List.of(privacy(owner, junitXml, "one"), privacy(owner, json, "two")), true);
+        String backwards = GranularSections.render(
+            List.of(privacy(owner, json, "two"), privacy(owner, junitXml, "one")), true);
+
+        assertEquals(forwards, backwards,
+            "qualified layout must also be a pure function of the stanza set, not its order");
+    }
+
     private static int count(String haystack, String needle) {
         int n = 0;
         for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {

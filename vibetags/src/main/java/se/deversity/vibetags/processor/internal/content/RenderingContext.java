@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -55,7 +56,18 @@ public final class RenderingContext {
         // Defensive copy: prevent callers from mutating the set through the stored reference.
         this.activeServices = Collections.unmodifiableSet(new LinkedHashSet<>(activeServices));
         this.estimatedContentSize = Math.max(256, estimatedContentSize);
-        this.granularOwners = Collections.unmodifiableSet(new LinkedHashSet<>(granularOwners));
+        // Sorted by the stable path identity, so the scoped-rules index is a pure function of the
+        // source. Owners arrive in annotation-processing round order, which the JLS does not
+        // constrain and which differs between Maven and Gradle; leaving it as-collected made two
+        // builds of identical sources emit byte-different index lines (issue #325). Sorting here
+        // rather than at each emit site means every current and future consumer of granularOwners()
+        // is deterministic by construction.
+        LinkedHashSet<TaggedElement> sortedOwners = new LinkedHashSet<>();
+        granularOwners.stream()
+                .sorted(Comparator.comparing(TaggedElement::path)
+                                  .thenComparing(o -> String.valueOf(o.kind())))
+                .forEach(sortedOwners::add);
+        this.granularOwners = Collections.unmodifiableSet(sortedOwners);
         this.roles = roles;
     }
 

@@ -26,6 +26,56 @@ class GranularIndexEndToEndTest {
         VibeTagsLogger.shutdown();
     }
 
+    /**
+     * The index lists owners in a stable order regardless of the order they were collected in
+     * (issue #325).
+     *
+     * <p>Owners reach {@code RenderingContext} in annotation-processing round order, which the JLS
+     * does not constrain and which differs between Maven and Gradle. Two builds of identical
+     * sources previously emitted the same {@code <element>} lines in a different sequence, so a
+     * project kept in lockstep across both build systems got a spurious diff every alternate build.
+     */
+    @Test
+    void granularOwnersAreOrderIndependent() {
+        var preset = owner("se.deversity.asynctest.Preset");
+        var site = owner("se.deversity.asynctest.diagnostics.SiteCapture.Site");
+        var junitXml = owner("se.deversity.asynctest.report.JUnitXmlReportListener");
+
+        java.util.List<String> collectedOneWay =
+            new java.util.ArrayList<>(orderOf(preset, site, junitXml));
+        java.util.List<String> collectedAnother =
+            new java.util.ArrayList<>(orderOf(junitXml, preset, site));
+
+        assertEquals(collectedOneWay, collectedAnother,
+            "the scoped-rules index must not depend on annotation-processing round order");
+        assertEquals(java.util.List.of(
+                "se.deversity.asynctest.Preset",
+                "se.deversity.asynctest.diagnostics.SiteCapture.Site",
+                "se.deversity.asynctest.report.JUnitXmlReportListener"),
+            collectedOneWay,
+            "owners are ordered by their stable path identity");
+    }
+
+    /** A minimal owner-level TaggedElement identified by {@code path}. */
+    private static se.deversity.vibetags.processor.model.TaggedElement owner(String path) {
+        String simple = path.substring(path.lastIndexOf('.') + 1);
+        return se.deversity.vibetags.processor.model.TaggedElement.builder(path)
+            .names(path, simple, simple, path.replace('.', '-'))
+            .kind(se.deversity.vibetags.processor.model.ElementTag.CLASS)
+            .build();
+    }
+
+    /** Paths of a RenderingContext's granular owners, in the order the index would emit them. */
+    private static java.util.List<String> orderOf(
+            se.deversity.vibetags.processor.model.TaggedElement... owners) {
+        var ctx = new se.deversity.vibetags.processor.internal.content.RenderingContext(
+            "P", "h", java.util.Set.of("claude", "claude_granular"), 1024,
+            new java.util.LinkedHashSet<>(java.util.Arrays.asList(owners)));
+        return ctx.granularOwners().stream()
+            .map(se.deversity.vibetags.processor.model.TaggedElement::path)
+            .toList();
+    }
+
     /** Two owners covering an always-inline bucket (locked, privacy) and an indexed one (context, contract). */
     private static void addMixedSources(ProcessorTestHarness h) {
         h.addSource("com.example.Gateway",

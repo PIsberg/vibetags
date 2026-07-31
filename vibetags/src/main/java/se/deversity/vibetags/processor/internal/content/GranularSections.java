@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +52,15 @@ public final class GranularSections {
         Map<String, List<GranularBody.Entry>> byTitle = new LinkedHashMap<>();
         for (GranularBody.Entry e : entries) {
             byTitle.computeIfAbsent(e.title(), k -> new ArrayList<>()).add(e);
+        }
+        // Order each section by the element's stable path identity. Stanzas arrive in
+        // annotation-processing order, which the JLS does not constrain and which differs between
+        // Maven and Gradle, so identical sources would otherwise emit byte-different files —
+        // notably the multi-target "Applies to" list (issue #325). Sorting here covers every
+        // layout below. Section order itself is left alone: it follows the fixed annotation-type
+        // order the collector walks, not a round-dependent one.
+        for (List<GranularBody.Entry> group : byTitle.values()) {
+            group.sort(Comparator.comparing(e -> e.element().path()));
         }
         StringBuilder out = new StringBuilder();
         for (Map.Entry<String, List<GranularBody.Entry>> section : byTitle.entrySet()) {
