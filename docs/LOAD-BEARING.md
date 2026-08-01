@@ -125,7 +125,17 @@ Beyond what the generated section below describes:
   keyed by annotation class and driven by `GuardrailAnnotations.ALL`; `model()` snapshots them.
   Buckets are created once in the constructor and only ever cleared **in place**, because
   `AIGuardrailProcessor` holds three of them as fields initialised before the first round
-- `AnnotationValidator` — all compile-time consistency checks (contradictory combinations, no-op annotations, invalid values); add new warnings here
+- `AnnotationValidator` — the entry point for all compile-time consistency checks. The checks
+  themselves are individually testable rules in `internal/validation/`: `PairRule` (two annotations
+  that contradict each other, as a table), `CoreRules` (an annotation whose own attributes leave it
+  instructing nobody), `ArchitectureRule` (the Tree-API import scan), `ModernJavaRules` (an
+  annotation that contradicts the declaration it sits on — records, sealed types, virtual threads,
+  the unnamed package). Add new warnings there, not in the entry point.
+
+  `ValidationRules` indexes rules by the annotation each one scans and runs
+  `getElementsAnnotatedWith` **once per annotation type**, however many rules share it. That is
+  load-bearing for build time on a large compilation unit: the query walks the round's root
+  elements, and the pre-registry validator issued one per check — four for `@AITestDriven` alone
 - `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 

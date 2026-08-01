@@ -67,6 +67,10 @@ kept here because breaking one of them fails silently:
   `com.sun.source`. An `Element` is only valid while its round is live, and the parallel write phase
   runs after the last one closes — `AnnotationCollector.model()` snapshots once, which is what makes
   reading it afterwards safe. `ArchitectureRulesTest` enforces the direction.
+- **Adding a validation check** is a line in `ValidationRules.PAIRS` or an entry in `CoreRules` /
+  `ModernJavaRules` under `processor/internal/validation/` — never a new loop in
+  `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
+  `scans()`, and the registry runs one round query per annotation type however many rules share it.
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
   annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
   `add-platform` / `add-annotation` skills rather than improvising.

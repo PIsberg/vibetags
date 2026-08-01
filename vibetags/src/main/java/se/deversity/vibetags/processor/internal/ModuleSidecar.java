@@ -541,7 +541,7 @@ public final class ModuleSidecar {
     }
 
     /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
-    private static String aggregateScopedDir(String service) {
+    private static @Nullable String aggregateScopedDir(String service) {
         switch (service) {
             case "claude":   return ".claude/rules";
             case "cursor":   return ".cursor/rules";
@@ -552,12 +552,12 @@ public final class ModuleSidecar {
     }
 
     /** Granular service key governing an aggregate service (e.g. {@code claude} → {@code claude_granular}). */
-    private static String aggregateGranularKey(String service) {
+    private static @Nullable String aggregateGranularKey(String service) {
         return aggregateScopedDir(service) == null ? null : service + "_granular";
     }
 
     /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
-    private static String aggregateFileName(String service) {
+    private static @Nullable String aggregateFileName(String service) {
         switch (service) {
             case "claude":   return "CLAUDE.md";
             case "cursor":   return ".cursorrules";
@@ -573,7 +573,8 @@ public final class ModuleSidecar {
      * no guardrails are lost). {@code moduleActive} is the module directory's own file-existence
      * opt-in set — the pointer names only the files the module actually generates.
      */
-    private static String buildIndexPointer(String service, String modulePath, java.util.Set<String> moduleActive) {
+    private static @Nullable String buildIndexPointer(String service, String modulePath,
+                                                      java.util.Set<String> moduleActive) {
         String scopedDir = aggregateScopedDir(service);
         if (scopedDir == null) return null;
         boolean hasGranular = moduleActive.contains(aggregateGranularKey(service));
@@ -720,7 +721,7 @@ public final class ModuleSidecar {
      *                       the right scope for a module's own {@code .claude/rules} directory
      */
     public static Set<String> granularStemsFrom(List<ModuleSidecar> sidecars,
-                                                String excludeModuleId,
+                                                @Nullable String excludeModuleId,
                                                 @Nullable String sameRegionOnly) {
         Set<String> stems = new LinkedHashSet<>();
         for (ModuleSidecar s : sidecars) {

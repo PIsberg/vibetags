@@ -61,6 +61,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -103,6 +104,23 @@ public final class AnnotationCollector {
     private boolean anyAnnotationsFound;
 
     /**
+     * Whether to compute {@link ElementSignature} for each snapshotted element.
+     *
+     * <p>Off by default, and that is a measurable saving rather than a micro-optimisation:
+     * {@code ElementSignature.of} on a type walks every enclosed member, renders each one, and
+     * sorts the result, so it is the most expensive thing done per element — and the only reader
+     * is the opt-in enforcing mode ({@code -Avibetags.enforce}, issue #284). On an ordinary build,
+     * with enforcement off, every one of those strings is computed and then thrown away.
+     *
+     * <p>The signature cannot be computed lazily instead: it needs the javac element model, which
+     * is only valid while the round that produced it is live, and the model is read after the last
+     * round closes. So the choice has to be made up front — which is what
+     * {@link #captureSignatures(boolean)} is for. Same shape as the {@code .vibetags-locks}
+     * opt-in that gates source-position resolution.
+     */
+    private boolean captureSignatures;
+
+    /**
      * The snapshot of the current contents, or {@code null} when it must be rebuilt. A generate or
      * check phase asks for the model several times (fingerprint, content build, per-module output),
      * so snapshotting once per round of mutation keeps that from re-walking every element.
@@ -113,6 +131,20 @@ public final class AnnotationCollector {
     public AnnotationCollector() {
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             buckets.put(type, new LinkedHashSet<>());
+        }
+    }
+
+    /**
+     * Turns structural-signature capture on or off. Call before the first round; the processor
+     * enables it only when {@code -Avibetags.enforce} or {@code -Avibetags.baseline.update} is set,
+     * because nothing else reads {@link TaggedElement#signature()}.
+     *
+     * <p>Invalidates the memoised snapshot, so flipping it between rounds is safe if unusual.
+     */
+    public void captureSignatures(boolean capture) {
+        if (this.captureSignatures != capture) {
+            this.captureSignatures = capture;
+            memo = null;
         }
     }
 
@@ -150,9 +182,15 @@ public final class AnnotationCollector {
                 continue;  // javac reported it absent this round: the query would only return empty
             }
             Set<? extends Element> found = roundEnv.getElementsAnnotatedWith(type);
-            if (!found.isEmpty()) {
-                buckets.get(type).addAll(found);
+            if (found.isEmpty()) {
+                continue;
             }
+            // Never null: the constructor creates one bucket per GuardrailAnnotations.ALL entry and
+            // nothing ever removes one. Stated rather than assumed, because a bucket silently
+            // missing here would drop every element of that annotation from the generated output.
+            Set<Element> bucket = Objects.requireNonNull(buckets.get(type),
+                () -> "no bucket for " + type.getName() + " — GuardrailAnnotations.ALL changed after construction");
+            bucket.addAll(found);
         }
 
         boolean added = false;
@@ -272,9 +310,10 @@ public final class AnnotationCollector {
      */
     private GuardrailModel snapshot() {
         Map<Element, TaggedElement.Builder> builders = new LinkedHashMap<>();
+        final boolean signatures = captureSignatures;
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                record(builders.computeIfAbsent(e, AnnotationCollector::newBuilder), e, type);
+                record(builders.computeIfAbsent(e, k -> newBuilder(k, signatures)), e, type);
             }
         });
 
@@ -282,11 +321,11 @@ public final class AnnotationCollector {
         GuardrailModel.Builder model = GuardrailModel.builder();
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                model.add(type, materialize(e, builders, tagged));
+                model.add(type, materialize(e, builders, tagged, signatures));
             }
         });
         lockedPositions.forEach((e, position) ->
-            model.lockedPosition(materialize(e, builders, tagged), position));
+            model.lockedPosition(materialize(e, builders, tagged, signatures), position));
         return model.build();
     }
 
@@ -296,15 +335,16 @@ public final class AnnotationCollector {
      */
     private static TaggedElement materialize(Element e,
                                              Map<Element, TaggedElement.Builder> builders,
-                                             Map<Element, TaggedElement> tagged) {
+                                             Map<Element, TaggedElement> tagged,
+                                             boolean signatures) {
         TaggedElement done = tagged.get(e);
         if (done != null) {
             return done;
         }
-        TaggedElement.Builder builder = builders.computeIfAbsent(e, AnnotationCollector::newBuilder);
+        TaggedElement.Builder builder = builders.computeIfAbsent(e, k -> newBuilder(k, signatures));
         Element ownerElement = ElementNaming.owningElement(e);
         if (!ownerElement.equals(e)) {
-            builder.owner(materialize(ownerElement, builders, tagged));
+            builder.owner(materialize(ownerElement, builders, tagged, signatures));
         }
         TaggedElement result = builder.build();
         tagged.put(e, result);
@@ -312,7 +352,7 @@ public final class AnnotationCollector {
     }
 
     /** The name forms and kind for {@code e}, computed once here and never derived again. */
-    private static TaggedElement.Builder newBuilder(Element e) {
+    private static TaggedElement.Builder newBuilder(Element e, boolean signatures) {
         return TaggedElement.builder(ElementNaming.elementPath(e))
             .names(e.toString(),
                    ElementNaming.simpleNameOf(e),
@@ -320,8 +360,10 @@ public final class AnnotationCollector {
                    ElementNaming.granularQName(e))
             .kind(tagOf(e))
             // Captured here because it needs the javac element model, which is only valid while the
-            // round is live; the enforcing mode reads it later as plain data (issue #284).
-            .signature(ElementSignature.of(e));
+            // round is live; the enforcing mode reads it later as plain data (issue #284). Skipped
+            // entirely when enforcement is off — rendering the visible member set of every type is
+            // the single most expensive thing done per element, and nothing else reads the result.
+            .signature(signatures ? ElementSignature.of(e) : "");
     }
 
     /**

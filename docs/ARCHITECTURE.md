@@ -158,7 +158,7 @@ machines: the generated SVG is sixty-odd boxes with zero transition edges. The t
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
 - `AnnotationCollector` — owns one `LinkedHashSet<Element>` accumulator per annotation type (keyed by annotation class, driven by `model.GuardrailAnnotations.ALL`), aggregating annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check. `model()` snapshots the accumulators into the compiler-free `GuardrailModel` the rendering layer reads — memoized until the next `collect()`/`reset()`. Buckets are created once and only cleared **in place**, because the processor holds three of them as fields
-- `AnnotationValidator` — emits compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap, `@AITestDriven`+`@AIIgnore` contradiction, `@AITestDriven`+`@AILocked` contradiction, invalid `@AITestDriven.coverageGoal`)
+- `AnnotationValidator` — the entry point for compile-time consistency warnings. The checks are individually testable rules in `internal/validation/`: `PairRule` (contradictory annotation pairs, as a table), `CoreRules` (attributes that leave an annotation instructing nobody), `ArchitectureRule` (the Tree-API import scan for `@AIArchitecture(cannotReference)`), `ModernJavaRules` (an annotation that contradicts the declaration it sits on — records, sealed types, virtual threads, the unnamed package). `ValidationRules` indexes rules by the annotation they scan so the round is queried once per annotation type rather than once per check. Full list in [ANNOTATIONS.md](ANNOTATIONS.md)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
@@ -476,6 +476,8 @@ Accumulation phase (every round, until processingOver() == true):
    - Contradiction checks (e.g. @AIDraft + @AILocked, @AILegacyBridge + @AIDraft)
    - Redundancy checks (e.g. @AIPrivacy + @AIIgnore, @AIPublicAPI + @AILocked, @AIParallelTests + @AILocked)
    - Config validation (e.g. empty @AIAudit, empty @AIArchitecture, invalid @AITestDriven coverageGoal)
+   - Modern-Java checks against the declaration itself (e.g. @AIExtensible on a sealed type, @AIPure on a void method, an array field under @AIImmutable)
+   - One getElementsAnnotatedWith per annotation type, not per check — the rules are indexed by what they scan
 3. ModuleRootResolver.fromRound(env, roundEnv) — on the first non-empty round, resolves the module root and source set by walking up from a root element's source file (javac Tree API, else Elements.getFileObjectOf) to the nearest directory containing pom.xml / build.gradle(.kts). This — not the JVM working directory, which is the reactor root for every module of an in-process Maven build and ~/.gradle/workers under Gradle — is the module identity used for multi-module sidecar aggregation (issues #278, #331). The source set splits the sidecar so compile and test-compile do not overwrite each other (issue #330). Falls back to the working directory when no compiler API exposes the source file.
 4. process() returns false so other processors still see the annotations
 
@@ -601,7 +603,9 @@ vibetags/
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   │   ├── internal/                     # javac-facing helpers
 │   │   │   │   │   ├── AnnotationCollector.java       # one LinkedHashSet per annotation type; model() snapshots them
-│   │   │   │   │   ├── AnnotationValidator.java       # Compile-time consistency warnings
+│   │   │   │   │   ├── AnnotationValidator.java       # Entry point for compile-time consistency warnings
+│   │   │   │   │   ├── validation/                    # The checks themselves: PairRule, CoreRules,
+│   │   │   │   │   │                                  #   ArchitectureRule, ModernJavaRules + registry
 │   │   │   │   │   ├── OrphanWarner.java              # "annotation used but ignore-file missing"
 │   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers

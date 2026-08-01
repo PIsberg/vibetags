@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,7 +18,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class GranularRenderer implements PlatformRenderer {
 
     @Override
-    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+    public @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context) {
         // Return null since granular output is written per-element via writeGranular, not as a single file.
         return null;
     }

@@ -111,7 +111,11 @@ public final class GuardrailEnforcer {
         Map<String, String> current = new LinkedHashMap<>();
         Map<String, TaggedElement> elementsByKey = new LinkedHashMap<>();
         for (String family : sortedList(families)) {
-            for (TaggedElement element : model.of(FAMILIES.get(family))) {
+            Class<? extends Annotation> annotation = FAMILIES.get(family);
+            if (annotation == null) {
+                continue; // parseFamilies only ever admits known names, so this is unreachable
+            }
+            for (TaggedElement element : model.of(annotation)) {
                 if (element.signature().isEmpty()) {
                     continue; // no provable shape (a package, or an element javac did not model)
                 }
@@ -159,7 +163,11 @@ public final class GuardrailEnforcer {
                 continue;
             }
             violations++;
-            reportChanged(parts[0], elementsByKey.get(entry.getKey()), approved, entry.getValue());
+            TaggedElement changed = elementsByKey.get(entry.getKey());
+            if (changed == null) {
+                continue; // current and elementsByKey are filled in lockstep; unreachable in practice
+            }
+            reportChanged(parts[0], changed, approved, entry.getValue());
         }
         // Direction 2: an approved element that is simply no longer there. This is the common one —
         // a method's path embeds its parameter types, so changing `charge(String,double)` to

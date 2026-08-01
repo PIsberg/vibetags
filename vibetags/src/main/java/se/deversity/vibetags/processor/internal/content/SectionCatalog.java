@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -275,7 +276,7 @@ public final class SectionCatalog {
      * {@code key}'s elements for {@code platform}, or {@code null} if the section is headerless
      * on that platform (see {@link #isHeaderless(Platform, Key)}).
      */
-    public static String header(Platform platform, Key key) {
+    public static @Nullable String header(Platform platform, Key key) {
         if (isHeaderless(platform, key)) {
             return null;
         }

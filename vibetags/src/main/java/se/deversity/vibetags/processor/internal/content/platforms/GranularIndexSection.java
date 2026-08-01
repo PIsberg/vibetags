@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import se.deversity.vibetags.processor.model.RoleConfig;
+import org.jspecify.annotations.Nullable;
 import java.util.Set;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.Escape;
@@ -34,7 +36,7 @@ final class GranularIndexSection {
      * that merely reuse a renderer's format but read no scoped directory (Cline, Firebase, Junie,
      * Void, the Claude skill) map to {@code null} and therefore never collapse to an index.
      */
-    static String governingGranularKey(Platform platform) {
+    static @Nullable String governingGranularKey(Platform platform) {
         switch (platform) {
             case CLAUDE:
             case CLAUDE_LOCAL:
@@ -65,7 +67,7 @@ final class GranularIndexSection {
     }
 
     /** Directory (no trailing slash) that holds the governing granular files for {@code platform}. */
-    private static String scopedDir(Platform platform) {
+    private static @Nullable String scopedDir(Platform platform) {
         String key = governingGranularKey(platform);
         if (key == null) {
             return null;
@@ -81,7 +83,7 @@ final class GranularIndexSection {
     }
 
     /** Filename suffix (including the leading dot) of the governing granular files for {@code platform}. */
-    private static String scopedSuffix(Platform platform) {
+    private static @Nullable String scopedSuffix(Platform platform) {
         String key = governingGranularKey(platform);
         if (key == null) {
             return null;
@@ -99,10 +101,16 @@ final class GranularIndexSection {
         // Name the file GranularRulesWriter actually wrote: the role-grouped stem when a
         // .vibetags-roles config routes this element, else the per-class qName. Resolving through
         // the same RoleConfig keeps the pointer from dangling to a file that was never written.
-        String stem = context.roles() != null
-            ? context.roles().granularStemFor(owner)
-            : owner.granularQName();
-        return scopedDir(platform) + "/" + stem + scopedSuffix(platform);
+        RoleConfig roles = context.roles();
+        String stem = roles != null ? roles.granularStemFor(owner) : owner.granularQName();
+        String dir = scopedDir(platform);
+        String suffix = scopedSuffix(platform);
+        if (dir == null || suffix == null) {
+            // Only reachable if a caller skipped indexActive(), which already required a governing
+            // granular key; a bare stem is still a usable pointer, an NPE in a renderer is not.
+            return stem;
+        }
+        return dir + "/" + stem + suffix;
     }
 
     /**

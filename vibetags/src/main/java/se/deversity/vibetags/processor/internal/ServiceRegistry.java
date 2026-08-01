@@ -4,6 +4,8 @@ import se.deversity.vibetags.annotations.AIContext;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
 import java.io.IOException;
+import org.jspecify.annotations.Nullable;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -217,7 +219,7 @@ public final class ServiceRegistry {
      * True when {@code path} already contains a VibeTags-generated markdown block. Unreadable
      * files fall back to {@code false}, i.e. to the conservative sole-file rule.
      */
-    private static boolean carriesGeneratedBlock(Path path) {
+    private static boolean carriesGeneratedBlock(@Nullable Path path) {
         if (path == null) {
             return false;
         }

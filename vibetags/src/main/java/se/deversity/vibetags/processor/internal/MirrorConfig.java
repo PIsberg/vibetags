@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -110,7 +111,7 @@ public final class MirrorConfig {
      * Loads {@code <dir>/.vibetags-mirror} if present, else returns {@code null} (this directory is
      * not a mirror target). Unreadable files are treated as absent.
      */
-    public static MirrorConfig load(Path dir) {
+    public static @Nullable MirrorConfig load(Path dir) {
         Path file = dir.resolve(FILE_NAME);
         if (!Files.isRegularFile(file)) {
             return null;
@@ -196,7 +197,7 @@ public final class MirrorConfig {
      * Recognises a {@code glob = ...} / {@code glob: ...} / {@code globs = ...} directive, returning
      * the value (possibly empty) or {@code null} when the line is a source path instead.
      */
-    private static String stripGlobKey(String line) {
+    private static @Nullable String stripGlobKey(String line) {
         int sep = indexOfAny(line, '=', ':');
         if (sep < 0) {
             return null;

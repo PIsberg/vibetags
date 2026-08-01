@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -87,7 +88,7 @@ public final class EnforcementBaseline {
     }
 
     /** The approved signature for {@code path} under {@code family}, or {@code null} if unrecorded. */
-    public String signatureFor(String moduleId, String family, String path) {
+    public @Nullable String signatureFor(String moduleId, String family, String path) {
         return entries.get(key(moduleId, family, path));
     }
 

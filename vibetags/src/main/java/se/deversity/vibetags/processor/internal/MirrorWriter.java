@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,9 +60,9 @@ public final class MirrorWriter {
                              AnnotationCollector collector,
                              String projectName,
                              String generatedHeader,
-                             RoleConfig roles,
+                             @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
-                             Messager messager) {
+                             @Nullable Messager messager) {
         if (moduleRoot == null || vibetagsRoot == null || moduleRoot.equals(vibetagsRoot)) {
             // No module identity (in-memory/non-javac compile) or the module IS the root: there is
             // no sibling to mirror into, and a root-scoped mirror would just duplicate root output.

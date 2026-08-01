@@ -39,6 +39,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>6.1.2</junit.version>
+        <nullaway.version>0.13.8</nullaway.version>
     </properties>
 
     <dependencies>
@@ -138,6 +139,11 @@
                             <artifactId>error_prone_core</artifactId>
                             <version>2.50.0</version>
                         </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
                 <executions>
@@ -149,9 +155,32 @@
                                 <arg>-proc:none</arg>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
-                                <!-- UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag
-                                     which was removed in JDK 26; disable until Error Prone fixes it -->
-                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF</arg>
+                                <!-- One arg, because javac accepts a single -Xplugin value and
+                                     Error Prone parses the rest of that string itself.
+
+                                     UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag,
+                                     removed in JDK 26; disable until Error Prone fixes it.
+
+                                     NullAway: the codebase already annotates with JSpecify @Nullable,
+                                     and this is what turns those annotations from documentation into a
+                                     gate. ERROR rather than WARNING on purpose — a nullability warning
+                                     nobody has to fix is one more line of build output people learn to
+                                     scroll past. JSpecifyMode reads @Nullable with JSpecify's own
+                                     semantics (generics included) rather than NullAway's legacy ones.
+                                     javac's own model is left unannotated: Element.getEnclosingElement()
+                                     and friends return null and say nothing about it, so treating
+                                     javax.lang.model as annotated would only produce false confidence.
+
+                                     AIGuardrailProcessor is the one excluded class, and the exclusion
+                                     is a TODO rather than a judgement. NullAway reports one finding in
+                                     it — `filePath` from serviceFiles.get(service) is dereferenced
+                                     without a guard in the parallel write phase — and that line is
+                                     inside generateFiles(), which is @AILocked because its step order
+                                     is load-bearing. Adding a guard there changes what the method does
+                                     when a service has content but no output path, so it is a decision
+                                     for a human rather than a drive-by fix. Delete this option once
+                                     that guard is agreed; every other class is checked. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source -XepOpt:NullAway:UnannotatedClasses=se.deversity.vibetags.processor.AIGuardrailProcessor</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>

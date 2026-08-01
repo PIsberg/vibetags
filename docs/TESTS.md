@@ -53,6 +53,9 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `ArchitectureRulesTest` | Formatter/renderer statelessness, and the compiler boundary: `content` and `model` must not import `javax.lang.model`/`com.sun.source`, `content` must not depend on `internal`, `model` must not depend on either |
 | `ElementTagMappingTest` | `ElementTag` mirrors `ElementKind` name-for-name — fails if a JDK adds a kind, before generated output can report it as `UNKNOWN` |
 | `AnnotationValidatorUnitTest` | All compile-time validation warning combinations |
+| `ValidationRegistryTest` | Properties of the rule registry itself: every rule scans an annotation that is actually in `GuardrailAnnotations.ALL` (one that is not would silently never fire), rules share round queries rather than issuing one each, and `all()` hands out a copy so a caller cannot empty the registry for the rest of the JVM's life |
+| `ModernJavaDetectorTest` | The detectors that read the declaration rather than the annotation pair: array component under `@AIImmutable`, `@AIExtensible` on final/record/enum/sealed, `@AIPure` on `void`, `@AIPublicAPI` on something unreachable, `ThreadLocal` strategy under virtual threads, unnamed package. Each case is paired with a clean fixture asserting the detector stays quiet |
+| `SignatureCaptureTest` | `ElementSignature` is computed only when the enforcing mode will read it. Drives `AnnotationCollector` inside a real compilation, because a mocked `Element` yields an empty signature either way and would pass whatever the collector did |
 | `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
 | `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |
 | `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
