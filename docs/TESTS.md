@@ -56,6 +56,8 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
 | `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |
 | `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
+| `GuardrailFileWriterAsyncTest` | The parallel write phase's shape under stress — one file per worker over a shared `GuardrailFileWriter` and `WriteCache` — asserting hand-authored content outside the markers survives and exactly one marker pair remains. `ParallelFileWriteTest` covers one real compile; this one repeats the write until a race would show |
+| `ModuleSidecarAsyncTest` | Concurrent `save()` + `readAll()` in one reactor root: no torn read (a body that was never saved) and no wrongful prune (a sibling's sidecar deleted as malformed mid-write) |
 | `WriteCacheProcessorIntegrationTest` | Cache integration: created on first compile, stable mtimes on second, rewrite on external edit |
 | `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |

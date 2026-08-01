@@ -92,12 +92,13 @@
         <dependency>
             <groupId>se.deversity.async-test-lib</groupId>
             <artifactId>async-test-lib</artifactId>
-            <!-- Pinned to 1.6.0 deliberately: this artifact is NOT on Maven Central, so CI builds
-                 it from the upstream git tag (see .github/workflows/build.yml). 1.7.0 exists only
-                 as a local install and has no v1.7.0 tag upstream — `versions:display-dependency-
-                 updates` reports it from the local repository, and taking that suggestion breaks
-                 every environment except the one that installed it. Bump the workflow tag first. -->
-            <version>1.6.0</version>
+            <!-- Pinned deliberately: this artifact is NOT on Maven Central, so CI builds it from
+                 the upstream git tag (see .github/workflows/build.yml). Only bump to a version that
+                 has a matching tag at github.com/PIsberg/async-test-lib — `versions:display-
+                 dependency-updates` also reports versions that exist only as a local install, and
+                 taking that suggestion breaks every environment except the one that installed it.
+                 Change the four workflow clone tags in the same commit as this version. -->
+            <version>1.7.0-RC4</version>
             <scope>test</scope>
         </dependency>
         <dependency>

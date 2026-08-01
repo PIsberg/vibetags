@@ -241,11 +241,51 @@ public final class ModuleSidecar {
         }
 
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        try {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+        moveIntoPlace(tmp, target);
+    }
+
+    /** Attempts at renaming the temp file over the live sidecar before giving up. */
+    private static final int MOVE_ATTEMPTS = 10;
+    /** Backoff step between move attempts; attempt N waits N × this. Worst case ≈ 275 ms. */
+    private static final long MOVE_BACKOFF_MS = 5L;
+
+    /**
+     * Renames the freshly written temp file over {@code target}, retrying briefly before failing.
+     *
+     * <p>Windows refuses a rename onto a file that another process has open, and
+     * {@link #readAll(Path)} in a sibling module's compilation opens exactly this file. In a
+     * parallel reactor ({@code mvn -T}, {@code gradle --parallel}) that collision is reachable and
+     * arrives as {@code AccessDeniedException} — which would abort this module's save and drop its
+     * entire contribution from the merged output for that build, the failure the sidecar exists to
+     * prevent. A reader holds the handle for microseconds, so a bounded retry trades a lost module
+     * for a few milliseconds. {@code ModuleSidecarAsyncTest} reproduces the collision; without this
+     * retry it fails on Windows within a second.
+     */
+    private static void moveIntoPlace(Path tmp, Path target) throws IOException {
+        IOException last = null;
+        for (int attempt = 1; attempt <= MOVE_ATTEMPTS; attempt++) {
+            try {
+                try {
+                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+                return;
+            } catch (java.nio.file.FileSystemException e) {
+                last = e;
+                if (attempt == MOVE_ATTEMPTS) break;
+                try {
+                    Thread.sleep(MOVE_BACKOFF_MS * attempt);
+                } catch (InterruptedException interrupted) {
+                    // Stop retrying, but report the move failure rather than the interruption:
+                    // that is the one the caller has to act on.
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
         }
+        tryDelete(tmp);
+        throw last;
     }
 
     private static void appendEncoded(StringBuilder sb, String key, String value) {

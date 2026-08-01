@@ -88,8 +88,8 @@ dependencies {
 
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
     testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
-    // 1.6.0, matching pom.xml: not on Maven Central, built from the upstream git tag in CI.
-    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.6.0'
+    // 1.7.0-RC4, matching pom.xml: not on Maven Central, built from the upstream git tag in CI.
+    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.0-RC4'
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
