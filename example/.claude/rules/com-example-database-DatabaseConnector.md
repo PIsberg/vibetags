@@ -13,5 +13,5 @@ When modifying this element, audit for:
 ## PII / Privacy Guardrails
 - **Rule**: Never log or expose runtime values of these elements.
 - **Reason**: Database credential - never log or include in error messages
-- **Applies to**: `DatabaseConnector.username`, `DatabaseConnector.password`
+- **Applies to**: `DatabaseConnector.password`, `DatabaseConnector.username`
 <!-- VIBETAGS-END -->

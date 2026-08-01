@@ -12,9 +12,9 @@ Do not suggest changes to the following files:
 - `com.example.security.SecurityConfig.getKeyRotationHours()` - Key rotation period mandated by company policy
 - `com.example.security.SecurityConfig.getMaxLoginAttempts()` - Max login attempts set by security team to prevent brute force
 - `com.example.security.SecurityConfig.validateToken(java.lang.String)` - Token validation must match auth server exactly. Changes will break all client authentication
-- `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 - `com.example.service.OrderService.calculateTax(java.lang.String,double)` - Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 - `com.example.service.OrderService.processPayment(java.lang.String,double)` - Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+- `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
 ## Security Audit Requirements
 Before suggesting changes to the following files, audit for the listed vulnerabilities:
@@ -30,22 +30,22 @@ Do not reference or suggest changes to the following:
 ## PII / Privacy Guardrails
 Never log, expose, or suggest code that outputs the runtime values of these elements:
 
-- `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 - `com.example.database.DatabaseConnector.password` - Database credential - never log or include in error messages
+- `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 - `com.example.service.InventoryService.customerId` - Customer identifiers linked to purchase history — PII under GDPR
 - `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
 - `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
 - `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
 - `com.example.strategy.impl.CreditCardStrategy.cardNumber` - PCI-DSS cardholder data - never log or expose in suggestions
-- `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 - `com.example.strategy.impl.CreditCardStrategy.cvv` - PCI-DSS security code - never log or expose in suggestions
+- `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 
 ## Core Functionality (Extreme Caution)
 The following elements are well-tested core components — change with extreme caution:
 
 - `com.example.security.SecurityConfig` — sensitivity: Critical. This is a security manager. Any single-line change can compromise the entire project.
-- `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` — sensitivity: Critical. Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 - `com.example.service.InventoryService.releaseReservation(java.lang.String)` — sensitivity: High. Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+- `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` — sensitivity: Critical. Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 
 ## Security-Critical Code
 The following elements are security-critical — do not weaken their security properties:
@@ -55,36 +55,36 @@ The following elements are security-critical — do not weaken their security pr
 ## Scoped Rules Index
 Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
 
-- `com.example.payment.PaymentProcessor` → `.github/instructions/com-example-payment-PaymentProcessor.instructions.md`
-- `com.example.security.SecurityConfig` → `.github/instructions/com-example-security-SecurityConfig.instructions.md`
-- `com.example.service.OrderService` → `.github/instructions/com-example-service-OrderService.instructions.md`
-- `com.example.service.InventoryService` → `.github/instructions/com-example-service-InventoryService.instructions.md`
-- `com.example.service.NotificationService` → `.github/instructions/com-example-service-NotificationService.instructions.md`
-- `com.example.service.PricingService` → `.github/instructions/com-example-service-PricingService.instructions.md`
-- `com.example.strategy.PaymentStrategy` → `.github/instructions/com-example-strategy-PaymentStrategy.instructions.md`
-- `com.example.utils.StringParser` → `.github/instructions/com-example-utils-StringParser.instructions.md`
-- `com.example.internal.GeneratedMetadata` → `.github/instructions/com-example-internal-GeneratedMetadata.instructions.md`
-- `com.example.database.DatabaseConnector` → `.github/instructions/com-example-database-DatabaseConnector.instructions.md`
 - `com.example.NotificationService` → `.github/instructions/com-example-NotificationService.instructions.md`
-- `com.example.strategy.impl.CreditCardStrategy` → `.github/instructions/com-example-strategy-impl-CreditCardStrategy.instructions.md`
+- `com.example.compliance.GdprService` → `.github/instructions/com-example-compliance-GdprService.instructions.md`
 - `com.example.concurrent.SessionCache` → `.github/instructions/com-example-concurrent-SessionCache.instructions.md`
 - `com.example.config.AsyncTestConfig` → `.github/instructions/com-example-config-AsyncTestConfig.instructions.md`
+- `com.example.config.ParallelTestSettings` → `.github/instructions/com-example-config-ParallelTestSettings.instructions.md`
+- `com.example.database.DatabaseConnector` → `.github/instructions/com-example-database-DatabaseConnector.instructions.md`
+- `com.example.database.UserEntity` → `.github/instructions/com-example-database-UserEntity.instructions.md`
+- `com.example.internal.GeneratedMetadata` → `.github/instructions/com-example-internal-GeneratedMetadata.instructions.md`
+- `com.example.legacy.LegacyBridgeService` → `.github/instructions/com-example-legacy-LegacyBridgeService.instructions.md`
 - `com.example.legacy.OldPaymentApi` → `.github/instructions/com-example-legacy-OldPaymentApi.instructions.md`
 - `com.example.metrics.OrderMetrics` → `.github/instructions/com-example-metrics-OrderMetrics.instructions.md`
-- `com.example.compliance.GdprService` → `.github/instructions/com-example-compliance-GdprService.instructions.md`
-- `com.example.config.ParallelTestSettings` → `.github/instructions/com-example-config-ParallelTestSettings.instructions.md`
-- `com.example.legacy.LegacyBridgeService` → `.github/instructions/com-example-legacy-LegacyBridgeService.instructions.md`
+- `com.example.payment.PaymentDetails` → `.github/instructions/com-example-payment-PaymentDetails.instructions.md`
+- `com.example.payment.PaymentProcessor` → `.github/instructions/com-example-payment-PaymentProcessor.instructions.md`
+- `com.example.security.SecurityConfig` → `.github/instructions/com-example-security-SecurityConfig.instructions.md`
+- `com.example.service.EvidenceBasedShowcase` → `.github/instructions/com-example-service-EvidenceBasedShowcase.instructions.md`
+- `com.example.service.InventoryService` → `.github/instructions/com-example-service-InventoryService.instructions.md`
 - `com.example.service.LayeredDomainService` → `.github/instructions/com-example-service-LayeredDomainService.instructions.md`
+- `com.example.service.NewAnnotationsShowcase` → `.github/instructions/com-example-service-NewAnnotationsShowcase.instructions.md`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.github/instructions/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.instructions.md`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.github/instructions/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.instructions.md`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.github/instructions/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.instructions.md`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.github/instructions/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.instructions.md`
+- `com.example.service.NotificationService` → `.github/instructions/com-example-service-NotificationService.instructions.md`
+- `com.example.service.OrderService` → `.github/instructions/com-example-service-OrderService.instructions.md`
+- `com.example.service.PricingService` → `.github/instructions/com-example-service-PricingService.instructions.md`
 - `com.example.service.PublicPaymentController` → `.github/instructions/com-example-service-PublicPaymentController.instructions.md`
 - `com.example.service.TransactionalPaymentService` → `.github/instructions/com-example-service-TransactionalPaymentService.instructions.md`
-- `com.example.payment.PaymentDetails` → `.github/instructions/com-example-payment-PaymentDetails.instructions.md`
+- `com.example.strategy.PaymentStrategy` → `.github/instructions/com-example-strategy-PaymentStrategy.instructions.md`
+- `com.example.strategy.impl.CreditCardStrategy` → `.github/instructions/com-example-strategy-impl-CreditCardStrategy.instructions.md`
 - `com.example.utils.I18nMessageHelper` → `.github/instructions/com-example-utils-I18nMessageHelper.instructions.md`
 - `com.example.utils.StrictUtility` → `.github/instructions/com-example-utils-StrictUtility.instructions.md`
-- `com.example.database.UserEntity` → `.github/instructions/com-example-database-UserEntity.instructions.md`
-- `com.example.service.NewAnnotationsShowcase` → `.github/instructions/com-example-service-NewAnnotationsShowcase.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.github/instructions/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.github/instructions/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.github/instructions/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.github/instructions/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.instructions.md`
-- `com.example.service.EvidenceBasedShowcase` → `.github/instructions/com-example-service-EvidenceBasedShowcase.instructions.md`
+- `com.example.utils.StringParser` → `.github/instructions/com-example-utils-StringParser.instructions.md`
 <!-- VIBETAGS-END -->

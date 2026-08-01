@@ -136,6 +136,10 @@ Beyond what the generated section below describes:
   `getElementsAnnotatedWith` **once per annotation type**, however many rules share it. That is
   load-bearing for build time on a large compilation unit: the query walks the round's root
   elements, and the pre-registry validator issued one per check — four for `@AITestDriven` alone
+- `GuardrailModel` — sorts every bucket by `TaggedElement.path()` when it snapshots. Load-bearing:
+  `getElementsAnnotatedWith` returns a `Set` with no specified iteration order, so preserving the
+  order the collector received makes generated output and the `BuildFingerprint` depend on which
+  machine ran the build. `OutputOrderDeterminismTest` pins it
 - `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 

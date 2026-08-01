@@ -60,6 +60,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the code they pin — marker handling disabled, and `save()` writing non-atomically to the live
   target.
 
+### Fixed
+- **Generated output depended on the order javac enumerated the sources in.**
+  `RoundEnvironment.getElementsAnnotatedWith` returns a `Set` with no specified iteration order;
+  javac fills it by walking the round's root elements, which is the order the file manager handed
+  them over. The collector's `LinkedHashSet` faithfully preserved that, so identical sources
+  produced different `CLAUDE.md` content and a different `BuildFingerprint` depending on who
+  compiled them — Maven versus Gradle, an IDE versus a command line, two machines whose directory
+  listings differ. Committed guardrail files churned whenever a colleague built, review diffs were
+  noise, and the write cache missed for no reason.
+
+  `GuardrailModel` now sorts every bucket by `TaggedElement.path()`, the element's own value
+  identity, so output is a function of the annotations and nothing else.
+  `OutputOrderDeterminismTest` compiles the same three classes twice with the file list reversed
+  and requires byte-identical output; it fails against the previous behaviour.
+
+  **This reorders generated files once for every consumer.** The content is unchanged — only the
+  order within each section — but the next build after upgrading will rewrite them.
+
+- **The repo's own committed guardrails were stale, and nothing said so.** `.claudeignore` still
+  carried the header-only block that #328 stopped emitting, and `CLAUDE.md` and `example/` still
+  carried the pre-sort ordering. All are regenerated here. CI now runs `-Pself-annotate` in check
+  mode (`-Dvibetags.selfcheck=true`) on the JDK 21 leg, so a stale committed guardrail file is a
+  red build rather than something the next person to run the profile by hand discovers. Verified in
+  both directions: the step passes on a clean tree and exits 1 on a deliberately edited `CLAUDE.md`.
+
 ### Changed
 - **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
   visible member set and sorting it is the most expensive thing the collector does per element, and

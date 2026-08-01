@@ -19,9 +19,9 @@ alwaysApply: false
 ### Rules for field cardNumber
 - **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
-### Rules for field expiryDate
-- **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
-
 ### Rules for field cvv
 - **Reason**: PCI-DSS security code - never log or expose in suggestions
+
+### Rules for field expiryDate
+- **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 <!-- VIBETAGS-END -->

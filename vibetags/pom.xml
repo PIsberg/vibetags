@@ -40,6 +40,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>6.1.2</junit.version>
         <nullaway.version>0.13.8</nullaway.version>
+        <!-- Flipped to true by CI so -Pself-annotate verifies the committed guardrails
+             instead of rewriting them. Off by default: the profile regenerates. -->
+        <vibetags.selfcheck>false</vibetags.selfcheck>
     </properties>
 
     <dependencies>
@@ -412,6 +415,7 @@
                             <compilerArgs>
                                 <arg>-Avibetags.root=${project.basedir}/..</arg>
                                 <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -433,6 +437,7 @@
                                     <compilerArgs>
                                         <arg>-Avibetags.root=${project.basedir}/..</arg>
                                         <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
                                     </compilerArgs>
                                     <annotationProcessorPaths>
                                         <path>

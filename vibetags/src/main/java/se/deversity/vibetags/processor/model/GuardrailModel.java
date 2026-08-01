@@ -47,9 +47,12 @@ import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,8 +61,18 @@ import java.util.Set;
  * platform renderer reads.
  *
  * <p>The javac-facing {@code AnnotationCollector} produces this once per generate phase; nothing
- * below this type touches {@code javax.lang.model}. Buckets are keyed by annotation type and each
- * is insertion-ordered, so generated output and the build fingerprint stay stable across recompiles.
+ * below this type touches {@code javax.lang.model}.
+ *
+ * <p><strong>Buckets are sorted by {@link TaggedElement#path()}, and that is load-bearing.</strong>
+ * They used to preserve the order the collector received elements in, which is the order
+ * {@code RoundEnvironment.getElementsAnnotatedWith} returned them — a {@code Set} with no specified
+ * iteration order, filled by walking the round's root elements in whatever order the file manager
+ * enumerated them. That order is not the same between Maven and Gradle, between an IDE and a
+ * command line, or between two machines whose directory listings differ, so identical sources
+ * produced different {@code CLAUDE.md} content and a different {@code BuildFingerprint} depending on
+ * who compiled them. Committed guardrail files then churned every time a colleague built, and the
+ * write cache missed for no reason. Sorting on the element's own stable identity makes the output a
+ * function of the annotations and nothing else. {@code OutputOrderDeterminismTest} pins it.
  *
  * <p>Immutable. A model handed to the renderers cannot be changed by them, which is what makes the
  * parallel write phase safe without any copying.
@@ -73,6 +86,13 @@ public final class GuardrailModel {
     private final Map<TaggedElement, SourceLocation> lockedPositions;
     private final boolean anyAnnotationsFound;
 
+    /**
+     * The element's own value identity — the same {@code (path, kind)} pair {@code equals} uses, so
+     * the ordering can never disagree with set membership.
+     */
+    private static final Comparator<TaggedElement> BY_IDENTITY =
+        Comparator.comparing(TaggedElement::path).thenComparing(e -> e.kind().name());
+
     private GuardrailModel(Builder b) {
         Map<Class<? extends Annotation>, Set<TaggedElement>> copy = new LinkedHashMap<>();
         boolean any = false;
@@ -81,15 +101,33 @@ public final class GuardrailModel {
             if (bucket == null || bucket.isEmpty()) {
                 continue;
             }
-            copy.put(type, Collections.unmodifiableSet(new LinkedHashSet<>(bucket)));
+            copy.put(type, Collections.unmodifiableSet(sorted(bucket)));
             any = true;
         }
         this.buckets = Collections.unmodifiableMap(copy);
-        this.lockedPositions = Collections.unmodifiableMap(new LinkedHashMap<>(b.lockedPositions));
+        this.lockedPositions = Collections.unmodifiableMap(sortedByKey(b.lockedPositions));
         this.anyAnnotationsFound = any;
     }
 
-    /** The elements carrying {@code type}, in collection order; empty when none do. */
+    /** The bucket ordered by element identity, in a set that keeps that order on iteration. */
+    private static Set<TaggedElement> sorted(Set<TaggedElement> bucket) {
+        List<TaggedElement> ordered = new ArrayList<>(bucket);
+        ordered.sort(BY_IDENTITY);
+        return new LinkedHashSet<>(ordered);
+    }
+
+    /** Same, for the locked-position map that feeds the {@code .vibetags-locks} report. */
+    private static Map<TaggedElement, SourceLocation> sortedByKey(Map<TaggedElement, SourceLocation> positions) {
+        List<TaggedElement> keys = new ArrayList<>(positions.keySet());
+        keys.sort(BY_IDENTITY);
+        Map<TaggedElement, SourceLocation> ordered = new LinkedHashMap<>();
+        for (TaggedElement key : keys) {
+            ordered.put(key, positions.get(key));
+        }
+        return ordered;
+    }
+
+    /** The elements carrying {@code type}, ordered by {@link TaggedElement#path()}; empty when none do. */
     public Set<TaggedElement> of(Class<? extends Annotation> type) {
         return buckets.getOrDefault(type, Set.of());
     }

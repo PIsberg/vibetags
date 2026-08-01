@@ -61,6 +61,18 @@ jobs:
           cd vibetags-bom
           mvn install -B
 
+      # The repo dogfoods its own guardrails but never verified them, so the committed
+      # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
+      # processor writes and nothing said so — which is exactly what happened, and is only
+      # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
+      # this and fails on any would-be write, so a stale committed guardrail is now a red
+      # build. On JDK 21 only: it verifies file content, which is JDK-independent.
+      - name: Verify VibeTags' Own Guardrails Are Current (self-check)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags
+          mvn clean compile -B -Pself-annotate -Dvibetags.selfcheck=true
+
       - name: Reset AI Config Files (Maven)
         run: |
           cd example

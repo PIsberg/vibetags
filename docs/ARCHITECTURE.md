@@ -92,7 +92,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 *Figure 2: `se.deversity.vibetags.processor` — parsed from source by code-karta*
 
 The hand-drawn PlantUML class diagram that used to stand here is [archived](diagrams/archive/):
-it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 17.
+it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 33.
 Hand-maintained structure drifts, and that one had. Both halves of what it showed are parsed
 from source instead — the processor above, and
 [the annotation surface](ANNOTATIONS.md#the-annotation-surface) in the annotation reference.
@@ -147,10 +147,10 @@ machines: the generated SVG is sixty-odd boxes with zero transition edges. The t
 
 **Key Components:**
 
-**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (39 annotations total — see the [project facts](../README.md#project-facts)). Full list, targets, attributes, and semantics: [docs/ANNOTATIONS.md](ANNOTATIONS.md).
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (see the [project facts](../README.md#project-facts) for the count). Full list, targets, attributes, and semantics: [docs/ANNOTATIONS.md](ANNOTATIONS.md).
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
-- `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
+- `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); orchestrator that wires the helpers below into the JSR 269 lifecycle and does none of the work itself
 - `VibeTagsLogger` — SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
 - `@SupportedAnnotationTypes("*")` — processes all annotations
 - Overrides `getSupportedSourceVersion()` to return `SourceVersion.latestSupported()` instead of a fixed `@SupportedSourceVersion` — the library builds/tests against Java 21, but pinning e.g. `RELEASE_17` would make javac emit a "supported source version" warning on every newer JDK a consumer compiles with
@@ -454,7 +454,7 @@ so the output stays deterministic (byte-stable) for the fingerprint short-circui
 
 All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at compile time and are stripped from final bytecode.
 
-The full table of all 39 annotations (targets, attributes, semantics) and every compile-time validation warning the processor emits now live in one place: **[docs/ANNOTATIONS.md](ANNOTATIONS.md)**.
+The full table of every annotation (targets, attributes, semantics) and every compile-time validation warning the processor emits now live in one place: **[docs/ANNOTATIONS.md](ANNOTATIONS.md)**.
 
 ### Annotation Processor
 
@@ -465,7 +465,7 @@ The full table of all 39 annotations (targets, attributes, semantics) and every 
 - Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
 - Supports Java 11+ source versions
 - Uses `@SupportedAnnotationTypes("*")` to process all annotations
-- **Thin orchestrator** (~230 lines): all the actual work lives in `internal/*` helpers
+- **Orchestrator only**: every piece of actual work lives in an `internal/*` helper
 
 **Processing Logic:**
 
@@ -599,7 +599,7 @@ vibetags/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/se/deversity/vibetags/processor/
-│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
+│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator; delegates to internal/
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   │   ├── internal/                     # javac-facing helpers
 │   │   │   │   │   ├── AnnotationCollector.java       # one LinkedHashSet per annotation type; model() snapshots them
@@ -1144,4 +1144,4 @@ The format hierarchy, a sample `llms.txt` output, opt-in commands, and the `vibe
 
 ---
 
-*Last updated: 2026-06-28 — refreshed counts to the current 39 annotations / 37 platforms (see [project facts](../README.md#project-facts)) and fixed a broken `file://` link to `junit-platform.properties`.*
+*Last updated: 2026-08-01 — replaced the restated annotation counts and the `AIGuardrailProcessor` line count with links and properties. Restating a number the README already pins is how the previous "39 annotations" here outlived the 44 that exist; a line count in prose rots on the next commit. `ProjectFactsConsistencyTest` guards the README's figures, and nothing guards a copy of them.*

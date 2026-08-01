@@ -8,8 +8,8 @@
 **/getKeyRotationHours.java
 **/getMaxLoginAttempts.java
 **/validateToken.java
-**/validateOrder.java
 **/calculateTax.java
 **/processPayment.java
+**/validateOrder.java
 **/GeneratedMetadata.java
 # VIBETAGS-END

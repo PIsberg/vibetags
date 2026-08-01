@@ -126,14 +126,14 @@
     <file path="com.example.security.SecurityConfig.validateToken(java.lang.String)">
       <reason>Token validation must match auth server exactly. Changes will break all client authentication</reason>
     </file>
-    <file path="com.example.service.OrderService.validateOrder(java.util.Map&lt;java.lang.String,java.lang.Object&gt;)">
-      <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
-    </file>
     <file path="com.example.service.OrderService.calculateTax(java.lang.String,double)">
       <reason>Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.</reason>
     </file>
     <file path="com.example.service.OrderService.processPayment(java.lang.String,double)">
       <reason>Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.</reason>
+    </file>
+    <file path="com.example.service.OrderService.validateOrder(java.util.Map&lt;java.lang.String,java.lang.Object&gt;)">
+      <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
     </file>
   </locked_files>
   <contextual_instructions>
@@ -189,32 +189,32 @@
     <task path="com.example.payment.PaymentProcessor">
       <instructions>Implement support for new crypto payments without breaking legacy flow.</instructions>
     </task>
-    <task path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
-      <instructions>Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)">
-      <instructions>Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).</instructions>
-    </task>
-    <task path="com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)">
-      <instructions>Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.</instructions>
+    <task path="com.example.service.NotificationService.getDeliveryStatus(java.lang.String)">
+      <instructions>Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.</instructions>
     </task>
     <task path="com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)">
       <instructions>Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).</instructions>
     </task>
-    <task path="com.example.service.NotificationService.getDeliveryStatus(java.lang.String)">
-      <instructions>Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.</instructions>
+    <task path="com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)">
+      <instructions>Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).</instructions>
+    </task>
+    <task path="com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)">
+      <instructions>Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.</instructions>
+    </task>
+    <task path="com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)">
+      <instructions>Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).</instructions>
     </task>
     <task path="com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)">
       <instructions>Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.</instructions>
     </task>
-    <task path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
-      <instructions>Implement order status workflow: CREATED -&gt; PAYMENT_PENDING -&gt; PAYMENT_CONFIRMED -&gt; PROCESSING -&gt; SHIPPED -&gt; DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
+    <task path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
+      <instructions>Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.</instructions>
     </task>
     <task path="com.example.service.OrderService.searchOrders(java.util.Map&lt;java.lang.String,java.lang.String&gt;,int,int)">
       <instructions>Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.</instructions>
     </task>
-    <task path="com.example.service.OrderService.generateOrderConfirmation(java.lang.String)">
-      <instructions>Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.</instructions>
+    <task path="com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)">
+      <instructions>Implement order status workflow: CREATED -&gt; PAYMENT_PENDING -&gt; PAYMENT_CONFIRMED -&gt; PROCESSING -&gt; SHIPPED -&gt; DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.</instructions>
     </task>
     <task path="com.example.strategy.PaymentStrategy.executePayment(double)">
       <instructions>Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.</instructions>
@@ -230,10 +230,10 @@
     </task>
   </implementation_tasks>
   <pii_guardrails>
-    <element path="com.example.database.DatabaseConnector.username">
+    <element path="com.example.database.DatabaseConnector.password">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
-    <element path="com.example.database.DatabaseConnector.password">
+    <element path="com.example.database.DatabaseConnector.username">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
     <element path="com.example.service.InventoryService.customerId">
@@ -251,11 +251,11 @@
     <element path="com.example.strategy.impl.CreditCardStrategy.cardNumber">
       <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
-    <element path="com.example.strategy.impl.CreditCardStrategy.expiryDate">
-      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
-    </element>
     <element path="com.example.strategy.impl.CreditCardStrategy.cvv">
       <reason>PCI-DSS security code - never log or expose in suggestions</reason>
+    </element>
+    <element path="com.example.strategy.impl.CreditCardStrategy.expiryDate">
+      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
   </pii_guardrails>
 
@@ -267,13 +267,13 @@
       <sensitivity>Critical</sensitivity>
       <note>This is a security manager. Any single-line change can compromise the entire project.</note>
     </element>
-    <element path="com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)">
-      <sensitivity>Critical</sensitivity>
-      <note>Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.</note>
-    </element>
     <element path="com.example.service.InventoryService.releaseReservation(java.lang.String)">
       <sensitivity>High</sensitivity>
       <note>Must be called as the exact inverse of reserveStock. Pair changes to both methods together.</note>
+    </element>
+    <element path="com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)">
+      <sensitivity>Critical</sensitivity>
+      <note>Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.</note>
     </element>
   </core_elements>
 
@@ -282,11 +282,11 @@
     <element path="com.example.payment.PaymentProcessor">
       <constraint>HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.</constraint>
     </element>
-    <element path="com.example.service.InventoryService.getAvailableStock(java.lang.String)">
-      <constraint>O(1) lookup required. Must complete in &lt;2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
-    </element>
     <element path="com.example.service.InventoryService.bulkRestock(java.util.List&lt;java.util.Map&lt;java.lang.String,java.lang.Object&gt;&gt;)">
       <constraint>Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.</constraint>
+    </element>
+    <element path="com.example.service.InventoryService.getAvailableStock(java.lang.String)">
+      <constraint>O(1) lookup required. Must complete in &lt;2ms p99. No database calls permitted; reads from in-memory cache only.</constraint>
     </element>
     <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
       <constraint>Must complete in &lt;5ms p99. Called on every cart update.</constraint>
@@ -295,11 +295,11 @@
 
 <rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>
   <contract_signatures>
-    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
-      <reason>Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.</reason>
-    </element>
     <element path="com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)">
       <reason>Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.</reason>
+    </element>
+    <element path="com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)">
+      <reason>Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.</reason>
     </element>
     <element path="com.example.service.PricingService.getBulkPricing(java.util.List&lt;java.lang.String&gt;,int)">
       <reason>B2B portal contract v1.2 — the List&lt;Map&lt;String,Object&gt;&gt; structure is serialized directly to JSON. Changing the return type breaks portal parsing.</reason>
@@ -521,11 +521,11 @@
 
 <rule>Strict input sanitization is mandatory for elements in <sanitization_elements>. Raw input must pass through approved filters before hitting queries or renderers.</rule>
   <secure_logging_elements>
-    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw">
-      <logging_policy>HASH</logging_policy>
-    </file>
     <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber">
       <logging_policy>MASK_CREDIT_CARD</logging_policy>
+    </file>
+    <file path="com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw">
+      <logging_policy>HASH</logging_policy>
     </file>
   </secure_logging_elements>
 
