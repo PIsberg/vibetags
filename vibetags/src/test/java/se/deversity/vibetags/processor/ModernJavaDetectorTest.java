@@ -85,6 +85,12 @@ class ModernJavaDetectorTest {
                 "package com.example.mj;\n"
                     + "public record OnlyPermitted(int v) implements ExtensibleSealed {}\n"),
 
+            new StringSource("com/example/mj/ExtensibleEnum.java",
+                "package com.example.mj;\n"
+                    + "import se.deversity.vibetags.annotations.AIExtensible;\n"
+                    + "@AIExtensible\n"
+                    + "public enum ExtensibleEnum { ONE, TWO }\n"),
+
             // --- @AIPure on a void method -------------------------------------------------
             new StringSource("com/example/mj/PureVoid.java",
                 "package com.example.mj;\n"
@@ -238,6 +244,12 @@ class ModernJavaDetectorTest {
     void warns_whenExtensibleSitsOnARecord() {
         assertReported("@AIExtensible on a record",
             "@AIExtensible", "ExtensibleRecord", "implicitly final");
+    }
+
+    @Test
+    void warns_whenExtensibleSitsOnAnEnum() {
+        assertReported("@AIExtensible on an enum",
+            "@AIExtensible", "ExtensibleEnum", "an enum", "implicitly final");
     }
 
     @Test

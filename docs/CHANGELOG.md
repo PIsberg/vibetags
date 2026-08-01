@@ -20,11 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rather than its own; and check mode dereferenced a service's output path without establishing
   that the service had one.
 
-  One class is excluded and it is a TODO rather than a judgement: NullAway reports the same
-  unguarded path dereference in `AIGuardrailProcessor.generateFiles()`, which is `@AILocked`
-  because its step order is load-bearing. Adding the guard changes what the method does when a
-  service has content but no output path, so it wants a human. The exclusion and the reasoning are
-  in `vibetags/pom.xml`; delete the option once the guard is agreed.
+  **No class is excluded.** The last finding was inside `AIGuardrailProcessor.generateFiles()`,
+  which is `@AILocked` because its step order is load-bearing: `serviceFiles.get(service)` was
+  dereferenced without a guard inside the parallel write phase. The lock was lifted for the edit
+  and restored, and the guard now skips the one unmapped entry instead of letting an NPE surface
+  as an `ExecutionException` that abandons the whole write phase — one unmapped key would
+  otherwise have cost every other file its update. The step order is untouched.
 
 - **Seven modern-Java detectors**, in a new `ModernJavaRules`. Every check VibeTags had compared
   annotations against each other; these compare an annotation against the declaration it sits on,
@@ -41,6 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@AIArchitecture(cannotReference)` they still fire under Gradle's compiler. Each is paired with a
   clean fixture asserting it stays quiet; removing the detectors turns 11 of `ModernJavaDetectorTest`'s
   17 cases red, and the 6 that stay green are exactly the silence assertions.
+
+- **Tests for behaviour that had none.** Three of these were reachable, user-facing and entirely
+  unexercised, which is why they are listed here rather than filed under coverage:
+  the enforcing mode's *in-place shape change* — a method whose return type changes keeps its path,
+  so it is caught by comparing signatures rather than by the "approved but absent" sweep, and only
+  the second of those two paths had a test; `@AITemporary(expiresOn = "2026-02-31")`, which passes
+  the `YYYY-MM-DD` shape check and is still not a date; and a `.vibetags-roles` role defined by a
+  bare list of classes, whose rule file has to derive its `globs:` front-matter from its members
+  or the editor never loads it. Plus `@AIExtensible` on an enum, `@AIThreadAffinity` with a named
+  thread and no `marshalVia`, a blank entry in `cannotReference`, an on-demand import matched
+  through a trailing-dot package, and the degraded-environment guards that keep a non-javac
+  compiler from turning a warning into a failed build.
 
 - **`SignatureCaptureStressTest` in `load-tests`.** The existing sweeps could not resolve the
   signature-capture change below, and that is a property of their fixture rather than of the

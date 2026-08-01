@@ -47,6 +47,26 @@ class EnforcingModeEndToEndTest {
         }
         """;
 
+    /**
+     * Same name, same parameter types, different return type.
+     *
+     * <p>Structurally different from {@link #CONTRACT_V2_BROKEN}, and that difference is the whole
+     * point of having both. A method's path embeds its parameter types, so changing one abandons
+     * the approved entry and the violation is found by the "approved but absent" sweep. Changing
+     * only the return type leaves the path intact, so the entry is still there and has to be caught
+     * by comparing signatures — a separate code path that nothing exercised.
+     */
+    private static final String CONTRACT_V2_RETURN_TYPE = """
+        package com.example;
+
+        import se.deversity.vibetags.annotations.AIContract;
+
+        public interface PaymentGateway {
+            @AIContract(reason = "External gateway API — breaking changes violate the SLA")
+            long charge(String customerId, double amount);
+        }
+        """;
+
     /** Reworded reason, identical signature: not a violation. */
     private static final String CONTRACT_V2_HARMLESS = """
         package com.example;
@@ -115,6 +135,40 @@ class EnforcingModeEndToEndTest {
             "a changed parameter type is what this mode exists to stop");
         assertTrue(errors(broken, "-Avibetags.baseline.update=true"),
             "the error must say how to approve an intended change");
+    }
+
+    @Test
+    void failsTheBuildWhenOnlyTheReturnTypeChanges() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(CONTRACT_V1, "-Avibetags.baseline.update=true");
+
+        List<Diagnostic<? extends JavaFileObject>> broken =
+            compile(CONTRACT_V2_RETURN_TYPE, "-Avibetags.enforce=contract");
+
+        assertTrue(errors(broken, "@AIContract violation"),
+            "a changed return type breaks every caller and must be caught");
+        assertTrue(errors(broken, "changed from what"),
+            "this is the in-place shape change, so the message must be the 'changed' one rather "
+                + "than the 'no such guarded element' one");
+        assertTrue(errors(broken, "approved:") && errors(broken, "now:"),
+            "the error has to show both shapes — a violation you cannot read is one you approve blind");
+    }
+
+    @Test
+    void toleratesEmptyEntriesInTheFamilyList() throws IOException {
+        // -Avibetags.enforce=contract,,locked, is what a shell variable or a generated build
+        // argument produces. Rejecting it, or reading the empty entry as an unknown family, would
+        // make the option fail on exactly the setups that pass it programmatically.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(CONTRACT_V1, "-Avibetags.baseline.update=true");
+
+        List<Diagnostic<? extends JavaFileObject>> messy =
+            compile(CONTRACT_V1, "-Avibetags.enforce=contract,, locked ,");
+
+        assertFalse(warns(messy, "unknown guardrail family"),
+            "an empty entry is whitespace, not a family somebody misspelled");
+        assertFalse(errors(messy, "violation"),
+            "and the families that were named must still be enforced normally");
     }
 
     @Test

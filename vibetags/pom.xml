@@ -174,16 +174,12 @@
                                      and friends return null and say nothing about it, so treating
                                      javax.lang.model as annotated would only produce false confidence.
 
-                                     AIGuardrailProcessor is the one excluded class, and the exclusion
-                                     is a TODO rather than a judgement. NullAway reports one finding in
-                                     it — `filePath` from serviceFiles.get(service) is dereferenced
-                                     without a guard in the parallel write phase — and that line is
-                                     inside generateFiles(), which is @AILocked because its step order
-                                     is load-bearing. Adding a guard there changes what the method does
-                                     when a service has content but no output path, so it is a decision
-                                     for a human rather than a drive-by fix. Delete this option once
-                                     that guard is agreed; every other class is checked. -->
-                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source -XepOpt:NullAway:UnannotatedClasses=se.deversity.vibetags.processor.AIGuardrailProcessor</arg>
+                                     No class is excluded: the guard NullAway asked for inside
+                                     generateFiles() was agreed and added, so every class is
+                                     checked. Do not reintroduce UnannotatedClasses — an exclusion
+                                     is invisible in the build output, which makes it the one kind
+                                     of gap nobody notices growing. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>

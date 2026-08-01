@@ -466,6 +466,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 String service = entry.getKey();
                 String content = entry.getValue();
                 Path filePath = serviceFiles.get(service);
+                if (filePath == null) {
+                    // Rendered content for a service the registry has no output path for. Every
+                    // renderer's key is registered today, so this is unreachable — but it is
+                    // unreachable by agreement between two collections, not by construction, and
+                    // the dereference below runs inside a parallelStream: an NPE here surfaces as
+                    // an ExecutionException that abandons the whole write phase, so one unmapped
+                    // key would cost every other file its update. Skipping the one entry keeps a
+                    // registry gap to the file it belongs to. Mirrors the guard in checkFiles().
+                    if (log != null) {
+                        log.warn("write.skip file=<unmapped> service={} reason=no-service-path", service);
+                    }
+                    return;
+                }
                 boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
                 // hasNewRules: true if any module (not just this one) contributed to this service.
                 boolean anyContributed = isMultiModule(allSidecars)
