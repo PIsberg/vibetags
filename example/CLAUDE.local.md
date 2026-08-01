@@ -20,14 +20,14 @@
     <file path="com.example.security.SecurityConfig.validateToken(java.lang.String)">
       <reason>Token validation must match auth server exactly. Changes will break all client authentication</reason>
     </file>
-    <file path="com.example.service.OrderService.validateOrder(java.util.Map&lt;java.lang.String,java.lang.Object&gt;)">
-      <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
-    </file>
     <file path="com.example.service.OrderService.calculateTax(java.lang.String,double)">
       <reason>Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.</reason>
     </file>
     <file path="com.example.service.OrderService.processPayment(java.lang.String,double)">
       <reason>Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.</reason>
+    </file>
+    <file path="com.example.service.OrderService.validateOrder(java.util.Map&lt;java.lang.String,java.lang.Object&gt;)">
+      <reason>Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.</reason>
     </file>
   </locked_files>
 
@@ -47,10 +47,10 @@
 
 <rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
   <pii_guardrails>
-    <element path="com.example.database.DatabaseConnector.username">
+    <element path="com.example.database.DatabaseConnector.password">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
-    <element path="com.example.database.DatabaseConnector.password">
+    <element path="com.example.database.DatabaseConnector.username">
       <reason>Database credential - never log or include in error messages</reason>
     </element>
     <element path="com.example.service.InventoryService.customerId">
@@ -68,11 +68,11 @@
     <element path="com.example.strategy.impl.CreditCardStrategy.cardNumber">
       <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
-    <element path="com.example.strategy.impl.CreditCardStrategy.expiryDate">
-      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
-    </element>
     <element path="com.example.strategy.impl.CreditCardStrategy.cvv">
       <reason>PCI-DSS security code - never log or expose in suggestions</reason>
+    </element>
+    <element path="com.example.strategy.impl.CreditCardStrategy.expiryDate">
+      <reason>PCI-DSS cardholder data - never log or expose in suggestions</reason>
     </element>
   </pii_guardrails>
 
@@ -84,13 +84,13 @@
       <sensitivity>Critical</sensitivity>
       <note>This is a security manager. Any single-line change can compromise the entire project.</note>
     </element>
-    <element path="com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)">
-      <sensitivity>Critical</sensitivity>
-      <note>Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.</note>
-    </element>
     <element path="com.example.service.InventoryService.releaseReservation(java.lang.String)">
       <sensitivity>High</sensitivity>
       <note>Must be called as the exact inverse of reserveStock. Pair changes to both methods together.</note>
+    </element>
+    <element path="com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)">
+      <sensitivity>Critical</sensitivity>
+      <note>Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.</note>
     </element>
   </core_elements>
 
@@ -104,38 +104,38 @@
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
-    <element path="com.example.payment.PaymentProcessor" rules=".claude/rules/com-example-payment-PaymentProcessor.md"/>
-    <element path="com.example.security.SecurityConfig" rules=".claude/rules/com-example-security-SecurityConfig.md"/>
-    <element path="com.example.service.OrderService" rules=".claude/rules/com-example-service-OrderService.md"/>
-    <element path="com.example.service.InventoryService" rules=".claude/rules/com-example-service-InventoryService.md"/>
-    <element path="com.example.service.NotificationService" rules=".claude/rules/com-example-service-NotificationService.md"/>
-    <element path="com.example.service.PricingService" rules=".claude/rules/com-example-service-PricingService.md"/>
-    <element path="com.example.strategy.PaymentStrategy" rules=".claude/rules/com-example-strategy-PaymentStrategy.md"/>
-    <element path="com.example.utils.StringParser" rules=".claude/rules/com-example-utils-StringParser.md"/>
-    <element path="com.example.internal.GeneratedMetadata" rules=".claude/rules/com-example-internal-GeneratedMetadata.md"/>
-    <element path="com.example.database.DatabaseConnector" rules=".claude/rules/com-example-database-DatabaseConnector.md"/>
     <element path="com.example.NotificationService" rules=".claude/rules/com-example-NotificationService.md"/>
-    <element path="com.example.strategy.impl.CreditCardStrategy" rules=".claude/rules/com-example-strategy-impl-CreditCardStrategy.md"/>
+    <element path="com.example.compliance.GdprService" rules=".claude/rules/com-example-compliance-GdprService.md"/>
     <element path="com.example.concurrent.SessionCache" rules=".claude/rules/com-example-concurrent-SessionCache.md"/>
     <element path="com.example.config.AsyncTestConfig" rules=".claude/rules/com-example-config-AsyncTestConfig.md"/>
+    <element path="com.example.config.ParallelTestSettings" rules=".claude/rules/com-example-config-ParallelTestSettings.md"/>
+    <element path="com.example.database.DatabaseConnector" rules=".claude/rules/com-example-database-DatabaseConnector.md"/>
+    <element path="com.example.database.UserEntity" rules=".claude/rules/com-example-database-UserEntity.md"/>
+    <element path="com.example.internal.GeneratedMetadata" rules=".claude/rules/com-example-internal-GeneratedMetadata.md"/>
+    <element path="com.example.legacy.LegacyBridgeService" rules=".claude/rules/com-example-legacy-LegacyBridgeService.md"/>
     <element path="com.example.legacy.OldPaymentApi" rules=".claude/rules/com-example-legacy-OldPaymentApi.md"/>
     <element path="com.example.metrics.OrderMetrics" rules=".claude/rules/com-example-metrics-OrderMetrics.md"/>
-    <element path="com.example.compliance.GdprService" rules=".claude/rules/com-example-compliance-GdprService.md"/>
-    <element path="com.example.config.ParallelTestSettings" rules=".claude/rules/com-example-config-ParallelTestSettings.md"/>
-    <element path="com.example.legacy.LegacyBridgeService" rules=".claude/rules/com-example-legacy-LegacyBridgeService.md"/>
+    <element path="com.example.payment.PaymentDetails" rules=".claude/rules/com-example-payment-PaymentDetails.md"/>
+    <element path="com.example.payment.PaymentProcessor" rules=".claude/rules/com-example-payment-PaymentProcessor.md"/>
+    <element path="com.example.security.SecurityConfig" rules=".claude/rules/com-example-security-SecurityConfig.md"/>
+    <element path="com.example.service.EvidenceBasedShowcase" rules=".claude/rules/com-example-service-EvidenceBasedShowcase.md"/>
+    <element path="com.example.service.InventoryService" rules=".claude/rules/com-example-service-InventoryService.md"/>
     <element path="com.example.service.LayeredDomainService" rules=".claude/rules/com-example-service-LayeredDomainService.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase" rules=".claude/rules/com-example-service-NewAnnotationsShowcase.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md"/>
+    <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md"/>
+    <element path="com.example.service.NotificationService" rules=".claude/rules/com-example-service-NotificationService.md"/>
+    <element path="com.example.service.OrderService" rules=".claude/rules/com-example-service-OrderService.md"/>
+    <element path="com.example.service.PricingService" rules=".claude/rules/com-example-service-PricingService.md"/>
     <element path="com.example.service.PublicPaymentController" rules=".claude/rules/com-example-service-PublicPaymentController.md"/>
     <element path="com.example.service.TransactionalPaymentService" rules=".claude/rules/com-example-service-TransactionalPaymentService.md"/>
-    <element path="com.example.payment.PaymentDetails" rules=".claude/rules/com-example-payment-PaymentDetails.md"/>
+    <element path="com.example.strategy.PaymentStrategy" rules=".claude/rules/com-example-strategy-PaymentStrategy.md"/>
+    <element path="com.example.strategy.impl.CreditCardStrategy" rules=".claude/rules/com-example-strategy-impl-CreditCardStrategy.md"/>
     <element path="com.example.utils.I18nMessageHelper" rules=".claude/rules/com-example-utils-I18nMessageHelper.md"/>
     <element path="com.example.utils.StrictUtility" rules=".claude/rules/com-example-utils-StrictUtility.md"/>
-    <element path="com.example.database.UserEntity" rules=".claude/rules/com-example-database-UserEntity.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase" rules=".claude/rules/com-example-service-NewAnnotationsShowcase.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md"/>
-    <element path="com.example.service.EvidenceBasedShowcase" rules=".claude/rules/com-example-service-EvidenceBasedShowcase.md"/>
+    <element path="com.example.utils.StringParser" rules=".claude/rules/com-example-utils-StringParser.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

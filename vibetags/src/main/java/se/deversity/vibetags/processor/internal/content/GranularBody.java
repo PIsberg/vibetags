@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +48,7 @@ public final class GranularBody implements CharSequence {
      * publish a partially-constructed String — recomputation is idempotent, so a lost update is
      * harmless but an unsafe publication would not be.
      */
-    private volatile String rendered;
+    private volatile @Nullable String rendered;
 
     /** Records one stanza. Stanzas are rendered in insertion order within their section. */
     public void add(Entry entry) {

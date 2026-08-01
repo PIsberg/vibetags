@@ -31,6 +31,15 @@ the processor can actually **prove** from the javac element model (issue #284).
   name + parameter types + return type + checked exceptions, and a type as its supertypes plus its
   public/protected member signatures, sorted. Bodies, comments, formatting and private members are
   invisible: an enforcement that fires when someone reformats a locked file gets switched off.
+
+  Those signatures are computed **only when this option (or `-Avibetags.baseline.update`) is set**.
+  Rendering a type's visible member set and sorting it is the most expensive thing the collector
+  does per element, and nothing but enforcement reads the result — on 400 wide classes it is
+  36 MB of allocation, about 7 % of the processor's own overhead. It cannot be deferred instead:
+  the javac element model is valid only while its round is live, and the model is read after the
+  last round closes, so `AnnotationCollector.captureSignatures(boolean)` is set up front from these
+  two options. A build that turns enforcement on therefore costs slightly more than one that does
+  not, by design.
 - **Not enforceable, and said so out loud.** `@AICallersOnly` and `@AIStrictClasspath` need
   call-graph and method-body analysis a processor cannot do portably — the Tree API is unavailable
   under Gradle (see `ModuleRootResolver`) — and `@AIThreadSafe`/`@AITestDriven` are semantic. Naming

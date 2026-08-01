@@ -375,11 +375,13 @@ public final class ModuleSidecar {
                 } else if (KEY_REGION_ID.equals(key)) {
                     regionId = val;
                 } else if (KEY_GRANULAR_STEMS.equals(key)) {
-                    for (String stem : decode(val).split("\n")) {
+                    // -1 keeps trailing empty fields rather than relying on split's default of
+                    // dropping them; the isBlank guard is what discards them, visibly.
+                    for (String stem : decode(val).split("\n", -1)) {
                         if (!stem.isBlank()) granularStems.add(stem);
                     }
                 } else if (KEY_ELEMENT_IDS.equals(key)) {
-                    for (String id : decode(val).split("\n")) {
+                    for (String id : decode(val).split("\n", -1)) {
                         if (!id.isBlank()) elementIds.add(id);
                     }
                 } else if (key.startsWith(KEY_MODULE_BODY_PREFIX)) {
@@ -387,7 +389,9 @@ public final class ModuleSidecar {
                 } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
                     indexDigests.put(key.substring(KEY_INDEX_DIGEST_PREFIX.length()), decode(val));
                 } else if (key.startsWith(RESERVED_PREFIX)) {
-                    continue; // reserved key from a newer processor — ignore, never render
+                    // Reserved key from a newer processor: recognised, deliberately not stored, and
+                    // above all kept out of the `else` below, which would put it in `bodies` and
+                    // render it into somebody's guardrail file. Doing nothing here is the point.
                 } else {
                     bodies.put(key, decode(val));
                 }
@@ -487,7 +491,15 @@ public final class ModuleSidecar {
                       }
                       result.add(s);
                   });
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+
+            // Best-effort listing: a root we cannot read contributes no sidecars, which is the
+
+            // same outcome as a root with none. Failing here would fail a compile over a
+
+            // directory the build does not need.
+
+        }
         applyRootIndexModeTo(root, result);
         return result;
     }
@@ -541,7 +553,7 @@ public final class ModuleSidecar {
     }
 
     /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
-    private static String aggregateScopedDir(String service) {
+    private static @Nullable String aggregateScopedDir(String service) {
         switch (service) {
             case "claude":   return ".claude/rules";
             case "cursor":   return ".cursor/rules";
@@ -552,12 +564,12 @@ public final class ModuleSidecar {
     }
 
     /** Granular service key governing an aggregate service (e.g. {@code claude} → {@code claude_granular}). */
-    private static String aggregateGranularKey(String service) {
+    private static @Nullable String aggregateGranularKey(String service) {
         return aggregateScopedDir(service) == null ? null : service + "_granular";
     }
 
     /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
-    private static String aggregateFileName(String service) {
+    private static @Nullable String aggregateFileName(String service) {
         switch (service) {
             case "claude":   return "CLAUDE.md";
             case "cursor":   return ".cursorrules";
@@ -573,7 +585,8 @@ public final class ModuleSidecar {
      * no guardrails are lost). {@code moduleActive} is the module directory's own file-existence
      * opt-in set — the pointer names only the files the module actually generates.
      */
-    private static String buildIndexPointer(String service, String modulePath, java.util.Set<String> moduleActive) {
+    private static @Nullable String buildIndexPointer(String service, String modulePath,
+                                                      java.util.Set<String> moduleActive) {
         String scopedDir = aggregateScopedDir(service);
         if (scopedDir == null) return null;
         boolean hasGranular = moduleActive.contains(aggregateGranularKey(service));
@@ -614,7 +627,11 @@ public final class ModuleSidecar {
                       return fn != null ? fn.toString() : "";
                   }))
                   .forEach(result::add);
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+
+            // Same best-effort listing contract as above: unreadable means empty, never fatal.
+
+        }
         return result;
     }
 
@@ -720,7 +737,7 @@ public final class ModuleSidecar {
      *                       the right scope for a module's own {@code .claude/rules} directory
      */
     public static Set<String> granularStemsFrom(List<ModuleSidecar> sidecars,
-                                                String excludeModuleId,
+                                                @Nullable String excludeModuleId,
                                                 @Nullable String sameRegionOnly) {
         Set<String> stems = new LinkedHashSet<>();
         for (ModuleSidecar s : sidecars) {
@@ -853,7 +870,10 @@ public final class ModuleSidecar {
         for (Path p : listPaths(root)) {
             try {
                 stamp = 31L * stamp + Files.getLastModifiedTime(p).toMillis();
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+                // A file that vanished between listing and stat contributes nothing to the stamp.
+                // That is correct: it is not there, so it is not part of this round of state.
+            }
         }
         return stamp;
     }
@@ -863,6 +883,16 @@ public final class ModuleSidecar {
     // -----------------------------------------------------------------------
 
     private static void tryDelete(Path p) {
-        try { Files.deleteIfExists(p); } catch (IOException ignored) {}
+        try {
+
+            Files.deleteIfExists(p);
+
+        } catch (IOException ignored) {
+
+            // Deleting a stale sidecar is housekeeping. If the file is locked or already gone,
+
+            // the next run tries again; taking the build down for it would be the larger bug.
+
+        }
     }
 }

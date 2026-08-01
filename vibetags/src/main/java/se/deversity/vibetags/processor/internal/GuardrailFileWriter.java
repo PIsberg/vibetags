@@ -175,7 +175,7 @@ public final class GuardrailFileWriter {
 
             debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
                 fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
-            if (supportsMarkers) {
+            if (markers != null) {
                 return writeWithMarkers(filePath, fileName, path, content, existing, hasNewRules, markers);
             }
             return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules);
@@ -358,7 +358,7 @@ public final class GuardrailFileWriter {
      * Returns the appropriate marker pair for a file based on its extension.
      * Returns {@code null} for JSON/TOML which are overwritten without markers.
      */
-    public static @Nullable String[] getMarkersFor(String fileName) {
+    public static String @Nullable [] getMarkersFor(String fileName) {
         if (fileName.endsWith(".md") || fileName.endsWith(".mdc")
             || "llms.txt".equals(fileName) || "llms-full.txt".equals(fileName)) {
             return new String[]{MARKER_START_MD, MARKER_END_MD};

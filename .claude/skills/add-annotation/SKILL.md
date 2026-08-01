@@ -116,16 +116,27 @@ see the class's `@AILocked` javadoc) serves stale output on the next compile wit
 This exact regression shipped once and was fixed in commit `df01cb8`
 ("fingerprint ignores the 12 newest annotation buckets").
 
-## Step 6 — AnnotationValidator (only if there is something to validate)
+## Step 6 — Validation rules (only if there is something to validate)
 
-`vibetags/.../internal/AnnotationValidator.java` — add a
-`for (Element element : elementsOf(roundEnv, present, AIYourName.class)) { ... }` block per check:
-contradictory pairing (`element.getAnnotation(Other.class) != null`), redundant pairing,
-blank-required-attribute, or invalid-value-range. Follow the existing message shape exactly:
+Rules live in `vibetags/.../internal/validation/`. **Do not add a loop to `AnnotationValidator`** —
+it is a thin entry point now, and a rule written there would be outside the registry that groups
+round queries by annotation.
+
+- **Contradictory or redundant pairing** → one line in `ValidationRules.PAIRS`:
+  `PairRule.warn(AIYourName.class, Other.class, " is annotated with both @AIYourName and @Other. <why>.")`.
+  The message is the text that follows the element's name, leading space included, and `warn`'s
+  first argument decides which round query runs — make it the rarer annotation.
+- **Blank required attribute or invalid value range** → an `AttributeRule.of(...)` entry in
+  `CoreRules.all()`.
+- **The annotation contradicts the declaration it sits on** (a record, a sealed or final type, a
+  `void` method, a non-public element) → `ModernJavaRules`.
+
+Follow the existing message shape exactly:
 `"VibeTags: " + element + " is annotated with both @X and @Y. <why it's contradictory>."` for
 pairings, `"VibeTags: @X on " + element + " has a blank '<attr>' attribute. <what to do>."` for
-missing values. Not every annotation needs a validator — skip this step if there is genuinely
-nothing to check (e.g. a marker annotation whose only attribute is a free-form `reason`).
+missing values — `ValidationContext` adds the `VibeTags: ` prefix, so rule bodies do not.
+Not every annotation needs a validator — skip this step if there is genuinely nothing to check
+(e.g. a marker annotation whose only attribute is a free-form `reason`).
 
 ## Step 7 — Tests (three new files, following the current wave's naming)
 

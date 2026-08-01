@@ -30,7 +30,23 @@ Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). J
 2. **Checkout**.
 3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
 4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`.
-5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it. PMD, SpotBugs and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis ~4×. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive.
+5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it. PMD, SpotBugs and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis ~4×. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
+carries NullAway with it — nullability is checked at `ERROR` on every matrix JDK, so a
+`@Nullable` that stops being honoured fails the build rather than producing a warning nobody reads.
+
+6b. **Verify VibeTags' Own Guardrails Are Current** — `mvn clean compile -Pself-annotate
+`-Dvibetags.selfcheck=true`, JDK 21 only. The repo dogfoods its own guardrails, and until now
+nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claudeignore` / `.claude/rules`
+matched what the processor writes. They had drifted. The flag turns the self-annotate profile into
+check mode, which fails on any would-be write, so the drift is a red build rather than something
+the next person to run the profile by hand discovers. JDK 21 only because it compares file content,
+which is JDK-independent.
+
+   Running it **locally** can report `vibetags/CLAUDE.md` as out of date when CI does not. That file
+   is gitignored, so a fresh checkout has none and the file-existence opt-in means nothing creates
+   one — verified by deleting it and running the full suite, which leaves it absent. On a machine
+   that has run `-Pself-annotate` before, it exists, and a test run then rewrites it. Regenerate
+   (`mvn compile -Pself-annotate`) before checking, or delete the file.
 6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `example/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 8 runs.
 7. **Reset AI Config Files** — `cd example && bash reset-ai-files.sh`. Truncates every generated AI config file in `example/` to zero bytes and removes all granular rule files under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
 8. **Build Example Project** — `cd example && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.

@@ -61,6 +61,18 @@ jobs:
           cd vibetags-bom
           mvn install -B
 
+      # The repo dogfoods its own guardrails but never verified them, so the committed
+      # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
+      # processor writes and nothing said so — which is exactly what happened, and is only
+      # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
+      # this and fails on any would-be write, so a stale committed guardrail is now a red
+      # build. On JDK 21 only: it verifies file content, which is JDK-independent.
+      - name: Verify VibeTags' Own Guardrails Are Current (self-check)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags
+          mvn clean compile -B -Pself-annotate -Dvibetags.selfcheck=true
+
       - name: Reset AI Config Files (Maven)
         run: |
           cd example
@@ -356,11 +368,15 @@ jobs:
           cd vibetags
           mvn install -DskipTests -B
 
-      - name: Run annotation-volume stress test (N â‰¤ 500) and concurrent-build test
+      # SignatureCaptureStressTest is in the list because it asserts a direction, not a duration:
+      # a build with enforcement off must not allocate what only the enforcing mode reads. That is
+      # a regression gate, and a regression gate that only runs on one laptop is not a gate. It
+      # takes ~15s and does not depend on runner speed, unlike the volume sweep's wall-clock.
+      - name: Run annotation-volume stress test (N ≤ 500), concurrent-build and signature-capture tests
         run: |
           cd load-tests
           mvn test -B \
-            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest" \
+            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest" \
             -Dstress.max.classes=500
 
       - name: Upload stress-test results

@@ -7,15 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
-  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
-  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
-  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
-  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
-  from that tag on JDK 21 (the version CI uses) and running the suite against it.
-
 ### Added
+- **NullAway joins the static-analysis gate, at ERROR.** The codebase already annotated with
+  JSpecify `@Nullable`; nothing checked it, so the annotations documented an intention rather than
+  enforcing one. NullAway 0.13.8 runs through the Error Prone hook that was already configured, in
+  JSpecify mode. It reported 55 findings on the first run; bringing the build green touched 18
+  files, and almost every fix was a missing `@Nullable` on a return type or parameter whose Javadoc
+  already said "or `null`". Four were real defects the annotations had been hiding: `GuardrailFileWriter.getMarkersFor` was
+  declared `@Nullable String[]` (an array of nullable Strings) when it returns a nullable array,
+  which is `String @Nullable []`; `GranularIndexSection.scopedPath` could dereference a null
+  directory; `AIGuardrailProcessor.logSet` dereferenced `log` behind a null check in its caller
+  rather than its own; and check mode dereferenced a service's output path without establishing
+  that the service had one.
+
+  **No class is excluded.** The last finding was inside `AIGuardrailProcessor.generateFiles()`,
+  which is `@AILocked` because its step order is load-bearing: `serviceFiles.get(service)` was
+  dereferenced without a guard inside the parallel write phase. The lock was lifted for the edit
+  and restored, and the guard now skips the one unmapped entry instead of letting an NPE surface
+  as an `ExecutionException` that abandons the whole write phase — one unmapped key would
+  otherwise have cost every other file its update. The step order is untouched.
+
+- **Seven modern-Java detectors**, in a new `ModernJavaRules`. Every check VibeTags had compared
+  annotations against each other; these compare an annotation against the declaration it sits on,
+  and each exists because a language feature newer than Java 8 changed what that declaration
+  already guarantees — or already forbids. `@AIImmutable` on a type with an array field (records
+  make this easiest to miss: the generated accessor hands the array straight out); `@AIExtensible`
+  on a final type, record or enum, and separately on a sealed type, where following the annotation
+  also means editing the `permits` clause; `@AIPure` on a `void` method; `@AIPublicAPI` on
+  something no external caller can reach; `@AIThreadSafe(THREAD_LOCAL)` on a type that really does
+  hold a `ThreadLocal`, which under virtual threads is one copy per task rather than one per pooled
+  thread (`ScopedValue`, JEP 506); and `@AILocked`/`@AIContract`/`@AIPublicAPI` in the unnamed
+  package, reachable without meaning to since compact source files (JEP 512) and a collision in the
+  fully-qualified name VibeTags identifies elements by. All read `javax.lang.model` only, so unlike
+  `@AIArchitecture(cannotReference)` they still fire under Gradle's compiler. Each is paired with a
+  clean fixture asserting it stays quiet; removing the detectors turns 11 of `ModernJavaDetectorTest`'s
+  17 cases red, and the 6 that stay green are exactly the silence assertions.
+
+- **Tests for behaviour that had none.** Three of these were reachable, user-facing and entirely
+  unexercised, which is why they are listed here rather than filed under coverage:
+  the enforcing mode's *in-place shape change* — a method whose return type changes keeps its path,
+  so it is caught by comparing signatures rather than by the "approved but absent" sweep, and only
+  the second of those two paths had a test; `@AITemporary(expiresOn = "2026-02-31")`, which passes
+  the `YYYY-MM-DD` shape check and is still not a date; and a `.vibetags-roles` role defined by a
+  bare list of classes, whose rule file has to derive its `globs:` front-matter from its members
+  or the editor never loads it. Plus `@AIExtensible` on an enum, `@AIThreadAffinity` with a named
+  thread and no `marshalVia`, a blank entry in `cannotReference`, an on-demand import matched
+  through a trailing-dot package, and the degraded-environment guards that keep a non-javac
+  compiler from turning a warning into a failed build.
+
+- **`SignatureCaptureStressTest` runs in CI.** The `load-tests` job pins `-Dtest` to a named list,
+  so a new test there is invisible to CI by default. It asserts a direction rather than a duration
+  — a build with enforcement off must not allocate what only the enforcing mode reads — so unlike
+  the volume sweep's wall-clock it is safe on a shared runner.
+
+- **`SignatureCaptureStressTest` in `load-tests`.** The existing sweeps could not resolve the
+  signature-capture change below, and that is a property of their fixture rather than of the
+  change: `SyntheticClassGenerator` emits classes with one method each, so anything scaling with a
+  type's *member* count disappears into javac's own allocation. The new test measures wide types —
+  400 classes × 40 public members — with enforcement on and off.
+
 - **Two concurrency stress tests for the two components that corrupt output silently when they
   race.** `GuardrailFileWriterAsyncTest` reproduces the parallel write phase's exact shape — one
   file per worker over a shared `GuardrailFileWriter` and `WriteCache` — and asserts that
@@ -27,6 +77,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mid-write (wrongful prune). Both were confirmed to fail against deliberately broken versions of
   the code they pin — marker handling disabled, and `save()` writing non-atomically to the live
   target.
+
+### Fixed
+- **Generated output depended on the order javac enumerated the sources in.**
+  `RoundEnvironment.getElementsAnnotatedWith` returns a `Set` with no specified iteration order;
+  javac fills it by walking the round's root elements, which is the order the file manager handed
+  them over. The collector's `LinkedHashSet` faithfully preserved that, so identical sources
+  produced different `CLAUDE.md` content and a different `BuildFingerprint` depending on who
+  compiled them — Maven versus Gradle, an IDE versus a command line, two machines whose directory
+  listings differ. Committed guardrail files churned whenever a colleague built, review diffs were
+  noise, and the write cache missed for no reason.
+
+  `GuardrailModel` now sorts every bucket by `TaggedElement.path()`, the element's own value
+  identity, so output is a function of the annotations and nothing else.
+  `OutputOrderDeterminismTest` compiles the same three classes twice with the file list reversed
+  and requires byte-identical output; it fails against the previous behaviour.
+
+  **This reorders generated files once for every consumer.** The content is unchanged — only the
+  order within each section — but the next build after upgrading will rewrite them.
+
+- **The repo's own committed guardrails were stale, and nothing said so.** `.claudeignore` still
+  carried the header-only block that #328 stopped emitting, and `CLAUDE.md` and `example/` still
+  carried the pre-sort ordering. All are regenerated here. CI now runs `-Pself-annotate` in check
+  mode (`-Dvibetags.selfcheck=true`) on the JDK 21 leg, so a stale committed guardrail file is a
+  red build rather than something the next person to run the profile by hand discovers. Verified in
+  both directions: the step passes on a clean tree and exits 1 on a deliberately edited `CLAUDE.md`.
+
+### Changed
+- **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
+  The substantive ones are fixed rather than muted: `String.split(String)` at three call sites,
+  which silently drops trailing empty fields, so `-Avibetags.enforce=contract,` and a sidecar's
+  newline-joined list parsed correctly by accident rather than by decision (now an explicit `-1`
+  limit); four `catch (IOException ignored) {}` blocks in `ModuleSidecar`, each a deliberate
+  best-effort swallow that read identically to somebody forgetting, now saying which it is; a
+  redundant `continue`; and `LocalDate.now()`'s hidden default time zone in the `@AITemporary`
+  expiry check, now `ZoneId.systemDefault()` because the developer's own calendar day is the
+  clock that rule is about. Two lambdas held in constants became named methods.
+
+  Three checks are off, with the reason recorded in `vibetags/pom.xml`:
+  `StatementSwitchToExpressionSwitch` (58 hits, pure style, all in renderers and formatters),
+  `StringConcatToTextBlock` (the literals are generated file content, where an indented text
+  block's leading whitespace is a rendering bug waiting to happen) and `InlineMeSuggester`
+  (a caller-migration tool for published APIs; these are package-internal test seams). A warning
+  nobody is going to act on trains people to scroll past the ones that matter — which is the same
+  argument used for running NullAway at `ERROR`.
+
+- **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
+  visible member set and sorting it is the most expensive thing the collector does per element, and
+  the only reader is `-Avibetags.enforce` (#284), which is off by default. Every ordinary build was
+  building those strings and dropping them. It cannot be made lazy — the javac element model is
+  valid only while its round is live, and the model is read after the last round closes — so the
+  processor decides up front, the same shape as the `.vibetags-locks` opt-in that already gates
+  source-position resolution. Measured on 400 wide classes: 36.4 MB less allocated, 6.9–7.2 % of
+  the processor's own allocation overhead, reproducible to within 0.3 % across three runs.
+  Generated output is byte-identical, confirmed by regenerating `example/` with the processor built
+  from before and after the change.
+
+- **`AnnotationValidator` is now a 40-line entry point over a rule registry.** It was one 450-line
+  method containing roughly forty hand-written `for` loops, and the repo's own health check flagged
+  it as the largest hotspot in the processor. The checks now live in
+  `processor/internal/validation/` as individually testable rules: `PairRule` (two annotations that
+  contradict each other, expressed as a table — 23 of them, one line each), `CoreRules` (an
+  annotation whose own attributes leave it instructing nobody), `ArchitectureRule` (the Tree-API
+  import scan), `ModernJavaRules` (above). Every diagnostic message is unchanged.
+
+  The registry is also the cheaper arrangement. Rules are indexed by the annotation they scan, so
+  `getElementsAnnotatedWith` runs once per annotation type however many rules share it —
+  `@AITestDriven` was queried four times per round, `@AILoadBearing` three. That query walks the
+  round's root elements, and this compounds with the existing short-circuit that skips annotations
+  javac reports absent.
+
+- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
+  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
+  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
+  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
+  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
+  from that tag on JDK 21 (the version CI uses) and running the suite against it.
 
 ### Fixed
 - **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`

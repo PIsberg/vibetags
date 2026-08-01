@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
@@ -14,7 +15,7 @@ public final class JunieRenderer implements PlatformRenderer {
     private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
 
     @Override
-    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+    public @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context) {
         String cursorContent = CURSOR_RENDERER.render(model, platform, context);
         if (cursorContent == null) {
             return null;

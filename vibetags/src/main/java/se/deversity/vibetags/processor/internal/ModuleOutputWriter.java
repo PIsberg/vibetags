@@ -47,9 +47,9 @@ public final class ModuleOutputWriter {
                              AnnotationCollector collector,
                              String projectName,
                              String generatedHeader,
-                             RoleConfig roles,
+                             @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
-                             Messager messager) {
+                             @Nullable Messager messager) {
         write(moduleRoot, vibetagsRoot, moduleFiles, moduleActive, collector, null, projectName,
             generatedHeader, roles, writer, messager, List.of(), null, null);
     }
@@ -84,9 +84,9 @@ public final class ModuleOutputWriter {
                              GuardrailContentBuilder.@Nullable Result prebuilt,
                              String projectName,
                              String generatedHeader,
-                             RoleConfig roles,
+                             @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
-                             Messager messager,
+                             @Nullable Messager messager,
                              List<ModuleSidecar> sidecars,
                              @Nullable String regionId,
                              @Nullable String moduleId) {

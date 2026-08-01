@@ -39,6 +39,10 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.version>6.1.2</junit.version>
+        <nullaway.version>0.13.8</nullaway.version>
+        <!-- Flipped to true by CI so -Pself-annotate verifies the committed guardrails
+             instead of rewriting them. Off by default: the profile regenerates. -->
+        <vibetags.selfcheck>false</vibetags.selfcheck>
     </properties>
 
     <dependencies>
@@ -138,6 +142,11 @@
                             <artifactId>error_prone_core</artifactId>
                             <version>2.50.0</version>
                         </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
                 <executions>
@@ -149,9 +158,47 @@
                                 <arg>-proc:none</arg>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
-                                <!-- UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag
-                                     which was removed in JDK 26; disable until Error Prone fixes it -->
-                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF</arg>
+                                <!-- One arg, because javac accepts a single -Xplugin value and
+                                     Error Prone parses the rest of that string itself.
+
+                                     UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag,
+                                     removed in JDK 26; disable until Error Prone fixes it.
+
+                                     NullAway: the codebase already annotates with JSpecify @Nullable,
+                                     and this is what turns those annotations from documentation into a
+                                     gate. ERROR rather than WARNING on purpose — a nullability warning
+                                     nobody has to fix is one more line of build output people learn to
+                                     scroll past. JSpecifyMode reads @Nullable with JSpecify's own
+                                     semantics (generics included) rather than NullAway's legacy ones.
+                                     javac's own model is left unannotated: Element.getEnclosingElement()
+                                     and friends return null and say nothing about it, so treating
+                                     javax.lang.model as annotated would only produce false confidence.
+
+                                     No class is excluded: the guard NullAway asked for inside
+                                     generateFiles() was agreed and added, so every class is
+                                     checked. Do not reintroduce UnannotatedClasses — an exclusion
+                                     is invisible in the build output, which makes it the one kind
+                                     of gap nobody notices growing.
+
+                                     Three checks are OFF, and the reason is the same each time: a
+                                     warning nobody is going to act on trains people to scroll past
+                                     the ones that matter. The substantive findings Error Prone
+                                     raised here (StringSplitter's dropped trailing fields, four
+                                     swallowed IOExceptions, a redundant continue, LocalDate.now()'s
+                                     hidden time zone) were fixed rather than muted, so the build
+                                     now emits zero Error Prone warnings and the next one is visible.
+
+                                     StatementSwitchToExpressionSwitch (58 hits): a pure style
+                                     preference. Every one of them is a statement switch whose arms
+                                     return, in a renderer or formatter; rewriting all 58 is churn
+                                     across the output-generating layer with no behaviour to gain.
+                                     StringConcatToTextBlock: the literals it names are generated
+                                     file content, where explicit \n beats an indented text block
+                                     whose leading whitespace is a rendering bug waiting to happen.
+                                     InlineMeSuggester: @InlineMe is a caller-migration tool for
+                                     published libraries; the deprecated methods it names are
+                                     package-internal test seams. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:StatementSwitchToExpressionSwitch:OFF -Xep:StringConcatToTextBlock:OFF -Xep:InlineMeSuggester:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>
@@ -383,6 +430,7 @@
                             <compilerArgs>
                                 <arg>-Avibetags.root=${project.basedir}/..</arg>
                                 <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -404,6 +452,7 @@
                                     <compilerArgs>
                                         <arg>-Avibetags.root=${project.basedir}/..</arg>
                                         <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
                                     </compilerArgs>
                                     <annotationProcessorPaths>
                                         <path>

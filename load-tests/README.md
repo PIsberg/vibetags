@@ -9,6 +9,7 @@ Standalone benchmark harness for the `AIGuardrailProcessor`. Five test categorie
 | Hot-path microbenchmarks | `ProcessorHotPathBenchmark` (JMH) | Per-call cost of `writeFileIfChanged`, `buildServiceFileMap`, `resolveActiveServices` |
 | Cache-hit microbenchmarks | `WriteCacheHitBenchmark` (JMH, since 0.7.1) | Per-call cost & allocation of `writeFileIfChanged` with the `WriteCache` wired in vs. null. Small (1 KB), medium (12 KB), large (1 MB) bodies × marker (`.md`) and non-marker (`.json`) file types |
 | Concurrent-build safety | `ConcurrentBuildTest` | Behaviour under N threads writing to a shared project root |
+| Signature-capture saving | `SignatureCaptureStressTest` (since 1.0.0-RC9) | Allocation on **wide** types (400 classes × 40 public members) with `-Avibetags.enforce` on vs. off. The delta is what an ordinary build stopped paying once `ElementSignature` became conditional |
 
 ## Prerequisite
 
@@ -42,6 +43,17 @@ java -jar target/benchmarks.jar WriteCacheHitBenchmark -wi 3 -i 5 -f 1 \
 # A single benchmark method with custom forks/iterations
 java -jar target/benchmarks.jar writeFileIfChanged -f 1 -wi 3 -i 5 -tu us
 ```
+
+### A note on fixture shape
+
+`SyntheticClassGenerator` emits classes with one method each. That is the right fixture for the
+volume sweeps — it isolates per-*element* cost — but it makes the harness blind to anything whose
+cost scales with a type's *member count*. The signature-capture change is the worked example: on
+the 1 000-class sweep the effect was inside the run-to-run noise, and on 400 classes of 40 members
+each it is 36 MB, reproducible to within 0.3 % across runs.
+
+If a change touches per-member work, measure it on wide types. `SignatureCaptureStressTest` is the
+template.
 
 ## What to measure for a library like this
 

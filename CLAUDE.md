@@ -67,6 +67,10 @@ kept here because breaking one of them fails silently:
   `com.sun.source`. An `Element` is only valid while its round is live, and the parallel write phase
   runs after the last one closes — `AnnotationCollector.model()` snapshots once, which is what makes
   reading it afterwards safe. `ArchitectureRulesTest` enforces the direction.
+- **Adding a validation check** is a line in `ValidationRules.PAIRS` or an entry in `CoreRules` /
+  `ModernJavaRules` under `processor/internal/validation/` — never a new loop in
+  `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
+  `scans()`, and the registry runs one round query per annotation type however many rules share it.
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
   annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
   `add-platform` / `add-annotation` skills rather than improvising.
@@ -121,12 +125,12 @@ The repo uses `pre-commit` with Checkstyle, gitleaks (secret scanning), end-of-f
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor" rules=".claude/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md"/>
     <element path="se.deversity.vibetags.processor.internal.AnnotationCollector" rules=".claude/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md"/>
+    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
     <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>
-    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>
+    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
     <element path="se.deversity.vibetags.processor.internal.WriteCache" rules=".claude/rules/se-deversity-vibetags-processor-internal-WriteCache.md"/>
-    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

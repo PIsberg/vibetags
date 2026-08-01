@@ -18,11 +18,11 @@
 ## Secure Logging Masking
 - **Rule**: Never pass these raw variables to log appenders or stdout streams.
 
-### Rules for parameter NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
-- **Policy**: HASH
-
 ### Rules for parameter NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber
 - **Policy**: MASK_CREDIT_CARD
+
+### Rules for parameter NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
+- **Policy**: HASH
 
 ### Rules for method runComplexMatrixMath
 - **Complexity Level**: HIGH

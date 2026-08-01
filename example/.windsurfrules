@@ -10,9 +10,9 @@
 * `com.example.security.SecurityConfig.getKeyRotationHours()` - Reason: Key rotation period mandated by company policy
 * `com.example.security.SecurityConfig.getMaxLoginAttempts()` - Reason: Max login attempts set by security team to prevent brute force
 * `com.example.security.SecurityConfig.validateToken(java.lang.String)` - Reason: Token validation must match auth server exactly. Changes will break all client authentication
-* `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Reason: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 * `com.example.service.OrderService.calculateTax(java.lang.String,double)` - Reason: Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 * `com.example.service.OrderService.processPayment(java.lang.String,double)` - Reason: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+* `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Reason: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code.
@@ -28,22 +28,22 @@ Do not reference, suggest changes to, or include the following in completions or
 ## 🔒 PII / PRIVACY GUARDRAILS
 Never include runtime values of the following in logs, console output, external API calls, test fixtures, or mock data.
 
-* `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 * `com.example.database.DatabaseConnector.password` - Database credential - never log or include in error messages
+* `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 * `com.example.service.InventoryService.customerId` - Customer identifiers linked to purchase history — PII under GDPR
 * `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
 * `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
 * `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
 * `com.example.strategy.impl.CreditCardStrategy.cardNumber` - PCI-DSS cardholder data - never log or expose in suggestions
-* `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 * `com.example.strategy.impl.CreditCardStrategy.cvv` - PCI-DSS security code - never log or expose in suggestions
+* `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 
 ## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)
 The following elements are well-tested core components. Make changes with extreme caution.
 
 * `com.example.security.SecurityConfig` - Sensitivity: Critical. Note: This is a security manager. Any single-line change can compromise the entire project.
-* `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` - Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 * `com.example.service.InventoryService.releaseReservation(java.lang.String)` - Sensitivity: High. Note: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+* `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` - Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 
 ## 🔐 SECURITY-CRITICAL CODE
 Never weaken security properties of these elements. Every change requires security review:
@@ -53,36 +53,36 @@ Never weaken security properties of these elements. Every change requires securi
 ## Scoped Rules Index
 Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
 
-- `com.example.payment.PaymentProcessor` → `.windsurf/rules/com-example-payment-PaymentProcessor.md`
-- `com.example.security.SecurityConfig` → `.windsurf/rules/com-example-security-SecurityConfig.md`
-- `com.example.service.OrderService` → `.windsurf/rules/com-example-service-OrderService.md`
-- `com.example.service.InventoryService` → `.windsurf/rules/com-example-service-InventoryService.md`
-- `com.example.service.NotificationService` → `.windsurf/rules/com-example-service-NotificationService.md`
-- `com.example.service.PricingService` → `.windsurf/rules/com-example-service-PricingService.md`
-- `com.example.strategy.PaymentStrategy` → `.windsurf/rules/com-example-strategy-PaymentStrategy.md`
-- `com.example.utils.StringParser` → `.windsurf/rules/com-example-utils-StringParser.md`
-- `com.example.internal.GeneratedMetadata` → `.windsurf/rules/com-example-internal-GeneratedMetadata.md`
-- `com.example.database.DatabaseConnector` → `.windsurf/rules/com-example-database-DatabaseConnector.md`
 - `com.example.NotificationService` → `.windsurf/rules/com-example-NotificationService.md`
-- `com.example.strategy.impl.CreditCardStrategy` → `.windsurf/rules/com-example-strategy-impl-CreditCardStrategy.md`
+- `com.example.compliance.GdprService` → `.windsurf/rules/com-example-compliance-GdprService.md`
 - `com.example.concurrent.SessionCache` → `.windsurf/rules/com-example-concurrent-SessionCache.md`
 - `com.example.config.AsyncTestConfig` → `.windsurf/rules/com-example-config-AsyncTestConfig.md`
+- `com.example.config.ParallelTestSettings` → `.windsurf/rules/com-example-config-ParallelTestSettings.md`
+- `com.example.database.DatabaseConnector` → `.windsurf/rules/com-example-database-DatabaseConnector.md`
+- `com.example.database.UserEntity` → `.windsurf/rules/com-example-database-UserEntity.md`
+- `com.example.internal.GeneratedMetadata` → `.windsurf/rules/com-example-internal-GeneratedMetadata.md`
+- `com.example.legacy.LegacyBridgeService` → `.windsurf/rules/com-example-legacy-LegacyBridgeService.md`
 - `com.example.legacy.OldPaymentApi` → `.windsurf/rules/com-example-legacy-OldPaymentApi.md`
 - `com.example.metrics.OrderMetrics` → `.windsurf/rules/com-example-metrics-OrderMetrics.md`
-- `com.example.compliance.GdprService` → `.windsurf/rules/com-example-compliance-GdprService.md`
-- `com.example.config.ParallelTestSettings` → `.windsurf/rules/com-example-config-ParallelTestSettings.md`
-- `com.example.legacy.LegacyBridgeService` → `.windsurf/rules/com-example-legacy-LegacyBridgeService.md`
+- `com.example.payment.PaymentDetails` → `.windsurf/rules/com-example-payment-PaymentDetails.md`
+- `com.example.payment.PaymentProcessor` → `.windsurf/rules/com-example-payment-PaymentProcessor.md`
+- `com.example.security.SecurityConfig` → `.windsurf/rules/com-example-security-SecurityConfig.md`
+- `com.example.service.EvidenceBasedShowcase` → `.windsurf/rules/com-example-service-EvidenceBasedShowcase.md`
+- `com.example.service.InventoryService` → `.windsurf/rules/com-example-service-InventoryService.md`
 - `com.example.service.LayeredDomainService` → `.windsurf/rules/com-example-service-LayeredDomainService.md`
+- `com.example.service.NewAnnotationsShowcase` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase.md`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md`
+- `com.example.service.NotificationService` → `.windsurf/rules/com-example-service-NotificationService.md`
+- `com.example.service.OrderService` → `.windsurf/rules/com-example-service-OrderService.md`
+- `com.example.service.PricingService` → `.windsurf/rules/com-example-service-PricingService.md`
 - `com.example.service.PublicPaymentController` → `.windsurf/rules/com-example-service-PublicPaymentController.md`
 - `com.example.service.TransactionalPaymentService` → `.windsurf/rules/com-example-service-TransactionalPaymentService.md`
-- `com.example.payment.PaymentDetails` → `.windsurf/rules/com-example-payment-PaymentDetails.md`
+- `com.example.strategy.PaymentStrategy` → `.windsurf/rules/com-example-strategy-PaymentStrategy.md`
+- `com.example.strategy.impl.CreditCardStrategy` → `.windsurf/rules/com-example-strategy-impl-CreditCardStrategy.md`
 - `com.example.utils.I18nMessageHelper` → `.windsurf/rules/com-example-utils-I18nMessageHelper.md`
 - `com.example.utils.StrictUtility` → `.windsurf/rules/com-example-utils-StrictUtility.md`
-- `com.example.database.UserEntity` → `.windsurf/rules/com-example-database-UserEntity.md`
-- `com.example.service.NewAnnotationsShowcase` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase.md`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md`
-- `com.example.service.EvidenceBasedShowcase` → `.windsurf/rules/com-example-service-EvidenceBasedShowcase.md`
+- `com.example.utils.StringParser` → `.windsurf/rules/com-example-utils-StringParser.md`
 # VIBETAGS-END

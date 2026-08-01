@@ -194,6 +194,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
         this.baselineUpdate = "true".equalsIgnoreCase(options.getOrDefault("vibetags.baseline.update", "false"));
         this.enforceFamilies = new GuardrailEnforcer(messager, log).parseFamilies(options.get("vibetags.enforce"));
+        // Structural signatures are read by nothing except the enforcing mode, and computing one
+        // walks and sorts a type's whole visible member set. Same opt-in shape as the locks report
+        // below: pay for it only when something is going to read it.
+        collector.captureSignatures(!this.enforceFamilies.isEmpty() || this.baselineUpdate);
         // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
@@ -462,6 +466,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 String service = entry.getKey();
                 String content = entry.getValue();
                 Path filePath = serviceFiles.get(service);
+                if (filePath == null) {
+                    // Rendered content for a service the registry has no output path for. Every
+                    // renderer's key is registered today, so this is unreachable — but it is
+                    // unreachable by agreement between two collections, not by construction, and
+                    // the dereference below runs inside a parallelStream: an NPE here surfaces as
+                    // an ExecutionException that abandons the whole write phase, so one unmapped
+                    // key would cost every other file its update. Skipping the one entry keeps a
+                    // registry gap to the file it belongs to. Mirrors the guard in checkFiles().
+                    if (log != null) {
+                        log.warn("write.skip file=<unmapped> service={} reason=no-service-path", service);
+                    }
+                    return;
+                }
                 boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
                 // hasNewRules: true if any module (not just this one) contributed to this service.
                 boolean anyContributed = isMultiModule(allSidecars)
@@ -619,6 +636,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (Map.Entry<String, String> entry : effectiveContent.entrySet()) {
             String service = entry.getKey();
             Path filePath = serviceFiles.get(service);
+            if (filePath == null) {
+                continue; // rendered content for a service with no configured output path: nothing to check
+            }
             boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
             boolean anyContributed = isMultiModule(allSidecars)
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
@@ -676,7 +696,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * <p>Empty unless the root opted into the index, this is a non-root module, and the module has
      * something in the safety tier at all — an empty digest would be a bare container element.
      */
-    private Map<String, String> buildSafetyDigests(Set<String> activeServices, RoleConfig roles) {
+    private Map<String, String> buildSafetyDigests(Set<String> activeServices, @Nullable RoleConfig roles) {
         if (!activeServices.contains("root_index") || moduleIdentity == null
                 || compilationRoot().equals(root) || !hasSafetyTierAnnotations()) {
             return Map.of();
@@ -806,7 +826,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     private void logSet(String label, Set<TaggedElement> elements) {
-        if (elements.isEmpty()) return;
+        // logSummary() returns early when log is null, but that is an argument rather than
+        // something the compiler can check — and this is a method reference, so it is one
+        // refactor away from being called from somewhere that does not check.
+        if (log == null || elements.isEmpty()) return;
         String names = elements.stream()
             .map(TaggedElement::simpleName)
             .collect(Collectors.joining(", "));

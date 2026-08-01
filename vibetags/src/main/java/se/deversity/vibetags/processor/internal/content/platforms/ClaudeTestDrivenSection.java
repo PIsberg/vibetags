@@ -72,9 +72,11 @@ final class ClaudeTestDrivenSection {
             }
         }
 
-        boolean coalesce = best >= MIN_COALESCE;
-        if (coalesce) {
-            appendDefaultBlock(defaultSig, groups.get(defaultSig), sb);
+        // best >= MIN_COALESCE implies a group was found, and therefore that defaultSig is set —
+        // but only the second half of that is something a reader (or a checker) can see locally.
+        boolean coalesce = best >= MIN_COALESCE && defaultSig != null;
+        if (coalesce && defaultSig != null) {
+            appendDefaultBlock(defaultSig, groups.getOrDefault(defaultSig, List.of()), sb);
         }
 
         for (TaggedElement e : elements) {

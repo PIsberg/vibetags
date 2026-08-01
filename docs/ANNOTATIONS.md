@@ -149,3 +149,39 @@ rerunning that script — see the `add-annotation` skill for the full checklist.
 - `@AIKeepInSync` + `@AIContract` on the same element — NOTE; verify the mirrors track something other than the frozen signature
 - `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
+
+**Modern-Java detectors:**
+
+The checks above compare annotations against each other. These compare an annotation against the
+*declaration* it sits on, and each one exists because a language feature newer than Java 8 changed
+what that declaration already guarantees — or already forbids. All of them read
+`javax.lang.model` only, so unlike `@AIArchitecture(cannotReference)` they still fire under
+Gradle's compiler.
+
+- `@AIImmutable` on a type with an array-typed instance field — `final` freezes the reference, not
+  the elements. On a **record** (16) the generated accessor hands that array straight out, which is
+  the case the language makes easiest to miss: records remove the usual reminder that a field wants
+  a defensive copy
+- `@AIExtensible` on a `final` type, a **record**, or an `enum` — implicitly or explicitly final, so
+  nothing can extend it and the strategy/visitor/factory route the annotation asks for is not open
+- `@AIExtensible` on a **sealed** type (17) — only the permitted subtypes can extend it, so adding
+  an implementation also means editing the `permits` clause, which is exactly the central edit the
+  annotation exists to avoid
+- `@AIPure` on a `void` method — a pure method with no return value has no observable effect at
+  all: either it mutates something (and is not pure) or it does nothing
+- `@AIPublicAPI` on a non-public element, or one enclosed in a non-public type — no caller outside
+  the package can bind to it, so the promise is about a surface that is not published. Under the
+  enforcing mode it would guard a signature that is free to change
+- `@AIThreadSafe(THREAD_LOCAL)` on a type that declares a `ThreadLocal` field — NOTE. Under
+  **virtual threads** (21) that is one copy per task rather than one per pooled thread;
+  `ScopedValue` ([JEP 506](https://openjdk.org/jeps/506), final in 25) binds a per-request constant
+  for the call and releases it on return
+- `@AILocked` / `@AIContract` / `@AIPublicAPI` on an element in the **unnamed package** — reachable
+  without meaning to since **compact source files** ([JEP 512](https://openjdk.org/jeps/512), final
+  in 25). VibeTags identifies a guarded element by its fully-qualified name, so two unnamed-package
+  declarations sharing a simple name collide into one guardrail entry and one enforcement-baseline
+  key
+
+Adding a check is one line in `ValidationRules.PAIRS`, or an entry in `CoreRules` (an annotation
+whose own attributes leave it instructing nobody) or `ModernJavaRules` (the list above). See
+`processor/internal/validation/`.

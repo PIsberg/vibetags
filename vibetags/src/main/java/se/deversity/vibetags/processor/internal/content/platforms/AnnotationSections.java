@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.List;
 import java.util.Set;
@@ -28,8 +29,8 @@ final class AnnotationSections {
      * without gating on emptiness (matching the source renderers, where a handful of buckets are
      * appended directly after the contextual-rules preamble).
      */
-    record Section(String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
-        static Section of(String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
+    record Section(@Nullable String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
+        static Section of(@Nullable String header, Function<GuardrailModel, Set<TaggedElement>> accessor, AnnotationFormatter formatter) {
             return new Section(header, accessor, formatter);
         }
 

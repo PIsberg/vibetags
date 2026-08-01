@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -20,7 +21,7 @@ public final class GuardrailContentBuilder {
     private final Set<String> activeServices;
     private final String projectName;
     private final String generatedHeader;
-    private final RoleConfig roles;
+    private final @Nullable RoleConfig roles;
     private boolean safetyDigest;
 
     public GuardrailContentBuilder(AnnotationCollector collector,
@@ -34,7 +35,7 @@ public final class GuardrailContentBuilder {
                                    Set<String> activeServices,
                                    String projectName,
                                    String generatedHeader,
-                                   RoleConfig roles) {
+                                   @Nullable RoleConfig roles) {
         this.collector = collector;
         // Defensive copy: callers must not be able to mutate the active-services set
         // through the reference they passed in.

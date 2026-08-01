@@ -102,6 +102,28 @@ class RoleBasedGranularEndToEndTest {
     }
 
     @Test
+    void roleDefinedOnlyByFqns_derivesItsGlobsFromItsMembers(@TempDir Path dir) throws IOException {
+        // A role can be written as a bare list of classes, with no glob at all. The rule file still
+        // needs a `globs:` front-matter line, because that line is how the editor decides when to
+        // load it — a role file with no globs is a file the agent never opens. So the globs are
+        // derived from the members' own paths.
+        ProcessorTestHarness h = harness(dir,
+            "legacy = com.example.util.PlainService, com.example.data.ProductEntity\n");
+        h.addSource("com.example.util.PlainService", PLAIN_SERVICE);
+        h.addSource("com.example.data.ProductEntity", PRODUCT_ENTITY);
+        h.compile();
+
+        String legacy = h.readFile(".cursor/rules/legacy.mdc");
+        assertTrue(legacy.contains("globs:"),
+            "a role file with no globs line is one the editor never loads:\n" + legacy);
+        assertTrue(legacy.contains("PlainService.java") && legacy.contains("ProductEntity.java"),
+            "the derived globs must name both members, or one of them silently loses its rules:\n" + legacy);
+        assertTrue(legacy.contains("com.example.util.PlainService")
+                && legacy.contains("com.example.data.ProductEntity"),
+            "both members' guardrails belong in the grouped file:\n" + legacy);
+    }
+
+    @Test
     void firstMatchWins_whenGlobsOverlap(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = harness(dir,
             "webhooks    = **/webhooks/**\n"

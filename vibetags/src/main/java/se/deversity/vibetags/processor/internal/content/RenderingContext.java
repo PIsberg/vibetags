@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -16,7 +18,7 @@ public final class RenderingContext {
     private final Set<String> activeServices;
     private final int estimatedContentSize;
     private final Set<TaggedElement> granularOwners;
-    private final RoleConfig roles;
+    private final @Nullable RoleConfig roles;
     private final boolean safetyDigest;
 
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
@@ -51,7 +53,8 @@ public final class RenderingContext {
      *        same files {@code GranularRulesWriter} writes (role-grouped or per-class).
      */
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
-                            int estimatedContentSize, Set<TaggedElement> granularOwners, RoleConfig roles) {
+                            int estimatedContentSize, Set<TaggedElement> granularOwners,
+                            @Nullable RoleConfig roles) {
         this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, roles, false);
     }
 
@@ -60,7 +63,8 @@ public final class RenderingContext {
      *        {@link #safetyDigest()}.
      */
     private RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
-                             int estimatedContentSize, Set<TaggedElement> granularOwners, RoleConfig roles,
+                             int estimatedContentSize, Set<TaggedElement> granularOwners,
+                             @Nullable RoleConfig roles,
                              boolean safetyDigest) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
@@ -134,7 +138,7 @@ public final class RenderingContext {
     }
 
     /** The role routing for this run (a {@code .vibetags-roles} config), or {@code null} when off. */
-    public RoleConfig roles() {
+    public @Nullable RoleConfig roles() {
         return roles;
     }
 

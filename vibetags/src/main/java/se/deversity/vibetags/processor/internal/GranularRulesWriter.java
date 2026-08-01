@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.model.ElementTag;
@@ -58,7 +59,7 @@ public final class GranularRulesWriter {
     public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices,
-                                RoleConfig roles) {
+                                @Nullable RoleConfig roles) {
         return write(elementRules, serviceFiles, activeServices, roles, "", List.of());
     }
 
@@ -76,7 +77,7 @@ public final class GranularRulesWriter {
     public Set<String> writeMirrored(Map<TaggedElement, GranularBody> elementRules,
                                      Map<String, Path> serviceFiles,
                                      Set<String> activeServices,
-                                     RoleConfig roles,
+                                     @Nullable RoleConfig roles,
                                      String filePrefix,
                                      List<String> extraGlobs) {
         return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs);
@@ -85,7 +86,7 @@ public final class GranularRulesWriter {
     private Set<String> write(Map<TaggedElement, GranularBody> elementRules,
                               Map<String, Path> serviceFiles,
                               Set<String> activeServices,
-                              RoleConfig roles,
+                              @Nullable RoleConfig roles,
                               String filePrefix,
                               List<String> extraGlobs) {
         Set<String> writtenQNames = new LinkedHashSet<>();
@@ -99,14 +100,16 @@ public final class GranularRulesWriter {
             return writtenQNames;
         }
 
-        boolean rolesActive = roles != null && !roles.isEmpty();
+        // One name for "roles are on", non-null when they are: a separate boolean flag says the
+        // same thing to a reader but nothing to the compiler, and every use below is in a lambda.
+        final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
 
         // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
         // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
         Map<String, List<TaggedElement>> roleMembers = new LinkedHashMap<>();
         Map<TaggedElement, GranularBody> unmatched = new LinkedHashMap<>();
         elementRules.forEach((owner, body) -> {
-            String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
+            String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
             if (role != null) {
                 roleMembers.computeIfAbsent(role, k -> new ArrayList<>()).add(owner);
             } else {
@@ -137,7 +140,7 @@ public final class GranularRulesWriter {
         roleMembers.forEach((roleName, members) -> {
             String stem = filePrefix + RoleConfig.sanitize(roleName);
             writtenQNames.add(stem);
-            List<String> globs = roles.globsFor(roleName);
+            List<String> globs = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
             if (globs.isEmpty()) {
                 // Role defined only by FQNs — derive globs from the members' own class/package globs.
                 Set<String> derived = new LinkedHashSet<>();
@@ -187,11 +190,11 @@ public final class GranularRulesWriter {
      * <p>Deliberately a pure function of the same inputs {@code write} uses, so the recorded stems
      * can never name a file that was not written.
      */
-    public static Set<String> stemsFor(Map<TaggedElement, GranularBody> elementRules, RoleConfig roles) {
+    public static Set<String> stemsFor(Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig roles) {
         Set<String> stems = new LinkedHashSet<>();
-        boolean rolesActive = roles != null && !roles.isEmpty();
+        final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
         elementRules.keySet().forEach(owner -> {
-            String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
+            String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
             stems.add(role != null ? RoleConfig.sanitize(role) : owner.granularQName());
         });
         return stems;
@@ -229,9 +232,9 @@ public final class GranularRulesWriter {
     public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
         Set<String> removed = new LinkedHashSet<>();
         for (GranularFormat f : FORMATS) {
-            if (activeServices.contains(f.serviceKey)) {
-                removed.addAll(
-                    fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames));
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir != null && activeServices.contains(f.serviceKey)) {
+                removed.addAll(fileWriter.cleanupGranularDirectory(dir, f.extension, excludeQNames));
             }
         }
         return removed;
@@ -245,9 +248,9 @@ public final class GranularRulesWriter {
     public void cleanupMirrored(Map<String, Path> serviceFiles, Set<String> activeServices,
                                 String filePrefix, Set<String> excludeQNames) {
         for (GranularFormat f : FORMATS) {
-            if (activeServices.contains(f.serviceKey)) {
-                fileWriter.cleanupGranularDirectory(
-                    serviceFiles.get(f.serviceKey), f.extension, excludeQNames, filePrefix);
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir != null && activeServices.contains(f.serviceKey)) {
+                fileWriter.cleanupGranularDirectory(dir, f.extension, excludeQNames, filePrefix);
             }
         }
     }
@@ -277,26 +280,32 @@ public final class GranularRulesWriter {
         }
     }
 
-    // YAML-frontmatter builders, keyed by the shape each platform uses.
-    private static final BiFunction<String, List<String>, String> FM_DESC_GLOBS_APPLY =
-        (desc, globs) -> "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
-    private static final BiFunction<String, List<String>, String> FM_NONE = (desc, globs) -> "";
+    // YAML-frontmatter builders, keyed by the shape each platform uses. Methods rather than lambdas
+    // in constants: the method reference reads the same at the use site and the body gets a name.
+    private static String fmDescGlobsApply(String desc, List<String> globs) {
+        return "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
+    }
+
+    /** No front matter at all — the platform reads the file by path, not by a globs declaration. */
+    private static String fmNone(String desc, List<String> globs) {
+        return "";
+    }
 
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
-        new GranularFormat("cursor_granular", ".mdc", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("trae_granular", ".md",
             (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("roo_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("windsurf_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("continue_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("tabnine_granular", ".md", FM_NONE, n -> "# AI Guidelines for " + n + "\n\n"),
-        new GranularFormat("amazonq_granular", ".md", FM_NONE, n -> "# Amazon Q Rules for " + n + "\n\n"),
-        new GranularFormat("ai_rules_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("pearai_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("kiro_granular", ".md", FM_NONE, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
-        new GranularFormat("gemini_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
+        new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
+        new GranularFormat("ai_rules_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
+        new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", ".md",
             (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),

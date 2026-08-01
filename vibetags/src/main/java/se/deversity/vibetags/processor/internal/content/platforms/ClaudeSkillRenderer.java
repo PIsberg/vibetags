@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
@@ -22,7 +23,7 @@ public final class ClaudeSkillRenderer implements PlatformRenderer {
         + "---\n\n";
 
     @Override
-    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+    public @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context) {
         String body = CURSOR_RENDERER.render(model, platform, context);
         if (body == null) {
             return null;

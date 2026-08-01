@@ -92,7 +92,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 *Figure 2: `se.deversity.vibetags.processor` — parsed from source by code-karta*
 
 The hand-drawn PlantUML class diagram that used to stand here is [archived](diagrams/archive/):
-it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 17.
+it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 33.
 Hand-maintained structure drifts, and that one had. Both halves of what it showed are parsed
 from source instead — the processor above, and
 [the annotation surface](ANNOTATIONS.md#the-annotation-surface) in the annotation reference.
@@ -147,10 +147,10 @@ machines: the generated SVG is sixty-odd boxes with zero transition edges. The t
 
 **Key Components:**
 
-**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (39 annotations total — see the [project facts](../README.md#project-facts)). Full list, targets, attributes, and semantics: [docs/ANNOTATIONS.md](ANNOTATIONS.md).
+**Annotations** — package `se.deversity.vibetags.annotations`, jar `vibetags-annotations` (see the [project facts](../README.md#project-facts) for the count). Full list, targets, attributes, and semantics: [docs/ANNOTATIONS.md](ANNOTATIONS.md).
 
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
-- `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); thin orchestrator (~230 lines) that wires the helpers below into the JSR 269 lifecycle
+- `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); orchestrator that wires the helpers below into the JSR 269 lifecycle and does none of the work itself
 - `VibeTagsLogger` — SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
 - `@SupportedAnnotationTypes("*")` — processes all annotations
 - Overrides `getSupportedSourceVersion()` to return `SourceVersion.latestSupported()` instead of a fixed `@SupportedSourceVersion` — the library builds/tests against Java 21, but pinning e.g. `RELEASE_17` would make javac emit a "supported source version" warning on every newer JDK a consumer compiles with
@@ -158,7 +158,7 @@ machines: the generated SVG is sixty-odd boxes with zero transition edges. The t
 
 **Internal helpers** — package `se.deversity.vibetags.processor.internal` (single-responsibility classes that do the actual work, since 0.6.0):
 - `AnnotationCollector` — owns one `LinkedHashSet<Element>` accumulator per annotation type (keyed by annotation class, driven by `model.GuardrailAnnotations.ALL`), aggregating annotated elements across all `javac` rounds; also tracks the `anyAnnotationsFound` flag used for the multi-module preservation check. `model()` snapshots the accumulators into the compiler-free `GuardrailModel` the rendering layer reads — memoized until the next `collect()`/`reset()`. Buckets are created once and only cleared **in place**, because the processor holds three of them as fields
-- `AnnotationValidator` — emits compile-time consistency warnings (`@AIDraft`+`@AILocked` contradiction, empty `@AIAudit.checkFor`, redundant `@AIPrivacy`+`@AIIgnore`, `@AIContract`+`@AIDraft` contradiction, `@AIContract`+`@AILocked` overlap, `@AITestDriven`+`@AIIgnore` contradiction, `@AITestDriven`+`@AILocked` contradiction, invalid `@AITestDriven.coverageGoal`)
+- `AnnotationValidator` — the entry point for compile-time consistency warnings. The checks are individually testable rules in `internal/validation/`: `PairRule` (contradictory annotation pairs, as a table), `CoreRules` (attributes that leave an annotation instructing nobody), `ArchitectureRule` (the Tree-API import scan for `@AIArchitecture(cannotReference)`), `ModernJavaRules` (an annotation that contradicts the declaration it sits on — records, sealed types, virtual threads, the unnamed package). `ValidationRules` indexes rules by the annotation they scan so the round is queried once per annotation type rather than once per check. Full list in [ANNOTATIONS.md](ANNOTATIONS.md)
 - `OrphanWarner` — emits warnings when annotations are used but the corresponding ignore-file isn't present (e.g. `@AIIgnore` without `.cursorignore`)
 - `ServiceRegistry` — maps logical service keys to file paths and resolves which services are "active" via the file-existence opt-in
 - `ElementNaming` — pure helpers for `elementPath`, `elementDisplayName`, `owningElement`
@@ -454,7 +454,7 @@ so the output stays deterministic (byte-stable) for the fingerprint short-circui
 
 All annotations use `@Retention(RetentionPolicy.SOURCE)` — they exist only at compile time and are stripped from final bytecode.
 
-The full table of all 39 annotations (targets, attributes, semantics) and every compile-time validation warning the processor emits now live in one place: **[docs/ANNOTATIONS.md](ANNOTATIONS.md)**.
+The full table of every annotation (targets, attributes, semantics) and every compile-time validation warning the processor emits now live in one place: **[docs/ANNOTATIONS.md](ANNOTATIONS.md)**.
 
 ### Annotation Processor
 
@@ -465,7 +465,7 @@ The full table of all 39 annotations (targets, attributes, semantics) and every 
 - Registered via SPI: `META-INF/services/javax.annotation.processing.Processor`
 - Supports Java 11+ source versions
 - Uses `@SupportedAnnotationTypes("*")` to process all annotations
-- **Thin orchestrator** (~230 lines): all the actual work lives in `internal/*` helpers
+- **Orchestrator only**: every piece of actual work lives in an `internal/*` helper
 
 **Processing Logic:**
 
@@ -476,6 +476,8 @@ Accumulation phase (every round, until processingOver() == true):
    - Contradiction checks (e.g. @AIDraft + @AILocked, @AILegacyBridge + @AIDraft)
    - Redundancy checks (e.g. @AIPrivacy + @AIIgnore, @AIPublicAPI + @AILocked, @AIParallelTests + @AILocked)
    - Config validation (e.g. empty @AIAudit, empty @AIArchitecture, invalid @AITestDriven coverageGoal)
+   - Modern-Java checks against the declaration itself (e.g. @AIExtensible on a sealed type, @AIPure on a void method, an array field under @AIImmutable)
+   - One getElementsAnnotatedWith per annotation type, not per check — the rules are indexed by what they scan
 3. ModuleRootResolver.fromRound(env, roundEnv) — on the first non-empty round, resolves the module root and source set by walking up from a root element's source file (javac Tree API, else Elements.getFileObjectOf) to the nearest directory containing pom.xml / build.gradle(.kts). This — not the JVM working directory, which is the reactor root for every module of an in-process Maven build and ~/.gradle/workers under Gradle — is the module identity used for multi-module sidecar aggregation (issues #278, #331). The source set splits the sidecar so compile and test-compile do not overwrite each other (issue #330). Falls back to the working directory when no compiler API exposes the source file.
 4. process() returns false so other processors still see the annotations
 
@@ -597,11 +599,13 @@ vibetags/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/se/deversity/vibetags/processor/
-│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator (~230 lines)
+│   │   │   │   ├── AIGuardrailProcessor.java     # JSR 269 orchestrator; delegates to internal/
 │   │   │   │   ├── VibeTagsLogger.java           # SLF4J/Logback file logger
 │   │   │   │   ├── internal/                     # javac-facing helpers
 │   │   │   │   │   ├── AnnotationCollector.java       # one LinkedHashSet per annotation type; model() snapshots them
-│   │   │   │   │   ├── AnnotationValidator.java       # Compile-time consistency warnings
+│   │   │   │   │   ├── AnnotationValidator.java       # Entry point for compile-time consistency warnings
+│   │   │   │   │   ├── validation/                    # The checks themselves: PairRule, CoreRules,
+│   │   │   │   │   │                                  #   ArchitectureRule, ModernJavaRules + registry
 │   │   │   │   │   ├── OrphanWarner.java              # "annotation used but ignore-file missing"
 │   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers
@@ -1140,4 +1144,4 @@ The format hierarchy, a sample `llms.txt` output, opt-in commands, and the `vibe
 
 ---
 
-*Last updated: 2026-06-28 — refreshed counts to the current 39 annotations / 37 platforms (see [project facts](../README.md#project-facts)) and fixed a broken `file://` link to `junit-platform.properties`.*
+*Last updated: 2026-08-01 — replaced the restated annotation counts and the `AIGuardrailProcessor` line count with links and properties. Restating a number the README already pins is how the previous "39 annotations" here outlived the 44 that exist; a line count in prose rots on the next commit. `ProjectFactsConsistencyTest` guards the README's figures, and nothing guards a copy of them.*
