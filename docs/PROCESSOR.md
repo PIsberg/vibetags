@@ -11,10 +11,45 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 |---|---|---|
 | `vibetags.project` | `"This Project"` | Sets the `# H1` project name in llms.txt and llms-full.txt |
 | `vibetags.root` | JVM working directory | Override the output directory for all generated files |
+| `vibetags.module` | resolved from the sources | Name this module explicitly in multi-module output. Only needed when the module cannot be read off the compiled sources (no build file above them, or a compiler exposing neither the Tree API nor `Elements.getFileObjectOf`) — the processor warns when it has to fall back to a content hash |
 | `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
 | `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
 | `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |
 | `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes nothing — no output files, no sidecars, no cache |
+| `vibetags.enforce` | (off) | Opt-in **enforcing mode**: comma-separated families (`locked`, `contract`, `publicapi`, or `all`) whose guarded elements must match `.vibetags-baseline`. A drift is a compile **error**. See below |
+| `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file |
+
+## Enforcing mode (`-Avibetags.enforce`)
+
+Guardrails are advisory by design: the enforcement in a consuming project comes from checkstyle/PMD/
+SpotBugs, and VibeTags' job is to make the mistake less likely rather than impossible. That default
+is unchanged. What this adds, opt-in and per family, is a hard stop for the guardrails whose promise
+the processor can actually **prove** from the javac element model (issue #284).
+
+- `locked` (`@AILocked`), `contract` (`@AIContract`), `publicapi` (`@AIPublicAPI`) — the element's
+  structural signature must match the committed baseline. `ElementSignature` renders a method as
+  name + parameter types + return type + checked exceptions, and a type as its supertypes plus its
+  public/protected member signatures, sorted. Bodies, comments, formatting and private members are
+  invisible: an enforcement that fires when someone reformats a locked file gets switched off.
+- **Not enforceable, and said so out loud.** `@AICallersOnly` and `@AIStrictClasspath` need
+  call-graph and method-body analysis a processor cannot do portably — the Tree API is unavailable
+  under Gradle (see `ModuleRootResolver`) — and `@AIThreadSafe`/`@AITestDriven` are semantic. Naming
+  one produces a `[WARNING]` explaining the boundary rather than silent non-enforcement.
+
+The baseline (`.vibetags-baseline`, committed) stores full signatures, sorted, one per line, keyed
+by **module id** — so a reactor's modules merge into it instead of overwriting each other, the same
+discipline as the sidecars. Full signatures rather than hashes because the point is that a pull
+request shows *what* changed.
+
+Two directions are checked, and the second is the one that matters: an element's path already
+encodes its parameter types, so changing `charge(String,double)` to `charge(String,long)` abandons
+the approved entry rather than editing it. An approved entry with no matching element in the
+compilation is therefore a violation too — that covers renames, deletions and removed annotations.
+
+Enforcement runs in `process()` before `generateFiles()`, deliberately: the generation path has a
+fingerprint short-circuit that would let an unchanged-inputs build skip the check silently.
+Switching the option on before a baseline exists warns and checks nothing, rather than failing every
+build on day one.
 
 ## Top-level fingerprint short-circuit
 

@@ -318,7 +318,10 @@ public final class AnnotationCollector {
                    ElementNaming.simpleNameOf(e),
                    ElementNaming.elementDisplayName(e),
                    ElementNaming.granularQName(e))
-            .kind(tagOf(e));
+            .kind(tagOf(e))
+            // Captured here because it needs the javac element model, which is only valid while the
+            // round is live; the enforcing mode reads it later as plain data (issue #284).
+            .signature(ElementSignature.of(e));
     }
 
     /**

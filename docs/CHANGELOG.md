@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC8] - 2026-08-01
+
 ### Added
 - **Gemini granular rules (`.gemini/rules/`), so `GEMINI.md` can stop being a second copy (#320).**
   Four platforms could already collapse their always-loaded aggregate to a scoped-rules index when a
@@ -18,6 +20,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   platforms use: the always-inline safety buckets stay, everything else moves to the scoped files.
   `gemini_instructions.md` is unaffected, and absent the new directory the output is byte-for-byte
   unchanged.
+- **`-Avibetags.module=<name>`** names the compiling module explicitly, for builds where it cannot be
+  read off the compiled sources. A build that has to fall back to a content hash while named sidecars
+  already exist now emits a `[WARNING]` naming both, instead of silently filing itself as a new
+  module. (#331)
+- **Opt-in enforcing mode (`-Avibetags.enforce`) (#284).** Guardrails stay advisory by default —
+  that is the product's posture and it is unchanged. For the families whose promise the processor can
+  *prove* from the javac element model, naming them turns "the AI was told not to" into "the build
+  will not let it": `locked`, `contract` and `publicapi` are checked against a committed
+  `.vibetags-baseline`, recorded with `-Avibetags.baseline.update=true`. Signatures are stored in
+  full and sorted, so the approval shows up as a reviewable diff rather than a hash. Method bodies,
+  comments, formatting and private members are invisible to it, so reformatting a locked file is not
+  a violation; changing a contract-frozen parameter type is. `@AICallersOnly`, `@AIStrictClasspath`,
+  `@AIThreadSafe` and `@AITestDriven` are *not* enforceable — they need call-graph or body analysis a
+  processor cannot do portably — and naming one is reported rather than silently ignored. The
+  baseline is keyed by module id, so a reactor's modules merge into it instead of overwriting each
+  other. Enforcement runs before generation, so the fingerprint short-circuit cannot skip it.
+- **Warnings on destructive rewrites.** Every multi-module defect VibeTags has shipped failed the
+  same way — well-formed output, green build, guardrails quietly gone. Two diagnostics now make that
+  class of failure announce itself: a module whose recorded elements are replaced by a *disjoint*
+  set, and a round that removes more scoped rule files than it writes. Both are deliberately narrow —
+  editing an annotation, or deleting one of many, trips neither — because a warning that fires on
+  ordinary work is one people configure away. Every removal is also a NOTE naming what went.
+- **A module that compiles as its own root now says so (#296).** A module that does not inherit
+  `-Avibetags.root` — most often because it overrides the compiler plugin's `compilerArgs` or
+  `annotationProcessorPaths` — generates a complete, correct set of files into its own directory and
+  contributes nothing to the reactor, with no NOTE and no WARNING. When an ancestor's build
+  definition *declares this directory as one of its modules* (a Maven `<module>` entry or a Gradle
+  `include`), that is now a `[WARNING]` naming the reactor root and the option to set. Gated on the
+  build declaring the relationship, so a standalone project nested inside another repository is
+  never told it is detached.
+
+### Fixed
+- **The `test-compile` round no longer deletes a module's main-source guardrails (#330).** `compile`
+  and `test-compile` are two javac invocations over disjoint sources, and both mapped to one module
+  identity — so for any module with an annotated test class, the test round rewrote the module's whole
+  region from what it alone saw and orphan-cleaned every main-source rule file. In one 5-module
+  reactor a module went from 12 scoped rule files to 1, and `mvn compile` and `mvn test` produced
+  different `CLAUDE.md` files from identical sources. Silently: the build succeeded and the output
+  stayed well-formed. Each source set now owns its own sidecar (`.vibetags-mod-core__test`) but shares
+  the module's *region* id, so one module still renders as one `VIBETAGS-MODULE` region and a
+  single-module project with annotated tests keeps its historical sub-marker-free output. Every
+  sidecar records the granular stems it wrote, and each cleanup pass spares every other sidecar's —
+  which also stops one module from deleting another module's rule files in a shared scoped directory.
+  A module's own nested `CLAUDE.md` merges across its source sets the same way.
+- **Gradle identifies modules by name again, instead of appending a duplicate content-hash region
+  (#331).** VibeTags declares itself an `aggregating` incremental processor, so Gradle hands it a
+  wrapped `ProcessingEnvironment` — and `Trees.instance` accepts only javac's own. The Tree API was
+  therefore *never* available under Gradle, module resolution returned nothing for every module, and
+  they all collapsed onto the JVM working directory (`~/.gradle/workers`, under neither the module nor
+  the reactor). A dual-build project got a second complete set of regions under a hash id, restored on
+  every later build from a gitignored sidecar so `git checkout` could not fix it. Identity now falls
+  back to `Elements.getFileObjectOf` (Java 18+), which survives the wrapper, so Gradle and Maven agree
+  on module names and produce byte-identical output.
+- **The lean indexed reactor root keeps the always-on safety tier inline (#332).** The README promises
+  that when granular rules are on, the root keeps `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit` and `@AISecure` inline and indexes only the rest. In the reactor-lean layout
+  (`.vibetags-root-index` + per-module `.claude/rules/`) it kept *nothing*: every module's region
+  collapsed to a single pointer sentence, so a locked file's guardrail only loaded once the agent
+  opened the very file it protects — by which point it has become a comment. Each module now
+  contributes its safety digest inline, followed by the pointer; the verbose per-element tier still
+  lives only in the scoped files. A module with nothing in the safety tier contributes just the
+  pointer, so no empty shell appears. The context saving is largely preserved (one real reactor went
+  85 → 141 lines, against 537 for the fully merged root).
+- **The lean indexed root no longer bloats `.github/copilot-instructions.md` (#319).** Two things
+  were wrong where a reactor keeps Copilot's aggregate *and* its granular directory at the root while
+  each module keeps its own `.claude/rules/`. The shared `.github/instructions/` only ever retained
+  the last module's files, because cleanup deleted every rule it had not written itself — fixed by
+  the same cross-module exclusion as #330. And every module's contribution repeated its preamble
+  including an empty "Locked Files" heading, so a file whose entire purpose is to be a lean index
+  grew on a version bump. Indexed output now omits the locked section (and Claude's
+  `<locked_files/>`) when nothing is locked. Full, non-indexed output is byte-for-byte unchanged.
+  `example-multimodule-indexed/` now carries this layout so CI covers it.
+
+### Changed
+- **Test coverage for reactors.** `example-multimodule/` used 10 of the 44 annotations and 3 of the
+  ~50 services, so every renderer defect that only appears in the sidecar merge had nothing standing
+  in its way — which is exactly how #319 reached a release. It now carries a `showcase/` module with
+  all 44 annotations and opts the reactor root into every non-granular service, and CI asserts both
+  counts. `example-multimodule-indexed/` gained Copilot's aggregate and granular directory at the
+  root, the layout #319 was reported against.
+- **Dependencies:** PMD 7.24.0 → 7.26.0, maven-pmd-plugin 3.26.0 → 3.28.0, maven-jar-plugin 3.4.2 →
+  3.5.1, central-publishing-maven-plugin 0.10.0 → 0.11.0. `vibetags/build.gradle` had drifted behind
+  `pom.xml` on jspecify, logback and JUnit; the two builds share one generated `CLAUDE.md`, so a
+  version split makes the output depend on which build ran last. Resynced. SLF4J stays at 2.0.18 (the
+  only newer version is `2.1.0-alpha1`), and async-test-lib stays at 1.6.0 — it is not on Maven
+  Central and CI builds it from the upstream git tag, so the 1.7.0 that
+  `versions:display-dependency-updates` reports is a local install with no tag behind it.
 
 ## [1.0.0-RC7] - 2026-07-29
 
@@ -1119,7 +1208,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...HEAD
+[1.0.0-RC8]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...v1.0.0-RC8
 [1.0.0-RC7]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC6...v1.0.0-RC7
 [1.0.0-RC6]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...v1.0.0-RC6
 [1.0.0-RC5]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC4...v1.0.0-RC5

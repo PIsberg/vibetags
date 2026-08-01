@@ -175,6 +175,29 @@ public final class GranularRulesWriter {
     }
 
     /**
+     * The stems {@link #writeAll} would write for {@code elementRules} under {@code roles}, without
+     * touching the filesystem.
+     *
+     * <p>Exists so a compilation can record its own granular filenames <em>before</em> it writes
+     * them: they go into the module sidecar, where sibling compilations read them as cleanup
+     * exclusions. Without that, a round deletes every rule file it did not itself write — which is
+     * every main-source rule file, when the round is {@code test-compile}
+     * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>).
+     *
+     * <p>Deliberately a pure function of the same inputs {@code write} uses, so the recorded stems
+     * can never name a file that was not written.
+     */
+    public static Set<String> stemsFor(Map<TaggedElement, GranularBody> elementRules, RoleConfig roles) {
+        Set<String> stems = new LinkedHashSet<>();
+        boolean rolesActive = roles != null && !roles.isEmpty();
+        elementRules.keySet().forEach(owner -> {
+            String role = rolesActive ? roles.roleFor(owner).orElse(null) : null;
+            stems.add(role != null ? RoleConfig.sanitize(role) : owner.granularQName());
+        });
+        return stems;
+    }
+
+    /**
      * The rule's own globs followed by any mirror globs, de-duplicated and order-preserving. Returns
      * {@code globs} untouched when there is nothing to add, so the ordinary single-glob per-class
      * frontmatter stays byte-for-byte identical.
@@ -203,12 +226,15 @@ public final class GranularRulesWriter {
      * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
      * (the per-class qNames and role stems just written this round).
      */
-    public void cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
+    public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
+        Set<String> removed = new LinkedHashSet<>();
         for (GranularFormat f : FORMATS) {
             if (activeServices.contains(f.serviceKey)) {
-                fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames);
+                removed.addAll(
+                    fileWriter.cleanupGranularDirectory(serviceFiles.get(f.serviceKey), f.extension, excludeQNames));
             }
         }
+        return removed;
     }
 
     /**

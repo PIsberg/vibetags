@@ -76,6 +76,29 @@ final class AnnotationSections {
     }
 
     /**
+     * The same preamble for an aggregate that has collapsed to a scoped-rules index, with the
+     * "LOCKED FILES" heading dropped when nothing is locked.
+     *
+     * <p>An empty heading costs one line in a single-module file and is invisible. In a reactor it
+     * is emitted <em>once per module</em> — six modules with no {@code @AILocked} between them turn
+     * a file that is supposed to be a lean index into pages of empty headings
+     * (<a href="https://github.com/PIsberg/vibetags/issues/319">issue #319</a>). Full (non-indexed)
+     * output keeps the unconditional heading, so single-opt-in aggregates stay byte-identical.
+     */
+    static void renderIndexedPreamble(StringBuilder sb, GuardrailModel model, Platform platform, String generatedHeader) {
+        sb.append("# AUTO-GENERATED AI RULES\n")
+          .append(generatedHeader)
+          .append("# Do not edit manually.\n");
+        if (model.locked().isEmpty()) {
+            return;
+        }
+        sb.append("\n## LOCKED FILES (DO NOT EDIT)\n");
+        for (TaggedElement e : model.locked()) {
+            FormatterRegistry.locked().format(e, sb, platform);
+        }
+    }
+
+    /**
      * The "# AUTO-GENERATED AI RULES ... LOCKED FILES ... CONTEXTUAL RULES" opening shared
      * verbatim by {@link CursorRenderer} and {@link WindsurfRenderer}.
      */

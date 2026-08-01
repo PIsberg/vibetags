@@ -17,6 +17,7 @@ public final class RenderingContext {
     private final int estimatedContentSize;
     private final Set<TaggedElement> granularOwners;
     private final RoleConfig roles;
+    private final boolean safetyDigest;
 
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
         this(projectName, generatedHeader, activeServices, 4096);
@@ -51,6 +52,16 @@ public final class RenderingContext {
      */
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                             int estimatedContentSize, Set<TaggedElement> granularOwners, RoleConfig roles) {
+        this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, roles, false);
+    }
+
+    /**
+     * @param safetyDigest render the safety tier only, with no scoped-rules index — see
+     *        {@link #safetyDigest()}.
+     */
+    private RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
+                             int estimatedContentSize, Set<TaggedElement> granularOwners, RoleConfig roles,
+                             boolean safetyDigest) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
         // Defensive copy: prevent callers from mutating the set through the stored reference.
@@ -69,6 +80,30 @@ public final class RenderingContext {
                 .forEach(sortedOwners::add);
         this.granularOwners = Collections.unmodifiableSet(sortedOwners);
         this.roles = roles;
+        this.safetyDigest = safetyDigest;
+    }
+
+    /**
+     * A copy of this context that renders the <em>safety digest</em>: the always-on buckets inline,
+     * and no scoped-rules index at all.
+     *
+     * <p>Used for the region a module contributes to a lean indexed reactor root. The root cannot
+     * carry that module's index — the scoped files live under the module directory, not the root's —
+     * so the pointer sentence names the directory instead, and this digest is what keeps
+     * {@code @AILocked} / {@code @AICore} / {@code @AIAudit} unconditionally in context there
+     * (<a href="https://github.com/PIsberg/vibetags/issues/332">issue #332</a>).
+     */
+    public RenderingContext asSafetyDigest() {
+        return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
+            granularOwners, roles, true);
+    }
+
+    /**
+     * True when this run renders a safety digest: aggregate renderers keep their inline safety
+     * sections but emit no scoped-rules index.
+     */
+    public boolean safetyDigest() {
+        return safetyDigest;
     }
 
     /** Capacity hint (bytes) for an O(N) renderer's top-level StringBuilder. */

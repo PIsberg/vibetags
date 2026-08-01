@@ -19,11 +19,40 @@ nearest `pom.xml`/`build.gradle(.kts)` — **not** from the JVM working director
 root for every module of an in-process Maven/Gradle build (issue #278: last-writer-wins). Sidecars
 are format v2; v1 files carry the broken working-directory identity and are pruned on read.
 
-Two preservation guards keep compiles with **no annotations** (e.g. Maven's test-compile pass) from
-destroying content: the module's sidecar is only saved when annotations were found, and shared-file
-writes with no contributions preserve the existing file content. Consequence: removing *all*
-annotations from a module leaves its last contribution in place until its `.vibetags-mod-*` file is
-deleted (or the module directory disappears).
+The resolver reaches the source file two ways, and needs both. javac's Tree API is the fast path but
+`Trees.instance` accepts only javac's own `ProcessingEnvironment`; Gradle wraps it for incremental
+annotation processing (VibeTags declares itself `aggregating`), so under Gradle the Tree API is
+*never* available. `Elements.getFileObjectOf` (Java 18+) answers the same question through the
+standard API and survives the wrapper. Without it every Gradle module fell back to the working
+directory — `~/.gradle/workers`, under neither the module nor the reactor — and collapsed onto one
+content-hash id that appended a duplicate set of regions beside Maven's named ones (issue #331).
+When identity still cannot be derived, `-Avibetags.module=<name>` sets it explicitly, and a build
+that falls back to a content hash while named sidecars already exist emits a `[WARNING]` naming
+both.
+
+### Source sets
+
+A module is compiled once per **source set**: Maven's `compile` and `test-compile` are two javac
+invocations over disjoint sources, and a test-sources-only round legitimately cannot see a single
+main source. Each source set therefore owns its own sidecar file — `.vibetags-mod-core` for `main`,
+`.vibetags-mod-core__test` for anything else — so neither round can overwrite the other's
+contribution or orphan-clean the rule files it could not see (issue #330).
+
+They share a **region id**, though: the merge groups sidecars by region, so one module still
+produces one `VIBETAGS-MODULE` region and a single-module project with annotated tests keeps its
+historical sub-marker-free output. `ModuleSidecar.regionCount()`, not the sidecar count, is what
+decides whether a build is multi-module.
+
+Each sidecar also records the granular rule stems it wrote (`GranularRulesWriter.stemsFor`, a pure
+function computed *before* the write so the `@AILocked` `generateFiles()` step order is unchanged).
+Every cleanup pass adds every *other* sidecar's stems to its exclusion list, which is what stops a
+round from deleting rule files belonging to another source set — or another module.
+
+Two preservation guards keep compiles with **no annotations** from destroying content: the module's
+sidecar is only saved when annotations were found, and shared-file writes with no contributions
+preserve the existing file content. Consequence: removing *all* annotations from a module leaves its
+last contribution in place until its `.vibetags-mod-*` file is deleted (or the module directory
+disappears).
 
 ## Per-module (nested) output
 
@@ -33,6 +62,11 @@ file or granular dir **inside its own directory** (`touch module-a/CLAUDE.md`), 
 with **no sidecar and no merge**. It simply re-runs the single-module pipeline (`ServiceRegistry` →
 `GuardrailContentBuilder` → `GuardrailFileWriter`/`GranularRulesWriter`) against `compilationRoot()`
 with the module dir's own file-existence opt-ins, so the scoped-rules index composes per-module too.
+
+Its content is rendered in `generateFiles()` (not inside `ModuleOutputWriter`) so it can go into the
+sidecar under `~mod~<service>` keys, and the writer concatenates the bodies of every sidecar sharing
+this module's region — main first. That is what makes a module's own `CLAUDE.md` survive a
+`test-compile` round that saw none of its main sources.
 
 Called as a terminal step in `generateFiles()`/`checkFiles()`; **gated on `moduleRoot != null` and
 `!compilationRoot.equals(root)`** so in-memory/non-javac compiles (which fall back to the JVM working
@@ -51,6 +85,18 @@ aggregates that have a granular sibling, the merge replaces each module's embedd
 pointer to that module's own scoped rules (and/or its own aggregate file), still wrapped in the
 `VIBETAGS-MODULE` sub-markers. The root module's own body stays inline, and aggregates **without** a
 granular sibling (`GEMINI.md`, `AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+
+**The safety tier stays inline** (issue #332). What each module contributes to the lean root is its
+*safety digest* — `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure` and
+nothing else — followed by the pointer. Those guardrails earn their keep by being unconditionally
+present: `@AILocked` exists to stop an agent that has not yet opened the locked file, and an
+`@AIAudit` an agent only learns after opening the file arrives after it has formed its plan. The
+verbose per-element detail is exactly what should load on demand, and that is what the pointer
+replaces. The digest is rendered by `GuardrailContentBuilder.safetyDigest()` — the same indexed
+renderer variant the single-module case uses, minus the scoped-rules index, because the scoped files
+live under the *module* directory and the root cannot name them relatively. A module with nothing in
+the safety tier contributes only its pointer, so no empty `<project_guardrails>` shell appears.
+Digests ride in the sidecar under `~idx~<service>` keys.
 
 Losslessness guard: a module is linked only when it actually emits its own per-module output for that
 service (its module dir opted into `.claude/rules/` and/or `CLAUDE.md`); a module with no output of

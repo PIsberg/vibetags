@@ -6,7 +6,7 @@
 
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0-RC7</version>
+    <version>1.0.0-RC8</version>
     <packaging>jar</packaging>
 
     <name>VibeTags Processor</name>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-annotations</artifactId>
-            <version>1.0.0-RC7</version>
+            <version>1.0.0-RC8</version>
         </dependency>
 
         <!-- JSpecify null annotations (@NullMarked, @Nullable, @NonNull).
@@ -92,6 +92,11 @@
         <dependency>
             <groupId>se.deversity.async-test-lib</groupId>
             <artifactId>async-test-lib</artifactId>
+            <!-- Pinned to 1.6.0 deliberately: this artifact is NOT on Maven Central, so CI builds
+                 it from the upstream git tag (see .github/workflows/build.yml). 1.7.0 exists only
+                 as a local install and has no v1.7.0 tag upstream — `versions:display-dependency-
+                 updates` reports it from the local repository, and taking that suggestion breaks
+                 every environment except the one that installed it. Bump the workflow tag first. -->
             <version>1.6.0</version>
             <scope>test</scope>
         </dependency>

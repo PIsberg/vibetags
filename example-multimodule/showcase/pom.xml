@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>se.deversity.vibetags.example</groupId>
+    <artifactId>vibetags-example-multimodule</artifactId>
+    <version>1.0.0</version>
+  </parent>
+  <artifactId>multimodule-showcase</artifactId>
+  <name>VibeTags Multi-Module Example :: Annotation Showcase</name>
+  <description>
+    Carries every one of the 44 @AI* annotations inside a reactor module, so the multi-module
+    merge is exercised for every renderer and not only for the handful the other modules happen
+    to use. The sources are the single-module example's, unchanged: what is under test here is
+    the sidecar/merge path, not the sources.
+  </description>
+</project>

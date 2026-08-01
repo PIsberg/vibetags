@@ -21,6 +21,7 @@
     <module>core</module>
     <module>engine</module>
     <module>cli</module>
+    <module>showcase</module>
     <module>tests</module>
   </modules>
 
@@ -28,7 +29,7 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vibetags.bom.version>1.0.0-RC7</vibetags.bom.version>
+    <vibetags.bom.version>1.0.0-RC8</vibetags.bom.version>
   </properties>
 
   <dependencyManagement>

@@ -42,6 +42,7 @@ public final class TaggedElement {
     private final ElementTag kind;
     private final Map<Class<? extends Annotation>, Annotation> annotations;
     private final Map<String, String> typeMembers;
+    private final String signature;
 
     /**
      * The class or package this element's granular rules are filed under, or {@code null} when the
@@ -64,6 +65,19 @@ public final class TaggedElement {
             ? Map.of()
             : Collections.unmodifiableMap(new LinkedHashMap<>(b.typeMembers));
         this.owner = b.owner;
+        this.signature = b.signature;
+    }
+
+    /**
+     * The element's structural shape — a method's parameter and return types, a type's visible
+     * member set — as a compiler-free string, or {@code ""} when it was not captured.
+     *
+     * <p>Read only by the opt-in enforcing mode, which compares it against a committed baseline
+     * (<a href="https://github.com/PIsberg/vibetags/issues/284">issue #284</a>). Captured in the
+     * collector, because it needs the javac model and the rendering half must stay compiler-free.
+     */
+    public String signature() {
+        return signature;
     }
 
     /**
@@ -170,6 +184,7 @@ public final class TaggedElement {
         private ElementTag kind = ElementTag.OTHER;
         private final Map<Class<? extends Annotation>, Annotation> annotations = new LinkedHashMap<>();
         private final Map<String, String> typeMembers = new LinkedHashMap<>();
+        private String signature = "";
         private @Nullable TaggedElement owner;
 
         private Builder(String path) {
@@ -200,6 +215,12 @@ public final class TaggedElement {
             if (value != null) {
                 annotations.put(type, value);
             }
+            return this;
+        }
+
+        /** Records the element's structural signature for the enforcing mode; empty when unknown. */
+        public Builder signature(@Nullable String signature) {
+            this.signature = signature == null ? "" : signature;
             return this;
         }
 

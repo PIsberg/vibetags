@@ -36,6 +36,7 @@ class ProcessorTestHarness {
     private final Path root;
     private final List<JavaFileObject> sources = new ArrayList<>();
     private final List<Path> fileSources = new ArrayList<>();
+    private javax.annotation.processing.Processor processorOverride;
 
     ProcessorTestHarness(Path tempDir) throws IOException {
         this(tempDir, true);
@@ -215,6 +216,20 @@ class ProcessorTestHarness {
         compileReturningDiagnostics(extraOptions);
     }
 
+    /**
+     * Compiles with a caller-supplied processor instance instead of a plain
+     * {@link AIGuardrailProcessor}. Lets a test reproduce a build that wraps the
+     * {@code ProcessingEnvironment} the way Gradle's incremental processing does.
+     */
+    void compileWith(javax.annotation.processing.Processor processor, String... extraOptions) {
+        this.processorOverride = processor;
+        try {
+            compileReturningDiagnostics(extraOptions);
+        } finally {
+            this.processorOverride = null;
+        }
+    }
+
     List<javax.tools.Diagnostic<? extends JavaFileObject>> compileReturningDiagnostics(String... extraOptions) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
@@ -240,7 +255,8 @@ class ProcessorTestHarness {
             JavaCompiler.CompilationTask task = compiler.getTask(
                 null, fm, diagnostics, options, null, units
             );
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
+            task.setProcessors(List.of(
+                processorOverride != null ? processorOverride : new AIGuardrailProcessor()));
             task.call();
             return diagnostics.getDiagnostics();
         } catch (IOException e) {

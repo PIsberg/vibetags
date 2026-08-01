@@ -49,7 +49,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.0.0-RC7</version>
+            <version>1.0.0-RC8</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -73,7 +73,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.0.0-RC7</version>
+                        <version>1.0.0-RC8</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -114,8 +114,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC7')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC7')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC8')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC8')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -357,7 +357,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.0.0-RC7</version>
+            <version>1.0.0-RC8</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -382,7 +382,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.0.0-RC7</version>
+                        <version>1.0.0-RC8</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -396,8 +396,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC7')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC7')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC8')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.0-RC8')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -411,15 +411,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>1.0.0-RC7</version>
+    <version>1.0.0-RC8</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:1.0.0-RC7'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-RC7'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:1.0.0-RC8'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-RC8'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
@@ -512,6 +512,7 @@ The layers never duplicate content:
 
 - **Root + granular together** → the root `CLAUDE.md` keeps only the always-on safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest with a one-line **index** pointing at the scoped `.claude/rules/*.md` files. Verbose per-element detail (context, contracts, performance, …) is pulled in only when Claude opens that file — keeping your always-loaded context lean and the high-value rules undiluted.
 - **Per-module `CLAUDE.md`** → holds only *that module's* guardrails, so Claude gets focused rules while working in the module, while the repo-root `CLAUDE.md` still carries the whole picture.
+- **Indexed reactor root** (`.vibetags-root-index` + per-module `.claude/rules/`) → the same split, one level up: each module's region in the root `CLAUDE.md` keeps that module's safety guardrails inline and points at `module-a/.claude/rules/` for everything else. A module with nothing in the safety tier contributes only the pointer.
 
 ### Grouping rules by role/topic (`.vibetags-roles`)
 

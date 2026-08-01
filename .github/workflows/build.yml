@@ -80,6 +80,7 @@ jobs:
         run: |
           cd example-multimodule
           for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
+                       "VIBETAGS-MODULE: showcase" \
                        "com.example.multimodule.core.IrNode" \
                        "com.example.multimodule.engine.LayoutEngine" \
                        "com.example.multimodule.cli.MultiModuleCli"; do
@@ -87,6 +88,51 @@ jobs:
             grep -qF "$token" .cursorrules || { echo "MISSING in .cursorrules: $token"; exit 1; }
           done
           echo "All reactor modules present in merged guardrail files."
+
+      - name: Verify Every Annotation Survives the Reactor Merge
+        run: |
+          cd example-multimodule
+          # showcase/ carries all 44 @AI* annotations, so the merged root must show all 44 of the
+          # renderer's element buckets. A renderer that silently drops a family in the multi-module
+          # path — as opposed to the single-module path example/ covers — fails here.
+          declared=$(ls ../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/*.java | wc -l)
+          sections=$(grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u | wc -l)
+          if [ "$sections" -ne "$declared" ]; then
+            echo "merged CLAUDE.md has $sections element sections for $declared annotations"
+            grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u
+            exit 1
+          fi
+          echo "All $declared annotation families present in the merged reactor output."
+
+      - name: Verify Every AI Service Is Generated in a Reactor
+        run: |
+          cd example-multimodule
+          # The reactor root opts into every non-granular service, so every renderer runs through
+          # the sidecar merge — not just the three the hand-written modules happened to use.
+          # (The four indexable granular directories are deliberately absent: co-activating them
+          # collapses the aggregates, which is what example-multimodule-indexed/ covers.)
+          expected=50
+          actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
+          if [ "$actual" != "$expected" ]; then
+            echo "expected $expected active services in the reactor, got $actual"
+            grep 'Active services' vibetags.log | tail -1
+            exit 1
+          fi
+          # Spot-check that marker-based files from renderers with nothing else asserting them
+          # really got written. (.codex/* is absent on purpose: Codex is dropped unless AGENTS.md is
+          # the sole AI config file, which it is not here. JSON/TOML configs are whole-file
+          # overwrites with no marker, so they are not in this list.)
+          for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
+                   .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
+                   .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
+                   .pr_agent.toml .coderabbit.yaml; do
+            test -s "$f" || { echo "reactor produced no content for: $f"; exit 1; }
+            grep -qF "VIBETAGS" "$f" || { echo "no VibeTags block in: $f"; exit 1; }
+          done
+          # Granular directories are populated per class, not with a single file.
+          test "$(ls -1 .kiro/steering/ | wc -l)" -gt 10 \
+            || { echo "kiro granular directory not populated in the reactor"; exit 1; }
+          echo "All $expected services active and generating in the reactor."
 
 
       - name: Verify Per-Module (nested) Output
@@ -131,29 +177,53 @@ jobs:
           cd example-multimodule-indexed
           mvn clean compile -B
 
-      - name: Verify Indexed Root (issue #295)
+      - name: Verify Indexed Root (issues #295, #319, #332)
         run: |
           cd example-multimodule-indexed
-          # Root CLAUDE.md is a lean INDEX: one pointer per module, no per-element detail inline.
+          # Root CLAUDE.md is a lean INDEX: one pointer per module...
           for m in core app; do
             grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md \
               || { echo "MISSING module pointer in indexed CLAUDE.md: $m"; exit 1; }
           done
           grep -qF "maintained in that module" CLAUDE.md \
             || { echo "indexed CLAUDE.md is not an index (no pointer text)"; exit 1; }
-          for fqn in "com.example.indexed.core.DocumentModel" "com.example.indexed.app.DocumentService"; do
-            if grep -qF "$fqn" CLAUDE.md; then
-              echo "indexed CLAUDE.md must NOT embed per-element detail: $fqn"; exit 1
+          # ...but the always-on SAFETY tier stays inline per module (#332). A guardrail that only
+          # loads once the agent opens the file it protects has become a comment.
+          grep -qF "com.example.indexed.core.DocumentModel" CLAUDE.md \
+            || { echo "indexed CLAUDE.md must keep @AILocked inline"; exit 1; }
+          grep -qF "com.example.indexed.app.DocumentService" CLAUDE.md \
+            || { echo "indexed CLAUDE.md must keep @AIAudit inline"; exit 1; }
+          # ...while the verbose tier is what the pointer replaces.
+          if grep -qF "<contextual_instructions>" CLAUDE.md; then
+            echo "indexed CLAUDE.md must NOT embed the verbose per-element buckets"; exit 1
+          fi
+          for token in "<contract_signatures>" "<pure_functions>" "<domain_model_elements>"; do
+            if grep -qF "$token" CLAUDE.md; then
+              echo "indexed CLAUDE.md must NOT embed the verbose tier: $token"; exit 1
             fi
           done
-          # GEMINI.md has no scoped-rules feature, so it still carries the full MERGED block.
+          # GEMINI.md has no scoped-rules feature here, so it still carries the full MERGED block.
           for fqn in "com.example.indexed.core.DocumentModel" "com.example.indexed.app.DocumentService"; do
             grep -qF "$fqn" GEMINI.md || { echo "MISSING in merged GEMINI.md: $fqn"; exit 1; }
           done
+          grep -qF "CONTRACT-FROZEN SIGNATURES" GEMINI.md \
+            || { echo "GEMINI.md must still carry the verbose tier"; exit 1; }
+          # Copilot: aggregate AND granular directory live at the ROOT, not per module — the
+          # combination that shipped broken in RC7 (#319). It must collapse to a scoped index...
+          grep -qF "## Scoped Rules Index" .github/copilot-instructions.md \
+            || { echo "indexed root did not collapse .github/copilot-instructions.md (#319)"; exit 1; }
+          # ...and every module's scoped file must survive every other module's compile.
+          for f in com-example-indexed-core-DocumentModel com-example-indexed-app-DocumentService; do
+            test -f ".github/instructions/$f.instructions.md" \
+              || { echo "MISSING shared granular file (cross-module cleanup regression): $f"; exit 1; }
+          done
+          # A module with nothing locked must not repeat an empty heading once per module.
+          test "$(grep -c '^## Locked Files' .github/copilot-instructions.md)" = "1" \
+            || { echo "empty Locked Files heading repeated per module (#319)"; exit 1; }
           # Tier-3 detail lives in per-module scoped rules, grouped by each module's .vibetags-roles.
           test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
           test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
-          echo "Indexed root points at per-module rules; GEMINI.md still merges; Tier-3 topics present."
+          echo "Indexed root: safety inline, verbose indexed, Copilot collapsed, all modules' scoped files intact."
       - name: Run Unit Tests (VibeTags Library)
         run: |
           cd vibetags

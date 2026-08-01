@@ -1,0 +1,8 @@
+{
+  "_generated_by": "VibeTags",
+  "rules": {
+    "locked_files": [
+    {"path": "com.example.multimodule.core.IrNode", "reason": "Core IR node: structural changes break every downstream module"}
+    ]
+  }
+}

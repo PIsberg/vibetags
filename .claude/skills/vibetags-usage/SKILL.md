@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
-version: 1.0.0-RC7
+version: 1.0.0-RC8
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0-RC7</version>
+    <version>1.0.0-RC8</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0-RC7'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-RC7'
+compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0-RC8'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-RC8'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -107,6 +107,89 @@ import se.deversity.vibetags.annotations.*;
 ```bash
 mvn clean compile   # or: gradle clean build
 ```
+
+---
+
+## Project Structure — where guardrails live
+
+Guardrails are generated into **three tiers**, and which files exist decides which tiers you get.
+Getting the layout right matters more than getting the annotations right: the same annotation in the
+wrong layout ends up in a file the agent never loads.
+
+| Tier | Scope | File | When the agent reads it |
+|---|---|---|---|
+| **1 — Project** | Whole repo/reactor | `CLAUDE.md`, `.cursorrules`, `GEMINI.md`, … at the root | Always in context |
+| **2 — Module** | One module | `module-a/CLAUDE.md` | While working in that module |
+| **3 — Element/topic** | One class, or one role | `.claude/rules/*.md`, `.cursor/rules/*.mdc`, … | When it opens a matching source file |
+
+The tiers never duplicate each other. Opt into **Tier 1 + Tier 3 together** and the aggregate stops
+repeating what the scoped files already say: it keeps the always-on **safety tier** inline
+(`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest
+with a one-line index. That split is the whole point — a locked file has to be known *before* the
+agent opens it, while a performance constraint only matters once it is editing that method.
+
+### Single module
+
+```
+my-project/
+├── pom.xml
+├── CLAUDE.md                  ← Tier 1: always loaded
+├── .claude/rules/             ← Tier 3: loaded per file (collapses Tier 1 to an index)
+│   └── com-example-OrderService.md
+└── src/main/java/…
+```
+
+### Reactor — merged root (start here)
+
+Every module's guardrails are merged into one root file, each in its own `VIBETAGS-MODULE` region.
+**Every module must point at the reactor root**, or its guardrails silently never arrive:
+
+```xml
+<compilerArgs><arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg></compilerArgs>
+```
+
+```
+reactor/
+├── pom.xml
+├── CLAUDE.md                  ← every module's guardrails, merged
+├── .vibetags-mod-core         ← generated; gitignore these
+├── core/pom.xml
+└── app/pom.xml
+```
+
+A module that overrides `compilerArgs` or `annotationProcessorPaths` will not inherit that option
+and will generate into its own directory instead. VibeTags warns when it can tell that is what
+happened; heed it rather than wondering where the guardrails went.
+
+### Reactor — lean indexed root (recommended once it grows)
+
+Give each module its own scoped rules and add `.vibetags-root-index` at the reactor root. The root
+then keeps each module's **safety tier** inline and points at that module's own rules for the rest —
+in one real 5-module project, 537 lines of always-on context became 141.
+
+```
+reactor/
+├── .vibetags-root-index       ← the opt-in (empty file)
+├── CLAUDE.md                  ← per module: safety tier + a pointer
+├── core/.claude/rules/        ← that module's full detail
+└── app/.claude/rules/
+```
+
+Files can live at either level: `.github/instructions/` at the **root** collects every module's
+Copilot rules into one shared directory, while `.claude/rules/` inside each **module** keeps them
+per module. Both work; pick per platform.
+
+### Optional layout files
+
+| File | Where | Effect |
+|---|---|---|
+| `.vibetags-root-index` | reactor root | Lean indexed root (above) |
+| `.vibetags-roles` | root or module | Group scoped rules into human-named topic files instead of one per class |
+| `.vibetags-mirror` | consuming module | Copy sibling modules' scoped rules in, for a module that centralises tests |
+| `.vibetags-locks` | root | Machine-readable `@AILocked` report with source line numbers |
+| `.vibetags-baseline` | root | Committed approval record for the enforcing mode — commit it |
+
+`.vibetags-mod-*`, `.vibetags-cache` and `vibetags.log` are generated build state. Gitignore them.
 
 ---
 
@@ -1112,12 +1195,42 @@ mkdir -p .claude/rules .github/instructions
             <arg>-Avibetags.log.path=logs/vibetags.log</arg>
             <!-- Log level: TRACE, DEBUG, INFO, WARN, ERROR, OFF -->
             <arg>-Avibetags.log.level=DEBUG</arg>
-            <!-- Override output root directory -->
-            <arg>-Avibetags.root=/path/to/output</arg>
+            <!-- Override output root directory (every module of a reactor needs this) -->
+            <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
+            <!-- Name this module explicitly, if it cannot be read off the compiled sources -->
+            <arg>-Avibetags.module=payments-core</arg>
+            <!-- CI: verify the committed files match the annotations instead of writing them -->
+            <arg>-Avibetags.check=true</arg>
+            <!-- Opt-in enforcement: fail the build on a guarded signature change -->
+            <arg>-Avibetags.enforce=locked,contract,publicapi</arg>
         </compilerArgs>
     </configuration>
 </plugin>
 ```
+
+### Enforcing mode (opt-in)
+
+Guardrails are advisory by default: they go into the agent's context so a mistake is less likely.
+For the families whose promise can be *proved* from the compiler's model, `-Avibetags.enforce` turns
+that into a hard stop.
+
+```bash
+mvn compile -Avibetags.baseline.update=true   # record and commit .vibetags-baseline
+mvn compile -Avibetags.enforce=contract       # thereafter, a signature change fails the build
+```
+
+| Family | What it checks |
+|---|---|
+| `locked` | An `@AILocked` element's visible shape is unchanged |
+| `contract` | An `@AIContract` signature is unchanged — name, parameters, return type, checked exceptions |
+| `publicapi` | Ditto for `@AIPublicAPI` |
+| `all` | All of the above |
+
+Method bodies, comments and formatting are invisible to it, so reformatting a locked file is not a
+violation. `@AICallersOnly`, `@AIStrictClasspath`, `@AIThreadSafe` and `@AITestDriven` are **not**
+enforceable — proving them needs call-graph or body analysis a processor cannot do portably — and
+naming one is reported rather than silently ignored. An intended change is approved by re-running
+with `-Avibetags.baseline.update=true` and committing the diff, so it gets reviewed.
 
 ### Processor options (Gradle)
 
@@ -1139,6 +1252,12 @@ tasks.withType(JavaCompile) {
 |---|---|---|
 | No files updated after compile | Target files don't exist | `touch CLAUDE.md` (or whichever platform file) then recompile |
 | `[NOTE] No AI config files found` | No opt-in files present | Create one or more platform files (see step 2) |
+| A module's guardrails are missing from the reactor root | That module never reached the root | Give it `-Avibetags.root=<reactor>`; VibeTags warns with *"generated its guardrails as its own root"* when it can tell |
+| `[WARNING] … rewritten with a completely different set of elements` | A compilation replaced a module's guardrails with an unrelated set | Almost always a round that could not see the sources it should have — check this module's annotation processing before committing the regenerated files |
+| `[WARNING] removed N scoped rule file(s) … while writing only M` | The build deleted more guardrails than it produced | Same cause; do not accept the deletion until you know why |
+| `[WARNING] could not identify the compiling module` | Sources are not under `-Avibetags.root` | Set `-Avibetags.root`, or name it with `-Avibetags.module=<name>` |
+| Guardrails differ between `mvn compile` and `mvn test` | Pre-1.0.0-RC8 processor | Upgrade — `compile` and `test-compile` now own separate sidecars |
+| Gradle appends a second set of `VIBETAGS-MODULE` regions | Pre-1.0.0-RC8 processor | Upgrade, then delete the stray `.vibetags-mod-<hash>` file once |
 | `[WARNING] @AIIgnore used but .cursorignore is missing` | Orphaned annotation | Create the missing file to fully support that platform |
 | `[WARNING] contradictory @AIDraft and @AILocked` | Both annotations on same element | Remove one of them |
 | `[WARNING] @AIAudit has no checkFor items` | Empty `checkFor` array | Add at least one vulnerability string |
