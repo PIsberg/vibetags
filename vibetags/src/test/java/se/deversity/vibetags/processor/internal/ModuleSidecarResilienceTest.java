@@ -82,6 +82,29 @@ class ModuleSidecarResilienceTest {
     }
 
     @Test
+    void anInterruptedRetryStopsWaitingAndKeepsTheInterruptFlag(@TempDir Path dir) throws IOException {
+        Path tmp = Files.writeString(dir.resolve("sidecar.tmp"), "payload");
+        AtomicInteger attempts = new AtomicInteger();
+
+        Thread.currentThread().interrupt();
+        try {
+            IOException thrown = assertThrows(IOException.class, () ->
+                ModuleSidecar.moveIntoPlace(tmp, dir.resolve("sidecar"), (source, destination) -> {
+                    attempts.incrementAndGet();
+                    throw new AccessDeniedException(destination.toString());
+                }));
+
+            assertEquals(1, attempts.get(), "an interrupted build should stop retrying at once");
+            assertTrue(thrown instanceof AccessDeniedException,
+                "the caller needs the move failure, not the interruption");
+            assertTrue(Thread.currentThread().isInterrupted(),
+                "swallowing the interrupt would leave javac unable to shut down");
+        } finally {
+            Thread.interrupted(); // clear the flag so it cannot leak into the next test
+        }
+    }
+
+    @Test
     void theProductionMoverReplacesAnExistingSidecar(@TempDir Path dir) throws IOException {
         Path tmp = Files.writeString(dir.resolve("sidecar.tmp"), "new");
         Path target = Files.writeString(dir.resolve("sidecar"), "old");
