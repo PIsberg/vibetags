@@ -93,6 +93,30 @@ mvnd -o test -Dtest=WriteCacheProcessorIntegrationTest -Djacoco.skip=true
 
 `mvnd` is purely a local convenience; CI and the published build still use `mvn`.
 
+### The security gate
+
+SpotBugs runs with [Find Security Bugs](https://find-sec-bugs.github.io/) attached
+(`vibetags/pom.xml`), at `verify`. Run it on its own with:
+
+```bash
+cd vibetags && mvn -o compile spotbugs:check
+```
+
+Two files govern what it says:
+
+- `vibetags/findsecbugs-taint-config.txt` declares the escapers (`Escape.xml`, `Escape.json`,
+  `Escape.tomlMultiline`, `CommonFormatterHelper.claudeReason`) as sanitizers, so escaped
+  interpolation is not reported. The format is one `class/Name.method(sig)ret:SAFE` per line and
+  **comments are not supported** — a `#` line aborts the analysis with `Line format is not 'type
+  signature:config info'` (blank lines are fine). Rename or move one of those methods and the entry
+  has to move with it.
+- `vibetags/spotbugs-exclude.xml` holds the exclusions, each with the reason it is not a bug.
+
+`POTENTIAL_XML_INJECTION` on a formatter means a value reaches the `CLAUDE.md` XML block without
+`Escape.xml` — that is the detector working, so escape the value rather than excluding the class.
+When an exclusion really is right, scope it to the method, so the next occurrence elsewhere is
+still reported.
+
 ## How to Contribute
 
 ### Reporting Bugs

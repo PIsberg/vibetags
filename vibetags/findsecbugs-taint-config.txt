@@ -1,0 +1,4 @@
+se/deversity/vibetags/processor/internal/content/Escape.xml(Ljava/lang/String;)Ljava/lang/String;:SAFE
+se/deversity/vibetags/processor/internal/content/Escape.json(Ljava/lang/String;)Ljava/lang/String;:SAFE
+se/deversity/vibetags/processor/internal/content/Escape.tomlMultiline(Ljava/lang/String;)Ljava/lang/String;:SAFE
+se/deversity/vibetags/processor/internal/content/annotations/CommonFormatterHelper.claudeReason(Ljava/lang/String;)Ljava/lang/String;:SAFE

@@ -78,7 +78,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the code they pin — marker handling disabled, and `save()` writing non-atomically to the live
   target.
 
+- **Find Security Bugs joins the SpotBugs gate.** `findsecbugs-plugin` 1.14.0 adds its security
+  detectors to the existing `spotbugs-maven-plugin` run. The first run reported 94 findings, 60 of
+  them `POTENTIAL_XML_INJECTION` on formatter lines that already call `Escape.xml` — the taint
+  analysis had no way to know that method sanitizes. Rather than excluding the package, the four
+  escapers (`Escape.xml`, `Escape.json`, `Escape.tomlMultiline`,
+  `CommonFormatterHelper.claudeReason`) are declared `SAFE` in `vibetags/findsecbugs-taint-config.txt`,
+  loaded through the plugin's `<jvmArgs>`. That leaves the detector live: deleting the `Escape.xml`
+  call from `AILockedFormatter`'s Claude branch was confirmed to fail the build with exactly one
+  `POTENTIAL_XML_INJECTION` at that line.
+
+  The remaining 12 findings are excluded per method in `spotbugs-exclude.xml`, each with the
+  reason: `PATH_TRAVERSAL_IN` on the six sites that resolve `-Avibetags.root` / `-Avibetags.log.path`
+  or a path composed from them (redirecting output is the documented feature, and setting a
+  compiler option already means controlling the compilation), and `IMPROPER_UNICODE` on the four
+  that parse `"true"` / `"false"` / `"OFF"` build options and lower-case config keys, none of which
+  is an authorization decision. Listing them per method rather than per pattern keeps a *new*
+  path-from-input or case-insensitive comparison reportable.
+
 ### Fixed
+- **A line break in a logged value split one event into several lines in `vibetags.log`.**
+  The log is meant to be read with grep — `domain.event key=value`, one event per line — but the
+  values interpolated into it come from outside the processor: module ids and roots taken from
+  compiler options, paths read back out of sidecar and baseline files. Any CR or LF in one of them
+  ended the line early, and the tail was indistinguishable from a separate event (`CRLF_INJECTION_LOGS`,
+  22 call sites). Fixed once in the Logback encoder rather than at each call site: the pattern in
+  `VibeTagsLogger.forRoot` now wraps `%msg` in `%replace(...){'[\r\n]+', ' '}`, so the value still
+  appears in full and the event stays on one line whatever it contains.
+  `VibeTagsLoggerUnitTest#logMessageWithLineBreaks_staysOnOneLine` pins it and was confirmed red
+  before the change (3 lines written for one event).
 - **Generated output depended on the order javac enumerated the sources in.**
   `RoundEnvironment.getElementsAnnotatedWith` returns a `Set` with no specified iteration order;
   javac fills it by walking the round's root elements, which is the order the file manager handed

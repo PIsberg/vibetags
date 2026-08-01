@@ -89,6 +89,27 @@ class VibeTagsLoggerUnitTest {
             "OFF for root B must not detach root A's appender — root A's messages were silently lost");
     }
 
+    // --- one event per line ---
+
+    @Test
+    void logMessageWithLineBreaks_staysOnOneLine() throws Exception {
+        // The log is a machine-greppable event stream: `domain.event key=value`, one event
+        // per line. A value carrying CR/LF (a module id or root path taken from a compiler
+        // option, a path read out of .vibetags-baseline) would otherwise split one event
+        // across several lines and could forge an entry that looks like a separate event.
+        Logger logger = VibeTagsLogger.forRoot(tempDir, null, "INFO");
+
+        logger.info("write.skip file={} reason=cache-unchanged", "a\nERROR forged.event injected=true\nb");
+
+        VibeTagsLogger.shutdown(tempDir);
+        java.util.List<String> lines = Files.readAllLines(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE));
+
+        assertEquals(1, lines.size(),
+            "a value containing CR/LF must not split the event across lines, got: " + lines);
+        assertTrue(lines.get(0).contains("forged.event"),
+            "sanity: the value itself must survive, only its line breaks are collapsed");
+    }
+
     // --- resolveLogFile: relative path ---
 
     @Test
