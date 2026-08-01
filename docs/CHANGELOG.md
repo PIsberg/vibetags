@@ -93,6 +93,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `<locked_files/>`) when nothing is locked. Full, non-indexed output is byte-for-byte unchanged.
   `example-multimodule-indexed/` now carries this layout so CI covers it.
 
+### Changed
+- **Test coverage for reactors.** `example-multimodule/` used 10 of the 44 annotations and 3 of the
+  ~50 services, so every renderer defect that only appears in the sidecar merge had nothing standing
+  in its way — which is exactly how #319 reached a release. It now carries a `showcase/` module with
+  all 44 annotations and opts the reactor root into every non-granular service, and CI asserts both
+  counts. `example-multimodule-indexed/` gained Copilot's aggregate and granular directory at the
+  root, the layout #319 was reported against.
+- **Dependencies:** PMD 7.24.0 → 7.26.0, maven-pmd-plugin 3.26.0 → 3.28.0, maven-jar-plugin 3.4.2 →
+  3.5.1, central-publishing-maven-plugin 0.10.0 → 0.11.0. `vibetags/build.gradle` had drifted behind
+  `pom.xml` on jspecify, logback and JUnit; the two builds share one generated `CLAUDE.md`, so a
+  version split makes the output depend on which build ran last. Resynced. SLF4J stays at 2.0.18 (the
+  only newer version is `2.1.0-alpha1`), and async-test-lib stays at 1.6.0 — it is not on Maven
+  Central and CI builds it from the upstream git tag, so the 1.7.0 that
+  `versions:display-dependency-updates` reports is a local install with no tag behind it.
+
 ## [1.0.0-RC7] - 2026-07-29
 
 ### Added
