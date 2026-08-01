@@ -69,10 +69,15 @@ class ModuleSidecarAsyncTest {
      * The cycle below is what makes the race reachable — verified by giving {@code save()} a
      * non-atomic, chunked write to the live target, which this fails against and a single
      * save/read pass does not.
+     *
+     * <p>720 save/read pairs across 8 workers, which is roughly a quarter of what first reproduced
+     * the Windows collisions and still overlaps writes and reads on every cycle. The two defects
+     * this test found are pinned deterministically by {@code ModuleSidecarResilienceTest}; the job
+     * left here is catching the next race, which does not need a minute of every build.
      */
-    private static final int CYCLES_PER_INVOCATION = 25;
+    private static final int CYCLES_PER_INVOCATION = 15;
 
-    @AsyncTest(threads = 8, invocations = 10, timeoutMs = 120_000)
+    @AsyncTest(threads = 8, invocations = 6, timeoutMs = 120_000)
     void concurrentSavesAndReadsNeverTearOrPruneASibling() throws IOException {
         // One module per worker, all sharing one reactor root — the shape of a parallel reactor.
         String moduleId = "mod" + Thread.currentThread().threadId();

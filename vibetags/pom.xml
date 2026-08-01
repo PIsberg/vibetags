@@ -98,7 +98,7 @@
                  dependency-updates` also reports versions that exist only as a local install, and
                  taking that suggestion breaks every environment except the one that installed it.
                  Change the four workflow clone tags in the same commit as this version. -->
-            <version>1.7.0-RC4</version>
+            <version>1.7.0-RC5</version>
             <scope>test</scope>
         </dependency>
         <dependency>

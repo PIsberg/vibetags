@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC4.** The pin stayed
+- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
   at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
-  that breaks every machine except the one that installed it. `v1.7.0-RC4` is now a tag on
+  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
   `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
   `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
   from that tag on JDK 21 (the version CI uses) and running the suite against it.
@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   target.
 
 ### Fixed
+- **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`
+  both for content that failed to parse and for a file it never managed to open, and `readAll()`
+  deletes on `null`. On Windows a sibling module's `save()` renames its sidecar into place, and a
+  concurrent reader's open fails with `AccessDeniedException` while that rename is in flight — so
+  the reader deleted a valid sibling's sidecar and took that module out of the merged output until
+  it recompiled. Failing to read a file is never evidence about its content: `load()` now returns
+  an `UNREADABLE` sentinel, which `readAll()` skips exactly as it already skips a future-version
+  sidecar, and only genuinely undecodable content is pruned. This is what
+  `ModuleSidecarAsyncTest` caught on the Windows CI runner after the save-side retry below was
+  already in place.
 - **A parallel reactor build on Windows could drop a whole module's guardrails.**
   `ModuleSidecar.save()` writes a temp file and renames it over the live sidecar; Windows refuses
   that rename while another process holds the target open, and `readAll()` in a sibling module's
