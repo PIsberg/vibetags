@@ -55,6 +55,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through a trailing-dot package, and the degraded-environment guards that keep a non-javac
   compiler from turning a warning into a failed build.
 
+- **`SignatureCaptureStressTest` runs in CI.** The `load-tests` job pins `-Dtest` to a named list,
+  so a new test there is invisible to CI by default. It asserts a direction rather than a duration
+  — a build with enforcement off must not allocate what only the enforcing mode reads — so unlike
+  the volume sweep's wall-clock it is safe on a shared runner.
+
 - **`SignatureCaptureStressTest` in `load-tests`.** The existing sweeps could not resolve the
   signature-capture change below, and that is a property of their fixture rather than of the
   change: `SyntheticClassGenerator` emits classes with one method each, so anything scaling with a
@@ -99,6 +104,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   both directions: the step passes on a clean tree and exits 1 on a deliberately edited `CLAUDE.md`.
 
 ### Changed
+- **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
+  The substantive ones are fixed rather than muted: `String.split(String)` at three call sites,
+  which silently drops trailing empty fields, so `-Avibetags.enforce=contract,` and a sidecar's
+  newline-joined list parsed correctly by accident rather than by decision (now an explicit `-1`
+  limit); four `catch (IOException ignored) {}` blocks in `ModuleSidecar`, each a deliberate
+  best-effort swallow that read identically to somebody forgetting, now saying which it is; a
+  redundant `continue`; and `LocalDate.now()`'s hidden default time zone in the `@AITemporary`
+  expiry check, now `ZoneId.systemDefault()` because the developer's own calendar day is the
+  clock that rule is about. Two lambdas held in constants became named methods.
+
+  Three checks are off, with the reason recorded in `vibetags/pom.xml`:
+  `StatementSwitchToExpressionSwitch` (58 hits, pure style, all in renderers and formatters),
+  `StringConcatToTextBlock` (the literals are generated file content, where an indented text
+  block's leading whitespace is a rendering bug waiting to happen) and `InlineMeSuggester`
+  (a caller-migration tool for published APIs; these are package-internal test seams). A warning
+  nobody is going to act on trains people to scroll past the ones that matter — which is the same
+  argument used for running NullAway at `ERROR`.
+
 - **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
   visible member set and sorting it is the most expensive thing the collector does per element, and
   the only reader is `-Avibetags.enforce` (#284), which is off by default. Every ordinary build was

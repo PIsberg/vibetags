@@ -178,8 +178,27 @@
                                      generateFiles() was agreed and added, so every class is
                                      checked. Do not reintroduce UnannotatedClasses — an exclusion
                                      is invisible in the build output, which makes it the one kind
-                                     of gap nobody notices growing. -->
-                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source</arg>
+                                     of gap nobody notices growing.
+
+                                     Three checks are OFF, and the reason is the same each time: a
+                                     warning nobody is going to act on trains people to scroll past
+                                     the ones that matter. The substantive findings Error Prone
+                                     raised here (StringSplitter's dropped trailing fields, four
+                                     swallowed IOExceptions, a redundant continue, LocalDate.now()'s
+                                     hidden time zone) were fixed rather than muted, so the build
+                                     now emits zero Error Prone warnings and the next one is visible.
+
+                                     StatementSwitchToExpressionSwitch (58 hits): a pure style
+                                     preference. Every one of them is a statement switch whose arms
+                                     return, in a renderer or formatter; rewriting all 58 is churn
+                                     across the output-generating layer with no behaviour to gain.
+                                     StringConcatToTextBlock: the literals it names are generated
+                                     file content, where explicit \n beats an indented text block
+                                     whose leading whitespace is a rendering bug waiting to happen.
+                                     InlineMeSuggester: @InlineMe is a caller-migration tool for
+                                     published libraries; the deprecated methods it names are
+                                     package-internal test seams. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:StatementSwitchToExpressionSwitch:OFF -Xep:StringConcatToTextBlock:OFF -Xep:InlineMeSuggester:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>

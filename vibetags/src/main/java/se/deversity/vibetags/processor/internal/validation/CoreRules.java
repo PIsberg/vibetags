@@ -22,6 +22,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -213,7 +214,10 @@ public final class CoreRules {
             return;
         }
         try {
-            if (LocalDate.now().isAfter(LocalDate.parse(expiresOn))) {
+            // The developer's own calendar day is the right clock here: "this workaround was
+            // supposed to be gone by now" is a statement about the person reading the warning, not
+            // about UTC. Stated explicitly rather than left to LocalDate.now()'s hidden default.
+            if (LocalDate.now(ZoneId.systemDefault()).isAfter(LocalDate.parse(expiresOn))) {
                 ctx.warn(e, "Temporary logic in " + e
                     + " has expired on " + expiresOn + ". Reason: " + temp.reason() + ". Clean up immediately.");
             }

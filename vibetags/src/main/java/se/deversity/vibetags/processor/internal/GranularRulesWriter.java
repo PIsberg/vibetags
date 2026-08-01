@@ -280,26 +280,32 @@ public final class GranularRulesWriter {
         }
     }
 
-    // YAML-frontmatter builders, keyed by the shape each platform uses.
-    private static final BiFunction<String, List<String>, String> FM_DESC_GLOBS_APPLY =
-        (desc, globs) -> "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
-    private static final BiFunction<String, List<String>, String> FM_NONE = (desc, globs) -> "";
+    // YAML-frontmatter builders, keyed by the shape each platform uses. Methods rather than lambdas
+    // in constants: the method reference reads the same at the use site and the body gets a name.
+    private static String fmDescGlobsApply(String desc, List<String> globs) {
+        return "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
+    }
+
+    /** No front matter at all — the platform reads the file by path, not by a globs declaration. */
+    private static String fmNone(String desc, List<String> globs) {
+        return "";
+    }
 
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
-        new GranularFormat("cursor_granular", ".mdc", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("trae_granular", ".md",
             (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("roo_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("windsurf_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("continue_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("tabnine_granular", ".md", FM_NONE, n -> "# AI Guidelines for " + n + "\n\n"),
-        new GranularFormat("amazonq_granular", ".md", FM_NONE, n -> "# Amazon Q Rules for " + n + "\n\n"),
-        new GranularFormat("ai_rules_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("pearai_granular", ".md", FM_DESC_GLOBS_APPLY, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("kiro_granular", ".md", FM_NONE, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
-        new GranularFormat("gemini_granular", ".md", FM_NONE, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
+        new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
+        new GranularFormat("ai_rules_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
+        new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", ".md",
             (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),

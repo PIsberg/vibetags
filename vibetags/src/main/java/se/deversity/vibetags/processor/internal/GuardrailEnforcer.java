@@ -77,7 +77,10 @@ public final class GuardrailEnforcer {
         if (option == null || option.isBlank()) {
             return selected;
         }
-        for (String raw : option.split(",")) {
+        // Explicit -1 limit: String.split(String) silently drops trailing empty fields, so
+        // "contract," and "contract" parse the same by accident rather than by decision. The empty
+        // entries are skipped below on purpose, which is the behaviour a generated -A argument needs.
+        for (String raw : option.split(",", -1)) {
             String family = raw.trim().toLowerCase(Locale.ROOT);
             if (family.isEmpty()) {
                 continue;
