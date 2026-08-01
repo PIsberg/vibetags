@@ -7,7 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
+  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
+  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
+  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
+  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
+  from that tag on JDK 21 (the version CI uses) and running the suite against it.
+
+### Added
+- **Two concurrency stress tests for the two components that corrupt output silently when they
+  race.** `GuardrailFileWriterAsyncTest` reproduces the parallel write phase's exact shape — one
+  file per worker over a shared `GuardrailFileWriter` and `WriteCache` — and asserts that
+  hand-authored content above and below the markers survives and that exactly one marker pair
+  remains; `ParallelFileWriteTest` already covered one real compile, but a single pass cannot
+  surface a race. `ModuleSidecarAsyncTest` runs concurrent `save()` and `readAll()` against one
+  reactor root and asserts both failure modes a parallel reactor could produce: a body that was
+  never saved (torn read), and a sibling's sidecar deleted as malformed because it was read
+  mid-write (wrongful prune). Both were confirmed to fail against deliberately broken versions of
+  the code they pin — marker handling disabled, and `save()` writing non-atomically to the live
+  target.
+
 ### Fixed
+- **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`
+  both for content that failed to parse and for a file it never managed to open, and `readAll()`
+  deletes on `null`. On Windows a sibling module's `save()` renames its sidecar into place, and a
+  concurrent reader's open fails with `AccessDeniedException` while that rename is in flight — so
+  the reader deleted a valid sibling's sidecar and took that module out of the merged output until
+  it recompiled. Failing to read a file is never evidence about its content: `load()` now returns
+  an `UNREADABLE` sentinel, which `readAll()` skips exactly as it already skips a future-version
+  sidecar, and only genuinely undecodable content is pruned. This is what
+  `ModuleSidecarAsyncTest` caught on the Windows CI runner after the save-side retry below was
+  already in place.
+- **A parallel reactor build on Windows could drop a whole module's guardrails.**
+  `ModuleSidecar.save()` writes a temp file and renames it over the live sidecar; Windows refuses
+  that rename while another process holds the target open, and `readAll()` in a sibling module's
+  compilation opens exactly that file. Under `mvn -T` or `gradle --parallel` the collision is
+  reachable, and it arrived as an `AccessDeniedException` that aborted the save — so the module's
+  entire contribution was missing from the merged output for that build, which is the failure the
+  sidecar exists to prevent. The rename now retries with a short backoff (10 attempts, ≈275 ms
+  worst case) before failing, since the reader's handle is open for microseconds. Found by the new
+  `ModuleSidecarAsyncTest`, which reproduces it in under a second on Windows; with the retry
+  removed it fails again.
 - **The release workflow reported a failed deploy as a successful one.** Each of the three deploy
   steps ran `if mvn clean deploy ... 2>&1 | tee "$log"; then echo "deployed."`, and `if` tests the
   exit status of the *pipeline* — which is tee's, and tee always succeeds. Maven's status was never

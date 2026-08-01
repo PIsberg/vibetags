@@ -241,11 +241,65 @@ public final class ModuleSidecar {
         }
 
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
+        moveIntoPlace(tmp, target, ATOMIC_REPLACE);
+    }
+
+    /** Attempts at renaming the temp file over the live sidecar before giving up. */
+    static final int MOVE_ATTEMPTS = 10;
+    /** Backoff step between move attempts; attempt N waits N × this. Worst case ≈ 275 ms. */
+    private static final long MOVE_BACKOFF_MS = 5L;
+
+    /**
+     * How the temp file is renamed over the live sidecar. Injectable so the retry path can be
+     * tested without manufacturing a real sharing violation, which only one OS produces.
+     */
+    @FunctionalInterface
+    interface FileMover {
+        void move(Path source, Path target) throws IOException;
+    }
+
+    /** The production rename: atomic where the filesystem supports it. */
+    static final FileMover ATOMIC_REPLACE = (source, target) -> {
         try {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (java.nio.file.AtomicMoveNotSupportedException crossDevice) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
+    };
+
+    /**
+     * Renames the freshly written temp file over {@code target}, retrying briefly before failing.
+     *
+     * <p>Windows refuses a rename onto a file that another process has open, and
+     * {@link #readAll(Path)} in a sibling module's compilation opens exactly this file. In a
+     * parallel reactor ({@code mvn -T}, {@code gradle --parallel}) that collision is reachable and
+     * arrives as {@code AccessDeniedException} — which would abort this module's save and drop its
+     * entire contribution from the merged output for that build, the failure the sidecar exists to
+     * prevent. A reader holds the handle for microseconds, so a bounded retry trades a lost module
+     * for a few milliseconds. {@code ModuleSidecarAsyncTest} reproduces the collision; without this
+     * retry it fails on Windows within a second.
+     */
+    static void moveIntoPlace(Path tmp, Path target, FileMover mover) throws IOException {
+        IOException last = null;
+        for (int attempt = 1; attempt <= MOVE_ATTEMPTS; attempt++) {
+            try {
+                mover.move(tmp, target);
+                return;
+            } catch (java.nio.file.FileSystemException e) {
+                last = e;
+                if (attempt == MOVE_ATTEMPTS) break;
+                try {
+                    Thread.sleep(MOVE_BACKOFF_MS * attempt);
+                } catch (InterruptedException interrupted) {
+                    // Stop retrying, but report the move failure rather than the interruption:
+                    // that is the one the caller has to act on.
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        tryDelete(tmp);
+        throw last;
     }
 
     private static void appendEncoded(StringBuilder sb, String key, String value) {
@@ -262,11 +316,24 @@ public final class ModuleSidecar {
     static final ModuleSidecar FUTURE_VERSION = new ModuleSidecar("_future_", "");
 
     /**
-     * Loads a sidecar from {@code path}. Returns {@code null} if the file is malformed or was
-     * written in an older format than {@link #FORMAT_VERSION} (stale — see the version history
-     * on {@code FORMAT_VERSION}; the caller prunes it), or {@link #FUTURE_VERSION} if its
-     * {@code # version} header is newer than {@link #FORMAT_VERSION} (owned by a newer sibling —
-     * skipped but never deleted).
+     * Sentinel returned by {@link #load(Path)} when the file could not be read at all. Also
+     * distinct from {@code null}: failing to read a file is never evidence that its content is
+     * garbage, and the caller deletes on {@code null}.
+     *
+     * <p>This is not hypothetical. Windows refuses to open a file that another process is renaming
+     * over, which is exactly what a sibling module's {@code save()} does in a parallel reactor. A
+     * reader that folded that {@code AccessDeniedException} into "malformed" deleted a valid
+     * sidecar and took that module out of the merged output until it recompiled.
+     */
+    static final ModuleSidecar UNREADABLE = new ModuleSidecar("_unreadable_", "");
+
+    /**
+     * Loads a sidecar from {@code path}. Returns {@code null} if the file's <em>content</em> is
+     * malformed or was written in an older format than {@link #FORMAT_VERSION} (stale — see the
+     * version history on {@code FORMAT_VERSION}; the caller prunes it), {@link #FUTURE_VERSION} if
+     * its {@code # version} header is newer than {@link #FORMAT_VERSION} (owned by a newer sibling
+     * — skipped but never deleted), or {@link #UNREADABLE} if the file could not be read at all
+     * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
         try {
@@ -336,7 +403,11 @@ public final class ModuleSidecar {
             s.granularStems.addAll(granularStems);
             s.elementIds.addAll(elementIds);
             return s;
-        } catch (IOException | IllegalArgumentException e) {
+        } catch (IOException unreadable) {
+            // Could not read it — that says nothing about the content. See UNREADABLE.
+            return UNREADABLE;
+        } catch (IllegalArgumentException malformed) {
+            // Read it fine, but a value is not decodable: genuinely corrupt, so the caller prunes.
             return null;
         }
     }
@@ -353,7 +424,7 @@ public final class ModuleSidecar {
             return null;
         }
         ModuleSidecar loaded = load(path);
-        return loaded == FUTURE_VERSION ? null : loaded;
+        return loaded == FUTURE_VERSION || loaded == UNREADABLE ? null : loaded;
     }
 
     private static String decode(String base64) {
@@ -389,6 +460,13 @@ public final class ModuleSidecar {
                   }))
                   .forEach(p -> {
                       ModuleSidecar s = load(p);
+                      if (s == UNREADABLE) {
+                          // Locked, vanished, or being renamed over by the module that owns it —
+                          // a sibling save in a parallel reactor does exactly that on Windows.
+                          // Skip this round (readAll already tolerates a missing sibling) and,
+                          // above all, do not delete a file we never managed to look at.
+                          return;
+                      }
                       if (s == null) {
                           tryDelete(p);
                           return;
