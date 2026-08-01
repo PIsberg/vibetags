@@ -188,7 +188,13 @@ public final class VibeTagsLogger {
 
             PatternLayoutEncoder encoder = new PatternLayoutEncoder();
             encoder.setContext(context);
-            encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %msg%n");
+            // %replace collapses CR/LF inside the formatted message: the log is an event
+            // stream read with grep, one event per line, and values interpolated into it come
+            // from outside (compiler options, module ids, paths read back out of sidecar and
+            // baseline files). A line break in one of those would split an event in two and
+            // let the tail masquerade as a separate event. Pinned by
+            // VibeTagsLoggerUnitTest#logMessageWithLineBreaks_staysOnOneLine.
+            encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %replace(%msg){'[\\r\\n]+', ' '}%n");
             encoder.start();
 
             FileAppender<ILoggingEvent> appender = new FileAppender<>();

@@ -321,6 +321,19 @@
                     <includeTests>false</includeTests>
                     <failOnError>true</failOnError>
                     <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
+                    <!-- Find Security Bugs: adds ~140 security detectors (injection, crypto,
+                         path traversal, XXE, deserialization) on top of the SpotBugs core set. -->
+                    <plugins>
+                        <plugin>
+                            <groupId>com.h3xstream.findsecbugs</groupId>
+                            <artifactId>findsecbugs-plugin</artifactId>
+                            <version>1.14.0</version>
+                        </plugin>
+                    </plugins>
+                    <!-- Teaches the taint analysis that Escape.xml/json/tomlMultiline sanitize.
+                         Without it every escaped interpolation is reported as an injection, and
+                         the detector stops being able to point at a genuinely unescaped one. -->
+                    <jvmArgs>-Dfindsecbugs.taint.customconfigfile=${project.basedir}/findsecbugs-taint-config.txt</jvmArgs>
                 </configuration>
                 <executions>
                     <execution>

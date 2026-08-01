@@ -7,6 +7,11 @@ package se.deversity.vibetags.processor.internal.content;
  *
  * <p>Markdown / plain-text platforms (e.g. {@code .cursorrules}) intentionally do <em>not</em> use
  * these — their content is free text and there is no structure to break.
+ *
+ * <p>These three methods are declared as taint sanitizers in
+ * {@code vibetags/findsecbugs-taint-config.txt}, which is what keeps Find Security Bugs reporting
+ * an <em>unescaped</em> interpolation instead of all of them. Renaming or moving one means editing
+ * that file in the same change — its entries are matched by fully qualified name and signature.
  */
 public final class Escape {
 

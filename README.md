@@ -16,6 +16,7 @@
 [![PMD](https://img.shields.io/badge/PMD-passing-brightgreen)](https://pmd.github.io/)
 [![Analyzed with codekoll](https://img.shields.io/badge/analyzed%20with-codekoll-brightgreen?logo=java&logoColor=white)](https://github.com/PIsberg/codekoll)
 [![SpotBugs](https://img.shields.io/badge/SpotBugs-passing-brightgreen)](https://spotbugs.github.io/)
+[![Find Security Bugs](https://img.shields.io/badge/Find%20Security%20Bugs-passing-brightgreen)](https://find-sec-bugs.github.io/)
 [![Error Prone](https://img.shields.io/badge/Error%20Prone-passing-brightgreen)](https://errorprone.info/)
 [![NullAway](https://img.shields.io/badge/NullAway-passing-brightgreen)](https://github.com/uber/NullAway)
 [![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen)](https://checkstyle.org/)
