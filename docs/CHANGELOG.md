@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The release workflow reported a failed deploy as a successful one.** Each of the three deploy
+  steps ran `if mvn clean deploy ... 2>&1 | tee "$log"; then echo "deployed."`, and `if` tests the
+  exit status of the *pipeline* — which is tee's, and tee always succeeds. Maven's status was never
+  read, so neither the `already exists` branch nor the failure branch could be reached by anything.
+  On 2026-08-01 a transient `Connection timed out` to `central.sonatype.com` killed the annotations
+  deploy after a nine-minute upload; the run went green and 1.0.0-RC8 published `vibetags-processor`
+  and `vibetags-bom` but not `vibetags-annotations`, so every consumer pinning that version failed to
+  resolve. The three copies are now one `.github/scripts/deploy-to-central.sh`, which reads Maven's
+  status via `PIPESTATUS`, still tolerates an already-published component, and retries transport
+  errors with backoff instead of leaving a release half-published.
+  `.github/scripts/deploy-to-central.test.sh` covers all five outcomes against a stub `mvn` and runs
+  in CI; against the old inline code it fails three of them.
+
 ## [1.0.0-RC8] - 2026-08-01
 
 ### Added
