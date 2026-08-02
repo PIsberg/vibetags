@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-RC9] - 2026-08-02
+
 ### Added
 - **NullAway joins the static-analysis gate, at ERROR.** The codebase already annotated with
   JSpecify `@Nullable`; nothing checked it, so the annotations documented an intention rather than
@@ -130,6 +132,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mode (`-Dvibetags.selfcheck=true`) on the JDK 21 leg, so a stale committed guardrail file is a
   red build rather than something the next person to run the profile by hand discovers. Verified in
   both directions: the step passes on a clean tree and exits 1 on a deliberately edited `CLAUDE.md`.
+- **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`
+  both for content that failed to parse and for a file it never managed to open, and `readAll()`
+  deletes on `null`. On Windows a sibling module's `save()` renames its sidecar into place, and a
+  concurrent reader's open fails with `AccessDeniedException` while that rename is in flight — so
+  the reader deleted a valid sibling's sidecar and took that module out of the merged output until
+  it recompiled. Failing to read a file is never evidence about its content: `load()` now returns
+  an `UNREADABLE` sentinel, which `readAll()` skips exactly as it already skips a future-version
+  sidecar, and only genuinely undecodable content is pruned. This is what
+  `ModuleSidecarAsyncTest` caught on the Windows CI runner after the save-side retry below was
+  already in place.
+- **A parallel reactor build on Windows could drop a whole module's guardrails.**
+  `ModuleSidecar.save()` writes a temp file and renames it over the live sidecar; Windows refuses
+  that rename while another process holds the target open, and `readAll()` in a sibling module's
+  compilation opens exactly that file. Under `mvn -T` or `gradle --parallel` the collision is
+  reachable, and it arrived as an `AccessDeniedException` that aborted the save — so the module's
+  entire contribution was missing from the merged output for that build, which is the failure the
+  sidecar exists to prevent. The rename now retries with a short backoff (10 attempts, ≈275 ms
+  worst case) before failing, since the reader's handle is open for microseconds. Found by the new
+  `ModuleSidecarAsyncTest`, which reproduces it in under a second on Windows; with the retry
+  removed it fails again.
+- **The release workflow reported a failed deploy as a successful one.** Each of the three deploy
+  steps ran `if mvn clean deploy ... 2>&1 | tee "$log"; then echo "deployed."`, and `if` tests the
+  exit status of the *pipeline* — which is tee's, and tee always succeeds. Maven's status was never
+  read, so neither the `already exists` branch nor the failure branch could be reached by anything.
+  On 2026-08-01 a transient `Connection timed out` to `central.sonatype.com` killed the annotations
+  deploy after a nine-minute upload; the run went green and 1.0.0-RC8 published `vibetags-processor`
+  and `vibetags-bom` but not `vibetags-annotations`, so every consumer pinning that version failed to
+  resolve. The three copies are now one `.github/scripts/deploy-to-central.sh`, which reads Maven's
+  status via `PIPESTATUS`, still tolerates an already-published component, and retries transport
+  errors with backoff instead of leaving a release half-published.
+  `.github/scripts/deploy-to-central.test.sh` covers all five outcomes against a stub `mvn` and runs
+  in CI; against the old inline code it fails three of them.
 
 ### Changed
 - **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
@@ -181,40 +215,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
   `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
   from that tag on JDK 21 (the version CI uses) and running the suite against it.
-
-### Fixed
-- **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`
-  both for content that failed to parse and for a file it never managed to open, and `readAll()`
-  deletes on `null`. On Windows a sibling module's `save()` renames its sidecar into place, and a
-  concurrent reader's open fails with `AccessDeniedException` while that rename is in flight — so
-  the reader deleted a valid sibling's sidecar and took that module out of the merged output until
-  it recompiled. Failing to read a file is never evidence about its content: `load()` now returns
-  an `UNREADABLE` sentinel, which `readAll()` skips exactly as it already skips a future-version
-  sidecar, and only genuinely undecodable content is pruned. This is what
-  `ModuleSidecarAsyncTest` caught on the Windows CI runner after the save-side retry below was
-  already in place.
-- **A parallel reactor build on Windows could drop a whole module's guardrails.**
-  `ModuleSidecar.save()` writes a temp file and renames it over the live sidecar; Windows refuses
-  that rename while another process holds the target open, and `readAll()` in a sibling module's
-  compilation opens exactly that file. Under `mvn -T` or `gradle --parallel` the collision is
-  reachable, and it arrived as an `AccessDeniedException` that aborted the save — so the module's
-  entire contribution was missing from the merged output for that build, which is the failure the
-  sidecar exists to prevent. The rename now retries with a short backoff (10 attempts, ≈275 ms
-  worst case) before failing, since the reader's handle is open for microseconds. Found by the new
-  `ModuleSidecarAsyncTest`, which reproduces it in under a second on Windows; with the retry
-  removed it fails again.
-- **The release workflow reported a failed deploy as a successful one.** Each of the three deploy
-  steps ran `if mvn clean deploy ... 2>&1 | tee "$log"; then echo "deployed."`, and `if` tests the
-  exit status of the *pipeline* — which is tee's, and tee always succeeds. Maven's status was never
-  read, so neither the `already exists` branch nor the failure branch could be reached by anything.
-  On 2026-08-01 a transient `Connection timed out` to `central.sonatype.com` killed the annotations
-  deploy after a nine-minute upload; the run went green and 1.0.0-RC8 published `vibetags-processor`
-  and `vibetags-bom` but not `vibetags-annotations`, so every consumer pinning that version failed to
-  resolve. The three copies are now one `.github/scripts/deploy-to-central.sh`, which reads Maven's
-  status via `PIPESTATUS`, still tolerates an already-published component, and retries transport
-  errors with backoff instead of leaving a release half-published.
-  `.github/scripts/deploy-to-central.test.sh` covers all five outcomes against a stub `mvn` and runs
-  in CI; against the old inline code it fails three of them.
 
 ## [1.0.0-RC8] - 2026-08-01
 
@@ -1417,7 +1417,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC9...HEAD
+[1.0.0-RC9]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...v1.0.0-RC9
 [1.0.0-RC8]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...v1.0.0-RC8
 [1.0.0-RC7]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC6...v1.0.0-RC7
 [1.0.0-RC6]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...v1.0.0-RC6
