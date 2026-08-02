@@ -4,6 +4,7 @@ import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating Roo Code's {@code .roomodes} custom-mode file (YAML).
@@ -37,5 +38,16 @@ public final class RooModesRenderer implements PlatformRenderer {
             sb.append(GuardrailInstructionBlock.indent(block.strip(), 6));
         }
         return sb.toString();
+    }
+
+    /**
+     * A reactor gets one VibeTags Architect mode carrying every module's guardrails, not one mode
+     * per module: Roo picks a mode by slug, and four modes sharing {@code vibetags-architect} would
+     * be four ways to spell the same ambiguity.
+     */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.appended("    customInstructions: |-", 6,
+            "      No VibeTags guardrails are currently declared.");
     }
 }

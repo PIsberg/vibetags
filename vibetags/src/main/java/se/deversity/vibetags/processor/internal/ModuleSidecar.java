@@ -3,6 +3,8 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -692,6 +694,23 @@ public final class ModuleSidecar {
         // returned verbatim (no sub-markers), multiple are wrapped below. When at least one module
         // was linked, always wrap so every pointer keeps its owning-module sub-marker context.
         if (!anyPointer && contributions.size() < MULTI_MODULE_THRESHOLD) return contributions.get(0).getValue();
+
+        // A YAML platform has one rules:/reviews:/customModes: key, so stacking whole documents
+        // below produces a file whose top-level key repeats once per module — rejected by a strict
+        // parser, silently truncated to the last module by a lenient one. Those platforms declare
+        // where their scaffold ends and get it written once, with every module's entries under it.
+        // A null shape means the platform concatenates fine; a null merge means the declared anchor
+        // was not in the rendering (a renderer changed without its shape), and stacking is then
+        // still the better of the two wrong answers.
+        YamlMergeShape shape = PlatformRendererRegistry.mergeShapeFor(serviceKey);
+        if (shape != null) {
+            String document = shape.merge(contributions,
+                id -> htmlMarkers ? String.format(SUB_MARKER_MD_FORMAT, id)
+                                  : String.format(SUB_MARKER_HASH_FORMAT, id),
+                id -> htmlMarkers ? String.format(SUB_MARKER_MD_END_FORMAT, id)
+                                  : String.format(SUB_MARKER_HASH_END_FORMAT, id));
+            if (document != null) return document.strip();
+        }
 
         StringBuilder merged = new StringBuilder();
         for (Map.Entry<String, String> entry : contributions) {

@@ -23,6 +23,8 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
 | `MultiModuleAggregationTest` | Sidecar aggregation and sub-marker output across multiple modules |
 | `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
+| `MultiModuleYamlValidityTest` | The six generated YAML documents survive a multi-module merge as *one* document: parsed with duplicate keys forbidden, every module's guardrails still reachable, empty modules contributing nothing |
+| `YamlMergeShapeContractTest` | Each `PlatformRenderer.mergeShape()` still describes what its renderer writes, and no generated `.yaml` ships without one |
 | `SourceSetIsolationEndToEndTest` | `compile` and `test-compile` are separate rounds over the same module: neither erases the other's guardrails or rule files, two source sets still render as one region, and a module's own aggregate merges across them (#330) |
 | `WrappedProcessingEnvironmentTest` | Module identity survives a wrapped `ProcessingEnvironment` (Gradle's incremental decorator, where the javac Tree API is unavailable) instead of collapsing onto one content hash (#331) |
 | `DestructiveRewriteWarningTest` | The diagnostics that make a silently-shrinking guardrail file visible: a wholesale element replacement, and a sweep that removes more than it writes — and, equally important, silence on ordinary work |

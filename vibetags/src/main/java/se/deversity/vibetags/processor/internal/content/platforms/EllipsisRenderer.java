@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating Ellipsis's {@code ellipsis.yaml} review configuration.
@@ -37,5 +38,11 @@ public final class EllipsisRenderer implements PlatformRenderer {
             }
         }
         return sb.toString();
+    }
+
+    /** Every module's entries go under the one {@code pr_review.rules:} sequence written above. */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.appended("  rules:", 4, "    []");
     }
 }

@@ -123,6 +123,17 @@
             <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
+        <!-- Test-only. The processor writes six YAML documents but must not gain a YAML
+             dependency: it runs on the consumer's annotation-processor path, where every
+             extra jar is one more thing to collide with. The tests need a real parser
+             because "the file looks right" is not the property that matters - "the tool
+             reading it sees every module's guardrails" is, and only a parser shows that. -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>2.5</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

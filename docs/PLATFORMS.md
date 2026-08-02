@@ -22,6 +22,13 @@ the rest of the parsed set is described in
 [ARCHITECTURE.md](ARCHITECTURE.md#parsed-diagrams-code-karta). Adding a platform means rerunning
 that script — see the `add-platform` skill for the full checklist.
 
+If the new output is a **YAML document**, the renderer must also override
+`PlatformRenderer.mergeShape()`. Without it the multi-module merge stacks each module's whole
+rendering, and the document ends up with its top-level key repeated once per module — invalid to a
+strict parser, silently truncated to the last module by a lenient one. `YamlMergeShapeContractTest`
+fails the build for a generated `.yaml` with no declaration, so this is hard to forget; see
+[MULTI-MODULE.md](MULTI-MODULE.md#yaml-outputs-merge-differently) for what the declaration means.
+
 ### Output files
 
 | File | Platform | Format |

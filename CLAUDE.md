@@ -74,6 +74,10 @@ kept here because breaking one of them fails silently:
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
   annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
   `add-platform` / `add-annotation` skills rather than improvising.
+- **A renderer that emits a YAML document must declare `PlatformRenderer.mergeShape()`.** The
+  multi-module merge otherwise stacks whole renderings and repeats the document's top-level key once
+  per module — invalid to a strict parser, silently truncated to the last module by a lenient one.
+  `YamlMergeShapeContractTest` fails a missing or drifted declaration.
 
 This repo dogfoods the index: the block at the bottom of this file is a scoped-rules index, and the
 per-element detail lives in `.claude/rules/`, loaded on demand by glob.

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Multi-module reactors wrote broken YAML, and lost most of their guardrails doing it.** The
+  sidecar merge stacked each module's *whole* rendered document between `VIBETAGS-MODULE`
+  sub-markers. That is right for Markdown; for the six generated YAML documents it repeated the
+  top-level key once per module. A strict parser rejects such a file outright. A lenient one
+  (SnakeYAML's default, PyYAML) keeps the last occurrence and discards the rest — so the AI reviewer
+  reading it saw one module's guardrails and no error anywhere. Measured on the four-module
+  `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml` exposed 1 module of 4,
+  `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
+
+  A YAML renderer now declares a `PlatformRenderer.mergeShape()`: where its shared scaffold ends,
+  which column its entries sit at, and what it emits when it has nothing to say. The merge writes
+  the scaffold once and puts every module's entries under it, so a reactor produces the same
+  document a single-module build does with more entries in it. Provenance survives — the
+  `VIBETAGS-MODULE` sub-markers are still there, indented to the entries' column, because a
+  dedented `#` line terminates a block scalar and would break the very files this fixes.
+  `.plandex.yaml` merges bucket by bucket, its `locked:` / `audit:` / `privacy:` keys being
+  conditional and otherwise free to repeat in turn.
+
+  The declaration is a twin of the renderer's output, so the build checks it:
+  `YamlMergeShapeContractTest` renders each platform and fails if the declared anchor, indent or
+  empty body no longer matches, or if a generated `.yaml` ships with no declaration at all.
+  `MultiModuleYamlValidityTest` parses the merged output for real, with duplicate keys forbidden,
+  and asserts both modules' elements survive the parse — the assertion the previous string-matching
+  tests could not make, and the reason the defect lived this long. SnakeYAML is a **test-scope**
+  dependency only; the processor still ships with no YAML library on the consumer's
+  annotation-processor path.
+
 ## [1.0.0-RC9] - 2026-08-02
 
 ### Added

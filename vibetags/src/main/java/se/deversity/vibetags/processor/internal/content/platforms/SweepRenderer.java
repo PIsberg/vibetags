@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating Sweep config.
@@ -43,5 +44,11 @@ public final class SweepRenderer implements PlatformRenderer {
             sb.append("  []\n");
         }
         return sb.toString();
+    }
+
+    /** Every module's entries go under the one {@code rules:} sequence written above. */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.appended("rules:", 2, "  []");
     }
 }

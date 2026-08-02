@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.internal.content.platforms.*;
 
 /**
@@ -46,6 +47,34 @@ public final class PlatformRendererRegistry {
      * @return the associated PlatformRenderer
      */
     public static PlatformRenderer getRenderer(Platform platform) {
+        PlatformRenderer renderer = findRenderer(platform);
+        if (renderer == null) {
+            throw new IllegalArgumentException("Unsupported platform: " + platform);
+        }
+        return renderer;
+    }
+
+    /**
+     * The merge shape declared by the renderer behind {@code serviceKey}, or {@code null} when the
+     * service has no renderer or its output is plain concatenable text.
+     *
+     * <p>Takes a service key rather than a {@link Platform} because the multi-module merge only ever
+     * knows the key, and not every key has a renderer at all — {@code root_index} is an opt-in file
+     * and nothing else, so this must answer "no shape" rather than throw.
+     *
+     * @param serviceKey the service key, e.g. {@code "sweep"}
+     * @return the declared shape, or {@code null}
+     */
+    public static @Nullable YamlMergeShape mergeShapeFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return null;
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? null : renderer.mergeShape();
+    }
+
+    private static @Nullable PlatformRenderer findRenderer(Platform platform) {
         switch (platform) {
             case CURSOR:
                 return CURSOR_RENDERER;
@@ -137,7 +166,7 @@ public final class PlatformRendererRegistry {
             case COPILOT_GRANULAR:
                 return GRANULAR_RENDERER;
             default:
-                throw new IllegalArgumentException("Unsupported platform: " + platform);
+                return null;
         }
     }
 

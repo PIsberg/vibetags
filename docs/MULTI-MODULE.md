@@ -14,6 +14,26 @@ Every module contributes to the shared marker files via per-module sidecars
 reads all sibling sidecars, and merges them into the shared files with `VIBETAGS-MODULE: <id>`
 sub-markers.
 
+### YAML outputs merge differently
+
+Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the six
+generated YAML documents (`sweep.yaml`, `.plandex.yaml`, `.coderabbit.yaml`, `ellipsis.yaml`,
+`.roomodes`, `.interpreter/profiles/vibetags.yaml`): a YAML document has one `rules:`, one
+`reviews:`, one `customModes:`, and stacking N modules repeated the key N times. A strict parser
+rejects that; a lenient one keeps the last occurrence, so every module but one lost its guardrails
+silently. Measured on `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
+exposed 1 module of 4, `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
+
+Those platforms therefore declare a `PlatformRenderer.mergeShape()` — the line their shared scaffold
+ends on, the column their entries sit at, and what they emit when they have nothing to say. The
+merge writes the scaffold once and puts every module's entries under it, still wrapped in
+`VIBETAGS-MODULE` sub-markers (indented to the entries' column, because a dedented `#` line would
+terminate a block scalar). `.plandex.yaml` merges bucket by bucket instead, since its `locked:` /
+`audit:` / `privacy:` keys are conditional and would otherwise repeat in turn.
+
+`YamlMergeShapeContractTest` renders each platform and fails if a declaration no longer matches what
+its renderer writes, or if a new YAML platform ships without one.
+
 Module identity comes from `ModuleRootResolver` — it walks up from the compiled sources to the
 nearest `pom.xml`/`build.gradle(.kts)` — **not** from the JVM working directory, which is the reactor
 root for every module of an in-process Maven/Gradle build (issue #278: last-writer-wins). Sidecars

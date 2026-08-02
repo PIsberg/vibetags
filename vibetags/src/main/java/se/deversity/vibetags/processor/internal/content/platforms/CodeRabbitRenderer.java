@@ -4,6 +4,7 @@ import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating CodeRabbit's {@code .coderabbit.yaml} review configuration.
@@ -32,5 +33,17 @@ public final class CodeRabbitRenderer implements PlatformRenderer {
             sb.append(GuardrailInstructionBlock.indent(block.strip(), 8));
         }
         return sb.toString();
+    }
+
+    /**
+     * Every module's guardrails go into the one {@code instructions:} block scalar written above,
+     * rather than each module adding its own {@code path_instructions} entry for the same glob.
+     * Sub-markers land inside the scalar and so read as provenance lines in the instruction text —
+     * which is why they must stay indented to the scalar's column.
+     */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.appended("      instructions: |", 8,
+            "        No VibeTags guardrails are currently declared.");
     }
 }

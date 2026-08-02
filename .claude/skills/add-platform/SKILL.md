@@ -61,11 +61,20 @@ will re-locate every dispatch point this skill lists.
      `IgnoreFileRenderer.getPlatformSpecificName()` and route the Platform enum constant to
      `IGNORE_FILE_RENDERER` in the registry (Step 4).
    - *Delegating*: wrap and forward to the existing renderer's `render()` (`FirebaseRenderer`).
+   - **YAML output** — also override `mergeShape()`. A YAML document has one of each top-level key,
+     and the multi-module merge stacks whole renderings unless told otherwise, so without this the
+     file gets its `rules:` / `reviews:` / `customModes:` repeated once per module: invalid to a
+     strict parser, silently truncated to the last module by a lenient one. Declare the last line of
+     your shared scaffold, the column your entries sit at, and what you emit when there is nothing
+     to say — `SweepRenderer` (sequence), `CodeRabbitRenderer` (block scalar) and `PlandexRenderer`
+     (conditional buckets → `YamlMergeShape.keyed`) are the three worked examples.
+     `YamlMergeShapeContractTest` fails the build if you skip it or if the declaration drifts from
+     what the renderer writes.
 
 4. **`vibetags/.../internal/content/PlatformRendererRegistry.java`** — declare
    `private static final XRenderer X_RENDERER = new XRenderer();` and add `case X:` (multiple
    `case`s can fall through to one renderer, e.g. `CODEX`/`CODEX_CONFIG`/`CODEX_RULES`) in
-   `getRenderer()`. Granular platforms map to the existing `GRANULAR_RENDERER`.
+   `findRenderer()`. Granular platforms map to the existing `GRANULAR_RENDERER`.
 
 5. If your renderer walks per-annotation buckets, every `AnnotationFormatter` under
    `internal/content/annotations/*Formatter.java` needs a `case YOUR_PLATFORM:` in its

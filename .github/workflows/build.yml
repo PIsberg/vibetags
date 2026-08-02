@@ -146,6 +146,59 @@ jobs:
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
+      - name: Verify Reactor YAML Is Readable By The Tools That Consume It
+        run: |
+          cd example-multimodule
+          # "The file exists and says VIBETAGS" is what the check above proves, and it is not
+          # enough: the merge once stacked each module's whole document, so these files carried
+          # their top-level key once per module. Strict parsers rejected them and lenient ones kept
+          # only the last module, silently. Parse them here with duplicate keys forbidden, and
+          # assert an element only one module declares is still reachable after the parse.
+          python3 - <<'PY'
+          import sys, yaml
+
+          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
+                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          # Declared in exactly one module each, so their presence proves the merge kept them all.
+          WITNESSES = {
+              "cli": "com.example.multimodule.cli.MultiModuleCli",
+              "core": "com.example.multimodule.core.IrNode",
+              "showcase": "com.example.security.SecurityConfig",
+          }
+
+          class Strict(yaml.SafeLoader):
+              pass
+
+          def no_duplicates(loader, node, deep=False):
+              seen = set()
+              for key_node, _ in node.value:
+                  key = loader.construct_object(key_node, deep=deep)
+                  if key in seen:
+                      raise yaml.constructor.ConstructorError(
+                          None, None, f"duplicate top-level key {key!r}", key_node.start_mark)
+                  seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+          Strict.construct_mapping = no_duplicates
+
+          failed = False
+          for path in FILES:
+              text = open(path, encoding="utf-8").read()
+              try:
+                  parsed = str(yaml.load(text, Loader=Strict))
+              except Exception as e:
+                  print(f"::error file={path}::not a valid YAML document: {e}")
+                  failed = True
+                  continue
+              missing = [m for m, w in WITNESSES.items() if w not in parsed]
+              if missing:
+                  print(f"::error file={path}::merged away the guardrails of module(s): {missing}")
+                  failed = True
+              else:
+                  print(f"{path}: parses strictly, all {len(WITNESSES)} modules survive")
+          sys.exit(1 if failed else 0)
+          PY
+
 
       - name: Verify Per-Module (nested) Output
         run: |
