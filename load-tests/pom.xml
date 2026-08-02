@@ -4,8 +4,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>se.deversity.vibetags</groupId>
+    <!-- Inherits every plugin and test-dependency version from the parent. Before it did,
+         this pom sat on maven-compiler-plugin 3.13.0 against everyone else's 3.15.0,
+         surefire 3.2.5 against 3.5.6, and declared junit.version=5.10.2 under the same
+         property name vibetags used for 6.1.2. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
     <artifactId>vibetags-load-tests</artifactId>
+    <!-- Never released; deliberately not ${revision}, because this harness is version-agnostic
+         and regularly built against an older processor to compare releases. -->
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -31,12 +43,11 @@
     </description>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.10.2</junit.version>
-        <jmh.version>1.37</jmh.version>
-        <processor.version>1.0.0-RC9</processor.version>
+        <!-- The processor under test. The only version this pom owns, and it owns it on purpose:
+             comparing releases means pointing the harness at an old one. CI overrides it with the
+             version the run just built, so the regression gates test the branch rather than
+             whatever this happens to say. -->
+        <processor.version>${revision}</processor.version>
         <stress.max.classes>10000</stress.max.classes>
         <load.test.threads>4</load.test.threads>
     </properties>
@@ -49,16 +60,14 @@
             <version>${processor.version}</version>
         </dependency>
 
-        <!-- JMH – microbenchmark framework -->
+        <!-- JMH – microbenchmark framework. Version from the parent (jmh.version). -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>${jmh.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -66,7 +75,6 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -77,7 +85,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
                 <configuration>
                     <source>21</source>
                     <target>21</target>
@@ -96,7 +103,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
                 <configuration>
                     <!-- Allow controlling concurrency depth and sweep ceiling via system properties -->
                     <systemPropertyVariables>
@@ -111,7 +117,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -143,7 +148,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.2.0</version>
                 <configuration>
                     <mainClass>org.openjdk.jmh.Main</mainClass>
                 </configuration>

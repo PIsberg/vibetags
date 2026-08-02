@@ -15,7 +15,19 @@ Independent Maven (and where noted, Gradle) subprojects:
 - `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly (intentional — cross-version comparison is the wrong workload for a BOM).
 - `action/locked-files/` — GitHub Action consuming `.vibetags-locks`.
 
-Build order matters: `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example` (or `load-tests`). CI installs them in this order; do the same locally.
+- `vibetags-parent/` — pom-only. **Every version in the repository is declared here and nowhere
+  else**: third-party dependencies, plugins, and `<revision>`, which is the VibeTags release
+  version. Not published: `flatten-maven-plugin` resolves it away before deploy, so the POMs on
+  Maven Central are self-contained and consumers gain nothing new to resolve. Subprojects reference
+  it by `<relativePath>`, so each still builds straight from a checkout with no install step.
+
+Build order matters: `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example` (or `load-tests`). CI installs them in this order; do the same locally. The parent needs no install of its own.
+
+**Never write a version literal into a managed pom.** `vibetags-annotations`, `vibetags`,
+`vibetags-bom` and `load-tests` inherit every version; a literal there is one the next release will
+miss. The Gradle builds and the standalone example poms cannot inherit, so they hold literals —
+`BuildVersionParityTest` fails the build when any of them disagrees with the parent. To bump:
+`scripts/set-version.sh <version>`, then that test.
 
 ## Build Commands
 

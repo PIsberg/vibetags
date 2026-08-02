@@ -1,6 +1,5 @@
 #!/bin/sh
-# Bumps the VibeTags core library version consistently across every place it is
-# hardcoded, since there is deliberately no parent POM tying the modules together.
+# Sets the VibeTags release version.
 #
 # Usage:
 #   scripts/set-version.sh <new-version>
@@ -8,24 +7,28 @@
 # Example:
 #   scripts/set-version.sh 1.0.0
 #
-# Covers (5 files, ~16 occurrences):
-#   vibetags-annotations/pom.xml       - <version>, plus Maven/Gradle install snippets in <description>
-#   vibetags-annotations/build.gradle  - top-level version, publication version
-#   vibetags/pom.xml                   - <version>, plus the <dependency> on vibetags-annotations
-#   vibetags/build.gradle              - top-level version, publication version, the
-#                                         api 'vibetags-annotations:...' dependency line
-#   vibetags-bom/pom.xml               - <version>, <vibetags.version> (the BOM's managed
-#                                         version property), plus install snippets in <description>
+# The version lives in ONE place: <revision> in vibetags-parent/pom.xml. Every pom that
+# inherits from the parent — vibetags-annotations, vibetags, vibetags-bom, load-tests —
+# takes its own version, its sibling dependencies and its BOM entries from it, so this
+# script does not touch them at all.
 #
-# Deliberately NOT touched (tracked separately, see docs/RELEASING.md / CLAUDE.md):
-#   example/pom.xml, example/build.gradle, tools/demo/pom.xml - track a released BOM
-#     version via vibetags.bom.version, updated independently once a release exists.
-#   load-tests/pom.xml - pins <processor.version> intentionally for cross-version
-#     benchmark comparisons; must not be force-bumped by this script.
+# What it still has to rewrite by hand, and why:
 #
-# Idempotent: the current version is read fresh from vibetags-bom/pom.xml on every
-# run, so re-running with the same target version is a no-op, and running again
-# later with a different target version picks up correctly from whatever is on disk.
+#   vibetags-annotations/build.gradle  Gradle cannot inherit from a Maven POM.
+#   vibetags/build.gradle              Same. Both publish under this version.
+#   vibetags-annotations/pom.xml       Prose only: the <description> shows consumers a
+#   vibetags-bom/pom.xml               copy-pasteable snippet with a literal version in it.
+#   example/pom.xml                    Standalone on purpose, so a user can lift them into
+#   example/build.gradle               their own project. Their vibetags.bom.version is a
+#   example-multimodule/pom.xml        literal, and CI builds them against the artifacts
+#   example-multimodule-indexed/pom.xml  this repo just installed, so they track the
+#   tools/demo/pom.xml                 current version rather than the last released one.
+#
+# This list is not maintained by discipline: BuildVersionParityTest fails the build if any
+# of these disagrees with <revision>, and it is what caught the omissions this script used
+# to leave behind.
+#
+# Idempotent: the current version is read fresh from the parent on every run.
 set -eu
 
 NEW_VERSION="${1:-}"
@@ -37,18 +40,15 @@ fi
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ROOT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 
-BOM_POM="$ROOT_DIR/vibetags-bom/pom.xml"
-if [ ! -f "$BOM_POM" ]; then
-    echo "error: $BOM_POM not found" >&2
+PARENT_POM="$ROOT_DIR/vibetags-parent/pom.xml"
+if [ ! -f "$PARENT_POM" ]; then
+    echo "error: $PARENT_POM not found" >&2
     exit 1
 fi
 
-# vibetags-bom/pom.xml's <vibetags.version> property is treated as the single
-# source of truth for "what version are we currently on".
-OLD_VERSION=$(sed -n 's:.*<vibetags\.version>\(.*\)</vibetags\.version>.*:\1:p' "$BOM_POM" | head -n1)
-
+OLD_VERSION=$(sed -n 's:.*<revision>\(.*\)</revision>.*:\1:p' "$PARENT_POM" | head -n1)
 if [ -z "$OLD_VERSION" ]; then
-    echo "error: could not determine current version from $BOM_POM" >&2
+    echo "error: could not read <revision> from $PARENT_POM" >&2
     exit 1
 fi
 
@@ -59,15 +59,13 @@ fi
 
 echo "Bumping VibeTags version: $OLD_VERSION -> $NEW_VERSION"
 
-# Escape regex metacharacters in the old version (dots, dashes, etc.) so it is
-# matched literally rather than as a sed pattern.
+# Escape regex metacharacters in the old version so it is matched literally.
 escape_sed() {
     printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g'
 }
 OLD_ESCAPED=$(escape_sed "$OLD_VERSION")
 
-# In-place edit that works with both GNU sed (Git Bash/Linux) and BSD sed (macOS):
-# always pass a backup suffix, then remove the backup file.
+# In-place edit that works with both GNU sed (Git Bash/Linux) and BSD sed (macOS).
 replace_in_file() {
     file="$1"
     if [ ! -f "$file" ]; then
@@ -79,16 +77,24 @@ replace_in_file() {
     echo "  updated ${file#"$ROOT_DIR"/}"
 }
 
+# The one authoritative edit.
+replace_in_file "$PARENT_POM"
+
+# Everything that cannot inherit it.
 for rel in \
-    vibetags-annotations/pom.xml \
     vibetags-annotations/build.gradle \
-    vibetags/pom.xml \
     vibetags/build.gradle \
+    vibetags-annotations/pom.xml \
     vibetags-bom/pom.xml \
+    example/pom.xml \
+    example/build.gradle \
+    example-multimodule/pom.xml \
+    example-multimodule-indexed/pom.xml \
+    tools/demo/pom.xml \
 ; do
     replace_in_file "$ROOT_DIR/$rel"
 done
 
 echo "Done."
-echo "Review the diff, then rebuild in order: vibetags-annotations -> vibetags -> vibetags-bom."
-echo "Remember: example/, tools/demo/, and load-tests/ track versions independently (see docs/RELEASING.md)."
+echo "Verify with:  cd vibetags && mvn test -Dtest=BuildVersionParityTest"
+echo "Then rebuild in order: vibetags-annotations -> vibetags -> vibetags-bom."
