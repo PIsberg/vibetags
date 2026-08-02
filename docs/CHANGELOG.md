@@ -38,6 +38,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   opted in, and the service count reached 50 in RC9, so some increase is the cost of the platforms
   added since. Whether it is *only* that has not been established and is not claimed here.
 
+- **The load-test regression gate was gating Maven Central, and would have passed either way.**
+  CI's `Load Tests` job runs `SignatureCaptureStressTest`, described in its own Javadoc as the guard
+  that goes red if signature capture becomes unconditional again. It ran against whatever
+  `load-tests/pom.xml` pinned `<processor.version>` to — `0.9.5`, two releases behind — so the gate
+  was measuring an artifact downloaded from Maven Central rather than the code in the pull request.
+
+  Pointing it at the right code was only half the problem. The assertion was `off < on`: enforcement
+  off must allocate less than enforcement on. Run against 0.9.5, where signature capture *is*
+  unconditional and there is nothing to save, it reports `saved=216KB (0.0% of processor overhead)`
+  out of 556 MB — and passes, because two noisy measurements of identical work land on either side
+  of each other about half the time. A coin flip guarding a 36 MB optimization.
+
+  The gate now asserts the size of the saving, not its sign: enforcement-off must save at least
+  3.0 % of the processor's own allocation overhead. Measured on this fixture, the optimization
+  delivers 6.9 % (36 MB) and its absence delivers 0.0–0.1 %, so the threshold sits between them with
+  room for run-to-run variance on either side. Verified by running it both ways: red on 0.9.5 with
+  "got 0.1 %", green on RC9 with 6.9 %.
+
+  CI now resolves the version from `vibetags/pom.xml` after installing it, so the job tests what the
+  run built regardless of what the pom pins, and fails loudly if that resolution comes back empty
+  instead of falling back to the pin.
+
   Tooling fixed along the way: `tools/plot-results.py` matched version directories with
   `^\d+\.\d+\.\d+$`, so every `1.0.0-RCn` baseline was captured, committed, and then silently left
   out of every chart — the folder was there, the line was not, and nothing said so. RC directories
