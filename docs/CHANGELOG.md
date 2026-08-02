@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- **Three quarters of the "processor overhead" the load tests have always reported was javac's,
+  not VibeTags'.**
+
+  ![Where the processor overhead goes](../load-tests/results/_plots/processor-tax-1.0.0-RC9.png)
+
+  `MemoryVolumeStressTest` subtracts a `-proc:none` compile from a VibeTags compile and calls the
+  difference the processor's cost. It is not. `-proc:none` switches off javac's whole
+  annotation-processing subsystem — the extra rounds, the `JavacProcessingEnvironment`, the retained
+  element model — and that subtraction charges every byte of it to VibeTags.
+
+  A new `ProcessorTaxStressTest` runs a third compile with `NoOpProcessor`: annotation processing
+  on, doing nothing. At N=1000 that control costs **171 MB**. VibeTags on top of it costs **57 MB**.
+  So the ~227 MB this harness has always reported is about **4x** VibeTags' actual allocation, and
+  every release baseline in `load-tests/results/` carries the same inflation.
+
+  This also redirects optimization effort. The 171 MB is not reachable from this codebase; the
+  57 MB is the entire addressable surface. Anyone tuning against the old number was, for three
+  bytes in four, tuning javac.
+
+  On the isolated metric, measured back-to-back in one session: 0.9.7 allocates 60906 KB, RC9
+  allocates 57409 KB — **5.7 % less**, which agrees with the 4.9 % the old metric shows for the
+  same pair. The correction changes the denominator, not the direction. **VibeTags did not get
+  faster here** — the measurement got honest.
+
+  Reproducibility: two RC9 runs agreed to 0.6 % on VibeTags' share, and the javac tax reproduced to
+  1.1 % across three runs including the 0.9.7 one, as it should, since it does not depend on which
+  processor is loaded.
+
 - **A 1.0.0-RC9 load-test baseline, and a comparison that is actually a comparison.**
 
   ![Allocation overhead vs earlier releases](../load-tests/results/_plots/alloc-release-comparison-1.0.0-RC9.png)

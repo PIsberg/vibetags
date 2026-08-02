@@ -48,6 +48,15 @@ things established while capturing 1.0.0-RC9, both on this repo's usual box:
 So a wall-clock difference between two releases on charts 1–3 is not evidence of anything unless it
 is very large. The plots now say so on their face.
 
+**And read the overhead column for what it is.** Every `memory.txt` in this directory reports
+`processorAlloc − baselineAlloc` where the baseline is `-proc:none`, which switches off javac's
+entire annotation-processing subsystem. That whole subsystem lands on VibeTags' side of the
+subtraction. Measured with a no-op-processor control (`ProcessorTaxStressTest`, and
+`1.0.0-RC9/processor-tax.txt`): at N=1000 the javac tax is ~171 MB and VibeTags' own allocation is
+~57 MB, so **the reported figure is about 4x the processor's real cost**, in every baseline here.
+Release-to-release *differences* are still meaningful — the tax is version-independent and cancels —
+but the absolute numbers are not VibeTags'.
+
 **Allocation is different.** `MemoryVolumeStressTest` counts allocated bytes through `ThreadMXBean`
 rather than timing anything, so a busy machine does not move it: two RC9 runs agreed to within
 **0.6 %** at N=100/500/1000. That is the metric to quote, and chart 8 is the way to quote it —
