@@ -7,122 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Performance
-
-- **Three quarters of the "processor overhead" the load tests have always reported was javac's,
-  not VibeTags'.**
-
-  ![Where the processor overhead goes](../load-tests/results/_plots/processor-tax-1.0.0-RC9.png)
-
-  `MemoryVolumeStressTest` subtracts a `-proc:none` compile from a VibeTags compile and calls the
-  difference the processor's cost. It is not. `-proc:none` switches off javac's whole
-  annotation-processing subsystem — the extra rounds, the `JavacProcessingEnvironment`, the retained
-  element model — and that subtraction charges every byte of it to VibeTags.
-
-  A new `ProcessorTaxStressTest` runs a third compile with `NoOpProcessor`: annotation processing
-  on, doing nothing. At N=1000 that control costs **171 MB**. VibeTags on top of it costs **57 MB**.
-  So the ~227 MB this harness has always reported is about **4x** VibeTags' actual allocation, and
-  every release baseline in `load-tests/results/` carries the same inflation.
-
-  This also redirects optimization effort. The 171 MB is not reachable from this codebase; the
-  57 MB is the entire addressable surface. Anyone tuning against the old number was, for three
-  bytes in four, tuning javac.
-
-  On the isolated metric, measured back-to-back in one session: 0.9.7 allocates 60906 KB, RC9
-  allocates 57409 KB — **5.7 % less**, which agrees with the 4.9 % the old metric shows for the
-  same pair. The correction changes the denominator, not the direction. **VibeTags did not get
-  faster here** — the measurement got honest.
-
-  Reproducibility: two RC9 runs agreed to 0.6 % on VibeTags' share, and the javac tax reproduced to
-  1.1 % across three runs including the 0.9.7 one, as it should, since it does not depend on which
-  processor is loaded.
-
-- **A 1.0.0-RC9 load-test baseline, and a comparison that is actually a comparison.**
-
-  ![Allocation overhead vs earlier releases](../load-tests/results/_plots/alloc-release-comparison-1.0.0-RC9.png)
-
-  Measured back-to-back in one session, switching only `-Dprocessor.version`, RC9 allocates
-  **4.9 % less than 0.9.7** at N=1000, **7.3 % less** at N=500 and **10.8 % less** at N=100. It is
-  level with 1.0.0-RC1 (0.15 % apart at N=1000, inside the noise floor) — which is the expected
-  result, since nothing between RC1 and RC9 claimed an allocation win. RC9 holds the RC1
-  optimizations rather than adding to them.
-
-  The same-session part is not ceremony. Comparing RC9's capture against RC1's *recorded* baseline
-  suggests a 4.4 % regression; comparing them on one machine shows no difference. The `baseline`
-  column — javac compiling the same sources with no processor at all — had moved 9 % between those
-  two capture days. The machine changed, not the processor.
-
-  **The wall-clock and JMH figures in this baseline are not comparable to earlier releases and are
-  marked as such.** Two runs of the identical RC9 build, minutes apart, differed by up to **1.93x**
-  on the JMH hot path, and re-running 0.9.7 today reproduced its own recorded numbers only to within
-  **1.4x–3.1x**. A noise floor that size swallows nearly anything worth reading off those charts, so
-  they now carry that warning on their face instead of inviting the comparison. Allocation is
-  immune — it counts bytes through `ThreadMXBean` rather than timing anything, and reproduced to
-  within 0.6 %.
-
-  One difference does clear that noise floor and is recorded in
-  `load-tests/results/1.0.0-RC9/env.txt` rather than glossed: `resolveActiveServices` is
-  substantially slower than in 0.9.7. It stats one path per registered service to decide which are
-  opted in, and the service count reached 50 in RC9, so some increase is the cost of the platforms
-  added since. Whether it is *only* that has not been established and is not claimed here.
-
-- **The load-test regression gate was gating Maven Central, and would have passed either way.**
-  CI's `Load Tests` job runs `SignatureCaptureStressTest`, described in its own Javadoc as the guard
-  that goes red if signature capture becomes unconditional again. It ran against whatever
-  `load-tests/pom.xml` pinned `<processor.version>` to — `0.9.5`, two releases behind — so the gate
-  was measuring an artifact downloaded from Maven Central rather than the code in the pull request.
-
-  Pointing it at the right code was only half the problem. The assertion was `off < on`: enforcement
-  off must allocate less than enforcement on. Run against 0.9.5, where signature capture *is*
-  unconditional and there is nothing to save, it reports `saved=216KB (0.0% of processor overhead)`
-  out of 556 MB — and passes, because two noisy measurements of identical work land on either side
-  of each other about half the time. A coin flip guarding a 36 MB optimization.
-
-  The gate now asserts the size of the saving, not its sign: enforcement-off must save at least
-  3.0 % of the processor's own allocation overhead. Measured on this fixture, the optimization
-  delivers 6.9 % (36 MB) and its absence delivers 0.0–0.1 %, so the threshold sits between them with
-  room for run-to-run variance on either side. Verified by running it both ways: red on 0.9.5 with
-  "got 0.1 %", green on RC9 with 6.9 %.
-
-  CI now resolves the version from `vibetags/pom.xml` after installing it, so the job tests what the
-  run built regardless of what the pom pins, and fails loudly if that resolution comes back empty
-  instead of falling back to the pin.
-
-  Tooling fixed along the way: `tools/plot-results.py` matched version directories with
-  `^\d+\.\d+\.\d+$`, so every `1.0.0-RCn` baseline was captured, committed, and then silently left
-  out of every chart — the folder was there, the line was not, and nothing said so. RC directories
-  now sort correctly too (`0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0`). The documented JMH capture
-  command also ran every benchmark into `jmh.json`, which is why 0.9.5 has 18 entries in a file
-  every other release has 6 in; both READMEs now carry the class filter.
-
-### Fixed
-- **Multi-module reactors wrote broken YAML, and lost most of their guardrails doing it.** The
-  sidecar merge stacked each module's *whole* rendered document between `VIBETAGS-MODULE`
-  sub-markers. That is right for Markdown; for the six generated YAML documents it repeated the
-  top-level key once per module. A strict parser rejects such a file outright. A lenient one
-  (SnakeYAML's default, PyYAML) keeps the last occurrence and discards the rest — so the AI reviewer
-  reading it saw one module's guardrails and no error anywhere. Measured on the four-module
-  `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml` exposed 1 module of 4,
-  `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
-
-  A YAML renderer now declares a `PlatformRenderer.mergeShape()`: where its shared scaffold ends,
-  which column its entries sit at, and what it emits when it has nothing to say. The merge writes
-  the scaffold once and puts every module's entries under it, so a reactor produces the same
-  document a single-module build does with more entries in it. Provenance survives — the
-  `VIBETAGS-MODULE` sub-markers are still there, indented to the entries' column, because a
-  dedented `#` line terminates a block scalar and would break the very files this fixes.
-  `.plandex.yaml` merges bucket by bucket, its `locked:` / `audit:` / `privacy:` keys being
-  conditional and otherwise free to repeat in turn.
-
-  The declaration is a twin of the renderer's output, so the build checks it:
-  `YamlMergeShapeContractTest` renders each platform and fails if the declared anchor, indent or
-  empty body no longer matches, or if a generated `.yaml` ships with no declaration at all.
-  `MultiModuleYamlValidityTest` parses the merged output for real, with duplicate keys forbidden,
-  and asserts both modules' elements survive the parse — the assertion the previous string-matching
-  tests could not make, and the reason the defect lived this long. SnakeYAML is a **test-scope**
-  dependency only; the processor still ships with no YAML library on the consumer's
-  annotation-processor path.
-
 ## [1.0.0-RC9] - 2026-08-02
 
 ### Added
@@ -214,7 +98,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is an authorization decision. Listing them per method rather than per pattern keeps a *new*
   path-from-input or case-insensitive comparison reportable.
 
+### Changed
+- **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
+  The substantive ones are fixed rather than muted: `String.split(String)` at three call sites,
+  which silently drops trailing empty fields, so `-Avibetags.enforce=contract,` and a sidecar's
+  newline-joined list parsed correctly by accident rather than by decision (now an explicit `-1`
+  limit); four `catch (IOException ignored) {}` blocks in `ModuleSidecar`, each a deliberate
+  best-effort swallow that read identically to somebody forgetting, now saying which it is; a
+  redundant `continue`; and `LocalDate.now()`'s hidden default time zone in the `@AITemporary`
+  expiry check, now `ZoneId.systemDefault()` because the developer's own calendar day is the
+  clock that rule is about. Two lambdas held in constants became named methods.
+
+  Three checks are off, with the reason recorded in `vibetags/pom.xml`:
+  `StatementSwitchToExpressionSwitch` (58 hits, pure style, all in renderers and formatters),
+  `StringConcatToTextBlock` (the literals are generated file content, where an indented text
+  block's leading whitespace is a rendering bug waiting to happen) and `InlineMeSuggester`
+  (a caller-migration tool for published APIs; these are package-internal test seams). A warning
+  nobody is going to act on trains people to scroll past the ones that matter — which is the same
+  argument used for running NullAway at `ERROR`.
+
+- **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
+  visible member set and sorting it is the most expensive thing the collector does per element, and
+  the only reader is `-Avibetags.enforce` (#284), which is off by default. Every ordinary build was
+  building those strings and dropping them. It cannot be made lazy — the javac element model is
+  valid only while its round is live, and the model is read after the last round closes — so the
+  processor decides up front, the same shape as the `.vibetags-locks` opt-in that already gates
+  source-position resolution. Measured on 400 wide classes: 36.4 MB less allocated, 6.9–7.2 % of
+  the processor's own allocation overhead, reproducible to within 0.3 % across three runs.
+  Generated output is byte-identical, confirmed by regenerating `example/` with the processor built
+  from before and after the change.
+
+- **`AnnotationValidator` is now a 40-line entry point over a rule registry.** It was one 450-line
+  method containing roughly forty hand-written `for` loops, and the repo's own health check flagged
+  it as the largest hotspot in the processor. The checks now live in
+  `processor/internal/validation/` as individually testable rules: `PairRule` (two annotations that
+  contradict each other, expressed as a table — 23 of them, one line each), `CoreRules` (an
+  annotation whose own attributes leave it instructing nobody), `ArchitectureRule` (the Tree-API
+  import scan), `ModernJavaRules` (above). Every diagnostic message is unchanged.
+
+  The registry is also the cheaper arrangement. Rules are indexed by the annotation they scan, so
+  `getElementsAnnotatedWith` runs once per annotation type however many rules share it —
+  `@AITestDriven` was queried four times per round, `@AILoadBearing` three. That query walks the
+  round's root elements, and this compounds with the existing short-circuit that skips annotations
+  javac reports absent.
+
+- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
+  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
+  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
+  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
+  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
+  from that tag on JDK 21 (the version CI uses) and running the suite against it.
+
 ### Fixed
+- **Multi-module reactors wrote broken YAML, and lost most of their guardrails doing it.** The
+  sidecar merge stacked each module's *whole* rendered document between `VIBETAGS-MODULE`
+  sub-markers. That is right for Markdown; for the six generated YAML documents it repeated the
+  top-level key once per module. A strict parser rejects such a file outright. A lenient one
+  (SnakeYAML's default, PyYAML) keeps the last occurrence and discards the rest — so the AI reviewer
+  reading it saw one module's guardrails and no error anywhere. Measured on the four-module
+  `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml` exposed 1 module of 4,
+  `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
+
+  A YAML renderer now declares a `PlatformRenderer.mergeShape()`: where its shared scaffold ends,
+  which column its entries sit at, and what it emits when it has nothing to say. The merge writes
+  the scaffold once and puts every module's entries under it, so a reactor produces the same
+  document a single-module build does with more entries in it. Provenance survives — the
+  `VIBETAGS-MODULE` sub-markers are still there, indented to the entries' column, because a
+  dedented `#` line terminates a block scalar and would break the very files this fixes.
+  `.plandex.yaml` merges bucket by bucket, its `locked:` / `audit:` / `privacy:` keys being
+  conditional and otherwise free to repeat in turn.
+
+  The declaration is a twin of the renderer's output, so the build checks it:
+  `YamlMergeShapeContractTest` renders each platform and fails if the declared anchor, indent or
+  empty body no longer matches, or if a generated `.yaml` ships with no declaration at all.
+  `MultiModuleYamlValidityTest` parses the merged output for real, with duplicate keys forbidden,
+  and asserts both modules' elements survive the parse — the assertion the previous string-matching
+  tests could not make, and the reason the defect lived this long. SnakeYAML is a **test-scope**
+  dependency only; the processor still ships with no YAML library on the consumer's
+  annotation-processor path.
 - **A line break in a logged value split one event into several lines in `vibetags.log`.**
   The log is meant to be read with grep — `domain.event key=value`, one event per line — but the
   values interpolated into it come from outside the processor: module ids and roots taken from
@@ -281,56 +242,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.github/scripts/deploy-to-central.test.sh` covers all five outcomes against a stub `mvn` and runs
   in CI; against the old inline code it fails three of them.
 
-### Changed
-- **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
-  The substantive ones are fixed rather than muted: `String.split(String)` at three call sites,
-  which silently drops trailing empty fields, so `-Avibetags.enforce=contract,` and a sidecar's
-  newline-joined list parsed correctly by accident rather than by decision (now an explicit `-1`
-  limit); four `catch (IOException ignored) {}` blocks in `ModuleSidecar`, each a deliberate
-  best-effort swallow that read identically to somebody forgetting, now saying which it is; a
-  redundant `continue`; and `LocalDate.now()`'s hidden default time zone in the `@AITemporary`
-  expiry check, now `ZoneId.systemDefault()` because the developer's own calendar day is the
-  clock that rule is about. Two lambdas held in constants became named methods.
+### Performance
+- **Three quarters of the "processor overhead" the load tests have always reported was javac's,
+  not VibeTags'.**
 
-  Three checks are off, with the reason recorded in `vibetags/pom.xml`:
-  `StatementSwitchToExpressionSwitch` (58 hits, pure style, all in renderers and formatters),
-  `StringConcatToTextBlock` (the literals are generated file content, where an indented text
-  block's leading whitespace is a rendering bug waiting to happen) and `InlineMeSuggester`
-  (a caller-migration tool for published APIs; these are package-internal test seams). A warning
-  nobody is going to act on trains people to scroll past the ones that matter — which is the same
-  argument used for running NullAway at `ERROR`.
+  ![Where the processor overhead goes](../load-tests/results/_plots/processor-tax-1.0.0-RC9.png)
 
-- **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
-  visible member set and sorting it is the most expensive thing the collector does per element, and
-  the only reader is `-Avibetags.enforce` (#284), which is off by default. Every ordinary build was
-  building those strings and dropping them. It cannot be made lazy — the javac element model is
-  valid only while its round is live, and the model is read after the last round closes — so the
-  processor decides up front, the same shape as the `.vibetags-locks` opt-in that already gates
-  source-position resolution. Measured on 400 wide classes: 36.4 MB less allocated, 6.9–7.2 % of
-  the processor's own allocation overhead, reproducible to within 0.3 % across three runs.
-  Generated output is byte-identical, confirmed by regenerating `example/` with the processor built
-  from before and after the change.
+  `MemoryVolumeStressTest` subtracts a `-proc:none` compile from a VibeTags compile and calls the
+  difference the processor's cost. It is not. `-proc:none` switches off javac's whole
+  annotation-processing subsystem — the extra rounds, the `JavacProcessingEnvironment`, the retained
+  element model — and that subtraction charges every byte of it to VibeTags.
 
-- **`AnnotationValidator` is now a 40-line entry point over a rule registry.** It was one 450-line
-  method containing roughly forty hand-written `for` loops, and the repo's own health check flagged
-  it as the largest hotspot in the processor. The checks now live in
-  `processor/internal/validation/` as individually testable rules: `PairRule` (two annotations that
-  contradict each other, expressed as a table — 23 of them, one line each), `CoreRules` (an
-  annotation whose own attributes leave it instructing nobody), `ArchitectureRule` (the Tree-API
-  import scan), `ModernJavaRules` (above). Every diagnostic message is unchanged.
+  A new `ProcessorTaxStressTest` runs a third compile with `NoOpProcessor`: annotation processing
+  on, doing nothing. At N=1000 that control costs **171 MB**. VibeTags on top of it costs **57 MB**.
+  So the ~227 MB this harness has always reported is about **4x** VibeTags' actual allocation, and
+  every release baseline in `load-tests/results/` carries the same inflation.
 
-  The registry is also the cheaper arrangement. Rules are indexed by the annotation they scan, so
-  `getElementsAnnotatedWith` runs once per annotation type however many rules share it —
-  `@AITestDriven` was queried four times per round, `@AILoadBearing` three. That query walks the
-  round's root elements, and this compounds with the existing short-circuit that skips annotations
-  javac reports absent.
+  This also redirects optimization effort. The 171 MB is not reachable from this codebase; the
+  57 MB is the entire addressable surface. Anyone tuning against the old number was, for three
+  bytes in four, tuning javac.
 
-- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
-  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
-  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
-  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
-  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
-  from that tag on JDK 21 (the version CI uses) and running the suite against it.
+  On the isolated metric, measured back-to-back in one session: 0.9.7 allocates 60906 KB, RC9
+  allocates 57409 KB — **5.7 % less**, which agrees with the 4.9 % the old metric shows for the
+  same pair. The correction changes the denominator, not the direction. **VibeTags did not get
+  faster here** — the measurement got honest.
+
+  Reproducibility: two RC9 runs agreed to 0.6 % on VibeTags' share, and the javac tax reproduced to
+  1.1 % across three runs including the 0.9.7 one, as it should, since it does not depend on which
+  processor is loaded.
+
+- **A 1.0.0-RC9 load-test baseline, and a comparison that is actually a comparison.**
+
+  ![Allocation overhead vs earlier releases](../load-tests/results/_plots/alloc-release-comparison-1.0.0-RC9.png)
+
+  Measured back-to-back in one session, switching only `-Dprocessor.version`, RC9 allocates
+  **4.9 % less than 0.9.7** at N=1000, **7.3 % less** at N=500 and **10.8 % less** at N=100. It is
+  level with 1.0.0-RC1 (0.15 % apart at N=1000, inside the noise floor) — which is the expected
+  result, since nothing between RC1 and RC9 claimed an allocation win. RC9 holds the RC1
+  optimizations rather than adding to them.
+
+  The same-session part is not ceremony. Comparing RC9's capture against RC1's *recorded* baseline
+  suggests a 4.4 % regression; comparing them on one machine shows no difference. The `baseline`
+  column — javac compiling the same sources with no processor at all — had moved 9 % between those
+  two capture days. The machine changed, not the processor.
+
+  **The wall-clock and JMH figures in this baseline are not comparable to earlier releases and are
+  marked as such.** Two runs of the identical RC9 build, minutes apart, differed by up to **1.93x**
+  on the JMH hot path, and re-running 0.9.7 today reproduced its own recorded numbers only to within
+  **1.4x–3.1x**. A noise floor that size swallows nearly anything worth reading off those charts, so
+  they now carry that warning on their face instead of inviting the comparison. Allocation is
+  immune — it counts bytes through `ThreadMXBean` rather than timing anything, and reproduced to
+  within 0.6 %.
+
+  One difference does clear that noise floor and is recorded in
+  `load-tests/results/1.0.0-RC9/env.txt` rather than glossed: `resolveActiveServices` is
+  substantially slower than in 0.9.7. It stats one path per registered service to decide which are
+  opted in, and the service count reached 50 in RC9, so some increase is the cost of the platforms
+  added since. Whether it is *only* that has not been established and is not claimed here.
+
+- **The load-test regression gate was gating Maven Central, and would have passed either way.**
+  CI's `Load Tests` job runs `SignatureCaptureStressTest`, described in its own Javadoc as the guard
+  that goes red if signature capture becomes unconditional again. It ran against whatever
+  `load-tests/pom.xml` pinned `<processor.version>` to — `0.9.5`, two releases behind — so the gate
+  was measuring an artifact downloaded from Maven Central rather than the code in the pull request.
+
+  Pointing it at the right code was only half the problem. The assertion was `off < on`: enforcement
+  off must allocate less than enforcement on. Run against 0.9.5, where signature capture *is*
+  unconditional and there is nothing to save, it reports `saved=216KB (0.0% of processor overhead)`
+  out of 556 MB — and passes, because two noisy measurements of identical work land on either side
+  of each other about half the time. A coin flip guarding a 36 MB optimization.
+
+  The gate now asserts the size of the saving, not its sign: enforcement-off must save at least
+  3.0 % of the processor's own allocation overhead. Measured on this fixture, the optimization
+  delivers 6.9 % (36 MB) and its absence delivers 0.0–0.1 %, so the threshold sits between them with
+  room for run-to-run variance on either side. Verified by running it both ways: red on 0.9.5 with
+  "got 0.1 %", green on RC9 with 6.9 %.
+
+  CI now resolves the version from `vibetags/pom.xml` after installing it, so the job tests what the
+  run built regardless of what the pom pins, and fails loudly if that resolution comes back empty
+  instead of falling back to the pin.
+
+  Tooling fixed along the way: `tools/plot-results.py` matched version directories with
+  `^\d+\.\d+\.\d+$`, so every `1.0.0-RCn` baseline was captured, committed, and then silently left
+  out of every chart — the folder was there, the line was not, and nothing said so. RC directories
+  now sort correctly too (`0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0`). The documented JMH capture
+  command also ran every benchmark into `jmh.json`, which is why 0.9.5 has 18 entries in a file
+  every other release has 6 in; both READMEs now carry the class filter.
 
 ## [1.0.0-RC8] - 2026-08-01
 
