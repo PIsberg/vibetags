@@ -21,16 +21,35 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RESULTS = REPO_ROOT / "load-tests" / "results"
 
-VERSION_DIR_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+# Release directories, pre-release suffix included. The suffix used to be excluded, which meant
+# every 1.0.0-RCn baseline was captured, committed, and then silently left out of every plot — the
+# folder was there, the line was not, and nothing said so.
+VERSION_DIR_PATTERN = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([A-Za-z]+)(\d*))?$")
 STRESS_ROW = re.compile(
     r"^\s*(\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$"
 )
 
 
+def release_order(name: str) -> tuple:
+    """
+    Sort key placing 0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0.
+
+    A pre-release precedes its own final release, so the suffix flag is 0 for RCs and 1 for a plain
+    version. Plain lexicographic sorting put "1.0.0-RC9" after "1.0.0" and "1.0.0-RC10" before
+    "-RC9", which would draw the release history in the wrong order on every chart.
+    """
+    m = VERSION_DIR_PATTERN.match(name)
+    if not m:
+        return (0, 0, 0, 0, 0)
+    major, minor, patch, tag, tag_num = m.groups()
+    return (int(major), int(minor), int(patch), 0 if tag else 1, int(tag_num or 0))
+
+
 def discover_versions(results_dir: Path) -> list[str]:
     versions = sorted(
-        p.name for p in results_dir.iterdir()
-        if p.is_dir() and VERSION_DIR_PATTERN.match(p.name)
+        (p.name for p in results_dir.iterdir()
+         if p.is_dir() and VERSION_DIR_PATTERN.match(p.name)),
+        key=release_order,
     )
     if not versions:
         sys.exit(f"No version directories found under {results_dir}")
@@ -59,7 +78,12 @@ def _load_table(path: Path) -> list[tuple[int, int, int, int, int]]:
 
 
 def load_jmh(version_dir: Path) -> dict[str, tuple[float, float]]:
-    data = json.loads((version_dir / "jmh.json").read_text(encoding="utf-8"))
+    # Not every baseline has one: 1.0.0-RC1 captured allocation only. Returning empty keeps that
+    # release on the stress and memory charts instead of aborting the whole run.
+    path = version_dir / "jmh.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
     out = {}
     for entry in data:
         name = entry["benchmark"].rsplit(".", 1)[-1]
@@ -109,7 +133,15 @@ def plot_memory_overhead_vs_n(versions: list[str], memory: dict[str, list], out_
     ax.grid(True, which="both", linestyle="--", alpha=0.4)
     ax.axhline(0, color="black", linewidth=0.5)
     ax.legend()
-    fig.tight_layout()
+    # Each line was captured on the day its release was cut, on whatever the machine was doing
+    # then. The baseline column alone moved 9 % between the 1.0.0-RC1 and 1.0.0-RC9 captures, which
+    # is larger than most release-to-release differences on this chart. Read it as a trend, and use
+    # a same-session comparison (tools/plot-release-comparison.py) for any actual claim.
+    fig.text(0.5, 0.015,
+             "Lines come from separate capture sessions months apart — differences under ~10 % "
+             "are environment, not code.",
+             ha="center", fontsize=8, style="italic", color="#555555")
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
     fig.savefig(out_path, dpi=120)
     plt.close(fig)
 
@@ -157,7 +189,13 @@ def plot_hotpath(versions: list[str], jmh: dict[str, dict], out_path: Path,
     ax.set_title(title)
     ax.grid(True, axis="y", linestyle="--", alpha=0.4)
     ax.legend()
-    fig.tight_layout()
+    # Wall-clock, and therefore hostage to whatever else the capture machine was doing. Re-running
+    # 0.9.7 on a different day reproduced its own recorded numbers only to within 1.4x-3.1x.
+    fig.text(0.5, 0.015,
+             "Wall-clock across separate capture sessions: the same build re-measured later has "
+             "landed 1.4x–3.1x from its own baseline. Bars are indicative, not a ranking.",
+             ha="center", fontsize=8, style="italic", color="#555555")
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
     fig.savefig(out_path, dpi=120)
     plt.close(fig)
 
@@ -179,11 +217,17 @@ def main() -> None:
     all_benchmarks = sorted({b for v in versions for b in jmh[v]})
     write_benchmarks = [b for b in all_benchmarks if b.startswith("writeFileIfChanged")]
 
-    plot_overhead_vs_n(versions, stress, args.out / "overhead-vs-n.png")
-    plot_hotpath(versions, jmh, args.out / "hotpath-by-release.png",
-                 all_benchmarks, "JMH ProcessorHotPathBenchmark — by release", log_y=True)
-    plot_hotpath(versions, jmh, args.out / "writeFileIfChanged-detail.png",
-                 write_benchmarks, "writeFileIfChanged variants (linear)", log_y=False)
+    versions_with_stress = [v for v in versions if stress[v]]
+    plot_overhead_vs_n(versions_with_stress, stress, args.out / "overhead-vs-n.png")
+
+    # Only releases that actually captured JMH output get a bar; an empty series would otherwise
+    # claim a legend entry and draw nothing, which reads as "measured, and it was zero".
+    versions_with_jmh = [v for v in versions if jmh[v]]
+    if versions_with_jmh:
+        plot_hotpath(versions_with_jmh, jmh, args.out / "hotpath-by-release.png",
+                     all_benchmarks, "JMH ProcessorHotPathBenchmark — by release", log_y=True)
+        plot_hotpath(versions_with_jmh, jmh, args.out / "writeFileIfChanged-detail.png",
+                     write_benchmarks, "writeFileIfChanged variants (linear)", log_y=False)
 
     versions_with_memory = [v for v in versions if memory[v]]
     if versions_with_memory:

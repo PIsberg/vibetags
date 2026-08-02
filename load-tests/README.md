@@ -9,6 +9,7 @@ Standalone benchmark harness for the `AIGuardrailProcessor`. Five test categorie
 | Hot-path microbenchmarks | `ProcessorHotPathBenchmark` (JMH) | Per-call cost of `writeFileIfChanged`, `buildServiceFileMap`, `resolveActiveServices` |
 | Cache-hit microbenchmarks | `WriteCacheHitBenchmark` (JMH, since 0.7.1) | Per-call cost & allocation of `writeFileIfChanged` with the `WriteCache` wired in vs. null. Small (1 KB), medium (12 KB), large (1 MB) bodies × marker (`.md`) and non-marker (`.json`) file types |
 | Concurrent-build safety | `ConcurrentBuildTest` | Behaviour under N threads writing to a shared project root |
+| Processor-tax split | `ProcessorTaxStressTest` (since 1.0.0-RC9) | How much of the reported "overhead" is javac's annotation-processing subsystem rather than VibeTags. Compiles the same sources three ways — `-proc:none`, `NoOpProcessor`, VibeTags — because the `-proc:none` baseline the other sweeps use charges javac's entire AP machinery to the processor. Measured: **~75 % of the reported overhead is javac's**, so the addressable surface is ~57 MB, not ~227 MB |
 | Signature-capture saving | `SignatureCaptureStressTest` (since 1.0.0-RC9) | Allocation on **wide** types (400 classes × 40 public members) with `-Avibetags.enforce` on vs. off. The delta is what an ordinary build stopped paying once `ElementSignature` became conditional |
 
 ## Prerequisite
@@ -30,9 +31,11 @@ mvn test
 # Cap the sweep so CI stays fast (skips N > 500)
 mvn test -Dstress.max.classes=500
 
-# JMH microbenchmarks — both classes, JSON output + GC profiler (~3 min)
+# JMH hot-path microbenchmarks, JSON output + GC profiler (~3 min). Keep the class filter:
+# unfiltered, JMH also runs WriteCacheHitBenchmark into the same file, and jmh.json stops being
+# the six-benchmark table every release baseline records. (0.9.5 has 18 in it for this reason.)
 mvn package -DskipTests
-java -jar target/benchmarks.jar -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
+java -jar target/benchmarks.jar ProcessorHotPathBenchmark -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
      -rf json -rff results/<X.Y.Z>/jmh.json
 
 # Just the cache-hit benchmark (proves the WriteCache value at 1 MB body sizes)

@@ -17,4 +17,19 @@ public interface PlatformRenderer {
      * @return the rendered file contents, or null if this platform is not active or handled elsewhere
      */
     @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context);
+
+    /**
+     * How this platform's output is combined across the modules of a reactor, or {@code null} when
+     * stacking whole renderings is correct.
+     *
+     * <p>Only the YAML platforms override this. Markdown sections and ignore-file lists concatenate
+     * without losing anything; a YAML document does not, because it has one of each top-level key
+     * and repeating it either fails the parse or silently drops every module but the last.
+     *
+     * @return the merge shape, or {@code null} for plain concatenation
+     * @see YamlMergeShape
+     */
+    default @Nullable YamlMergeShape mergeShape() {
+        return null;
+    }
 }

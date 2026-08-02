@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating Open Interpreter profiles.
@@ -60,5 +61,11 @@ public final class InterpreterRenderer implements PlatformRenderer {
             }
         }
         return sb.toString();
+    }
+
+    /** Every module's guardrails go into the one {@code instructions:} block scalar written above. */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.appended("instructions: |", 2, "");
     }
 }

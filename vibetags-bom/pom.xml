@@ -4,10 +4,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>se.deversity.vibetags</groupId>
+    <!-- Versions, plugin declarations and the publishing setup all live in the parent.
+         flatten-maven-plugin (inherited) removes this parent and resolves ${revision} before
+         deploy, so the BOM on Maven Central stays a self-contained, parent-free POM. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
     <artifactId>vibetags-bom</artifactId>
-    <version>1.0.0-RC9</version>
     <packaging>pom</packaging>
+
+    <!-- Declared, not inherited: Maven appends the artifactId to an inherited project url. -->
+    <url>https://github.com/PIsberg/vibetags</url>
 
     <name>VibeTags BOM</name>
     <description>
@@ -38,112 +49,48 @@
             compileOnly 'se.deversity.vibetags:vibetags-annotations'
             annotationProcessor 'se.deversity.vibetags:vibetags-processor'
     </description>
-    <url>https://github.com/PIsberg/vibetags</url>
 
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>PIsberg</id>
-            <name>Peter Isberg</name>
-            <url>https://github.com/PIsberg</url>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:git://github.com/PIsberg/vibetags.git</connection>
-        <developerConnection>scm:git:ssh://github.com/PIsberg/vibetags.git</developerConnection>
-        <url>https://github.com/PIsberg/vibetags/tree/main</url>
-    </scm>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Single source of truth for the VibeTags artifact set. Bump this when releasing
-             a new processor version; all consumers that import this BOM track the bump
-             without further changes. -->
-        <vibetags.version>1.0.0-RC9</vibetags.version>
-    </properties>
+    <build>
+        <plugins>
+            <!--
+              flattenMode=bom, overriding the parent's ossrh. This is not a preference: ossrh mode
+              DROPS <dependencyManagement>, and a BOM is nothing else. Published under ossrh this
+              file resolved, imported cleanly, and managed zero dependencies — every consumer would
+              have got "'dependencies.dependency.version' is missing" for vibetags-annotations and
+              vibetags-processor, with a BOM that looked perfectly valid. Verified by reading the
+              installed POM rather than trusting the build to say so.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <configuration>
+                    <flattenMode>bom</flattenMode>
+                    <pomElements>
+                        <properties>remove</properties>
+                    </pomElements>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencyManagement>
         <dependencies>
+            <!-- ${revision} comes from vibetags-parent and is resolved into a literal by
+                 flatten-maven-plugin before deploy, so consumers importing this BOM see real
+                 version numbers. There used to be a second source of truth here — a
+                 vibetags.version property that had to be bumped in step with three other poms;
+                 the release now moves one number in the parent. -->
             <dependency>
                 <groupId>se.deversity.vibetags</groupId>
                 <artifactId>vibetags-annotations</artifactId>
-                <version>${vibetags.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>se.deversity.vibetags</groupId>
                 <artifactId>vibetags-processor</artifactId>
-                <version>${vibetags.version}</version>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>central</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-        </snapshotRepository>
-        <repository>
-            <id>central</id>
-            <url>https://central.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
-    <profiles>
-        <!-- Mirrors the processor pom so `mvn deploy -P central-publish,sign-artifacts`
-             from this directory publishes the BOM to Maven Central alongside the jar. -->
-        <profile>
-            <id>central-publish</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.11.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>central</publishingServerId>
-                            <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>sign-artifacts</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.8</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <configuration>
-                                    <gpgArguments>
-                                        <arg>--pinentry-mode</arg>
-                                        <arg>loopback</arg>
-                                    </gpgArguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

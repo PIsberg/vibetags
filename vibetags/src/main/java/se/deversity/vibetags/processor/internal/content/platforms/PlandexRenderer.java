@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 
 /**
  * PlatformRenderer for generating Plandex config.
@@ -38,5 +39,14 @@ public final class PlandexRenderer implements PlatformRenderer {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Keyed rather than appended: the buckets under {@code guardrails:} are conditional, so two
+     * modules that both have locked elements would otherwise write {@code locked:} twice.
+     */
+    @Override
+    public YamlMergeShape mergeShape() {
+        return YamlMergeShape.keyed("guardrails:", 2);
     }
 }

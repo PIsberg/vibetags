@@ -4,42 +4,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>se.deversity.vibetags</groupId>
+    <!-- Versions, plugin declarations and the publishing setup all live in the parent.
+         relativePath keeps this buildable straight from a checkout without installing the
+         parent first, and flatten-maven-plugin (inherited) removes the parent from the POM
+         that reaches Maven Central. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0-RC9</version>
     <packaging>jar</packaging>
+
+    <!-- Declared, not inherited: Maven appends the artifactId to an inherited project url. -->
+    <url>https://github.com/PIsberg/vibetags</url>
 
     <name>VibeTags Processor</name>
     <description>Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.</description>
-    <url>https://github.com/PIsberg/vibetags</url>
-
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>PIsberg</id>
-            <name>Peter Isberg</name>
-            <url>https://github.com/PIsberg</url>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:git://github.com/PIsberg/vibetags.git</connection>
-        <developerConnection>scm:git:ssh://github.com/PIsberg/vibetags.git</developerConnection>
-        <url>https://github.com/PIsberg/vibetags/tree/main</url>
-    </scm>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>6.1.2</junit.version>
-        <nullaway.version>0.13.8</nullaway.version>
         <!-- Flipped to true by CI so -Pself-annotate verifies the committed guardrails
              instead of rewriting them. Off by default: the profile regenerates. -->
         <vibetags.selfcheck>false</vibetags.selfcheck>
@@ -54,7 +39,6 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-annotations</artifactId>
-            <version>1.0.0-RC9</version>
         </dependency>
 
         <!-- JSpecify null annotations (@NullMarked, @Nullable, @NonNull).
@@ -64,7 +48,6 @@
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
-            <version>1.0.1</version>
         </dependency>
 
         <!-- Logging: SLF4J API + Logback file appender for vibetags.log.
@@ -79,48 +62,52 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.18</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.6.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>se.deversity.async-test-lib</groupId>
             <artifactId>async-test-lib</artifactId>
-            <!-- Pinned deliberately: this artifact is NOT on Maven Central, so CI builds it from
-                 the upstream git tag (see .github/workflows/build.yml). Only bump to a version that
-                 has a matching tag at github.com/PIsberg/async-test-lib — `versions:display-
-                 dependency-updates` also reports versions that exist only as a local install, and
-                 taking that suggestion breaks every environment except the one that installed it.
-                 Change the four workflow clone tags in the same commit as this version. -->
-            <version>1.7.0-RC5</version>
+            <!-- Version in the parent (async-test-lib.version). Pinned deliberately: this artifact
+                 is NOT on Maven Central, so CI builds it from the upstream git tag (see
+                 .github/workflows/build.yml). Only bump to a version that has a matching tag at
+                 github.com/PIsberg/async-test-lib — `versions:display-dependency-updates` also
+                 reports versions that exist only as a local install, and taking that suggestion
+                 breaks every environment except the one that installed it. Change the four workflow
+                 clone tags in the same commit as the parent's property. -->
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
-            <version>1.4.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.23.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Test-only. The processor writes six YAML documents but must not gain a YAML
+             dependency: it runs on the consumer's annotation-processor path, where every
+             extra jar is one more thing to collide with. The tests need a real parser
+             because "the file looks right" is not the property that matters - "the tool
+             reading it sees every module's guardrails" is, and only a parser shows that. -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -130,7 +117,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
                 <configuration>
                     <!-- Disable annotation processing for the processor itself -->
                     <compilerArgs>
@@ -140,7 +126,7 @@
                         <path>
                             <groupId>com.google.errorprone</groupId>
                             <artifactId>error_prone_core</artifactId>
-                            <version>2.50.0</version>
+                            <version>${error-prone.version}</version>
                         </path>
                         <path>
                             <groupId>com.uber.nullaway</groupId>
@@ -208,7 +194,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.6</version>
                 <configuration>
                     <argLine>${argLine} -Dnet.bytebuddy.experimental=true -Dlicense.mock.mode=true</argLine>
                 </configuration>
@@ -216,7 +201,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.28.0</version>
                 <configuration>
                     <failOnViolation>true</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
@@ -233,23 +217,13 @@
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-core</artifactId>
-                        <version>7.26.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-java</artifactId>
-                        <version>7.26.0</version>
-                    </dependency>
-                </dependencies>
+                <!-- pmd-core/pmd-java are pinned by the parent's pluginManagement entry for this
+                     plugin. Plugin-level <dependencies> do not take their versions from
+                     pluginManagement, so they cannot be declared version-less here. -->
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.15</version>
                 <executions>
                     <execution>
                         <goals>
@@ -268,7 +242,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.5.1</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -287,7 +260,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -301,7 +273,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -314,7 +285,6 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.10.2.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>
@@ -327,7 +297,7 @@
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>
                             <artifactId>findsecbugs-plugin</artifactId>
-                            <version>1.14.0</version>
+                            <version>${findsecbugs-plugin.version}</version>
                         </plugin>
                     </plugins>
                     <!-- Teaches the taint analysis that Escape.xml/json/tomlMultiline sanitize.
@@ -347,7 +317,6 @@
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
-                <version>2.9.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -373,7 +342,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.6.0</version>
                 <configuration>
                     <configLocation>${project.basedir}/../checkstyle.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
@@ -414,7 +382,6 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.11.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
@@ -436,7 +403,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.15.0</version>
                         <!-- combine.self="override" replaces the default configuration entirely,
                              discarding -proc:none so the annotation processor can run. -->
                         <configuration combine.self="override">
@@ -496,7 +462,6 @@
                     <plugin>
                         <groupId>org.pitest</groupId>
                         <artifactId>pitest-maven</artifactId>
-                        <version>1.25.8</version>
                         <configuration>
                             <targetClasses>
                                 <param>se.deversity.vibetags.*</param>
@@ -518,7 +483,7 @@
                             <dependency>
                                 <groupId>org.pitest</groupId>
                                 <artifactId>pitest-junit5-plugin</artifactId>
-                                <version>1.2.2</version>
+                                <version>${pitest-junit5-plugin.version}</version>
                             </dependency>
                             <!-- Explicit, matching ${junit.version}: pitest-junit5-plugin 1.2.2 marks its
                                  own junit-platform-launcher dependency "provided" rather than shading a
@@ -542,7 +507,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.8</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>

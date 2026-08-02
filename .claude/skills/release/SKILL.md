@@ -11,11 +11,11 @@ disagree, `docs/RELEASING.md` wins — and say so rather than silently improvisi
 
 ## Step 1 — Establish the current version and ask for the next one
 
-The single source of truth for "what version are we on" is the `<vibetags.version>`
-property in `vibetags-bom/pom.xml`:
+The single source of truth for "what version are we on" is the `<revision>`
+property in `vibetags-parent/pom.xml`:
 
 ```bash
-sed -n 's:.*<vibetags\.version>\(.*\)</vibetags\.version>.*:\1:p' vibetags-bom/pom.xml | head -n1
+sed -n 's:.*<revision>\(.*\)</revision>.*:\1:p' vibetags-parent/pom.xml | head -n1
 git tag --sort=-v:refname | head -5
 ```
 
@@ -54,15 +54,29 @@ git checkout -b release/v<version>
 
 ## Step 3 — Bump the version
 
-`scripts/set-version.sh` covers the three core modules in one pass (it reads the
-current version fresh from the BOM, so it is idempotent):
+`scripts/set-version.sh` does the whole bump in one pass (it reads the current
+version fresh from the parent, so it is idempotent):
 
 ```bash
 scripts/set-version.sh <version>
 ```
 
-That handles `vibetags-annotations/pom.xml`, `vibetags-annotations/build.gradle`,
-`vibetags/pom.xml`, `vibetags/build.gradle`, and `vibetags-bom/pom.xml`.
+That rewrites `<revision>` in `vibetags-parent/pom.xml` — which every managed pom
+inherits its version from, so `vibetags-annotations/pom.xml`, `vibetags/pom.xml`,
+`vibetags-bom/pom.xml` and `load-tests/pom.xml` need no edit at all — plus the
+places that cannot inherit it: both `build.gradle` files, the copy-pasteable
+snippets in the `<description>` blocks, and the standalone example/demo poms.
+
+Then confirm nothing was missed, rather than assuming:
+
+```bash
+cd vibetags && mvn test -Dtest=BuildVersionParityTest
+```
+
+That test fails if any Gradle file, example pom or managed pom disagrees with
+`<revision>`. It exists because the previous script skipped the examples and
+`load-tests/`, and `load-tests/` consequently sat two releases behind while CI
+believed it was benchmarking the branch.
 
 It deliberately does **not** touch the consumers, which you must update by hand with
 `Edit` — they track a *released* BOM version, which only now exists:

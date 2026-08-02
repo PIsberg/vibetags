@@ -146,6 +146,59 @@ jobs:
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
+      - name: Verify Reactor YAML Is Readable By The Tools That Consume It
+        run: |
+          cd example-multimodule
+          # "The file exists and says VIBETAGS" is what the check above proves, and it is not
+          # enough: the merge once stacked each module's whole document, so these files carried
+          # their top-level key once per module. Strict parsers rejected them and lenient ones kept
+          # only the last module, silently. Parse them here with duplicate keys forbidden, and
+          # assert an element only one module declares is still reachable after the parse.
+          python3 - <<'PY'
+          import sys, yaml
+
+          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
+                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          # Declared in exactly one module each, so their presence proves the merge kept them all.
+          WITNESSES = {
+              "cli": "com.example.multimodule.cli.MultiModuleCli",
+              "core": "com.example.multimodule.core.IrNode",
+              "showcase": "com.example.security.SecurityConfig",
+          }
+
+          class Strict(yaml.SafeLoader):
+              pass
+
+          def no_duplicates(loader, node, deep=False):
+              seen = set()
+              for key_node, _ in node.value:
+                  key = loader.construct_object(key_node, deep=deep)
+                  if key in seen:
+                      raise yaml.constructor.ConstructorError(
+                          None, None, f"duplicate top-level key {key!r}", key_node.start_mark)
+                  seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+          Strict.construct_mapping = no_duplicates
+
+          failed = False
+          for path in FILES:
+              text = open(path, encoding="utf-8").read()
+              try:
+                  parsed = str(yaml.load(text, Loader=Strict))
+              except Exception as e:
+                  print(f"::error file={path}::not a valid YAML document: {e}")
+                  failed = True
+                  continue
+              missing = [m for m, w in WITNESSES.items() if w not in parsed]
+              if missing:
+                  print(f"::error file={path}::merged away the guardrails of module(s): {missing}")
+                  failed = True
+              else:
+                  print(f"{path}: parses strictly, all {len(WITNESSES)} modules survive")
+          sys.exit(1 if failed else 0)
+          PY
+
 
       - name: Verify Per-Module (nested) Output
         run: |
@@ -374,8 +427,23 @@ jobs:
       # takes ~15s and does not depend on runner speed, unlike the volume sweep's wall-clock.
       - name: Run annotation-volume stress test (N ≤ 500), concurrent-build and signature-capture tests
         run: |
+          # load-tests/pom.xml pins <processor.version> to whichever release is being compared, and
+          # that pin is deliberate for cross-version work. It is wrong for this job: a regression
+          # gate has to run against the code in the pull request, and the pin sat two releases
+          # behind, so this step was gating an artifact downloaded from Maven Central. The
+          # signature-capture guard passed on 0.9.5 — a build predating the optimization it exists
+          # to protect — while reporting a 0.0% saving.
+          VT_VERSION=$(cd vibetags && mvn -q help:evaluate -Dexpression=project.version -DforceStdout | tail -1)
+          echo "Load-testing the processor built by this run: $VT_VERSION"
+          # An empty or malformed value would silently fall back to the pom's pin, which is the
+          # failure this step exists to remove. Fail loudly instead.
+          case "$VT_VERSION" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "could not resolve the processor version, got '$VT_VERSION'"; exit 1 ;;
+          esac
           cd load-tests
           mvn test -B \
+            -Dprocessor.version="$VT_VERSION" \
             -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest" \
             -Dstress.max.classes=500
 

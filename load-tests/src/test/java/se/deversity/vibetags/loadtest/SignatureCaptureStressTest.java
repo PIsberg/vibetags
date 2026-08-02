@@ -70,6 +70,16 @@ class SignatureCaptureStressTest {
     private static final int CLASSES = 400;
     private static final int MEMBERS_PER_CLASS = 40;
 
+    /**
+     * Minimum share of the processor's own allocation overhead that turning enforcement off must
+     * save, as a percentage.
+     *
+     * <p>Measured on this fixture: 6.9 % with the optimization present (36 MB), 0.0 % without it.
+     * The threshold sits between those, nearer the floor, so run-to-run variance cannot fail a
+     * healthy build while the optimization's removal cannot pass one.
+     */
+    private static final double MIN_SAVED_SHARE = 3.0;
+
     private static ThreadMXBean threadBean;
 
     @BeforeAll
@@ -118,8 +128,20 @@ class SignatureCaptureStressTest {
         System.out.println(line);
         append(line);
 
-        assertTrue(off < on,
-            "A build with enforcement off must not allocate what only the enforcing mode reads. " + line);
+        // A bare `off < on` is not a regression gate. Run this against 0.9.5, where signature
+        // capture was unconditional and there is nothing to save, and it reports
+        // "saved=216KB (0.0% of processor overhead)" out of 556 MB — then passes, because two
+        // noisy measurements of the same work land on either side of each other about half the
+        // time. The gate has to assert the size of the saving, not merely its sign.
+        //
+        // MIN_SAVED_SHARE is set well below what the optimization actually delivers (6.9 % of
+        // processor overhead on RC9, 36 MB, which the README reports as reproducible to 0.3 %) and
+        // far above what its absence produces (0.0 %). Anything in between means the saving shrank
+        // enough to be worth a look, which is exactly when this should fail.
+        assertTrue(shareOfOverhead >= MIN_SAVED_SHARE, String.format(Locale.ROOT,
+            "Enforcement-off must save at least %.1f%% of the processor's own allocation overhead, "
+                + "got %.1f%%. Signature capture has most likely become unconditional again. %s",
+            MIN_SAVED_SHARE, shareOfOverhead, line));
     }
 
     private static Path root(Path tempDir, String name) throws IOException {

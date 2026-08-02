@@ -92,6 +92,12 @@ dependencies {
     testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.0-RC5'
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
+    // Test-only, matching pom.xml. The processor writes six YAML documents but must not gain a
+    // YAML dependency: it runs on the consumer's annotation-processor path, where every extra jar
+    // is one more thing to collide with. The tests need a real parser because "the file looks
+    // right" is not the property that matters - "the tool reading it sees every module's
+    // guardrails" is, and only a parser shows that.
+    testImplementation 'org.yaml:snakeyaml:2.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 

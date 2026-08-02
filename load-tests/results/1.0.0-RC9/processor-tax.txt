@@ -1,0 +1,54 @@
+What the "processor overhead" number actually contains
+======================================================
+
+MemoryVolumeStressTest subtracts a `-proc:none` compile from a VibeTags compile and calls the
+difference the processor's overhead. That subtraction is wrong in a specific and expensive way:
+`-proc:none` switches off javac's entire annotation-processing subsystem — the extra rounds, the
+JavacProcessingEnvironment, the retained element model, the round-environment bookkeeping. All of
+it lands on VibeTags' side of the subtraction, and none of it is code VibeTags can make cheaper.
+
+ProcessorTaxStressTest measures three compiles of the same 1000 sources instead of two, adding a
+control that turns annotation processing ON and then does nothing (NoOpProcessor).
+
+Measured 2026-08-02, JDK 26, same machine, same session
+-------------------------------------------------------
+                              procNone      noOp   vibetags    apTax  vibetagsShare   share%
+  1.0.0-RC9  run a             147879    322592     379822   174712          57229    24.7%
+  1.0.0-RC9  run b             147880    322007     379597   174127          57589    24.9%
+  0.9.7                        148268    321118     382025   172850          60906    26.1%
+                                                                              (all values KB)
+
+  apTax          = noOp - procNone      the price of running ANY annotation processor
+  vibetagsShare  = vibetags - noOp      the price of running THIS one
+  share%         = vibetagsShare / (vibetags - procNone)
+
+What this changes
+-----------------
+Roughly **three quarters of the number this harness has always reported as "processor overhead" is
+javac's, not VibeTags'.** At N=1000 the reported figure is ~227 MB; VibeTags' own allocation is
+~57 MB. Every release baseline in this directory carries the same inflation, so the historical
+charts overstate the processor's cost by about 4x.
+
+It also changes what optimizing means. Effort aimed at the ~171 MB of apTax is aimed at nothing:
+no change to this codebase moves it. The ~57 MB is the whole addressable surface.
+
+Release comparison on the isolated metric
+-----------------------------------------
+Measured back-to-back in one session, switching only -Dprocessor.version:
+
+  0.9.7      60906 KB
+  1.0.0-RC9  57409 KB  (mean of runs a and b)   -> 5.7% less
+
+That agrees with the 4.9% the reported metric shows for the same pair, which is the useful
+cross-check: the two framings differ in denominator, not in direction or magnitude of the change.
+
+Reproducibility
+---------------
+Two RC9 runs agreed to 0.6% on vibetagsShare (57229 / 57589 KB). apTax reproduced to 1.1%
+(174712 / 174127 / 172850 KB across three runs, including the 0.9.7 one — as expected, since it is
+javac's cost and does not depend on which processor version is loaded).
+
+Not claimed here
+----------------
+That VibeTags got faster between 0.9.7 and RC9 by more than the 5.7% above. The large drop in the
+headline number is a correction to the measurement, not a change in the software.

@@ -26,15 +26,25 @@ import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _RESULTS_DIR = REPO_ROOT / "load-tests" / "results"
-_VERSION_PAT = re.compile(r"^\d+\.\d+\.\d+$")
+# Pre-release suffix included, or a 1.0.0-RCn baseline is never seen as "the latest".
+_VERSION_PAT = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([A-Za-z]+)(\d*))?$")
 DEFAULT_OUT = _RESULTS_DIR / "_plots"
+
+
+def _release_order(name: str) -> tuple:
+    """Sort key placing 0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0 (see tools/plot-results.py)."""
+    m = _VERSION_PAT.match(name)
+    if not m:
+        return (0, 0, 0, 0, 0)
+    major, minor, patch, tag, tag_num = m.groups()
+    return (int(major), int(minor), int(patch), 0 if tag else 1, int(tag_num or 0))
 
 
 def _latest_input() -> Path:
     """Return jmh-cache-hit.json from the highest version directory that has one."""
     versions = sorted(
         (p for p in _RESULTS_DIR.iterdir() if p.is_dir() and _VERSION_PAT.match(p.name)),
-        key=lambda p: [int(x) for x in p.name.split(".")],
+        key=lambda p: _release_order(p.name),
     )
     for v in reversed(versions):
         candidate = v / "jmh-cache-hit.json"
