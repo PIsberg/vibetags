@@ -1,7 +1,8 @@
 # VibeTags Multi-Module Example
 
-A three-module Maven reactor (`core` → `engine` → `cli`) that runs the VibeTags annotation
-processor in **every** module, with all modules sharing the reactor root as the VibeTags root.
+A five-module Maven reactor (`core` → `engine` → `cli`, plus `showcase` and `tests`) that runs the
+VibeTags annotation processor in **every** module, with all modules sharing the reactor root as the
+VibeTags root.
 It mirrors the setup of real multi-module consumers (blindbean, codekarta) and serves as the
 regression example for
 [issue #278](https://github.com/PIsberg/vibetags/issues/278): before the fix, the monolithic
@@ -10,11 +11,18 @@ guardrail files (`CLAUDE.md`, `.cursorrules`, `llms.txt`) only kept the annotati
 
 ## Layout
 
-| Module | Annotations |
-|---|---|
-| `core` | `@AIDomainModel`, `@AILocked`, `@AIImmutable` |
-| `engine` | `@AIExtensible`, `@AIThreadSafe` |
-| `cli` | `@AIAudit`, `@AITestDriven`, `@AIContract`, `@AIPure`, `@AIIdempotent` |
+| Module | Annotations | Why it is here |
+|---|---|---|
+| `core` | 3 — `@AIDomainModel`, `@AILocked`, `@AIImmutable` | The dependency root every other module compiles against |
+| `engine` | 2 — `@AIExtensible`, `@AIThreadSafe` | A middle module, so the merge has to survive more than two contributors |
+| `cli` | 5 — `@AIAudit`, `@AITestDriven`, `@AIContract`, `@AIPure`, `@AIIdempotent` | The leaf, and usually the last to compile — the module that used to win under last-writer-wins |
+| `showcase` | **all 44** | Carries the full annotation set so the merged root has real volume to merge. `ExampleCoverageTest` fails the build if an annotation is added to the library without appearing here |
+| `tests` | 0 | A module with no annotations at all: it must not erase the others' contributions, and it exercises the `.vibetags-mirror` cross-module mirroring |
+
+The small per-module counts are deliberate. Spreading a few distinct annotations across `core`,
+`engine` and `cli` is what makes a lost contribution obvious in the merged output — if `core`'s
+`@AILocked` disappears from the root `CLAUDE.md`, that is visible at a glance in a way it would not
+be inside a module carrying forty-four.
 
 The parent POM passes `-Avibetags.root=${maven.multiModuleProjectDirectory}` (anchored by the
 `.mvn/` directory) so every module writes to the same shared root.

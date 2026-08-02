@@ -77,7 +77,69 @@ class ProjectFactsConsistencyTest {
                 + "in sync.");
     }
 
+    /**
+     * The README's dogfooding claim quotes two line counts as evidence that the scoped-rules index
+     * keeps always-loaded context small. They were 46 and 115 when written; the generated block had
+     * since drifted to 45 and nothing noticed, because prose does not fail a build.
+     *
+     * <p>Pinning them here is deliberately a little brittle: adding an annotation to this repo's own
+     * source changes the block, and this test then fails with both numbers in the message, so
+     * correcting the README is a one-line edit rather than an investigation. A number nobody checks
+     * is a number that is eventually wrong, and this one is load-bearing — it is the evidence for
+     * the feature's headline benefit.
+     */
+    @Test
+    void readmeDogfoodingLineCountsMatchThisRepositorysOwnFiles() throws IOException {
+        Path readme = REPO_ROOT.resolve("README.md");
+        Path claudeMd = REPO_ROOT.resolve("CLAUDE.md");
+        Path rulesDir = REPO_ROOT.resolve(".claude/rules");
+        assumeTrue(Files.isRegularFile(readme) && Files.isRegularFile(claudeMd)
+                && Files.isDirectory(rulesDir),
+            "repo layout not reachable from the test working directory; skipping");
+
+        String md = Files.readString(readme, StandardCharsets.UTF_8);
+        int claimedBlock = extractCount(md,
+            "generated block in its own `CLAUDE\\.md` is (\\d+) lines", "generated-block line");
+        int claimedDetail = extractCount(md,
+            "with (\\d+) lines of per-element detail", "per-element detail line");
+
+        assertEquals(generatedBlockLines(claudeMd), claimedBlock,
+            "README says the generated block in CLAUDE.md is " + claimedBlock + " lines, but it is "
+                + generatedBlockLines(claudeMd) + " (counted between the VIBETAGS markers, "
+                + "inclusive). Update the README sentence.");
+        assertEquals(scopedRuleLines(rulesDir), claimedDetail,
+            "README says .claude/rules/ holds " + claimedDetail + " lines of per-element detail, but "
+                + "it holds " + scopedRuleLines(rulesDir) + ". Update the README sentence.");
+    }
+
     // -----------------------------------------------------------------------
+
+    /** Lines from {@code <!-- VIBETAGS-START -->} to {@code <!-- VIBETAGS-END -->}, inclusive. */
+    private static int generatedBlockLines(Path claudeMd) throws IOException {
+        List<String> lines = Files.readAllLines(claudeMd, StandardCharsets.UTF_8);
+        int start = -1;
+        int end = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).strip();
+            // Matched on the comment form, not the bare word: this file also *discusses* the
+            // markers in prose, and those mentions come first.
+            if (start < 0 && "<!-- VIBETAGS-START -->".equals(line)) start = i;
+            if ("<!-- VIBETAGS-END -->".equals(line)) end = i;
+        }
+        assertTrue(start >= 0 && end > start,
+            "CLAUDE.md has no VIBETAGS-START/END block — has this repo stopped dogfooding?");
+        return end - start + 1;
+    }
+
+    private static int scopedRuleLines(Path rulesDir) throws IOException {
+        int total = 0;
+        try (Stream<Path> files = Files.list(rulesDir)) {
+            for (Path f : files.filter(p -> p.toString().endsWith(".md")).toList()) {
+                total += Files.readAllLines(f, StandardCharsets.UTF_8).size();
+            }
+        }
+        return total;
+    }
 
     private static boolean isAnnotationInterface(Path javaFile) {
         try {

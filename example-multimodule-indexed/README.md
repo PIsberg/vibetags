@@ -19,6 +19,23 @@ auto-load the scoped rules.
 > The `.vibetags-root-index` marker is what turns the root aggregate into an index. Delete it and the
 > next build re-embeds the full merge (the `../example-multimodule` layout).
 
+## Annotation coverage
+
+Both modules together exercise **every one of the [44 annotations](../README.md#project-facts)**, which
+is what makes this reactor a useful test of the index rather than a toy: the index only earns its keep
+when there is enough detail to be worth deferring. `ExampleCoverageTest` fails the build if an
+annotation is added to the library without appearing here.
+
+That coverage is also what makes the two tiers visible side by side. The **safety** buckets
+(`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline in the root
+`CLAUDE.md` — a guardrail that only loads once the agent opens the file it protects has become a
+comment. Everything else — the contracts, the thread affinities, the banned APIs, the observability
+notes — collapses to a one-line module pointer and loads from `core/.claude/rules/` or
+`app/.claude/rules/` when a matching source file is opened.
+
+`.claudeignore` and `.copilotignore` are opted in at the root so `@AIIgnore` has somewhere to write;
+without them the processor emits a NOTE saying the annotation is used but no ignore file exists.
+
 ## Build
 
 Requires the in-development processor (indexed root landed in RC6). Install the library first (see the
