@@ -30,9 +30,11 @@ mvn test
 # Cap the sweep so CI stays fast (skips N > 500)
 mvn test -Dstress.max.classes=500
 
-# JMH microbenchmarks — both classes, JSON output + GC profiler (~3 min)
+# JMH hot-path microbenchmarks, JSON output + GC profiler (~3 min). Keep the class filter:
+# unfiltered, JMH also runs WriteCacheHitBenchmark into the same file, and jmh.json stops being
+# the six-benchmark table every release baseline records. (0.9.5 has 18 in it for this reason.)
 mvn package -DskipTests
-java -jar target/benchmarks.jar -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
+java -jar target/benchmarks.jar ProcessorHotPathBenchmark -wi 3 -i 5 -f 1 -tu us -bm avgt -prof gc \
      -rf json -rff results/<X.Y.Z>/jmh.json
 
 # Just the cache-hit benchmark (proves the WriteCache value at 1 MB body sizes)

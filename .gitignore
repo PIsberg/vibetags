@@ -46,3 +46,9 @@ vibetags/llms.txt
 vibetags/llms-full.txt
 vibetags/.codex/
 vibetags/.qwen/
+
+# Python bytecode from the tools/ plotting scripts. Running any of them leaves a
+# tools/__pycache__/ behind, which otherwise turns up as untracked noise in every
+# `git status` after a plot regeneration.
+__pycache__/
+*.pyc

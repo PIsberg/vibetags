@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+
+- **A 1.0.0-RC9 load-test baseline, and a comparison that is actually a comparison.**
+
+  ![Allocation overhead vs earlier releases](../load-tests/results/_plots/alloc-release-comparison-1.0.0-RC9.png)
+
+  Measured back-to-back in one session, switching only `-Dprocessor.version`, RC9 allocates
+  **4.9 % less than 0.9.7** at N=1000, **7.3 % less** at N=500 and **10.8 % less** at N=100. It is
+  level with 1.0.0-RC1 (0.15 % apart at N=1000, inside the noise floor) — which is the expected
+  result, since nothing between RC1 and RC9 claimed an allocation win. RC9 holds the RC1
+  optimizations rather than adding to them.
+
+  The same-session part is not ceremony. Comparing RC9's capture against RC1's *recorded* baseline
+  suggests a 4.4 % regression; comparing them on one machine shows no difference. The `baseline`
+  column — javac compiling the same sources with no processor at all — had moved 9 % between those
+  two capture days. The machine changed, not the processor.
+
+  **The wall-clock and JMH figures in this baseline are not comparable to earlier releases and are
+  marked as such.** Two runs of the identical RC9 build, minutes apart, differed by up to **1.93x**
+  on the JMH hot path, and re-running 0.9.7 today reproduced its own recorded numbers only to within
+  **1.4x–3.1x**. A noise floor that size swallows nearly anything worth reading off those charts, so
+  they now carry that warning on their face instead of inviting the comparison. Allocation is
+  immune — it counts bytes through `ThreadMXBean` rather than timing anything, and reproduced to
+  within 0.6 %.
+
+  One difference does clear that noise floor and is recorded in
+  `load-tests/results/1.0.0-RC9/env.txt` rather than glossed: `resolveActiveServices` is
+  substantially slower than in 0.9.7. It stats one path per registered service to decide which are
+  opted in, and the service count reached 50 in RC9, so some increase is the cost of the platforms
+  added since. Whether it is *only* that has not been established and is not claimed here.
+
+  Tooling fixed along the way: `tools/plot-results.py` matched version directories with
+  `^\d+\.\d+\.\d+$`, so every `1.0.0-RCn` baseline was captured, committed, and then silently left
+  out of every chart — the folder was there, the line was not, and nothing said so. RC directories
+  now sort correctly too (`0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0`). The documented JMH capture
+  command also ran every benchmark into `jmh.json`, which is why 0.9.5 has 18 entries in a file
+  every other release has 6 in; both READMEs now carry the class filter.
+
 ### Fixed
 - **Multi-module reactors wrote broken YAML, and lost most of their guardrails doing it.** The
   sidecar merge stacked each module's *whole* rendered document between `VIBETAGS-MODULE`
