@@ -90,6 +90,12 @@ kept here because breaking one of them fails silently:
   multi-module merge otherwise stacks whole renderings and repeats the document's top-level key once
   per module — invalid to a strict parser, silently truncated to the last module by a lenient one.
   `YamlMergeShapeContractTest` fails a missing or drifted declaration.
+- **A renderer whose marker-free file varies with the annotations must declare
+  `PlatformRenderer.wholeFileMerge()`.** A file with no markers is a whole-file overwrite, so
+  without one it publishes whichever module compiled last. `MultiModuleWholeFileMergeTest` derives
+  the rule — it renders each such service empty and populated, and fails any that differ without a
+  merge. Note the coupling that made this invisible: sidecar bodies are also what
+  `anyContributed` reads, so a service missing from the sidecar never refreshes at all.
 
 This repo dogfoods the index: the block at the bottom of this file is a scoped-rules index, and the
 per-element detail lives in `.claude/rules/`, loaded on demand by glob.

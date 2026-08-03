@@ -74,6 +74,23 @@ public final class PlatformRendererRegistry {
         return renderer == null ? null : renderer.mergeShape();
     }
 
+    /**
+     * The whole-file merge declared by the renderer behind {@code serviceKey}, or {@code null} when
+     * the service has no renderer, its file carries markers, or its output holds no per-element
+     * content.
+     *
+     * @param serviceKey the service key, e.g. {@code "mentat"}
+     * @return the declared merge, or {@code null}
+     */
+    public static @Nullable WholeFileMerge wholeFileMergeFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return null;
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? null : renderer.wholeFileMerge();
+    }
+
     private static @Nullable PlatformRenderer findRenderer(Platform platform) {
         switch (platform) {
             case CURSOR:

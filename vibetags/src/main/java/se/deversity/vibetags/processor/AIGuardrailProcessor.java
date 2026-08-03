@@ -12,6 +12,8 @@ import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
+import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
@@ -382,12 +384,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // --- Multi-module aggregation ---
         // Write this module's rendered bodies to its sidecar file so siblings can pick them up.
         ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
-        contentByService.forEach((service, body) -> {
-            Path filePath = serviceFiles.get(service);
-            if (filePath != null && GuardrailFileWriter.getMarkersFor(filePath.getFileName().toString()) != null) {
-                mySidecar.putBody(service, body);
-            }
-        });
+        // Every rendered body, not just the marker-based ones. This used to skip services whose
+        // file has no markers (JSON/TOML), which had a consequence well beyond the merge: the write
+        // phase below reads exactly this map to decide whether a shared file may be rewritten at
+        // all, so for those services the answer was permanently "no module contributed" and the
+        // writer's no-new-rules guard skipped every update to an existing file. Whatever the first
+        // successful write produced stayed there for good (issue #265). contentByService already
+        // excludes granular directories, so every entry here is a real output file.
+        contentByService.forEach(mySidecar::putBody);
         if (moduleBuilt != null) {
             moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
         }
@@ -951,7 +955,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             Path fileName = entry.getValue().getFileName();
             if (fileName == null) continue;
             String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
-            if (markers == null) continue; // JSON/TOML: keep current-module content as-is
+            if (markers == null) {
+                // JSON and TOML have nowhere to put a marker, so these files are whole-file
+                // overwrites. Keeping the compiling module's rendering publishes one module's view
+                // of the project; the renderer supplies a format-aware merge where the file holds
+                // per-element content (issue #265). Where it does not — the static configs — there
+                // is nothing to merge and every module renders the same bytes anyway.
+                WholeFileMerge wholeFile = PlatformRendererRegistry.wholeFileMergeFor(service);
+                if (wholeFile != null) {
+                    String document = wholeFile.merge(ModuleSidecar.contributionsFor(service, allSidecars));
+                    if (document != null && !document.isBlank()) {
+                        merged.put(service, document);
+                    }
+                }
+                continue;
+            }
             boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
             String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
             if (!mergedBody.isBlank()) {

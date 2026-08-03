@@ -6,6 +6,7 @@ import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 
 /**
  * PlatformRenderer for generating Mentat config.
@@ -62,6 +63,18 @@ public final class MentatRenderer implements PlatformRenderer {
         sb.append("  }\n}\n");
         return sb.toString();
     }
+
+    /**
+     * The rules arrays are unioned per key across modules. Concatenating two of these documents
+     * would not be JSON, and keeping only the compiling module's would publish one module's view of
+     * the project — which is what {@code .mentatconfig.json} did in a reactor until #265.
+     */
+    @Override
+    public WholeFileMerge wholeFileMerge() {
+        return MERGE;
+    }
+
+    private static final WholeFileMerge MERGE = WholeFileMerge.jsonRules();
 
     private static void appendJsonSection(StringBuilder out, String key, StringBuilder items) {
         if (items.length() == 0) return;

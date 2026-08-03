@@ -70,6 +70,13 @@ will re-locate every dispatch point this skill lists.
      (conditional buckets → `YamlMergeShape.keyed`) are the three worked examples.
      `YamlMergeShapeContractTest` fails the build if you skip it or if the declaration drifts from
      what the renderer writes.
+   - **JSON or TOML output whose content varies with the annotations** — override
+     `wholeFileMerge()` instead. Those files carry no markers, so they are whole-file overwrites and
+     without a merge a reactor publishes whichever module compiled last. `MentatRenderer`
+     (`WholeFileMerge.jsonRules()`) and `PrAgentRenderer` (`WholeFileMerge.tomlInstructions()`) are
+     the worked examples; a static config that does not vary needs nothing.
+     `MultiModuleWholeFileMergeTest` derives the requirement by rendering your service empty and
+     populated, so forgetting it fails the build.
 
 4. **`vibetags/.../internal/content/PlatformRendererRegistry.java`** — declare
    `private static final XRenderer X_RENDERER = new XRenderer();` and add `case X:` (multiple

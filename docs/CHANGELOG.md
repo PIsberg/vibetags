@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Multi-module reactors froze their JSON and TOML outputs after the first write, and the freeze
+  hid a second bug underneath it.** The remaining half of #265.
+
+  The write phase asks `anyContributed` whether any module has contributed to a service before it
+  will rewrite a shared file, and that question is answered from the sidecar — which stored bodies
+  only for marker-based services. For a JSON or TOML output the answer was permanently "no", so the
+  writer's `no-new-rules` guard skipped every update to an existing file. Whatever the first
+  successful write produced stayed there for good. On the four-module `example-multimodule`,
+  `.mentatconfig.json` carried **1 entry from 1 module of 4** and every later build logged
+  `no changes`; `.pr_agent.toml` carried 6 guardrail lines from the same single module.
+
+  Storing those bodies makes the files refresh — and immediately exposes the bug the freeze was
+  masking. A file with no markers is a whole-file overwrite, so refreshing it just replaces one
+  module's view of the project with another's. Last-writer-wins is not obviously better than frozen.
+
+  So the two renderers that emit per-element content also declare a
+  `PlatformRenderer.wholeFileMerge()`, which re-assembles the document from every module's
+  rendering: `.mentatconfig.json` unions each rules array inside its own key, and `.pr_agent.toml`
+  rewrites **both** `extra_instructions` blocks from the union of the instruction lines — updating
+  one and not the other would give PR-Agent two different views of the same project. Measured on the
+  same reactor:
+
+  | file | before | after |
+  |---|---|---|
+  | `.mentatconfig.json` | 1 section, 1 entry, 1 of 4 modules | 9 sections, 51 entries, all modules |
+  | `.pr_agent.toml` | 6 guardrail lines, 1 of 4 modules | 200 lines, all modules |
+
+  The merges are format-aware because there is no generic answer — concatenating two JSON documents
+  is not JSON. They parse only VibeTags' own output, whose shape is fixed by a renderer in the same
+  package, and decline by returning `null` rather than guessing when a document is not that shape.
+  A single-module build is byte-identical to before, and a rebuild of the reactor is byte-identical
+  to the previous one, so nothing churns.
+
+  The three static configs (`.cody/config.json`, `.qwen/settings.json`, `.codex/config.toml`)
+  declare no merge, because their content does not vary with the annotations. They still gain the
+  refresh: without it, upgrading VibeTags never updated them in a reactor either.
+
+  `MultiModuleWholeFileMergeTest` derives the rule instead of listing it — it renders every
+  marker-free service with an empty model and a populated one, and fails any whose output differs
+  but which declares no merge. Verified by deleting Mentat's declaration, which names it exactly.
+
+  Inside the `@AILocked` `generateFiles()` this is a single changed statement — the sidecar now
+  stores every rendered body rather than filtering on markers. No step was added, removed or
+  reordered, which is what that lock protects.
+
 ## [1.0.0-RC9] - 2026-08-02
 
 ### Added

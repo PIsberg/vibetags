@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 
 /**
  * PlatformRenderer for generating Qodo/Codium PR-Agent's {@code .pr_agent.toml} configuration.
@@ -35,4 +36,16 @@ public final class PrAgentRenderer implements PlatformRenderer {
           .append("\"\"\"\n");
         return sb.toString();
     }
+
+    /**
+     * Both instruction blocks are rewritten from the union of every module's guardrails. Keeping
+     * only the compiling module's would publish one module's view of the project, which is what
+     * .pr_agent.toml did in a reactor until #265.
+     */
+    @Override
+    public WholeFileMerge wholeFileMerge() {
+        return MERGE;
+    }
+
+    private static final WholeFileMerge MERGE = WholeFileMerge.tomlInstructions();
 }
