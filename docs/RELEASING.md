@@ -268,7 +268,7 @@ gh release edit $TAG --notes-file /tmp/r.md
 
 ### 7. Automatic Publishing
 
-Creating a release triggers the [Publish workflow](.github/workflows/publish.yml), which runs two parallel jobs:
+Creating a release triggers the [Publish workflow](../.github/workflows/publish.yml), which runs two parallel jobs:
 
 1. **Publish to GitHub Packages** — deploys the artifact to `maven.pkg.github.com/PIsberg/vibetags` using the `-P github` profile.
 2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys all three artifacts (`vibetags-annotations`, `vibetags-processor`, `vibetags-bom`) to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`). Order matters: annotations must be deployed before the processor (which depends on them).

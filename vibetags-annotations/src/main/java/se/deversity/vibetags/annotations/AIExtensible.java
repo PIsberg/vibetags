@@ -12,14 +12,20 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface AIExtensible {
+    /** The polymorphic route to take instead of adding another branch to a conditional. */
     enum Strategy {
+        /** Add behaviour as an interchangeable implementation selected at runtime. */
         STRATEGY_PATTERN,
+        /** Add behaviour as a visitor over a stable type hierarchy. */
         VISITOR_PATTERN,
+        /** Add behaviour by producing a new product from a factory rather than by branching. */
         FACTORY
     }
 
     /**
      * Design strategy required for extending capabilities.
+     *
+     * @return the pattern to extend through; defaults to {@link Strategy#STRATEGY_PATTERN}
      */
     Strategy value() default Strategy.STRATEGY_PATTERN;
 }

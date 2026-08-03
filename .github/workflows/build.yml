@@ -2,9 +2,12 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, 'feature/*', 'fix/*' ]
+    branches: [ main, master, 'feature/*', 'fix/*', 'chore/*', 'docs/*', 'ci/*', 'release/*' ]
+  # Deliberately unfiltered: a pull request is a request to review a change, so it is tested
+  # whichever branch it targets. Restricting this to main meant a stacked PR — one targeting the
+  # branch it was built on, so its diff shows only its own work — ran no tests at all, and its PR
+  # page was indistinguishable from one whose tests had passed.
   pull_request:
-    branches: [ main, master ]
 
 permissions:
   contents: read
@@ -82,6 +85,23 @@ jobs:
         run: |
           cd example
           mvn clean compile -B -Dvibetags.log.path=../vibetags.log
+
+      - name: Verify The Example's Committed Guardrails Match Its Annotations
+        run: |
+          # The three reactors run check mode. example/ cannot: the step above empties its config
+          # files and regenerates them, so check mode would compare the fresh tree against itself.
+          # Comparing against git is the equivalent gate, and a slightly stronger one — it proves a
+          # from-empty regeneration reproduces exactly what is committed. It fails when someone
+          # edits an annotation here and forgets to commit the regenerated files, which until now
+          # went unnoticed.
+          if [ -n "$(git status --porcelain -- example/)" ]; then
+            echo "::error::example/ guardrail files are out of date with its annotations."
+            echo "Run: cd example && mvn clean compile   then commit the regenerated files."
+            git status --porcelain -- example/
+            git --no-pager diff -- example/
+            exit 1
+          fi
+          echo "example/ regenerates byte-for-byte to the committed files."
 
       - name: Build Multi-Module Example (Maven reactor)
         run: |

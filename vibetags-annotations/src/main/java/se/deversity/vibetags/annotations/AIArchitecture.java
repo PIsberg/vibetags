@@ -14,11 +14,15 @@ import java.lang.annotation.Target;
 public @interface AIArchitecture {
     /**
      * Defines the architectural layer or component this class belongs to.
+     *
+     * @return the layer name, e.g. {@code "domain"}, or an empty string to leave it unstated
      */
     String belongsTo() default "";
 
     /**
      * Defines the list of layers or components that this class is strictly prohibited from referencing or importing.
+     *
+     * @return the layer or package names this type must never reference; empty means unrestricted
      */
     String[] cannotReference() default {};
 }
