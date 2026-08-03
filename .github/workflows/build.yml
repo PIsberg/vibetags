@@ -302,6 +302,13 @@ jobs:
           cd example-multimodule-indexed
           mvn clean compile -B
 
+      - name: Verify The Indexed Example's Committed Guardrails (check mode)
+        run: |
+          cd example-multimodule-indexed
+          # Runs after the build above, so the tree is already regenerated: a failure here means
+          # the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
+
       - name: Verify Indexed Root (issues #295, #319, #332)
         run: |
           cd example-multimodule-indexed
