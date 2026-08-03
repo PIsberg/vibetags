@@ -2,9 +2,12 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, 'feature/*', 'fix/*' ]
+    branches: [ main, master, 'feature/*', 'fix/*', 'chore/*', 'docs/*', 'ci/*', 'release/*' ]
+  # Deliberately unfiltered: a pull request is a request to review a change, so it is tested
+  # whichever branch it targets. Restricting this to main meant a stacked PR — one targeting the
+  # branch it was built on, so its diff shows only its own work — ran no tests at all, and its PR
+  # page was indistinguishable from one whose tests had passed.
   pull_request:
-    branches: [ main, master ]
 
 permissions:
   contents: read
