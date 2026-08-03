@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **PIT mutation testing runs on demand only.** It moved out of `build.yml` into its own
+  `mutation.yml`, whose sole trigger is `workflow_dispatch`. The job was the longest leg in CI and
+  carried `continue-on-error: true`, so no score it produced could fail a build — every push paid
+  for a number nothing acted on. The standalone workflow drops `continue-on-error`: when someone
+  asks for the run, a failure should read as one. Nothing about the `mutation` Maven profile
+  changed, so `mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` still works
+  locally and from a dispatched run.
+
 ## [1.0.0-RC10] - 2026-08-03
 
 ### Added
