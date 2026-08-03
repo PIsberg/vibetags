@@ -14,11 +14,15 @@ import java.lang.annotation.Target;
 public @interface AITemporary {
     /**
      * Expiration date in ISO format YYYY-MM-DD (e.g. "2026-06-30").
+     *
+     * @return the date after which compilation fails, forcing the workaround to be revisited
      */
     String expiresOn();
 
     /**
      * Rationale behind this temporary workaround.
+     *
+     * @return why the shortcut was taken, so whoever hits the expiry knows what to replace
      */
     String reason();
 }

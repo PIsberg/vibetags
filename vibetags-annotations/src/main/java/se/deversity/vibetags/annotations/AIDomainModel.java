@@ -14,6 +14,8 @@ import java.lang.annotation.Target;
 public @interface AIDomainModel {
     /**
      * Optional list of packages or classes that are explicitly allowed to be imported.
+     *
+     * @return the imports exempt from the framework ban; empty means no exemptions
      */
     String[] allow() default {};
 }
