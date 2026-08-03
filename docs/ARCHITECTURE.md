@@ -590,7 +590,7 @@ vibetags/
 │   ├── src/main/java/se/deversity/vibetags/annotations/
 │   │   ├── AILocked.java
 │   │   ├── AIContext.java
-│   │   ├── ...                          # 39 annotation @interface files in total — see ../README.md#project-facts
+│   │   ├── ...                          # every @interface — see ../README.md#project-facts
 │   │   └── AITemporary.java
 │   ├── pom.xml
 │   └── build.gradle

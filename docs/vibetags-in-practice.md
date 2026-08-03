@@ -20,7 +20,7 @@ Five codebases use VibeTags. All are authored by the same developer, so this is 
 
 Two areas inside the VibeTags repo are **not** real usage and are excluded from all counts below:
 
-- **`example/`** — 82 uses across all 39 annotation types, 26 of them exactly once. This is a coverage matrix, not a risk model: one annotation per formatter code path, wired into the `verify-generated-files` CI action that greps generated output for expected strings. Its heavy `@AIDraft` use (15 real sites) exists because demonstrating "AI, implement this" requires stub bodies.
+- **`example/`** — at least one use of every annotation type. This is a coverage matrix, not a risk model: one annotation per formatter code path, wired into the `verify-generated-files` CI action that greps generated output for expected strings. Its heavy `@AIDraft` use (15 real sites) exists because demonstrating "AI, implement this" requires stub bodies.
 - **`load-tests/`** — `SyntheticClassGenerator` emits annotations *as strings at runtime* on a modulo schedule (every class `@AIContext`, every 2nd `@AILocked`, every 5th `@AIPrivacy`…), sweeping N from 10 to 10,000 classes. Annotations as synthetic load, not guardrails.
 
 ### The headline finding
