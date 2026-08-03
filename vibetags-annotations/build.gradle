@@ -30,6 +30,7 @@ publishing {
                     license {
                         name = 'MIT License'
                         url = 'https://opensource.org/licenses/MIT'
+                        distribution = 'repo'
                     }
                 }
                 developers {
