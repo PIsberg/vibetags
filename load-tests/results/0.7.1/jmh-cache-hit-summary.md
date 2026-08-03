@@ -74,9 +74,9 @@ Fix shipped in 0.7.1: use `String.hashCode()` as the fingerprint.
 
 ## Plots
 
-![Wall-clock per writeFileIfChanged call (log-y)](../../docs/changelog-assets/0.7.1/cache-hit-time.png)
+![Wall-clock per writeFileIfChanged call (log-y)](../../../docs/changelog-assets/0.7.1/cache-hit-time.png)
 
-![Allocation per writeFileIfChanged call (log-y)](../../docs/changelog-assets/0.7.1/cache-hit-alloc.png)
+![Allocation per writeFileIfChanged call (log-y)](../../../docs/changelog-assets/0.7.1/cache-hit-alloc.png)
 
 ## Caveats
 

@@ -2,6 +2,8 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
 
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -9,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +29,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       must equal the "<b>N annotations</b>" figure stated in the README "project facts" line.</li>
  *   <li><b>Platform count</b> — the "<b>N AI platforms</b>" figure in the README must equal the number
  *       of distinct platforms actually enumerated in the README "Supported AI Platforms" list.</li>
+ *   <li><b>Output counts</b> — the "<b>N config files</b>" and "<b>N scoped-rule directories</b>"
+ *       figures must equal what {@code ServiceRegistry} actually declares. These are a different
+ *       count from the platform figure and must not be conflated with it: a platform is a tool,
+ *       and one tool routinely owns several files. The README claimed "37 config formats" for a
+ *       long time — the platform number wearing the file number's label, understating the real
+ *       figure by a third, and nothing disagreed because nothing was checking.</li>
  * </ul>
  *
  * <p>The README "At a glance" line is the single source of truth for these numbers; every other doc
@@ -38,6 +47,35 @@ class ProjectFactsConsistencyTest {
 
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
+
+    @Test
+    void readmeOutputCountsMatchWhatTheServiceRegistryDeclares() throws IOException {
+        Path readme = REPO_ROOT.resolve("README.md");
+        if (!Files.isRegularFile(readme)) {
+            return; // repo layout not reachable; the other tests document this skip
+        }
+        String md = Files.readString(readme, StandardCharsets.UTF_8);
+
+        Map<String, Path> services = ServiceRegistry.buildServiceFileMap(Paths.get("."));
+        // A scoped-rules entry is a directory of per-element rule files; everything else is a
+        // single config file. The file name is the only thing that distinguishes them without
+        // touching the disk, and rule directories are the ones with no extension.
+        long directories = services.values().stream()
+            .map(Path::getFileName)
+            .filter(java.util.Objects::nonNull)
+            .filter(name -> !name.toString().contains("."))
+            .count();
+        long files = services.size() - directories;
+
+        assertEquals(files,
+            extractCount(md, "\\*\\*(\\d+) config files\\*\\*", "config file"),
+            "The README's config-file count disagrees with ServiceRegistry. This is the number a "
+                + "reader uses to judge whether VibeTags is worth adopting, so it has to be the "
+                + "number the code actually writes.");
+        assertEquals(directories,
+            extractCount(md, "\\*\\*(\\d+) scoped-rule directories\\*\\*", "scoped-rule directory"),
+            "The README's scoped-rule-directory count disagrees with ServiceRegistry.");
+    }
 
     @Test
     void readmeAnnotationCountMatchesTheNumberOfAnnotationInterfaces() throws IOException {
