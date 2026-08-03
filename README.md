@@ -24,13 +24,13 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **37 AI platforms**. These two numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. (Counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **37 AI platforms**, written as **49 config files** and **13 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
 `.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
 
-- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [37 config formats](#project-facts).
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [49 config files](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
 - **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 45 lines, with 115 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
@@ -154,11 +154,11 @@ gradle compileJava
 
 - [What is VibeTags?](#-what-is-vibetags)
 - [Project Structure](#-project-structure)
-- [Installation](#-quick-start)
+- [Installation](#-installation)
 - [How It Works](#-how-it-works)
-- [Organizing Context Files](#-organizing-context-files-for-optimal-context)
+- [Organizing Context Files](#️-organizing-context-files-for-optimal-context)
 - [Documentation](#-documentation)
-- [Building from Source](#-building-both-projects)
+- [Building from Source](#️-building-from-source)
 - [Performance & Load Tests](#-performance--load-tests)
 - [When to Use VibeTags](#-when-to-use-vibetags)
 - [Advanced Features & Annotation Reference](#-advanced-features--annotation-reference) → full guide in **[USAGE.md](USAGE.md)**
@@ -194,7 +194,7 @@ carries: **what it can annotate**, and **which tier its guardrail lands in**.
 - **Tier** is where the rule shows up once a platform's scoped-rules directory is opted in.
   **safety** guardrails stay inline in the always-loaded aggregate, because a rule that only loads
   after the agent opens the file it protects has already failed. Everything else moves to the
-  scoped file and is replaced by a one-line pointer. See [Context tiers](#-context-tiers-1-2-3).
+  scoped file and is replaced by a one-line pointer. See [`example-all-tiers/`](example-all-tiers/README.md), which demonstrates all three.
 - **Required attributes** have no default; leave one out and the code does not compile.
 
 Every annotation below is used in [`example/`](example/README.md) — that README maps each one to the
