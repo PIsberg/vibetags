@@ -17,6 +17,14 @@
     and which tier it lands in.
   </description>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>billing</module>
     <module>shipping</module>

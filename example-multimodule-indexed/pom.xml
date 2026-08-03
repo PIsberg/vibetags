@@ -18,6 +18,14 @@
     layout) — see https://github.com/PIsberg/vibetags/issues/295.
   </description>
 
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <modules>
     <module>core</module>
     <module>app</module>
