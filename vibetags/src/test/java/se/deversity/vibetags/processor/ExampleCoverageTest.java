@@ -49,7 +49,7 @@ class ExampleCoverageTest {
 
     /** Example projects that must demonstrate the whole annotation set. */
     private static final List<String> EXHAUSTIVE_EXAMPLES = List.of(
-        "example/src", "example-multimodule", "example-multimodule-indexed");
+        "example/src", "example-multimodule", "example-multimodule-indexed", "example-all-tiers");
 
     @Test
     void everyAnnotationIsDemonstratedInEveryExhaustiveExample() throws IOException {

@@ -32,4 +32,19 @@ public interface PlatformRenderer {
     default @Nullable YamlMergeShape mergeShape() {
         return null;
     }
+
+    /**
+     * How this platform's marker-free output is combined across the modules of a reactor, or
+     * {@code null} when the file carries markers (and is merged by region) or holds no per-element
+     * content at all.
+     *
+     * <p>Only the JSON and TOML platforms that render guardrails override this. A file with no
+     * markers is a whole-file overwrite, so without a merge it carries one module's view of the
+     * project — see {@link WholeFileMerge} for what that cost before this existed.
+     *
+     * @return the merge, or {@code null} for "no merge needed"
+     */
+    default @Nullable WholeFileMerge wholeFileMerge() {
+        return null;
+    }
 }

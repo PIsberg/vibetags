@@ -732,6 +732,41 @@ public final class ModuleSidecar {
     }
 
     /**
+     * Every region's body for {@code serviceKey}, as (region id → body) in output order.
+     *
+     * <p>The input a {@code WholeFileMerge} works from. Grouped by region for the same reason
+     * {@link #mergeFor} groups: a module compiled twice (main and test source sets) is one
+     * contributor, not two, and its source sets are joined before the format-aware merge sees them
+     * (issue #330). Regions with no body for this service are omitted rather than contributing an
+     * empty document.
+     *
+     * @param serviceKey e.g. {@code "mentat"}
+     * @param sidecars   all known module sidecars (current + siblings)
+     */
+    public static List<Map.Entry<String, String>> contributionsFor(String serviceKey,
+                                                                   List<ModuleSidecar> sidecars) {
+        List<Map.Entry<String, String>> contributions = new ArrayList<>();
+        for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
+            List<String> parts = new ArrayList<>();
+            for (ModuleSidecar s : region.getValue()) {
+                String body = s.bodies.get(serviceKey);
+                if (body != null && !body.isBlank()) {
+                    parts.add(body);
+                }
+            }
+            if (!parts.isEmpty()) {
+                contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), parts.get(0)));
+                // A second source set of the same module renders the same whole-file document from
+                // a different slice of the code; both are offered so the merge unions them.
+                for (int i = 1; i < parts.size(); i++) {
+                    contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), parts.get(i)));
+                }
+            }
+        }
+        return contributions;
+    }
+
+    /**
      * Merges the <em>module's own</em> nested output for {@code serviceKey} across the source sets
      * of one region, main first (sidecars arrive sorted by filename, and the main source set's id
      * carries no suffix). Returns {@code ""} when no sidecar in the region has a body — the caller

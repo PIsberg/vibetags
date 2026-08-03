@@ -34,6 +34,41 @@ terminate a block scalar). `.plandex.yaml` merges bucket by bucket instead, sinc
 `YamlMergeShapeContractTest` renders each platform and fails if a declaration no longer matches what
 its renderer writes, or if a new YAML platform ships without one.
 
+### JSON and TOML outputs merge differently again
+
+The marker-free files — `.mentatconfig.json` and `.pr_agent.toml` — failed twice over in a reactor,
+and the first failure hid the second.
+
+They never refreshed. The write phase decides whether a shared file may be rewritten from
+`anyContributed`, which asks whether any module's sidecar holds a body for that service, and sidecar
+bodies were stored only for marker-based services. For a JSON or TOML output the answer was
+permanently "no module contributed", so the writer's `no-new-rules` guard skipped every update to an
+existing file. Whatever the first successful write produced was frozen there: on the four-module
+`example-multimodule`, `.mentatconfig.json` held **1 entry from 1 module**, and every later build
+logged `no changes`.
+
+Fixing only that would have turned a frozen file into a last-writer-wins file, because a whole-file
+overwrite carries the compiling module's view of the project. So those renderers also declare a
+`PlatformRenderer.wholeFileMerge()`, which re-assembles the document from every module's rendering:
+JSON rules arrays are unioned inside their key, and PR-Agent's two `extra_instructions` blocks are
+both rewritten from the union of the instruction lines. After the fix the same file holds **51
+entries across 9 sections from all 4 modules**, and `.pr_agent.toml` went from 6 guardrail lines to
+200.
+
+The merges are format-aware rather than generic because there is no generic answer — concatenating
+two JSON documents is not JSON. They parse only VibeTags' own output, whose shape is fixed by a
+renderer in the same package, and return `null` rather than guessing when a document is not that
+shape, leaving the caller with the previous behaviour.
+
+The static configs (`.cody/config.json`, `.qwen/settings.json`, `.codex/config.toml`) declare no
+merge: their content does not vary with the annotations, so every module renders the same bytes.
+They still benefit from the refresh fix — without it, upgrading VibeTags never updated them in a
+reactor.
+
+`MultiModuleWholeFileMergeTest` derives the rule rather than listing it: it renders every marker-free
+service with an empty model and a populated one, and fails any whose output differs but which
+declares no merge.
+
 Module identity comes from `ModuleRootResolver` — it walks up from the compiled sources to the
 nearest `pom.xml`/`build.gradle(.kts)` — **not** from the JVM working directory, which is the reactor
 root for every module of an in-process Maven/Gradle build (issue #278: last-writer-wins). Sidecars

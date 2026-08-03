@@ -146,6 +146,20 @@ jobs:
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
+      - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
+        run: |
+          cd example-multimodule
+          # Check mode is what a consumer runs in CI: instead of regenerating, the processor fails
+          # the build when a generated file no longer matches the annotations. Running it here does
+          # two jobs. It exercises the feature end-to-end through a real reactor — the only test of
+          # it outside the unit suite — and it guards this example, where editing an annotation and
+          # forgetting to commit the regenerated file previously went unnoticed because CI only
+          # ever ran a plain `compile`.
+          #
+          # It runs after the normal build above, so the tree is already regenerated: a failure
+          # here means the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
+
       - name: Verify Reactor YAML Is Readable By The Tools That Consume It
         run: |
           cd example-multimodule
@@ -237,10 +251,63 @@ jobs:
           fi
           echo "Sibling module rules mirrored into the centralised test module."
 
+      - name: Build All-Tiers Example And Verify The Tier Split
+        run: |
+          cd example-all-tiers
+          mvn clean compile -B
+          # Tier 1 must carry the six safety buckets inline and nothing verbose: a guardrail that
+          # only loads once the agent opens the file it protects has become a comment, and a
+          # verbose bucket inline is the always-loaded bloat the index exists to remove.
+          for bucket in locked_files audit_requirements pii_guardrails core_elements \
+                        ignored_elements security_elements; do
+            grep -qF "<$bucket>" CLAUDE.md \
+              || { echo "Tier 1 lost the safety bucket: $bucket"; exit 1; }
+          done
+          for bucket in contextual_instructions contract_signatures performance_constraints \
+                        sanitization_elements observability_instrumentation; do
+            if grep -qF "<$bucket>" CLAUDE.md; then
+              echo "Tier 1 embedded a verbose bucket that belongs in Tier 3: $bucket"; exit 1
+            fi
+          done
+          # Tier 1 points at both lower tiers, per module.
+          for m in billing shipping; do
+            grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md || { echo "no Tier-1 region for $m"; exit 1; }
+            grep -qF "$m/.claude/rules/" CLAUDE.md || { echo "Tier-1 pointer misses $m Tier 3"; exit 1; }
+            grep -qF "$m/CLAUDE.md" CLAUDE.md || { echo "Tier-1 pointer misses $m Tier 2"; exit 1; }
+          done
+          # Tier 2 is a real boundary: neither module's file mentions the other.
+          # `if grep` rather than `grep && {…}`: the steps run under `bash -e`, and a grep that
+          # correctly finds nothing exits 1, which would fail the step on the passing case.
+          if grep -q shipping billing/CLAUDE.md; then echo "Tier 2 billing leaks shipping"; exit 1; fi
+          if grep -q billing shipping/CLAUDE.md; then echo "Tier 2 shipping leaks billing"; exit 1; fi
+          # Tier 3 is role-grouped and auto-loading, and reaches parameter level — the finest
+          # addressing VibeTags produces, and the one a hand-written rules file cannot express.
+          for f in billing/.claude/rules/api-endpoints.md billing/.claude/rules/domain-model.md \
+                   shipping/.claude/rules/label-printing.md; do
+            test -s "$f" || { echo "missing role-grouped Tier-3 file: $f"; exit 1; }
+            grep -q "^paths:" "$f" || { echo "$f has no paths: front-matter, so it never loads"; exit 1; }
+          done
+          grep -qF "renderInvoice(java.lang.String,java.lang.String)#customerNote" \
+            billing/.claude/rules/api-endpoints.md \
+            || { echo "no parameter-level guardrail generated"; exit 1; }
+          echo "All three tiers and all four annotation levels verified."
+
+      - name: Verify The All-Tiers Example's Committed Guardrails (check mode)
+        run: |
+          cd example-all-tiers
+          mvn clean compile -B -Dvibetags.check=true
+
       - name: Build Indexed Multi-Module Example (issue #295)
         run: |
           cd example-multimodule-indexed
           mvn clean compile -B
+
+      - name: Verify The Indexed Example's Committed Guardrails (check mode)
+        run: |
+          cd example-multimodule-indexed
+          # Runs after the build above, so the tree is already regenerated: a failure here means
+          # the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
 
       - name: Verify Indexed Root (issues #295, #319, #332)
         run: |

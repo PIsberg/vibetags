@@ -171,11 +171,85 @@ gradle compileJava
 VibeTags provides Java annotations that serve as instructions for AI code generation tools. When your project is compiled, the VibeTags annotation processor automatically generates platform-specific configuration files that enforce your rules across different AI platforms.
 
 
-![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1)
+<!-- Replaced the v1.1 infographic with the walkthrough video. To restore it:
+     ![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1) -->
+[![VibeTags AI Guardrails for Java — a walkthrough](https://img.youtube.com/vi/QF0YloxDjnY/maxresdefault.jpg)](https://youtu.be/QF0YloxDjnY)
+
+*[VibeTags AI Guardrails for Java](https://youtu.be/QF0YloxDjnY) — what the annotations do, what
+they generate, and how the generated files reach each AI tool.*
 
 
 
 ### Key Features
+
+<a name="annotation-reference"></a>
+### Annotation reference — where each one goes, and where its rule ends up
+
+Two facts you need before writing an annotation, neither of which the categorised list below
+carries: **what it can annotate**, and **which tier its guardrail lands in**.
+
+- **Can annotate** is the annotation's `@Target`. Most are type-and-method; a few are narrower, and
+  two (`@AIInputSanitized`, `@AISecureLogging`) can *only* go on a parameter or field — the finest
+  addressing VibeTags produces.
+- **Tier** is where the rule shows up once a platform's scoped-rules directory is opted in.
+  **safety** guardrails stay inline in the always-loaded aggregate, because a rule that only loads
+  after the agent opens the file it protects has already failed. Everything else moves to the
+  scoped file and is replaced by a one-line pointer. See [Context tiers](#-context-tiers-1-2-3).
+- **Required attributes** have no default; leave one out and the code does not compile.
+
+Every annotation below is used in [`example/`](example/README.md) — that README maps each one to the
+file demonstrating it — and all four example projects exercise the full set.
+
+| Annotation | Can annotate | Required attributes | Tier |
+|---|---|---|---|
+| `@AIArchitecture` | type | — | scoped |
+| `@AIAudit` | type, method | — | **safety** |
+| `@AIBannedApi` | type, method | `forbidden` | scoped |
+| `@AICallersOnly` | type, method | `value` | scoped |
+| `@AIContext` | type, method | — | scoped |
+| `@AIContract` | type, method | — | scoped |
+| `@AICore` | type, method, field | — | **safety** |
+| `@AIDeprecated` | type, method, field | — | scoped |
+| `@AIDomainModel` | type | — | scoped |
+| `@AIDraft` | type, method | — | scoped |
+| `@AIExplain` | type, method | — | scoped |
+| `@AIExtensible` | type | — | scoped |
+| `@AIFeatureFlag` | type, method, field | — | scoped |
+| `@AIGenerated` | type, method, field | `from` | scoped |
+| `@AIIdempotent` | type, method | — | scoped |
+| `@AIIgnore` | type, method, field | — | **safety** |
+| `@AIImmutable` | type | — | scoped |
+| `@AIInputSanitized` | parameter, field | `value` | scoped |
+| `@AIInternationalized` | type, method | — | scoped |
+| `@AIKeepInSync` | type, method, field | `mirrors` | scoped |
+| `@AILegacyBridge` | type, method | — | scoped |
+| `@AILoadBearing` | type, method, field, parameter | `invariant` | scoped |
+| `@AILocked` | type, method, field | — | **safety** |
+| `@AIMemoryBudget` | type, method | — | scoped |
+| `@AIObservability` | type, method | — | scoped |
+| `@AIParallelTests` | type, method | — | scoped |
+| `@AIPerformance` | type, method, field | — | scoped |
+| `@AIPrivacy` | type, method, field | — | **safety** |
+| `@AIPrototype` | type | — | scoped |
+| `@AIPublicAPI` | type, method | — | scoped |
+| `@AIPure` | method | — | scoped |
+| `@AIRegulation` | type, method, field | `standard` | scoped |
+| `@AISandboxOnly` | type, method | — | scoped |
+| `@AISchemaSafe` | type, field | — | scoped |
+| `@AISecure` | type, method | — | **safety** |
+| `@AISecureLogging` | field, parameter | — | scoped |
+| `@AIStrictClasspath` | type, method | — | scoped |
+| `@AIStrictExceptions` | type, method | — | scoped |
+| `@AIStrictTypes` | type, method, field | — | scoped |
+| `@AISunset` | type, method, field | `jira` | scoped |
+| `@AITemporary` | type, method | `expiresOn`, `reason` | scoped |
+| `@AITestDriven` | type, method | — | scoped |
+| `@AIThreadAffinity` | type, method | `value` | scoped |
+| `@AIThreadSafe` | type, method | — | scoped |
+
+`AnnotationReferenceTest` regenerates this table from the annotation sources and the renderer and
+fails if it drifts, so the targets and tiers here are the ones the compiler and processor actually
+use rather than a description of them.
 
 The [44 annotations](#project-facts) group into six categories by intent. Within each category they are listed alphabetically.
 
@@ -598,7 +672,10 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 
 **Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
 [`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
-[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3).
+[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
+and [`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
+every level — type, instance field, method, and method parameter — so you can see which tier each
+one lands in).
 
 ## 📚 Documentation
 

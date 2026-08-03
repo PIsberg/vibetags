@@ -76,7 +76,7 @@ class BuildVersionParityTest {
      */
     private static final List<String> EXAMPLE_POMS = List.of(
         "example/pom.xml", "example-multimodule/pom.xml", "example-multimodule-indexed/pom.xml",
-        "tools/demo/pom.xml");
+        "example-all-tiers/pom.xml", "tools/demo/pom.xml");
 
     /**
      * Versions a managed pom may still state as a literal, with the reason. Anything else is drift
