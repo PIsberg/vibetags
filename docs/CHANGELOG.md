@@ -8,6 +8,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Every example demonstrates all 44 annotations, and the README says where each one goes.**
+
+  `example-all-tiers/` went from 20 annotations to all 44 while keeping the structure it exists to
+  show, and `ExampleCoverageTest` now holds all four example projects to the full set, so an
+  annotation added without an example fails the build.
+
+  The README gained a 44-row reference: what each annotation can be attached to, which attributes
+  have no default, and whether its guardrail stays in the always-loaded aggregate or moves to a
+  scoped file. `AnnotationReferenceTest` derives all three columns from the code — `@Target` by
+  reflection, required attributes from members with no default, and the tier by reading back which
+  buckets the indexed renderer keeps inline. The tier column is the one worth deriving: "safety" is
+  not a property of an annotation, it is whichever buckets survive the aggregate collapsing to an
+  index, so moving one in the renderer now fails the README rather than quietly leaving it
+  describing a split that no longer happens.
+
+- **Opting a scoped-rules directory in and back out again is now tested, both directions.**
+
+  Tier 3 is controlled like every other output: the directory's presence is the opt-in. Opting *in*
+  fails loudly if it breaks, because the rule files are simply absent. Opting *out* fails silently,
+  and into the shape that looks correct — a smaller `CLAUDE.md` still carrying an index that points
+  at a directory nobody has, leaving those guardrails in neither place.
+
+  `ScopedRulesOptInOptOutEndToEndTest` drives both transitions over `example-all-tiers/billing`'s
+  own sources, so it also fails if that example stops exercising all three tiers. It covers the
+  collapse actually shrinking the aggregate, the safety buckets surviving it, opting out restoring
+  the detail and dropping every reference to the directory, opting out holding across two further
+  builds, and deleting a single rule file while still opted in regenerating it byte for byte.
+
+- **International characters in annotation values are proven, not assumed.**
+
+  A guardrail reason is prose, written in whatever language the team works in, and
+  "Får inte loggas enligt GDPR §9" is worthless to an agent if it arrives as "F?r inte loggas".
+  `InternationalCharactersEndToEndTest` drives a real compile with Swedish, German, French, CJK,
+  Japanese, Cyrillic, Greek, Arabic, Hebrew, emoji (surrogate pairs, outside the BMP) and combining
+  marks, then reads them back out of the XML-shaped aggregate, JSON parsed with a real parser, TOML,
+  the base64 sidecar round trip between two modules, a file-backed source so the compiler's own
+  decoding is exercised, and the raw bytes on disk.
+
+  Escaping is asserted separately from survival, because an escaper must act on `< > & " '` and
+  leave everything above U+007F alone; asserting both together lets one defect hide the other.
+
+- **The cross-module merge records which branch it took.**
+
+  It chooses between publishing the compiling module's own rendering and publishing the merged view
+  of every module. Both are well-formed documents and the wrong one differs only by the siblings it
+  is missing, which is what the JSON/TOML freeze below was and why it lasted. Every path now emits
+  its reason and every `.skip` carries one, so `contributions=4` answers "did my sibling's rules
+  make it in?" and `bodies=0` on a `sidecar.save` names the failure directly.
+
+  The diagnostic channel was also unreachable from any example — nothing passed
+  `-Avibetags.log.level` — so neither this logging nor the writer's existing events could be seen by
+  anyone following the docs. All four example poms now wire it, defaulting to `INFO`.
+
+- **All four examples verify their committed guardrails, and every documentation link resolves.**
+
+  `example-multimodule-indexed` was building with a plain `compile`, so drift in it was invisible;
+  it now runs check mode. `example/` cannot use check mode — its job empties the config files and
+  regenerates them, so check mode would compare the fresh tree against itself — and instead
+  compares against git, which additionally proves a from-empty regeneration reproduces exactly what
+  is committed.
+
+  `DocumentationLinksTest` checks every relative link and fragment across 738 Markdown files. Eight
+  were dead: two table-of-contents entries pointing at renamed headings, a fragment naming a section
+  that has never existed, a `LICENSE` and a workflow linked as though `docs/` were the repository
+  root, and two benchmark plots whose relative path was one directory short, so images committed
+  since 0.7.1 had never once rendered.
+
+- **The release script rewrites every file that states the version.**
+
+  `example-all-tiers/pom.xml` was checked by `BuildVersionParityTest` but never written by
+  `scripts/set-version.sh`, so the documented release procedure failed partway through. `README.md`
+  and the usage skill were checked by nothing, so a GA cut with that gap would have shipped eleven
+  install snippets telling every new user to depend on a release candidate.
+
+  `ReleaseScriptCoverageTest` derives the list instead of trusting it: any tracked file stating the
+  current version must either appear in the script or be recorded as historical with a reason. The
+  changelog, the benchmark results and the version-sort-order examples are recorded — a blanket
+  search-and-replace would have claimed this release shipped every past change and that
+  measurements were taken on versions that did not exist when they were run.
+
 - **`example-all-tiers/`: all three tiers at once, and a class annotated at every level.**
 
   The tier model was documented in a table and demonstrated one slice at a time — `example/` shows
@@ -66,6 +146,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a comment about having drifted before.
 
 ### Fixed
+- **The README understated the number of generated files by a third.**
+
+  "37 config formats" was the platform count wearing the file count's label. 37 is how many AI
+  *tools* are supported; Cursor is one tool with both `.cursorrules` and `.cursorignore`. The
+  registry declares 62 outputs: 49 config files and 13 scoped-rule directories. The annotation and
+  platform figures were already pinned by `ProjectFactsConsistencyTest`; the output counts were not,
+  which is how this survived — it read like the figure beside it and nothing disagreed. All four are
+  now pinned, the output counts against the live registry rather than against prose.
+
 - **Multi-module reactors froze their JSON and TOML outputs after the first write, and the freeze
   hid a second bug underneath it.** The remaining half of #265.
 

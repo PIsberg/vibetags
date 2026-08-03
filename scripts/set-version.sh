@@ -22,11 +22,23 @@
 #   example/build.gradle               their own project. Their vibetags.bom.version is a
 #   example-multimodule/pom.xml        literal, and CI builds them against the artifacts
 #   example-multimodule-indexed/pom.xml  this repo just installed, so they track the
-#   tools/demo/pom.xml                 current version rather than the last released one.
+#   example-all-tiers/pom.xml          current version rather than the last released one.
+#   tools/demo/pom.xml
+#
+#   README.md                          Install snippets. A consumer copies these verbatim, so a
+#   .claude/skills/vibetags-usage/     GA that still says RC9 hands every new user the wrong
+#     SKILL.md                         coordinate.
 #
 # This list is not maintained by discipline: BuildVersionParityTest fails the build if any
 # of these disagrees with <revision>, and it is what caught the omissions this script used
 # to leave behind.
+#
+# What must NOT be rewritten, and why a blanket search-and-replace is wrong:
+#
+#   docs/CHANGELOG.md                  A record of what each version did. Rewriting it would
+#                                      claim the current release shipped every past change.
+#   load-tests/results/**              Measurements belong to the version they were taken on.
+#   load-tests/README.md               "since 1.0.0-RC9" is provenance, not a coordinate.
 #
 # Idempotent: the current version is read fresh from the parent on every run.
 set -eu
@@ -90,7 +102,10 @@ for rel in \
     example/build.gradle \
     example-multimodule/pom.xml \
     example-multimodule-indexed/pom.xml \
+    example-all-tiers/pom.xml \
     tools/demo/pom.xml \
+    README.md \
+    .claude/skills/vibetags-usage/SKILL.md \
 ; do
     replace_in_file "$ROOT_DIR/$rel"
 done
