@@ -147,6 +147,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   copies now share one method — the same fate, and the same remedy, as the merge block that carries
   a comment about having drifted before.
 
+### Changed
+- **The published javadoc documents the API rather than the internals, and the next gap is fatal.**
+
+  The javadoc jar documented every class in the processor module and warned on most of them. That is
+  two problems in one artifact: it invites a consumer to bind to classes that are free to change
+  every release, and the noise is why nobody noticed the API itself was undocumented.
+  `processor.internal` is the compiler-facing half, which `ArchitectureRulesTest` polices precisely
+  because it carries no stability promise, and `processor.model` is the compiler-free data layer the
+  renderers read. Neither is called from outside, and both are now excluded from the published
+  artifact.
+
+  What is left is documented: `SourceLocation`'s three record components,
+  `AIGuardrailProcessor.writeFileIfChanged`, two deprecated delegates missing `@param`/`@return`,
+  and `VibeTagsLogger.shutdown(Path)`. `doclint=all` with `failOnWarnings` makes a regression a
+  build failure, matching what `vibetags-annotations` already did. `generateFiles()` was not
+  touched; it is `@AILocked` and none of the gaps were in it.
+
+  One measurement error is worth recording, because it changed the conclusion twice: javadoc caps
+  its output at `-Xmaxwarns`, 100 by default. Two runs reporting exactly 100 read as "unchanged"
+  when the first had been a truncated sample attributing everything to one package. A count equal to
+  the cap is a lower bound, not a total.
+
 ### Fixed
 - **The README understated the number of generated files by a third.**
 
@@ -156,6 +178,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   platform figures were already pinned by `ProjectFactsConsistencyTest`; the output counts were not,
   which is how this survived — it read like the figure beside it and nothing disagreed. All four are
   now pinned, the output counts against the live registry rather than against prose.
+
+- **Four docs restated the annotation count, and had drifted from it.**
+
+  The README's project-facts line declares itself the single source of truth and asks other docs to
+  link back rather than restate the figure. Nothing enforced that. The README claimed "all 15 Java
+  annotations" and "all 8 VibeTags annotations" six lines below the pinned 44,
+  `docs/ARCHITECTURE.md` claimed "39 annotation `@interface` files in total" while linking to the
+  source of truth in the same sentence, and `docs/vibetags-in-practice.md` claimed 39 annotation
+  types.
+
+  `noDocRestatesADifferentAnnotationCount` pins it. The pattern matches only claims about the whole
+  set ("all N annotations", "the N annotations", "N annotation ... in total"), so true statements
+  about a subset, such as "7 annotations have zero real-world traction", still pass; narrowing the
+  pattern was chosen over exempting whole documents, which would have blinded the check to the next
+  drift inside them. Verified by reintroducing "all 15 Java annotations" and watching it fail with
+  the file and line.
+
+  Every annotation reference across all 741 Markdown files was audited against the annotations that
+  actually exist. Nothing else was wrong: no doc names an annotation that does not exist, passes an
+  attribute it does not have, or uses an enum constant outside its enum. The Contributing section
+  was also proposing two annotations that have shipped (`@AIPattern` is `@AIExtensible`, `@AITest`
+  is `@AITestDriven`), and now points at the `add-platform` and `add-annotation` skills instead.
 
 - **Multi-module reactors froze their JSON and TOML outputs after the first write, and the freeze
   hid a second bug underneath it.** The remaining half of #265.
