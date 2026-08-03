@@ -857,6 +857,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         OrphanWarner.warnAboutOrphans(messager, log, active, hasLocked, hasIgnore, hasAudit);
     }
 
+    /**
+     * Writes {@code content} to {@code path} through the marker-aware writer, if it differs from
+     * what is already there.
+     *
+     * @param path        the file to write, absolute or relative to the VibeTags root
+     * @param content     the generated body; for a marker file this is the block between the
+     *                    markers, and hand-authored content outside them is preserved
+     * @param hasNewRules whether this round produced any rules. When false the writer leaves an
+     *                    existing file alone rather than emptying it, so a compile that saw no
+     *                    annotations cannot wipe guardrails another round wrote
+     * @return {@code true} if the file was created or changed, {@code false} if it was left as-is
+     */
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         return fileWriter.writeFileIfChanged(path, content, hasNewRules);
     }
@@ -885,13 +897,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         fileWriter.cleanupGranularDirectory(dir, extension, excludeQNames);
     }
 
-    /** @deprecated call {@link ServiceRegistry#buildServiceFileMap(Path)} directly. */
+    /**
+     * Maps every known service key to the file or directory it would be written to.
+     *
+     * @param root the VibeTags root that output paths are resolved against
+     * @return service key to output path, for every service the processor knows about, whether or
+     *         not that path exists — presence is what decides activation, not this map
+     * @deprecated call {@link ServiceRegistry#buildServiceFileMap(Path)} directly.
+     */
     @Deprecated
     public static Map<String, Path> buildServiceFileMap(Path root) {
         return ServiceRegistry.buildServiceFileMap(root);
     }
 
-    /** @deprecated call {@link ServiceRegistry#resolveActiveServices(Messager, Map)} directly. */
+    /**
+     * Narrows the full service map to the services this project has opted into.
+     *
+     * @param messager        where to report activation notes to the compiler
+     * @param allServiceFiles every known service and its output path, as
+     *                        {@link #buildServiceFileMap(Path)} returns it
+     * @return the keys whose output file already exists, since file presence is the opt-in
+     * @deprecated call {@link ServiceRegistry#resolveActiveServices(Messager, Map)} directly.
+     */
     @Deprecated
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
         return ServiceRegistry.resolveActiveServices(messager, allServiceFiles);
