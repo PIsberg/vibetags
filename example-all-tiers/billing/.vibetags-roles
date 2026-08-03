@@ -1,2 +1,3 @@
 api-endpoints   = **/*Controller.java
-domain-model    = **/*Entry.java
+domain-model    = **/*Entry.java, **/*Rules.java
+payments        = **/*Gateway.java

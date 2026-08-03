@@ -31,6 +31,10 @@
          example pins the last release (RC5); this one pins the in-development version so
          CI resolves it from the freshly-installed reactor build. Bump on release. -->
     <vibetags.bom.version>1.0.0-RC9</vibetags.bom.version>
+    <!-- The diagnostic channel. INFO reports what ran; `mvn compile
+         -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,
+         which is how you find out why a file was or was not rewritten. -->
+    <vibetags.log.level>INFO</vibetags.log.level>
   </properties>
 
   <dependencyManagement>
@@ -69,6 +73,7 @@
                    root aggregate collapses each module to a pointer. -->
               <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
               <arg>-Avibetags.project=VibeTags Multi-Module Example (Indexed)</arg>
+              <arg>-Avibetags.log.level=${vibetags.log.level}</arg>
             </compilerArgs>
             <annotationProcessorPaths>
               <path>

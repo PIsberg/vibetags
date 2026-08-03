@@ -15,7 +15,9 @@
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <element path="com.example.alltiers.shipping.CarrierAdapter" rules=".claude/rules/carrier-rates.md"/>
     <element path="com.example.alltiers.shipping.LabelPrinter" rules=".claude/rules/label-printing.md"/>
+    <element path="com.example.alltiers.shipping.RateCalculator" rules=".claude/rules/carrier-rates.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

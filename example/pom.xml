@@ -21,7 +21,11 @@
              value rolls the processor and any future vibetags-* artifact in lockstep. -->
         <vibetags.bom.version>1.0.0-RC9</vibetags.bom.version>
         <vibetags.log.path>vibetags.log</vibetags.log.path>
-    </properties>
+      <!-- The diagnostic channel. INFO reports what ran; `mvn compile
+         -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,
+         which is how you find out why a file was or was not rewritten. -->
+    <vibetags.log.level>INFO</vibetags.log.level>
+  </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -57,7 +61,8 @@
                     <compilerArgs>
                         <arg>-Avibetags.root=${project.basedir}</arg>
                         <arg>-Avibetags.log.path=${vibetags.log.path}</arg>
-                    </compilerArgs>
+                      <arg>-Avibetags.log.level=${vibetags.log.level}</arg>
+            </compilerArgs>
                     <!-- Explicit processor path required for Java 23+ where implicit classpath
                          discovery is disabled by default (see javac release 23 notes). -->
                     <!-- annotationProcessorPaths does not inherit versions from

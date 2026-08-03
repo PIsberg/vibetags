@@ -38,6 +38,8 @@
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
     <element path="com.example.alltiers.billing.InvoiceController" rules=".claude/rules/api-endpoints.md"/>
     <element path="com.example.alltiers.billing.LedgerEntry" rules=".claude/rules/domain-model.md"/>
+    <element path="com.example.alltiers.billing.PaymentGateway" rules=".claude/rules/payments.md"/>
+    <element path="com.example.alltiers.billing.TaxRules" rules=".claude/rules/domain-model.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

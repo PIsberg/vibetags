@@ -84,3 +84,25 @@ Try editing any `reason = "…"` and running it without regenerating.
   parameter-level rule, behind `paths: ["**/*Controller.java"]`.
 - **`shipping/.claude/rules/label-printing.md`** — the same shape in the other module, proving the
   split is per-module rather than global.
+
+### Seeing why a file was written
+
+```bash
+mvn clean compile -Dvibetags.log.level=DEBUG   # narrate every decision to vibetags.log
+```
+
+INFO reports what ran. DEBUG adds one structured event per decision, which is what you read when a
+file changed and you expected it not to, or the reverse:
+
+```
+sidecar.save id=core region=core bodies=29 moduleBodies=1 stems=2 elements=2
+sidecar.read count=4 regions=4 ids=[cli, core, engine, showcase]
+merge.wholefile service=mentat contributions=4 bytes=10782
+merge.skip service=cody reason=no-whole-file-merger file=config.json
+write.skip file=CLAUDE.md reason=cache-unchanged bytes=2481
+```
+
+The counts are the point. `contributions=4` says every module reached the merged JSON; a `1` there
+means the file holds one module's view of the reactor, which is a well-formed document and a wrong
+one. Every `.skip` carries a `reason=`, so "why was nothing written?" is a grep rather than a
+debugger.
