@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Five workflows run on push, pull request, schedule, or release.
+This document describes what happens during CI builds in `.github/workflows/`. Five workflows run on push, pull request, schedule, or release; a sixth, mutation testing, runs only when someone asks for it.
 
 ## Overview
 
@@ -11,6 +11,7 @@ This document describes what happens during CI builds in `.github/workflows/`. F
 | Dependency Review | `dependency-review.yml` | Pull requests |
 | Scorecard | `scorecards.yml` | Push to `main`, branch-protection-rule, weekly cron (Tuesdays 07:20 UTC) |
 | Publish to Maven Central | `publish.yml` | GitHub Release `created` |
+| Mutation Testing (PIT) | `mutation.yml` | Manual only (`workflow_dispatch`) |
 
 All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow is `contents: read`; jobs that need more (e.g. CodeQL writes `security-events`) escalate explicitly.
 
@@ -20,7 +21,7 @@ All third-party actions are pinned by full commit SHA with the version as a trai
 
 ## 1. Build and Test (`build.yml`)
 
-The main CI workflow. Jobs run in parallel except `load-tests` and `mutation-testing`, which both wait on `build-maven`.
+The main CI workflow. Jobs run in parallel except `load-tests`, which waits on `build-maven`.
 
 ### Job: `build-maven`
 
@@ -87,14 +88,7 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
 
 The same `.github/actions/verify-generated-files` composite action runs after the Gradle build, so any divergence between Maven and Gradle output paths is caught.
 
-### Job: `mutation-testing`
-
-Single JDK 21 leg, `needs: build-maven`, `continue-on-error: true` — a failing or low-scoring mutation run does not fail the overall workflow. Steps:
-
-1. **Harden runner**, **checkout**, **set up JDK 21** (Maven cache).
-2. **Install async-test-lib** and **Install VibeTags Annotations** — same as `build-maven`.
-3. **Run Mutation Coverage (PIT)** — `cd vibetags && mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage`. The `mutation` Maven profile (in `vibetags/pom.xml`) pulls in `pitest-maven` 1.19.1 and `pitest-junit5-plugin` 1.2.2 and is otherwise inactive — it only runs when `-Pmutation` is passed explicitly, so normal `mvn install`/`mvn test` runs are unaffected.
-4. **Upload PIT mutation report** — `if: always()`. Uploads `vibetags/target/pit-reports/**` as `pitest-report-${{ github.run_id }}`, `if-no-files-found: warn`.
+Mutation testing used to be a job here. It now lives in its own manually triggered workflow — see section 6.
 
 ---
 
@@ -138,6 +132,20 @@ Triggered when a GitHub Release is created.
 - **Sign and deploy BOM** — `cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Same Sonatype Central + GPG profiles as the processor pom; publishes `se.deversity.vibetags:vibetags-bom:<version>` (pom-only) so consumers can import it. Runs after annotations and processor have been deployed.
 
 Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN_USERNAME`, `CENTRAL_TOKEN_PASSWORD`. CI also references `CODECOV_TOKEN` from `build.yml`.
+
+---
+
+## 6. Mutation Testing (`mutation.yml`)
+
+PIT mutation coverage over `se.deversity.vibetags.*`. **On demand only** — the sole trigger is `workflow_dispatch`, so nothing starts it on push or pull request. Run it from Actions → Mutation Testing (PIT) → Run workflow, picking the branch to analyse.
+
+It was a job in `build.yml` until it was split out. A full PIT run costs more wall-clock than the rest of CI put together, its score moves slowly, and `continue-on-error: true` meant no result it produced could ever fail a build — so every push paid for a number nobody read. The split also drops `continue-on-error`: when the run is deliberate, a red run should read as red.
+
+- Single JDK 21 leg, `ubuntu-latest`, `contents: read`.
+- Steps: harden runner → checkout → set up JDK 21 (Maven cache) → install `async-test-lib` → `cd vibetags-annotations && mvn install -B` → `cd vibetags && mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage`.
+- The `mutation` Maven profile (in `vibetags/pom.xml`) pulls in `pitest-maven` and `pitest-junit5-plugin` and is otherwise inactive — it only applies when `-Pmutation` is passed explicitly, so normal `mvn install` / `mvn test` runs are unaffected. It sets no `mutationThreshold`, so the job goes red only on a real failure, not on a low score.
+- **Upload PIT mutation report** — `if: always()`. Uploads `vibetags/target/pit-reports/**` as `pitest-report-${{ github.run_id }}`, `if-no-files-found: warn`.
+- The PIT badge in `README.md` is a hand-maintained static badge; update it from a dispatched run rather than expecting CI to move it.
 
 ---
 
