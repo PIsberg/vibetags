@@ -171,7 +171,12 @@ gradle compileJava
 VibeTags provides Java annotations that serve as instructions for AI code generation tools. When your project is compiled, the VibeTags annotation processor automatically generates platform-specific configuration files that enforce your rules across different AI platforms.
 
 
-![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1)
+<!-- Replaced the v1.1 infographic with the walkthrough video. To restore it:
+     ![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1) -->
+[![VibeTags AI Guardrails for Java — a walkthrough](https://img.youtube.com/vi/QF0YloxDjnY/maxresdefault.jpg)](https://youtu.be/QF0YloxDjnY)
+
+*[VibeTags AI Guardrails for Java](https://youtu.be/QF0YloxDjnY) — what the annotations do, what
+they generate, and how the generated files reach each AI tool.*
 
 
 
