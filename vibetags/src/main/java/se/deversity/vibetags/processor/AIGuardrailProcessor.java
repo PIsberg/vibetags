@@ -446,8 +446,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         Messager messager = getSafeMessager();
         messager.printMessage(Diagnostic.Kind.NOTE,
-            "VibeTags: Generating files (v" + VERSION + ") for " + effectiveContent.size()
-                + " active services: " + String.join(", ", effectiveContent.keySet())
+            "VibeTags: Generating files (v" + VERSION + ") for " + activeServices.size()
+                + " active services: "
+                + activeServices.stream().sorted().collect(Collectors.joining(", "))
                 + (isMultiModule(allSidecars)
                     ? " [multi-module: " + ModuleSidecar.regionCount(allSidecars) + " modules]" : ""));
 
