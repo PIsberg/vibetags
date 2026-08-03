@@ -50,8 +50,19 @@ public final class ArchitectureRule implements ValidationRule {
         } catch (Throwable t) {
             // Trees is unavailable (Gradle's compiler, ECJ, a mocked environment) or threw. A
             // layering rule that cannot be checked is reported as unchecked, never as a failure.
-            ctx.note(element, "Trees API not available for AST architectural import scanning: " + t.getMessage());
+            ctx.note(element, "Trees API not available for AST architectural import scanning: "
+                + unavailableReason(t) + "; cannotReference was not checked this round");
         }
+    }
+
+    /**
+     * Names the failure for the unchecked-layering note above. {@code getMessage()} is null for
+     * the classloader failures Gradle's isolated compiler workers throw, and a note ending in
+     * ": null" tells the reader nothing — fall back to the throwable's type name.
+     */
+    static String unavailableReason(Throwable t) {
+        String message = t.getMessage();
+        return (message == null || message.isBlank()) ? t.getClass().getSimpleName() : message;
     }
 
     private static void scanImports(ValidationContext ctx, Element element, String[] forbidden,

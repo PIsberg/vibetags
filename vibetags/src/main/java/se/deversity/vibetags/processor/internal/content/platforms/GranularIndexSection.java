@@ -66,8 +66,11 @@ final class GranularIndexSection {
             && !context.granularOwners().isEmpty();
     }
 
-    /** Directory (no trailing slash) that holds the governing granular files for {@code platform}. */
-    private static @Nullable String scopedDir(Platform platform) {
+    /**
+     * Directory (no trailing slash) that holds the governing granular files for {@code platform}.
+     * Package-private so {@code DocsGranularPairsClaimTest} can derive the documented pair list.
+     */
+    static @Nullable String scopedDir(Platform platform) {
         String key = governingGranularKey(platform);
         if (key == null) {
             return null;
