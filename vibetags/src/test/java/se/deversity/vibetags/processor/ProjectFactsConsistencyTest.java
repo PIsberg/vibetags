@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,80 @@ class ProjectFactsConsistencyTest {
 
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
+
+    /**
+     * Docs that state a version's own historical scope, which must keep their original numbers.
+     * A changelog entry saying a release "extends the set to 39 annotations" was true when written
+     * and stays true; rewriting it would claim that release shipped something it did not.
+     */
+    private static final Set<String> HISTORICAL_DOCS = Set.of(
+        "docs/CHANGELOG.md", "docs/proposed-annotations.md", "docs/PLAN.md",
+        "docs/ARCHITECTURE.md",       // its "Last updated" note quotes the counts it removed
+        "USAGE.md");                  // "v0.9.9 extends the set to 39" is a statement about v0.9.9
+
+    /**
+     * Prose that claims to state the <em>whole</em> set: "all N annotations", "the N annotations",
+     * or "N annotation ... in total".
+     *
+     * <p>Deliberately not every "N annotations". A sentence like "7 annotations have zero
+     * real-world traction" is a finding about a subset and is true; only a claim about the total
+     * can go stale. Matching both would force whole documents onto an exemption list, which would
+     * then hide the next real drift inside them.
+     *
+     * <p>Version strings are excluded by the leading guard: the 8 in "v0.9.8 annotations" is not a
+     * count.
+     */
+    private static final Pattern PROSE_COUNT = Pattern.compile(
+        "(?:all|the)\\s+(\\d+)\\s+(?:Java\\s+|VibeTags\\s+)?annotations?\\b"
+            + "|(?<![\\d.])(\\d+)\\s+(?:Java\\s+|VibeTags\\s+)?annotation\\b[^.\\n]*?\\bin total\\b");
+
+    @Test
+    void noDocRestatesADifferentAnnotationCount() throws IOException {
+        Path annotationsDir = REPO_ROOT.resolve(
+            "vibetags-annotations/src/main/java/se/deversity/vibetags/annotations");
+        assumeTrue(Files.isDirectory(annotationsDir), "annotations module not reachable; skipping");
+        long actual;
+        try (Stream<Path> files = Files.list(annotationsDir)) {
+            actual = files
+                .filter(p -> p.toString().endsWith(".java"))
+                .filter(ProjectFactsConsistencyTest::isAnnotationInterface)
+                .count();
+        }
+
+        List<String> drifted = new ArrayList<>();
+        try (Stream<Path> docs = Files.walk(REPO_ROOT)) {
+            for (Path doc : docs.filter(p -> p.toString().endsWith(".md")).toList()) {
+                String rel = REPO_ROOT.relativize(doc).toString().replace('\\', '/');
+                if (rel.contains("/target/") || rel.contains("/node_modules/")
+                    || rel.startsWith("target/") || HISTORICAL_DOCS.contains(rel)) {
+                    continue;
+                }
+                String text;
+                try {
+                    text = Files.readString(doc, StandardCharsets.UTF_8);
+                } catch (IOException notText) {
+                    continue;
+                }
+                Matcher m = PROSE_COUNT.matcher(text);
+                while (m.find()) {
+                    String captured = m.group(1) != null ? m.group(1) : m.group(2);
+                    int stated = Integer.parseInt(captured);
+                    if (stated != actual) {
+                        int line = (int) text.substring(0, m.start()).chars()
+                            .filter(c -> c == '\n').count() + 1;
+                        drifted.add(rel + ":" + line + " says \"" + m.group() + "\"");
+                    }
+                }
+            }
+        }
+
+        assertTrue(drifted.isEmpty(),
+            "There are " + actual + " annotations, but these docs state a different count. The "
+                + "README project-facts line is the single source of truth and other docs are "
+                + "meant to link to it rather than restate it — restating is how \"all 15 Java "
+                + "annotations\" survived six lines below the pinned figure:\n  "
+                + String.join("\n  ", drifted));
+    }
 
     @Test
     void readmeOutputCountsMatchWhatTheServiceRegistryDeclares() throws IOException {

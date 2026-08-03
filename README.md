@@ -784,19 +784,28 @@ VibeTags ships far more than the basics shown above:
 
 ## 🤝 Contributing
 
-VibeTags is designed to evolve based on community needs. Future extensions could include:
+VibeTags is designed to evolve based on community needs. The two annotations this section
+used to propose have both shipped — `@AIExtensible` takes a design pattern to extend through, and
+`@AITestDriven` enforces Red-Green-Refactor — so the open ground is elsewhere:
 
-- `@AIPattern` - Specify design patterns AI should follow
-- `@AITest` - Guide AI in generating tests
-- Custom annotation processors for organization-specific needs
+- **A new platform** — one renderer plus two registry entries; see the `add-platform` skill
+- **A new annotation** — see the `add-annotation` skill, which lists every place one has to be wired
+- **Organization-specific processors** that consume the same annotations for in-house tooling
+
+Every annotation must be demonstrated in all four example projects and appear in the
+[annotation reference](#annotation-reference); `ExampleCoverageTest` and `AnnotationReferenceTest`
+fail the build otherwise.
 
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains all 15 Java annotations and the annotation processor that generates AI configuration files at compile time.
+The core annotation processor library. Contains the annotation processor that generates AI
+configuration files at compile time; the annotations themselves live in `vibetags-annotations/`
+(see [project facts](#project-facts) for the count).
 
 ### [example/](example/README.md)
-A practical e-commerce application demonstrating real-world usage of all 8 VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
+A practical e-commerce application demonstrating every VibeTags annotation
+(see [project facts](#project-facts) for the count), held to that by `ExampleCoverageTest`. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
 
 ### [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 Technical reference for the annotation processor internals. Read this before contributing or if you need to understand why a particular file is (or is not) being generated.
