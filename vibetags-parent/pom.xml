@@ -68,7 +68,7 @@
         <!-- The VibeTags release version. Bump THIS and nothing else: every module takes its
              own version, its sibling dependencies and its BOM entries from it. Resolved into
              the deployed POMs by flatten-maven-plugin, so consumers never see the property. -->
-        <revision>1.0.0-RC9</revision>
+        <revision>1.0.0-RC10</revision>
 
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
