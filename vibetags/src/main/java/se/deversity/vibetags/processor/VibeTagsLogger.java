@@ -101,6 +101,9 @@ public final class VibeTagsLogger {
 
     /**
      * Detaches and stops appenders specifically for the given project root's logger.
+     *
+     * @param projectRoot the root whose logger should be torn down; {@code null} is a no-op, so a
+     *                    caller that never resolved a root does not have to guard the call
      */
     public static void shutdown(@Nullable Path projectRoot) {
         if (projectRoot == null) return;

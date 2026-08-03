@@ -273,6 +273,28 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!--
+                      The published javadoc documents what a consumer can actually use. Everything
+                      under processor.internal is the compiler-facing half — ArchitectureRulesTest
+                      polices its dependency direction precisely because it is free to change — so
+                      shipping it here would invite people to bind to classes with no stability
+                      promise.
+
+                      processor.model goes with it: it is the compiler-free data layer the
+                      renderers read, not something a consumer calls. Its 74 undocumented
+                      methods are a contributor-facing gap, not a published one.
+
+                      Between them they hold every javadoc warning in this module, so
+                      excluding them makes the artifact honest and lets doclint be fatal
+                      on the surface that really is API, rather than trading one for the
+                      other. Note javadoc caps output at -Xmaxwarns (100 by default), so
+                      a count of exactly 100 is a cap and not a total.
+                    -->
+                    <excludePackageNames>se.deversity.vibetags.processor.internal:se.deversity.vibetags.processor.internal.*:se.deversity.vibetags.processor.model</excludePackageNames>
+                    <doclint>all</doclint>
+                    <failOnWarnings>true</failOnWarnings>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
