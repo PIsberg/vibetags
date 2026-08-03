@@ -30,6 +30,9 @@
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <vibetags.bom.version>1.0.0-RC9</vibetags.bom.version>
+    <!-- Flipped to true by CI (and by anyone running `mvn compile -Dvibetags.check=true`) so the
+         build verifies the committed guardrail files instead of rewriting them. -->
+    <vibetags.check>false</vibetags.check>
   </properties>
 
   <dependencyManagement>
@@ -71,6 +74,17 @@
               -->
               <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
               <arg>-Avibetags.project=VibeTags Multi-Module Example</arg>
+              <!--
+                Check mode, wired the way a consumer would wire it. Off by default so an ordinary
+                build regenerates; `mvn compile -Dvibetags.check=true` instead FAILS the build when
+                a generated file no longer matches the annotations, which is what you want in CI.
+
+                This is the answer to "how do I test my guardrails": not a test you write, but a
+                flag that makes the compiler check them. It also guards this example — before it,
+                editing an annotation here and forgetting to commit the regenerated file went
+                unnoticed, because CI only ever ran a plain `compile`.
+              -->
+              <arg>-Avibetags.check=${vibetags.check}</arg>
             </compilerArgs>
             <annotationProcessorPaths>
               <path>

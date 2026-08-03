@@ -27,6 +27,24 @@ be inside a module carrying forty-four.
 The parent POM passes `-Avibetags.root=${maven.multiModuleProjectDirectory}` (anchored by the
 `.mvn/` directory) so every module writes to the same shared root.
 
+## Verifying the guardrails (check mode)
+
+```bash
+mvn clean compile                          # regenerate
+mvn clean compile -Dvibetags.check=true    # verify, and FAIL if anything drifted
+```
+
+This is what a consumer runs in CI, and it is the answer to "how do I test my guardrails" — not a
+test you write, but a flag that makes the compiler check them. In check mode the processor writes
+nothing; it compares what the annotations *would* generate against what is on disk and fails the
+build on any difference, naming the files.
+
+The parent POM wires it as `-Avibetags.check=${vibetags.check}`, defaulting to `false`, so a normal
+build still regenerates. CI runs both: the plain build, then the check.
+
+Try it — edit any `reason = "…"` in a module, then run the check without regenerating. The build
+fails and lists every file the edit should have touched.
+
 ## Build
 
 Install the library first (see the repository root README), then:

@@ -146,6 +146,20 @@ jobs:
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
+      - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
+        run: |
+          cd example-multimodule
+          # Check mode is what a consumer runs in CI: instead of regenerating, the processor fails
+          # the build when a generated file no longer matches the annotations. Running it here does
+          # two jobs. It exercises the feature end-to-end through a real reactor — the only test of
+          # it outside the unit suite — and it guards this example, where editing an annotation and
+          # forgetting to commit the regenerated file previously went unnoticed because CI only
+          # ever ran a plain `compile`.
+          #
+          # It runs after the normal build above, so the tree is already regenerated: a failure
+          # here means the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
+
       - name: Verify Reactor YAML Is Readable By The Tools That Consume It
         run: |
           cd example-multimodule

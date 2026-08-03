@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Lifecycle coverage for the second compile, and check mode wired into an example.**
+
+  Everything was tested at the moment a guardrail is *created*. What happens afterwards — an
+  annotation's value edited, an annotation deleted, a platform opted out of — was covered only for
+  removal in a single module. Those are the cases that fail quietly: the file is regenerated, it
+  looks plausible, and the stale half is invisible unless you knew what used to be there.
+
+  `GuardrailLifecycleEndToEndTest` drives real second compiles for each. The opt-out case is the one
+  that had nothing at all behind it, despite being the load-bearing invariant of the design —
+  "file presence is the opt-in, and deleting one deactivates that platform permanently". The nearest
+  existing test deleted `.cursorrules` and asserted it came *back*, which was true only because its
+  harness re-creates every opt-in file before compiling.
+
+  It also pins the documented limitation rather than pretending it away: emptying a module of
+  *every* annotation leaves its last contribution in the merged files until its `.vibetags-mod-*` is
+  deleted. That is deliberate — the same guard stops a module compiled without annotations from
+  wiping everyone else's — so it is written as a passing test of current behaviour, with the
+  documented escape hatch exercised, so changing it later is a deliberate act with a failing test to
+  update.
+
+  `example-multimodule` now wires check mode the way a consumer would (`-Avibetags.check=true`,
+  off by default), and CI runs it. That is the honest answer to "how do I test my guardrails" — not
+  a test you write, but a flag that makes the compiler check them. It also closes a gap in this
+  repository: editing an annotation in an example and forgetting to commit the regenerated file
+  previously went unnoticed, because CI only ever ran a plain `compile`.
+
+  **It immediately earned itself.** Running it caught that the JSON/TOML fix below was incomplete:
+  the sidecar-population block is copied in both `generateFiles` and `checkFiles`, and only the
+  first was fixed, so check mode reported drift on a tree a real compile had just produced. The two
+  copies now share one method — the same fate, and the same remedy, as the merge block that carries
+  a comment about having drifted before.
+
 ### Fixed
 - **Multi-module reactors froze their JSON and TOML outputs after the first write, and the freeze
   hid a second bug underneath it.** The remaining half of #265.

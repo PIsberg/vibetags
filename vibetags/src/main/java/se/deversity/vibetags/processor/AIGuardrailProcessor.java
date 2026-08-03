@@ -384,14 +384,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // --- Multi-module aggregation ---
         // Write this module's rendered bodies to its sidecar file so siblings can pick them up.
         ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
-        // Every rendered body, not just the marker-based ones. This used to skip services whose
-        // file has no markers (JSON/TOML), which had a consequence well beyond the merge: the write
-        // phase below reads exactly this map to decide whether a shared file may be rewritten at
-        // all, so for those services the answer was permanently "no module contributed" and the
-        // writer's no-new-rules guard skipped every update to an existing file. Whatever the first
-        // successful write produced stayed there for good (issue #265). contentByService already
-        // excludes granular directories, so every entry here is a real output file.
-        contentByService.forEach(mySidecar::putBody);
+        populateSidecarBodies(mySidecar, contentByService);
         if (moduleBuilt != null) {
             moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
         }
@@ -588,14 +581,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             : new GuardrailContentBuilder(collector, moduleActiveServices, projectName, GENERATED_HEADER, checkModuleRoles).build();
 
         ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
-        contentByService.forEach((service, body) -> {
-            Path filePath = serviceFiles.get(service);
-            // Path.getFileName() returns null only for root paths — guard for correctness.
-            Path fileName = filePath != null ? filePath.getFileName() : null;
-            if (fileName != null && GuardrailFileWriter.getMarkersFor(fileName.toString()) != null) {
-                mySidecar.putBody(service, body);
-            }
-        });
+        populateSidecarBodies(mySidecar, contentByService);
         if (moduleBuilt != null) {
             moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
         }
@@ -939,6 +925,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // gains VIBETAGS-MODULE sub-markers is the separate question mergeFor() answers per region,
         // so a lone module compiled twice keeps its historical sub-marker-free shape.
         return allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
+    }
+
+    /**
+     * Records every rendered body on this module's sidecar.
+     *
+     * <p>Shared by {@code generateFiles} and {@code checkFiles} rather than written out twice, for
+     * the reason the merge below is shared: the two copies drifted. This one stored bodies only for
+     * marker-based services, which cost more than the merge it was written for - the write phase
+     * reads the same map to decide whether a shared file may be rewritten at all, so a JSON or TOML
+     * output was permanently "no module contributed" and never refreshed (issue #265). Fixing one
+     * copy and not the other then made check mode report drift on a tree a real compile had just
+     * produced, because the two disagreed about what the merge should see.
+     *
+     * <p>{@code contentByService} already excludes granular directories, so every entry is a real
+     * output file.
+     */
+    private static void populateSidecarBodies(ModuleSidecar sidecar,
+                                              Map<String, String> contentByService) {
+        contentByService.forEach(sidecar::putBody);
     }
 
     static Map<String, String> mergeAcrossModules(Map<String, String> contentByService,
