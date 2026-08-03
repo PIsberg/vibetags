@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`example-all-tiers/`: all three tiers at once, and a class annotated at every level.**
+
+  The tier model was documented in a table and demonstrated one slice at a time — `example/` shows
+  Tier 3 at a single-module root, `example-multimodule/` shows Tier 1 merged plus Tier 2,
+  `example-multimodule-indexed/` shows an indexed Tier 1 plus Tier 3. Nothing showed them composing,
+  which is the arrangement the README actually recommends for a reactor.
+
+  A two-module reactor now turns on all three: an indexed Tier-1 root, a Tier-2 `CLAUDE.md` in each
+  module, and Tier-3 scoped rules grouped by role through `.vibetags-roles`. The generated root is
+  the argument for the layout — six safety buckets inline, two pointers, and nothing else.
+
+  `InvoiceController` carries a guardrail at **every level a guardrail can attach to**, which no
+  other example does in one class: type, instance field, method, and method parameter. The parameter
+  case is the interesting one, since `renderInvoice(java.lang.String,java.lang.String)#customerNote`
+  is the finest addressing VibeTags produces and the one a hand-written rules file cannot express at
+  all.
+
+  CI asserts the split rather than just that the files exist: the six safety buckets are inline at
+  Tier 1 and no verbose bucket is, each module's Tier-1 pointer names both lower tiers, neither
+  Tier-2 file mentions the other module, every Tier-3 file is role-grouped and carries `paths:`
+  front-matter, and the parameter-level rule is present. Verified by deleting
+  `.vibetags-root-index` and watching it fail with "Tier 1 embedded a verbose bucket that belongs in
+  Tier 3: contextual_instructions". The example also runs check mode, so its committed guardrails
+  cannot drift from its annotations.
+
 - **Lifecycle coverage for the second compile, and check mode wired into an example.**
 
   Everything was tested at the moment a guardrail is *created*. What happens afterwards — an

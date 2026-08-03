@@ -1,0 +1,2 @@
+api-endpoints   = **/*Controller.java
+domain-model    = **/*Entry.java

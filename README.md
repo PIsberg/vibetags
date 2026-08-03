@@ -598,7 +598,10 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 
 **Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
 [`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
-[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3).
+[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
+and [`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
+every level — type, instance field, method, and method parameter — so you can see which tier each
+one lands in).
 
 ## 📚 Documentation
 
