@@ -95,6 +95,37 @@ class AnnotationReferenceTest {
     }
 
     @Test
+    void everyRowsRequiredAttributesMatchTheAnnotationsMembers() throws IOException {
+        Map<String, String[]> rows = readTable();
+        assumeTrue(!rows.isEmpty(), "README table not reachable; skipping");
+
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, String[]> row : rows.entrySet()) {
+            Class<?> type = load(row.getKey());
+            if (type == null) {
+                continue;
+            }
+            // A member with no default has to be supplied at the use site or the code does not
+            // compile, which is exactly what the column claims.
+            String actual = Stream.of(type.getDeclaredMethods())
+                .filter(m -> m.getDefaultValue() == null)
+                .map(m -> "`" + m.getName() + "`")
+                .sorted()
+                .reduce((a, b) -> a + ", " + b)
+                .orElse(EM_DASH);
+            String claimed = row.getValue()[1];
+            if (!sortedAttributes(claimed).equals(sortedAttributes(actual))) {
+                problems.add("@" + row.getKey() + ": README says " + claimed + ", the annotation "
+                    + "requires " + actual);
+            }
+        }
+        assertTrue(problems.isEmpty(),
+            "README annotation reference disagrees with the annotations' own members — a reader "
+                + "following it would write code that does not compile, or leave out an attribute "
+                + "the table said was optional:\n  " + String.join("\n  ", problems));
+    }
+
+    @Test
     void theSafetyColumnMatchesWhatTheIndexedRendererKeepsInline() throws IOException {
         Map<String, String[]> rows = readTable();
         assumeTrue(!rows.isEmpty(), "README table not reachable; skipping");
@@ -153,6 +184,18 @@ class AnnotationReferenceTest {
             found.add("AI" + bucket);
         }
         return found;
+    }
+
+    /** The generator writes this when an annotation requires nothing. */
+    private static final String EM_DASH = "—";
+
+    /** Order-insensitive compare; the table lists attributes alphabetically, reflection does not. */
+    private static List<String> sortedAttributes(String cell) {
+        String trimmed = cell.strip();
+        if (trimmed.isEmpty() || EM_DASH.equals(trimmed) || "-".equals(trimmed)) {
+            return List.of();
+        }
+        return Stream.of(trimmed.split(",")).map(String::strip).sorted().toList();
     }
 
     /** annotation simple name → {targets, requiredAttributes, tier}. */
