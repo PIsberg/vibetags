@@ -106,6 +106,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!--
+                      This module IS the public API: 44 annotations whose members and enum constants
+                      are what a consumer's IDE shows on hover and what lands on javadoc.io. A
+                      missing @return or an undocumented enum constant leaves them guessing a
+                      guardrail's meaning from its name.
+
+                      Warnings were not fatal before, so 46 of them accumulated silently while the
+                      javadoc jar kept building successfully. Making them fatal is what stops the
+                      next annotation from re-opening the same gap.
+                    -->
+                    <doclint>all</doclint>
+                    <failOnWarnings>true</failOnWarnings>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>

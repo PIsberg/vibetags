@@ -65,7 +65,11 @@ class ReleaseScriptCoverageTest {
         "tools/plot-release-comparison.py",
         "tools/plot-processor-tax.py",
         "tools/plot-cache-hit.py",
-        "tools/plot-results.py");
+        "tools/plot-results.py",
+        // This file, which quotes the same sort-order example a few lines above while explaining
+        // why those tools are exempt. It flagged itself the moment it was committed, which is the
+        // scan working: it reads `git ls-files`, so a file becomes visible when it becomes real.
+        "vibetags/src/test/java/se/deversity/vibetags/processor/ReleaseScriptCoverageTest.java");
 
     /** Build outputs and local scratch that are not part of the release. */
     private static final Set<String> IGNORED_SUFFIXES =
