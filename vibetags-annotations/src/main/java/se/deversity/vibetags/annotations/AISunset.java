@@ -14,11 +14,17 @@ import java.lang.annotation.Target;
 public @interface AISunset {
     /**
      * Fully qualified class replacement for the sunset API element.
+     *
+     * @return the type callers should migrate to, or {@code Object.class} when no direct
+     *         replacement exists
      */
     Class<?> replacement() default Object.class;
 
     /**
      * JIRA or issue tracking ticket for deprecation/sunset progress (e.g. "DEBT-123").
+     *
+     * @return the ticket tracking the removal, so the guardrail points at the work rather than
+     *         only at the prohibition
      */
     String jira();
 }

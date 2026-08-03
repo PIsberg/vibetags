@@ -14,6 +14,8 @@ import java.lang.annotation.Target;
 public @interface AICallersOnly {
     /**
      * Fully qualified names or wildcard patterns of allowed callers (e.g. "com.example.service.*").
+     *
+     * @return the callers permitted to invoke this element; anything else is an illegal bypass
      */
     String[] value();
 }
