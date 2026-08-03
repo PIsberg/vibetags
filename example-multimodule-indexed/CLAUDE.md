@@ -13,6 +13,13 @@
 <rule>
   If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
 </rule>
+  <security_elements>
+    <element path="com.example.indexed.app.DocumentSearchView">
+      <aspect>Query handling</aspect>
+    </element>
+  </security_elements>
+
+<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
 </project_guardrails>
 
 Guardrails for module `app` are maintained in that module's own files, in the scoped rules under `app/.claude/rules/` (loaded automatically when you open a matching source file). Consult those for this module's full guardrails.
@@ -25,6 +32,28 @@ Guardrails for module `app` are maintained in that module's own files, in the sc
       <reason>Core document model: structural changes ripple through every module</reason>
     </file>
   </locked_files>
+  <ignored_elements>
+    <file path="com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay"/>
+  </ignored_elements>
+
+<rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
+  <pii_guardrails>
+    <element path="com.example.indexed.core.DocumentRetention.ownerEmail">
+      <reason>Owner email identifies a natural person; never log it or put it in a suggestion</reason>
+    </element>
+  </pii_guardrails>
+
+<rule>
+  Never include runtime values of elements listed in <pii_guardrails> in logs, console output, external API calls, test fixtures, mock data, or code suggestions. Treat their values as strictly confidential.
+</rule>
+  <core_elements>
+    <element path="com.example.indexed.core.DocumentIndexEntry">
+      <sensitivity>high</sensitivity>
+      <note>Index entries are read by every module; a field change is a format change</note>
+    </element>
+  </core_elements>
+
+<rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>

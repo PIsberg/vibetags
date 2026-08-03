@@ -8,7 +8,7 @@ VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags
 
 Independent Maven (and where noted, Gradle) subprojects:
 
-- `vibetags-annotations/` — the 39 `@interface` classes, zero deps. On the consumer's compile classpath. **Build first.**
+- `vibetags-annotations/` — the 44 `@interface` classes, zero deps. On the consumer's compile classpath. **Build first.**
 - `vibetags/` — the processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). On the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM managing both versions. Maven only; Gradle reads it via `mavenLocal()` / `platform(...)`.
 - `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last two are reactors, asserted in CI).

@@ -36,4 +36,117 @@ When modifying this element, audit for:
 
 ### com.example.indexed.app.DocumentService.storageKey(java.lang.String,java.lang.String)
 - **Rule**: Must remain a pure function. Forbid state modifications and side effects.
+
+## Implementation Tasks
+
+### com.example.indexed.app.DocumentImportJob.importAll(java.lang.String)
+- **Instruction**: Implement resumable import: checkpoint every 1000 rows and restart from the last checkpoint
+
+## Strict Test Isolation
+
+### com.example.indexed.app.DocumentImportJob
+- **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.
+
+## Legacy Compatibility Bridge
+
+### com.example.indexed.app.DocumentImportJob.mapLegacyColumn(java.lang.String)
+- **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.
+
+## Feature Flag Gate
+
+### com.example.indexed.app.DocumentImportJob.useV2Pipeline()
+- **Flag**: 'import.v2.enabled' (default: false)
+- **Rule**: This code is gated behind a feature flag. Preserve the flag check. Never assume the flag is always active.
+
+## Sandbox Restriction
+
+### com.example.indexed.app.DocumentImportJob.reindexEverything()
+- **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.
+
+## Polymorphic Extension Pattern
+
+### com.example.indexed.app.DocumentImportJob
+- **Pattern**: STRATEGY_PATTERN
+- **Rule**: Open for extension, closed for modification. Use strategy or visitor subclasses instead of changing this file.
+
+## Experimental Prototype
+
+### com.example.indexed.app.DocumentImportJob
+- **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.
+
+## Generated — Edit The Source
+
+### com.example.indexed.app.DocumentImportJob.LEGACY_COLUMNS
+- **Rule**: Machine-generated. Read it, never write it — hand edits are silently overwritten.
+- **Generated from**: schema/legacy-import.yaml
+- **Edit instead**: schema/legacy-import.yaml
+- **Regenerate with**: mvn generate-sources
+
+## Observability Instrumentation
+
+### com.example.indexed.app.DocumentSearchView.renderRow(java.lang.String)
+- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard.
+- **Details**: Metrics: search.render.count. Traces: search.render. Logs: search.render.slow. Note: Renaming a metric breaks the search dashboard and its alerts
+
+## Public API Surface Protection
+
+### com.example.indexed.app.DocumentSearchView
+- **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.
+
+## Strict Exception Handling
+
+### com.example.indexed.app.DocumentSearchView
+- **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.
+
+## Strict Classpath Integrity
+
+### com.example.indexed.app.DocumentSearchView
+- **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.
+
+## Security-Critical Code
+
+### com.example.indexed.app.DocumentSearchView
+- **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact.
+- **Aspect**: Query handling
+
+## Access Restrictions
+
+### com.example.indexed.app.DocumentSearchView.loadFromIndex(long)
+- **Allowed Callers**: [com.example.indexed.app.DocumentService]
+
+## Memory Budget Constraints
+
+### com.example.indexed.app.DocumentSearchView.renderRow(java.lang.String)
+- **Policy**: NO_AUTOBOXING
+- **Rule**: Strictly limit or prevent object allocations.
+
+## Input Sanitization
+
+### com.example.indexed.app.DocumentSearchView.renderRow(java.lang.String)#highlight
+- **Target Filters**: XSS
+- **Rule**: Run raw input strings through approved sanitizers.
+
+## Banned APIs
+
+### com.example.indexed.app.DocumentSearchView.renderRow(java.lang.String)
+- **Rule**: The following compile here but are prohibited at this element.
+- **Forbidden**: java.lang.String.format, java.util.Date
+- **Use instead**: StringBuilder and java.time
+- **Reason**: Runs per result row; String.format dominates the profile at this call rate
+
+## Thread Affinity
+
+### com.example.indexed.app.DocumentSearchView.loadFromIndex(long)
+- **Rule**: Safe on exactly one thread. This is NOT thread-safety — never add locks to "fix" it; marshal the call instead.
+- **Affinity**: NEVER_MAIN (search-worker)
+- **Marshal via**: SearchExecutor.submit
+- **Symptom if violated**: The UI thread blocks on index I/O and the app stops painting
+
+## Mirrored — Keep In Sync
+
+### com.example.indexed.app.DocumentSearchView
+- **Rule**: Free to change, but every mirror must change in the same commit.
+- **Mirrors**: com.example.indexed.core.DocumentIndexEntry
+- **Reason**: Projects the index entry field for field; a field added there and not here is invisible to search
+- **Enforced by**: DocumentIndexEntryTest#projectionCoversEveryField
 <!-- VIBETAGS-END -->
