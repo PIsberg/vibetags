@@ -86,7 +86,7 @@
         <junit.platform.version>6.1.2</junit.platform.version>
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.4.2</archunit.version>
-        <async-test-lib.version>1.7.0-RC5</async-test-lib.version>
+        <async-test-lib.version>1.7.0-RC8</async-test-lib.version>
         <snakeyaml.version>2.5</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
 
