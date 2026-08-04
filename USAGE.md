@@ -6,6 +6,7 @@
 
 - [Logging Configuration](#logging-configuration)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
+- [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
 - [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
 - [Qwen Configuration](#-qwen-configuration)
 - [llms.txt Standard](#-llmstxt-standard-windsurf-cascade--llm-agents)
@@ -264,6 +265,48 @@ Create one or more of the following files in your project root to opt in:
 ```
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
+
+### Troubleshooting: Nothing Was Generated
+
+The build says `BUILD SUCCESS`, an opted-in file exists, and it is still empty. Both known
+causes are silent, and both turned up in real consumer projects, so check these two first.
+
+**1. JDK 23+ only runs annotation processors that are explicitly configured.**
+
+Since JDK 23, `javac` no longer picks up annotation processors found on the class path. A pom
+that declares `vibetags-processor` as an ordinary (or `provided`) dependency compiles cleanly
+on JDK 23+ and generates nothing: no error, no warning, no files.
+
+The recommended setup is explicit and therefore unaffected: `<annotationProcessorPaths>` on
+Maven (as shown in the [README](README.md)), the `annotationProcessor` configuration on
+Gradle. If the processor must stay on the class path, restore processing with:
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <proc>full</proc>
+    </configuration>
+</plugin>
+```
+
+**2. A build with nothing to compile never starts `javac`.**
+
+VibeTags runs inside the compiler. An incremental `mvn compile` with no changed sources skips
+`javac` entirely, so a platform file you just opted in stays empty even though the build is
+green. The same applies to opting out and to verifying a regeneration: the change only shows
+once `javac` actually runs.
+
+Force one real compile after changing the opt-in set:
+
+```bash
+mvn clean compile      # or touch any source file, then compile
+```
+
+**Still empty?** Read `vibetags.log`. Every skipped write is a `write.skip` event carrying a
+`reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path
+(see [Logging Configuration](#logging-configuration)).
 
 ### 🧩 Granular Rules (Cursor, Trae, Roo Code)
 
