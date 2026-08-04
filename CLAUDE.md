@@ -106,6 +106,7 @@ per-element detail lives in `.claude/rules/`, loaded on demand by glob.
 - `docs/ANNOTATIONS.md` — adding or changing an annotation: full table, semantics, validation warnings.
 - `docs/PLATFORMS.md` — adding a platform, or a question about a specific output file.
 - `docs/TESTS.md` — which test class covers what.
+- `docs/DEPENDENCIES.md` — every third-party artifact, why it is here, what ships to consumers and what only runs the build; where versions are declared and which newer versions were rejected.
 - `docs/LOAD-BEARING.md` — processing flow, file-existence opt-in, marker rules, the scoped-rules
   index, and the internal class map. The reasoning behind the invariants above.
 - `docs/ARCHITECTURE.md` — deep dive: system diagram, data flow, design decisions, limitations.

@@ -85,9 +85,9 @@
         <junit.version>6.1.2</junit.version>
         <junit.platform.version>6.1.2</junit.platform.version>
         <mockito.version>5.23.0</mockito.version>
-        <archunit.version>1.4.2</archunit.version>
+        <archunit.version>1.5.0</archunit.version>
         <async-test-lib.version>1.7.0-RC8</async-test-lib.version>
-        <snakeyaml.version>2.5</snakeyaml.version>
+        <snakeyaml.version>2.6</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
 
         <!-- Build plugins -->
@@ -96,22 +96,22 @@
         <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
-        <maven-shade-plugin.version>3.5.2</maven-shade-plugin.version>
-        <exec-maven-plugin.version>3.2.0</exec-maven-plugin.version>
+        <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+        <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
 
         <!-- Static analysis and coverage -->
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <pmd.version>7.26.0</pmd.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <spotbugs-maven-plugin.version>4.10.2.0</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <pitest-maven.version>1.25.8</pitest-maven.version>
-        <pitest-junit5-plugin.version>1.2.2</pitest-junit5-plugin.version>
+        <pitest-maven.version>1.25.9</pitest-maven.version>
+        <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
         <error-prone.version>2.50.0</error-prone.version>
         <nullaway.version>0.13.8</nullaway.version>
-        <cyclonedx-maven-plugin.version>2.9.2</cyclonedx-maven-plugin.version>
+        <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
 
         <!-- Publishing -->
         <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
