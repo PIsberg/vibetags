@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
-version: 1.0.0-RC10
+version: 1.0.0
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0-RC10</version>
+    <version>1.0.0</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0-RC10'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0-RC10'
+compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)

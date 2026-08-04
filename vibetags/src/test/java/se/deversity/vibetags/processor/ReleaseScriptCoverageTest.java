@@ -57,6 +57,47 @@ class ReleaseScriptCoverageTest {
         "docs/CHANGELOG.md",          // a record of what each version did
         "load-tests/README.md",       // "since 1.0.0-RCn" is provenance, not a coordinate
         "load-tests/results/README.md",
+        // Feature history and worked examples. "New in v1.0.0" in USAGE.md names the release
+        // an annotation shipped in, and proposed-annotations.md records the same fact;
+        // RELEASING.md walks its steps with 1.0.0 as the example version; CONCEPT_PLUGIN.md
+        // pitches hypothetical coordinates for a plugin that does not exist. None of them
+        // track the current release.
+        "USAGE.md",
+        "docs/proposed-annotations.md",
+        "docs/RELEASING.md",
+        "docs/CONCEPT_PLUGIN.md",
+        // The multi-module examples' own lineage. Each child pom names its example root
+        // (groupId se.deversity.vibetags.example) at version 1.0.0, which is the sample
+        // project's own version, not a VibeTags coordinate. The roots do carry one (the BOM
+        // property), and set-version.sh rewrites the roots.
+        "example-all-tiers/billing/pom.xml",
+        "example-all-tiers/shipping/pom.xml",
+        "example-multimodule-indexed/app/pom.xml",
+        "example-multimodule-indexed/core/pom.xml",
+        "example-multimodule/cli/pom.xml",
+        "example-multimodule/core/pom.xml",
+        "example-multimodule/engine/pom.xml",
+        "example-multimodule/showcase/pom.xml",
+        "example-multimodule/tests/pom.xml",
+        // Feature-wave references in code. The showcase demos say which release their five
+        // annotations shipped in and carry a CATALOG_VERSION fixture that happens to be
+        // 1.0.0; AIKeepInSync's javadoc quotes an illustrative VERSION constant; the
+        // NewAnnotations test javadocs name the wave they cover; GranularRenderer groups a
+        // formatter block by it; the fingerprint tests pass "1.0.0" as an arbitrary fixture
+        // version; BuildVersionParityTest documents example/build.gradle's own version.
+        // None of these are release coordinates.
+        "example/src/main/java/com/example/service/EvidenceBasedShowcase.java",
+        "example-multimodule/showcase/src/main/java/com/example/service/EvidenceBasedShowcase.java",
+        "vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/AIKeepInSync.java",
+        "vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/platforms/GranularRenderer.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/BuildFingerprintUnitTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/BuildVersionParityTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV5DefinitionTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV5EndToEndTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV5ValidationTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6DefinitionTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6EndToEndTest.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6ValidationTest.java",
         // The benchmark plotters. Two default --version to the last release that actually has
         // measurements under load-tests/results/; bumping that on release would aim them at a
         // directory nobody has generated yet. The other two name versions inside a comment
@@ -88,6 +129,7 @@ class ReleaseScriptCoverageTest {
         assumeTrue(!tracked.isEmpty(), "git did not list any tracked files; skipping");
 
         String scriptText = Files.readString(script, StandardCharsets.UTF_8);
+        Pattern statesVersion = wholeCoordinate(version);
         List<String> missing = new ArrayList<>();
 
         for (String rel : tracked) {
@@ -104,7 +146,7 @@ class ReleaseScriptCoverageTest {
             } catch (IOException | java.io.UncheckedIOException notText) {
                 continue; // binary or unreadable; it cannot carry a version string
             }
-            if (text.contains(version) && !scriptText.contains(rel)) {
+            if (statesVersion.matcher(text).find() && !scriptText.contains(rel)) {
                 missing.add(rel + " (states " + version + ")");
             }
         }
@@ -117,6 +159,16 @@ class ReleaseScriptCoverageTest {
     }
 
     // -----------------------------------------------------------------------
+
+    /**
+     * {@code version} stated as a whole coordinate. A bare {@code contains} would light up
+     * every {@code 1.0.0-RC3} and {@code 1.0.0-SNAPSHOT} mention the moment the release
+     * version becomes {@code 1.0.0}: those state a different version that merely starts with
+     * this one. The guards also keep {@code 21.0.0} from matching a search for {@code 1.0.0}.
+     */
+    private static Pattern wholeCoordinate(String version) {
+        return Pattern.compile("(?<![0-9.])" + Pattern.quote(version) + "(?![0-9A-Za-z.-])");
+    }
 
     private static boolean isIgnored(String rel) {
         return IGNORED_SUFFIXES.stream().anyMatch(rel::endsWith);
