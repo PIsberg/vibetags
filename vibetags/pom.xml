@@ -76,13 +76,13 @@
         <dependency>
             <groupId>se.deversity.async-test-lib</groupId>
             <artifactId>async-test-lib</artifactId>
-            <!-- Version in the parent (async-test-lib.version). Pinned deliberately: this artifact
-                 is NOT on Maven Central, so CI builds it from the upstream git tag (see
-                 .github/workflows/build.yml). Only bump to a version that has a matching tag at
-                 github.com/PIsberg/async-test-lib — `versions:display-dependency-updates` also
-                 reports versions that exist only as a local install, and taking that suggestion
-                 breaks every environment except the one that installed it. Change the four workflow
-                 clone tags in the same commit as the parent's property. -->
+            <!-- Version in the parent (async-test-lib.version). Resolves from Maven Central like any
+                 other dependency; CI no longer builds it from a git tag. Do not take
+                 `versions:display-dependency-updates` at its word here: it
+                 reports 1.7.0, which exists only as a local install on the maintainer's machine
+                 and is a 404 on Central. Check
+                 repo1.maven.org/maven2/se/deversity/async-test-lib/async-test-lib/maven-metadata.xml
+                 before bumping. -->
             <scope>test</scope>
         </dependency>
         <dependency>

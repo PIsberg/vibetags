@@ -139,6 +139,34 @@ class BuildVersionParityTest {
             "A Gradle build publishing under the wrong version:\n  " + String.join("\n  ", problems));
     }
 
+    /**
+     * Gradle's PMD plugin takes its analyser version from {@code toolVersion}, not from a
+     * dependency coordinate, so {@link #gradleBuildsAgreeWithTheParentOnEveryManagedCoordinate}
+     * never saw it. It drifted: vibetags-annotations sat on PMD 7.24.0 while the parent and
+     * vibetags/build.gradle were on 7.26.0, which means the two modules were analysed by different
+     * rule sets and a rule added between those releases ran on one module only.
+     */
+    @Test
+    void gradlePmdToolVersionsMatchTheParent() {
+        String expected = properties().get("pmd.version");
+        Pattern toolVersion = Pattern.compile("^\\s*toolVersion\\s*=\\s*['\"]([^'\"]+)['\"]",
+            Pattern.MULTILINE);
+        List<String> problems = new ArrayList<>();
+
+        for (String file : GRADLE_FILES) {
+            Matcher m = toolVersion.matcher(read(repoRoot().resolve(file)));
+            while (m.find()) {
+                if (!expected.equals(m.group(1))) {
+                    problems.add(file + ": PMD toolVersion is " + m.group(1)
+                        + " but vibetags-parent declares pmd.version " + expected);
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(),
+            "A Gradle module analysed by a different PMD than the rest of the build:\n  "
+                + String.join("\n  ", problems));
+    }
+
     @Test
     void managedPomsDeclareNoVersionOfTheirOwn() {
         List<String> problems = new ArrayList<>();

@@ -11,9 +11,10 @@ Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vib
 - [USAGE.md](USAGE.md): consumer guide — every annotation with usage examples
 - [SPEC.md](SPEC.md): behavior and output-format specification
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): technical deep dive — system diagram, data flow, design decisions
-- [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md): all 39 annotations — attribute table, semantics, compile-time validation warnings
+- [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md): every annotation — attribute table, semantics, compile-time validation warnings
 - [docs/PLATFORMS.md](docs/PLATFORMS.md): generated file ↔ platform ↔ format table, granular-rules notes
 - [docs/TESTS.md](docs/TESTS.md): which test class covers what
+- [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): every third-party artifact and why it is here; what ships to consumers vs what only runs the build
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): contribution workflow
 - [docs/RELEASING.md](docs/RELEASING.md): release process
 - [docs/CHANGELOG.md](docs/CHANGELOG.md): version history

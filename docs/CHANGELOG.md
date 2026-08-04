@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`docs/DEPENDENCIES.md`: every third-party artifact, and why.** Split by what it costs a
+  consumer. Three artifacts reach the consumer's annotation-processor path (jspecify, slf4j-api,
+  logback-classic) and `vibetags-annotations` has none at all; everything else is test or build
+  scope and never leaves the repository. The document names the parent property that holds each
+  version rather than restating the number, and records the versions deliberately not taken, so the
+  next sweep does not re-derive that slf4j 2.1.0-alpha1, maven-compiler-plugin 4.0.0-beta-4 and
+  surefire 3.6.0-M1 are prereleases.
+- **`BuildVersionParityTest` now checks Gradle's PMD `toolVersion`.** It is not a dependency
+  coordinate, so the existing parity check never saw it, and it had already drifted:
+  `vibetags-annotations/build.gradle` sat on PMD 7.24.0 while the parent and `vibetags/build.gradle`
+  were on 7.26.0, which is two modules analysed by two rule sets.
+
+### Changed
+- **Dependencies:** ArchUnit 1.4.2 → 1.5.0, SnakeYAML 2.5 → 2.6, maven-shade-plugin 3.5.2 → 3.6.2,
+  exec-maven-plugin 3.2.0 → 3.6.3, spotbugs-maven-plugin 4.10.2.0 → 4.10.3.0, pitest-maven 1.25.8 →
+  1.25.9, pitest-junit5-plugin 1.2.2 → 1.2.3, cyclonedx-maven-plugin 2.9.2 → 2.9.3, and PMD 7.26.0
+  in `vibetags-annotations/build.gradle`, which the parent had declared since 1.0.0-RC8. Verified by
+  the full Maven build (1465 tests) and both Gradle builds. async-test-lib stays at 1.7.0-RC8: the
+  1.7.0 that `versions:display-dependency-updates` reports is still a local install and 404s on
+  Central.
+- **CI no longer builds async-test-lib from a git tag.** Four jobs cloned
+  `github.com/PIsberg/async-test-lib` at `v1.7.0-RC5` and ran `mvn install` on it before every
+  build. The artifact has been on Maven Central all along, so those four jobs were paying for an
+  artifact Maven then resolved from Central anyway; the tag had also been left at RC5 when the
+  dependency moved to RC8, and one of the clones failed transiently and reddened an unrelated PR.
+  Verified by resolving 1.7.0-RC8 from Central into an empty local repository.
+
 ## [1.0.0] - 2026-08-04
 
 ### Added

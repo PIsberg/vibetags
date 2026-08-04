@@ -17,7 +17,7 @@ Ground rules for any agent working here:
   → `example`. Always build from the subproject's own directory.
 - Reference docs load on demand: `docs/ANNOTATIONS.md` (annotation reference),
   `docs/PLATFORMS.md` (output-file table), `docs/TESTS.md` (test coverage map),
-  `docs/ARCHITECTURE.md` (deep dive).
+  `docs/ARCHITECTURE.md` (deep dive), `docs/DEPENDENCIES.md` (third-party artifacts).
 
 Note: this file is intentionally not VibeTags-managed — other AI config files
 exist at the root, so the processor's AGENTS.md sole-file fallback leaves it

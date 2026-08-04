@@ -87,9 +87,9 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.18'
     implementation 'ch.qos.logback:logback-classic:1.6.1'
 
-    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.5.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
-    // 1.7.0-RC5, matching pom.xml: not on Maven Central, built from the upstream git tag in CI.
+    // Concurrency-test harness, matching pom.xml. Resolves from Maven Central like any other dep.
     testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.0-RC8'
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
@@ -98,7 +98,7 @@ dependencies {
     // is one more thing to collide with. The tests need a real parser because "the file looks
     // right" is not the property that matters - "the tool reading it sees every module's
     // guardrails" is, and only a parser shows that.
-    testImplementation 'org.yaml:snakeyaml:2.5'
+    testImplementation 'org.yaml:snakeyaml:2.6'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 
