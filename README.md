@@ -470,6 +470,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 
 > **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `example/pom.xml`.
 
+> **Note (JDK 23+):** `javac` only runs annotation processors that are explicitly configured; `<annotationProcessorPaths>` and Gradle's `annotationProcessor` qualify. A pom that instead lists `vibetags-processor` as an ordinary dependency silently generates nothing on JDK 23+ unless `<proc>full</proc>` is added to `maven-compiler-plugin`. More silent-failure cases: [Troubleshooting: Nothing Was Generated](USAGE.md#troubleshooting-nothing-was-generated).
+
 **Gradle:**
 ```groovy
 dependencies {

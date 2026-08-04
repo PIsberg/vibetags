@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`USAGE.md` documents the two silent ways to get nothing generated.** A new Troubleshooting
+  section covers JDK 23+ no longer running class-path annotation processors, which turned a
+  `provided`-scope `vibetags-processor` into a no-op with no error and no warning in a real
+  consumer project (`<proc>full</proc>` or the recommended `<annotationProcessorPaths>` setup
+  restores it), and incremental builds with no stale sources never starting `javac`, which
+  leaves a freshly opted-in file empty until a clean or touched-source compile. The README's
+  installation section gained the JDK 23+ note beside its existing `annotationProcessorPaths`
+  caveat.
+- **The five aggregate-granular pairs claim is derived, not asserted (#356).**
+  `DocsGranularPairsClaimTest` reads the pair count and directory list from
+  `GranularIndexSection` and fails `PLATFORMS.md` or `LOAD-BEARING.md` when either disagrees.
+  It catches the exact drift #355 fixed: the docs said four platforms while the code gated
+  five.
+
 ### Changed
 - **PIT mutation testing runs on demand only.** It moved out of `build.yml` into its own
   `mutation.yml`, whose sole trigger is `workflow_dispatch`. The job was the longest leg in CI and
@@ -15,6 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   asks for the run, a failure should read as one. Nothing about the `mutation` Maven profile
   changed, so `mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` still works
   locally and from a dispatched run.
+- **Every published pom carries the complete MIT license block (#357).** The parent's existing
+  declaration gained `distribution=repo` and the four managed poms inherit it; the five
+  standalone example roots that cannot inherit each received the full block, and both
+  publishing Gradle builds now emit `distribution=repo` in their publication poms. Verified
+  through the effective pom of a managed pom and a reactor child, the flattened deploy pom,
+  and the Gradle-generated publication pom.
+
+### Fixed
+- **The Generating-files NOTE reports the resolved active-services set (#356).** With an
+  aggregate and its granular directory both opted in (`CLAUDE.md` plus `.claude/rules/`), the
+  NOTE counted only the aggregate content map and claimed one active service while
+  `vibetags.log` correctly said two. It now reports the same resolved set the log uses,
+  sorted. `ActiveServicesNoteTest` pins the message and failed red against the old one.
+- **A Trees-API failure is named instead of `null` (#356).** Under Gradle compiler workers a
+  classloader failure carries no message, so `@AIArchitecture`'s unchecked-layering note
+  rendered `Trees API not available: null`. The reason now falls back to the throwable's type
+  name and states that `cannotReference` was not checked this round.
+  `ArchitectureRuleReasonTest` covers message, null and blank.
 
 ## [1.0.0-RC10] - 2026-08-03
 
