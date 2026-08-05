@@ -1,0 +1,8 @@
+# Role/topic routing for the granular rule files at the reactor root.
+#
+# One role, matched by classes in THREE different modules (core, engine, cli). All three
+# resolve the same output path — .kiro/steering/reactor-spine.md, .trae/rules/reactor-spine.md
+# and the rest — so this is the layout of issue #365, where each module's compile replaced the
+# file with only its own classes and the siblings' guardrails vanished. CI asserts all three
+# survive; showcase/ keeps its per-class files, so both paths stay covered.
+reactor-spine = **/multimodule/**

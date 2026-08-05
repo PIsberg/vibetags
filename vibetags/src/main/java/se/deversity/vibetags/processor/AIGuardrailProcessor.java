@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.BuildFingerprint;
 import se.deversity.vibetags.processor.internal.DestructiveRewriteWarner;
 import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
+import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
@@ -389,11 +390,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
         }
         // Granular filenames go in before they are written: siblings read them as cleanup
-        // exclusions, so no round deletes rule files it simply could not see (issue #330).
-        Set<String> myStems = new java.util.LinkedHashSet<>(
-            GranularRulesWriter.stemsFor(built.elementRules, rootRoles));
+        // exclusions, so no round deletes rule files it simply could not see (issue #330). The
+        // content behind each name goes in with it, because a granular file is not owned by one
+        // module either — a role spanning modules resolves to one shared path, and without the
+        // contributions the last module to compile replaced it (issue #365).
+        Map<String, GranularContribution> myGranular =
+            GranularRulesWriter.contributionsFor(built.elementRules, rootRoles);
+        myGranular.forEach(mySidecar::putGranularContribution);
+        Set<String> myStems = new java.util.LinkedHashSet<>(myGranular.keySet());
         if (moduleBuilt != null) {
-            myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, moduleRoles));
+            Map<String, GranularContribution> myModuleGranular =
+                GranularRulesWriter.contributionsFor(moduleBuilt.elementRules, moduleRoles);
+            myModuleGranular.forEach(mySidecar::putModuleGranularContribution);
+            myStems.addAll(myModuleGranular.keySet());
         }
         mySidecar.setGranularStems(myStems);
         // The elements themselves, recorded whether or not a granular service is active: this is
@@ -517,15 +526,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (log != null) log.info("{} — {}", entry[0], entry[1]);
         }
 
-        // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans. The exclusion
-        // list carries every OTHER sidecar's stems as well, so this round leaves alone the rule
-        // files written by another module or another source set of this one (issue #330).
+        // Per-class granular rule files (Cursor / Trae / Roo) + cleanup of orphans. Each file is
+        // written from every module's contribution, not just this one's, so a role spanning modules
+        // keeps all of their guardrails (issue #365). The exclusion list carries every OTHER
+        // sidecar's stems as well, so this round leaves alone the rule files written by another
+        // module or another source set of this one (issue #330).
         Set<String> writtenQNames = new java.util.LinkedHashSet<>(
-            granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles));
+            granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles,
+                ModuleSidecar.mergeGranular(allSidecars)));
         writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
         Set<String> removedQNames = granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
-        destructiveWarner().orphanSweep("the reactor root", removedQNames,
-            GranularRulesWriter.stemsFor(elementRules, rootRoles));
+        // myGranular's keys ARE the stems this round planned — the same map the sidecar recorded,
+        // so the sweep can never be judged against a differently-computed set.
+        destructiveWarner().orphanSweep("the reactor root", removedQNames, myGranular.keySet());
 
         // Per-module (nested) output — write this module's own guardrails into its own directory.
         // Independent of the cross-module aggregation above (which serves only the shared root
@@ -600,10 +613,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (moduleBuilt != null) {
             moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
         }
-        Set<String> myStems = new java.util.LinkedHashSet<>(
-            GranularRulesWriter.stemsFor(built.elementRules, checkRootRoles));
+        Map<String, GranularContribution> myGranular =
+            GranularRulesWriter.contributionsFor(built.elementRules, checkRootRoles);
+        myGranular.forEach(mySidecar::putGranularContribution);
+        Set<String> myStems = new java.util.LinkedHashSet<>(myGranular.keySet());
         if (moduleBuilt != null) {
-            myStems.addAll(GranularRulesWriter.stemsFor(moduleBuilt.elementRules, checkModuleRoles));
+            Map<String, GranularContribution> myModuleGranular =
+                GranularRulesWriter.contributionsFor(moduleBuilt.elementRules, checkModuleRoles);
+            myModuleGranular.forEach(mySidecar::putModuleGranularContribution);
+            myStems.addAll(myModuleGranular.keySet());
         }
         mySidecar.setGranularStems(myStems);
         mySidecar.setElementIds(collector.model().elementIds());
@@ -652,7 +670,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
         Set<String> writtenQNames = new java.util.LinkedHashSet<>(
-            checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles));
+            checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles,
+                ModuleSidecar.mergeGranular(allSidecars)));
         writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
         checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
 

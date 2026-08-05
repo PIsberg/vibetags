@@ -129,9 +129,13 @@ public final class ModuleOutputWriter {
         }
 
         // Per-class granular rule files under the module directory; cleanup runs after write, and
-        // spares the stems other source sets of this same module recorded in their sidecars.
+        // spares the stems other source sets of this same module recorded in their sidecars. The
+        // content merges across those source sets too: a role matched by both main and test sources
+        // resolves to one file here, and without the merge the second round to compile replaced the
+        // first's rules (the module-scoped half of issue #365).
         GranularRulesWriter granular = new GranularRulesWriter(writer);
-        Set<String> writtenStems = granular.writeAll(built.elementRules, moduleFiles, moduleActive, roles);
+        Set<String> writtenStems = granular.writeAll(built.elementRules, moduleFiles, moduleActive,
+            roles, regionId == null ? Map.of() : ModuleSidecar.mergeModuleGranular(sidecars, regionId));
         Set<String> keep = new LinkedHashSet<>(writtenStems);
         keep.addAll(ModuleSidecar.granularStemsFrom(sidecars, moduleId, regionId));
         Set<String> removed = granular.cleanupAll(moduleFiles, moduleActive, keep);

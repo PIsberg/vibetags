@@ -96,6 +96,12 @@ kept here because breaking one of them fails silently:
   the rule — it renders each such service empty and populated, and fails any that differ without a
   merge. Note the coupling that made this invisible: sidecar bodies are also what
   `anyContributed` reads, so a service missing from the sidecar never refreshes at all.
+- **A granular rule file can have more than one author, so its content goes in the sidecar too.**
+  A role in a reactor-root `.vibetags-roles` routes on the package, not the module, so one file is
+  written by every module it matches — and each write replaced the last (issue #365). Anything that
+  renders a granular file must record its share via `GranularRulesWriter.contributionsFor` and write
+  through `ModuleSidecar.mergeGranular`; the stem alone only answers "may this be deleted?".
+  `MultiModuleGranularRoleMergeTest` fails a path that writes without merging.
 
 This repo dogfoods the index: the block at the bottom of this file is a scoped-rules index, and the
 per-element detail lives in `.claude/rules/`, loaded on demand by glob.

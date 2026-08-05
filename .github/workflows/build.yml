@@ -265,6 +265,38 @@ jobs:
           fi
           echo "Sibling module rules mirrored into the centralised test module."
 
+      - name: Verify Granular Role Files Merge Across Modules (issue #365)
+        run: |
+          cd example-multimodule
+          # .vibetags-roles routes core/, engine/ and cli/ into ONE root rule file, so all three
+          # modules write the same path. Each compile used to replace it with its own classes
+          # alone, and only the module that happened to compile last kept its guardrails.
+          for dir in .kiro/steering .trae/rules .roo/rules .ai/rules .continue/rules \
+                     .tabnine/guidelines .amazonq/rules .pearai/rules; do
+            f="$dir/reactor-spine.md"
+            test -f "$f" || { echo "MISSING role rule file: $f"; exit 1; }
+            for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
+                         "com.example.multimodule.core.IrNode" \
+                         "com.example.multimodule.engine.LayoutEngine" \
+                         "com.example.multimodule.cli.MultiModuleCli"; do
+              grep -qF "$token" "$f" || { echo "MISSING in $f: $token"; exit 1; }
+            done
+          done
+          # A class matching no role keeps its own per-class file — the merge must not eat that path.
+          test -f .kiro/steering/com-example-security-SecurityConfig.md \
+            || { echo "unrouted classes lost their per-class rule file"; exit 1; }
+          # The report's second repro: `mvn -pl <one-module>` must leave the shared file byte-identical,
+          # or an unrelated one-module edit produces a spurious diff in a generated file.
+          before=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          mvn -B -pl core clean compile
+          after=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          if [ "$before" != "$after" ]; then
+            echo "a one-module rebuild rewrote the shared role file:"
+            git --no-pager diff -- .kiro/steering/reactor-spine.md
+            exit 1
+          fi
+          echo "Role files merge across all three modules and survive a one-module rebuild."
+
       - name: Build All-Tiers Example And Verify The Tier Split
         run: |
           cd example-all-tiers

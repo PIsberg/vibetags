@@ -151,6 +151,7 @@ Beyond what the generated section below describes:
 - `AnnotationFormatter` + `FormatterRegistry` — one `AI*Formatter` per annotation in `content/annotations/`; renderers pull per-annotation text from here rather than formatting inline
 - `SectionCatalog` / `AnnotationSections` — shared driver that walks annotation buckets into titled sections
 - `GranularBody` / `GranularSections` — structured stanzas for granular rule files, so a file hoists the constant rule sentence a section shares instead of repeating it per element
+- `GranularContribution` — one compilation's share of one granular rule file (its globs and body), recorded in the module sidecar so a file several modules write is merged rather than replaced (#365)
 
 Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches
 `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + any bespoke renderers. Step-by-step

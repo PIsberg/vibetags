@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 import java.io.IOException;
@@ -64,8 +65,9 @@ public final class ModuleSidecar {
      *       (see {@code ModuleRootResolver}). The bump exists purely to invalidate v1 files.</li>
      * </ul>
      *
-     * <p>Still 2 as of the source-set split (issue #330) and the safety-digest addition (issue
-     * #332): both only add <em>keys</em> to the same {@code key=value} layout. A sidecar written
+     * <p>Still 2 as of the source-set split (issue #330), the safety-digest addition (issue #332)
+     * and the granular contributions (issue #365): all three only add <em>keys</em> to the same
+     * {@code key=value} layout. A sidecar written
      * by an older processor simply carries none of them and degrades to the previous behaviour,
      * and an older processor reading a newer sidecar sees the extra keys as service bodies whose
      * names ({@code ~...}) match no service and are therefore never rendered. Bumping would have
@@ -87,6 +89,14 @@ public final class ModuleSidecar {
     private static final String KEY_INDEX_DIGEST_PREFIX = "~idx~";
     /** Key holding the annotated element ids this module+source-set contributed. */
     private static final String KEY_ELEMENT_IDS = "~elements";
+    /**
+     * Key prefix for one granular rule file's contribution from this module+source-set, keyed by
+     * stem. Read back by {@link #mergeGranular} so a rule file several modules write ends up with
+     * all of their rules instead of the last writer's (issue #365).
+     */
+    private static final String KEY_GRANULAR_UNIT_PREFIX = "~gran~";
+    /** As above, for the module's own (nested) granular output; merged across source sets only. */
+    private static final String KEY_MODULE_GRANULAR_UNIT_PREFIX = "~modgran~";
 
     /** Separator between a module id and its non-primary source set. */
     static final String SOURCE_SET_SEPARATOR = "__";
@@ -119,6 +129,20 @@ public final class ModuleSidecar {
      * neither another module's, nor another source set's (issue #330).
      */
     private final Set<String> granularStems = new LinkedHashSet<>();
+
+    /**
+     * What this module+source-set contributes to each granular rule file it writes, keyed by stem.
+     *
+     * <p>Distinct from {@link #granularStems}, which only names the files: the stems answer "may
+     * this file be deleted?", these answer "what belongs in it?". A stem is not owned by one module
+     * — a role in a reactor-root {@code .vibetags-roles} routes classes from several modules into
+     * one file, and every one of them resolves the same path — so without the content the last
+     * module to compile simply replaced the file (issue #365).
+     */
+    private final Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
+
+    /** As above for the module's own nested granular output, merged across source sets only. */
+    private final Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
 
     /**
      * Every annotated element this module+source-set contributed, by stable id. Unlike
@@ -193,6 +217,20 @@ public final class ModuleSidecar {
         }
     }
 
+    /** Records this module+source-set's contribution to one shared granular rule file. */
+    public void putGranularContribution(String stem, GranularContribution contribution) {
+        if (contribution != null && !contribution.isEmpty()) {
+            granularUnits.put(stem, contribution);
+        }
+    }
+
+    /** Records this module+source-set's contribution to one of its own nested granular files. */
+    public void putModuleGranularContribution(String stem, GranularContribution contribution) {
+        if (contribution != null && !contribution.isEmpty()) {
+            moduleGranularUnits.put(stem, contribution);
+        }
+    }
+
     /** Records the annotated element ids this module+source-set contributed this run. */
     public void setElementIds(Set<String> ids) {
         elementIds.clear();
@@ -208,6 +246,12 @@ public final class ModuleSidecar {
     public Map<String, String> getModuleBodies() { return Collections.unmodifiableMap(moduleBodies); }
     public Set<String> getGranularStems() { return Collections.unmodifiableSet(granularStems); }
     public Set<String> getElementIds() { return Collections.unmodifiableSet(elementIds); }
+    public Map<String, GranularContribution> getGranularContributions() {
+        return Collections.unmodifiableMap(granularUnits);
+    }
+    public Map<String, GranularContribution> getModuleGranularContributions() {
+        return Collections.unmodifiableMap(moduleGranularUnits);
+    }
 
     /** Returns true when this sidecar has at least one non-empty body. */
     public boolean hasContent() { return !bodies.isEmpty(); }
@@ -234,6 +278,12 @@ public final class ModuleSidecar {
         }
         for (Map.Entry<String, String> entry : indexDigests.entrySet()) {
             appendEncoded(sb, KEY_INDEX_DIGEST_PREFIX + entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, GranularContribution> entry : granularUnits.entrySet()) {
+            appendEncoded(sb, KEY_GRANULAR_UNIT_PREFIX + entry.getKey(), entry.getValue().serialize());
+        }
+        for (Map.Entry<String, GranularContribution> entry : moduleGranularUnits.entrySet()) {
+            appendEncoded(sb, KEY_MODULE_GRANULAR_UNIT_PREFIX + entry.getKey(), entry.getValue().serialize());
         }
         if (!granularStems.isEmpty()) {
             appendEncoded(sb, KEY_GRANULAR_STEMS, String.join("\n", granularStems));
@@ -349,6 +399,8 @@ public final class ModuleSidecar {
             Map<String, String> indexDigests = new LinkedHashMap<>();
             Set<String> granularStems = new LinkedHashSet<>();
             Set<String> elementIds = new LinkedHashSet<>();
+            Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
+            Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
             for (String line : lines) {
                 if (line.startsWith("#")) {
                     // Enforce the format-version header: refuse to (mis-)parse future formats,
@@ -386,6 +438,14 @@ public final class ModuleSidecar {
                     for (String id : decode(val).split("\n", -1)) {
                         if (!id.isBlank()) elementIds.add(id);
                     }
+                } else if (key.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)) {
+                    // Checked before the ~mod~ prefix below: "~modgran~" does not start with
+                    // "~mod~", but the two read alike and the order is what keeps that true.
+                    putParsedContribution(moduleGranularUnits,
+                        key.substring(KEY_MODULE_GRANULAR_UNIT_PREFIX.length()), decode(val));
+                } else if (key.startsWith(KEY_GRANULAR_UNIT_PREFIX)) {
+                    putParsedContribution(granularUnits,
+                        key.substring(KEY_GRANULAR_UNIT_PREFIX.length()), decode(val));
                 } else if (key.startsWith(KEY_MODULE_BODY_PREFIX)) {
                     moduleBodies.put(key.substring(KEY_MODULE_BODY_PREFIX.length()), decode(val));
                 } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
@@ -408,6 +468,8 @@ public final class ModuleSidecar {
             s.indexDigests.putAll(indexDigests);
             s.granularStems.addAll(granularStems);
             s.elementIds.addAll(elementIds);
+            s.granularUnits.putAll(granularUnits);
+            s.moduleGranularUnits.putAll(moduleGranularUnits);
             return s;
         } catch (IOException unreadable) {
             // Could not read it — that says nothing about the content. See UNREADABLE.
@@ -415,6 +477,19 @@ public final class ModuleSidecar {
         } catch (IllegalArgumentException malformed) {
             // Read it fine, but a value is not decodable: genuinely corrupt, so the caller prunes.
             return null;
+        }
+    }
+
+    /**
+     * Stores one parsed granular contribution, dropping a value that is not in the serialized
+     * shape. A malformed entry is skipped rather than guessed at: the compiling module then falls
+     * back to its own rendering for that file, which is the behaviour before the merge existed.
+     */
+    private static void putParsedContribution(Map<String, GranularContribution> target,
+                                              String stem, String serialized) {
+        GranularContribution parsed = GranularContribution.parse(serialized);
+        if (parsed != null && !parsed.isEmpty()) {
+            target.put(stem, parsed);
         }
     }
 
@@ -800,6 +875,93 @@ public final class ModuleSidecar {
             stems.addAll(s.granularStems);
         }
         return stems;
+    }
+
+    /**
+     * Every module's contribution to each <em>shared</em> granular rule file, keyed by stem.
+     *
+     * <p>The granular counterpart of {@link #mergeFor}. A rule file is not owned by one module: a
+     * role declared in a reactor-root {@code .vibetags-roles} routes classes from several modules
+     * into one file, and each of them resolves the same path, so before this every module's compile
+     * replaced the file with its own classes alone
+     * (<a href="https://github.com/PIsberg/vibetags/issues/365">issue #365</a>). Contributions are
+     * grouped by region first, so a module compiled once per source set is one contributor and its
+     * source sets are simply concatenated; several regions are wrapped in {@code VIBETAGS-MODULE}
+     * sub-markers, exactly as the aggregate files are. Granular files are markdown on every
+     * platform, so the HTML marker form always applies.
+     *
+     * <p>A lone contributor's body is returned verbatim, which keeps the single-module output
+     * byte-for-byte what it was. Globs are unioned across contributors in the same encounter order
+     * for every module, so which module compiles last cannot change the file.
+     */
+    public static Map<String, GranularContribution> mergeGranular(List<ModuleSidecar> sidecars) {
+        return mergeGranularUnits(sidecars, s -> s.granularUnits, true, null);
+    }
+
+    /**
+     * As above for a module's own nested granular output, across the source sets of one region.
+     *
+     * <p>No sub-markers and no cross-module merge: this file lives under the module directory and
+     * holds that module's guardrails only. What it does need is the {@code test-compile} round's
+     * contribution beside the {@code compile} round's, for the same reason
+     * {@link #mergeModuleBodies} does — otherwise the second round replaces the first's role file.
+     */
+    public static Map<String, GranularContribution> mergeModuleGranular(List<ModuleSidecar> sidecars,
+                                                                        String regionId) {
+        return mergeGranularUnits(sidecars, s -> s.moduleGranularUnits, false, regionId);
+    }
+
+    private static Map<String, GranularContribution> mergeGranularUnits(
+            List<ModuleSidecar> sidecars,
+            java.util.function.Function<ModuleSidecar, Map<String, GranularContribution>> source,
+            boolean subMarkers,
+            @Nullable String regionOnly) {
+        // stem → region → the contributions of that region's source sets, in encounter order.
+        Map<String, Map<String, List<GranularContribution>>> byStem = new LinkedHashMap<>();
+        for (ModuleSidecar s : sidecars) {
+            if (regionOnly != null && !s.regionId.equals(regionOnly)) continue;
+            source.apply(s).forEach((stem, contribution) -> {
+                if (contribution.isEmpty()) return;
+                byStem.computeIfAbsent(stem, k -> new LinkedHashMap<>())
+                      .computeIfAbsent(s.regionId, k -> new ArrayList<>())
+                      .add(contribution);
+            });
+        }
+
+        Map<String, GranularContribution> merged = new LinkedHashMap<>();
+        byStem.forEach((stem, byRegion) -> {
+            Set<String> globs = new LinkedHashSet<>();
+            List<Map.Entry<String, String>> regionBodies = new ArrayList<>();
+            byRegion.forEach((region, contributions) -> {
+                List<String> parts = new ArrayList<>();
+                for (GranularContribution c : contributions) {
+                    globs.addAll(c.globs());
+                    parts.add(c.body().strip());
+                }
+                regionBodies.add(new AbstractMap.SimpleEntry<>(region, String.join("\n\n", parts)));
+            });
+            merged.put(stem, new GranularContribution(new ArrayList<>(globs),
+                joinRegions(regionBodies, subMarkers)));
+        });
+        return merged;
+    }
+
+    /** One region → its body verbatim; several → each wrapped in its own module sub-markers. */
+    private static String joinRegions(List<Map.Entry<String, String>> regionBodies, boolean subMarkers) {
+        if (!subMarkers || regionBodies.size() < MULTI_MODULE_THRESHOLD) {
+            List<String> parts = new ArrayList<>();
+            for (Map.Entry<String, String> entry : regionBodies) {
+                parts.add(entry.getValue());
+            }
+            return String.join("\n\n", parts);
+        }
+        StringBuilder merged = new StringBuilder();
+        for (Map.Entry<String, String> entry : regionBodies) {
+            merged.append(String.format(SUB_MARKER_MD_FORMAT, entry.getKey())).append('\n')
+                  .append(entry.getValue()).append('\n')
+                  .append(String.format(SUB_MARKER_MD_END_FORMAT, entry.getKey())).append('\n');
+        }
+        return merged.toString().strip();
     }
 
     /** Sidecars grouped by region id, preserving the (filename-sorted) encounter order. */
