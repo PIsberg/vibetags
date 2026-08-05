@@ -179,6 +179,36 @@ A role file spans several owners, so it is rendered in `GranularSections` *quali
 by topic with fully-qualified element headings, and with each section's shared rule sentence hoisted
 once (see [Granular rule files](#granular-rule-file-layout) below).
 
+### A role file is written by every module it matches, so it merges
+
+`.vibetags-roles` at the **reactor root** routes on the element's package, not on the module it
+lives in, so one role routinely spans several modules — and all of them resolve the same output
+path. Each module's compile therefore wrote the whole file, and each one overwrote the last: only
+the module that happened to compile last kept its guardrails, and the rest disappeared with nothing
+in the build reporting it. Which module won depended on which modules recompiled, so an unrelated
+one-module edit also produced a spurious diff in a generated file (issue #365). Measured on
+`async-test-lib`: the shared role file held **1 module of 3**, and an `@AICore` marked *critical* was
+absent from `.gemini/rules/` entirely while appearing in the aggregate `GEMINI.md`.
+
+Granular files therefore merge the same way the aggregates do. Each compilation records what it
+contributes to each rule file — the globs its frontmatter needs and its rendered body — in its own
+sidecar under `~gran~<stem>` (`GranularRulesWriter.contributionsFor`, computed from the same `plan`
+the write itself uses, so a recorded contribution can never describe a file that would have been
+written differently). `ModuleSidecar.mergeGranular` then groups those contributions by region and
+hands the writer one body per file: a lone contributor's body verbatim — which is what keeps the
+single-module output byte-for-byte unchanged — and several wrapped in `VIBETAGS-MODULE` sub-markers,
+with their globs unioned. The union is taken whole rather than per module, so every module writes
+the same bytes and reactor order cannot churn the diff.
+
+The module's own nested rules (`module-a/.claude/rules/`) merge through the same machinery, under
+`~modgran~<stem>` and scoped to one region: no cross-module merge and no sub-markers there, but a
+role matched by both a module's main and test sources still needs both rounds' contributions —
+without them the second source set to compile replaced the first's file.
+
+A sidecar written before this carries no contributions at all; the compiling module then publishes
+its own rendering, which is the pre-merge behaviour, rather than failing. Same for a contribution
+that will not parse.
+
 ## Cross-module mirroring (`.vibetags-mirror`)
 
 Guardrails are scoped to the module that owns the annotated source. A reactor that centralises its

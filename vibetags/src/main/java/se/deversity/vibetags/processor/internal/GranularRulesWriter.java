@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
+import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -60,7 +61,29 @@ public final class GranularRulesWriter {
                                 Map<String, Path> serviceFiles,
                                 Set<String> activeServices,
                                 @Nullable RoleConfig roles) {
-        return write(elementRules, serviceFiles, activeServices, roles, "", List.of());
+        return writeAll(elementRules, serviceFiles, activeServices, roles, Map.of());
+    }
+
+    /**
+     * As above, but publishing every module's contribution to a file rather than only this
+     * compilation's (<a href="https://github.com/PIsberg/vibetags/issues/365">issue #365</a>).
+     *
+     * <p>A role declared in a reactor-root {@code .vibetags-roles} can match classes in several
+     * modules, and all of them resolve the same output path — so each module's compile replaced the
+     * file with its own classes alone and the siblings' guardrails vanished, silently and
+     * nondeterministically (whichever module compiled last won). Two source sets of one module
+     * collide the same way. {@code mergedByStem} carries what every sidecar recorded for that stem,
+     * merged; a stem it does not mention keeps this compilation's own rendering, which is what makes
+     * the single-module output byte-for-byte unchanged.
+     *
+     * @param mergedByStem stem → merged contribution, from {@code ModuleSidecar.mergeGranular}
+     */
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
+                                Map<String, Path> serviceFiles,
+                                Set<String> activeServices,
+                                @Nullable RoleConfig roles,
+                                Map<String, GranularContribution> mergedByStem) {
+        return write(elementRules, serviceFiles, activeServices, roles, "", List.of(), mergedByStem);
     }
 
     /**
@@ -69,6 +92,9 @@ public final class GranularRulesWriter {
      * namespaces the source module so two producers mirroring into the same target never collide or
      * clean up each other's files — and {@code extraGlobs} are appended to each file's frontmatter
      * so the mirrored rules actually match the target module's own sources.
+     *
+     * <p>No cross-module merge applies: the prefix already makes every mirrored stem unique to its
+     * source module, so there is no shared file for two compilations to overwrite.
      *
      * @param filePrefix reserved filename prefix, e.g. {@code mirrored-payments-core-}
      * @param extraGlobs globs appended after the rule's own glob(s)
@@ -80,7 +106,30 @@ public final class GranularRulesWriter {
                                      @Nullable RoleConfig roles,
                                      String filePrefix,
                                      List<String> extraGlobs) {
-        return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs);
+        return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs, Map.of());
+    }
+
+    /**
+     * What this compilation contributes to each granular rule file, keyed by stem — the globs its
+     * frontmatter needs and the rendered body — without touching the filesystem.
+     *
+     * <p>Recorded in the module sidecar, where it does two jobs. Its <em>keys</em> are the filenames
+     * this round will write, which sibling compilations read as cleanup exclusions — without them a
+     * round deletes every rule file it did not itself write, which is every main-source rule file
+     * when the round is {@code test-compile}
+     * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>). Its <em>values</em>
+     * are what those files should contain, so a file several modules write is merged rather than
+     * replaced (issue #365).
+     *
+     * <p>Both come from {@link #plan}, the same method {@link #write} writes from, so a recorded
+     * contribution can never name or describe a file that would have been written differently.
+     */
+    public static Map<String, GranularContribution> contributionsFor(
+            Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig roles) {
+        Map<String, GranularContribution> contributions = new LinkedHashMap<>();
+        plan(elementRules, roles, "", List.of())
+            .forEach((stem, unit) -> contributions.put(stem, unit.content()));
+        return contributions;
     }
 
     private Set<String> write(Map<TaggedElement, GranularBody> elementRules,
@@ -88,7 +137,8 @@ public final class GranularRulesWriter {
                               Set<String> activeServices,
                               @Nullable RoleConfig roles,
                               String filePrefix,
-                              List<String> extraGlobs) {
+                              List<String> extraGlobs,
+                              Map<String, GranularContribution> mergedByStem) {
         Set<String> writtenQNames = new LinkedHashSet<>();
         List<GranularFormat> formats = new ArrayList<>();
         for (GranularFormat f : FORMATS) {
@@ -100,6 +150,44 @@ public final class GranularRulesWriter {
             return writtenQNames;
         }
 
+        for (Map.Entry<String, Unit> planned : plan(elementRules, roles, filePrefix, extraGlobs).entrySet()) {
+            String stem = planned.getKey();
+            Unit unit = planned.getValue();
+            writtenQNames.add(stem);
+            // The merged view wins when there is one, because it already contains this module's own
+            // contribution — the sidecar was written before it was read. Its globs are taken whole
+            // rather than unioned with the local ones so that every module writing this file writes
+            // the same bytes; a per-module union would order them per module and churn the diff.
+            GranularContribution merged = mergedByStem.get(stem);
+            List<String> globs = unit.content().globs();
+            String body = unit.content().body();
+            if (merged != null && !merged.isEmpty() && !merged.globs().isEmpty()) {
+                globs = merged.globs();
+                body = merged.body();
+            }
+            for (GranularFormat f : formats) {
+                Path serviceDir = serviceFiles.get(f.serviceKey);
+                if (serviceDir == null) {
+                    continue;  // service not configured for this run: nothing to write
+                }
+                fileWriter.writeFileIfChanged(
+                    serviceDir.resolve(stem + f.extension).toString(),
+                    f.render(unit.description(), unit.displayName(), globs, body), true);
+            }
+        }
+
+        return writtenQNames;
+    }
+
+    /**
+     * Everything {@link #write} would write, as stem → file, with nothing rendered to disk. Split
+     * out of the write so the same plan can be recorded in the sidecar (see
+     * {@link #contributionsFor}) and so the merge has one definition of what a stem's content is.
+     */
+    private static Map<String, Unit> plan(Map<TaggedElement, GranularBody> elementRules,
+                                          @Nullable RoleConfig roles,
+                                          String filePrefix,
+                                          List<String> extraGlobs) {
         // One name for "roles are on", non-null when they are: a separate boolean flag says the
         // same thing to a reader but nothing to the compiler, and every use below is in a lambda.
         final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
@@ -117,29 +205,19 @@ public final class GranularRulesWriter {
             }
         });
 
+        Map<String, Unit> units = new LinkedHashMap<>();
+
         // Unmatched elements → one file per class/package (unchanged output).
         unmatched.forEach((owner, body) -> {
             String qName = filePrefix + owner.granularQName();
-            writtenQNames.add(qName);
-            String simpleName = owner.simpleName();
-            String description = "AI rules for " + owner;
-            List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
-            String content = body.toString().trim();
-            for (GranularFormat f : formats) {
-                Path serviceDir = serviceFiles.get(f.serviceKey);
-                if (serviceDir == null) {
-                    continue;  // service not configured for this run: nothing to write
-                }
-                fileWriter.writeFileIfChanged(
-                    serviceDir.resolve(qName + f.extension).toString(),
-                    f.render(description, simpleName, globs, content), true);
-            }
+            units.put(qName, new Unit(owner.simpleName(), "AI rules for " + owner,
+                new GranularContribution(withExtra(List.of(defaultGlob(owner)), extraGlobs),
+                    body.toString().trim())));
         });
 
         // Role members → one grouped, human-named file per role.
         roleMembers.forEach((roleName, members) -> {
             String stem = filePrefix + RoleConfig.sanitize(roleName);
-            writtenQNames.add(stem);
             List<String> globs = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
             if (globs.isEmpty()) {
                 // Role defined only by FQNs — derive globs from the members' own class/package globs.
@@ -161,44 +239,15 @@ public final class GranularRulesWriter {
                     stanzas.addAll(memberBody.entries());
                 }
             }
-            String description = "AI rules for role " + roleName;
-            String content = GranularSections.render(stanzas, true).trim();
-            for (GranularFormat f : formats) {
-                Path serviceDir = serviceFiles.get(f.serviceKey);
-                if (serviceDir == null) {
-                    continue;  // service not configured for this run: nothing to write
-                }
-                fileWriter.writeFileIfChanged(
-                    serviceDir.resolve(stem + f.extension).toString(),
-                    f.render(description, roleName, globs, content), true);
-            }
+            units.put(stem, new Unit(roleName, "AI rules for role " + roleName,
+                new GranularContribution(globs, GranularSections.render(stanzas, true).trim())));
         });
 
-        return writtenQNames;
+        return units;
     }
 
-    /**
-     * The stems {@link #writeAll} would write for {@code elementRules} under {@code roles}, without
-     * touching the filesystem.
-     *
-     * <p>Exists so a compilation can record its own granular filenames <em>before</em> it writes
-     * them: they go into the module sidecar, where sibling compilations read them as cleanup
-     * exclusions. Without that, a round deletes every rule file it did not itself write — which is
-     * every main-source rule file, when the round is {@code test-compile}
-     * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>).
-     *
-     * <p>Deliberately a pure function of the same inputs {@code write} uses, so the recorded stems
-     * can never name a file that was not written.
-     */
-    public static Set<String> stemsFor(Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig roles) {
-        Set<String> stems = new LinkedHashSet<>();
-        final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
-        elementRules.keySet().forEach(owner -> {
-            String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
-            stems.add(role != null ? RoleConfig.sanitize(role) : owner.granularQName());
-        });
-        return stems;
-    }
+    /** One planned granular file: its frontmatter description, its heading name, and its content. */
+    private record Unit(String displayName, String description, GranularContribution content) {}
 
     /**
      * The rule's own globs followed by any mirror globs, de-duplicated and order-preserving. Returns

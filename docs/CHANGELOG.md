@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Granular rule files at a reactor root are merged across modules instead of overwritten
+  ([#365](https://github.com/PIsberg/vibetags/issues/365)).** A role declared in a reactor-root
+  `.vibetags-roles` routes on the element's package, not on the module it lives in, so one role
+  routinely matches classes in several modules — and all of them resolve the same output path. Each
+  module's compile wrote the whole file and replaced the previous module's content: only the module
+  that happened to compile last kept its guardrails. Reported on a three-module reactor where
+  `.gemini/rules/` held **one module of three**, and an `@AICore` marked *critical* (nothing may
+  throw out of `premain`, an exception there aborts JVM startup) was absent from the scoped rules
+  entirely while still appearing in the aggregate `GEMINI.md` — so the guardrail existed and never
+  reached the tool that loads rules on file open. Which module won depended on which modules
+  recompiled, so an unrelated one-module edit also produced a spurious diff in a generated file.
+
+  Granular files now merge the way the aggregate files already did. Each compilation records its
+  contribution to every rule file it writes — the frontmatter globs and the rendered body — in its
+  own sidecar; the write assembles the file from every module's contribution, wrapping several
+  modules in the same `VIBETAGS-MODULE` sub-markers the aggregates use and unioning their globs. A
+  lone contributor's body is used verbatim, so single-module output is byte-for-byte unchanged. The
+  same merge covers two source sets of one module, at the reactor root and in a module's own nested
+  rules directory. A sidecar written by an older processor carries no contributions and falls back
+  to the previous behaviour rather than failing.
+
+  `example-multimodule` now routes its `core`, `engine` and `cli` classes into one root role file,
+  and CI asserts all three modules survive and that rebuilding a single module leaves the file
+  byte-identical.
+
 ### Added
 - **`docs/DEPENDENCIES.md`: every third-party artifact, and why.** Split by what it costs a
   consumer. Three artifacts reach the consumer's annotation-processor path (jspecify, slf4j-api,
