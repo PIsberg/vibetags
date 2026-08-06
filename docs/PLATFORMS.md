@@ -79,7 +79,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.clinerules` | Cline AI assistant | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
-| `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
 | `.void/rules.md` | Void Editor | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |

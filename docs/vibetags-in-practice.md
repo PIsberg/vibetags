@@ -472,7 +472,7 @@ The concrete cost, in order of severity:
 - **`Strategy.OTHER` is 24 of 33 `@AIThreadSafe` uses.** The taxonomy doesn't fit lock-free designs. A `LOCK_FREE` constant is the obvious fix.
 - **`@AISchemaSafe` is bare at 15 of 15 sites** across two independent projects. Either the `reason` is genuinely unnecessary, or it should be required.
 - **7 annotations have zero real-world traction.** Five are lifecycle markers with no in-flux code to mark; `@AIRegulation` needs an application-tier consumer this corpus lacks.
-- **Nobody has opted into more than 3 platforms.** ~40 supported, 5 in actual use across five projects: `CLAUDE.md`, `GEMINI.md`, `llms.txt`, `llms-full.txt`, plus the ignore files. Claude is universal; everything else is incidental.
+- **Nobody has opted into more than 3 platforms.** 37 supported, 5 in actual use across five projects: `CLAUDE.md`, `GEMINI.md`, `llms.txt`, `llms-full.txt`, plus the ignore files. Claude is universal; everything else is incidental.
 - **`skill3` is alone in needing `-Avibetags.root`**, and its comment explains why: Gradle runs javac in a worker with a different CWD. The other two Gradle projects don't set it and rely on auto-detection.
 
 ### Concrete fixes

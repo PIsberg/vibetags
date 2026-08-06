@@ -1,5 +1,8 @@
 # VibeTags Specification: Parallel Tests & New AI Guardrails
 
+> **Historical design document.** This proposal has since been implemented and is kept for
+> provenance. For current behaviour, see `docs/ANNOTATIONS.md`, `docs/TESTS.md`, and `README.md`.
+
 This specification details the design and implementation of 9 new compile-time Java annotations for **VibeTags** to expand its AI guardrail catalog, alongside the architectural changes required to execute VibeTags' own test suite in parallel with strict thread isolation.
 
 ---

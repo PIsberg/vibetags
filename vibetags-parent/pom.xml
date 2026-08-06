@@ -69,7 +69,7 @@
         <!-- The VibeTags release version. Bump THIS and nothing else: every module takes its
              own version, its sibling dependencies and its BOM entries from it. Resolved into
              the deployed POMs by flatten-maven-plugin, so consumers never see the property. -->
-        <revision>1.0.0</revision>
+        <revision>1.0.1</revision>
 
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -86,7 +86,7 @@
         <junit.platform.version>6.1.2</junit.platform.version>
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
-        <async-test-lib.version>1.7.0-RC8</async-test-lib.version>
+        <async-test-lib.version>1.7.1</async-test-lib.version>
         <snakeyaml.version>2.6</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
 

@@ -55,7 +55,7 @@ YAML front-matter in `.mdc`/`.md` files is preserved — markers go after the fr
 
 ### Output files
 
-50+ AI platforms (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, …). Full file/platform/format table: `docs/PLATFORMS.md`.
+37 AI platforms across 49 generated config files, both counts pinned by `ProjectFactsConsistencyTest` against `README.md` (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, …). Full file/platform/format table: `docs/PLATFORMS.md`.
 
 ### Aggregate ↔ granular de-duplication (scoped-rules index)
 

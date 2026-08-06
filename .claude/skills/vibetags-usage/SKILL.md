@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0'
+compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.1'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.1'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -1066,7 +1066,7 @@ Use on: **class, method, field**
 @AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
               reason = "The release version is asserted in three places and drifts silently",
               enforcedBy = "ProjectFactsConsistencyTest")
-public static final String VERSION = "1.0.0";
+public static final String VERSION = "1.0.1";
 ```
 
 The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
@@ -1256,8 +1256,8 @@ tasks.withType(JavaCompile) {
 | `[WARNING] … rewritten with a completely different set of elements` | A compilation replaced a module's guardrails with an unrelated set | Almost always a round that could not see the sources it should have — check this module's annotation processing before committing the regenerated files |
 | `[WARNING] removed N scoped rule file(s) … while writing only M` | The build deleted more guardrails than it produced | Same cause; do not accept the deletion until you know why |
 | `[WARNING] could not identify the compiling module` | Sources are not under `-Avibetags.root` | Set `-Avibetags.root`, or name it with `-Avibetags.module=<name>` |
-| Guardrails differ between `mvn compile` and `mvn test` | Pre-1.0.0-RC8 processor | Upgrade — `compile` and `test-compile` now own separate sidecars |
-| Gradle appends a second set of `VIBETAGS-MODULE` regions | Pre-1.0.0-RC8 processor | Upgrade, then delete the stray `.vibetags-mod-<hash>` file once |
+| Guardrails differ between `mvn compile` and `mvn test` | Pre-1.0.1-RC8 processor | Upgrade — `compile` and `test-compile` now own separate sidecars |
+| Gradle appends a second set of `VIBETAGS-MODULE` regions | Pre-1.0.1-RC8 processor | Upgrade, then delete the stray `.vibetags-mod-<hash>` file once |
 | `[WARNING] @AIIgnore used but .cursorignore is missing` | Orphaned annotation | Create the missing file to fully support that platform |
 | `[WARNING] contradictory @AIDraft and @AILocked` | Both annotations on same element | Remove one of them |
 | `[WARNING] @AIAudit has no checkFor items` | Empty `checkFor` array | Add at least one vulnerability string |

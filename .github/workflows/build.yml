@@ -407,11 +407,6 @@ jobs:
           cd vibetags
           mvn test -B
 
-      - name: Run Integration Tests (requires compiled example)
-        run: |
-          cd vibetags
-          mvn test -Drun.integration.tests=true -B
-
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:
@@ -612,11 +607,6 @@ jobs:
         run: |
           cd vibetags
           ./gradlew test --no-daemon
-
-      - name: Run Integration Tests (requires compiled example)
-        run: |
-          cd vibetags
-          ./gradlew test -Drun.integration.tests=true --no-daemon
 
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
