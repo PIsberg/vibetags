@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIDeprecated;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.*;
  * Direct unit tests for {@link se.deversity.vibetags.processor.internal.AnnotationValidator}
  * targeting the validation-warning branches not exercised by existing integration tests.
  */
+@Tag("e2e")
 class AnnotationValidatorUnitTest {
 
     // -----------------------------------------------------------------------

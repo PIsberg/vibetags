@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * instruction files named *.instructions.md with an `applyTo` YAML frontmatter glob
  * (Copilot's path-scoping field).
  */
+@Tag("e2e")
 class CopilotGranularEndToEndTest {
 
     private static final String LOCKED_FILE = ".github/instructions/com-example-payment-PaymentProcessor.instructions.md";

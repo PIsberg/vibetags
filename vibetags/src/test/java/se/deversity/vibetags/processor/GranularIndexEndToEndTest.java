@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * locked+core+safety summary plus a scoped-rules index instead of duplicating every element's full
  * guardrails. Single opt-in (aggregate only) keeps the full output, byte-for-byte as before.
  */
+@Tag("e2e")
 class GranularIndexEndToEndTest {
 
     @AfterEach

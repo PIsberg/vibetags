@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * End-to-end tests for platforms added in v0.8.0:
  * PearAI (granular), Mentat, Sweep, Plandex, Double.bot, Open Interpreter, and Codeium.
  */
+@Tag("e2e")
 class NewPlatformsV2EndToEndTest {
 
     @TempDir

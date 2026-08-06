@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies that when .claude/rules/ exists on disk, the processor writes per-class
  * rule files with a `paths:` YAML frontmatter glob (Claude Code's path-scoping field).
  */
+@Tag("e2e")
 class ClaudeGranularEndToEndTest {
 
     private static final String LOCKED_FILE = ".claude/rules/com-example-payment-PaymentProcessor.md";

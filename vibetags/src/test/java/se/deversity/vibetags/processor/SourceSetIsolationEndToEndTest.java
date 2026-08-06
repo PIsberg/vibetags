@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>Each test therefore compiles the two source sets as separate compilations, in the order Maven
  * runs them, and asserts that the second does not erase the first.
  */
+@Tag("e2e")
 class SourceSetIsolationEndToEndTest {
 
     /**

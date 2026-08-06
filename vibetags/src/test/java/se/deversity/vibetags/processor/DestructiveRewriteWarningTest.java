@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>The two halves of the contract are equally important: it fires on a wholesale replacement, and
  * it stays silent on ordinary work. A warning that cries wolf is one people configure away.
  */
+@Tag("e2e")
 class DestructiveRewriteWarningTest {
 
     private static final String LOCKED_A = """

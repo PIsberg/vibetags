@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies that when .kiro/steering/ exists on disk, the processor writes per-class
  * steering files in plain Markdown (no YAML front-matter) with Kiro-specific headings.
  */
+@Tag("e2e")
 class KiroGranularEndToEndTest {
 
     @TempDir

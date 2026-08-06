@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>Changing an annotation reason changes the fingerprint.</li>
  * </ol>
  */
+@Tag("e2e")
 class BuildFingerprintIntegrationTest {
 
     private static final Pattern FINGERPRINT_LINE = Pattern.compile("(?m)^# fingerprint: ([0-9a-f]{8})\\s*$");

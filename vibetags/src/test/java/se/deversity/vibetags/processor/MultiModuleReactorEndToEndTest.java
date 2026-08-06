@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * while the JVM working directory stays wherever the test JVM happens to run. Before the fix,
  * both "modules" computed the same identity and the shared files degraded to last-writer-wins.
  */
+@Tag("e2e")
 class MultiModuleReactorEndToEndTest {
 
     private static final String CORE_SOURCE = """

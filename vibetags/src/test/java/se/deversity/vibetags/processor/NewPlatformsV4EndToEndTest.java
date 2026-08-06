@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>Editors &amp; modes: {@code .void/rules.md}, {@code .roomodes}</li>
  * </ul>
  */
+@Tag("e2e")
 class NewPlatformsV4EndToEndTest {
 
     @TempDir

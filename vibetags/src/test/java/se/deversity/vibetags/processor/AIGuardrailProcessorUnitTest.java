@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -40,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for AIGuardrailProcessor.
  * Tests the processor logic without full compilation.
  */
+@Tag("e2e")
 class AIGuardrailProcessorUnitTest {
 
     @AfterEach

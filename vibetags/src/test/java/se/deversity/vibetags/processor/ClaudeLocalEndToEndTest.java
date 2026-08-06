@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies that when CLAUDE.local.md exists on disk, the processor populates it with
  * the same guardrail content as CLAUDE.md (Claude Code loads both files for the same project).
  */
+@Tag("e2e")
 class ClaudeLocalEndToEndTest {
 
     @TempDir

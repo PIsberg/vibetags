@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * element with element path, kind, source file, line range, and reason. Consumed by the
  * locked-files GitHub Action for PR diff guarding.
  */
+@Tag("e2e")
 class LocksReportEndToEndTest {
 
     @AfterEach

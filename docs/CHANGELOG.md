@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A module's sidecar could be dropped from a parallel reactor build when a rename lost a race
+  for more than 275 ms.** `ModuleSidecar.save()` writes a temp file and renames it over the live
+  sidecar; on Windows that rename fails while anything else holds the target open, so it retries.
+  The retry schedule was 10 attempts of 5 ms × attempt — 275 ms in total — and that was not enough:
+  `ModuleSidecarAsyncTest` failed in 6 of 13 full-suite runs, and the failure in production is a
+  module's guardrails silently missing from the merged output for that build.
+
+  Instrumenting the retry loop over five suite runs showed why. Of roughly 1057 renames per run,
+  985-1004 succeeded on the first attempt and the rest tailed off through attempts 2-9 — successes
+  at attempts 8 and 9 appeared in runs that passed, so the old budget sat directly on top of the
+  tail. Nothing succeeded at attempts 4, 5, 8, 9 or 10 in the first probe run while a give-up still
+  occurred, which says a blocker is either gone within ~15 ms or holds far longer than the whole
+  budget: the signature of a virus scanner, not of a sibling's `readAll()`.
+
+  The schedule is now 15 attempts backing off exponentially (5, 10, 20, 40, 80, 160, then 300 ms)
+  for a nominal 2.7 s, with each wait jittered into `[half, full]` so modules retrying in lockstep
+  spread out instead of re-colliding with the same reader sweep. 8 of 8 full-suite runs passed
+  afterwards, against 6 failures in the 13 before it. This is a probabilistic race, so that is
+  evidence rather than proof — but the budget is now roughly ten times the blocker that was
+  actually observed. `ModuleSidecarResilienceTest` pins the budget and the ride-out past the old
+  cap; both fail against the previous schedule.
+
+### Changed
+- **`mvn test` is now a fast local loop; CI runs the full suite with `-Pe2e`.** The suite had one
+  tier, so the cheapest local check cost the same as the most expensive: 131 classes, 1484 tests,
+  ~70s wall clock, of which 52 classes accounted for 599.66s of the 704.15s spent. Those 52 now
+  carry `@Tag("e2e")` and are skipped by default, taking `mvn test` to 80 classes / 910 tests / 35s
+  — with about 10s of that being compile and JaCoCo rather than tests. `mvn test -Pe2e` runs
+  everything (132 classes, 1486 tests, 61s) and every CI leg that runs tests passes it, so nothing
+  merges without a full run.
+
+  The split is by measured cost, not by name: `NewAnnotationsV4EndToEndTest` takes 0.01s and stays
+  local, `AIGuardrailProcessorUnitTest` takes 13.71s and does not. 21 fast-tier classes still drive
+  `javac` through `ProcessorTestHarness`, so the processor round-trip is genuinely covered locally;
+  the write cache, fingerprinting, reactors, mirroring and the async stress loops are not, and need
+  `-Pe2e`.
+
+  Two things keep this from rotting into the `-Drun.integration.tests=true` gate that was dropped in
+  2026-04 for gating nothing. `TestTagVocabularyTest` fails the build on a misspelled tag or when
+  `pom.xml` and `build.gradle` stop excluding the same one. And naming a test explicitly overrides
+  the filter in both build systems — without that, `mvn test -Dtest=WriteCacheProcessorIntegrationTest`
+  printed `Tests run: 0` and `BUILD SUCCESS`, which is the silent-green failure the split exists to
+  avoid rather than create.
+
+  The `build-maven`, `cross-platform` and `build-gradle` legs each used to run the whole suite twice
+  (once inside `install`/`build`, once in a dedicated step). The install pass now runs the fast tier
+  and the dedicated step runs `-Pe2e`, so coverage is unchanged and each leg does strictly less work.
+
 ## [1.0.1] - 2026-08-06
 
 ### Fixed

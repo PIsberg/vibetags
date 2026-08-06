@@ -402,10 +402,13 @@ jobs:
           test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
           test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
           echo "Indexed root: safety inline, verbose indexed, Copilot collapsed, all modules' scoped files intact."
-      - name: Run Unit Tests (VibeTags Library)
+      # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
+      # step above ran the fast tier; this is the only place the whole suite runs, so it is
+      # not the redundant second pass it looks like.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
         run: |
           cd vibetags
-          mvn test -B
+          mvn test -B -Pe2e
 
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
@@ -483,10 +486,13 @@ jobs:
           grep -qF "VIBETAGS-MODULE: engine" CLAUDE.md
           grep -qF "VIBETAGS-MODULE: cli" CLAUDE.md
 
-      - name: Run Unit Tests (VibeTags Library)
+      # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
+      # step above ran the fast tier; this is the only place the whole suite runs, so it is
+      # not the redundant second pass it looks like.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
         run: |
           cd vibetags
-          mvn test -B
+          mvn test -B -Pe2e
 
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
@@ -603,10 +609,12 @@ jobs:
           cd example
           ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
 
-      - name: Run Unit Tests (VibeTags Library)
+      # -Pe2e mirrors the Maven profile; see vibetags/build.gradle. The `build` step above
+      # ran the fast tier only, so without this the Gradle legs never see the e2e classes.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
         run: |
           cd vibetags
-          ./gradlew test --no-daemon
+          ./gradlew test -Pe2e --no-daemon
 
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files

@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.*;
  * Tests for the process() method and remaining uncovered branches in AIGuardrailProcessor.
  */
 @SuppressWarnings("unchecked")
+@Tag("e2e")
 class AIGuardrailProcessorProcessTest {
 
     // -----------------------------------------------------------------------
