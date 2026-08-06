@@ -1,0 +1,78 @@
+name: Fuzz Smoke
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  jazzer-smoke:
+    name: Jazzer smoke run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install VibeTags annotations
+        run: cd vibetags-annotations && mvn install -B -q -DskipTests
+
+      - name: Compile VibeTags library
+        run: cd vibetags && mvn clean compile -B -q
+
+      - name: Fetch Jazzer (pinned by checksum)
+        run: |
+          curl -sSfL -o jazzer.tar.gz \
+            https://github.com/CodeIntelligenceTesting/jazzer/releases/download/v0.30.0/jazzer-linux-x86-64.tar.gz
+          echo "6eeaf0026d75599b07527d93b576593ce847cfca8b337a579971a5a9cdf792d0  jazzer.tar.gz" | sha256sum -c -
+          mkdir jazzer-dist && tar xzf jazzer.tar.gz -C jazzer-dist
+
+      - name: Fetch Jazzer API jar
+        run: |
+          mvn -B -q dependency:copy \
+            -Dartifact=com.code-intelligence:jazzer-api:0.24.0 \
+            -DoutputDirectory=jazzer-dist \
+            -Dmdep.stripVersion=true
+
+      - name: Compile the fuzz harness
+        run: |
+          # -proc:none: target/classes carries the processor's META-INF/services
+          # registration, so without it javac discovers AIGuardrailProcessor and
+          # fails instantiating it (slf4j is not on this compile classpath).
+          javac -proc:none -cp "vibetags/target/classes:jazzer-dist/jazzer-api.jar" \
+            -d fuzz-classes oss-fuzz/VibeTagsFuzzer.java
+
+      - name: Run the fuzz smoke (10,000 iterations)
+        run: |
+          mvn -B -q -f vibetags/pom.xml dependency:build-classpath \
+            -DincludeScope=runtime -Dmdep.outputFile=target/runtime-cp.txt
+          mkdir -p fuzz-findings
+          ./jazzer-dist/jazzer \
+            --cp="fuzz-classes:vibetags/target/classes:$(cat vibetags/target/runtime-cp.txt)" \
+            --target_class=VibeTagsFuzzer \
+            -artifact_prefix=fuzz-findings/ \
+            -runs=10000
+
+      - name: Upload crash inputs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-findings-${{ github.run_id }}
+          path: fuzz-findings/
+          if-no-files-found: ignore

@@ -2,8 +2,8 @@
 
 This directory contains the artefacts that **[OSS-Fuzz](https://github.com/google/oss-fuzz)** — Google's continuous fuzzing service for open-source projects — needs to build and run a [Jazzer](https://github.com/CodeIntelligenceTesting/jazzer) fuzzer against `AIGuardrailProcessor`.
 
-> **Status (2026-05): compile-ready, not yet submitted upstream.** Files were added in commit
-> [`b3a3edf`](https://github.com/PIsberg/vibetags/commit/b3a3edf) (2026-04-17) as a starter template, sat unused for a few weeks, and were brought back into sync with the v0.7.1 processor API in this PR. CI does not currently run them, and the project has not been submitted to upstream OSS-Fuzz — see [What's left](#whats-left) below.
+> **Status (2026-08): smoke-tested in CI on every push, not yet submitted upstream.** Files were added in commit
+> [`b3a3edf`](https://github.com/PIsberg/vibetags/commit/b3a3edf) (2026-04-17) as a starter template, sat unused for a few weeks, and were brought back into sync with the v0.7.1 processor API. Since 2026-08 the [`fuzz.yml`](../.github/workflows/fuzz.yml) workflow compiles this harness against the current processor and runs a 10,000-iteration Jazzer smoke on every push and PR to `main`, so the harness can no longer rot silently. The project has not been submitted to upstream OSS-Fuzz; see [What's left](#whats-left) below.
 
 ## What OSS-Fuzz is
 
@@ -41,18 +41,27 @@ You don't need OSS-Fuzz infrastructure to run a Jazzer fuzzer:
 cd vibetags-annotations && mvn install -DskipTests
 cd ../vibetags             && mvn install -DskipTests
 
-# 2. Grab a Jazzer release (https://github.com/CodeIntelligenceTesting/jazzer/releases)
-JAZZER=~/jazzer-linux-x86_64
+# 2. Grab a Jazzer release (https://github.com/CodeIntelligenceTesting/jazzer/releases).
+#    The tarball holds the `jazzer` binary and `jazzer_standalone.jar`; the API jar
+#    the harness compiles against comes from Maven Central.
+JAZZER=~/jazzer   # extracted jazzer-<os>.tar.gz
+mvn dependency:copy -Dartifact=com.code-intelligence:jazzer-api:0.24.0 \
+    -DoutputDirectory=$JAZZER -Dmdep.stripVersion=true
 
 # 3. Compile the fuzzer
-PROCESSOR_JAR=$(find ~/.m2/repository/se/deversity/vibetags/vibetags-processor -name "*.jar" | head -1)
-javac -cp $PROCESSOR_JAR:$JAZZER/jazzer_api_deploy.jar oss-fuzz/VibeTagsFuzzer.java -d /tmp/fuzz
+PROCESSOR_JAR=$(find ~/.m2/repository/se/deversity/vibetags/vibetags-processor \
+    -name "*.jar" ! -name "*sources*" ! -name "*javadoc*" | head -1)
+javac -cp $PROCESSOR_JAR:$JAZZER/jazzer-api.jar oss-fuzz/VibeTagsFuzzer.java -d /tmp/fuzz
 
-# 4. Run a few thousand iterations
-$JAZZER/jazzer --cp=/tmp/fuzz:$PROCESSOR_JAR --target_class=VibeTagsFuzzer -runs=10000
+# 4. Run a few thousand iterations. The processor jar is not shaded, so its
+#    runtime deps (slf4j, logback) must be on the fuzzer classpath too.
+cd vibetags && mvn dependency:build-classpath -DincludeScope=runtime \
+    -Dmdep.outputFile=target/runtime-cp.txt && cd ..
+$JAZZER/jazzer --cp=/tmp/fuzz:$PROCESSOR_JAR:$(cat vibetags/target/runtime-cp.txt) \
+    --target_class=VibeTagsFuzzer -runs=10000
 ```
 
-A short smoke run (`-runs=10000`) takes about 30 seconds on a quiescent laptop and is enough to verify the harness is wired up correctly. Submit-grade campaigns are open-ended — OSS-Fuzz runs them indefinitely.
+A short smoke run (`-runs=10000`) takes between 30 seconds and two minutes depending on the machine (measured 2026-08: 120 s at 83 exec/s on a Windows laptop) and is enough to verify the harness is wired up correctly. Submit-grade campaigns are open-ended — OSS-Fuzz runs them indefinitely. CI runs exactly this smoke on every push via [`fuzz.yml`](../.github/workflows/fuzz.yml).
 
 ## Submitting to OSS-Fuzz upstream
 
@@ -63,9 +72,8 @@ When ready, the path is:
 
 ## What's left
 
-Two follow-ups still open, both genuinely optional:
+One follow-up still open, genuinely optional:
 
-1. **Broaden the harness.** `VibeTagsFuzzer` only exercises `writeFileIfChanged`. Equally interesting attack surfaces — `stripLegacyVibeTagsBlock` against malformed XML, `cleanupGranularDirectory` against directory-traversal-like paths, the marker-position parsing in `writeWithMarkers` — are not covered. Adding `*Fuzzer.java` siblings is enough; `build.sh` already loops over every `*Fuzzer.java` it finds and emits a launcher.
-2. **CI smoke-compile.** Nothing currently verifies the harness still compiles against the live processor jar — a future API change can rot it again. A 30-second job in `build.yml` that runs the local recipe with `-runs=1` would catch this.
+1. **Broaden the harness.** `VibeTagsFuzzer` only exercises `writeFileIfChanged`. Equally interesting attack surfaces (`stripLegacyVibeTagsBlock` against malformed XML, `cleanupGranularDirectory` against directory-traversal-like paths, the marker-position parsing in `writeWithMarkers`) are not covered. Adding `*Fuzzer.java` siblings is enough for OSS-Fuzz; `build.sh` already loops over every `*Fuzzer.java` it finds and emits a launcher. The CI smoke ([`fuzz.yml`](../.github/workflows/fuzz.yml)) compiles and runs `VibeTagsFuzzer` by name, so add new siblings there as well.
 
-Neither blocks an upstream submission; both reduce the chance of the harness silently rotting again.
+The second follow-up this section used to list, a CI job that smoke-runs the harness so it cannot rot unnoticed, was implemented in 2026-08 as [`fuzz.yml`](../.github/workflows/fuzz.yml): 10,000 Jazzer iterations on every push and PR to `main`. It does not block an upstream submission; it removes the main reason the harness went stale before.
