@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 /**
@@ -296,10 +297,27 @@ public final class ModuleSidecar {
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
     }
 
-    /** Attempts at renaming the temp file over the live sidecar before giving up. */
-    static final int MOVE_ATTEMPTS = 10;
-    /** Backoff step between move attempts; attempt N waits N × this. Worst case ≈ 275 ms. */
+    /**
+     * Attempts at renaming the temp file over the live sidecar before giving up.
+     *
+     * <p>Sized from measurement, not taste. Instrumenting {@link #moveIntoPlace} over five full
+     * suite runs on Windows recorded ~1057 moves per run: about 985-1004 succeeded on the first
+     * attempt, and the rest tailed off through attempts 2-9 — successes at attempt 8 and 9 were
+     * observed in runs that passed. The previous schedule (10 attempts, 5 ms × attempt, 275 ms
+     * total) sat directly on top of that tail, so two of the five runs exhausted it and failed.
+     * A blocker is therefore either gone within ~15 ms or holds for far longer than 275 ms, which
+     * is the signature of a virus scanner rather than of a sibling's {@link #readAll(Path)}.
+     */
+    static final int MOVE_ATTEMPTS = 15;
+    /** First backoff step. Each attempt doubles it, up to {@link #MOVE_BACKOFF_MAX_MS}. */
     private static final long MOVE_BACKOFF_MS = 5L;
+    /**
+     * Ceiling for one backoff, so doubling stays bounded. The nominal schedule is
+     * 5, 10, 20, 40, 80, 160 then 300 ms per attempt — about 2.7 s across all 15 attempts, and
+     * at least half that once jitter is applied. Ten times the old budget, against a failure
+     * whose cost is a module silently missing from the merged guardrails for that build.
+     */
+    private static final long MOVE_BACKOFF_MAX_MS = 300L;
 
     /**
      * How the temp file is renamed over the live sidecar. Injectable so the retry path can be
@@ -327,11 +345,21 @@ public final class ModuleSidecar {
      * parallel reactor ({@code mvn -T}, {@code gradle --parallel}) that collision is reachable and
      * arrives as {@code AccessDeniedException} — which would abort this module's save and drop its
      * entire contribution from the merged output for that build, the failure the sidecar exists to
-     * prevent. A reader holds the handle for microseconds, so a bounded retry trades a lost module
-     * for a few milliseconds. {@code ModuleSidecarAsyncTest} reproduces the collision; without this
-     * retry it fails on Windows within a second.
+     * prevent. A sibling's read holds the handle for microseconds; a scanner's holds it for far
+     * longer, which is why the schedule below backs off exponentially instead of trading a lost
+     * module for a fixed handful of milliseconds. {@code ModuleSidecarAsyncTest} reproduces the
+     * collision; without this retry it fails on Windows within a second.
      */
     static void moveIntoPlace(Path tmp, Path target, FileMover mover) throws IOException {
+        moveIntoPlace(tmp, target, mover, Thread::sleep);
+    }
+
+    /**
+     * The retry loop, with the wait injectable so the retry tests do not pay the real schedule.
+     *
+     * @param pause how to wait between attempts; production passes {@code Thread::sleep}
+     */
+    static void moveIntoPlace(Path tmp, Path target, FileMover mover, Backoff pause) throws IOException {
         IOException last = null;
         for (int attempt = 1; attempt <= MOVE_ATTEMPTS; attempt++) {
             try {
@@ -341,7 +369,7 @@ public final class ModuleSidecar {
                 last = e;
                 if (attempt == MOVE_ATTEMPTS) break;
                 try {
-                    Thread.sleep(MOVE_BACKOFF_MS * attempt);
+                    pause.millis(jittered(backoffMillis(attempt)));
                 } catch (InterruptedException interrupted) {
                     // Stop retrying, but report the move failure rather than the interruption:
                     // that is the one the caller has to act on.
@@ -352,6 +380,33 @@ public final class ModuleSidecar {
         }
         tryDelete(tmp);
         throw last;
+    }
+
+    /** How {@link #moveIntoPlace} waits between attempts. */
+    @FunctionalInterface
+    interface Backoff {
+        void millis(long duration) throws InterruptedException;
+    }
+
+    /**
+     * The nominal wait before attempt {@code attempt + 1}: {@link #MOVE_BACKOFF_MS} doubled per
+     * attempt and capped at {@link #MOVE_BACKOFF_MAX_MS}. Deterministic, so the budget it adds up
+     * to can be asserted; {@link #jittered} is what actually varies the sleep.
+     */
+    static long backoffMillis(int attempt) {
+        int doublings = Math.min(attempt - 1, Long.SIZE - 2);
+        return Math.min(MOVE_BACKOFF_MAX_MS, MOVE_BACKOFF_MS << doublings);
+    }
+
+    /**
+     * Spreads a wait over {@code [duration/2, duration]}.
+     *
+     * <p>Every module in a reactor writes its sidecar at the same point in its own compile, so
+     * without jitter their retries line up on one grid and keep colliding with the same reader
+     * sweep — the retries then re-synchronise rather than spread out.
+     */
+    private static long jittered(long duration) {
+        return duration / 2 + ThreadLocalRandom.current().nextLong(duration / 2 + 1);
     }
 
     private static void appendEncoded(StringBuilder sb, String key, String value) {

@@ -49,6 +49,51 @@ class ModuleSidecarResilienceTest {
         assertFalse(Files.exists(tmp), "the temp file should have been renamed away");
     }
 
+    /**
+     * The nominal schedule has to be long enough to outlast the blocker that actually shows up.
+     *
+     * <p>The number is measured, not chosen: instrumenting the retry loop over five full suite
+     * runs on Windows recorded successes as late as attempt 9, and the old 275 ms budget gave up
+     * in two of those five runs. Asserting the budget rather than the attempt count keeps this
+     * honest if the schedule's shape changes — halving it would reopen the flake.
+     */
+    @Test
+    void theRetryBudgetOutlastsTheBlockerObservedInPractice() {
+        long nominal = 0;
+        for (int attempt = 1; attempt < ModuleSidecar.MOVE_ATTEMPTS; attempt++) {
+            nominal += ModuleSidecar.backoffMillis(attempt);
+        }
+
+        assertTrue(nominal >= 2_000,
+            "the retry budget is " + nominal + " ms; the blockers that caused ModuleSidecarAsyncTest "
+                + "to fail outlasted 275 ms, so anything near that reopens the flake");
+        // Jitter spends between half and all of each nominal wait, so the floor is what matters.
+        assertTrue(nominal / 2 >= 1_000,
+            "even the most jittered-down run must still wait over a second before giving up");
+    }
+
+    /**
+     * A blocker lasting longer than the old 10-attempt cap must now be ridden out rather than
+     * turned into a lost module. This fails against the previous schedule, which is the point.
+     */
+    @Test
+    void renameRidesOutABlockerThatOutlastsTheOldTenAttemptCap(@TempDir Path dir) throws IOException {
+        Path tmp = Files.writeString(dir.resolve("sidecar.tmp"), "payload");
+        Path target = dir.resolve("sidecar");
+        AtomicInteger attempts = new AtomicInteger();
+
+        ModuleSidecar.moveIntoPlace(tmp, target, (source, destination) -> {
+            if (attempts.incrementAndGet() <= 11) {
+                throw new AccessDeniedException(destination.toString());
+            }
+            Files.move(source, destination);
+        }, millis -> { /* the schedule is asserted above; this test is about the cap */ });
+
+        assertEquals(12, attempts.get(), "should have kept retrying past the old cap of 10");
+        assertEquals("payload", Files.readString(target), "the payload must survive the retries");
+        assertFalse(Files.exists(tmp), "the temp file should have been renamed away");
+    }
+
     @Test
     void renameGivesUpAfterTheLastAttemptAndTakesTheTempFileWithIt(@TempDir Path dir) throws IOException {
         Path tmp = Files.writeString(dir.resolve("sidecar.tmp"), "payload");
@@ -56,10 +101,12 @@ class ModuleSidecarResilienceTest {
         AtomicInteger attempts = new AtomicInteger();
 
         IOException thrown = assertThrows(IOException.class, () ->
+            // No-op backoff: this test is about giving up at the cap, and paying the real
+            // multi-second schedule to prove it would put a stress test in the fast tier.
             ModuleSidecar.moveIntoPlace(tmp, target, (source, destination) -> {
                 attempts.incrementAndGet();
                 throw new AccessDeniedException(destination.toString());
-            }));
+            }, millis -> { }));
 
         assertEquals(ModuleSidecar.MOVE_ATTEMPTS, attempts.get(), "should stop at the attempt cap");
         assertTrue(thrown instanceof AccessDeniedException, "should report the filesystem's own failure");

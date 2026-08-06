@@ -98,6 +98,19 @@
     <Bug pattern="CRLF_INJECTION_LOGS"/>
   </Match>
 
+  <!-- PREDICTABLE_RANDOM: scoped to the one method, so a ThreadLocalRandom used anywhere
+       else in the class is still reported. ModuleSidecar.jittered() spreads the wait between
+       two attempts at renaming a temp file over a sidecar; the value never leaves the method,
+       is never a token, key, nonce or filename, and an attacker who could predict it would
+       learn how long a build slept. Its job is decorrelating retries so modules that write
+       their sidecars at the same point in their compile stop re-colliding — a use where
+       SecureRandom would buy nothing and cost entropy on every retry. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
+    <Method name="jittered"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+
   <!-- PATH_TRAVERSAL_IN: listed per method, not project-wide, so a NEW path built from
        input is still reported. Every site below is the processor going where the build told
        it to go: -Avibetags.root and -Avibetags.log.path are documented as absolute-capable
