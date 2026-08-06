@@ -125,10 +125,30 @@ compileJava {
 }
 
 
+// Mirrors the Maven split in vibetags/pom.xml: `gradle test` skips the @Tag("e2e")
+// classes so the local loop stays fast, and -Pe2e adds them back. The two build
+// systems have to agree — if this block and the pom's <excludedGroups> drift, one of
+// them silently stops running 52 test classes. TestTagVocabularyTest pins the tag name
+// in both files; nothing else does, so change them together.
 test {
     useJUnitPlatform()
     jvmArgs "-Dnet.bytebuddy.experimental=true", "-Dlicense.mock.mode=true"
     finalizedBy jacocoTestReport
+}
+
+// Applied here rather than in the useJUnitPlatform block above because --tests is a task
+// option: it is parsed after the project is evaluated, so commandLineIncludePatterns is
+// still empty while build.gradle is being read. Naming a test has to win over the tag
+// filter — otherwise `gradlew test --tests '*WriteCacheProcessorIntegrationTest'` prints
+// BUILD SUCCESSFUL having run nothing, which is the same silent-green trap the Maven side
+// avoids with the named-test-overrides-tags profile.
+gradle.taskGraph.whenReady {
+    boolean namedATest = !test.filter.commandLineIncludePatterns.isEmpty()
+    if (!project.hasProperty("e2e") && !namedATest) {
+        test.options {
+            excludeTags "e2e"
+        }
+    }
 }
 
 jacocoTestReport {

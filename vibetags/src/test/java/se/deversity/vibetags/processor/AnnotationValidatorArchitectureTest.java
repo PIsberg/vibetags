@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.annotations.AIArchitecture;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * These tests compile real Java sources so the Trees API is live and the import-scan
  * logic executes. processingEnv=null tests cover the graceful-fallback catch path.
  */
+@Tag("e2e")
 class AnnotationValidatorArchitectureTest {
 
     // -----------------------------------------------------------------------

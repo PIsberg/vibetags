@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Self-contained: compiles annotated test sources into a {@code @TempDir} via
  * {@link ProcessorTestHarness} — no dependency on the example project.
  */
+@Tag("e2e")
 class AnnotationProcessorEndToEndTest {
 
     @TempDir

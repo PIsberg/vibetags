@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * per-class fallback for elements matching no role. Uses Cursor granular ({@code .cursor/rules})
  * as the representative platform.
  */
+@Tag("e2e")
 class RoleBasedGranularEndToEndTest {
 
     @AfterEach

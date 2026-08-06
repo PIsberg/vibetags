@@ -40,8 +40,9 @@ cd ../vibetags         && mvn clean install     # or: gradle clean build publish
 cd ../vibetags-bom     && mvn install           # Maven only
 
 # Tests (from vibetags/)
-mvn test                                   # full suite; unit, integration and end-to-end are all self-contained
-mvn test -Dtest=AnnotationProcessorEndToEndTest
+mvn test                                   # fast tier: 80 classes, 910 tests, 35s. Skips @Tag("e2e").
+mvn test -Pe2e                             # everything: 132 classes, 1486 tests, 61s. What CI runs.
+mvn test -Dtest=AnnotationProcessorEndToEndTest   # -Dtest overrides the tag filter
 mvn test -Dtest=AIGuardrailProcessorUnitTest#methodName
 
 # Example (triggers annotation processing; library must be installed first)

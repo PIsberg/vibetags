@@ -28,6 +28,12 @@
         <!-- Flipped to true by CI so -Pself-annotate verifies the committed guardrails
              instead of rewriting them. Off by default: the profile regenerates. -->
         <vibetags.selfcheck>false</vibetags.selfcheck>
+
+        <!-- JUnit tags surefire skips by default, so `mvn test` stays a fast local
+             loop. Emptied by -Pe2e, which CI uses to run the whole suite. Every test
+             class over 5s in the 2026-08-06 baseline carries @Tag("e2e"); the rule and
+             the measurement are in docs/TESTS.md. -->
+        <vibetags.test.excludedGroups>e2e</vibetags.test.excludedGroups>
     </properties>
 
     <dependencies>
@@ -196,6 +202,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${argLine} -Dnet.bytebuddy.experimental=true -Dlicense.mock.mode=true</argLine>
+                    <!-- Empty in -Pe2e so CI runs everything. See the property comment. -->
+                    <excludedGroups>${vibetags.test.excludedGroups}</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>
@@ -396,6 +404,39 @@
     </distributionManagement>
 
     <profiles>
+        <!-- Adds the @Tag("e2e") classes back to the run. Without it `mvn test` skips
+             them, which is what keeps the local loop fast; with it the suite is
+             complete. CI passes -Pe2e on every leg that runs tests, so nothing merges
+             without the full suite having run somewhere.
+             Usage: mvn test -Pe2e  (from the vibetags/ directory) -->
+        <profile>
+            <id>e2e</id>
+            <properties>
+                <vibetags.test.excludedGroups/>
+            </properties>
+        </profile>
+
+        <!-- Naming a test explicitly means you want that test, tag or no tag.
+             Without this, `mvn test -Dtest=WriteCacheProcessorIntegrationTest` prints
+             "Tests run: 0" and BUILD SUCCESS — the tag filter drops the class after
+             -Dtest selects it, and failIfNoSpecifiedTests does not fire because the
+             class was found. A green build that ran nothing is the exact failure this
+             split is supposed to avoid, so -Dtest clears the exclusion. Verified by
+             running `mvn test -Dtest=WriteCacheProcessorIntegrationTest` with and
+             without this profile: 0 tests before, 3 after. build.gradle does the same
+             for Gradle's test-name filter. -->
+        <profile>
+            <id>named-test-overrides-tags</id>
+            <activation>
+                <property>
+                    <name>test</name>
+                </property>
+            </activation>
+            <properties>
+                <vibetags.test.excludedGroups/>
+            </properties>
+        </profile>
+
         <!-- Central Portal publishing (Maven Central) -->
         <profile>
             <id>central-publish</id>

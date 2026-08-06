@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.annotations.AILocked;
@@ -40,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The other half of the contract — that enforcement still catches a changed shape once it is
  * switched on — is {@code EnforcingModeEndToEndTest}.
  */
+@Tag("e2e")
 class SignatureCaptureTest {
 
     private static final String SOURCE =

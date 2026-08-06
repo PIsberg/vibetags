@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.when;
  *   <li>element order must not matter (kills the {@code List::sort} removal in appendAnnotationSet).</li>
  * </ul>
  */
+@Tag("e2e")
 class BuildFingerprintMutationTest {
 
     private static Element mockEl(String fqn) {

@@ -2,6 +2,53 @@
 
 Index of every test class in `vibetags/src/test` and what it covers — use this to find which test to run or extend for a given change.
 
+## Running the tests: the fast tier and `-Pe2e`
+
+`mvn test` runs the fast tier only — it skips every class tagged `@Tag("e2e")`. `mvn test -Pe2e` runs
+everything, and that is what CI runs on all three legs that execute tests (`build-maven`,
+`cross-platform`, `build-gradle`). Gradle mirrors both: `gradlew test` and `gradlew test -Pe2e`.
+
+Measured on a 16-core Windows machine on 2026-08-06, warm compile, `-Dmaven.pmd.skip -Dspotbugs.skip`:
+
+| Command | Classes | Tests | Wall clock |
+|---|---|---|---|
+| `mvn test` | 80 | 910 | 35s |
+| `mvn test -Pe2e` | 132 | 1486 | 61s |
+
+Roughly 10s of either figure is compile, Error Prone and JaCoCo rather than tests — `mvn test
+-DskipTests` costs 10s on the same machine — so the tests themselves go from ~51s to ~25s.
+
+**What is tagged, and why.** The 52 classes that took over 5s in the full-suite baseline of
+2026-08-06: 599.66s of the 704.15s the suite spent. The rule is cost, not category.
+`NewAnnotationsV4EndToEndTest` runs in 0.01s and stays in the fast tier; `AIGuardrailProcessorUnitTest`
+takes 13.71s and does not. Do not tag by name suffix — `EndToEnd` correlates with nothing here.
+
+**The fast tier still exercises the processor.** 21 of its classes drive `javac` through
+`ProcessorTestHarness`: the V3/V5/V6 annotation round-trips, Qwen and Claude-skill output, granular
+hoisting, the validation rules and the parallel write path. A change that breaks generation fails
+locally. What the fast tier does *not* cover is the expensive machinery — the write cache, build
+fingerprinting, multi-module reactors and mirroring, international characters, and the async stress
+loops. Those are exactly the areas where "it compiled and the file looked right" is not evidence, so
+run `-Pe2e` before pushing anything that touches them.
+
+**Naming a test overrides the tag.** `mvn test -Dtest=WriteCacheProcessorIntegrationTest` runs that
+class even though it is tagged, and so does `gradlew test --tests '*WriteCacheProcessorIntegrationTest'`.
+Both build files special-case this deliberately: without it the command prints `Tests run: 0` and
+`BUILD SUCCESS`, a green result that ran nothing.
+
+**Per-class times are not stable enough to re-derive the split from.** They are measured under
+concurrency (`src/test/resources/junit-platform.properties` sets `parallel.enabled=true`), so a
+class's recorded time depends on what else was running beside it. `Coverage1dot0GapTest` measured
+4.71s in the full suite and 13.93s in the fast tier on its own; the fast tier's summed class time
+rose from 104s to 220s purely by having fewer classes to share the machine with. If you re-tag, take
+the numbers from a full-suite run, and trust wall clock over the sum.
+
+`TestTagVocabularyTest` fails the build if a tag is misspelled, or if `pom.xml` and `build.gradle`
+stop excluding the same one.
+
+## Index
+
+
 | Class | Coverage |
 |---|---|
 | `AnnotationDefinitionsTest` | Annotation structure and defaults (the original 27 annotations; the 12 newest are covered by `NewAnnotationsV4`/`V5` definition tests) |
@@ -68,7 +115,7 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
 | `GuardrailFileWriterAsyncTest` | The parallel write phase's shape under stress — one file per worker over a shared `GuardrailFileWriter` and `WriteCache` — asserting hand-authored content outside the markers survives and exactly one marker pair remains. `ParallelFileWriteTest` covers one real compile; this one repeats the write until a race would show |
 | `ModuleSidecarAsyncTest` | Concurrent `save()` + `readAll()` in one reactor root: no torn read (a body that was never saved) and no wrongful prune (a sibling's sidecar deleted as malformed mid-write) |
-| `ModuleSidecarResilienceTest` | The deterministic half of the same problem: the rename retry (succeeds after transient failures, gives up at the attempt cap and removes its temp file, does not retry a non-filesystem failure) and the unreadable-vs-malformed split (`readAll` prunes corrupt content but never a file it could not read) |
+| `ModuleSidecarResilienceTest` | The deterministic half of the same problem: the rename retry (succeeds after transient failures, rides out a blocker past the old 10-attempt cap, keeps a retry budget over 2 s, gives up at the attempt cap and removes its temp file, does not retry a non-filesystem failure) and the unreadable-vs-malformed split (`readAll` prunes corrupt content but never a file it could not read). The budget assertion is what stops the 2026-08-06 flake being reintroduced by shrinking the schedule |
 | `WriteCacheProcessorIntegrationTest` | Cache integration: created on first compile, stable mtimes on second, rewrite on external edit |
 | `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
@@ -85,7 +132,8 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `NewAnnotationsV6DefinitionTest` | Definition-level tests for the evidence-based wave (`@AIGenerated`, `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity`, `@AIKeepInSync`): retention, targets, and which attributes are required vs. defaulted |
 | `NewAnnotationsV6EndToEndTest` | End-to-end content for the evidence-based wave — asserts the *wording* each annotation exists to produce (the `@AIGenerated` redirect, the "do not add locks" warning on `@AIThreadAffinity`) across CLAUDE.md's XML blocks, `.cursorrules`, `llms-full.txt`, and granular rules |
 | `NewAnnotationsV6ValidationTest` | The 11 new validation warnings, plus clean fixtures asserting each stays silent when its condition is not met |
-| `AIGuardrailProcessorIntegrationTest` | Full workflow. Self-contained via `ProcessorTestHarness`; runs with plain `mvn test` (the `-Drun.integration.tests=true` gate was dropped in 2026-04) |
+| `AIGuardrailProcessorIntegrationTest` | Full workflow. Self-contained via `ProcessorTestHarness`. Tagged `@Tag("e2e")` (13.63s), so it needs `mvn test -Pe2e` — the older `-Drun.integration.tests=true` gate was dropped in 2026-04 and is not what tags it now |
+| `TestTagVocabularyTest` | The fast/e2e split itself: every `@Tag` value is one the build files filter on, and `pom.xml` and `build.gradle` still exclude the same tag |
 | `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
 | `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
 | `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |

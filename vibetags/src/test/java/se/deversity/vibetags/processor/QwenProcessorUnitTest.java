@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.*;
  * Comprehensive unit tests for Qwen-specific functionality in AIGuardrailProcessor.
  * Tests Qwen file generation, settings, and ignore patterns.
  */
+@Tag("e2e")
 class QwenProcessorUnitTest {
 
     @Test

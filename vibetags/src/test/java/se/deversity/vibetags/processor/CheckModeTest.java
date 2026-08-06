@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>Check mode is strictly opt-in: without the option, behaviour is the normal generate
  * path (covered by the rest of the suite).
  */
+@Tag("e2e")
 class CheckModeTest {
 
     private static final String CHECK_OPTION = "-Avibetags.check=true";

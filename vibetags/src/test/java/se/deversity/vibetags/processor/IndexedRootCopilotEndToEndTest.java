@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * repeated an empty "Locked Files" heading, so an aggregate whose whole purpose is to be lean grew
  * on a version bump.
  */
+@Tag("e2e")
 class IndexedRootCopilotEndToEndTest {
 
     private static final String CORE_SOURCE = """

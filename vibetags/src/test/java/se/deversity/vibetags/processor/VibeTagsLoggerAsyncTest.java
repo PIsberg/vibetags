@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * High-concurrency stress test for VibeTagsLogger isolated parallel execution.
  * Uses async-test-lib to force real thread collisions and race-condition checks.
  */
+@Tag("e2e")
 class VibeTagsLoggerAsyncTest {
 
     @BeforeAll

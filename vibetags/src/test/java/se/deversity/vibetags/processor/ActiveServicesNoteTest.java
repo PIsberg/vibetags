@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * looking at. Found dogfooding RC10 across five consumer repos (common-license-lib reported 2 of
  * 4, skill3 reported 4 with two granular directories silently active).
  */
+@Tag("e2e")
 class ActiveServicesNoteTest {
 
     @Test

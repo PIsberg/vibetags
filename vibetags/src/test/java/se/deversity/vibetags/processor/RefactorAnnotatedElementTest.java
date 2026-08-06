@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * by dashes (e.g. {@code com.example.payment.PaymentProcessor} →
  * {@code com-example-payment-PaymentProcessor.mdc}).
  */
+@Tag("e2e")
 class RefactorAnnotatedElementTest {
 
     @AfterEach

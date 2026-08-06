@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import se.deversity.asynctest.AsyncTest;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * place while {@code readAll()} skips {@code .tmp} files; this test is what keeps that pairing
  * honest.
  */
+@Tag("e2e")
 class ModuleSidecarAsyncTest {
 
     /**

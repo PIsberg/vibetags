@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies that when .junie/guidelines.md exists on disk, the processor populates it with
  * guardrail content derived from .cursorrules but using Junie-specific headings.
  */
+@Tag("e2e")
 class JunieEndToEndTest {
 
     @TempDir

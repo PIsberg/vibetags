@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * into a temp root; the example on disk is never written to.
  */
 @DisplayName("Scoped rules: opting in and opting out")
+@Tag("e2e")
 class ScopedRulesOptInOptOutEndToEndTest {
 
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */

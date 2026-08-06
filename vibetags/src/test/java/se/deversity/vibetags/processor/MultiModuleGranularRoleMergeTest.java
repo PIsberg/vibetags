@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * living in three different modules into a single role, so all three write the same file
  * {@code .gemini/rules/instrumentation.md}.
  */
+@Tag("e2e")
 class MultiModuleGranularRoleMergeTest {
 
     private static final String BENCHMARK_SOURCE = """

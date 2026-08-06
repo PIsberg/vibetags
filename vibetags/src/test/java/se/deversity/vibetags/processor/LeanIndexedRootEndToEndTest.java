@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -33,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>These compile file-backed sources laid out as a two-module reactor sharing one VibeTags root,
  * exercising the real processor pipeline (not just {@code ModuleSidecar} in isolation).
  */
+@Tag("e2e")
 class LeanIndexedRootEndToEndTest {
 
     /** Carries one safety-tier annotation and one verbose-tier one, so the split is observable. */

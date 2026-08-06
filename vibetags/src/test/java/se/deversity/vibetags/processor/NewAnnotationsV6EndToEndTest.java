@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of refusing, and of `@AIThreadAffinity` that it tells an agent NOT to reach for a lock. A test
  * that only checked the class name would pass on output that lost both.
  */
+@Tag("e2e")
 class NewAnnotationsV6EndToEndTest {
 
     private static final String SOURCE = """

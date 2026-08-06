@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code reason} that is surfaced in the generated output — so the rationale survives across AI
  * sessions — and that nothing extra is emitted when the reason is left blank.
  */
+@Tag("e2e")
 class MarkerReasonEndToEndTest {
 
     @TempDir

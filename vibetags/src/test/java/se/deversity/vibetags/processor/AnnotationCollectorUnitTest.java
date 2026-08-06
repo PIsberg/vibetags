@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.*;
  *   position 13 - !deprecatedElements.isEmpty()   (L77 true)
  *   position 15 - !regulationElements.isEmpty()   (L78 true)
  */
+@Tag("e2e")
 class AnnotationCollectorUnitTest {
 
     private static Element mockElem(String fqn) {

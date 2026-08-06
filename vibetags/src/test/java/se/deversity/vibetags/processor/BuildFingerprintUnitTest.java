@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.*;
  * {@code getAnnotation()} returns {@code null}. These tests verify that the fingerprint
  * computation degrades gracefully to an empty string rather than throwing NPE.
  */
+@Tag("e2e")
 class BuildFingerprintUnitTest {
 
     /**

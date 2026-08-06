@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * does not pass {@code -Avibetags.enforce} asserts silence. What the mode adds is a hard stop for
  * the families whose promise the processor can actually prove from the element model.
  */
+@Tag("e2e")
 class EnforcingModeEndToEndTest {
 
     private static final String CONTRACT_V1 = """
