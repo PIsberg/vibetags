@@ -92,7 +92,8 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 *Figure 2: `se.deversity.vibetags.processor` — parsed from source by code-karta*
 
 The hand-drawn PlantUML class diagram that used to stand here is [archived](diagrams/archive/):
-it drew 8 of the 44 annotations and named 8 internal helper classes, of which there are now 33.
+it drew 8 of the 44 annotations and named 8 internal helper classes, of which `processor/internal/`
+now holds 24 at the top level alone (129 files counting its subpackages).
 Hand-maintained structure drifts, and that one had. Both halves of what it showed are parsed
 from source instead — the processor above, and
 [the annotation surface](ANNOTATIONS.md#the-annotation-surface) in the annotation reference.
@@ -916,14 +917,16 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 | `GuardrailFileWriterCoverageTest` | 4 | (0.7.1) Streaming-cache hit records cache entry; size match + byte mismatch + `!hasNewRules` skips; same with `hasNewRules=true` writes; all four `noopMessager` overloads return silently |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
 | `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
-| `AnnotationProcessorEndToEndTest` | 75 | End-to-end snapshot net: compile example, verify all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
+| `AnnotationProcessorEndToEndTest` | 76 | End-to-end snapshot net: compiles annotated fixture sources in-memory via `ProcessorTestHarness`, verifies all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
-| `VibeTagsLoggerUnitTest` | 10 | File logging: log level filtering, file rotation, shutdown |
-| `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore (conditional, requires `-Drun.integration.tests=true`) |
+| `VibeTagsLoggerUnitTest` | 13 | File logging: log level filtering, file rotation, shutdown |
+| `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore. Self-contained via `ProcessorTestHarness`; runs with plain `mvn test` |
 
-**Total: 424 tests** (410 after 0.7.0; 0.7.1 added 9 new tests for the cache + streaming compare + writer coverage gaps, and corrected the existing tally as `WriteCacheTest` grew from 10 → 15 during coverage hardening).
+**Total: 1484 tests** (the surefire summary of `mvn test` in `vibetags/`, measured 2026-08-06). The
+per-class tallies above date from the 0.7.x era and the table no longer lists every class; trust the
+build's own summary over any total restated here.
 
 **JMH benchmarks** (under `load-tests/`, not counted above):
 - `ProcessorHotPathBenchmark` — 6 benchmarks: `buildServiceFileMap`, `resolveActiveServices_{all,none}Present`, `writeFileIfChanged_{noChange,smallWrite,largeWrite}`. Run on every release-tagged baseline.

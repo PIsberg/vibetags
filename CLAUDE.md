@@ -40,8 +40,7 @@ cd ../vibetags         && mvn clean install     # or: gradle clean build publish
 cd ../vibetags-bom     && mvn install           # Maven only
 
 # Tests (from vibetags/)
-mvn test                                   # unit tests only
-mvn test -Drun.integration.tests=true      # include integration tests
+mvn test                                   # full suite; unit, integration and end-to-end are all self-contained
 mvn test -Dtest=AnnotationProcessorEndToEndTest
 mvn test -Dtest=AIGuardrailProcessorUnitTest#methodName
 
@@ -117,6 +116,11 @@ per-element detail lives in `.claude/rules/`, loaded on demand by glob.
   index, and the internal class map. The reasoning behind the invariants above.
 - `docs/ARCHITECTURE.md` — deep dive: system diagram, data flow, design decisions, limitations.
 - `USAGE.md` — consumer-facing usage (how to add VibeTags to a project).
+- `README.md` — the test-enforced project facts (44 annotations, 37 platforms, 49 config files; pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
+- `docs/WORKFLOW.md` — what CI actually runs, step by step, and why each verification exists.
+- `docs/RELEASING.md` — the release process.
+- `docs/CHANGELOG.md` — what each release changed and why.
+- `docs/vibetags-in-practice.md` — survey of annotation/platform usage across five real consumer codebases (2026-07-16).
 
 ## Pre-commit Hooks
 

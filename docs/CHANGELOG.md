@@ -33,7 +33,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and CI asserts all three modules survive and that rebuilding a single module leaves the file
   byte-identical.
 
+- **The documentation described a test gate that has not existed since April.**
+  `-Drun.integration.tests=true` stopped gating anything when the integration tests became
+  self-contained (commit `e6a6aba`, 2026-04-07), but CLAUDE.md, `docs/TESTS.md`, `docs/WORKFLOW.md`
+  and `docs/ARCHITECTURE.md` still documented the flag, and two of those claimed the end-to-end
+  tests read `example/` output; they compile fixture sources in-memory via `ProcessorTestHarness`.
+  Verified by running `AIGuardrailProcessorIntegrationTest` with and without the flag: all 23 tests
+  execute either way.
+- **Doc counts and phantom entries corrected against ground truth.** `DESIGN.md` was listed as a
+  generated platform file, and `DesignMdEndToEndTest` / `GuardrailContentBuilderLazyAllocationTest`
+  as tests; none exist in the source tree. `docs/LOAD-BEARING.md` said "50+ AI platforms" where the
+  test-pinned count is 37; `docs/ARCHITECTURE.md` said 33 internal helper classes (measured: 24
+  top-level, 129 with subpackages) and a 424-test total (measured: 1484); two per-class test counts
+  were stale. README's build-from-source section now installs `vibetags-annotations` before
+  `vibetags`, without which its own commands fail on a clean checkout; reproduced before fixing.
+  `SPEC.md` is marked as a historical design document.
+
 ### Added
+- **CLAUDE.md links the rest of the map.** The always-loaded entry point now points at README's
+  test-enforced project facts, `docs/WORKFLOW.md`, `docs/RELEASING.md`, `docs/CHANGELOG.md` and
+  `docs/vibetags-in-practice.md`; none of them were reachable from it before, and an agent that
+  starts from CLAUDE.md had no path to the counts the build actually pins.
 - **`docs/DEPENDENCIES.md`: every third-party artifact, and why.** Split by what it costs a
   consumer. Three artifacts reach the consumer's annotation-processor path (jspecify, slf4j-api,
   logback-classic) and `vibetags-annotations` has none at all; everything else is test or build
@@ -47,13 +67,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were on 7.26.0, which is two modules analysed by two rule sets.
 
 ### Changed
+- **CI: the two "Run Integration Tests" steps are gone.** They passed
+  `-Drun.integration.tests=true`, which has gated nothing since 2026-04, so each step re-ran the
+  exact suite the "Run Unit Tests" step before it had just finished. Coverage is unchanged: the
+  Maven and Gradle jobs still run the full suite once each.
+- **async-test-lib 1.7.0-RC8 → 1.7.1.** The RC line's GA and its follow-up are on Maven Central as
+  of 2026-08-06 (verified against `maven-metadata.xml` on repo1.maven.org, the check the previous
+  sweep documented), so the "deliberately not taken" entry in `docs/DEPENDENCIES.md` is gone with
+  the pin.
 - **Dependencies:** ArchUnit 1.4.2 → 1.5.0, SnakeYAML 2.5 → 2.6, maven-shade-plugin 3.5.2 → 3.6.2,
   exec-maven-plugin 3.2.0 → 3.6.3, spotbugs-maven-plugin 4.10.2.0 → 4.10.3.0, pitest-maven 1.25.8 →
   1.25.9, pitest-junit5-plugin 1.2.2 → 1.2.3, cyclonedx-maven-plugin 2.9.2 → 2.9.3, and PMD 7.26.0
   in `vibetags-annotations/build.gradle`, which the parent had declared since 1.0.0-RC8. Verified by
-  the full Maven build (1465 tests) and both Gradle builds. async-test-lib stays at 1.7.0-RC8: the
-  1.7.0 that `versions:display-dependency-updates` reports is still a local install and 404s on
-  Central.
+  the full Maven build (1465 tests) and both Gradle builds.
 - **CI no longer builds async-test-lib from a git tag.** Four jobs cloned
   `github.com/PIsberg/async-test-lib` at `v1.7.0-RC5` and ran `mvn install` on it before every
   build. The artifact has been on Maven Central all along, so those four jobs were paying for an

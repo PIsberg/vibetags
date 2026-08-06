@@ -50,7 +50,6 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `CheckModeTest` | Opt-in check mode (`-Avibetags.check=true`): pass/fail verdicts, zero writes, multi-module merge parity, dry-run `GuardrailFileWriter` |
 | `LocksReportEndToEndTest` | `.vibetags-locks` machine-readable lock report: class/method positions via the javac Tree API, JSON escaping, opt-in behaviour |
 | `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
-| `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
 | `GuardrailContentBuilderUnitTest` | Per-annotation content generation for each platform |
 | `GuardrailFileWriterCoverageTest` | `GuardrailFileWriter` branch coverage |
 | `GuardrailFileWriterEdgeCaseTest` | Edge cases: empty content, missing parent dir, read-only file |
@@ -74,7 +73,6 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
 | `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
 | `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
-| `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
 | `NewPlatformsV4EndToEndTest` | AI PR reviewers (`.coderabbit.yaml`, `.pr_agent.toml`, `ellipsis.yaml`), context-packer ignore files (`.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore`), Void (`.void/rules.md`), and Roo modes (`.roomodes`) |
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
@@ -87,7 +85,7 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 | `NewAnnotationsV6DefinitionTest` | Definition-level tests for the evidence-based wave (`@AIGenerated`, `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity`, `@AIKeepInSync`): retention, targets, and which attributes are required vs. defaulted |
 | `NewAnnotationsV6EndToEndTest` | End-to-end content for the evidence-based wave — asserts the *wording* each annotation exists to produce (the `@AIGenerated` redirect, the "do not add locks" warning on `@AIThreadAffinity`) across CLAUDE.md's XML blocks, `.cursorrules`, `llms-full.txt`, and granular rules |
 | `NewAnnotationsV6ValidationTest` | The 11 new validation warnings, plus clean fixtures asserting each stays silent when its condition is not met |
-| `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
+| `AIGuardrailProcessorIntegrationTest` | Full workflow. Self-contained via `ProcessorTestHarness`; runs with plain `mvn test` (the `-Drun.integration.tests=true` gate was dropped in 2026-04) |
 | `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
 | `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
 | `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |
