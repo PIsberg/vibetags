@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Five workflows run on push, pull request, schedule, or release; a sixth, mutation testing, runs only when someone asks for it.
+This document describes what happens during CI builds in `.github/workflows/`. Six workflows run on push, pull request, schedule, or release; a seventh, mutation testing, runs only when someone asks for it.
 
 ## Overview
 
@@ -11,6 +11,7 @@ This document describes what happens during CI builds in `.github/workflows/`. F
 | Dependency Review | `dependency-review.yml` | Pull requests |
 | Scorecard | `scorecards.yml` | Push to `main`, branch-protection-rule, weekly cron (Tuesdays 07:20 UTC) |
 | Publish to Maven Central | `publish.yml` | GitHub Release `created` |
+| Fuzz Smoke (Jazzer) | `fuzz.yml` | Push/PR to `main` |
 | Mutation Testing (PIT) | `mutation.yml` | Manual only (`workflow_dispatch`) |
 
 All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow is `contents: read`; jobs that need more (e.g. CodeQL writes `security-events`) escalate explicitly.
@@ -87,7 +88,7 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
 
 The same `.github/actions/verify-generated-files` composite action runs after the Gradle build, so any divergence between Maven and Gradle output paths is caught.
 
-Mutation testing used to be a job here. It now lives in its own manually triggered workflow — see section 6.
+Mutation testing used to be a job here. It now lives in its own manually triggered workflow — see section 7.
 
 ---
 
@@ -134,7 +135,21 @@ Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN
 
 ---
 
-## 6. Mutation Testing (`mutation.yml`)
+## 6. Fuzz Smoke (`fuzz.yml`)
+
+A 10,000-iteration Jazzer run against the OSS-Fuzz harness in `oss-fuzz/`, on every push and pull request to `main`. Single JDK 21 leg, `contents: read`, 15-minute timeout.
+
+It exists to catch two failure classes:
+
+- **Harness rot.** The harness compiles against the live processor classes (`vibetags/target/classes`), so a processor API change that breaks `oss-fuzz/VibeTagsFuzzer.java` is a red build here instead of a surprise at OSS-Fuzz submission time. Not hypothetical: the harness sat unused from 2026-04 and had to be re-synced to the 0.7.1 API by hand.
+- **Real findings.** The run is a genuine coverage-guided fuzz of `AIGuardrailProcessor.writeFileIfChanged` (marker parsing, front-matter detection, content merge). 10,000 iterations is a smoke, not a campaign, but Jazzer's CMP instrumentation discovers the `VIBETAGS-START` marker strings on its own within a few thousand executions, so the interesting parse paths are reached. An uncaught exception or hang fails the job and uploads the triggering input as the `fuzz-findings-<run_id>` artifact.
+
+- Steps: harden runner → checkout → set up JDK 21 (Maven cache) → `cd vibetags-annotations && mvn install -B -q -DskipTests` → `cd vibetags && mvn clean compile -B -q` → download Jazzer v0.30.0 and verify it against a SHA-256 recorded in the workflow (a moved release tag cannot substitute a different binary) → fetch `com.code-intelligence:jazzer-api` from Maven Central for the compile classpath → `javac` the harness → build the runtime classpath with `dependency:build-classpath` (the processor jar is not shaded, so slf4j/logback must be on the fuzzer's `--cp`) → run with `-runs=10000` (measured: 120 s for 10,000 runs on a Windows laptop; Linux runners are faster).
+- There is no `continue-on-error`: a failure here is either a real finding or real rot, never noise.
+
+---
+
+## 7. Mutation Testing (`mutation.yml`)
 
 PIT mutation coverage over `se.deversity.vibetags.*`. **On demand only** — the sole trigger is `workflow_dispatch`, so nothing starts it on push or pull request. Run it from Actions → Mutation Testing (PIT) → Run workflow, picking the branch to analyse.
 
