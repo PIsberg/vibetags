@@ -52,7 +52,10 @@ jobs:
 
       - name: Compile the fuzz harness
         run: |
-          javac -cp "vibetags/target/classes:jazzer-dist/jazzer-api.jar" \
+          # -proc:none: target/classes carries the processor's META-INF/services
+          # registration, so without it javac discovers AIGuardrailProcessor and
+          # fails instantiating it (slf4j is not on this compile classpath).
+          javac -proc:none -cp "vibetags/target/classes:jazzer-dist/jazzer-api.jar" \
             -d fuzz-classes oss-fuzz/VibeTagsFuzzer.java
 
       - name: Run the fuzz smoke (10,000 iterations)
