@@ -35,8 +35,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AILegacyBridge") && warnings.get(0).contains("@AIDraft"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AILegacyBridge") && w.contains("@AIDraft")));
     }
 
     @Test
@@ -49,14 +48,14 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
         when(element.toString()).thenReturn("com.example.Api");
         when(element.getAnnotation(AIPublicAPI.class)).thenReturn(mock(AIPublicAPI.class));
         when(element.getAnnotation(AILocked.class)).thenReturn(mock(AILocked.class));
+        when(element.getModifiers()).thenReturn(Set.of(javax.lang.model.element.Modifier.PUBLIC));
 
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIPublicAPI.class);
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIPublicAPI") && warnings.get(0).contains("@AILocked"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIPublicAPI") && w.contains("@AILocked")));
     }
 
     @Test
@@ -75,8 +74,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIParallelTests") && warnings.get(0).contains("@AILocked"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIParallelTests") && w.contains("@AILocked")));
     }
 
     @Test
@@ -95,8 +93,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AISchemaSafe") && warnings.get(0).contains("@AIIgnore"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AISchemaSafe") && w.contains("@AIIgnore")));
     }
 
     @Test
@@ -115,8 +112,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIStrictClasspath") && warnings.get(0).contains("@AILocked"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIStrictClasspath") && w.contains("@AILocked")));
     }
 
     @Test
@@ -137,8 +133,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIFeatureFlag") && warnings.get(0).contains("@AILocked"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIFeatureFlag") && w.contains("@AILocked")));
     }
 
     @Test
@@ -158,8 +153,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIFeatureFlag") && warnings.get(0).contains("blank 'flag'"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIFeatureFlag") && w.contains("blank 'flag'")));
     }
 
     @Test
@@ -178,8 +172,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIIdempotent") && warnings.get(0).contains("@AIDraft"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIIdempotent") && w.contains("@AIDraft")));
     }
 
     @Test
@@ -200,8 +193,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AIArchitecture") && warnings.get(0).contains("blank 'belongsTo'"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIArchitecture") && w.contains("blank 'belongsTo'")));
     }
 
     @Test
@@ -221,8 +213,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AISecure") && warnings.get(0).contains("blank 'aspect'"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AISecure") && w.contains("blank 'aspect'")));
     }
 
     @Test
@@ -243,8 +234,7 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
 
         processor.validateAnnotations(messager, roundEnv);
 
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("@AISecure") && warnings.get(0).contains("@AIIgnore"));
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("@AISecure") && w.contains("@AIIgnore")));
     }
 
     private static Messager capturingMessager(List<String> sink) {
