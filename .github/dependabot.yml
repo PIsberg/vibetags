@@ -4,6 +4,20 @@ updates:
     directory: /
     schedule:
       interval: daily
+    groups:
+      # init, analyze and upload-sarif are three entry points into one action repo, and
+      # CodeQL refuses to run them at different versions: init stamps its config with its
+      # own version and analyze's post step rejects a config it did not write, with
+      # "Loaded a configuration file for version X, but running version Y".
+      #
+      # Dependabot bills each path as its own dependency, so ungrouped it opened one PR
+      # per entry point (#367 for init, #368 for analyze). Each PR moved half the pair,
+      # so each failed CI on its own and neither could merge — the bump deadlocked until
+      # someone hand-merged them. Grouping puts every codeql-action path in one PR that
+      # is consistent by construction.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   - package-ecosystem: npm
     directory: /
