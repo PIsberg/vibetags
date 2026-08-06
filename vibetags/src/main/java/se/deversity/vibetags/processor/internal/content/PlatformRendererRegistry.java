@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.internal.content.platforms.*;
 
 /**
@@ -27,6 +28,14 @@ public final class PlatformRendererRegistry {
     private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
+    private static final ClaudeLocalRenderer CLAUDE_LOCAL_RENDERER = new ClaudeLocalRenderer();
+    private static final ClaudeSkillRenderer CLAUDE_SKILL_RENDERER = new ClaudeSkillRenderer();
+    private static final CodeRabbitRenderer CODERABBIT_RENDERER = new CodeRabbitRenderer();
+    private static final PrAgentRenderer PR_AGENT_RENDERER = new PrAgentRenderer();
+    private static final EllipsisRenderer ELLIPSIS_RENDERER = new EllipsisRenderer();
+    private static final VoidRenderer VOID_RENDERER = new VoidRenderer();
+    private static final RooModesRenderer ROO_MODES_RENDERER = new RooModesRenderer();
+    private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
 
     private PlatformRendererRegistry() {}
@@ -38,6 +47,51 @@ public final class PlatformRendererRegistry {
      * @return the associated PlatformRenderer
      */
     public static PlatformRenderer getRenderer(Platform platform) {
+        PlatformRenderer renderer = findRenderer(platform);
+        if (renderer == null) {
+            throw new IllegalArgumentException("Unsupported platform: " + platform);
+        }
+        return renderer;
+    }
+
+    /**
+     * The merge shape declared by the renderer behind {@code serviceKey}, or {@code null} when the
+     * service has no renderer or its output is plain concatenable text.
+     *
+     * <p>Takes a service key rather than a {@link Platform} because the multi-module merge only ever
+     * knows the key, and not every key has a renderer at all — {@code root_index} is an opt-in file
+     * and nothing else, so this must answer "no shape" rather than throw.
+     *
+     * @param serviceKey the service key, e.g. {@code "sweep"}
+     * @return the declared shape, or {@code null}
+     */
+    public static @Nullable YamlMergeShape mergeShapeFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return null;
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? null : renderer.mergeShape();
+    }
+
+    /**
+     * The whole-file merge declared by the renderer behind {@code serviceKey}, or {@code null} when
+     * the service has no renderer, its file carries markers, or its output holds no per-element
+     * content.
+     *
+     * @param serviceKey the service key, e.g. {@code "mentat"}
+     * @return the declared merge, or {@code null}
+     */
+    public static @Nullable WholeFileMerge wholeFileMergeFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return null;
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? null : renderer.wholeFileMerge();
+    }
+
+    private static @Nullable PlatformRenderer findRenderer(Platform platform) {
         switch (platform) {
             case CURSOR:
                 return CURSOR_RENDERER;
@@ -73,6 +127,11 @@ public final class PlatformRendererRegistry {
             case DOUBLE_IGNORE:
             case CODEIUM_IGNORE:
             case ANTIGRAVITY_IGNORE:
+            case REPOMIX_IGNORE:
+            case GITINGEST_IGNORE:
+            case GPT_IGNORE:
+            case GHOSTCODER_IGNORE:
+            case PIECES_IGNORE:
                 return IGNORE_FILE_RENDERER;
             case WINDSURF:
                 return WINDSURF_RENDERER;
@@ -94,6 +153,22 @@ public final class PlatformRendererRegistry {
                 return JUNIE_RENDERER;
             case FIREBASE:
                 return FIREBASE_RENDERER;
+            case CLAUDE_LOCAL:
+                return CLAUDE_LOCAL_RENDERER;
+            case CLAUDE_SKILL:
+                return CLAUDE_SKILL_RENDERER;
+            case CODERABBIT:
+                return CODERABBIT_RENDERER;
+            case PR_AGENT:
+                return PR_AGENT_RENDERER;
+            case ELLIPSIS:
+                return ELLIPSIS_RENDERER;
+            case VOID:
+                return VOID_RENDERER;
+            case ROO_MODES:
+                return ROO_MODES_RENDERER;
+            case LOCKS_REPORT:
+                return LOCKS_REPORT_RENDERER;
             case CURSOR_GRANULAR:
             case TRAE_GRANULAR:
             case ROO_GRANULAR:
@@ -104,9 +179,11 @@ public final class PlatformRendererRegistry {
             case AI_RULES_GRANULAR:
             case PEARAI_GRANULAR:
             case KIRO_GRANULAR:
+            case CLAUDE_GRANULAR:
+            case COPILOT_GRANULAR:
                 return GRANULAR_RENDERER;
             default:
-                throw new IllegalArgumentException("Unsupported platform: " + platform);
+                return null;
         }
     }
 

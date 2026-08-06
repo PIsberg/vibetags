@@ -71,7 +71,7 @@ class AnnotationDefinitionsTest {
     void testAIContextDefaultValues() throws NoSuchMethodException {
         Method focusMethod = AIContext.class.getDeclaredMethod("focus");
         Method avoidsMethod = AIContext.class.getDeclaredMethod("avoids");
-        
+
         assertEquals("", focusMethod.getDefaultValue());
         assertEquals("", avoidsMethod.getDefaultValue());
     }

@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies that the annotations are correctly processed and produce expected prompt outputs
  * across the major platforms.
  */
+@Tag("e2e")
 class NewAnnotationsV5EndToEndTest {
 
     @TempDir
@@ -79,7 +81,21 @@ class NewAnnotationsV5EndToEndTest {
 
     @Test
     void idempotent_agentsMdContainsSection() throws IOException {
-        String agents = harness.readFile("AGENTS.md");
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule);
+        // the shared harness opts in to many platforms, so use an isolated AGENTS-only harness.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-v5");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.idempotent.PaymentHandler",
+            "package com.example.idempotent;\n"
+                + "import se.deversity.vibetags.annotations.AIIdempotent;\n"
+                + "public class PaymentHandler {\n"
+                + "  @AIIdempotent(reason = \"Deduplication key ensures re-sends are safe.\")\n"
+                + "  public void processPayment(String deduplicationKey) {}\n"
+                + "}\n");
+        h.compile();
+
+        String agents = h.readFile("AGENTS.md");
         assertTrue(agents.contains("IDEMPOTENCY"), "AGENTS.md must contain idempotency section");
         assertTrue(agents.contains("com.example.idempotent.PaymentHandler.processPayment"), "AGENTS.md must list the annotated method");
     }

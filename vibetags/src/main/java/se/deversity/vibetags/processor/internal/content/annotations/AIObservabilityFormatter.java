@@ -2,10 +2,10 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIObservability;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -13,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIObservabilityFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIObservability obs = element.getAnnotation(AIObservability.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIObservability obs = element.annotation(AIObservability.class);
         if (obs == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String[] metrics = obs.metrics();
         String[] traces = obs.traces();
         String[] logs = obs.logs();
@@ -33,11 +33,11 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
-                for (String m : metrics) sb.append("      <metric>").append(m).append("</metric>\n");
-                for (String t : traces)  sb.append("      <trace>").append(t).append("</trace>\n");
-                for (String l : logs)    sb.append("      <log>").append(l).append("</log>\n");
-                if (!note.isEmpty()) sb.append("      <note>").append(note).append("</note>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
+                for (String m : metrics) sb.append("      <metric>").append(Escape.xml(m)).append("</metric>\n");
+                for (String t : traces)  sb.append("      <trace>").append(Escape.xml(t)).append("</trace>\n");
+                for (String l : logs)    sb.append("      <log>").append(Escape.xml(l)).append("</log>\n");
+                if (!note.isEmpty()) sb.append("      <note>").append(Escape.xml(note)).append("</note>\n");
                 sb.append("    </element>\n");
                 break;
             case CODEX:
@@ -54,7 +54,7 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n");

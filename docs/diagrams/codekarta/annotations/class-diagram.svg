@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1264" height="834" viewBox="0 0 1264 834">
+<defs>
+<style>
+svg { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important; }
+.node-rect { transition: filter 0.2s ease, stroke-width 0.2s ease, stroke 0.2s ease; }
+.node-rect:hover { stroke-width: 2.2 !important; filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.12)) !important; }
+.edge-line { stroke-linecap: round; stroke-linejoin: round; transition: stroke-width 0.2s ease; }
+.edge-line:hover { stroke-width: 2.5 !important; }
+.edge-label { paint-order: stroke; stroke: #f9fafb; stroke-width: 3; font-weight: 500; }
+.diagram-attribution { fill: #9ca3af; text-decoration: none; transition: fill 0.2s ease; }
+.diagram-attribution:hover { fill: #4b5563; text-decoration: underline; }
+.group-rect { transition: stroke-width 0.2s ease; }
+.node-label { pointer-events: none; }
+</style>
+<filter id="nodeShadow" x="-20%" y="-20%" width="140%" height="140%">
+  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.08"/>
+</filter>
+<linearGradient id="grad-CLASS" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#ffffff"/>
+  <stop offset="100%" stop-color="#f3f4f6"/>
+</linearGradient>
+<linearGradient id="grad-INTERFACE" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#eff6ff"/>
+  <stop offset="100%" stop-color="#dbeafe"/>
+</linearGradient>
+<linearGradient id="grad-MODULE" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#faf5ff"/>
+  <stop offset="100%" stop-color="#ede9fe"/>
+</linearGradient>
+<linearGradient id="grad-METHOD" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#fffbeb"/>
+  <stop offset="100%" stop-color="#fef3c7"/>
+</linearGradient>
+<linearGradient id="grad-PACKAGE" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#ecfdf5"/>
+  <stop offset="100%" stop-color="#d1fae5"/>
+</linearGradient>
+<linearGradient id="grad-EXCEPTION" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#fef2f2"/>
+  <stop offset="100%" stop-color="#fee2e2"/>
+</linearGradient>
+<linearGradient id="grad-STATE" x1="0%" y1="0%" x2="0%" y2="100%">
+  <stop offset="0%" stop-color="#f0f9ff"/>
+  <stop offset="100%" stop-color="#e0f2fe"/>
+</linearGradient>
+<pattern id="dotGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+  <circle cx="2" cy="2" r="1" fill="#e5e7eb"/>
+</pattern>
+</defs>
+<rect width="1264" height="834" fill="#f9fafb"/>
+<rect width="1264" height="834" fill="url(#dotGrid)"/>
+<rect class="group-rect" x="10.0" y="10.0" width="1208.0" height="744.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<text x="16.0" y="23.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.annotations</text>
+<g id="AIArchitecture">
+  <title>AIArchitecture [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIArchitecture</text>
+</g>
+<g id="AIAudit">
+  <title>AIAudit [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIAudit</text>
+</g>
+<g id="AIBannedApi">
+  <title>AIBannedApi [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIBannedApi</text>
+</g>
+<g id="AICallersOnly">
+  <title>AICallersOnly [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AICallersOnly</text>
+</g>
+<g id="AIContext">
+  <title>AIContext [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIContext</text>
+</g>
+<g id="AIContract">
+  <title>AIContract [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="24.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="67.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIContract</text>
+</g>
+<g id="AICore">
+  <title>AICore [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AICore</text>
+</g>
+<g id="AIDeprecated">
+  <title>AIDeprecated [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIDeprecated</text>
+</g>
+<g id="AIDomainModel">
+  <title>AIDomainModel [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIDomainModel</text>
+</g>
+<g id="AIDraft">
+  <title>AIDraft [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIDraft</text>
+</g>
+<g id="AIExplain">
+  <title>AIExplain [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIExplain</text>
+</g>
+<g id="AIExtensible">
+  <title>AIExtensible [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="157.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIExtensible</text>
+</g>
+<g id="AIFeatureFlag">
+  <title>AIFeatureFlag [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIFeatureFlag</text>
+</g>
+<g id="AIGenerated">
+  <title>AIGenerated [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIGenerated</text>
+</g>
+<g id="AIIdempotent">
+  <title>AIIdempotent [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIIdempotent</text>
+</g>
+<g id="AIIgnore">
+  <title>AIIgnore [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIIgnore</text>
+</g>
+<g id="AIImmutable">
+  <title>AIImmutable [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIImmutable</text>
+</g>
+<g id="AIInputSanitized">
+  <title>AIInputSanitized [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIInputSanitized</text>
+</g>
+<g id="AIInternationalized">
+  <title>AIInternationalized [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIInternationalized</text>
+</g>
+<g id="AIKeepInSync">
+  <title>AIKeepInSync [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIKeepInSync</text>
+</g>
+<g id="AILegacyBridge">
+  <title>AILegacyBridge [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AILegacyBridge</text>
+</g>
+<g id="AILoadBearing">
+  <title>AILoadBearing [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AILoadBearing</text>
+</g>
+<g id="AILocked">
+  <title>AILocked [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AILocked</text>
+</g>
+<g id="AIMemoryBudget">
+  <title>AIMemoryBudget [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIMemoryBudget</text>
+</g>
+<g id="AIObservability">
+  <title>AIObservability [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIObservability</text>
+</g>
+<g id="AIParallelTests">
+  <title>AIParallelTests [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIParallelTests</text>
+</g>
+<g id="AIPerformance">
+  <title>AIPerformance [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIPerformance</text>
+</g>
+<g id="AIPrivacy">
+  <title>AIPrivacy [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIPrivacy</text>
+</g>
+<g id="AIPrototype">
+  <title>AIPrototype [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIPrototype</text>
+</g>
+<g id="AIPublicAPI">
+  <title>AIPublicAPI [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIPublicAPI</text>
+</g>
+<g id="AIPure">
+  <title>AIPure [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIPure</text>
+</g>
+<g id="AIRegulation">
+  <title>AIRegulation [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIRegulation</text>
+</g>
+<g id="AISandboxOnly">
+  <title>AISandboxOnly [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AISandboxOnly</text>
+</g>
+<g id="AISchemaSafe">
+  <title>AISchemaSafe [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AISchemaSafe</text>
+</g>
+<g id="AISecure">
+  <title>AISecure [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AISecure</text>
+</g>
+<g id="AISecureLogging">
+  <title>AISecureLogging [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="474.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="517.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AISecureLogging</text>
+</g>
+<g id="AIStrictClasspath">
+  <title>AIStrictClasspath [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIStrictClasspath</text>
+</g>
+<g id="AIStrictExceptions">
+  <title>AIStrictExceptions [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIStrictExceptions</text>
+</g>
+<g id="AIStrictTypes">
+  <title>AIStrictTypes [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIStrictTypes</text>
+</g>
+<g id="AISunset">
+  <title>AISunset [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AISunset</text>
+</g>
+<g id="AITemporary">
+  <title>AITemporary [CLASS]</title>
+  <rect class="node-rect" x="824.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AITemporary</text>
+</g>
+<g id="AITestDriven">
+  <title>AITestDriven [CLASS]</title>
+  <rect class="node-rect" x="1024.0" y="564.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="607.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AITestDriven</text>
+</g>
+<g id="AIThreadAffinity">
+  <title>AIThreadAffinity [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="654.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="697.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIThreadAffinity</text>
+</g>
+<g id="AIThreadSafe">
+  <title>AIThreadSafe [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="654.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="697.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIThreadSafe</text>
+</g>
+<script type="text/javascript">
+<![CDATA[
+document.addEventListener('DOMContentLoaded', () => {
+  const svg = document.querySelector('svg');
+  if (!svg) return;
+  const nodes = Array.from(svg.querySelectorAll('g')).filter(g => g.querySelector('.node-rect'));
+  const edges = Array.from(svg.querySelectorAll('.edge-line, .edge-label'));
+  nodes.forEach(node => {
+    node.style.cursor = 'pointer';
+    node.addEventListener('mouseenter', () => {
+      const nodeId = node.id;
+      nodes.forEach(n => {
+        if (n.id !== nodeId) {
+          n.style.opacity = '0.15';
+          n.style.transition = 'opacity 0.2s ease';
+        }
+      });
+      const connectedNodeIds = new Set([nodeId]);
+      edges.forEach(edge => {
+        const source = edge.getAttribute('data-source');
+        const target = edge.getAttribute('data-target');
+        const isConnected = (source === nodeId || target === nodeId || 
+                             (source && source.startsWith(nodeId + '.')) || 
+                             (target && target.startsWith(nodeId + '.')) ||
+                             (nodeId && nodeId.startsWith(source + '.')) ||
+                             (nodeId && nodeId.startsWith(target + '.')));
+        if (isConnected) {
+          if (source) connectedNodeIds.add(source);
+          if (target) connectedNodeIds.add(target);
+          const dotSrc = source ? source.lastIndexOf('.') : -1;
+          if (dotSrc > 0) connectedNodeIds.add(source.substring(0, dotSrc));
+          const dotTgt = target ? target.lastIndexOf('.') : -1;
+          if (dotTgt > 0) connectedNodeIds.add(target.substring(0, dotTgt));
+          edge.style.opacity = '1';
+          if (edge.classList.contains('edge-line')) {
+            edge.style.strokeWidth = '2.8px';
+          }
+          edge.style.fontWeight = 'bold';
+          edge.style.transition = 'opacity 0.2s ease, stroke-width 0.2s ease';
+        } else {
+          edge.style.opacity = '0.08';
+          edge.style.transition = 'opacity 0.2s ease';
+        }
+      });
+      nodes.forEach(n => {
+        if (connectedNodeIds.has(n.id)) {
+          n.style.opacity = '1';
+        }
+      });
+    });
+    node.addEventListener('mouseleave', () => {
+      nodes.forEach(n => {
+        n.style.opacity = '1';
+      });
+      edges.forEach(edge => {
+        edge.style.opacity = '1';
+        edge.style.strokeWidth = '';
+        edge.style.fontWeight = '';
+      });
+    });
+  });
+});
+]]>
+</script>
+<a class="diagram-attribution" href="https://github.com/PIsberg/codekarta" target="_blank" rel="noopener noreferrer">
+  <text x="1248.0" y="818.0" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
+</a>
+</svg>

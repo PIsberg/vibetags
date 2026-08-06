@@ -17,7 +17,7 @@ public @interface AICore {
      * @return the sensitivity level
      */
     String sensitivity() default "High";
-    
+
     /**
      * Specific note or warning regarding why this core logic is sensitive.
      * @return the warning note

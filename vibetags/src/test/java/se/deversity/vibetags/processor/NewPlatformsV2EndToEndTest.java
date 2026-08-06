@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * End-to-end tests for platforms added in v0.8.0:
  * PearAI (granular), Mentat, Sweep, Plandex, Double.bot, Open Interpreter, and Codeium.
  */
+@Tag("e2e")
 class NewPlatformsV2EndToEndTest {
 
     @TempDir
@@ -89,6 +91,19 @@ class NewPlatformsV2EndToEndTest {
         assertTrue(content.trim().endsWith("}"), "Should end with }");
         assertTrue(content.contains("\"_generated_by\": \"VibeTags\""), "Should have generated_by field");
         assertTrue(content.contains("\"rules\""), "Should have rules object");
+    }
+
+    @Test
+    void testMentatConfigHasNoTrailingCommas() throws IOException {
+        String content = harness.readFile(".mentatconfig.json");
+
+        // JSON forbids trailing commas ("...],\n  }" is invalid). A strict parser —
+        // which is what Mentat uses to read its own config — rejects the whole file,
+        // so every guardrail in it is silently ignored.
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(",\\s*[}\\]]").matcher(content);
+        assertFalse(m.find(),
+            "Generated .mentatconfig.json contains a trailing comma before a closing brace/bracket "
+                + "— invalid JSON, strict parsers reject the entire file:\n" + content);
     }
 
     @Test
@@ -185,6 +200,19 @@ class NewPlatformsV2EndToEndTest {
 
         assertTrue(content.contains("audit:"), "Should have audit: section");
         assertTrue(content.contains("DatabaseConnector"), "Should mention @AIAudit DatabaseConnector");
+    }
+
+    @Test
+    void testPlandexYamlHasPrivacySection() throws IOException {
+        String content = harness.readFile(".plandex.yaml");
+
+        // PlandexRenderer builds a privacy section from collector.privacy() — if the
+        // formatter has no PLANDEX case, the loop is a silent no-op and every
+        // @AIPrivacy guardrail is missing from .plandex.yaml.
+        assertTrue(content.contains("privacy:"),
+            "Should have privacy: section — the sources contain @AIPrivacy on UserProfile.email");
+        assertTrue(content.contains("UserProfile"), "Should mention the @AIPrivacy element");
+        assertTrue(content.contains("Contains PII - GDPR protected"), "Should carry the privacy reason");
     }
 
     // -----------------------------------------------------------------------

@@ -4,41 +4,36 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>se.deversity.vibetags</groupId>
+    <!-- Versions, plugin declarations and the publishing setup all live in the parent.
+         relativePath keeps this buildable straight from a checkout without installing the
+         parent first, and flatten-maven-plugin (inherited) removes the parent from the POM
+         that reaches Maven Central. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
     <artifactId>vibetags-processor</artifactId>
-    <version>0.9.8</version>
     <packaging>jar</packaging>
+
+    <!-- Declared, not inherited: Maven appends the artifactId to an inherited project url. -->
+    <url>https://github.com/PIsberg/vibetags</url>
 
     <name>VibeTags Processor</name>
     <description>Java annotation processor that generates AI platform-specific guardrail configuration files at compile time.</description>
-    <url>https://github.com/PIsberg/vibetags</url>
-
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>PIsberg</id>
-            <name>Peter Isberg</name>
-            <url>https://github.com/PIsberg</url>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:git://github.com/PIsberg/vibetags.git</connection>
-        <developerConnection>scm:git:ssh://github.com/PIsberg/vibetags.git</developerConnection>
-        <url>https://github.com/PIsberg/vibetags/tree/main</url>
-    </scm>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>6.1.0</junit.version>
+        <!-- Flipped to true by CI so -Pself-annotate verifies the committed guardrails
+             instead of rewriting them. Off by default: the profile regenerates. -->
+        <vibetags.selfcheck>false</vibetags.selfcheck>
+
+        <!-- JUnit tags surefire skips by default, so `mvn test` stays a fast local
+             loop. Emptied by -Pe2e, which CI uses to run the whole suite. Every test
+             class over 5s in the 2026-08-06 baseline carries @Tag("e2e"); the rule and
+             the measurement are in docs/TESTS.md. -->
+        <vibetags.test.excludedGroups>e2e</vibetags.test.excludedGroups>
     </properties>
 
     <dependencies>
@@ -50,7 +45,6 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-annotations</artifactId>
-            <version>0.9.8</version>
         </dependency>
 
         <!-- JSpecify null annotations (@NullMarked, @Nullable, @NonNull).
@@ -60,7 +54,6 @@
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>
-            <version>1.0.0</version>
         </dependency>
 
         <!-- Logging: SLF4J API + Logback file appender for vibetags.log.
@@ -75,42 +68,52 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.18</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.33</version>
         </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>se.deversity.async-test-lib</groupId>
             <artifactId>async-test-lib</artifactId>
-            <version>1.6.0</version>
+            <!-- Version in the parent (async-test-lib.version). Resolves from Maven Central like any
+                 other dependency; CI no longer builds it from a git tag. Do not take
+                 `versions:display-dependency-updates` at its word here: it
+                 reports 1.7.0, which exists only as a local install on the maintainer's machine
+                 and is a 404 on Central. Check
+                 repo1.maven.org/maven2/se/deversity/async-test-lib/async-test-lib/maven-metadata.xml
+                 before bumping. -->
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
-            <version>1.4.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.23.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.23.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Test-only. The processor writes six YAML documents but must not gain a YAML
+             dependency: it runs on the consumer's annotation-processor path, where every
+             extra jar is one more thing to collide with. The tests need a real parser
+             because "the file looks right" is not the property that matters - "the tool
+             reading it sees every module's guardrails" is, and only a parser shows that. -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -120,7 +123,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
                 <configuration>
                     <!-- Disable annotation processing for the processor itself -->
                     <compilerArgs>
@@ -130,7 +132,12 @@
                         <path>
                             <groupId>com.google.errorprone</groupId>
                             <artifactId>error_prone_core</artifactId>
-                            <version>2.49.0</version>
+                            <version>${error-prone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -143,9 +150,47 @@
                                 <arg>-proc:none</arg>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
-                                <!-- UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag
-                                     which was removed in JDK 26; disable until Error Prone fixes it -->
-                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF</arg>
+                                <!-- One arg, because javac accepts a single -Xplugin value and
+                                     Error Prone parses the rest of that string itself.
+
+                                     UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag,
+                                     removed in JDK 26; disable until Error Prone fixes it.
+
+                                     NullAway: the codebase already annotates with JSpecify @Nullable,
+                                     and this is what turns those annotations from documentation into a
+                                     gate. ERROR rather than WARNING on purpose — a nullability warning
+                                     nobody has to fix is one more line of build output people learn to
+                                     scroll past. JSpecifyMode reads @Nullable with JSpecify's own
+                                     semantics (generics included) rather than NullAway's legacy ones.
+                                     javac's own model is left unannotated: Element.getEnclosingElement()
+                                     and friends return null and say nothing about it, so treating
+                                     javax.lang.model as annotated would only produce false confidence.
+
+                                     No class is excluded: the guard NullAway asked for inside
+                                     generateFiles() was agreed and added, so every class is
+                                     checked. Do not reintroduce UnannotatedClasses — an exclusion
+                                     is invisible in the build output, which makes it the one kind
+                                     of gap nobody notices growing.
+
+                                     Three checks are OFF, and the reason is the same each time: a
+                                     warning nobody is going to act on trains people to scroll past
+                                     the ones that matter. The substantive findings Error Prone
+                                     raised here (StringSplitter's dropped trailing fields, four
+                                     swallowed IOExceptions, a redundant continue, LocalDate.now()'s
+                                     hidden time zone) were fixed rather than muted, so the build
+                                     now emits zero Error Prone warnings and the next one is visible.
+
+                                     StatementSwitchToExpressionSwitch (58 hits): a pure style
+                                     preference. Every one of them is a statement switch whose arms
+                                     return, in a renderer or formatter; rewriting all 58 is churn
+                                     across the output-generating layer with no behaviour to gain.
+                                     StringConcatToTextBlock: the literals it names are generated
+                                     file content, where explicit \n beats an indented text block
+                                     whose leading whitespace is a rendering bug waiting to happen.
+                                     InlineMeSuggester: @InlineMe is a caller-migration tool for
+                                     published libraries; the deprecated methods it names are
+                                     package-internal test seams. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:StatementSwitchToExpressionSwitch:OFF -Xep:StringConcatToTextBlock:OFF -Xep:InlineMeSuggester:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:UnannotatedSubPackages=javax.lang.model,javax.annotation.processing,com.sun.source</arg>
                                 <arg>-XDshould-stop.ifError=FLOW</arg>
                             </compilerArgs>
                         </configuration>
@@ -155,15 +200,15 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.6</version>
                 <configuration>
                     <argLine>${argLine} -Dnet.bytebuddy.experimental=true -Dlicense.mock.mode=true</argLine>
+                    <!-- Empty in -Pe2e so CI runs everything. See the property comment. -->
+                    <excludedGroups>${vibetags.test.excludedGroups}</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.28.0</version>
                 <configuration>
                     <failOnViolation>true</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
@@ -180,23 +225,13 @@
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-core</artifactId>
-                        <version>7.24.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-java</artifactId>
-                        <version>7.24.0</version>
-                    </dependency>
-                </dependencies>
+                <!-- pmd-core/pmd-java are pinned by the parent's pluginManagement entry for this
+                     plugin. Plugin-level <dependencies> do not take their versions from
+                     pluginManagement, so they cannot be declared version-less here. -->
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.14</version>
                 <executions>
                     <execution>
                         <goals>
@@ -212,11 +247,27 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <!-- Implementation-Version feeds ProcessorVersion → BuildFingerprint,
+                                 so a processor upgrade invalidates stale .vibetags-cache fingerprints. -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- Stable JPMS module name for modular consumers; changing it after 1.0 is breaking. -->
+                            <Automatic-Module-Name>se.deversity.vibetags.processor</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
             <!-- Required for Maven Central publishing: sources JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -230,7 +281,28 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
+                <configuration>
+                    <!--
+                      The published javadoc documents what a consumer can actually use. Everything
+                      under processor.internal is the compiler-facing half — ArchitectureRulesTest
+                      polices its dependency direction precisely because it is free to change — so
+                      shipping it here would invite people to bind to classes with no stability
+                      promise.
+
+                      processor.model goes with it: it is the compiler-free data layer the
+                      renderers read, not something a consumer calls. Its 74 undocumented
+                      methods are a contributor-facing gap, not a published one.
+
+                      Between them they hold every javadoc warning in this module, so
+                      excluding them makes the artifact honest and lets doclint be fatal
+                      on the surface that really is API, rather than trading one for the
+                      other. Note javadoc caps output at -Xmaxwarns (100 by default), so
+                      a count of exactly 100 is a cap and not a total.
+                    -->
+                    <excludePackageNames>se.deversity.vibetags.processor.internal:se.deversity.vibetags.processor.internal.*:se.deversity.vibetags.processor.model</excludePackageNames>
+                    <doclint>all</doclint>
+                    <failOnWarnings>true</failOnWarnings>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -243,13 +315,25 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.9.8.3</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>
                     <includeTests>false</includeTests>
                     <failOnError>true</failOnError>
                     <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
+                    <!-- Find Security Bugs: adds ~140 security detectors (injection, crypto,
+                         path traversal, XXE, deserialization) on top of the SpotBugs core set. -->
+                    <plugins>
+                        <plugin>
+                            <groupId>com.h3xstream.findsecbugs</groupId>
+                            <artifactId>findsecbugs-plugin</artifactId>
+                            <version>${findsecbugs-plugin.version}</version>
+                        </plugin>
+                    </plugins>
+                    <!-- Teaches the taint analysis that Escape.xml/json/tomlMultiline sanitize.
+                         Without it every escaped interpolation is reported as an injection, and
+                         the detector stops being able to point at a genuinely unescaped one. -->
+                    <jvmArgs>-Dfindsecbugs.taint.customconfigfile=${project.basedir}/findsecbugs-taint-config.txt</jvmArgs>
                 </configuration>
                 <executions>
                     <execution>
@@ -263,7 +347,6 @@
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
-                <version>2.9.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -289,7 +372,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.6.0</version>
                 <configuration>
                     <configLocation>${project.basedir}/../checkstyle.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
@@ -322,6 +404,39 @@
     </distributionManagement>
 
     <profiles>
+        <!-- Adds the @Tag("e2e") classes back to the run. Without it `mvn test` skips
+             them, which is what keeps the local loop fast; with it the suite is
+             complete. CI passes -Pe2e on every leg that runs tests, so nothing merges
+             without the full suite having run somewhere.
+             Usage: mvn test -Pe2e  (from the vibetags/ directory) -->
+        <profile>
+            <id>e2e</id>
+            <properties>
+                <vibetags.test.excludedGroups/>
+            </properties>
+        </profile>
+
+        <!-- Naming a test explicitly means you want that test, tag or no tag.
+             Without this, `mvn test -Dtest=WriteCacheProcessorIntegrationTest` prints
+             "Tests run: 0" and BUILD SUCCESS — the tag filter drops the class after
+             -Dtest selects it, and failIfNoSpecifiedTests does not fire because the
+             class was found. A green build that ran nothing is the exact failure this
+             split is supposed to avoid, so -Dtest clears the exclusion. Verified by
+             running `mvn test -Dtest=WriteCacheProcessorIntegrationTest` with and
+             without this profile: 0 tests before, 3 after. build.gradle does the same
+             for Gradle's test-name filter. -->
+        <profile>
+            <id>named-test-overrides-tags</id>
+            <activation>
+                <property>
+                    <name>test</name>
+                </property>
+            </activation>
+            <properties>
+                <vibetags.test.excludedGroups/>
+            </properties>
+        </profile>
+
         <!-- Central Portal publishing (Maven Central) -->
         <profile>
             <id>central-publish</id>
@@ -330,7 +445,6 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.10.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>central</publishingServerId>
@@ -352,13 +466,13 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-compiler-plugin</artifactId>
-                        <version>3.15.0</version>
                         <!-- combine.self="override" replaces the default configuration entirely,
                              discarding -proc:none so the annotation processor can run. -->
                         <configuration combine.self="override">
                             <compilerArgs>
                                 <arg>-Avibetags.root=${project.basedir}/..</arg>
                                 <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -368,6 +482,81 @@
                                 </path>
                             </annotationProcessorPaths>
                         </configuration>
+                        <executions>
+                            <!-- The plugin-level override above does NOT reach an execution that
+                                 carries its own <configuration>: default-compile pins -proc:none and
+                                 -Xplugin:ErrorProne, which would keep the processor off and then
+                                 fail outright ("plug-in not found: ErrorProne") once the Error Prone
+                                 path is gone. Override the execution too. -->
+                            <execution>
+                                <id>default-compile</id>
+                                <configuration combine.self="override">
+                                    <compilerArgs>
+                                        <arg>-Avibetags.root=${project.basedir}/..</arg>
+                                        <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
+                                <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
+                                    </compilerArgs>
+                                    <annotationProcessorPaths>
+                                        <path>
+                                            <groupId>se.deversity.vibetags</groupId>
+                                            <artifactId>vibetags-processor</artifactId>
+                                            <version>${project.version}</version>
+                                        </path>
+                                    </annotationProcessorPaths>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Mutation testing: mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+             pitest-junit5-plugin 1.2.2 is the latest release on Maven Central (Feb 2025); it has not
+             been certified against JUnit 6 by its maintainers, but 1.2.2's fix ("set junit-platform-launcher
+             to provided scope") removed the shaded-classes conflict that caused earlier JUnit-version
+             incompatibilities (see pitest/pitest-junit5-plugin#106), so it now defers to whatever
+             junit-platform-launcher is on this plugin's own classpath instead of bundling one — which is
+             why that artifact is declared explicitly below, pinned to ${junit.version} (6.1.1). -->
+        <profile>
+            <id>mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses>
+                                <param>se.deversity.vibetags.*</param>
+                            </targetClasses>
+                            <targetTests>
+                                <param>se.deversity.vibetags.*</param>
+                            </targetTests>
+                            <outputFormats>
+                                <param>HTML</param>
+                                <param>XML</param>
+                            </outputFormats>
+                            <timestampedReports>false</timestampedReports>
+                            <!-- PIT defaults to a single thread; GitHub-hosted ubuntu-latest runners
+                                 provide 4 vCPUs, so running mutants in parallel cuts wall-clock time
+                                 roughly proportionally without changing what gets analyzed. -->
+                            <threads>4</threads>
+                        </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>${pitest-junit5-plugin.version}</version>
+                            </dependency>
+                            <!-- Explicit, matching ${junit.version}: pitest-junit5-plugin 1.2.2 marks its
+                                 own junit-platform-launcher dependency "provided" rather than shading a
+                                 fixed version, so the host build must supply one on the plugin's classpath. -->
+                            <dependency>
+                                <groupId>org.junit.platform</groupId>
+                                <artifactId>junit-platform-launcher</artifactId>
+                                <version>${junit.version}</version>
+                            </dependency>
+                        </dependencies>
                     </plugin>
                 </plugins>
             </build>
@@ -381,7 +570,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.8</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>

@@ -3,6 +3,9 @@ package se.deversity.vibetags.processor.internal;
 import se.deversity.vibetags.annotations.AIContext;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
+import java.io.IOException;
+import org.jspecify.annotations.Nullable;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -38,7 +41,21 @@ public final class ServiceRegistry {
         // v0.9.7 platforms
         "cline", "junie", "kiro_granular",
         // Firebase AI
-        "firebase"
+        "firebase",
+        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+        "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+        // Gemini granular rules (#320): lets GEMINI.md collapse to a scoped-rules index
+        "gemini_granular",
+        // Context-packer ignore files
+        "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+        // AI pull-request reviewers
+        "coderabbit", "pr_agent", "ellipsis",
+        // Editors & modes
+        "void", "roo_modes",
+        // Machine-readable @AILocked report for CI diff guards
+        "locks_report",
+        // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
+        "root_index"
     );
 
     private ServiceRegistry() {}
@@ -98,33 +115,118 @@ public final class ServiceRegistry {
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
         map.put("firebase",      root.resolve(".idx/airules.md"));
+        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+        map.put("claude_local",     root.resolve("CLAUDE.local.md"));
+        map.put("claude_skill",     root.resolve(".claude/skills/vibetags-guardrails/SKILL.md"));
+        map.put("claude_granular",  root.resolve(".claude/rules"));
+        map.put("copilot_granular", root.resolve(".github/instructions"));
+        map.put("gemini_granular", root.resolve(".gemini/rules"));
+        // Context-packer ignore files
+        map.put("repomix_ignore",    root.resolve(".repomixignore"));
+        map.put("gitingest_ignore",  root.resolve(".gitingestignore"));
+        map.put("gpt_ignore",        root.resolve(".gptignore"));
+        map.put("ghostcoder_ignore", root.resolve(".ghostcoderignore"));
+        map.put("pieces_ignore",     root.resolve(".piecesignore"));
+        // AI pull-request reviewers
+        map.put("coderabbit",    root.resolve(".coderabbit.yaml"));
+        map.put("pr_agent",      root.resolve(".pr_agent.toml"));
+        map.put("ellipsis",      root.resolve("ellipsis.yaml"));
+        // Editors & modes
+        map.put("void",          root.resolve(".void/rules.md"));
+        map.put("roo_modes",     root.resolve(".roomodes"));
+        // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
+        map.put("locks_report",  root.resolve(".vibetags-locks"));
+        // Lean indexed root aggregate opt-in (multi-module). No renderer: presence only flips the
+        // reactor-root CLAUDE.md/.cursorrules/.windsurfrules/copilot-instructions.md merge from
+        // embedding each module's guardrails to linking the module's own scoped rule files.
+        map.put("root_index",    root.resolve(".vibetags-root-index"));
         return map;
     }
 
     /**
      * Resolves which primary services should have their files written. Only "signal" files
      * (e.g. CLAUDE.md, .cursorrules) are checked; their presence is the opt-in.
+     *
+     * <p>Special case for {@code AGENTS.md} (the {@code codex} service): it doubles as a
+     * near-universal agent-instructions file, and projects that use several AI tools frequently
+     * keep {@code AGENTS.md} only as a thin pointer to another tool's file (e.g. {@code CLAUDE.md}).
+     * To avoid clobbering such a pointer, {@code AGENTS.md} is treated as a write target only when
+     * it is the <em>sole</em> AI config file present. If any other service opted in, {@code codex}
+     * is dropped here, which also disables the Codex sidecar config it would otherwise drive.
+     *
+     * <p><strong>Marker escape hatch.</strong> The sole-file rule exists to protect hand-authored
+     * pointers, not to forbid a generated {@code AGENTS.md} outright — a Claude + Codex project
+     * could not have one at all. A file that already contains a VibeTags block
+     * ({@link GuardrailFileWriter#MARKER_START_MD}) was written by VibeTags in the first place, and
+     * {@code GuardrailFileWriter} only ever replaces the region between the markers, so refreshing
+     * it cannot destroy anything the user wrote by hand. Such a file therefore stays an active
+     * write target even alongside {@code CLAUDE.md}, {@code GEMINI.md} and friends. Paste a
+     * {@code VIBETAGS-START} / {@code VIBETAGS-END} comment pair into {@code AGENTS.md} to opt a
+     * multi-tool project into a generated Codex file.
      */
     public static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
-        Set<String> active = new HashSet<>();
+        boolean codexOptedIn = allServiceFiles.containsKey("codex") && Files.exists(allServiceFiles.get("codex"));
+        Set<String> active = resolveActiveServices(allServiceFiles);
 
-        allServiceFiles.forEach((key, path) -> {
-            if (!OPT_IN_KEYS.contains(key)) return;
-            if (Files.exists(path)) {
-                active.add(key);
-            }
-        });
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc); the
+        // quiet overload dropped it, so re-emit the explanatory note here for the root resolution.
+        if (codexOptedIn && !active.contains("codex")) {
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: AGENTS.md left untouched because other AI config files are present; "
+                + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
+                + "(remove the other AI config files), or paste a "
+                + GuardrailFileWriter.MARKER_START_MD + " / <!-- VIBETAGS-END --> pair into it, "
+                + "to have VibeTags manage it.");
+        }
 
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             allServiceFiles.entrySet().stream()
-                .filter(e -> OPT_IN_KEYS.contains(e.getKey()))
+                .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
 
         return active;
+    }
+
+    /**
+     * Quiet resolution — same file-existence opt-in and AGENTS.md sole-file logic as
+     * {@link #resolveActiveServices(Messager, Map)}, but emits no diagnostics. Used for per-module
+     * output scans, where a module directory with no opt-in files is the common case and must not
+     * spam a "nothing will be generated" note for every module in a reactor.
+     */
+    public static Set<String> resolveActiveServices(Map<String, Path> allServiceFiles) {
+        Set<String> active = new HashSet<>();
+        allServiceFiles.forEach((key, path) -> {
+            if (OPT_IN_KEYS.contains(key) && Files.exists(path)) {
+                active.add(key);
+            }
+        });
+        // AGENTS.md is only managed when it is the only AI config file present (see Javadoc),
+        // unless it already carries a VibeTags block — a marked file is one VibeTags generated,
+        // so refreshing it cannot clobber a hand-authored pointer.
+        if (active.contains("codex") && active.size() > 1
+                && !carriesGeneratedBlock(allServiceFiles.get("codex"))) {
+            active.remove("codex");
+        }
+        return active;
+    }
+
+    /**
+     * True when {@code path} already contains a VibeTags-generated markdown block. Unreadable
+     * files fall back to {@code false}, i.e. to the conservative sole-file rule.
+     */
+    private static boolean carriesGeneratedBlock(@Nullable Path path) {
+        if (path == null) {
+            return false;
+        }
+        try {
+            return Files.readString(path).contains(GuardrailFileWriter.MARKER_START_MD);
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
     }
 }

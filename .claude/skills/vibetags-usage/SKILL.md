@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
-description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary annotations, or wants to control how AI tools interact with Java code.
-version: 0.9.8
+description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
+version: 1.0.1
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>0.9.8</version>
+    <version>1.0.1</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:0.9.8'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.8'
+compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.1'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.1'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -34,6 +34,9 @@ VibeTags **never creates files** — it only updates files that already exist. C
 
 ```bash
 touch CLAUDE.md .claudeignore              # Claude / Claude Code
+touch CLAUDE.local.md                      # Claude Code (local override)
+mkdir -p .claude/rules                     # Claude Code (granular per-class rules)
+mkdir -p .claude/skills/vibetags-guardrails && touch .claude/skills/vibetags-guardrails/SKILL.md  # Claude Code (Skill)
 touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
@@ -41,8 +44,9 @@ mkdir -p .roo/rules                        # Roo Code (per-class rules)
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
-touch AGENTS.md                            # Codex CLI
+touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
+mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
 touch .windsurfrules                       # Windsurf IDE (traditional)
 mkdir -p .windsurf/rules                   # Windsurf IDE (granular per-class rules)
@@ -66,9 +70,31 @@ touch .clinerules                          # Cline AI assistant
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
+touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
+mkdir -p .void && touch .void/rules.md     # Void Editor
+touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
+
+> **`AGENTS.md` is special:** it is only generated when it is the **sole** AI config file in the
+> project. Since `AGENTS.md` is a near-universal agent file often kept as a pointer to another
+> tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
+> is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
+> managed.
+>
+> **Escape hatch (marker opt-in):** if you *want* a generated `AGENTS.md` alongside `CLAUDE.md`
+> — a Claude + Codex project, say — paste a marker pair into it:
+>
+> ```markdown
+> <!-- VIBETAGS-START -->
+> <!-- VIBETAGS-END -->
+> ```
+>
+> A file carrying the markers was written by VibeTags in the first place, and only the region
+> between them is ever replaced, so refreshing it cannot clobber your prose. Marked files stay
+> managed no matter how many other AI config files are present.
 
 ### 3. Annotate your Java code
 
@@ -81,6 +107,89 @@ import se.deversity.vibetags.annotations.*;
 ```bash
 mvn clean compile   # or: gradle clean build
 ```
+
+---
+
+## Project Structure — where guardrails live
+
+Guardrails are generated into **three tiers**, and which files exist decides which tiers you get.
+Getting the layout right matters more than getting the annotations right: the same annotation in the
+wrong layout ends up in a file the agent never loads.
+
+| Tier | Scope | File | When the agent reads it |
+|---|---|---|---|
+| **1 — Project** | Whole repo/reactor | `CLAUDE.md`, `.cursorrules`, `GEMINI.md`, … at the root | Always in context |
+| **2 — Module** | One module | `module-a/CLAUDE.md` | While working in that module |
+| **3 — Element/topic** | One class, or one role | `.claude/rules/*.md`, `.cursor/rules/*.mdc`, … | When it opens a matching source file |
+
+The tiers never duplicate each other. Opt into **Tier 1 + Tier 3 together** and the aggregate stops
+repeating what the scoped files already say: it keeps the always-on **safety tier** inline
+(`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest
+with a one-line index. That split is the whole point — a locked file has to be known *before* the
+agent opens it, while a performance constraint only matters once it is editing that method.
+
+### Single module
+
+```
+my-project/
+├── pom.xml
+├── CLAUDE.md                  ← Tier 1: always loaded
+├── .claude/rules/             ← Tier 3: loaded per file (collapses Tier 1 to an index)
+│   └── com-example-OrderService.md
+└── src/main/java/…
+```
+
+### Reactor — merged root (start here)
+
+Every module's guardrails are merged into one root file, each in its own `VIBETAGS-MODULE` region.
+**Every module must point at the reactor root**, or its guardrails silently never arrive:
+
+```xml
+<compilerArgs><arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg></compilerArgs>
+```
+
+```
+reactor/
+├── pom.xml
+├── CLAUDE.md                  ← every module's guardrails, merged
+├── .vibetags-mod-core         ← generated; gitignore these
+├── core/pom.xml
+└── app/pom.xml
+```
+
+A module that overrides `compilerArgs` or `annotationProcessorPaths` will not inherit that option
+and will generate into its own directory instead. VibeTags warns when it can tell that is what
+happened; heed it rather than wondering where the guardrails went.
+
+### Reactor — lean indexed root (recommended once it grows)
+
+Give each module its own scoped rules and add `.vibetags-root-index` at the reactor root. The root
+then keeps each module's **safety tier** inline and points at that module's own rules for the rest —
+in one real 5-module project, 537 lines of always-on context became 141.
+
+```
+reactor/
+├── .vibetags-root-index       ← the opt-in (empty file)
+├── CLAUDE.md                  ← per module: safety tier + a pointer
+├── core/.claude/rules/        ← that module's full detail
+└── app/.claude/rules/
+```
+
+Files can live at either level: `.github/instructions/` at the **root** collects every module's
+Copilot rules into one shared directory, while `.claude/rules/` inside each **module** keeps them
+per module. Both work; pick per platform.
+
+### Optional layout files
+
+| File | Where | Effect |
+|---|---|---|
+| `.vibetags-root-index` | reactor root | Lean indexed root (above) |
+| `.vibetags-roles` | root or module | Group scoped rules into human-named topic files instead of one per class |
+| `.vibetags-mirror` | consuming module | Copy sibling modules' scoped rules in, for a module that centralises tests |
+| `.vibetags-locks` | root | Machine-readable `@AILocked` report with source line numbers |
+| `.vibetags-baseline` | root | Committed approval record for the enforcing mode — commit it |
+
+`.vibetags-mod-*`, `.vibetags-cache` and `vibetags.log` are generated build state. Gitignore them.
 
 ---
 
@@ -431,14 +540,14 @@ Declares which architectural layer this class belongs to and which layers it mus
 Use on: **class, method**
 
 ```java
-@AILegacyBridge
+@AILegacyBridge(reason = "Mirrors a v1 payment-SDK quirk; 'cleaning it up' broke the gateway in 2023")
 public class LegacyPaymentAdapter {
     // Works around a quirk in the v1 payment provider SDK — must not be "cleaned up"
     public String formatAmount(double amount) { ... }
 }
 ```
 
-Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed.
+Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed. The optional `reason` records *why* across AI sessions and is surfaced in the generated output.
 
 When to use: SDK adapter shims, workarounds for upstream library bugs, compatibility wrappers kept alive for old API clients.
 
@@ -449,7 +558,7 @@ When to use: SDK adapter shims, workarounds for upstream library bugs, compatibi
 Use on: **class, method**
 
 ```java
-@AIStrictClasspath
+@AIStrictClasspath(reason = "Runs in the locked-down sandbox where the SecurityManager throws on reflection")
 public class DataParser {
     // Must only use JDK and existing compile-time classpath — no runtime class loading
 }
@@ -466,7 +575,7 @@ When to use: security-sensitive execution environments, GraalVM native-image tar
 Use on: **class, method**
 
 ```java
-@AIInternationalized
+@AIInternationalized(reason = "Ships in 11 locales; a hardcoded English string failed the l10n audit last quarter")
 public class NotificationTemplateRenderer {
     // All user-visible text must come from message bundles — never hardcoded
 }
@@ -483,7 +592,7 @@ When to use: UI components, REST error responses, email templates, notification 
 Use on: **class, method**
 
 ```java
-@AIPublicAPI
+@AIPublicAPI(reason = "Consumed by three external partner integrations pinned to v1")
 public class ProductSearchClient {
     public List<Product> search(String query, int maxResults) { ... }
 }
@@ -502,7 +611,7 @@ When to use: SDK entry points, REST controller response shapes, message schema c
 Use on: **class, field**
 
 ```java
-@AISchemaSafe
+@AISchemaSafe(reason = "Replicated to the billing read-model; column changes need a backward-compatible migration")
 @Entity
 public class UserEntity {
     @Column(name = "email", nullable = false)
@@ -521,7 +630,7 @@ When to use: JPA/Hibernate entities, Avro/Protobuf schema classes, JSON serializ
 Use on: **class, method**
 
 ```java
-@AIStrictExceptions
+@AIStrictExceptions(reason = "A bare catch(Exception) once swallowed a rollback and double-charged customers")
 public class PaymentGatewayClient {
     public Receipt charge(Money amount) throws PaymentDeclinedException { ... }
 }
@@ -538,7 +647,7 @@ When to use: external integrations, retry boundaries, error-handling layers, cod
 Use on: **class, method, field**
 
 ```java
-@AIStrictTypes
+@AIStrictTypes(reason = "Currency math broke in INC-4412 when a double leaked into the amount")
 public class PricingCalculator {
     // Use BigDecimal for money, Instant/ZonedDateTime for time — never double or String
     public BigDecimal calculateDiscount(Money basePrice, Percentage rate) { ... }
@@ -556,7 +665,7 @@ When to use: financial calculations, time/date handling, any domain model where 
 Use on: **class, method**
 
 ```java
-@AIParallelTests
+@AIParallelTests(reason = "A shared static counter caused flaky CI in build #4471 — keep cases isolated")
 public class OrderServiceTest {
     // Tests must not share mutable state or bind to fixed ports
 }
@@ -663,7 +772,7 @@ Restricts which packages or classes are permitted to invoke this method or class
 Use on: **class, method**
 
 ```java
-@AISandboxOnly
+@AISandboxOnly(reason = "Seeds fake credentials; a prod hotfix once imported it and leaked test data to staging")
 public class SandboxTestHelper { ... }
 ```
 
@@ -695,7 +804,7 @@ Restricts heap allocations, autoboxing, or object instantiation inside high-perf
 Use on: **method**
 
 ```java
-@AIPure
+@AIPure(reason = "Memoized by callers that assume referential transparency — no logging or caching side effects")
 public static int add(int a, int b) { return a + b; }
 ```
 
@@ -786,7 +895,7 @@ Enforces step-by-step mathematical/architectural Chain-of-Thought (CoT) explanat
 Use on: **class**
 
 ```java
-@AIPrototype
+@AIPrototype(reason = "Throwaway Q3 Kafka spike — no error handling on purpose; production must not depend on it")
 public class DraftKafkaIntegrationSpike { ... }
 ```
 
@@ -841,6 +950,140 @@ Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilat
 
 ---
 
+### `@AIGenerated` — Redirect edits to the true source
+
+Use on: **class, method, field**
+
+```java
+@AIGenerated(from = "src/main/resources/openapi/orders.yaml",
+             regenerateWith = "mvn generate-sources",
+             editInstead = "src/main/resources/openapi/orders.yaml")
+public class OrdersApiStub { ... }
+```
+
+A **redirect**, not a wall. `@AILocked` can only say "stop", which makes an agent give up or route around the obstacle; this names where the change belongs. `@AIIgnore` is wrong in the opposite direction — an agent must still *read* generated types to understand behavior, it must only never *write* them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `from` | `String` | *(required)* | The schema, template, IDL, or upstream repo this is generated from |
+| `regenerateWith` | `String` | `""` | Command that regenerates it (e.g. `"mvn generate-sources"`) |
+| `editInstead` | `String` | `""` | The file a human should actually change, when it differs from `from` |
+
+**Compile-time warnings:**
+
+- `@AIGenerated` + `@AIIgnore` — contradictory; generated code must stay readable
+- `@AIGenerated` + `@AIDraft` — contradictory; drafting output that gets overwritten is pointless
+- `@AIGenerated` with neither `regenerateWith` nor `editInstead` — a dead end rather than a redirect
+
+---
+
+### `@AILoadBearing` — "This looks wrong and is deliberate"
+
+Use on: **class, method, field, parameter**
+
+```java
+@AILoadBearing(invariant = "Sessions are never deallocated while the dispatch source is live",
+               breaksIf = "Freeing here reintroduces a use-after-free crash under load (#412)",
+               suppressAudit = true)
+private final List<Session> retained = new ArrayList<>();
+```
+
+Unlike `@AILocked`, edits are welcome — as long as the invariant survives. Also covers the **intentional omission** case (a decorator deliberately not applied), which nothing else can express because there is no element to annotate for something that is not there.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `invariant` | `String` | *(required)* | What must remain true after any change |
+| `breaksIf` | `String` | `""` | The concrete failure — crash, leak, silent desync |
+| `suppressAudit` | `boolean` | `false` | Tells reviewers and scanners the oddity is not a defect |
+
+**Compile-time warnings:**
+
+- `@AILoadBearing` with a blank `breaksIf` — advisory; the failure mode is what makes the rule stick
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory instructions to the same reviewer
+
+---
+
+### `@AIBannedApi` — Forbid symbols you cannot annotate
+
+Use on: **class, method**
+
+```java
+@AIBannedApi(forbidden = {"java.lang.System.out", "java.lang.System.err"},
+             useInstead = "the injected org.slf4j.Logger",
+             reason = "Console output bypasses structured logging")
+public class OrderService { ... }
+```
+
+Hosted on the **consumer** and pointing outward, because the symbols teams actually ban — `java.util.Date`, `System.out`, a framework's `@Scheduled` — are stdlib or third-party and cannot be annotated at all. `@AIArchitecture(cannotReference)` bans a *layer*, not a *symbol*, and carries no replacement.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `forbidden` | `String[]` | *(required)* | The forbidden symbols, types, or packages |
+| `useInstead` | `String` | `""` | The sanctioned replacement |
+| `reason` | `String` | `""` | Why the API is banned here |
+
+**Compile-time warnings:**
+
+- `@AIBannedApi` with an empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no route invites a worse substitute
+
+---
+
+### `@AIThreadAffinity` — Safe on exactly one thread
+
+Use on: **class, method**
+
+```java
+@AIThreadAffinity(value = AIThreadAffinity.Affinity.NAMED,
+                  thread = "Swing EDT",
+                  marshalVia = "SwingUtilities.invokeLater",
+                  symptomIfViolated = "Silent repaint corruption; no exception on most JDKs")
+public void refreshTable() { ... }
+```
+
+The inverse of `@AIThreadSafe`, which promises safety from *any* thread. These are opposite claims: tagging an EDT-pinned method `@AIThreadSafe` states something false, and leaving it untagged invites "let's move this off the main thread". An AI asked to make it thread-safe adds a lock — precisely the wrong fix, because the requirement is not mutual exclusion but *which* thread runs the call.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Affinity` | *(required)* | `MAIN_ONLY`, `NEVER_MAIN`, `BACKGROUND_ONLY`, or `NAMED` |
+| `thread` | `String` | `""` | The thread's name when `value` is `NAMED` |
+| `marshalVia` | `String` | `""` | How a caller on the wrong thread hands work across |
+| `symptomIfViolated` | `String` | `""` | What going wrong looks like — usually only under load |
+
+**Compile-time warnings:**
+
+- `@AIThreadAffinity` + `@AIThreadSafe` — contradictory; opposite claims, so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; the caller is told "no" with no way to comply
+
+---
+
+### `@AIKeepInSync` — Duplicated at sites that must move together
+
+Use on: **class, method, field**
+
+```java
+@AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
+              reason = "The release version is asserted in three places and drifts silently",
+              enforcedBy = "ProjectFactsConsistencyTest")
+public static final String VERSION = "1.0.1";
+```
+
+The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `mirrors` | `String[]` | *(required)* | The sites that must move together with this element |
+| `reason` | `String` | `""` | Why the duplication exists and what desync would break |
+| `enforcedBy` | `String` | `""` | The parity test or CI check; its absence means drift is not caught |
+
+**Compile-time warnings:**
+
+- `@AIKeepInSync` with an empty `mirrors[]` — no-op; nothing is kept in sync
+- `@AIKeepInSync` + `@AIContract` — NOTE; verify the mirrors track something other than the frozen signature
+
+---
+
 ## Annotation Combinations
 
 | Combination | Result |
@@ -854,6 +1097,12 @@ Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilat
 | `@AILocked` + `@AIDraft` | **Warning**: contradictory — don't combine |
 | `@AIIgnore` + `@AIPrivacy` | **Warning**: redundant — `@AIIgnore` already excludes |
 | `@AIContract` + `@AIDraft` | **Warning**: contradictory — frozen signature can't need drafting |
+| `@AIGenerated` + `@AILocked` | Belt-and-braces on generated output; `@AIGenerated` alone is usually better, since it redirects instead of dead-ending |
+| `@AILoadBearing` + `@AIExplain` | Supply the rationale AND require one back for any change |
+| `@AIBannedApi` + `@AIArchitecture` | Ban specific symbols AND the layers they live in |
+| `@AIThreadAffinity` + `@AIThreadSafe` | **Warning**: contradictory — opposite claims, one is false |
+| `@AIGenerated` + `@AIIgnore` | **Warning**: contradictory — generated code must stay readable |
+| `@AILoadBearing(suppressAudit)` + `@AIAudit` | **Warning**: contradictory — one suppresses findings, the other mandates them |
 | `@AIContract` + `@AILocked` | **Warning**: overlapping intent — consider using only `@AILocked` |
 | `@AITestDriven` + `@AIContext` | Enforce TDD workflow AND guide implementation style |
 | `@AITestDriven` + `@AIPerformance` | Any change must include tests AND meet complexity constraints |
@@ -907,6 +1156,8 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 
 | Directory | Platform | Format |
 |---|---|---|
+| `.claude/rules/*.md` | Claude Code | YAML front-matter (`paths:`) + Markdown |
+| `.github/instructions/*.instructions.md` | GitHub Copilot | YAML front-matter (`applyTo:`) + Markdown |
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
@@ -923,6 +1174,7 @@ Enable by creating the directories:
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
 mkdir -p .kiro/steering
+mkdir -p .claude/rules .github/instructions
 ```
 
 ---
@@ -943,12 +1195,42 @@ mkdir -p .kiro/steering
             <arg>-Avibetags.log.path=logs/vibetags.log</arg>
             <!-- Log level: TRACE, DEBUG, INFO, WARN, ERROR, OFF -->
             <arg>-Avibetags.log.level=DEBUG</arg>
-            <!-- Override output root directory -->
-            <arg>-Avibetags.root=/path/to/output</arg>
+            <!-- Override output root directory (every module of a reactor needs this) -->
+            <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
+            <!-- Name this module explicitly, if it cannot be read off the compiled sources -->
+            <arg>-Avibetags.module=payments-core</arg>
+            <!-- CI: verify the committed files match the annotations instead of writing them -->
+            <arg>-Avibetags.check=true</arg>
+            <!-- Opt-in enforcement: fail the build on a guarded signature change -->
+            <arg>-Avibetags.enforce=locked,contract,publicapi</arg>
         </compilerArgs>
     </configuration>
 </plugin>
 ```
+
+### Enforcing mode (opt-in)
+
+Guardrails are advisory by default: they go into the agent's context so a mistake is less likely.
+For the families whose promise can be *proved* from the compiler's model, `-Avibetags.enforce` turns
+that into a hard stop.
+
+```bash
+mvn compile -Avibetags.baseline.update=true   # record and commit .vibetags-baseline
+mvn compile -Avibetags.enforce=contract       # thereafter, a signature change fails the build
+```
+
+| Family | What it checks |
+|---|---|
+| `locked` | An `@AILocked` element's visible shape is unchanged |
+| `contract` | An `@AIContract` signature is unchanged — name, parameters, return type, checked exceptions |
+| `publicapi` | Ditto for `@AIPublicAPI` |
+| `all` | All of the above |
+
+Method bodies, comments and formatting are invisible to it, so reformatting a locked file is not a
+violation. `@AICallersOnly`, `@AIStrictClasspath`, `@AIThreadSafe` and `@AITestDriven` are **not**
+enforceable — proving them needs call-graph or body analysis a processor cannot do portably — and
+naming one is reported rather than silently ignored. An intended change is approved by re-running
+with `-Avibetags.baseline.update=true` and committing the diff, so it gets reviewed.
 
 ### Processor options (Gradle)
 
@@ -970,6 +1252,12 @@ tasks.withType(JavaCompile) {
 |---|---|---|
 | No files updated after compile | Target files don't exist | `touch CLAUDE.md` (or whichever platform file) then recompile |
 | `[NOTE] No AI config files found` | No opt-in files present | Create one or more platform files (see step 2) |
+| A module's guardrails are missing from the reactor root | That module never reached the root | Give it `-Avibetags.root=<reactor>`; VibeTags warns with *"generated its guardrails as its own root"* when it can tell |
+| `[WARNING] … rewritten with a completely different set of elements` | A compilation replaced a module's guardrails with an unrelated set | Almost always a round that could not see the sources it should have — check this module's annotation processing before committing the regenerated files |
+| `[WARNING] removed N scoped rule file(s) … while writing only M` | The build deleted more guardrails than it produced | Same cause; do not accept the deletion until you know why |
+| `[WARNING] could not identify the compiling module` | Sources are not under `-Avibetags.root` | Set `-Avibetags.root`, or name it with `-Avibetags.module=<name>` |
+| Guardrails differ between `mvn compile` and `mvn test` | Pre-1.0.1-RC8 processor | Upgrade — `compile` and `test-compile` now own separate sidecars |
+| Gradle appends a second set of `VIBETAGS-MODULE` regions | Pre-1.0.1-RC8 processor | Upgrade, then delete the stray `.vibetags-mod-<hash>` file once |
 | `[WARNING] @AIIgnore used but .cursorignore is missing` | Orphaned annotation | Create the missing file to fully support that platform |
 | `[WARNING] contradictory @AIDraft and @AILocked` | Both annotations on same element | Remove one of them |
 | `[WARNING] @AIAudit has no checkFor items` | Empty `checkFor` array | Add at least one vulnerability string |
@@ -1004,6 +1292,9 @@ tasks.withType(JavaCompile) {
 | File(s) | Platform |
 |---|---|
 | `CLAUDE.md`, `.claudeignore` | Claude / Claude Code |
+| `CLAUDE.local.md` | Claude Code (local override) |
+| `.claude/rules/*.md` | Claude Code (granular per-class rules) |
+| `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |
 | `.cursorrules`, `.cursorignore` | Cursor (traditional) |
 | `.cursor/rules/*.mdc` | Cursor (granular per-class rules) |
 | `.windsurfrules` | Windsurf IDE (traditional) |
@@ -1016,6 +1307,7 @@ tasks.withType(JavaCompile) {
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
+| `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
 | `.cody/config.json`, `.codyignore` | Sourcegraph Cody |
 | `.supermavenignore` | Supermaven |
@@ -1036,3 +1328,13 @@ tasks.withType(JavaCompile) {
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
+| `.void/rules.md` | Void Editor |
+| `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
+| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
+| `ellipsis.yaml` | Ellipsis (AI PR reviewer) |
+| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
+| `.repomixignore` | Repomix (context packer) |
+| `.gitingestignore` | Gitingest (context packer) |
+| `.gptignore` | GPT context packer |
+| `.ghostcoderignore` | Ghostcoder |
+| `.piecesignore` | Pieces for Developers |

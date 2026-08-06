@@ -1,9 +1,9 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIPure;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -11,11 +11,13 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIPureFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIPure pure = element.getAnnotation(AIPure.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIPure pure = element.annotation(AIPure.class);
         if (pure == null) return;
-        String className = ElementNaming.elementPath(element);
-        String summary = "Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.";
+        String className = element.path();
+        String reason = pure.reason();
+        String summary = CommonFormatterHelper.withReason(
+            "Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.", reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -23,7 +25,7 @@ public final class AIPureFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <policy>Pure function: no side effects, deterministic.</policy>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <policy>Pure function: no side effects, deterministic.</policy>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Requirement**: Mathematically pure function. No side effects.\n\n");

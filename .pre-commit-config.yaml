@@ -2,7 +2,7 @@ repos:
 - repo: https://github.com/gherynos/pre-commit-java
   rev: v0.2.4
   hooks:
-  - id: Checkstyle
+  - id: checkstyle
 - repo: https://github.com/gitleaks/gitleaks
   rev: v8.16.3
   hooks:
@@ -10,5 +10,12 @@ repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.4.0
   hooks:
+  # The code-karta SVGs under docs/diagrams/codekarta/ are generator output, byte for byte,
+  # and the benchmark logs under load-tests/results/ are frozen measurement records.
+  # Letting these hooks reformat either would leave the committed file permanently different
+  # from what the generator or the benchmark harness actually emitted, so every regeneration
+  # would show up as a diff nobody made.
   - id: end-of-file-fixer
+    exclude: ^(docs/diagrams/codekarta/|load-tests/results/)
   - id: trailing-whitespace
+    exclude: ^(docs/diagrams/codekarta/|load-tests/results/)

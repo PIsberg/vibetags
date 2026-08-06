@@ -14,6 +14,7 @@ import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 /**
@@ -153,13 +154,6 @@ public class ArchitectureRulesTest {
      * The {@code content.annotations} and {@code content.platforms} sub-packages must not
      * form circular dependencies with each other. Formatters are pure output helpers and
      * renderers orchestrate them — the dependency must be one-way.
-     *
-     * <p>Note: the broader {@code internal} ↔ {@code internal.content} dependency is
-     * intentional by design: {@code PlatformRenderer.render()} takes {@link
-     * se.deversity.vibetags.processor.internal.AnnotationCollector} as a parameter, and
-     * {@code GuardrailContentBuilder} (in {@code internal}) drives the content layer.
-     * That known cross-cutting dependency is excluded here; only the leaf sub-packages
-     * are checked for cycles.
      */
     @ArchTest
     static final ArchRule NO_CYCLES_IN_CONTENT_SUBPACKAGES =
@@ -167,4 +161,67 @@ public class ArchitectureRulesTest {
                     .matching("se.deversity.vibetags.processor.internal.content.(**)")
                     .should().beFreeOfCycles()
                     .as("content.annotations and content.platforms must be free of circular package dependencies");
+
+    // -----------------------------------------------------------------------
+    // The compiler boundary: internal → model ← content
+    // -----------------------------------------------------------------------
+
+    /** Compiler-facing APIs. Anything below the {@code model} seam must be free of all of them. */
+    private static final String[] COMPILER_PACKAGES = {
+        "javax.lang.model..",
+        "javax.annotation.processing..",
+        "javax.tools..",
+        "com.sun.source..",
+    };
+
+    /**
+     * The rendering layer must not touch a compiler API.
+     *
+     * <p>This is the rule the whole {@code model} package exists to make true. Renderers read
+     * {@link se.deversity.vibetags.processor.model.GuardrailModel} and
+     * {@link se.deversity.vibetags.processor.model.TaggedElement} — plain data, snapshotted while a
+     * round was live. A single {@code Element} reaching a renderer would re-couple ~90 files to
+     * javac, make them untestable without a compiler, and reintroduce the risk this refactor
+     * removed: reading an element after its round has closed.
+     */
+    @ArchTest
+    static final ArchRule CONTENT_IS_COMPILER_FREE =
+            noClasses()
+                    .that().resideInAPackage("..processor.internal.content..")
+                    .should().dependOnClassesThat().resideInAnyPackage(COMPILER_PACKAGES)
+                    .as("the content (rendering) layer must not depend on any compiler API");
+
+    /** Same rule for the model itself — it is the data the rendering layer is allowed to see. */
+    @ArchTest
+    static final ArchRule MODEL_IS_COMPILER_FREE =
+            noClasses()
+                    .that().resideInAPackage("..processor.model..")
+                    .should().dependOnClassesThat().resideInAnyPackage(COMPILER_PACKAGES)
+                    .as("the model must not depend on any compiler API");
+
+    /**
+     * The model is the bottom of the stack: it must not reach back up into the processor.
+     * Without this, the dependency could quietly become a cycle again the first time a model type
+     * needed "just one helper" from {@code internal}.
+     */
+    @ArchTest
+    static final ArchRule MODEL_DOES_NOT_DEPEND_ON_THE_PROCESSOR =
+            noClasses()
+                    .that().resideInAPackage("..processor.model..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "se.deversity.vibetags.processor",
+                            "se.deversity.vibetags.processor.internal..")
+                    .as("the model must not depend on the processor or its internals");
+
+    /**
+     * The content layer may depend on {@code model}, but no longer on {@code internal} itself.
+     * That edge — {@code PlatformRenderer.render(AnnotationCollector, …)} — was the documented
+     * exception this test used to carve out, and it is what made {@code internal ↔ content} a cycle.
+     */
+    @ArchTest
+    static final ArchRule CONTENT_DOES_NOT_DEPEND_ON_INTERNAL =
+            noClasses()
+                    .that().resideInAPackage("..processor.internal.content..")
+                    .should().dependOnClassesThat().resideInAPackage("se.deversity.vibetags.processor.internal")
+                    .as("the content layer must depend on the model, not on the javac-facing internals");
 }

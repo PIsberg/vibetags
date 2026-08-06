@@ -1,0 +1,2 @@
+label-printing  = **/*Printer.java
+carrier-rates   = **/*Adapter.java, **/*Calculator.java

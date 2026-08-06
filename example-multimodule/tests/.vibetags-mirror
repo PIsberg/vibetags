@@ -1,0 +1,15 @@
+# Cross-module rule mirroring — https://github.com/PIsberg/vibetags/issues/312
+#
+# This module holds every test in the reactor but no @AI* annotations of its own, so the
+# guardrails protecting the code it exercises live in *sibling* modules, out of reach of a tool
+# that discovers rule directories by walking up from the edited file. Listing those modules here
+# makes VibeTags mirror their scoped rules into this module's own .claude/rules/ directory.
+#
+# Source modules, relative to this file's directory. Omit them all to mirror every module.
+../core
+../engine
+../cli
+
+# Globs appended to each mirrored rule file's frontmatter so the rules match this module's
+# sources. Defaults to **/tests/**/*.java when omitted; spelled out here for clarity.
+glob = **/tests/src/test/java/**/*.java

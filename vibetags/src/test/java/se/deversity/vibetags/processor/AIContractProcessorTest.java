@@ -25,6 +25,7 @@ import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
 import org.junit.jupiter.api.parallel.Isolated;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -85,7 +86,6 @@ class AIContractProcessorTest {
     void validateAnnotations_contractAndDraft_emitsContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.PaymentGateway.charge(double)");
@@ -98,7 +98,7 @@ class AIContractProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size(), "Should emit exactly one warning");
         assertTrue(warnings.get(0).contains("@AIContract") && warnings.get(0).contains("@AIDraft"),
@@ -111,7 +111,6 @@ class AIContractProcessorTest {
     void validateAnnotations_contractWithoutDraft_noContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.PaymentGateway.charge(double)");
@@ -124,7 +123,7 @@ class AIContractProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIContract is used without @AIDraft");
@@ -138,7 +137,6 @@ class AIContractProcessorTest {
     void validateAnnotations_contractAndLocked_emitsOverlapWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.LegacyApi.process()");
@@ -155,7 +153,7 @@ class AIContractProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("@AIContract") && w.contains("@AILocked")),
             "Should warn about @AIContract + @AILocked overlap");
@@ -167,7 +165,6 @@ class AIContractProcessorTest {
     void validateAnnotations_contractWithoutLocked_noOverlapWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.PaymentGateway.charge(double)");
@@ -181,7 +178,7 @@ class AIContractProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains("@AIContract") && w.contains("@AILocked")),
             "No overlap warning when @AIContract is used without @AILocked");
@@ -233,19 +230,27 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToAgentsMd() throws Exception {
-        withCwdSignalFiles(List.of("AGENTS.md"), () -> {
-            CapturingProcessor processor = makeCapturingProcessor();
-            processor.process(Set.of(), contractRoundEnv("com.example.OrderApi.placeOrder", "Mobile app contract"));
-            triggerGeneration(processor);
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule),
+        // so use an isolated root that opts in to AGENTS.md only.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-contract");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.OrderApi",
+            "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AIContract;\n"
+            + "public interface OrderApi {\n"
+            + "    @AIContract(reason = \"Mobile app contract\")\n"
+            + "    void placeOrder();\n"
+            + "}\n");
+        h.compile();
 
-            String content = processor.contentFor("AGENTS.md");
-            assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
-                "AGENTS.md must have contract-frozen section");
-            assertTrue(content.contains("com.example.OrderApi.placeOrder"),
-                "AGENTS.md must list the annotated element");
-            assertTrue(content.contains("Mobile app contract"),
-                "AGENTS.md must include the contract reason");
-        });
+        String content = h.readFile("AGENTS.md");
+        assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
+            "AGENTS.md must have contract-frozen section");
+        assertTrue(content.contains("com.example.OrderApi.placeOrder"),
+            "AGENTS.md must list the annotated element");
+        assertTrue(content.contains("Mobile app contract"),
+            "AGENTS.md must include the contract reason");
     }
 
     @Test

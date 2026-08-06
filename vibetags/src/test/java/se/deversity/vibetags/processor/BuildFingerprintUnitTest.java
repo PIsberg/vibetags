@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIContext;
@@ -17,6 +18,7 @@ import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
+import se.deversity.vibetags.processor.internal.ProcessorVersion;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.*;
  * {@code getAnnotation()} returns {@code null}. These tests verify that the fingerprint
  * computation degrades gracefully to an empty string rather than throwing NPE.
  */
+@Tag("e2e")
 class BuildFingerprintUnitTest {
 
     /**
@@ -148,6 +151,162 @@ class BuildFingerprintUnitTest {
             BuildFingerprint.compute(c1, Set.of("cursor")),
             BuildFingerprint.compute(c2, Set.of("cursor")),
             "Identical null-annotation inputs must produce the same fingerprint");
+    }
+
+    @Test
+    void compute_processorVersionChange_invalidatesFingerprint() {
+        // A new processor release may render different content from identical annotation
+        // inputs, so the version alone must change the fingerprint — otherwise the
+        // short-circuit would skip regeneration after an upgrade and leave stale output.
+        AnnotationCollector collector = new AnnotationCollector();
+        RoundEnvironment re = mock(RoundEnvironment.class);
+
+        Element lockedElem = namedElement("com.example.Locked");
+        when(lockedElem.getAnnotation(AILocked.class)).thenReturn(null);
+        doReturn(Set.of(lockedElem)).when(re).getElementsAnnotatedWith(AILocked.class);
+        collector.collect(re);
+
+        String v1 = BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0");
+        String v2 = BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.1");
+
+        assertNotEquals(v1, v2,
+            "Identical inputs under different processor versions must produce different fingerprints");
+        assertEquals(v1, BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+            "Same version + same inputs must stay deterministic");
+    }
+
+    @Test
+    void compute_defaultOverload_usesRunningProcessorVersion() {
+        AnnotationCollector collector = new AnnotationCollector();
+
+        assertEquals(
+            BuildFingerprint.compute(collector, Set.of("cursor"), ProcessorVersion.get()),
+            BuildFingerprint.compute(collector, Set.of("cursor")),
+            "The two-arg overload must fingerprint with the running processor's version");
+    }
+
+    @Test
+    void processorVersion_isNeverBlank() {
+        String v = ProcessorVersion.get();
+        assertNotNull(v, "ProcessorVersion.get() must never return null");
+        assertFalse(v.isBlank(), "ProcessorVersion.get() must never return blank");
+    }
+
+    /**
+     * Every collected annotation bucket must be part of the fingerprint input. If a bucket is
+     * omitted, adding/removing that annotation leaves the fingerprint unchanged, and the top-level
+     * short-circuit in {@code generateFiles()} skips regeneration — the generated guardrail files
+     * silently go stale. This exercises the 12 newest buckets (v1.1 annotations), which are
+     * rendered by every renderer (LlmsRenderer, ClaudeRenderer, GranularRenderer, ...) and must
+     * therefore invalidate the cache like the original 27.
+     */
+    @Test
+    void compute_everyNewestAnnotationBucket_affectsFingerprint() {
+        String emptyFp = BuildFingerprint.compute(new AnnotationCollector(), Set.of("cursor"), "1.0.0");
+
+        java.util.Map<String, Class<? extends java.lang.annotation.Annotation>> buckets =
+            new java.util.LinkedHashMap<>();
+        buckets.put("callersOnly",    se.deversity.vibetags.annotations.AICallersOnly.class);
+        buckets.put("sandboxOnly",    se.deversity.vibetags.annotations.AISandboxOnly.class);
+        buckets.put("memoryBudget",   se.deversity.vibetags.annotations.AIMemoryBudget.class);
+        buckets.put("pure",           se.deversity.vibetags.annotations.AIPure.class);
+        buckets.put("domainModel",    se.deversity.vibetags.annotations.AIDomainModel.class);
+        buckets.put("extensible",     se.deversity.vibetags.annotations.AIExtensible.class);
+        buckets.put("inputSanitized", se.deversity.vibetags.annotations.AIInputSanitized.class);
+        buckets.put("secureLogging",  se.deversity.vibetags.annotations.AISecureLogging.class);
+        buckets.put("explain",        se.deversity.vibetags.annotations.AIExplain.class);
+        buckets.put("prototype",      se.deversity.vibetags.annotations.AIPrototype.class);
+        buckets.put("sunset",         se.deversity.vibetags.annotations.AISunset.class);
+        buckets.put("temporary",      se.deversity.vibetags.annotations.AITemporary.class);
+
+        for (var entry : buckets.entrySet()) {
+            AnnotationCollector collector = new AnnotationCollector();
+            RoundEnvironment re = mock(RoundEnvironment.class);
+            Element elem = namedElement("com.example." + entry.getKey());
+            doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(entry.getValue());
+            collector.collect(re);
+
+            assertNotEquals(emptyFp,
+                BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+                "An element in the '" + entry.getKey() + "' bucket must change the fingerprint "
+                    + "(otherwise the short-circuit skips regeneration and output goes stale)");
+        }
+    }
+
+    /**
+     * Attribute values of the newest buckets must also be fingerprinted: editing
+     * {@code @AITemporary(expiresOn = ...)} on an already-annotated element changes the rendered
+     * output, so it must change the fingerprint too.
+     */
+    @Test
+    void compute_temporaryAttributeChange_invalidatesFingerprint() {
+        String fpA = fingerprintWithTemporary("2026-01-01", "hotfix A");
+        String fpB = fingerprintWithTemporary("2027-12-31", "hotfix A");
+
+        assertNotEquals(fpA, fpB,
+            "Changing @AITemporary.expiresOn must change the fingerprint — the rendered "
+                + "expiration date differs, so regeneration must not be skipped");
+        assertEquals(fpA, fingerprintWithTemporary("2026-01-01", "hotfix A"),
+            "Identical @AITemporary attributes must stay deterministic");
+    }
+
+    /**
+     * The 13 "middle batch" buckets that fall between the original 15 (covered by
+     * {@link #compute_nullAnnotationsOnAllTypes_returnsValidFingerprint}) and the newest 12
+     * (covered by {@link #compute_everyNewestAnnotationBucket_affectsFingerprint} above) — added
+     * across v0.9.x releases and never wired into either existing sweep. Same rationale as that
+     * test: an element in any of these buckets must change the fingerprint, otherwise the
+     * top-level short-circuit skips regeneration and the generated files silently go stale.
+     */
+    @Test
+    void compute_everyMiddleBatchAnnotationBucket_affectsFingerprint() {
+        String emptyFp = BuildFingerprint.compute(new AnnotationCollector(), Set.of("cursor"), "1.0.0");
+
+        java.util.Map<String, Class<? extends java.lang.annotation.Annotation>> buckets =
+            new java.util.LinkedHashMap<>();
+        buckets.put("ignore",             se.deversity.vibetags.annotations.AIIgnore.class);
+        buckets.put("parallelTests",      se.deversity.vibetags.annotations.AIParallelTests.class);
+        buckets.put("legacyBridge",       se.deversity.vibetags.annotations.AILegacyBridge.class);
+        buckets.put("architecture",       se.deversity.vibetags.annotations.AIArchitecture.class);
+        buckets.put("publicApi",          se.deversity.vibetags.annotations.AIPublicAPI.class);
+        buckets.put("strictExceptions",   se.deversity.vibetags.annotations.AIStrictExceptions.class);
+        buckets.put("strictTypes",        se.deversity.vibetags.annotations.AIStrictTypes.class);
+        buckets.put("internationalized",  se.deversity.vibetags.annotations.AIInternationalized.class);
+        buckets.put("strictClasspath",    se.deversity.vibetags.annotations.AIStrictClasspath.class);
+        buckets.put("schemaSafe",         se.deversity.vibetags.annotations.AISchemaSafe.class);
+        buckets.put("idempotent",         se.deversity.vibetags.annotations.AIIdempotent.class);
+        buckets.put("featureFlag",        se.deversity.vibetags.annotations.AIFeatureFlag.class);
+        buckets.put("secure",             se.deversity.vibetags.annotations.AISecure.class);
+
+        for (var entry : buckets.entrySet()) {
+            AnnotationCollector collector = new AnnotationCollector();
+            RoundEnvironment re = mock(RoundEnvironment.class);
+            Element elem = namedElement("com.example." + entry.getKey());
+            doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(entry.getValue());
+            collector.collect(re);
+
+            assertNotEquals(emptyFp,
+                BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0"),
+                "An element in the '" + entry.getKey() + "' bucket must change the fingerprint "
+                    + "(otherwise the short-circuit skips regeneration and output goes stale)");
+        }
+    }
+
+    private static String fingerprintWithTemporary(String expiresOn, String reason) {
+        se.deversity.vibetags.annotations.AITemporary ann =
+            mock(se.deversity.vibetags.annotations.AITemporary.class);
+        when(ann.expiresOn()).thenReturn(expiresOn);
+        when(ann.reason()).thenReturn(reason);
+
+        Element elem = namedElement("com.example.TempFix");
+        when(elem.getAnnotation(se.deversity.vibetags.annotations.AITemporary.class)).thenReturn(ann);
+
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AITemporary.class);
+
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.collect(re);
+        return BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0");
     }
 
     // -----------------------------------------------------------------------

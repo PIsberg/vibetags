@@ -2,10 +2,10 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIFeatureFlag;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -13,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIFeatureFlagFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIFeatureFlag ff = element.getAnnotation(AIFeatureFlag.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIFeatureFlag ff = element.annotation(AIFeatureFlag.class);
         if (ff == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String flag = ff.flag();
         boolean defaultValue = ff.defaultValue();
         String flagDisplay = flag.isEmpty() ? "(unspecified)" : "'" + flag + "'";
@@ -29,9 +29,9 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!flag.isEmpty()) {
-                    sb.append("      <flag>").append(flag).append("</flag>\n");
+                    sb.append("      <flag>").append(Escape.xml(flag)).append("</flag>\n");
                 }
                 sb.append("      <default_value>").append(defaultValue).append("</default_value>\n");
                 sb.append("    </element>\n");
@@ -50,7 +50,7 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Feature flag: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n");
@@ -63,7 +63,7 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Feature flag gate for ").append(className).append(": ").append(summary).append("\"\n");
+                sb.append("  - \"Feature flag gate for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (feature-flag): ").append(summary).append("\n");

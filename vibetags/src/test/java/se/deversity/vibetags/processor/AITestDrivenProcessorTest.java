@@ -11,6 +11,7 @@ import javax.lang.model.element.Name;
 import javax.tools.Diagnostic;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -26,6 +27,7 @@ import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AITestDriven;
 
 import org.junit.jupiter.api.parallel.Isolated;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -121,7 +123,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenAndIgnore_emitsContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdIgnore = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -136,7 +137,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AIIgnore")),
             "Should warn about @AITestDriven + @AIIgnore combination");
@@ -148,7 +149,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenWithoutIgnore_noContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdAlone = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -163,7 +163,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AIIgnore")),
             "No warning when @AITestDriven is used alone");
@@ -177,7 +177,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_testDrivenAndLocked_emitsContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdLocked = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -194,7 +193,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("@AITestDriven") && w.contains("@AILocked")),
             "Should warn about @AITestDriven + @AILocked combination");
@@ -208,7 +207,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoalAbove100_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdAbove = mockTestDriven(150, "");
         Element element = mock(Element.class);
@@ -224,7 +222,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("coverageGoal") && w.contains("150")),
             "Should warn about coverageGoal > 100");
@@ -234,7 +232,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoalNegative_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdNeg = mockTestDriven(-1, "");
         Element element = mock(Element.class);
@@ -250,7 +247,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains("coverageGoal")),
             "Should warn about negative coverageGoal");
@@ -260,7 +257,6 @@ class AITestDrivenProcessorTest {
     void validateAnnotations_coverageGoal100_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AITestDriven tdValid = mockTestDriven(100, "");
         Element element = mock(Element.class);
@@ -276,7 +272,7 @@ class AITestDrivenProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains("coverageGoal")),
             "No coverageGoal warning for valid value 100");
@@ -328,17 +324,25 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToAgentsMd() throws Exception {
-        withCwdSignalFiles(List.of("AGENTS.md"), () -> {
-            CapturingProcessor processor = makeCapturingProcessor();
-            processor.process(Set.of(), testDrivenRoundEnv("com.example.BillingService.invoice", 100, "JUNIT_5", ""));
-            triggerGeneration(processor);
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule),
+        // so use an isolated root that opts in to AGENTS.md only.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-testdriven");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.BillingService",
+            "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AITestDriven;\n"
+            + "public class BillingService {\n"
+            + "    @AITestDriven(coverageGoal = 100)\n"
+            + "    public void invoice() {}\n"
+            + "}\n");
+        h.compile();
 
-            String content = processor.contentFor("AGENTS.md");
-            assertTrue(content.contains("TEST-DRIVEN"),
-                "AGENTS.md must have test-driven section");
-            assertTrue(content.contains("com.example.BillingService.invoice"),
-                "AGENTS.md must list the annotated element");
-        });
+        String content = h.readFile("AGENTS.md");
+        assertTrue(content.contains("TEST-DRIVEN"),
+            "AGENTS.md must have test-driven section");
+        assertTrue(content.contains("com.example.BillingService.invoice"),
+            "AGENTS.md must list the annotated element");
     }
 
     @Test
@@ -538,6 +542,43 @@ class AITestDrivenProcessorTest {
             String content = processor.contentFor(".cursorrules");
             assertTrue(content.contains("com.example.OrderService.calculateDiscount"), "Must list first element");
             assertTrue(content.contains("com.example.BillingService.invoice"), "Must list second element");
+        });
+    }
+
+    @Test
+    void process_multipleIdenticalTestDrivenElements_coalescedInClaudeMd() throws Exception {
+        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+            Element el1 = testDrivenElement("com.example.diag.AlphaDetector", 80, "");
+            Element el2 = testDrivenElement("com.example.diag.BetaDetector", 80, "");
+            Element el3 = testDrivenElement("com.example.diag.GammaDetector", 80, "");
+
+            RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+            when(roundEnv.processingOver()).thenReturn(false);
+            doReturn(new LinkedHashSet<>(List.of(el1, el2, el3)))
+                .when(roundEnv).getElementsAnnotatedWith(AITestDriven.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIIgnore.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AICore.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPerformance.class);
+            doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIContract.class);
+
+            CapturingProcessor processor = makeCapturingProcessor();
+            processor.process(Set.of(), roundEnv);
+            triggerGeneration(processor);
+
+            String content = processor.contentFor("CLAUDE.md");
+            assertTrue(content.contains("<test_driven_default coverage_goal=\"80\" frameworks=\"JUNIT_5\">"),
+                "identical elements collapse into a single <test_driven_default> block");
+            assertTrue(content.contains("com.example.diag.AlphaDetector")
+                    && content.contains("com.example.diag.BetaDetector")
+                    && content.contains("com.example.diag.GammaDetector"),
+                "every element is named under <applies-to>");
+            assertFalse(content.contains("<coverage_goal>"),
+                "coalesced members must not each repeat the per-element coverage_goal stanza");
         });
     }
 

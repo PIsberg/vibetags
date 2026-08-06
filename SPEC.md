@@ -1,5 +1,8 @@
 # VibeTags Specification: Parallel Tests & New AI Guardrails
 
+> **Historical design document.** This proposal has since been implemented and is kept for
+> provenance. For current behaviour, see `docs/ANNOTATIONS.md`, `docs/TESTS.md`, and `README.md`.
+
 This specification details the design and implementation of 9 new compile-time Java annotations for **VibeTags** to expand its AI guardrail catalog, alongside the architectural changes required to execute VibeTags' own test suite in parallel with strict thread isolation.
 
 ---
@@ -19,35 +22,20 @@ To enable parallel test execution, we must isolate Logback logger configurations
 graph TD
     A[Test Thread 1] -->|init processor| B[Root: TempDir1]
     C[Test Thread 2] -->|init processor| D[Root: TempDir2]
-    
+
     B -->|get logger| E[VibeTagsLogger.forRoot]
     D -->|get logger| F[VibeTagsLogger.forRoot]
-    
+
     E -->|suffix with TempDir1 hash| G[Logback Logger: se.deversity.vibetags.198327]
     F -->|suffix with TempDir2 hash| H[Logback Logger: se.deversity.vibetags.459273]
-    
+
     G -->|isolated appender| I[TempDir1/vibetags.log]
     H -->|isolated appender| J[TempDir2/vibetags.log]
 ```
 
-#### Implementation details:
-1. **Dynamic Logger Resolution**:
-   ```java
-   private static String getLoggerName(Path projectRoot) {
-       if (projectRoot == null) {
-           return LOGGER_NAME;
-       }
-       // Suffix the logger name with an absolute path hash to isolate test threads
-       return LOGGER_NAME + "." + Math.abs(projectRoot.toAbsolutePath().normalize().hashCode());
-   }
-   ```
-2. **Targeted Appender Management**: `detachAndStopAllAppenders()` and `shutdown()` will only affect the logger instance corresponding to the unique project root path.
-3. **JUnit 5 Parallel Configuration**: Create a `junit-platform.properties` in `vibetags/src/test/resources` to enable concurrent execution:
-   ```properties
-   junit.jupiter.execution.parallel.enabled = true
-   junit.jupiter.execution.parallel.mode.default = concurrent
-   junit.jupiter.execution.parallel.mode.classes.default = concurrent
-   ```
+#### Implementation details
+
+This design shipped as specified. The as-built logger-name-suffixing code, the committed `junit-platform.properties`, and the verification test are documented in one place: [docs/ARCHITECTURE.md § Concurrency & Thread-Isolated Logging](docs/ARCHITECTURE.md#concurrency--thread-isolated-logging).
 
 ---
 

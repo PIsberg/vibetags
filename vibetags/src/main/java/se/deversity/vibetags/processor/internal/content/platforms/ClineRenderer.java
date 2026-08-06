@@ -1,6 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -14,7 +14,7 @@ public final class ClineRenderer implements PlatformRenderer {
     private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
 
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        return CURSOR_RENDERER.render(collector, platform, context);
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+        return CURSOR_RENDERER.render(model, platform, context);
     }
 }

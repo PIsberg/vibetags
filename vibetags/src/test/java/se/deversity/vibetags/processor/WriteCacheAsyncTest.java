@@ -32,12 +32,12 @@ class WriteCacheAsyncTest {
         String uniqueId = UUID.randomUUID().toString();
         Path file = rootDir.resolve("file-" + uniqueId + ".txt");
         String content = "content-" + uniqueId;
-        
+
         Files.writeString(file, content);
 
         // Perform concurrent write and read
         cache.recordWrite(file, content);
-        
+
         // Since each thread writes to a completely distinct file, there should be no cross-thread collision on entries.
         // However, if the underlying map is not thread-safe, concurrent reads/writes will trigger exceptions.
         assertTrue(cache.isUnchanged(file, content), "Cache should hit for isolated file");

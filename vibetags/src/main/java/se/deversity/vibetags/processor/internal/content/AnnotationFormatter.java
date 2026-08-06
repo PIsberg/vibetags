@@ -1,6 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 /**
  * Defines the contract to format cross-platform content fragments for an individual annotation type.
@@ -14,5 +14,5 @@ public interface AnnotationFormatter {
      * @param sb the platform-specific buffer
      * @param platform the target platform/service
      */
-    void format(Element element, StringBuilder sb, Platform platform);
+    void format(TaggedElement element, StringBuilder sb, Platform platform);
 }

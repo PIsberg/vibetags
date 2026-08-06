@@ -10,58 +10,58 @@
 * `com.example.security.SecurityConfig.getKeyRotationHours()` - Key rotation period mandated by company policy
 * `com.example.security.SecurityConfig.getMaxLoginAttempts()` - Max login attempts set by security team to prevent brute force
 * `com.example.security.SecurityConfig.validateToken(java.lang.String)` - Token validation must match auth server exactly. Changes will break all client authentication
-* `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 * `com.example.service.OrderService.calculateTax(java.lang.String,double)` - Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 * `com.example.service.OrderService.processPayment(java.lang.String,double)` - Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+* `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
 ## CONTEXTUAL RULES
-* `com.example.security.SecurityConfig` 
+* `com.example.security.SecurityConfig`
   * Focus: This class is READ-ONLY for AI assistants. Do not suggest modifications.
   * Avoid: Any changes to encryption algorithms, key sizes, or validation logic
-* `com.example.service.InventoryService` 
+* `com.example.service.InventoryService`
   * Focus: Maintain inventory consistency across concurrent requests. All stock updates must be atomic.
   * Avoid: Non-atomic read-modify-write sequences, unsynchronized shared state
-* `com.example.service.NotificationService` 
+* `com.example.service.NotificationService`
   * Focus: Implement notification delivery with retry logic and error handling
   * Avoid: Hard-coded credentials, synchronous blocking calls
-* `com.example.service.OrderService` 
+* `com.example.service.OrderService`
   * Focus: Maintain transactional integrity. All database operations must use proper transaction management.
   * Avoid: Raw SQL queries, direct database connections without connection pooling
-* `com.example.service.PricingService` 
+* `com.example.service.PricingService`
   * Focus: Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.
   * Avoid: Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
-* `com.example.strategy.PaymentStrategy` 
+* `com.example.strategy.PaymentStrategy`
   * Focus: Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.
   * Avoid: Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
-* `com.example.utils.StringParser` 
+* `com.example.utils.StringParser`
   * Focus: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
   * Avoid: java.util.regex, String.split(), StringBuilder in loops
 
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review. Explicitly state that you have audited the changes for the listed vulnerabilities.
 
-* `com.example.database.DatabaseConnector` 
+* `com.example.database.DatabaseConnector`
   - Required Checks: SQL Injection, Thread Safety issues
 
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI's memory and context:
 
-* `com.example.internal.GeneratedMetadata` 
+* `com.example.internal.GeneratedMetadata`
 
 ## IMPLEMENTATION TASKS
 The following elements are drafts that need implementation:
 
 * `com.example.NotificationService` - Task: Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.
 * `com.example.payment.PaymentProcessor` - Task: Implement support for new crypto payments without breaking legacy flow.
-* `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Task: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
-* `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Task: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
-* `com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)` - Task: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
-* `com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)` - Task: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
 * `com.example.service.NotificationService.getDeliveryStatus(java.lang.String)` - Task: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
+* `com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)` - Task: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
+* `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Task: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
+* `com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)` - Task: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
+* `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Task: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
 * `com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)` - Task: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
-* `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)` - Task: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
-* `com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)` - Task: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
 * `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Task: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
+* `com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)` - Task: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
+* `com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)` - Task: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
 * `com.example.strategy.PaymentStrategy.executePayment(double)` - Task: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
 * `com.example.strategy.PaymentStrategy.validatePaymentMethod()` - Task: Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
 * `com.example.strategy.impl.CreditCardStrategy.executePayment(double)` - Task: Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
@@ -71,36 +71,36 @@ The following elements are drafts that need implementation:
 The following elements handle PII. Never include their runtime values in logs,
 console output, external API calls, test fixtures, or mock data.
 
-* `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 * `com.example.database.DatabaseConnector.password` - Database credential - never log or include in error messages
+* `com.example.database.DatabaseConnector.username` - Database credential - never log or include in error messages
 * `com.example.service.InventoryService.customerId` - Customer identifiers linked to purchase history — PII under GDPR
 * `com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)` - Email address is PII under GDPR - never log the recipient address
 * `com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)` - Phone number is PII - never log the destination number
 * `com.example.service.OrderService.generateOrderConfirmation(java.lang.String)` - Output contains customer shipping address and contact details (PII)
 * `com.example.strategy.impl.CreditCardStrategy.cardNumber` - PCI-DSS cardholder data - never log or expose in suggestions
-* `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 * `com.example.strategy.impl.CreditCardStrategy.cvv` - PCI-DSS security code - never log or expose in suggestions
+* `com.example.strategy.impl.CreditCardStrategy.expiryDate` - PCI-DSS cardholder data - never log or expose in suggestions
 
 ## 🧠 CORE FUNCTIONALITY
 The following elements are well-tested core components. Make changes with extreme caution.
 
 * `com.example.security.SecurityConfig` - Sensitivity: Critical. Note: This is a security manager. Any single-line change can compromise the entire project.
-* `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` - Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 * `com.example.service.InventoryService.releaseReservation(java.lang.String)` - Sensitivity: High. Note: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+* `com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)` - Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 
 ## ⚡ PERFORMANCE CONSTRAINTS
 Hot-path elements — O(n²) complexity is forbidden. Reason about complexity before proposing changes.
 
 * `com.example.payment.PaymentProcessor` - HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
-* `com.example.service.InventoryService.getAvailableStock(java.lang.String)` - O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
 * `com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)` - Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+* `com.example.service.InventoryService.getAvailableStock(java.lang.String)` - O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
 * `com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)` - Must complete in <5ms p99. Called on every cart update.
 
 ## 🔐 CONTRACT-FROZEN SIGNATURES
 Signatures (method names, parameters, return types, checked exceptions) are immutable. Internal logic may be changed.
 
-* `com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)` - Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
 * `com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)` - Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
+* `com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)` - Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
 * `com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)` - B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
 
 ## 🧪 TEST-DRIVEN REQUIREMENTS
@@ -138,12 +138,12 @@ These elements implement compliance clauses — document compliance impact and n
 ## 🧪 STRICT TEST ISOLATION
 Tests must run in complete thread isolation without shared mutable state:
 
-* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts.
+* `com.example.config.ParallelTestSettings` - Strict test isolation required. No shared mutable state or external resource conflicts. Reason: Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated
 
 ## 🌉 LEGACY COMPATIBILITY BRIDGE
 Modernization/structural refactoring is prohibited for these elements:
 
-* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
+* `com.example.legacy.LegacyBridgeService` - Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested. Reason: Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023
 
 ## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
 Strict layered architecture constraints apply to these elements:
@@ -153,32 +153,32 @@ Strict layered architecture constraints apply to these elements:
 ## 🔌 PUBLIC API SURFACE PROTECTION
 Public API surface. Signatures and backwards compatibility must be strictly preserved:
 
-* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
+* `com.example.service.PublicPaymentController` - Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability. Reason: Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead
 
 ## 🚨 STRICT EXCEPTION HANDLING
 Generic exception throwing/catching is strictly prohibited for these elements:
 
-* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
+* `com.example.service.TransactionalPaymentService` - Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited. Reason: A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle
 
 ## 🏷️ STRICT TYPE SAFETY
 Loose typing is strictly prohibited for these elements:
 
-* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
+* `com.example.payment.PaymentDetails` - Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety. Reason: Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map
 
 ## 🌐 INTERNATIONALIZATION MANDATE
 Hardcoding user-facing strings is strictly prohibited for these elements:
 
-* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
+* `com.example.utils.I18nMessageHelper` - Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources. Reason: Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle
 
 ## 🛡️ STRICT CLASSPATH INTEGRITY
 Dynamic runtime class loading is strictly prohibited for these elements:
 
-* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
+* `com.example.utils.StrictUtility` - Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited. Reason: Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime
 
 ## 🗄️ SCHEMA & SERIALIZATION SAFETY
 Modifying schema or data formats without explicit migration plans is prohibited:
 
-* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
+* `com.example.database.UserEntity` - Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan. Reason: Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first
 
 ## ♻️ IDEMPOTENCY GUARANTEES
 Multiple invocations of these operations must produce the same result:

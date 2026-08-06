@@ -1,9 +1,9 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIInputSanitized;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -11,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIInputSanitizedFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIInputSanitized inputSanitized = element.getAnnotation(AIInputSanitized.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIInputSanitized inputSanitized = element.annotation(AIInputSanitized.class);
         if (inputSanitized == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         AIInputSanitized.SanitizerType[] types = inputSanitized.value();
         String[] typesStr = new String[types.length];
         for (int i = 0; i < types.length; i++) {
@@ -29,7 +29,7 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <sanitization_types>").append(typeList).append("</sanitization_types>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <sanitization_types>").append(Escape.xml(typeList)).append("</sanitization_types>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sanitization Requirement**: ").append(typeList).append("\n\n");

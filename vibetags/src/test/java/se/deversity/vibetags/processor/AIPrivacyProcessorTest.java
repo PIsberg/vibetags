@@ -22,6 +22,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
 import org.junit.jupiter.api.parallel.Isolated;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -83,7 +84,6 @@ class AIPrivacyProcessorTest {
     void validateAnnotations_privacyAndIgnore_emitsRedundancyWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.UserProfile.email");
@@ -95,7 +95,7 @@ class AIPrivacyProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size(), "Should emit exactly one warning");
         assertTrue(warnings.get(0).contains("@AIPrivacy and @AIIgnore"),
@@ -108,7 +108,6 @@ class AIPrivacyProcessorTest {
     void validateAnnotations_privacyWithoutIgnore_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.UserProfile.email");
@@ -120,7 +119,7 @@ class AIPrivacyProcessorTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIPrivacy is used without @AIIgnore");
@@ -172,19 +171,27 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToAgentsMd() throws Exception {
-        withCwdSignalFiles(List.of("AGENTS.md"), () -> {
-            CapturingProcessor processor = makeCapturingProcessor(List.of());
-            processor.process(Set.of(), privacyRoundEnv("com.example.Patient.dob", "HIPAA date of birth"));
-            triggerGeneration(processor);
+        // AGENTS.md is only written when it is the sole AI config file (sole-file fallback rule),
+        // so use an isolated root that opts in to AGENTS.md only.
+        java.nio.file.Path dir = java.nio.file.Files.createTempDirectory("vt-agents-privacy");
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        h.addSource("com.example.Patient",
+            "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AIPrivacy;\n"
+            + "public class Patient {\n"
+            + "    @AIPrivacy(reason = \"HIPAA date of birth\")\n"
+            + "    private String dob;\n"
+            + "}\n");
+        h.compile();
 
-            String content = processor.contentFor("AGENTS.md");
-            assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
-                "AGENTS.md must have PII guardrails section");
-            assertTrue(content.contains("com.example.Patient.dob"),
-                "AGENTS.md must list the annotated element");
-            assertTrue(content.contains("HIPAA date of birth"),
-                "AGENTS.md must include the privacy reason");
-        });
+        String content = h.readFile("AGENTS.md");
+        assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
+            "AGENTS.md must have PII guardrails section");
+        assertTrue(content.contains("com.example.Patient.dob"),
+            "AGENTS.md must list the annotated element");
+        assertTrue(content.contains("HIPAA date of birth"),
+            "AGENTS.md must include the privacy reason");
     }
 
     @Test

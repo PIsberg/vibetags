@@ -12,18 +12,18 @@ jobs:
     name: Publish to Maven Central
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # attach signed artifacts to the GitHub release
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -40,19 +40,37 @@ jobs:
           GPG_TTY: /dev/tty
 
       - name: Sign and deploy annotations to Maven Central
-        run: cd vibetags-annotations && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags-annotations vibetags-annotations \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
       - name: Build, sign, and deploy processor to Maven Central
-        run: cd vibetags && mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags vibetags-processor -DskipTests \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
       - name: Sign and deploy BOM to Maven Central
-        run: cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags-bom vibetags-bom \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
+      # Attach the GPG-signed jars/poms (and their .asc signatures) to the
+      # GitHub release so Scorecard's Signed-Releases check can verify them.
+      - name: Attach signed artifacts to the GitHub release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          files: |
+            vibetags-annotations/target/*.jar
+            vibetags-annotations/target/*.jar.asc
+            vibetags/target/*.jar
+            vibetags/target/*.jar.asc
+            vibetags-bom/target/*.pom.asc

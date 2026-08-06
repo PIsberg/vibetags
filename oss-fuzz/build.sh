@@ -31,7 +31,7 @@ RUNTIME_CLASSPATH=$(echo $PROJECT_JARS | xargs -I {} echo "\$this_dir/{}"):\$thi
 for fuzzer in $(find $SRC -name '*Fuzzer.java'); do
   fuzzer_basename=$(basename -s .java $fuzzer)
   javac -cp $BUILD_CLASSPATH $fuzzer
-  
+
   # The Fuzzer is in a package or default package. We assume default package for Jazzer ease.
   cp $(dirname $fuzzer)/${fuzzer_basename}.class $OUT/
 

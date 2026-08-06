@@ -6,6 +6,7 @@
 
 - [Logging Configuration](#logging-configuration)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
+- [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
 - [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
 - [Qwen Configuration](#-qwen-configuration)
 - [llms.txt Standard](#-llmstxt-standard-windsurf-cascade--llm-agents)
@@ -17,6 +18,8 @@
 - [@AITestDriven — Test-Driven AI Requirements](#-aitestdriven---test-driven-ai-requirements)
 - [Design-Intent Annotations (v0.9.8)](#-new-in-v098-five-design-intent-annotations)
 - [Platform Guardrail Annotations (v0.9.8)](#️-new-in-v098-continued-nine-platform-guardrail-annotations)
+- [Precision Guardrail Annotations (v0.9.9)](#-new-in-v099-twelve-precision-guardrail-annotations)
+- [Evidence-Based Annotations (v1.0.0)](#-new-in-v100-five-evidence-based-annotations)
 
 For the full annotation table, processor options, and output-file formats, see also [CLAUDE.md](CLAUDE.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -67,6 +70,109 @@ tasks.withType(JavaCompile) {
     ]
 }
 ```
+
+### Check Mode — CI Drift Enforcement (Opt-in)
+
+By default VibeTags *generates* guardrail files and never fails your build. **Check mode** flips that for CI: it verifies that every generated file is in sync with the annotations and **fails the compile** if anything has drifted — without writing a single byte to disk.
+
+| Option | Default | Description |
+|---|---|---|
+| `vibetags.check` | `false` | When `true`, verify instead of generate: run the full content build and multi-module merge, compare against the files on disk, and report every file a normal compile would change as a compile **error**. Nothing is written — no output files, no sidecars, no cache. |
+
+Drift is detected for all of it: changed annotations not yet regenerated, hand-edited generated blocks, stale granular rule files, and orphaned granular files a normal compile would clean up. The write cache and fingerprint short-circuit are bypassed, so the verdict never depends on local cache state — a fresh CI checkout works.
+
+Javac `-A` options can't be passed as a Maven user property, so opt in through a profile.
+
+**Maven profile** (CI opts in with `mvn compile -P vibetags-check`; the default build is untouched):
+
+```xml
+<profile>
+    <id>vibetags-check</id>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Avibetags.check=true</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</profile>
+```
+
+**Gradle:**
+
+```groovy
+// Opt in via a project property: gradle compileJava -PvibetagsCheck
+tasks.withType(JavaCompile) {
+    if (project.hasProperty('vibetagsCheck')) {
+        options.compilerArgs += ['-Avibetags.check=true']
+    }
+}
+```
+
+**GitHub Actions:**
+
+```yaml
+- name: Verify AI guardrails are in sync
+  run: mvn -B compile -P vibetags-check
+```
+
+When the check fails, the error lists every out-of-date file:
+
+```text
+[ERROR] VibeTags: check failed — 3 guardrail file(s) are out of date with the annotations:
+  - CLAUDE.md
+  - .cursorrules
+  - .cursor/rules/com-example-PaymentProcessor.mdc
+Run a normal compile (without -Avibetags.check=true) and commit the regenerated files.
+```
+
+To fix: run a normal compile locally and commit the regenerated files.
+
+### Locked-Code PR Guard (GitHub Action)
+
+Guardrail files *ask* AI tools to keep out of `@AILocked` code — the locked-files guard *verifies* nothing slipped through. It fails a pull request whose diff touches locked code.
+
+**1. Opt in to the machine-readable lock report** (same file-existence model as every platform):
+
+```bash
+touch .vibetags-locks
+mvn compile
+```
+
+The compile writes `.vibetags-locks` — JSON Lines between `# VIBETAGS` hash markers, one entry per `@AILocked` element with its source file and 1-based line range:
+
+```text
+# VIBETAGS-START
+{"type":"locked","element":"com.example.PaymentProcessor","kind":"CLASS","file":"src/main/java/com/example/PaymentProcessor.java","startLine":12,"endLine":240,"reason":"Core payment logic"}
+# VIBETAGS-END
+```
+
+Line positions come from the javac Compiler Tree API; under other compilers (ECJ) entries omit positions and tools fall back to file-level matching. In Maven multi-module builds the report aggregates every module's locks via module sub-markers.
+
+**2. Add the action to your PR workflow:**
+
+```yaml
+jobs:
+  locked-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: PIsberg/vibetags/action/locked-files@main
+```
+
+The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
 
 ### Choosing Which AI Services to Support (Opt-in Model)
 
@@ -159,6 +265,48 @@ Create one or more of the following files in your project root to opt in:
 ```
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
+
+### Troubleshooting: Nothing Was Generated
+
+The build says `BUILD SUCCESS`, an opted-in file exists, and it is still empty. Both known
+causes are silent, and both turned up in real consumer projects, so check these two first.
+
+**1. JDK 23+ only runs annotation processors that are explicitly configured.**
+
+Since JDK 23, `javac` no longer picks up annotation processors found on the class path. A pom
+that declares `vibetags-processor` as an ordinary (or `provided`) dependency compiles cleanly
+on JDK 23+ and generates nothing: no error, no warning, no files.
+
+The recommended setup is explicit and therefore unaffected: `<annotationProcessorPaths>` on
+Maven (as shown in the [README](README.md)), the `annotationProcessor` configuration on
+Gradle. If the processor must stay on the class path, restore processing with:
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <proc>full</proc>
+    </configuration>
+</plugin>
+```
+
+**2. A build with nothing to compile never starts `javac`.**
+
+VibeTags runs inside the compiler. An incremental `mvn compile` with no changed sources skips
+`javac` entirely, so a platform file you just opted in stays empty even though the build is
+green. The same applies to opting out and to verifying a regeneration: the change only shows
+once `javac` actually runs.
+
+Force one real compile after changing the opt-in set:
+
+```bash
+mvn clean compile      # or touch any source file, then compile
+```
+
+**Still empty?** Read `vibetags.log`. Every skipped write is a `write.skip` event carrying a
+`reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path
+(see [Logging Configuration](#logging-configuration)).
 
 ### 🧩 Granular Rules (Cursor, Trae, Roo Code)
 
@@ -837,3 +985,213 @@ public class GdprService {
 
 Generated guidance: *"Idempotency guaranteed. Multiple invocations must produce the same result as one. Never introduce side effects that cause repeated invocations to produce different results."*
 
+#### 🚩 `@AIFeatureFlag(flag, defaultValue)`
+
+Marks code gated behind a feature flag. AI assistants must preserve the flag check and never assume the flag is always active when refactoring.
+
+```java
+@AIFeatureFlag(flag = "checkout.new-payment-flow", defaultValue = false)
+public void processWithNewFlow(Order order) { ... }
+```
+
+Generated guidance: *"This element is gated behind a feature flag. Do not assume the flag is always active. Preserve the flag check."*
+
+#### 🔐 `@AISecure(aspect)`
+
+Marks security-critical code. AI must never weaken security properties (authentication, encryption, input validation, …) and must flag every change for security review.
+
+```java
+@AISecure(aspect = "authentication")
+public boolean verifyToken(String jwt) { ... }
+```
+
+Generated guidance: *"Security-critical. AI must not weaken security properties. Any change must be reviewed for security impact."*
+
+### 🆕 New in v0.9.9: Twelve Precision Guardrail Annotations
+
+v0.9.9 extends the set to 39 annotations with element-precise guardrails — including the first two annotations that target **method parameters** (`@AIInputSanitized`, `@AISecureLogging`).
+
+#### 🚫 `@AICallersOnly(value)`
+
+Restricts who may invoke the element. AI must not introduce calls from outside the allowed callers.
+
+```java
+@AICallersOnly({"com.example.billing.InvoiceService", "com.example.billing.RefundService"})
+public void postLedgerEntry(LedgerEntry entry) { ... }
+```
+
+#### 🛡️ `@AISandboxOnly`
+
+Marks sandbox/test-harness code. Production classes must never import or reference it.
+
+#### ⚡ `@AIMemoryBudget(value)`
+
+Declares a strict allocation budget (`ZERO_ALLOCATION`, `NO_AUTOBOXING`, …) on hot-path code. AI must optimize allocations and never introduce per-call garbage.
+
+```java
+@AIMemoryBudget(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION)
+public long checksum(byte[] frame) { ... }
+```
+
+#### 🧠 `@AIPure`
+
+The method must remain a pure function: no side effects, no state mutation, deterministic for the same inputs.
+
+#### 🧱 `@AIDomainModel(allow)`
+
+A framework-free domain entity. AI must not import Spring, JPA/Hibernate, Jackson, or other framework packages; explicit exceptions go in `allow`.
+
+#### ❄️ `@AIExtensible(value)`
+
+The type is extended via the declared polymorphic pattern (`STRATEGY_PATTERN`, `VISITOR_PATTERN`, …). AI must implement extensions polymorphically, never by appending branch conditionals.
+
+#### 🚨 `@AIInputSanitized(value)` — *parameter/field*
+
+The annotated parameter or field must pass approved sanitizers (`SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, …) before reaching queries or renderers.
+
+```java
+public void exportKeys(
+        @AIInputSanitized({AIInputSanitized.SanitizerType.PATH_TRAVERSAL}) String filePath) { ... }
+```
+
+Parameter entries are rendered with their full element path, e.g. `com.example.KeyStore.exportKeys(java.lang.String)#filePath`.
+
+#### 🔒 `@AISecureLogging(value)` — *field/parameter*
+
+A sensitive value that must never reach logs or stdout unprotected. AI must enforce the masking policy (`OMIT`, `HASH`, `MASK_CREDIT_CARD`, …) in any logging it writes.
+
+```java
+public void registerUserSession(
+        @AISecureLogging(AISecureLogging.MaskingPolicy.HASH) String passwordRaw) { ... }
+```
+
+#### 📋 `@AIExplain(value)`
+
+Any change requires a step-by-step proof of correctness in the PR/walkthrough, scaled to the declared complexity level (`HIGH`, `MEDIUM`, …).
+
+#### 🛠️ `@AIPrototype`
+
+An experimental stub: QA and test constraints are relaxed, but production classes must never import it.
+
+#### 🌅 `@AISunset(jira, replacement)`
+
+Strict deprecation tied to a JIRA ticket. Introducing *new* references is forbidden; AI routes callers to `replacement`.
+
+```java
+@AISunset(jira = "PAY-1234", replacement = PaymentProcessorV2.class)
+public class LegacyPaymentProcessor { ... }
+```
+
+#### 🚧 `@AITemporary(expiresOn, reason)`
+
+A hotfix or stub with an expiration date. The processor warns at compile time when `expiresOn` (`YYYY-MM-DD`) has passed.
+
+```java
+@AITemporary(expiresOn = "2026-09-01", reason = "Stub until the upstream rate-limit fix ships.")
+public Response retryWithBackoffHack(Request req) { ... }
+```
+
+#### Validation warnings for the v0.9.9 annotations
+
+- `@AISunset` + `@AIDraft` — contradictory (sunset elements must not be actively drafted or expanded)
+- `@AISunset` with a blank `jira` — required attribute missing
+- `@AITemporary` with a blank or unparseable `expiresOn` date — invalid value
+- `@AITemporary` whose `expiresOn` date has passed — expired workaround still in the codebase
+
+### 🆕 New in v1.0.0: Five Evidence-Based Annotations
+
+These five were reverse-engineered from guardrails real maintainers wrote **by hand** in 225
+open-source `CLAUDE.md` files — a hand-written AI rule is a constraint someone wished they could
+express in code, so where one had no annotation, that was a gap in the library. Full evidence,
+frequency counts, and the candidates that did *not* make the cut: [`docs/proposed-annotations.md`](docs/proposed-annotations.md).
+
+Four of the five close the same structural gap: VibeTags owned the *positive* pole of an axis and
+was missing the *negative* one — and an AI reading the **absence** of a tag reliably does the wrong
+thing.
+
+#### 🤖 `@AIGenerated(from, regenerateWith, editInstead)`
+
+Machine-generated code whose hand edits are silently overwritten — and, crucially, **where the change
+belongs instead**. `@AILocked` can only say "stop", which makes an agent give up or route around the
+obstacle; this says "stop, and here is the route". `@AIIgnore` is wrong here in the opposite
+direction: an agent must still *read* generated types to understand behaviour, it must only never
+*write* them.
+
+```java
+@AIGenerated(from = "src/main/resources/openapi/orders.yaml",
+             regenerateWith = "mvn generate-sources",
+             editInstead = "src/main/resources/openapi/orders.yaml")
+public class OrdersApiStub { ... }
+```
+
+#### 🧩 `@AILoadBearing(invariant, breaksIf, suppressAudit)`
+
+Code that *looks* wrong, redundant, or over-defensive and is deliberate. Unlike `@AILocked`, edits
+are welcome — as long as the stated invariant survives. Naming the concrete failure in `breaksIf` is
+what actually stops the tidy-up; `suppressAudit = true` tells scanners the oddity is not a defect.
+
+```java
+@AILoadBearing(invariant = "Sessions are never deallocated while the dispatch source is live",
+               breaksIf = "Freeing here reintroduces a use-after-free crash under load (#412)",
+               suppressAudit = true)
+private final List<Session> retained = new ArrayList<>();
+```
+
+#### ⛔ `@AIBannedApi(forbidden, useInstead, reason)`
+
+Named APIs that compile at this element but are prohibited there. The constraint is hosted on the
+**consumer** and points outward, because the symbols teams actually ban — `java.util.Date`,
+`System.out`, a framework's `@Scheduled` — are stdlib or third-party and cannot be annotated at all.
+
+```java
+@AIBannedApi(forbidden = {"java.lang.System.out", "java.lang.System.err"},
+             useInstead = "the injected org.slf4j.Logger",
+             reason = "Console output bypasses structured logging")
+public class OrderService { ... }
+```
+
+#### 🧵 `@AIThreadAffinity(value, thread, marshalVia, symptomIfViolated)`
+
+Safe on **exactly one** thread — the inverse of `@AIThreadSafe`, which promises safety from any. The
+gap between them is a correctness hole, not a documentation nicety: tagging an EDT-pinned method
+`@AIThreadSafe` states something false, and leaving it untagged invites "let's move this off the main
+thread". An agent asked to make it thread-safe adds a lock, which is precisely the wrong fix.
+
+```java
+@AIThreadAffinity(value = AIThreadAffinity.Affinity.NAMED,
+                  thread = "Swing EDT",
+                  marshalVia = "SwingUtilities.invokeLater",
+                  symptomIfViolated = "Silent repaint corruption; no exception on most JDKs")
+public void refreshTable() { ... }
+```
+
+#### 🔗 `@AIKeepInSync(mirrors, reason, enforcedBy)`
+
+The most-written rule in the whole corpus. This element is duplicated at named sites that must move
+together; it is free to change, and the failure mode is a *partial* change that desyncs a mirror no
+compiler checks. `enforcedBy` names the parity test if one exists — and its absence tells an agent
+the drift will **not** be caught.
+
+```java
+@AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
+              reason = "The release version is asserted in three places and drifts silently",
+              enforcedBy = "ProjectFactsConsistencyTest")
+public static final String VERSION = "1.0.0";
+```
+
+Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them — it cannot
+verify them the way `@AIImmutable` is checked against final fields.
+
+#### Validation warnings for the v1.0.0 annotations
+
+- `@AIGenerated` + `@AIIgnore` — contradictory; generated code must stay readable
+- `@AIGenerated` + `@AIDraft` — contradictory; drafting output that gets overwritten is pointless
+- `@AIGenerated` with neither `regenerateWith` nor `editInstead` — a dead end rather than a redirect
+- `@AILoadBearing` with a blank `breaksIf` — advisory; the failure mode is what makes the rule stick
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory instructions to the same reviewer
+- `@AIBannedApi` with an empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no route invites a worse substitute
+- `@AIThreadAffinity` + `@AIThreadSafe` — contradictory; opposite claims, so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; the caller is told "no" with no way to comply
+- `@AIKeepInSync` with an empty `mirrors[]` — no-op; nothing is kept in sync

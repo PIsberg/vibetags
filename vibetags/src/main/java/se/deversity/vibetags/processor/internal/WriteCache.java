@@ -38,6 +38,19 @@ import java.util.Map;
 )
 public final class WriteCache {
 
+    /**
+     * Format version written into the cache header. Bump when the line format changes.
+     * A cache written by a newer processor (higher version) is discarded wholesale on load —
+     * never mis-parsed — and rebuilt by this run. Caches without a {@code # format:} header
+     * (pre-1.0) use the same line format as version 1 and load normally.
+     *
+     * <p>Version 2 introduced watched-input entries ({@link #INPUT_HASH}); the line format is
+     * unchanged, but only a version that knows to prune them can be allowed to keep them — an
+     * older processor never re-records such an entry, so a deleted input would suppress its
+     * short-circuit forever. Bumping the version makes that processor discard the cache instead.
+     */
+    static final int FORMAT_VERSION = 2;
+
     /** Cache record. */
     static final class Entry {
         final String hash;
@@ -136,18 +149,62 @@ public final class WriteCache {
     public synchronized boolean allCachedFilesStable() {
         loadIfNeeded();
         if (entries.isEmpty()) return true;
-        for (Map.Entry<String, Entry> e : entries.entrySet()) {
+        for (java.util.Iterator<Map.Entry<String, Entry>> it = entries.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<String, Entry> e = it.next();
             try {
                 Path fullPath = rootDir.resolve(e.getKey()).normalize();
                 BasicFileAttributes attrs = Files.readAttributes(fullPath, BasicFileAttributes.class);
                 if (attrs.size() != e.getValue().size) return false;
                 if (attrs.lastModifiedTime().toMillis() != e.getValue().mtime) return false;
             } catch (IOException ioe) {
+                // A missing *output* stays in the cache: it must keep forcing regeneration until we
+                // rewrite it. A missing *input* has no such rewrite — nothing will ever re-record it
+                // — so drop it here, or its absence would suppress the short-circuit forever.
+                if (INPUT_HASH.equals(e.getValue().hash)) {
+                    it.remove();
+                    dirty = true;
+                }
                 return false; // missing or unreadable — caller must regenerate
             }
         }
         return true;
     }
+
+    /**
+     * Records a config file that VibeTags <em>reads</em> rather than writes, so that editing it
+     * invalidates {@link #allCachedFilesStable()} on the next compile.
+     *
+     * <p>Needed for inputs the build fingerprint cannot see — notably {@code .vibetags-mirror},
+     * which lives in a module other than the one being compiled (see
+     * {@code GuardrailFileWriter.watchInput}). The entry carries {@link #INPUT_HASH} instead of a
+     * content hash: it is never a write target, so no {@link #isUnchanged} comparison can match it,
+     * and {@link #allCachedFilesStable()} knows to prune it once the file goes away.
+     */
+    public synchronized void recordInput(Path file) {
+        loadIfNeeded();
+        String relKey = cacheKey(file);
+        try {
+            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+            Entry existing = entries.get(relKey);
+            if (existing != null && existing.size == attrs.size()
+                    && existing.mtime == attrs.lastModifiedTime().toMillis()
+                    && INPUT_HASH.equals(existing.hash)) {
+                return; // unchanged — do not dirty the cache for a file we only read
+            }
+            entries.put(relKey, new Entry(INPUT_HASH, attrs.size(), attrs.lastModifiedTime().toMillis()));
+            dirty = true;
+        } catch (IOException ignored) {
+            if (entries.remove(relKey) != null) {
+                dirty = true;
+            }
+        }
+    }
+
+    /**
+     * Sentinel in the hash column marking a watched input rather than a file we wrote. Deliberately
+     * not 8 hex digits, so it can never collide with a {@link #fingerprint} value.
+     */
+    static final String INPUT_HASH = "input---";
 
     /** Returns true iff cache says we wrote {@code body} to {@code file} and the file is byte-stable since. */
     @AIPerformance(constraint = "O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason")
@@ -199,6 +256,7 @@ public final class WriteCache {
         if (!dirty) return;
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n");
+        sb.append("# format: ").append(FORMAT_VERSION).append('\n');
         if (buildFingerprint != null) {
             sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
         }
@@ -246,6 +304,27 @@ public final class WriteCache {
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
                 if (line.isEmpty()) continue;
                 if (line.charAt(0) == '#') {
+                    // Future-format guard: a cache written by a newer processor may use a line
+                    // format this version cannot parse. Discard it wholesale — the cache is a
+                    // pure optimisation and rebuilds on the next successful write.
+                    String formatPrefix = "# format: ";
+                    if (line.startsWith(formatPrefix)) {
+                        try {
+                            int version = Integer.parseInt(line.substring(formatPrefix.length()).trim());
+                            if (version > FORMAT_VERSION) {
+                                entries.clear();
+                                buildFingerprint = null;
+                                sidecarStamp = null;
+                                return;
+                            }
+                        } catch (NumberFormatException ignored) {
+                            // Unparseable format header — treat as unknown and start over.
+                            entries.clear();
+                            buildFingerprint = null;
+                            sidecarStamp = null;
+                            return;
+                        }
+                    }
                     // Recognise the fingerprint header; ignore other comments.
                     String prefix = "# fingerprint: ";
                     if (line.startsWith(prefix)) {
@@ -286,7 +365,7 @@ public final class WriteCache {
                     // Skip corrupt rows — fresh entries replace them on next write.
                 }
             }
-        } catch (NoSuchFileException nsfe) {
+        } catch (NoSuchFileException ignored) {
             // First run — empty cache is fine.
         } catch (IOException ioe) {
             entries.clear(); // Corrupt or unreadable — start over.

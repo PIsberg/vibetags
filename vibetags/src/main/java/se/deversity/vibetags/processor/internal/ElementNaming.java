@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 
 /**
@@ -29,11 +30,30 @@ public final class ElementNaming {
     }
 
     /**
+     * Derives the granular rule filename stem (minus extension) for an element: its FQN with every
+     * character outside {@code [A-Za-z0-9-]} replaced by {@code -} (dots included). This is the
+     * single source of truth shared by {@link GranularRulesWriter} (which names the scoped files)
+     * and the aggregate scoped-rules index (which must point at exactly those filenames) — keeping
+     * both in lock-step so a pointer can never drift from the file it references.
+     */
+    public static String granularQName(Element element) {
+        return element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+    }
+
+    /**
      * Returns a fully-qualified path for an element. For FIELD/METHOD/CONSTRUCTOR the enclosing
-     * type's FQN is prepended; otherwise the element's own toString is used.
+     * type's FQN is prepended; for PARAMETER the enclosing executable's path is prepended with a
+     * {@code #} separator (e.g. {@code com.example.Foo.export(java.lang.String)#filePath});
+     * otherwise the element's own toString is used.
      */
     public static String elementPath(Element element) {
         ElementKind kind = element.getKind();
+        if (kind == ElementKind.PARAMETER) {
+            Element executable = element.getEnclosingElement();
+            if (executable != null) {
+                return elementPath(executable) + "#" + element.getSimpleName();
+            }
+        }
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
@@ -45,16 +65,33 @@ public final class ElementNaming {
 
     /**
      * Short display name suitable for llms.txt link text. For FIELD/METHOD/CONSTRUCTOR returns
-     * "EnclosingSimpleName.memberSig"; for types just the simple name.
+     * "EnclosingSimpleName.memberSig"; for PARAMETER the enclosing executable's display name is
+     * prepended with a {@code #} separator; for types just the simple name.
      */
     public static String elementDisplayName(Element element) {
         ElementKind kind = element.getKind();
+        if (kind == ElementKind.PARAMETER) {
+            Element executable = element.getEnclosingElement();
+            if (executable != null) {
+                return elementDisplayName(executable) + "#" + simpleNameOf(element);
+            }
+        }
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
-                return enclosing.getSimpleName() + "." + element.toString();
+                return simpleNameOf(enclosing) + "." + element.toString();
             }
         }
-        return element.getSimpleName().toString();
+        return simpleNameOf(element);
+    }
+
+    /**
+     * The element's simple name as a String, or {@code ""} when the compiler does not supply one.
+     * The empty case is real: unnamed packages have no simple name, and mocked elements in unit
+     * tests return none — neither is worth an NPE inside somebody else's build.
+     */
+    public static String simpleNameOf(Element element) {
+        Name name = element.getSimpleName();
+        return name != null ? name.toString() : "";
     }
 }

@@ -2,9 +2,12 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, 'feature/*', 'fix/*' ]
+    branches: [ main, master, 'feature/*', 'fix/*', 'chore/*', 'docs/*', 'ci/*', 'release/*' ]
+  # Deliberately unfiltered: a pull request is a request to review a change, so it is tested
+  # whichever branch it targets. Restricting this to main meant a stacked PR — one targeting the
+  # branch it was built on, so its diff shows only its own work — ran no tests at all, and its PR
+  # page was indistinguishable from one whose tests had passed.
   pull_request:
-    branches: [ main, master ]
 
 permissions:
   contents: read
@@ -19,24 +22,18 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: maven
-      
-      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
-        run: |
-          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
-          cd /tmp/async-test-lib
-          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
 
       - name: Install VibeTags Annotations (Maven)
         run: |
@@ -61,6 +58,18 @@ jobs:
           cd vibetags-bom
           mvn install -B
 
+      # The repo dogfoods its own guardrails but never verified them, so the committed
+      # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
+      # processor writes and nothing said so — which is exactly what happened, and is only
+      # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
+      # this and fails on any would-be write, so a stale committed guardrail is now a red
+      # build. On JDK 21 only: it verifies file content, which is JDK-independent.
+      - name: Verify VibeTags' Own Guardrails Are Current (self-check)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags
+          mvn clean compile -B -Pself-annotate -Dvibetags.selfcheck=true
+
       - name: Reset AI Config Files (Maven)
         run: |
           cd example
@@ -71,87 +80,353 @@ jobs:
           cd example
           mvn clean compile -B -Dvibetags.log.path=../vibetags.log
 
-      - name: Run Unit Tests (VibeTags Library)
+      - name: Verify The Example's Committed Guardrails Match Its Annotations
         run: |
-          cd vibetags
-          mvn test -B
-      
-      - name: Run Integration Tests (requires compiled example)
-        run: |
-          cd vibetags
-          mvn test -Drun.integration.tests=true -B
-      
-      - name: Verify Generated AI Config Files
-        run: |
-          cd example
-          echo "Checking generated files exist and contain content..."
-          for f in \
-            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
-            .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
-            .github/copilot-instructions.md llms.txt llms-full.txt \
-            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
-            .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
-            .cursor/rules/com-example-payment-PaymentProcessor.mdc \
-            .cursor/rules/com-example-database-DatabaseConnector.mdc \
-            .trae/rules/com-example-payment-PaymentProcessor.md \
-            .roo/rules/com-example-payment-PaymentProcessor.md \
-            .windsurf/rules/com-example-payment-PaymentProcessor.md \
-            .continue/rules/com-example-payment-PaymentProcessor.md \
-            .tabnine/guidelines/com-example-payment-PaymentProcessor.md \
-            .amazonq/rules/com-example-payment-PaymentProcessor.md \
-            .ai/rules/com-example-payment-PaymentProcessor.md \
-            .pearai/rules/com-example-payment-PaymentProcessor.md \
-            .mentatconfig.json sweep.yaml .plandex.yaml \
-            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
-            GEMINI.md .antigravityignore; do
-            if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
-            if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
-            echo "OK $f"
-          done
-          echo "All generated files present and non-empty"
+          # The three reactors run check mode. example/ cannot: the step above empties its config
+          # files and regenerates them, so check mode would compare the fresh tree against itself.
+          # Comparing against git is the equivalent gate, and a slightly stronger one — it proves a
+          # from-empty regeneration reproduces exactly what is committed. It fails when someone
+          # edits an annotation here and forgets to commit the regenerated files, which until now
+          # went unnoticed.
+          if [ -n "$(git status --porcelain -- example/)" ]; then
+            echo "::error::example/ guardrail files are out of date with its annotations."
+            echo "Run: cd example && mvn clean compile   then commit the regenerated files."
+            git status --porcelain -- example/
+            git --no-pager diff -- example/
+            exit 1
+          fi
+          echo "example/ regenerates byte-for-byte to the committed files."
 
-      - name: Verify @AIAudit Content
+      - name: Build Multi-Module Example (Maven reactor)
         run: |
-          cd example
-          echo "Checking @AIAudit content in generated files..."
-          grep -q "MANDATORY SECURITY AUDITS" .cursorrules || { echo "FAIL Cursor audit section missing"; exit 1; }
-          echo "OK Cursor audit section"
-          grep -q "audit_requirements" CLAUDE.md || { echo "FAIL Claude audit requirements missing"; exit 1; }
-          echo "OK Claude audit requirements"
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
-          echo "OK Gemini audit requirements"
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
-          echo "OK GEMINI.md audit requirements"
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
-          echo "OK Codex audit guardrails"
-          grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
-          echo "OK Qwen audit guardrails"
-          grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }
-          echo "OK Copilot audit requirements"
-          grep -q "Security Audit Requirements" llms.txt || { echo "FAIL llms.txt audit section missing"; exit 1; }
-          echo "OK llms.txt audit section"
-          grep -q "Mandatory Security Audit Requirements" llms-full.txt || { echo "FAIL llms-full.txt audit section missing"; exit 1; }
-          echo "OK llms-full.txt audit section"
-          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
-          echo "OK Aider conventions audit section"
-          grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
-          echo "OK sweep.yaml audit rule"
-          grep -q '"audit"' .mentatconfig.json || { echo "FAIL .mentatconfig.json audit section missing"; exit 1; }
-          echo "OK .mentatconfig.json audit section"
-          grep -q "audit:" .plandex.yaml || { echo "FAIL .plandex.yaml audit section missing"; exit 1; }
-          echo "OK .plandex.yaml audit section"
-          grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
-          echo "OK Open Interpreter profile audit"
-          echo "All @AIAudit content verified"
+          cd example-multimodule
+          mvn clean verify -B
+
+      - name: Verify Multi-Module Aggregation (issue #278)
+        run: |
+          cd example-multimodule
+          for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
+                       "VIBETAGS-MODULE: showcase" \
+                       "com.example.multimodule.core.IrNode" \
+                       "com.example.multimodule.engine.LayoutEngine" \
+                       "com.example.multimodule.cli.MultiModuleCli"; do
+            grep -qF "$token" CLAUDE.md || { echo "MISSING in CLAUDE.md: $token"; exit 1; }
+            grep -qF "$token" .cursorrules || { echo "MISSING in .cursorrules: $token"; exit 1; }
+          done
+          echo "All reactor modules present in merged guardrail files."
+
+      - name: Verify Every Annotation Survives the Reactor Merge
+        run: |
+          cd example-multimodule
+          # showcase/ carries all 44 @AI* annotations, so the merged root must show all 44 of the
+          # renderer's element buckets. A renderer that silently drops a family in the multi-module
+          # path — as opposed to the single-module path example/ covers — fails here.
+          declared=$(ls ../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/*.java | wc -l)
+          sections=$(grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u | wc -l)
+          if [ "$sections" -ne "$declared" ]; then
+            echo "merged CLAUDE.md has $sections element sections for $declared annotations"
+            grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u
+            exit 1
+          fi
+          echo "All $declared annotation families present in the merged reactor output."
+
+      - name: Verify Every AI Service Is Generated in a Reactor
+        run: |
+          cd example-multimodule
+          # The reactor root opts into every non-granular service, so every renderer runs through
+          # the sidecar merge — not just the three the hand-written modules happened to use.
+          # (The four indexable granular directories are deliberately absent: co-activating them
+          # collapses the aggregates, which is what example-multimodule-indexed/ covers.)
+          expected=50
+          actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
+          if [ "$actual" != "$expected" ]; then
+            echo "expected $expected active services in the reactor, got $actual"
+            grep 'Active services' vibetags.log | tail -1
+            exit 1
+          fi
+          # Spot-check that marker-based files from renderers with nothing else asserting them
+          # really got written. (.codex/* is absent on purpose: Codex is dropped unless AGENTS.md is
+          # the sole AI config file, which it is not here. JSON/TOML configs are whole-file
+          # overwrites with no marker, so they are not in this list.)
+          for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
+                   .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
+                   .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
+                   .pr_agent.toml .coderabbit.yaml; do
+            test -s "$f" || { echo "reactor produced no content for: $f"; exit 1; }
+            grep -qF "VIBETAGS" "$f" || { echo "no VibeTags block in: $f"; exit 1; }
+          done
+          # Granular directories are populated per class, not with a single file.
+          test "$(ls -1 .kiro/steering/ | wc -l)" -gt 10 \
+            || { echo "kiro granular directory not populated in the reactor"; exit 1; }
+          echo "All $expected services active and generating in the reactor."
+
+      - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
+        run: |
+          cd example-multimodule
+          # Check mode is what a consumer runs in CI: instead of regenerating, the processor fails
+          # the build when a generated file no longer matches the annotations. Running it here does
+          # two jobs. It exercises the feature end-to-end through a real reactor — the only test of
+          # it outside the unit suite — and it guards this example, where editing an annotation and
+          # forgetting to commit the regenerated file previously went unnoticed because CI only
+          # ever ran a plain `compile`.
+          #
+          # It runs after the normal build above, so the tree is already regenerated: a failure
+          # here means the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
+
+      - name: Verify Reactor YAML Is Readable By The Tools That Consume It
+        run: |
+          cd example-multimodule
+          # "The file exists and says VIBETAGS" is what the check above proves, and it is not
+          # enough: the merge once stacked each module's whole document, so these files carried
+          # their top-level key once per module. Strict parsers rejected them and lenient ones kept
+          # only the last module, silently. Parse them here with duplicate keys forbidden, and
+          # assert an element only one module declares is still reachable after the parse.
+          python3 - <<'PY'
+          import sys, yaml
+
+          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
+                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          # Declared in exactly one module each, so their presence proves the merge kept them all.
+          WITNESSES = {
+              "cli": "com.example.multimodule.cli.MultiModuleCli",
+              "core": "com.example.multimodule.core.IrNode",
+              "showcase": "com.example.security.SecurityConfig",
+          }
+
+          class Strict(yaml.SafeLoader):
+              pass
+
+          def no_duplicates(loader, node, deep=False):
+              seen = set()
+              for key_node, _ in node.value:
+                  key = loader.construct_object(key_node, deep=deep)
+                  if key in seen:
+                      raise yaml.constructor.ConstructorError(
+                          None, None, f"duplicate top-level key {key!r}", key_node.start_mark)
+                  seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+          Strict.construct_mapping = no_duplicates
+
+          failed = False
+          for path in FILES:
+              text = open(path, encoding="utf-8").read()
+              try:
+                  parsed = str(yaml.load(text, Loader=Strict))
+              except Exception as e:
+                  print(f"::error file={path}::not a valid YAML document: {e}")
+                  failed = True
+                  continue
+              missing = [m for m, w in WITNESSES.items() if w not in parsed]
+              if missing:
+                  print(f"::error file={path}::merged away the guardrails of module(s): {missing}")
+                  failed = True
+              else:
+                  print(f"{path}: parses strictly, all {len(WITNESSES)} modules survive")
+          sys.exit(1 if failed else 0)
+          PY
+
+
+      - name: Verify Per-Module (nested) Output
+        run: |
+          cd example-multimodule
+          # cli/ opts into its own CLAUDE.md, so it must carry ONLY cli's guardrails...
+          grep -qF "com.example.multimodule.cli.MultiModuleCli" cli/CLAUDE.md \
+            || { echo "MISSING in cli/CLAUDE.md: cli guardrail"; exit 1; }
+          for foreign in "com.example.multimodule.core.IrNode" "com.example.multimodule.engine.LayoutEngine"; do
+            if grep -qF "$foreign" cli/CLAUDE.md; then
+              echo "LEAKED into cli/CLAUDE.md (should be module-scoped): $foreign"; exit 1
+            fi
+          done
+          # ...and the reactor-root file is unchanged: still merges every module.
+          grep -qF "com.example.multimodule.core.IrNode" CLAUDE.md \
+            || { echo "root CLAUDE.md must still merge all modules"; exit 1; }
+          echo "Per-module output is module-scoped; reactor root still merges all modules."
+
+      - name: Verify Cross-Module Mirroring (issue #312)
+        run: |
+          cd example-multimodule
+          # tests/ has no @AI* annotations of its own; it opted in via .vibetags-mirror, so each
+          # source module's scoped rules must be mirrored there under its own namespace.
+          for f in mirrored-core-com-example-multimodule-core-IrNode.md \
+                   mirrored-engine-com-example-multimodule-engine-LayoutEngine.md \
+                   mirrored-cli-com-example-multimodule-cli-MultiModuleCli.md; do
+            test -f "tests/.claude/rules/$f" || { echo "MISSING mirrored rule: $f"; exit 1; }
+          done
+          # A mirrored file carries the source rule verbatim, with the target's globs appended.
+          grep -qF "Core IR node" tests/.claude/rules/mirrored-core-com-example-multimodule-core-IrNode.md \
+            || { echo "mirrored rule lost the source module's guardrail"; exit 1; }
+          grep -qF '"**/tests/src/test/java/**/*.java"' tests/.claude/rules/mirrored-core-com-example-multimodule-core-IrNode.md \
+            || { echo "mirrored rule is not scoped to the target module's sources"; exit 1; }
+          # Mirroring must not disturb the reactor root: tests/ contributes no annotations.
+          if grep -qF "VIBETAGS-MODULE: tests" CLAUDE.md; then
+            echo "a mirror target with no annotations must not appear in the root merge"; exit 1
+          fi
+          echo "Sibling module rules mirrored into the centralised test module."
+
+      - name: Verify Granular Role Files Merge Across Modules (issue #365)
+        run: |
+          cd example-multimodule
+          # .vibetags-roles routes core/, engine/ and cli/ into ONE root rule file, so all three
+          # modules write the same path. Each compile used to replace it with its own classes
+          # alone, and only the module that happened to compile last kept its guardrails.
+          for dir in .kiro/steering .trae/rules .roo/rules .ai/rules .continue/rules \
+                     .tabnine/guidelines .amazonq/rules .pearai/rules; do
+            f="$dir/reactor-spine.md"
+            test -f "$f" || { echo "MISSING role rule file: $f"; exit 1; }
+            for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
+                         "com.example.multimodule.core.IrNode" \
+                         "com.example.multimodule.engine.LayoutEngine" \
+                         "com.example.multimodule.cli.MultiModuleCli"; do
+              grep -qF "$token" "$f" || { echo "MISSING in $f: $token"; exit 1; }
+            done
+          done
+          # A class matching no role keeps its own per-class file — the merge must not eat that path.
+          test -f .kiro/steering/com-example-security-SecurityConfig.md \
+            || { echo "unrouted classes lost their per-class rule file"; exit 1; }
+          # The report's second repro: `mvn -pl <one-module>` must leave the shared file byte-identical,
+          # or an unrelated one-module edit produces a spurious diff in a generated file.
+          before=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          mvn -B -pl core clean compile
+          after=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          if [ "$before" != "$after" ]; then
+            echo "a one-module rebuild rewrote the shared role file:"
+            git --no-pager diff -- .kiro/steering/reactor-spine.md
+            exit 1
+          fi
+          echo "Role files merge across all three modules and survive a one-module rebuild."
+
+      - name: Build All-Tiers Example And Verify The Tier Split
+        run: |
+          cd example-all-tiers
+          mvn clean compile -B
+          # Tier 1 must carry the six safety buckets inline and nothing verbose: a guardrail that
+          # only loads once the agent opens the file it protects has become a comment, and a
+          # verbose bucket inline is the always-loaded bloat the index exists to remove.
+          for bucket in locked_files audit_requirements pii_guardrails core_elements \
+                        ignored_elements security_elements; do
+            grep -qF "<$bucket>" CLAUDE.md \
+              || { echo "Tier 1 lost the safety bucket: $bucket"; exit 1; }
+          done
+          for bucket in contextual_instructions contract_signatures performance_constraints \
+                        sanitization_elements observability_instrumentation; do
+            if grep -qF "<$bucket>" CLAUDE.md; then
+              echo "Tier 1 embedded a verbose bucket that belongs in Tier 3: $bucket"; exit 1
+            fi
+          done
+          # Tier 1 points at both lower tiers, per module.
+          for m in billing shipping; do
+            grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md || { echo "no Tier-1 region for $m"; exit 1; }
+            grep -qF "$m/.claude/rules/" CLAUDE.md || { echo "Tier-1 pointer misses $m Tier 3"; exit 1; }
+            grep -qF "$m/CLAUDE.md" CLAUDE.md || { echo "Tier-1 pointer misses $m Tier 2"; exit 1; }
+          done
+          # Tier 2 is a real boundary: neither module's file mentions the other.
+          # `if grep` rather than `grep && {…}`: the steps run under `bash -e`, and a grep that
+          # correctly finds nothing exits 1, which would fail the step on the passing case.
+          if grep -q shipping billing/CLAUDE.md; then echo "Tier 2 billing leaks shipping"; exit 1; fi
+          if grep -q billing shipping/CLAUDE.md; then echo "Tier 2 shipping leaks billing"; exit 1; fi
+          # Tier 3 is role-grouped and auto-loading, and reaches parameter level — the finest
+          # addressing VibeTags produces, and the one a hand-written rules file cannot express.
+          for f in billing/.claude/rules/api-endpoints.md billing/.claude/rules/domain-model.md \
+                   shipping/.claude/rules/label-printing.md; do
+            test -s "$f" || { echo "missing role-grouped Tier-3 file: $f"; exit 1; }
+            grep -q "^paths:" "$f" || { echo "$f has no paths: front-matter, so it never loads"; exit 1; }
+          done
+          grep -qF "renderInvoice(java.lang.String,java.lang.String)#customerNote" \
+            billing/.claude/rules/api-endpoints.md \
+            || { echo "no parameter-level guardrail generated"; exit 1; }
+          echo "All three tiers and all four annotation levels verified."
+
+      - name: Verify The All-Tiers Example's Committed Guardrails (check mode)
+        run: |
+          cd example-all-tiers
+          mvn clean compile -B -Dvibetags.check=true
+
+      - name: Build Indexed Multi-Module Example (issue #295)
+        run: |
+          cd example-multimodule-indexed
+          mvn clean compile -B
+
+      - name: Verify The Indexed Example's Committed Guardrails (check mode)
+        run: |
+          cd example-multimodule-indexed
+          # Runs after the build above, so the tree is already regenerated: a failure here means
+          # the committed files disagree with the committed annotations.
+          mvn clean compile -B -Dvibetags.check=true
+
+      - name: Verify Indexed Root (issues #295, #319, #332)
+        run: |
+          cd example-multimodule-indexed
+          # Root CLAUDE.md is a lean INDEX: one pointer per module...
+          for m in core app; do
+            grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md \
+              || { echo "MISSING module pointer in indexed CLAUDE.md: $m"; exit 1; }
+          done
+          grep -qF "maintained in that module" CLAUDE.md \
+            || { echo "indexed CLAUDE.md is not an index (no pointer text)"; exit 1; }
+          # ...but the always-on SAFETY tier stays inline per module (#332). A guardrail that only
+          # loads once the agent opens the file it protects has become a comment.
+          grep -qF "com.example.indexed.core.DocumentModel" CLAUDE.md \
+            || { echo "indexed CLAUDE.md must keep @AILocked inline"; exit 1; }
+          grep -qF "com.example.indexed.app.DocumentService" CLAUDE.md \
+            || { echo "indexed CLAUDE.md must keep @AIAudit inline"; exit 1; }
+          # ...while the verbose tier is what the pointer replaces.
+          if grep -qF "<contextual_instructions>" CLAUDE.md; then
+            echo "indexed CLAUDE.md must NOT embed the verbose per-element buckets"; exit 1
+          fi
+          for token in "<contract_signatures>" "<pure_functions>" "<domain_model_elements>"; do
+            if grep -qF "$token" CLAUDE.md; then
+              echo "indexed CLAUDE.md must NOT embed the verbose tier: $token"; exit 1
+            fi
+          done
+          # GEMINI.md has no scoped-rules feature here, so it still carries the full MERGED block.
+          for fqn in "com.example.indexed.core.DocumentModel" "com.example.indexed.app.DocumentService"; do
+            grep -qF "$fqn" GEMINI.md || { echo "MISSING in merged GEMINI.md: $fqn"; exit 1; }
+          done
+          grep -qF "CONTRACT-FROZEN SIGNATURES" GEMINI.md \
+            || { echo "GEMINI.md must still carry the verbose tier"; exit 1; }
+          # Copilot: aggregate AND granular directory live at the ROOT, not per module — the
+          # combination that shipped broken in RC7 (#319). It must collapse to a scoped index...
+          grep -qF "## Scoped Rules Index" .github/copilot-instructions.md \
+            || { echo "indexed root did not collapse .github/copilot-instructions.md (#319)"; exit 1; }
+          # ...and every module's scoped file must survive every other module's compile.
+          for f in com-example-indexed-core-DocumentModel com-example-indexed-app-DocumentService; do
+            test -f ".github/instructions/$f.instructions.md" \
+              || { echo "MISSING shared granular file (cross-module cleanup regression): $f"; exit 1; }
+          done
+          # A module with nothing locked must not repeat an empty heading once per module.
+          test "$(grep -c '^## Locked Files' .github/copilot-instructions.md)" = "1" \
+            || { echo "empty Locked Files heading repeated per module (#319)"; exit 1; }
+          # Tier-3 detail lives in per-module scoped rules, grouped by each module's .vibetags-roles.
+          test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
+          test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
+          echo "Indexed root: safety inline, verbose indexed, Copilot collapsed, all modules' scoped files intact."
+      # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
+      # step above ran the fast tier; this is the only place the whole suite runs, so it is
+      # not the redundant second pass it looks like.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
+        run: |
+          cd vibetags
+          mvn test -B -Pe2e
+
+      - name: Verify Generated AI Config Files
+        uses: ./.github/actions/verify-generated-files
+        with:
+          working-directory: example
+
+      - name: Verify the Central deploy script reports failures
+        if: matrix.java == '21'
+        run: bash .github/scripts/deploy-to-central.test.sh
 
       - name: Upload coverage to Codecov
         if: matrix.java == '21'
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: vibetags/target/site/jacoco/jacoco.xml
           flags: unittests
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
   cross-platform:
     name: Cross-Platform Tests (${{ matrix.os }})
@@ -169,30 +444,60 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-
-      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
-        run: |
-          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git "${RUNNER_TEMP}/async-test-lib"
-          cd "${RUNNER_TEMP}/async-test-lib"
-          mvn install -DskipTests -B -q
 
       - name: Install VibeTags Annotations (Maven)
         run: |
           cd vibetags-annotations
           mvn install -B -q
 
-      - name: Run Unit Tests (VibeTags Library)
+      - name: Build VibeTags Library (Maven)
         run: |
           cd vibetags
-          mvn test -B
+          mvn clean install -B -q
+
+      - name: Install VibeTags BOM (Maven)
+        run: |
+          cd vibetags-bom
+          mvn install -B -q
+
+      - name: Reset AI Config Files (Maven)
+        run: |
+          cd example
+          bash reset-ai-files.sh
+
+      - name: Build Example Project (Maven)
+        run: |
+          cd example
+          mvn -B clean compile
+
+      - name: Build Multi-Module Example (Maven reactor)
+        run: |
+          cd example-multimodule
+          mvn clean verify -B
+          grep -qF "VIBETAGS-MODULE: core" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: engine" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: cli" CLAUDE.md
+
+      # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
+      # step above ran the fast tier; this is the only place the whole suite runs, so it is
+      # not the redundant second pass it looks like.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
+        run: |
+          cd vibetags
+          mvn test -B -Pe2e
+
+      - name: Verify Generated AI Config Files
+        uses: ./.github/actions/verify-generated-files
+        with:
+          working-directory: example
 
   load-tests:
     name: Load Tests (JDK 21)
@@ -201,14 +506,14 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -224,11 +529,30 @@ jobs:
           cd vibetags
           mvn install -DskipTests -B
 
-      - name: Run annotation-volume stress test (N â‰¤ 500) and concurrent-build test
+      # SignatureCaptureStressTest is in the list because it asserts a direction, not a duration:
+      # a build with enforcement off must not allocate what only the enforcing mode reads. That is
+      # a regression gate, and a regression gate that only runs on one laptop is not a gate. It
+      # takes ~15s and does not depend on runner speed, unlike the volume sweep's wall-clock.
+      - name: Run annotation-volume stress test (N ≤ 500), concurrent-build and signature-capture tests
         run: |
+          # load-tests/pom.xml pins <processor.version> to whichever release is being compared, and
+          # that pin is deliberate for cross-version work. It is wrong for this job: a regression
+          # gate has to run against the code in the pull request, and the pin sat two releases
+          # behind, so this step was gating an artifact downloaded from Maven Central. The
+          # signature-capture guard passed on 0.9.5 — a build predating the optimization it exists
+          # to protect — while reporting a 0.0% saving.
+          VT_VERSION=$(cd vibetags && mvn -q help:evaluate -Dexpression=project.version -DforceStdout | tail -1)
+          echo "Load-testing the processor built by this run: $VT_VERSION"
+          # An empty or malformed value would silently fall back to the pom's pin, which is the
+          # failure this step exists to remove. Fail loudly instead.
+          case "$VT_VERSION" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "could not resolve the processor version, got '$VT_VERSION'"; exit 1 ;;
+          esac
           cd load-tests
           mvn test -B \
-            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest" \
+            -Dprocessor.version="$VT_VERSION" \
+            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest" \
             -Dstress.max.classes=500
 
       - name: Upload stress-test results
@@ -247,36 +571,28 @@ jobs:
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: gradle
-      
-      - name: Install async-test-lib (required for concurrency tests, not on Maven Central)
-        run: |
-          git clone --depth 1 --branch v1.4.0 https://github.com/PIsberg/async-test-lib.git /tmp/async-test-lib
-          cd /tmp/async-test-lib
-          JAVA_HOME=$JAVA_HOME_21_X64 mvn install -DskipTests -B -q
 
       - name: Publish VibeTags Annotations (Gradle)
         run: |
           cd vibetags-annotations
-          gradle wrapper || echo "Wrapper generation skipped"
-          gradle clean build publishToMavenLocal --no-daemon
+          ./gradlew clean build publishToMavenLocal --no-daemon
 
       - name: Build VibeTags Library (Gradle)
         run: |
           cd vibetags
-          gradle wrapper || echo "Wrapper generation skipped"
-          gradle clean build publishToMavenLocal --no-daemon
+          ./gradlew clean build publishToMavenLocal --no-daemon
 
       - name: Install VibeTags BOM (Maven, consumed by Gradle via mavenLocal)
         run: |
@@ -291,87 +607,28 @@ jobs:
       - name: Build Example Project (Gradle)
         run: |
           cd example
-          gradle wrapper || echo "Wrapper generation skipped"
-          gradle clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
-      
-      - name: Run Unit Tests (VibeTags Library)
-        run: |
-          cd vibetags
-          gradle test --no-daemon
-      
-      - name: Run Integration Tests (requires compiled example)
-        run: |
-          cd vibetags
-          gradle test -Drun.integration.tests=true --no-daemon
-      
-      - name: Verify Generated AI Config Files
-        run: |
-          cd example
-          echo "Checking generated files exist and contain content..."
-          for f in \
-            .cursorrules CLAUDE.md .aiexclude AGENTS.md QWEN.md .qwenignore \
-            .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
-            .github/copilot-instructions.md llms.txt llms-full.txt \
-            .codex/config.toml .codex/rules/vibetags.rules CONVENTIONS.md .aiderignore \
-            .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
-            .cursor/rules/com-example-payment-PaymentProcessor.mdc \
-            .cursor/rules/com-example-database-DatabaseConnector.mdc \
-            .trae/rules/com-example-payment-PaymentProcessor.md \
-            .roo/rules/com-example-payment-PaymentProcessor.md \
-            .windsurf/rules/com-example-payment-PaymentProcessor.md \
-            .continue/rules/com-example-payment-PaymentProcessor.md \
-            .tabnine/guidelines/com-example-payment-PaymentProcessor.md \
-            .amazonq/rules/com-example-payment-PaymentProcessor.md \
-            .ai/rules/com-example-payment-PaymentProcessor.md \
-            .pearai/rules/com-example-payment-PaymentProcessor.md \
-            .mentatconfig.json sweep.yaml .plandex.yaml \
-            .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
-            GEMINI.md .antigravityignore; do
-            if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
-            if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
-            echo "OK $f"
-          done
-          echo "All generated files present and non-empty"
+          ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
 
-      - name: Verify @AIAudit Content
+      # -Pe2e mirrors the Maven profile; see vibetags/build.gradle. The `build` step above
+      # ran the fast tier only, so without this the Gradle legs never see the e2e classes.
+      - name: Run Full Test Suite (VibeTags Library, incl. e2e)
         run: |
-          cd example
-          echo "Checking @AIAudit content in generated files..."
-          grep -q "MANDATORY SECURITY AUDITS" .cursorrules || { echo "FAIL Cursor audit section missing"; exit 1; }
-          echo "OK Cursor audit section"
-          grep -q "audit_requirements" CLAUDE.md || { echo "FAIL Claude audit requirements missing"; exit 1; }
-          echo "OK Claude audit requirements"
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
-          echo "OK Gemini audit requirements"
-          grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
-          echo "OK GEMINI.md audit requirements"
-          grep -q "MANDATORY SECURITY AUDITS" AGENTS.md || { echo "FAIL Codex audit guardrails missing"; exit 1; }
-          echo "OK Codex audit guardrails"
-          grep -q "MANDATORY SECURITY AUDITS" QWEN.md || { echo "FAIL Qwen audit guardrails missing"; exit 1; }
-          echo "OK Qwen audit guardrails"
-          grep -q "Security Audit Requirements" .github/copilot-instructions.md || { echo "FAIL Copilot audit requirements missing"; exit 1; }
-          echo "OK Copilot audit requirements"
-          grep -q "Security Audit Requirements" llms.txt || { echo "FAIL llms.txt audit section missing"; exit 1; }
-          echo "OK llms.txt audit section"
-          grep -q "Mandatory Security Audit Requirements" llms-full.txt || { echo "FAIL llms-full.txt audit section missing"; exit 1; }
-          echo "OK llms-full.txt audit section"
-          grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
-          echo "OK Aider conventions audit section"
-          grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
-          echo "OK sweep.yaml audit rule"
-          grep -q '"audit"' .mentatconfig.json || { echo "FAIL .mentatconfig.json audit section missing"; exit 1; }
-          echo "OK .mentatconfig.json audit section"
-          grep -q "audit:" .plandex.yaml || { echo "FAIL .plandex.yaml audit section missing"; exit 1; }
-          echo "OK .plandex.yaml audit section"
-          grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
-          echo "OK Open Interpreter profile audit"
-          echo "All @AIAudit content verified"
+          cd vibetags
+          ./gradlew test -Pe2e --no-daemon
+
+      - name: Verify Generated AI Config Files
+        uses: ./.github/actions/verify-generated-files
+        with:
+          working-directory: example
 
       - name: Upload coverage to Codecov
         if: matrix.java == '21'
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: vibetags/build/reports/jacoco/test/jacocoTestReport.xml
           flags: unittests-gradle
-          fail_ci_if_error: true
+          fail_ci_if_error: false
+
+  # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only
+  # (workflow_dispatch). It was the longest job here and nothing gated on its result.

@@ -13,4 +13,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.TYPE, ElementType.FIELD})
 public @interface AISchemaSafe {
+
+    /**
+     * Optional rationale, persisted across AI sessions: why this rule applies to this element
+     * (a past incident, a subtle invariant, a decision the next agent cannot re-derive). When set,
+     * it is surfaced in the generated guardrail output.
+     *
+     * @return the rationale to carry into the generated guardrails, or an empty string to omit it
+     */
+    String reason() default "";
 }

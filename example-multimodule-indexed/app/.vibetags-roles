@@ -1,0 +1,2 @@
+# services = the app module's services → app/.claude/rules/services.md
+services = **/app/*.java

@@ -1,0 +1,106 @@
+package se.deversity.vibetags.processor.internal.content.platforms;
+
+import se.deversity.vibetags.processor.model.TaggedElement;
+import java.util.ArrayList;
+import java.util.List;
+import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.Platform;
+
+/**
+ * Builds a single, human-readable guardrail-instruction block covering every collected
+ * annotation. Shared by the PR-reviewer renderers (CodeRabbit, Ellipsis, PR-Agent) and the
+ * Roo custom-mode renderer, which all need the same prose summary embedded into their own
+ * schema (YAML block scalars, TOML multiline strings, etc.).
+ *
+ * <p>Formatting is delegated to the per-annotation formatters using {@link Platform#INTERPRETER}
+ * (a free-text, single-line-per-element style already supported by every formatter), so the
+ * block stays in lock-step with the rest of the generated guardrails without duplicating the
+ * per-annotation prose here.
+ */
+final class GuardrailInstructionBlock {
+
+    private GuardrailInstructionBlock() {}
+
+    /**
+     * Renders the guardrail summary as one bullet line per annotated element. Returns an empty
+     * string when no annotations were collected.
+     */
+    static String build(GuardrailModel model) {
+        StringBuilder sb = new StringBuilder(1024);
+        Platform p = Platform.INTERPRETER;
+        for (TaggedElement e : model.locked()) FormatterRegistry.locked().format(e, sb, p);
+        for (TaggedElement e : model.context()) FormatterRegistry.context().format(e, sb, p);
+        for (TaggedElement e : model.ignore()) FormatterRegistry.ignore().format(e, sb, p);
+        for (TaggedElement e : model.audit()) FormatterRegistry.audit().format(e, sb, p);
+        for (TaggedElement e : model.draft()) FormatterRegistry.draft().format(e, sb, p);
+        for (TaggedElement e : model.privacy()) FormatterRegistry.privacy().format(e, sb, p);
+        for (TaggedElement e : model.core()) FormatterRegistry.core().format(e, sb, p);
+        for (TaggedElement e : model.performance()) FormatterRegistry.performance().format(e, sb, p);
+        for (TaggedElement e : model.contract()) FormatterRegistry.contract().format(e, sb, p);
+        for (TaggedElement e : model.testDriven()) FormatterRegistry.testDriven().format(e, sb, p);
+        for (TaggedElement e : model.threadSafe()) FormatterRegistry.threadSafe().format(e, sb, p);
+        for (TaggedElement e : model.immutable()) FormatterRegistry.immutable().format(e, sb, p);
+        for (TaggedElement e : model.deprecated()) FormatterRegistry.deprecated().format(e, sb, p);
+        for (TaggedElement e : model.observability()) FormatterRegistry.observability().format(e, sb, p);
+        for (TaggedElement e : model.regulation()) FormatterRegistry.regulation().format(e, sb, p);
+        for (TaggedElement e : model.parallelTests()) FormatterRegistry.parallelTests().format(e, sb, p);
+        for (TaggedElement e : model.legacyBridge()) FormatterRegistry.legacyBridge().format(e, sb, p);
+        for (TaggedElement e : model.architecture()) FormatterRegistry.architecture().format(e, sb, p);
+        for (TaggedElement e : model.publicApi()) FormatterRegistry.publicApi().format(e, sb, p);
+        for (TaggedElement e : model.strictExceptions()) FormatterRegistry.strictExceptions().format(e, sb, p);
+        for (TaggedElement e : model.strictTypes()) FormatterRegistry.strictTypes().format(e, sb, p);
+        for (TaggedElement e : model.internationalized()) FormatterRegistry.internationalized().format(e, sb, p);
+        for (TaggedElement e : model.strictClasspath()) FormatterRegistry.strictClasspath().format(e, sb, p);
+        for (TaggedElement e : model.schemaSafe()) FormatterRegistry.schemaSafe().format(e, sb, p);
+        for (TaggedElement e : model.idempotent()) FormatterRegistry.idempotent().format(e, sb, p);
+        for (TaggedElement e : model.featureFlag()) FormatterRegistry.featureFlag().format(e, sb, p);
+        for (TaggedElement e : model.secure()) FormatterRegistry.secure().format(e, sb, p);
+        for (TaggedElement e : model.callersOnly()) FormatterRegistry.callersOnly().format(e, sb, p);
+        for (TaggedElement e : model.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, sb, p);
+        for (TaggedElement e : model.memoryBudget()) FormatterRegistry.memoryBudget().format(e, sb, p);
+        for (TaggedElement e : model.pure()) FormatterRegistry.pure().format(e, sb, p);
+        for (TaggedElement e : model.domainModel()) FormatterRegistry.domainModel().format(e, sb, p);
+        for (TaggedElement e : model.extensible()) FormatterRegistry.extensible().format(e, sb, p);
+        for (TaggedElement e : model.inputSanitized()) FormatterRegistry.inputSanitized().format(e, sb, p);
+        for (TaggedElement e : model.secureLogging()) FormatterRegistry.secureLogging().format(e, sb, p);
+        for (TaggedElement e : model.explain()) FormatterRegistry.explain().format(e, sb, p);
+        for (TaggedElement e : model.prototype()) FormatterRegistry.prototype().format(e, sb, p);
+        for (TaggedElement e : model.sunset()) FormatterRegistry.sunset().format(e, sb, p);
+        for (TaggedElement e : model.temporary()) FormatterRegistry.temporary().format(e, sb, p);
+        for (TaggedElement e : model.generated()) FormatterRegistry.generated().format(e, sb, p);
+        for (TaggedElement e : model.loadBearing()) FormatterRegistry.loadBearing().format(e, sb, p);
+        for (TaggedElement e : model.bannedApi()) FormatterRegistry.bannedApi().format(e, sb, p);
+        for (TaggedElement e : model.threadAffinity()) FormatterRegistry.threadAffinity().format(e, sb, p);
+        for (TaggedElement e : model.keepInSync()) FormatterRegistry.keepInSync().format(e, sb, p);
+        return sb.toString();
+    }
+
+    /** The guardrail summary split into non-blank lines (leading "- "/"* " bullet stripped). */
+    static List<String> lines(GuardrailModel model) {
+        List<String> out = new ArrayList<>();
+        for (String line : build(model).split("\n", -1)) {
+            String trimmed = line.strip();
+            if (trimmed.isEmpty()) continue;
+            if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                trimmed = trimmed.substring(2).strip();
+            }
+            out.add(trimmed);
+        }
+        return out;
+    }
+
+    /** Indents every line of {@code block} by {@code spaces}, preserving blank lines as empty. */
+    static String indent(String block, int spaces) {
+        String pad = " ".repeat(spaces);
+        StringBuilder sb = new StringBuilder(block.length() + 32);
+        for (String line : block.split("\n", -1)) {
+            if (line.isEmpty()) {
+                sb.append("\n");
+            } else {
+                sb.append(pad).append(line).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+}

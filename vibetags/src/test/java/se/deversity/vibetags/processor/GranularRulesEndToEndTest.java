@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag("e2e")
 class GranularRulesEndToEndTest {
 
     @TempDir
@@ -20,7 +22,7 @@ class GranularRulesEndToEndTest {
 
     @BeforeAll
     static void setUp() throws IOException {
-        harness = ProcessorTestHarness.withExampleSources(tempDir);
+        harness = ProcessorTestHarness.withExampleSources(tempDir, ".cursor/rules/.vibetags");
     }
 
     @AfterAll
@@ -100,7 +102,7 @@ class GranularRulesEndToEndTest {
 
         // 2. Run the processor in this directory
         ProcessorTestHarness h = new ProcessorTestHarness(cleanupDir);
-        h.addSource("com.example.Legit", 
+        h.addSource("com.example.Legit",
             "package com.example;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +
             "@AILocked(reason=\"ok\") public class Legit {}");

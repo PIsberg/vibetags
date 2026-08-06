@@ -4,26 +4,37 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13275/badge)](https://www.bestpractices.dev/projects/13275)
 [![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
+[![ArchUnit](https://img.shields.io/badge/ArchUnit-passing-brightgreen?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/blob/main/vibetags/src/test/java/se/deversity/vibetags/processor/ArchitectureRulesTest.java)
 [![Java 21 | 25 | 26](https://img.shields.io/badge/Java-21%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
+[![PIT Mutation Testing](https://img.shields.io/badge/PIT%20Mutation-56%25-yellow?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/actions/workflows/mutation.yml)
 [![Lines of Code](https://www.aschey.tech/tokei/github/PIsberg/VibeTags?languages=Java&category=code)](https://github.com/PIsberg/VibeTags)
 [![PMD](https://img.shields.io/badge/PMD-passing-brightgreen)](https://pmd.github.io/)
+[![Analyzed with codekoll](https://img.shields.io/badge/analyzed%20with-codekoll-brightgreen?logo=java&logoColor=white)](https://github.com/PIsberg/codekoll)
 [![SpotBugs](https://img.shields.io/badge/SpotBugs-passing-brightgreen)](https://spotbugs.github.io/)
+[![Find Security Bugs](https://img.shields.io/badge/Find%20Security%20Bugs-passing-brightgreen)](https://find-sec-bugs.github.io/)
 [![Error Prone](https://img.shields.io/badge/Error%20Prone-passing-brightgreen)](https://errorprone.info/)
+[![NullAway](https://img.shields.io/badge/NullAway-passing-brightgreen)](https://github.com/uber/NullAway)
 [![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen)](https://checkstyle.org/)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-0079C1?logo=paypal&logoColor=white)](https://paypal.me/isbergpeter)
 
-**VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, 27 AI platforms, all from a single `mvn compile`.
+**VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
+
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **37 AI platforms**, written as **49 config files** and **13 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
 `.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
 
-- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across 27 config formats.
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [49 config files](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
+- **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 45 lines, with 115 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
+- **CI-enforceable** — opt-in check mode (`-Avibetags.check=true`) fails the build when guardrail files have drifted from the annotations, and the [locked-files GitHub Action](action/locked-files/README.md) fails any PR whose diff touches `@AILocked` code. See [USAGE.md](USAGE.md#check-mode--ci-drift-enforcement-opt-in).
 
 <!-- DEMO-GIF: generated by .github/workflows/demo.yml — run `gh workflow run demo.yml` to regenerate -->
 ![VibeTags demo — annotate, compile, all platforms update](docs/demo.gif)
@@ -41,7 +52,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.8</version>
+            <version>1.0.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -65,7 +76,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.8</version>
+                        <version>1.0.1</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -106,8 +117,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.8')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.8')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.1')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.1')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -143,10 +154,11 @@ gradle compileJava
 
 - [What is VibeTags?](#-what-is-vibetags)
 - [Project Structure](#-project-structure)
-- [Installation](#-quick-start)
+- [Installation](#-installation)
 - [How It Works](#-how-it-works)
+- [Organizing Context Files](#️-organizing-context-files-for-optimal-context)
 - [Documentation](#-documentation)
-- [Building from Source](#-building-both-projects)
+- [Building from Source](#️-building-from-source)
 - [Performance & Load Tests](#-performance--load-tests)
 - [When to Use VibeTags](#-when-to-use-vibetags)
 - [Advanced Features & Annotation Reference](#-advanced-features--annotation-reference) → full guide in **[USAGE.md](USAGE.md)**
@@ -159,13 +171,87 @@ gradle compileJava
 VibeTags provides Java annotations that serve as instructions for AI code generation tools. When your project is compiled, the VibeTags annotation processor automatically generates platform-specific configuration files that enforce your rules across different AI platforms.
 
 
-![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1)
+<!-- Replaced the v1.1 infographic with the walkthrough video. To restore it:
+     ![vibetags-infographics-v1_1](https://github.com/user-attachments/assets/f3041cde-3e71-47b0-b210-030f8f5792a1) -->
+[![VibeTags AI Guardrails for Java — a walkthrough](https://img.youtube.com/vi/QF0YloxDjnY/maxresdefault.jpg)](https://youtu.be/QF0YloxDjnY)
+
+*[VibeTags AI Guardrails for Java](https://youtu.be/QF0YloxDjnY) — what the annotations do, what
+they generate, and how the generated files reach each AI tool.*
 
 
 
 ### Key Features
 
-The 39 annotations group into six categories by intent. Within each category they are listed alphabetically.
+<a name="annotation-reference"></a>
+### Annotation reference — where each one goes, and where its rule ends up
+
+Two facts you need before writing an annotation, neither of which the categorised list below
+carries: **what it can annotate**, and **which tier its guardrail lands in**.
+
+- **Can annotate** is the annotation's `@Target`. Most are type-and-method; a few are narrower, and
+  two (`@AIInputSanitized`, `@AISecureLogging`) can *only* go on a parameter or field — the finest
+  addressing VibeTags produces.
+- **Tier** is where the rule shows up once a platform's scoped-rules directory is opted in.
+  **safety** guardrails stay inline in the always-loaded aggregate, because a rule that only loads
+  after the agent opens the file it protects has already failed. Everything else moves to the
+  scoped file and is replaced by a one-line pointer. See [`example-all-tiers/`](example-all-tiers/README.md), which demonstrates all three.
+- **Required attributes** have no default; leave one out and the code does not compile.
+
+Every annotation below is used in [`example/`](example/README.md) — that README maps each one to the
+file demonstrating it — and all four example projects exercise the full set.
+
+| Annotation | Can annotate | Required attributes | Tier |
+|---|---|---|---|
+| `@AIArchitecture` | type | — | scoped |
+| `@AIAudit` | type, method | — | **safety** |
+| `@AIBannedApi` | type, method | `forbidden` | scoped |
+| `@AICallersOnly` | type, method | `value` | scoped |
+| `@AIContext` | type, method | — | scoped |
+| `@AIContract` | type, method | — | scoped |
+| `@AICore` | type, method, field | — | **safety** |
+| `@AIDeprecated` | type, method, field | — | scoped |
+| `@AIDomainModel` | type | — | scoped |
+| `@AIDraft` | type, method | — | scoped |
+| `@AIExplain` | type, method | — | scoped |
+| `@AIExtensible` | type | — | scoped |
+| `@AIFeatureFlag` | type, method, field | — | scoped |
+| `@AIGenerated` | type, method, field | `from` | scoped |
+| `@AIIdempotent` | type, method | — | scoped |
+| `@AIIgnore` | type, method, field | — | **safety** |
+| `@AIImmutable` | type | — | scoped |
+| `@AIInputSanitized` | parameter, field | `value` | scoped |
+| `@AIInternationalized` | type, method | — | scoped |
+| `@AIKeepInSync` | type, method, field | `mirrors` | scoped |
+| `@AILegacyBridge` | type, method | — | scoped |
+| `@AILoadBearing` | type, method, field, parameter | `invariant` | scoped |
+| `@AILocked` | type, method, field | — | **safety** |
+| `@AIMemoryBudget` | type, method | — | scoped |
+| `@AIObservability` | type, method | — | scoped |
+| `@AIParallelTests` | type, method | — | scoped |
+| `@AIPerformance` | type, method, field | — | scoped |
+| `@AIPrivacy` | type, method, field | — | **safety** |
+| `@AIPrototype` | type | — | scoped |
+| `@AIPublicAPI` | type, method | — | scoped |
+| `@AIPure` | method | — | scoped |
+| `@AIRegulation` | type, method, field | `standard` | scoped |
+| `@AISandboxOnly` | type, method | — | scoped |
+| `@AISchemaSafe` | type, field | — | scoped |
+| `@AISecure` | type, method | — | **safety** |
+| `@AISecureLogging` | field, parameter | — | scoped |
+| `@AIStrictClasspath` | type, method | — | scoped |
+| `@AIStrictExceptions` | type, method | — | scoped |
+| `@AIStrictTypes` | type, method, field | — | scoped |
+| `@AISunset` | type, method, field | `jira` | scoped |
+| `@AITemporary` | type, method | `expiresOn`, `reason` | scoped |
+| `@AITestDriven` | type, method | — | scoped |
+| `@AIThreadAffinity` | type, method | `value` | scoped |
+| `@AIThreadSafe` | type, method | — | scoped |
+
+`AnnotationReferenceTest` regenerates this table from the annotation sources and the renderer and
+fails if it drifts, so the targets and tiers here are the ones the compiler and processor actually
+use rather than a description of them.
+
+The [44 annotations](#project-facts) group into six categories by intent. Within each category they are listed alphabetically.
 
 #### 🛡️ Protection & Access Control — keep AI away from code
 
@@ -178,6 +264,7 @@ The 39 annotations group into six categories by intent. Within each category the
 #### 🚧 Behavioral Constraints — limit what AI can change
 
 - **🧱 @AIArchitecture** - Enforce layering boundaries (declares `belongsTo` layer and forbidden `cannotReference` layers)
+- **⛔ @AIBannedApi** - Forbid named symbols at this element even though they compile — hosted on the consumer so it reaches stdlib and third-party APIs you cannot annotate, and names the sanctioned replacement
 - **📜 @AIContract** - Freeze the public signature of an interface or method — AI may change internal logic but must not alter method names, parameter types, parameter order, return types, or checked exceptions
 - **💾 @AIMemoryBudget** - Enforce zero-allocation, no-new-objects, or no-autoboxing policies on high-performance paths
 - **⚡ @AIPerformance** - Enforce strict time/space complexity constraints for performance-critical hot-paths
@@ -191,11 +278,14 @@ The 39 annotations group into six categories by intent. Within each category the
 - **🔌 @AIExtensible** - Mark classes open for capability extensions using Strategy, Visitor, or Factory patterns instead of if-else spikes
 - **❄️ @AIImmutable** - Declare a class immutable; the processor warns if any non-static instance field is non-final
 - **🗣️ @AIInternationalized** - Prohibit hardcoded user-facing strings (all visible text must be extracted to i18n bundle message keys)
+- **🔗 @AIKeepInSync** - Name the sites this element is duplicated at; it may change freely, but a *partial* change silently desyncs a mirror no compiler checks
+- **🧩 @AILoadBearing** - Mark code that looks redundant or over-defensive and is deliberate — records the invariant and the concrete failure that "cleaning it up" reintroduces
 - **📡 @AIObservability** - Name the metrics, traces, and log statements downstream dashboards depend on — AI must not silently remove or rename them
 - **🌐 @AIPublicAPI** - Protect public APIs (all modifications must be additive; forbidden to rename or change serialization formats)
 - **🗄️ @AISchemaSafe** - Protect persistent database entities (forbids destructive changes, column drops, table drops)
 - **🛡️ @AIStrictExceptions** - Enforce strict error handling (forbids swallowing exceptions or throwing generic RuntimeExceptions)
 - **📐 @AIStrictTypes** - Require high-precision or timezone-sensitive data structures (e.g. `BigDecimal` for currency and `Instant`/`ZonedDateTime` for time)
+- **🧵 @AIThreadAffinity** - Declare that an element is safe on *exactly one* thread — the inverse of `@AIThreadSafe`, so an AI asked to "make it thread-safe" marshals the call instead of adding a lock
 - **🧵 @AIThreadSafe** - Declare a thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`) that AI must preserve on every change
 
 #### 🔐 Security & Compliance — auditing, privacy, and regulation
@@ -212,6 +302,7 @@ The 39 annotations group into six categories by intent. Within each category the
 - **✏️ @AIDraft** - Mark methods or classes that need AI implementation with detailed instructions
 - **💬 @AIExplain** - Demand Chain-of-Thought (CoT) sequence/class diagrams or mathematical justifications before applying code changes
 - **🚩 @AIFeatureFlag** - Mark code gated behind a feature flag; AI must preserve the flag check and never assume the flag is always active
+- **🤖 @AIGenerated** - Mark machine-generated code whose hand edits are overwritten, and *redirect* the change to the true source — unlike `@AILocked`, which can only say "stop"
 - **♻️ @AIIdempotent** - Declare that an operation must remain idempotent; AI must never introduce side effects that cause repeated calls to produce different results
 - **🧪 @AIParallelTests** - Enforce strict test isolation for concurrent execution (forbids shared mutable state or resource conflicts)
 - **🧪 @AIPrototype** - Relax standard strict quality rules (e.g. coverage, i18n) for rapid spikes while preventing leaks into production code
@@ -226,14 +317,14 @@ The 39 annotations group into six categories by intent. Within each category the
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with **33 AI platforms**:
+Generated configuration files work out-of-the-box with the [**37 AI platforms**](#project-facts) below (Cursor and Windsurf each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
 - **Antigravity AI** (`.antigravityignore`)
-- **Claude** (`CLAUDE.md`, `.claudeignore`)
+- **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
 - **Cline** (`.clinerules`)
-- **Codex CLI** (`AGENTS.md`, `.codex/config.toml`, `.codex/rules/*.rules`)
+- **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
@@ -248,19 +339,40 @@ Generated configuration files work out-of-the-box with **33 AI platforms**:
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
+- **Void Editor** (`.void/rules.md`)
 - **Windsurf IDE** (`.windsurfrules`)
+
+#### AI pull-request reviewers
+- **CodeRabbit** (`.coderabbit.yaml`) — `reviews.path_instructions` that flag PRs violating guardrails
+- **Qodo / Codium PR-Agent** (`.pr_agent.toml`) — `extra_instructions` for the reviewer and code-suggestion tools
+- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail
+
+#### Context packers (ignore files)
+- **Repomix** (`.repomixignore`)
+- **Gitingest** (`.gitingestignore`)
+- **GPT context packer** (`.gptignore`)
+- **Ghostcoder** (`.ghostcoderignore`)
+- **Pieces for Developers** (`.piecesignore`)
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
+- **Claude** (`.claude/rules/*.md` — YAML front-matter (`paths:`) + Markdown)
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
+- **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
 - **Amazon Kiro** (`.kiro/steering/*.md`)
-- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`)
+- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`, plus a `.roomodes` "VibeTags Architect" custom mode)
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
 - **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
 - **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
+
+> † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because
+> `AGENTS.md` is a near-universal agent file that teams often keep as a thin pointer to another
+> tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
+> is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
+> managed.
 
 ## 📁 Project Structure
 
@@ -322,7 +434,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>0.9.8</version>
+            <version>1.0.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -347,7 +459,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>0.9.8</version>
+                        <version>1.0.1</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -358,11 +470,13 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 
 > **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `example/pom.xml`.
 
+> **Note (JDK 23+):** `javac` only runs annotation processors that are explicitly configured; `<annotationProcessorPaths>` and Gradle's `annotationProcessor` qualify. A pom that instead lists `vibetags-processor` as an ordinary dependency silently generates nothing on JDK 23+ unless `<proc>full</proc>` is added to `maven-compiler-plugin`. More silent-failure cases: [Troubleshooting: Nothing Was Generated](USAGE.md#troubleshooting-nothing-was-generated).
+
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:0.9.8')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:0.9.8')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.1')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.1')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -376,15 +490,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.8</version>
+    <version>1.0.1</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.8'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.8'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:1.0.1'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.1'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
@@ -462,12 +576,115 @@ public class PricingService {
 }
 ```
 
+
+## 🗂️ Organizing Context Files for Optimal Context
+
+AI tools work best when guardrails are **scoped to where you're working**, not dumped into one ever-growing file. VibeTags lets you opt into three **tiers** (Tier 1–3) that compose and de-duplicate automatically — here using **Claude Code** as the example:
+
+| Tier | Layer | Opt in by creating | When Claude loads it |
+|---|---|---|---|
+| **Tier 1** | Project | `CLAUDE.md` (repo root); add **`.vibetags-root-index`** for the lean **indexed** root | Always in context |
+| **Tier 2** | Module | `module-a/CLAUDE.md` | When working inside that module |
+| **Tier 3** | Element / topic | `.claude/rules/` (directory; group with `.vibetags-roles`) | When it opens a matching source file |
+
+The layers never duplicate content:
+
+- **Root + granular together** → the root `CLAUDE.md` keeps only the always-on safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and replaces the rest with a one-line **index** pointing at the scoped `.claude/rules/*.md` files. Verbose per-element detail (context, contracts, performance, …) is pulled in only when Claude opens that file — keeping your always-loaded context lean and the high-value rules undiluted.
+- **Per-module `CLAUDE.md`** → holds only *that module's* guardrails, so Claude gets focused rules while working in the module, while the repo-root `CLAUDE.md` still carries the whole picture.
+- **Indexed reactor root** (`.vibetags-root-index` + per-module `.claude/rules/`) → the same split, one level up: each module's region in the root `CLAUDE.md` keeps that module's safety guardrails inline and points at `module-a/.claude/rules/` for everything else. A module with nothing in the safety tier contributes only the pointer.
+
+### Grouping rules by role/topic (`.vibetags-roles`)
+
+By default each annotated class gets its own scoped file (`com-example-PaymentProcessor.md`). For the more idiomatic layout — a few human-named topic files, the way Claude's docs recommend — drop a **`.vibetags-roles`** file in the repo (or a module) root:
+
+```
+# .vibetags-roles — name = comma-separated globs and/or fully-qualified names
+api-endpoints     = **/*Controller.java
+database-models   = **/*Entity.java
+external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
+```
+
+On the next compile, `.claude/rules/` (and `.cursor/rules/`, …) contains `api-endpoints.md`, `database-models.md`, `external-webhooks.md` — each with a `paths:` glob list and the grouped guardrails, loaded on-demand when Claude opens a matching file. Three tiers, simplest first:
+
+- **Package scope (zero config)** — annotate a `package-info.java`; that package gets one directory-scoped rule file. Nothing else needed.
+- **Role globs (the power feature)** — the `.vibetags-roles` globs above group elements by naming pattern or directory. An element goes to the **first** matching role (config order); anything matching no role keeps its own per-class file, so nothing is ever lost.
+- **Per-element override** — for the odd class that doesn't fit its glob, add its **fully-qualified name** to a role line (see `com.example.legacy.WeirdEndpoint` above). No annotation required — all routing lives in one file.
+
+`.vibetags-roles` works per module too (drop one in a module root) and composes with the index and per-module layers above.
+
+### Reaching a centralised test module (`.vibetags-mirror`)
+
+Guardrails are scoped to the module that owns the annotated source. If your reactor keeps every test
+in one module, the code that actually exercises your `@AILocked` bridges and `@AIPrivacy` key
+material sits in a *sibling* of the rules protecting it — so a tool that discovers rule directories
+by walking up from the edited file finds nothing, silently
+([#312](https://github.com/PIsberg/vibetags/issues/312)).
+
+The consuming module opts in, by dropping a **`.vibetags-mirror`** next to its own `.claude/rules/`:
+
+```
+# payments-tests/.vibetags-mirror
+
+# Source modules, relative to this file. Omit them all to mirror every module.
+../payments-core
+../payments-api
+
+# Globs appended to each mirrored file, so the rules match this module's sources.
+# Defaults to **/payments-tests/**/*.java
+glob = **/payments-tests/src/test/java/**/*.java
+```
+
+The next compile writes `payments-tests/.claude/rules/mirrored-payments-core-*.md` — the source
+module's rule verbatim, with your test globs added. The target needs no `@AI*` annotations of its
+own, mirrored files are namespaced per source module (so modules compiling independently never
+clobber each other), and they are cleaned up like any other generated file when the annotations go
+away. Worked example: [`example-multimodule/tests/`](example-multimodule/tests/).
+
+### Recommended layout for a multi-module project
+
+```text
+my-app/
+├── CLAUDE.md                     # always loaded: safety guardrails + index to the rest
+├── .claude/rules/                # root-level detail only; per-module detail lives in each module below
+│   ├── com-example-PaymentProcessor.md
+│   └── …
+├── payments/
+│   ├── CLAUDE.md                 # loaded when working in payments/
+│   └── .claude/rules/            # payments-scoped per-file detail
+└── billing/
+    └── CLAUDE.md                 # loaded when working in billing/
+```
+
+Activate any layer by creating the file or directory and compiling — VibeTags never creates opt-in files for you, and deleting one turns that layer off. The same pattern works for **Cursor** (`.cursorrules` + `.cursor/rules/`), **Windsurf** (`.windsurfrules` + `.windsurf/rules/`), and **Copilot** (`.github/copilot-instructions.md` + `.github/instructions/`).
+
+### When to use a root `.claude/rules/` (root granular)
+
+`.claude/rules/` at the **repo root** is a **single-module** (or non-reactor) mechanism — there the
+root *is* the project, so its scoped rules are simply the project's Tier-3 detail. In a **multi-module
+reactor** a root `.claude/rules/` cannot aggregate across modules (each module overwrites it — see
+[#295](https://github.com/PIsberg/vibetags/issues/295)), so put Tier-3 rules in **each module**
+(`module-a/.claude/rules/`) and let the **indexed** Tier-1 root (`.vibetags-root-index`) point at them.
+Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
+
+| You have | Tier-1 root | Tier-3 detail |
+|---|---|---|
+| **Single module** | `CLAUDE.md` | root `.claude/rules/` ✅ |
+| **Reactor, lean** | `CLAUDE.md` + `.vibetags-root-index` (indexed) | per-module `.claude/rules/` |
+| **Reactor, always-on** | `CLAUDE.md` (merged) | per-module `CLAUDE.md` (Tier 2) |
+
+**Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
+[`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
+[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
+and [`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
+every level — type, instance field, method, and method parameter — so you can see which tier each
+one lands in).
+
 ## 📚 Documentation
 
 | Resource | What it covers |
 |---|---|
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
-| **[Example Project](example/README.md)** | A runnable e-commerce demo that shows all 15 annotations in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Example Project](example/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
@@ -477,8 +694,10 @@ public class PricingService {
 ### Build Everything with Maven
 
 ```bash
-# Build library
-cd vibetags && mvn clean install
+# Build library. Order matters: the processor depends on the annotations artifact,
+# which is a plain dependency, not a reactor sibling, so install it first
+cd vibetags-annotations && mvn install
+cd ../vibetags && mvn clean install
 
 # Build example
 cd ../example && mvn clean compile
@@ -569,25 +788,41 @@ VibeTags ships far more than the basics shown above:
 
 ## 🤝 Contributing
 
-VibeTags is designed to evolve based on community needs. Future extensions could include:
+VibeTags is designed to evolve based on community needs. The two annotations this section
+used to propose have both shipped — `@AIExtensible` takes a design pattern to extend through, and
+`@AITestDriven` enforces Red-Green-Refactor — so the open ground is elsewhere:
 
-- `@AIPattern` - Specify design patterns AI should follow
-- `@AITest` - Guide AI in generating tests
-- Custom annotation processors for organization-specific needs
+- **A new platform** — one renderer plus two registry entries; see the `add-platform` skill
+- **A new annotation** — see the `add-annotation` skill, which lists every place one has to be wired
+- **Organization-specific processors** that consume the same annotations for in-house tooling
+
+Every annotation must be demonstrated in all four example projects and appear in the
+[annotation reference](#annotation-reference); `ExampleCoverageTest` and `AnnotationReferenceTest`
+fail the build otherwise.
 
 ## 📊 Project Components
 
 ### vibetags/
-The core annotation processor library. Contains all 15 Java annotations and the annotation processor that generates AI configuration files at compile time.
+The core annotation processor library. Contains the annotation processor that generates AI
+configuration files at compile time; the annotations themselves live in `vibetags-annotations/`
+(see [project facts](#project-facts) for the count).
 
 ### [example/](example/README.md)
-A practical e-commerce application demonstrating real-world usage of all 8 VibeTags annotations. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
+A practical e-commerce application demonstrating every VibeTags annotation
+(see [project facts](#project-facts) for the count), held to that by `ExampleCoverageTest`. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
 
 ### [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 Technical reference for the annotation processor internals. Read this before contributing or if you need to understand why a particular file is (or is not) being generated.
 
 ### [.claude/skills/vibetags-usage/SKILL.md](.claude/skills/vibetags-usage/SKILL.md)
 A Claude Code skill that gives your AI assistant a full working knowledge of VibeTags — annotation semantics, valid combinations, processor configuration, and troubleshooting. Activate it in Claude Code with `/vibetags-usage`.
+
+## 💛 Support VibeTags
+
+VibeTags is built and maintained by a single developer in his spare time. If it saves you time, a small donation helps keep the project alive:
+
+- **[Donate via PayPal](https://paypal.me/isbergpeter)** — every contribution, however small, is appreciated.
+- Don't have PayPal yet? **[Sign up with this invite link](https://www.paypal.com/webapps/mch/cmd/?v=3.0&t=1784460151&fdata=OBcGAzRHBBYcHAQeSFRMKk90PRgwNE9jVWhoGjAsS0gtRmZpYAd8bEJTbQlgWnlVaFVQX3cFTEdaUUwTRBFMSy50aF1xaV11Q357XWt5UlFdUX5sbQtpdFdGdFcnAS9HcCRJR3QDVVVORltJHUVcU19nfFtzZF9jV2poTjYhDkhMJ2Z5bwZwZkNRYwFhWHpfYFZdV3UCXEdYU0xRTlRMKk90BiQWGDoHV2hqTng4BAgAAmZ5GBNpOBUOOwImCScKNBAfAyENHhMUHQwCVE9XBw88J1B.a09jVWhoHzUhDkhMJ2Z5aQV4ZURWdBlySWoFOQVJRwMWTCk3IyQkaFRMSU90Kgs1cE8CV2h5TnhrS0gICSM8LBNpFVVGZABiWHheYVdcVmIWTkdYEwwZSVRMKk90fl59Yll0QHFwV2F4XlBfVXNhbBNpdlVGIUg9AS9HcCRJR3UCXl5NRFVAHkVeWVthfFNyaFljV2poTi9pSylMRnR2aBNpdlVGIUtwSQtHcFVfXncDW1ZIRVxRDFZMSwc7PRwgDgcmV2gJTnh-Ul9VV3JgaQZ-ZEVTZw1kUX9WcEVLR2JeAxIPFTITQhEIS08VaEsLNBY2VgssHC1oKwoZDig2eRNrdFUKJl8OAzsPcEUoR2J-IDYrNT4jZDojOU90aktkMA02HyYnMDAsS0gtRmZvaQN8YUFQZgxmX3lfZFBbV3METEdaUUwRTgEEBQAKKgUhNE9jNmhoPTwuDxsfBisHMVw-PAACClkODjkPNAoMR2IUTEcQHhkVXyoeDx8KOw82NBpjVwloTj8pBhoIRmZ7eRMhOwAGNkwiDTpHcCRJR3MZXUdYU0xRThoYBBonMEtkEU9jJQxoTnppSxweAiMHPUo8MAYJNFQ9EWpHEUVJACJbHgNYUU5RDDw-NS0ZACkOBSYQI2hoL3hpDAgBFCJ5eRFpdAQVMEs0BioSOAsGOTdOHQNYUS1RDENYWVZhfV98YF5xT3h9Wm17Xl5MRmR5eUYvJx0DdBkRSWpRZVxbUXYAWVJJR11JGUNfU11laEtmcE8vHT0uHTw5Aw1MRgd5eVZ7NBFQZwBlWnJSY1BdBXZWXlZBFV4UFRYIDgxmeFohcE9hV2gkBC0vGAwLDiN5eXJpdBBUNF1mWnNSY11cVHcCDlMYQ11ISEYJUg0wLQh2YF4mV2hqTng-GR0EA2Z5GBNpMUcGMA9jUH9UaFBaUnZUWAdKQFUVHhFVCQsxK1l0YQpjV2poTispBAJMRgd5eQN8dFVEdBkiHSk5MgwGR2J3TEc2Pj45eTBMS010aA8zNAA2KScoAjxpSylMRjc9KkEnOxULPEIwHCIJPzsHCDBeGQNYUU5RDAAeDxwKLh8sNU9jNmhoXDx6W1BYXn9pYVR-YUMCZQplDH9eMAFeACYGVQVOFFxRDFZMSxsmLBgaIgsxBSAmAQYvHwAJRmYYeRN.NEUEZllmWnpfN1NbUHoAXVVIEgxASRYLDAgzLwwjNE9jVWhoGSo8Aw1MRgd5eQUpZBdUNA9jWXIAZldeX3QHXlcbEV0UThMLDAgzLwwgcE9hV2g.HC06Aw1MRgd5eQEtZ0VeYAFpWXIAZ1BfA3MFWQJNSAwVGxMIW1Y2fg50cE9hV2g7Cj8hDkhMJ2Z5bwZwZkNRYwFhWHpfYFZdV3UCXEdYU0xRSA0dAxwsFh42cE8CV2h4WGF8Xl9cV3JpeRNrdFUCIRlwKGpHEighJQgWTEVYURkXWVRMKk90IR4xIR1nRQhsXR9tWC8aEDB2KFMxJRULe1s-BW5UFwcPFmYFKwseHUhCawcIDAsnOw83dF0EHyc9Cjc8T1opCiwsPxd6YwAUJ1s0TXgiaQYJCi8&cks=ZjgxYjY4YjRlNDZjYWM1NWM4NTU1YWViMmI3YThmYjI&e=1.0)** — free for you, and PayPal gives the project a referral bonus.
 
 ## 📝 License
 

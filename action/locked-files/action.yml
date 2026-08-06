@@ -1,0 +1,52 @@
+name: 'VibeTags Locked-Files Guard'
+description: >-
+  Fails a pull request when its diff touches code protected by @AILocked.
+  Compiles the PR head so the machine-readable .vibetags-locks report is fresh,
+  then intersects the PR diff with the locked line ranges.
+author: 'PIsberg'
+branding:
+  icon: 'lock'
+  color: 'red'
+
+inputs:
+  base-ref:
+    description: >-
+      Ref or SHA to diff against. Defaults to the PR base. The repository must be
+      checked out with enough history to reach the merge base (fetch-depth: 0 is safest).
+    required: false
+    default: ''
+  build-command:
+    description: 'Command that compiles the project and regenerates .vibetags-locks.'
+    required: false
+    default: 'mvn -B -q compile'
+  working-directory:
+    description: 'Directory to build and check from.'
+    required: false
+    default: '.'
+  warn-only:
+    description: 'Emit warnings instead of failing the job.'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Opt in to the VibeTags lock report
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      # File presence is VibeTags' opt-in signal: touching .vibetags-locks makes the
+      # next compile populate it. No pom/build changes needed.
+      run: touch .vibetags-locks
+
+    - name: Build (regenerates the lock report)
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: ${{ inputs.build-command }}
+
+    - name: Check PR diff against locked ranges
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        VIBETAGS_BASE_REF: ${{ inputs.base-ref != '' && inputs.base-ref || github.event.pull_request.base.sha }}
+        VIBETAGS_WARN_ONLY: ${{ inputs.warn-only }}
+      run: python3 "${{ github.action_path }}/check_locked_diff.py"

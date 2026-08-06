@@ -29,10 +29,6 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Token validation must match auth server exactly. Changes will break all client authentication
 
-#### LOCKED: com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)
-- **Status**: Locked (Do Not Edit)
-- **Reason**: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
-
 #### LOCKED: com.example.service.OrderService.calculateTax(java.lang.String,double)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
@@ -40,6 +36,10 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### LOCKED: com.example.service.OrderService.processPayment(java.lang.String,double)
 - **Status**: Locked (Do Not Edit)
 - **Reason**: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+
+#### LOCKED: com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)
+- **Status**: Locked (Do Not Edit)
+- **Reason**: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
 #### CONTEXT: com.example.security.SecurityConfig
 - **Focus**: This class is READ-ONLY for AI assistants. Do not suggest modifications.
@@ -81,32 +81,32 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### DRAFT/TODO: com.example.payment.PaymentProcessor
 - **Instruction**: Implement support for new crypto payments without breaking legacy flow.
 
-#### DRAFT/TODO: com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
-- **Instruction**: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
-
-#### DRAFT/TODO: com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)
-- **Instruction**: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
-
-#### DRAFT/TODO: com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)
-- **Instruction**: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
+#### DRAFT/TODO: com.example.service.NotificationService.getDeliveryStatus(java.lang.String)
+- **Instruction**: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
 
 #### DRAFT/TODO: com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)
 - **Instruction**: Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
 
-#### DRAFT/TODO: com.example.service.NotificationService.getDeliveryStatus(java.lang.String)
-- **Instruction**: Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
+#### DRAFT/TODO: com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)
+- **Instruction**: Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
+
+#### DRAFT/TODO: com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)
+- **Instruction**: Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
+
+#### DRAFT/TODO: com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)
+- **Instruction**: Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
 
 #### DRAFT/TODO: com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)
 - **Instruction**: Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
 
-#### DRAFT/TODO: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
-- **Instruction**: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
+#### DRAFT/TODO: com.example.service.OrderService.generateOrderConfirmation(java.lang.String)
+- **Instruction**: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
 
 #### DRAFT/TODO: com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)
 - **Instruction**: Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
 
-#### DRAFT/TODO: com.example.service.OrderService.generateOrderConfirmation(java.lang.String)
-- **Instruction**: Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
+#### DRAFT/TODO: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
+- **Instruction**: Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
 
 #### DRAFT/TODO: com.example.strategy.PaymentStrategy.executePayment(double)
 - **Instruction**: Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
@@ -120,11 +120,11 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### DRAFT/TODO: com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()
 - **Instruction**: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
 
-#### PRIVACY/PII: com.example.database.DatabaseConnector.username
+#### PRIVACY/PII: com.example.database.DatabaseConnector.password
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Database credential - never log or include in error messages
 
-#### PRIVACY/PII: com.example.database.DatabaseConnector.password
+#### PRIVACY/PII: com.example.database.DatabaseConnector.username
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: Database credential - never log or include in error messages
 
@@ -148,49 +148,49 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
-#### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.expiryDate
-- **Safety Rule**: Never log or expose runtime values of this element.
-- **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
-
 #### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.cvv
 - **Safety Rule**: Never log or expose runtime values of this element.
 - **Reason**: PCI-DSS security code - never log or expose in suggestions
+
+#### PRIVACY/PII: com.example.strategy.impl.CreditCardStrategy.expiryDate
+- **Safety Rule**: Never log or expose runtime values of this element.
+- **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
 #### CORE FUNCTIONALITY: com.example.security.SecurityConfig
 - **Sensitivity**: Critical
 - **Note**: This is a security manager. Any single-line change can compromise the entire project.
 
-#### CORE FUNCTIONALITY: com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)
-- **Sensitivity**: Critical
-- **Note**: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
-
 #### CORE FUNCTIONALITY: com.example.service.InventoryService.releaseReservation(java.lang.String)
 - **Sensitivity**: High
 - **Note**: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+
+#### CORE FUNCTIONALITY: com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)
+- **Sensitivity**: Critical
+- **Note**: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
 
 #### PERFORMANCE CONSTRAINTS: com.example.payment.PaymentProcessor
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
 
-#### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.getAvailableStock(java.lang.String)
-- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
-- **Constraint**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
-
 #### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+
+#### PERFORMANCE CONSTRAINTS: com.example.service.InventoryService.getAvailableStock(java.lang.String)
+- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
+- **Constraint**: O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
 
 #### PERFORMANCE CONSTRAINTS: com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.
 - **Constraint**: Must complete in <5ms p99. Called on every cart update.
 
-#### CONTRACT: com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
-- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
-- **Reason**: Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
-
 #### CONTRACT: com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)
 - **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
 - **Reason**: Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
+
+#### CONTRACT: com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
+- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
+- **Reason**: Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
 
 #### CONTRACT: com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)
 - **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.
@@ -271,4 +271,34 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### SECURITY-CRITICAL: com.example.security.SecurityConfig
 - **Aspect**: authentication
 - **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.
+
+#### GENERATED: com.example.service.EvidenceBasedShowcase
+- **Source**: src/main/resources/openapi/checkout.yaml
+- **Edit instead**: src/main/resources/openapi/checkout.yaml
+- **Regenerate with**: mvn generate-sources
+- **Rule**: Never hand-edit. Change the source and regenerate.
+
+#### LOAD-BEARING: com.example.service.EvidenceBasedShowcase.settledOrderIds
+- **Invariant**: Settled orders stay in the list until the reconciliation job drains it
+- **Breaks if changed**: Clearing eagerly drops in-flight settlements and silently under-reports revenue
+- **Audit**: Not a defect. Do not flag.
+- **Rule**: Refactor freely, but preserve the invariant.
+
+#### BANNED APIs: com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)
+- **Forbidden**: java.lang.System.out, java.util.Date, java.lang.Double
+- **Use instead**: the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal
+- **Reason**: Console output bypasses structured logging; Date and Double are unsafe for money and time
+- **Rule**: These compile but are prohibited at this element.
+
+#### THREAD AFFINITY: com.example.service.EvidenceBasedShowcase.refreshCartBadge()
+- **Pinned to**: the checkout-ui thread only
+- **Marshal via**: CheckoutDispatcher.runOnUiThread
+- **Symptom if violated**: Cart totals render stale under load; no exception is thrown
+- **Rule**: Not thread-safe. Do not add locks; call it from the correct thread.
+
+#### KEEP IN SYNC: com.example.service.EvidenceBasedShowcase.CATALOG_VERSION
+- **Mirrors**: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md
+- **Reason**: The release version is duplicated across build config, docs, and the badge
+- **Enforced by**: ProjectFactsConsistencyTest
+- **Rule**: Change all sites in the same commit, or none.
 <!-- VIBETAGS-END -->

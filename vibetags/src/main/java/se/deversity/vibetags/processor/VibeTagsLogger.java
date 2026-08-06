@@ -101,6 +101,9 @@ public final class VibeTagsLogger {
 
     /**
      * Detaches and stops appenders specifically for the given project root's logger.
+     *
+     * @param projectRoot the root whose logger should be torn down; {@code null} is a no-op, so a
+     *                    caller that never resolved a root does not have to guard the call
      */
     public static void shutdown(@Nullable Path projectRoot) {
         if (projectRoot == null) return;
@@ -165,14 +168,17 @@ public final class VibeTagsLogger {
         if (projectRoot != null) {
             THREAD_PROJECT_ROOTS.get().add(projectRoot);
         }
-        // Resolve the effective log file path
-        Path logFile = resolveLogFile(projectRoot, logPath);
-
-        // Handle OFF level — return no-op immediately, release any previous handle
+        // Handle OFF level BEFORE resolving the log file path: OFF never creates a file,
+        // and resolving would NPE for a null (permitted, @Nullable) projectRoot. Release
+        // only THIS root's previous handle — a global shutdown() here would silently
+        // detach the appenders of other roots' still-active loggers on the same thread.
         if ("OFF".equalsIgnoreCase(level)) {
-            shutdown();
+            detachAppendersFor(projectRoot);
             return NOPLogger.NOP_LOGGER;
         }
+
+        // Resolve the effective log file path
+        Path logFile = resolveLogFile(projectRoot, logPath);
 
         try {
             ILoggerFactory factory = LoggerFactory.getILoggerFactory();
@@ -185,7 +191,13 @@ public final class VibeTagsLogger {
 
             PatternLayoutEncoder encoder = new PatternLayoutEncoder();
             encoder.setContext(context);
-            encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %msg%n");
+            // %replace collapses CR/LF inside the formatted message: the log is an event
+            // stream read with grep, one event per line, and values interpolated into it come
+            // from outside (compiler options, module ids, paths read back out of sidecar and
+            // baseline files). A line break in one of those would split an event in two and
+            // let the tail masquerade as a separate event. Pinned by
+            // VibeTagsLoggerUnitTest#logMessageWithLineBreaks_staysOnOneLine.
+            encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %replace(%msg){'[\\r\\n]+', ' '}%n");
             encoder.start();
 
             FileAppender<ILoggingEvent> appender = new FileAppender<>();
@@ -211,11 +223,33 @@ public final class VibeTagsLogger {
         }
     }
 
+    /**
+     * Detaches and stops the appenders of the logger belonging to {@code projectRoot} only
+     * (or the base logger when {@code projectRoot} is null), leaving other roots' loggers
+     * on this thread untouched.
+     */
+    private static void detachAppendersFor(@Nullable Path projectRoot) {
+        try {
+            ILoggerFactory factory = LoggerFactory.getILoggerFactory();
+            if (factory instanceof LoggerContext context) {
+                context.getLogger(getLoggerName(projectRoot)).detachAndStopAllAppenders();
+            }
+            if (projectRoot != null) {
+                THREAD_PROJECT_ROOTS.get().remove(projectRoot);
+            }
+        } catch (RuntimeException ignored) {
+            // Never let logging teardown propagate.
+        }
+    }
+
     private static Path resolveLogFile(@Nullable Path projectRoot, @Nullable String logPath) {
+        // projectRoot is @Nullable: fall back to the JVM working directory, matching the
+        // processor's own default root (Paths.get("")).
+        Path base = projectRoot != null ? projectRoot : Paths.get("").toAbsolutePath();
         if (logPath == null || logPath.isBlank()) {
-            return projectRoot.resolve(DEFAULT_LOG_FILE);
+            return base.resolve(DEFAULT_LOG_FILE);
         }
         Path p = Paths.get(logPath);
-        return p.isAbsolute() ? p : projectRoot.resolve(p);
+        return p.isAbsolute() ? p : base.resolve(p);
     }
 }

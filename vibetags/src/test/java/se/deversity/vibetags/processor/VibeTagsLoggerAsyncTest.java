@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * High-concurrency stress test for VibeTagsLogger isolated parallel execution.
  * Uses async-test-lib to force real thread collisions and race-condition checks.
  */
+@Tag("e2e")
 class VibeTagsLoggerAsyncTest {
 
     @BeforeAll
@@ -44,7 +46,7 @@ class VibeTagsLoggerAsyncTest {
         // Verify that the log file was created and contains ONLY this thread's logs
         assertTrue(Files.exists(logFile), "Log file should exist for thread " + threadId);
         String content = Files.readString(logFile);
-        
+
         assertTrue(content.contains(helloMsg), "Log file must contain hello message");
         assertTrue(content.contains(goodbyeMsg), "Log file must contain goodbye message");
 

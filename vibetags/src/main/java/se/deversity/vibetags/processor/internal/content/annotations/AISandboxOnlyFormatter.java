@@ -1,9 +1,9 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AISandboxOnly;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -11,11 +11,13 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISandboxOnlyFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AISandboxOnly sandboxOnly = element.getAnnotation(AISandboxOnly.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AISandboxOnly sandboxOnly = element.annotation(AISandboxOnly.class);
         if (sandboxOnly == null) return;
-        String className = ElementNaming.elementPath(element);
-        String summary = "Strictly sandbox or test environment only. Production code must never import or invoke.";
+        String className = element.path();
+        String reason = sandboxOnly.reason();
+        String summary = CommonFormatterHelper.withReason(
+            "Strictly sandbox or test environment only. Production code must never import or invoke.", reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -23,7 +25,7 @@ public final class AISandboxOnlyFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <policy>Sandbox or test only. Do not invoke from production.</policy>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <policy>Sandbox or test only. Do not invoke from production.</policy>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Scope**: Sandbox/testing environments only. Never use in production.\n\n");

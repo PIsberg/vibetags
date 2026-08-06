@@ -7,6 +7,11 @@ coverage/
 .env*
 !.env.example
 /.qwen/
+# Build output, wherever it appears. The per-project entries below predate this and are kept
+# for clarity, but a bare `target/` is what actually covers a new module: example-all-tiers/
+# has two of them, and listing paths one by one is how the next new module gets committed.
+target/
+
 vibetags/target
 vibetags-annotations/target/
 example/target
@@ -30,3 +35,31 @@ load-tests/dependency-reduced-pom.xml
 # generated, but kept ignored so any straggler from an old checkout doesn't
 # get re-committed by accident.
 *.bak
+# Mutation/stress reports downloaded from CI runs
+pitest-report-*/
+stress-results-*/
+# Processor test residue: the processor writes to the JVM working dir, so a
+# stray opt-in file in vibetags/ gets filled with com.example test-fixture
+# guardrails. These must never live in vibetags/ itself — backstop ignores so
+# they can't be re-committed if a test regenerates them.
+vibetags/CLAUDE.md
+vibetags/AGENTS.md
+vibetags/QWEN.md
+vibetags/GEMINI.md
+vibetags/.cursorrules
+vibetags/llms.txt
+vibetags/llms-full.txt
+vibetags/.codex/
+vibetags/.qwen/
+
+# Python bytecode from the tools/ plotting scripts. Running any of them leaves a
+# tools/__pycache__/ behind, which otherwise turns up as untracked noise in every
+# `git status` after a plot regeneration.
+__pycache__/
+*.pyc
+
+# flatten-maven-plugin's output: the parent-free, ${revision}-resolved POM that gets
+# installed and deployed. A build artifact, regenerated every time, and committing it
+# would put a second copy of every version under source control — the opposite of the
+# point. `mvn clean` removes it via the plugin's flatten.clean execution.
+.flattened-pom.xml

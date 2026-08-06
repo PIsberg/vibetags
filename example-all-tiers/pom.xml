@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>se.deversity.vibetags.example</groupId>
+  <artifactId>vibetags-example-all-tiers</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>VibeTags Example :: All Tiers</name>
+  <description>
+    All three context tiers active at once, which no other example shows: an indexed Tier-1
+    reactor root, a Tier-2 CLAUDE.md inside each module, and Tier-3 scoped rules grouped by
+    role. The annotations are placed at every level a guardrail can attach to — type, instance
+    field, method, and method parameter — so the generated files show what each level produces
+    and which tier it lands in.
+  </description>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <modules>
+    <module>billing</module>
+    <module>shipping</module>
+  </modules>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <vibetags.bom.version>1.0.1</vibetags.bom.version>
+    <!-- Flipped to true by CI so the build verifies the committed guardrail files instead of
+         rewriting them. See the README's "Verifying" section. -->
+    <vibetags.check>false</vibetags.check>
+    <!-- The diagnostic channel. INFO reports what ran; `mvn compile
+         -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,
+         which is how you find out why a file was or was not rewritten. -->
+    <vibetags.log.level>INFO</vibetags.log.level>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-bom</artifactId>
+        <version>${vibetags.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>se.deversity.vibetags</groupId>
+      <artifactId>vibetags-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.15.0</version>
+          <configuration>
+            <source>21</source>
+            <target>21</target>
+            <compilerArgs>
+              <!-- Every module shares the reactor root as the VibeTags root, anchored by the
+                   .mvn/ directory. .vibetags-root-index at that root makes Tier 1 an index. -->
+              <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
+              <arg>-Avibetags.project=VibeTags All-Tiers Example</arg>
+              <arg>-Avibetags.check=${vibetags.check}</arg>
+              <arg>-Avibetags.log.level=${vibetags.log.level}</arg>
+            </compilerArgs>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>se.deversity.vibetags</groupId>
+                <artifactId>vibetags-processor</artifactId>
+                <version>${vibetags.bom.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

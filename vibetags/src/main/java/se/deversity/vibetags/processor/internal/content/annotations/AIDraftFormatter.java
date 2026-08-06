@@ -2,10 +2,10 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIDraft;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -13,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIDraftFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIDraft draft = element.getAnnotation(AIDraft.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIDraft draft = element.annotation(AIDraft.class);
         if (draft == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String instructions = draft.instructions();
 
         switch (platform) {
@@ -25,7 +25,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <task path=\"").append(className).append("\">\n      <instructions>").append(instructions).append("</instructions>\n    </task>\n");
+                sb.append("    <task path=\"").append(Escape.xml(className)).append("\">\n      <instructions>").append(Escape.xml(instructions)).append("</instructions>\n    </task>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(instructions).append("\n");
@@ -41,7 +41,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(instructions).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(instructions).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(instructions).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Instructions**: ").append(instructions).append("\n\n");
@@ -53,10 +53,10 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(instructions).append("\n");
                 break;
             case MENTAT:
-                sb.append("    {\"path\": \"").append(className).append("\", \"instructions\": \"").append(instructions).append("\"},\n");
+                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"instructions\": \"").append(Escape.json(instructions)).append("\"},\n");
                 break;
             case SWEEP:
-                sb.append("  - \"Implementation task for ").append(className).append(": ").append(instructions).append("\"\n");
+                sb.append("  - \"Implementation task for ").append(Escape.json(className)).append(": ").append(Escape.json(instructions)).append("\"\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (draft): ").append(instructions).append("\n");

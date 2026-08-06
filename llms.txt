@@ -1,0 +1,71 @@
+# VibeTags
+
+> Compile-time Java annotation processor (JSR 269) that generates AI-platform guardrail configuration files — CLAUDE.md, .cursorrules, llms.txt, and 50+ others — from `@AI*` annotations in Java source. Zero runtime overhead; all annotations are `RetentionPolicy.SOURCE`.
+
+Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example`; output files are opt-in by file existence (the processor never creates a file that doesn't already exist); generated content lives between `VIBETAGS-START`/`VIBETAGS-END` markers and hand-authored content outside them is preserved.
+
+## Docs
+
+- [CLAUDE.md](CLAUDE.md): agent briefing — build commands, load-bearing architecture invariants, project guardrails (tool-neutral despite the name)
+- [README.md](README.md): project intro, quick start, supported platforms
+- [USAGE.md](USAGE.md): consumer guide — every annotation with usage examples
+- [SPEC.md](SPEC.md): behavior and output-format specification
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): technical deep dive — system diagram, data flow, design decisions
+- [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md): every annotation — attribute table, semantics, compile-time validation warnings
+- [docs/PLATFORMS.md](docs/PLATFORMS.md): generated file ↔ platform ↔ format table, granular-rules notes
+- [docs/TESTS.md](docs/TESTS.md): which test class covers what
+- [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md): every third-party artifact and why it is here; what ships to consumers vs what only runs the build
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): contribution workflow
+- [docs/RELEASING.md](docs/RELEASING.md): release process
+- [docs/CHANGELOG.md](docs/CHANGELOG.md): version history
+
+## Source
+
+- [vibetags-annotations/](vibetags-annotations/): the 39 `@interface` classes (zero dependencies, consumer compile classpath)
+- [vibetags/](vibetags/): the annotation processor — `AIGuardrailProcessor` plus `internal/` (writer, cache, fingerprint, sidecar, content renderers)
+- [vibetags-bom/](vibetags-bom/): Maven BOM managing annotation + processor versions
+- [example/](example/README.md): demo consumer app showing every generated output file in situ
+- [action/locked-files/](action/locked-files/): GitHub Action that fails PRs touching `@AILocked` line ranges
+
+## Optional
+
+- [docs/vibetags-in-practice.md](docs/vibetags-in-practice.md): worked real-world examples
+- [docs/proposed-annotations.md](docs/proposed-annotations.md): annotation ideas not yet implemented
+- [docs/CONCEPT_PLUGIN.md](docs/CONCEPT_PLUGIN.md): IDE/build-plugin concept notes
+- [docs/PLAN.md](docs/PLAN.md): historical roadmap, superseded — see docs/CHANGELOG.md for what shipped
+- [load-tests/](load-tests/README.md): benchmark harness comparing processor versions
+
+<!-- VIBETAGS-START -->
+# VibeTags Annotation Processor
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [AIGuardrailProcessor.generateFiles()](se.deversity.vibetags.processor.AIGuardrailProcessor.generateFiles()): Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output
+
+## Contextual Rules
+- [AnnotationCollector](se.deversity.vibetags.processor.internal.AnnotationCollector): Focus - Accumulates annotated elements across multiple javac processing rounds, then snapshots them into a compiler-free GuardrailModel. Ordering is settled in GuardrailModel, which sorts every bucket by TaggedElement.path() — javac's getElementsAnnotatedWith has no specified iteration order, so anything that preserves it makes generated output depend on which machine compiled it. Avoid - Restoring javac's iteration order as the output order, here or in GuardrailModel — it differs between Maven and Gradle and between machines, which churns committed guardrail files and misses the write cache. OutputOrderDeterminismTest pins it
+- [GranularRulesWriter](se.deversity.vibetags.processor.internal.GranularRulesWriter): Focus - Writes granular rule files (per-class, or role-grouped when .vibetags-roles is present) for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles. Avoid - Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools
+- [ServiceRegistry](se.deversity.vibetags.processor.internal.ServiceRegistry): Focus - Maps platform service keys to output file paths; resolves active services by checking file existence on disk. Avoid - Creating output files that do not already exist — file presence on disk is the user's explicit opt-in signal
+
+## 🧠 Core Functionality
+- [AIGuardrailProcessor](se.deversity.vibetags.processor.AIGuardrailProcessor): Sensitivity: critical. Note: JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes
+- [GuardrailFileWriter](se.deversity.vibetags.processor.internal.GuardrailFileWriter): Sensitivity: high. Note: Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost
+- [ModuleSidecar](se.deversity.vibetags.processor.internal.ModuleSidecar): Sensitivity: high. Note: Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility
+- [WriteCache](se.deversity.vibetags.processor.internal.WriteCache): Sensitivity: high. Note: Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files
+
+## ⚡ Performance Constraints
+- [BuildFingerprint.fingerprint(java.lang.String)](se.deversity.vibetags.processor.internal.BuildFingerprint.fingerprint(java.lang.String)): O(N) in string length; uses String.hashCode() which HotSpot intrinsifies on x86; must not allocate intermediate byte[]
+- [WriteCache.isUnchanged(java.nio.file.Path,java.lang.String)](se.deversity.vibetags.processor.internal.WriteCache.isUnchanged(java.nio.file.Path,java.lang.String)): O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason
+
+## 🔐 Contract-Frozen Signatures
+- [AIGuardrailProcessor.process(java.util.Set<? extends javax.lang.model.element.TypeElement>,javax.annotation.processing.RoundEnvironment)](se.deversity.vibetags.processor.AIGuardrailProcessor.process(java.util.Set<? extends javax.lang.model.element.TypeElement>,javax.annotation.processing.RoundEnvironment)): JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor
+- [BuildFingerprint.compute(se.deversity.vibetags.processor.internal.AnnotationCollector,java.util.Set<java.lang.String>)](se.deversity.vibetags.processor.internal.BuildFingerprint.compute(se.deversity.vibetags.processor.internal.AnnotationCollector,java.util.Set<java.lang.String>)): Same inputs must always produce the same 8-hex output across JVM restarts; changing the algorithm silently invalidates all existing .vibetags-cache files
+- [GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)](se.deversity.vibetags.processor.internal.GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)): Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics
+- [ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)](se.deversity.vibetags.processor.internal.ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)): Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile
+
+## ❄️ Immutable Types
+- [BuildFingerprint](se.deversity.vibetags.processor.internal.BuildFingerprint): immutable type — Purely stateless; private constructor prevents instantiation; all computation results are returned as values
+<!-- VIBETAGS-END -->

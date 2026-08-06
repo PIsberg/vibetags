@@ -1,0 +1,4 @@
+target/
+vibetags.log
+.vibetags-cache
+.vibetags-mod-*

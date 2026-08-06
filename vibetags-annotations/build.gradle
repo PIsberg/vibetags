@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'se.deversity.vibetags'
-version = '0.9.8'
+version = '1.0.1'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -19,7 +19,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-annotations'
-            version = '0.9.8'
+            version = '1.0.1'
             from components.java
 
             pom {
@@ -30,6 +30,7 @@ publishing {
                     license {
                         name = 'MIT License'
                         url = 'https://opensource.org/licenses/MIT'
+                        distribution = 'repo'
                     }
                 }
                 developers {
@@ -57,16 +58,10 @@ publishing {
                 password = System.getenv('GITHUB_TOKEN')
             }
         }
-        maven {
-            name = 'OSSRH'
-            def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = System.getenv('OSSRH_USERNAME')
-                password = System.getenv('OSSRH_PASSWORD')
-            }
-        }
+        // Maven Central releases do NOT go through this Gradle publication.
+        // The canonical release path is the Maven `publish` workflow (central-publishing-maven-plugin);
+        // see docs/RELEASING.md. This block previously pointed at the decommissioned
+        // OSSRH host (s01.oss.sonatype.org, shut down mid-2025) and was removed.
     }
 }
 
@@ -82,9 +77,20 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+jar {
+    manifest {
+        attributes(
+            // Stable JPMS module name for modular consumers; changing it after 1.0 is breaking.
+            'Automatic-Module-Name': 'se.deversity.vibetags.annotations',
+            'Implementation-Title': 'vibetags-annotations',
+            'Implementation-Version': version
+        )
+    }
+}
+
 pmd {
     consoleOutput = true
-    toolVersion = "7.24.0"
+    toolVersion = "7.26.0"
     ignoreFailures = false
     ruleSetFiles = files("${projectDir}/../pmd-ruleset.xml")
 }

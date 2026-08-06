@@ -1,0 +1,45 @@
+name: Validate Gradle Wrapper
+
+# Verifies the checked-in gradle-wrapper.jar matches a known-good Gradle
+# release checksum.
+#
+# The push trigger deliberately carries no `paths:` filter. Scorecard's
+# Binary-Artifacts check does not merely look for this workflow: it lists the
+# workflow's successful runs and requires one whose head SHA equals the latest
+# commit on the default branch (ossf/scorecard, checks/raw/binary_artifact.go,
+# func gradleWrapperValidated). Under a path filter almost no commit on main has
+# a run at all, so all three gradle-wrapper.jar files stay reported as
+# unverified binary artifacts. Running on every push to main is what clears it.
+#
+# Pull requests keep the filter: Scorecard never inspects them, and the
+# pre-merge value is limited to commits that touch the wrapper.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    paths:
+      - '**/gradle/wrapper/gradle-wrapper.jar'
+      - '**/gradle/wrapper/gradle-wrapper.properties'
+      - '.github/workflows/gradle-wrapper-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0

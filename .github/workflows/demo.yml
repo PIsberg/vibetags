@@ -11,25 +11,28 @@ on:
       - '.github/workflows/demo.yml'
   workflow_dispatch:
 
+# Least privilege at the top level; the commit/PR job opts into the writes it needs.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   generate-demo:
     name: Record demo and convert to GIF
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the GIF branch
+      pull-requests: write    # open the update PR
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           java-version: '21'
           distribution: 'temurin'

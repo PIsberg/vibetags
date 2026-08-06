@@ -1,9 +1,9 @@
 package se.deversity.vibetags.processor.internal.content.annotations;
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIExtensible;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -11,10 +11,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIExtensibleFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIExtensible extensible = element.getAnnotation(AIExtensible.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIExtensible extensible = element.annotation(AIExtensible.class);
         if (extensible == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         AIExtensible.Strategy strategy = extensible.value();
         String summary = "Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: " + strategy.name();
 
@@ -24,7 +24,7 @@ public final class AIExtensibleFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(className).append("\">\n      <extension_pattern>").append(strategy.name()).append("</extension_pattern>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <extension_pattern>").append(Escape.xml(strategy.name())).append("</extension_pattern>\n    </file>\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Extension Design**: ").append(strategy.name()).append(". Use polymorphism.\n\n");

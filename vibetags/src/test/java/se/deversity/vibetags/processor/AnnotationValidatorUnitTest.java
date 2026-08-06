@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIDeprecated;
@@ -10,6 +11,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIObservability;
 import se.deversity.vibetags.annotations.AIRegulation;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.RoundEnvironment;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.*;
  * Direct unit tests for {@link se.deversity.vibetags.processor.internal.AnnotationValidator}
  * targeting the validation-warning branches not exercised by existing integration tests.
  */
+@Tag("e2e")
 class AnnotationValidatorUnitTest {
 
     // -----------------------------------------------------------------------
@@ -36,7 +39,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_draftAndIgnore_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.NotifService");
@@ -46,7 +48,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size(), "Should emit exactly one warning for @AIDraft + @AIIgnore");
         String w = warnings.get(0);
@@ -58,7 +60,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_draftWithoutIgnore_noContradictionWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         Element element = mock(Element.class);
         when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
@@ -67,7 +68,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIDraft.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(), "No warning when @AIDraft is used without @AIIgnore");
     }
@@ -80,7 +81,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiContext_bothBlank_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIContext ctx = mock(AIContext.class);
         when(ctx.focus()).thenReturn("   ");  // blank
@@ -93,7 +93,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertEquals(1, warnings.size(), "Should emit one warning when both focus and avoids are blank");
         String w = warnings.get(0);
@@ -107,7 +107,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiContext_onlyFocusBlank_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIContext ctx = mock(AIContext.class);
         when(ctx.focus()).thenReturn("");          // blank
@@ -119,7 +118,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when at least one of focus/avoids is non-blank");
@@ -129,7 +128,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiContext_onlyAvoidsBlank_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIContext ctx = mock(AIContext.class);
         when(ctx.focus()).thenReturn("memory usage");  // not blank
@@ -141,7 +139,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIContext.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when focus is non-blank even if avoids is blank");
@@ -155,7 +153,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiDeprecated_blankReplacedBy_emitsWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIDeprecated dep = mock(AIDeprecated.class);
         when(dep.replacedBy()).thenReturn("");
@@ -168,7 +165,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIDeprecated.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().anyMatch(w ->
                 w.contains("@AIDeprecated") && w.contains("replacedBy")),
@@ -179,7 +176,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiDeprecated_nonBlankReplacedBy_noReplacedByWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIDeprecated dep = mock(AIDeprecated.class);
         when(dep.replacedBy()).thenReturn("com.example.NewService");
@@ -192,7 +188,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIDeprecated.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.stream().noneMatch(w -> w.contains("replacedBy")),
             "No replacedBy warning when replacedBy is non-blank. Warnings: " + warnings);
@@ -206,7 +202,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiThreadSafeImmutable_withoutAiImmutable_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIThreadSafe ts = mock(AIThreadSafe.class);
         when(ts.strategy()).thenReturn(AIThreadSafe.Strategy.IMMUTABLE);
@@ -219,7 +214,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIThreadSafe.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "@AIThreadSafe(IMMUTABLE) without @AIImmutable must not emit redundancy warning");
@@ -229,7 +224,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiThreadSafe_nonImmutableStrategy_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIThreadSafe ts = mock(AIThreadSafe.class);
         when(ts.strategy()).thenReturn(AIThreadSafe.Strategy.SYNCHRONIZED);
@@ -242,7 +236,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIThreadSafe.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "Non-IMMUTABLE @AIThreadSafe strategy with @AIImmutable must not emit redundancy warning");
@@ -256,7 +250,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiObservability_withMetrics_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIObservability obs = mock(AIObservability.class);
         when(obs.metrics()).thenReturn(new String[]{"payment.count"});
@@ -269,7 +262,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIObservability.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIObservability declares at least one metric");
@@ -279,7 +272,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiObservability_withTracesOnly_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIObservability obs = mock(AIObservability.class);
         when(obs.metrics()).thenReturn(new String[]{});
@@ -292,7 +284,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIObservability.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIObservability declares at least one trace span");
@@ -306,7 +298,6 @@ class AnnotationValidatorUnitTest {
     void validateAnnotations_aiRegulation_nonBlankStandard_noWarning() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(warnings);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         AIRegulation reg = mock(AIRegulation.class);
         when(reg.standard()).thenReturn("GDPR");
@@ -317,7 +308,7 @@ class AnnotationValidatorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         doReturn(Set.of(element)).when(roundEnv).getElementsAnnotatedWith(AIRegulation.class);
 
-        processor.validateAnnotations(messager, roundEnv);
+        AnnotationValidator.validate(messager, roundEnv, null);
 
         assertTrue(warnings.isEmpty(),
             "No warning when @AIRegulation has a non-blank standard");

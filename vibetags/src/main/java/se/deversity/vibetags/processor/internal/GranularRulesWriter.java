@@ -1,23 +1,36 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
+import se.deversity.vibetags.processor.internal.content.GranularContribution;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.model.TaggedElement;
+import se.deversity.vibetags.processor.internal.content.GranularSections;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
- * Writes per-class granular rule files for Cursor (.mdc), Trae (.md), and Roo (.md).
- * Each annotated class/package becomes one file in the platform's rules directory.
+ * Writes granular rule files for Cursor (.mdc), Claude, Windsurf, Copilot, Trae, Roo, and similar
+ * platforms. By default each annotated class/package becomes one file in the platform's rules
+ * directory. When a {@link RoleConfig} is supplied (a {@code .vibetags-roles} config is present),
+ * elements matching a role are instead grouped into one human-named file per role (e.g.
+ * {@code api-endpoints.md}); elements matching no role keep their per-class file.
  *
- * <p>Returns the set of qNames written so the caller can pass them to
+ * <p>Returns the set of qNames/role-stems written so the caller can pass them to
  * {@link GuardrailFileWriter#cleanupGranularDirectory(Path, String, Set)} as the exclude list,
  * preventing a delete-then-recreate cycle on each compile.
  */
 @AIContext(
-    focus = "Writes per-class granular rule files for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles",
+    focus = "Writes granular rule files (per-class, or role-grouped when .vibetags-roles is present) for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles",
     avoids = "Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools"
 )
 public final class GranularRulesWriter {
@@ -28,140 +41,325 @@ public final class GranularRulesWriter {
         this.fileWriter = fileWriter;
     }
 
+    /** Per-class granular writing (no role routing). */
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
+                                Map<String, Path> serviceFiles,
+                                Set<String> activeServices) {
+        return writeAll(elementRules, serviceFiles, activeServices, null);
+    }
+
     /**
-     * Writes per-class granular rule files for all active platforms.
+     * Writes granular rule files for all active platforms.
      *
      * @param elementRules    map of owning class/package element → accumulated rules markdown
      * @param serviceFiles    service-key → directory path map
      * @param activeServices  currently-active services (controls which platforms get files)
-     * @return qNames (filename minus extension) of files just written
+     * @param roles           role routing config, or {@code null}/empty for per-class behavior
+     * @return qNames (per-class) and role stems (filename minus extension) of files just written
      */
-    public Set<String> writeAll(Map<Element, StringBuilder> elementRules,
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
                                 Map<String, Path> serviceFiles,
-                                Set<String> activeServices) {
+                                Set<String> activeServices,
+                                @Nullable RoleConfig roles) {
+        return writeAll(elementRules, serviceFiles, activeServices, roles, Map.of());
+    }
+
+    /**
+     * As above, but publishing every module's contribution to a file rather than only this
+     * compilation's (<a href="https://github.com/PIsberg/vibetags/issues/365">issue #365</a>).
+     *
+     * <p>A role declared in a reactor-root {@code .vibetags-roles} can match classes in several
+     * modules, and all of them resolve the same output path — so each module's compile replaced the
+     * file with its own classes alone and the siblings' guardrails vanished, silently and
+     * nondeterministically (whichever module compiled last won). Two source sets of one module
+     * collide the same way. {@code mergedByStem} carries what every sidecar recorded for that stem,
+     * merged; a stem it does not mention keeps this compilation's own rendering, which is what makes
+     * the single-module output byte-for-byte unchanged.
+     *
+     * @param mergedByStem stem → merged contribution, from {@code ModuleSidecar.mergeGranular}
+     */
+    public Set<String> writeAll(Map<TaggedElement, GranularBody> elementRules,
+                                Map<String, Path> serviceFiles,
+                                Set<String> activeServices,
+                                @Nullable RoleConfig roles,
+                                Map<String, GranularContribution> mergedByStem) {
+        return write(elementRules, serviceFiles, activeServices, roles, "", List.of(), mergedByStem);
+    }
+
+    /**
+     * Writes {@code elementRules} into <em>another</em> module's granular directories (issue #312).
+     * Identical to {@link #writeAll} except that every filename carries {@code filePrefix} — which
+     * namespaces the source module so two producers mirroring into the same target never collide or
+     * clean up each other's files — and {@code extraGlobs} are appended to each file's frontmatter
+     * so the mirrored rules actually match the target module's own sources.
+     *
+     * <p>No cross-module merge applies: the prefix already makes every mirrored stem unique to its
+     * source module, so there is no shared file for two compilations to overwrite.
+     *
+     * @param filePrefix reserved filename prefix, e.g. {@code mirrored-payments-core-}
+     * @param extraGlobs globs appended after the rule's own glob(s)
+     * @return the prefixed stems written, for {@link #cleanupMirrored}
+     */
+    public Set<String> writeMirrored(Map<TaggedElement, GranularBody> elementRules,
+                                     Map<String, Path> serviceFiles,
+                                     Set<String> activeServices,
+                                     @Nullable RoleConfig roles,
+                                     String filePrefix,
+                                     List<String> extraGlobs) {
+        return write(elementRules, serviceFiles, activeServices, roles, filePrefix, extraGlobs, Map.of());
+    }
+
+    /**
+     * What this compilation contributes to each granular rule file, keyed by stem — the globs its
+     * frontmatter needs and the rendered body — without touching the filesystem.
+     *
+     * <p>Recorded in the module sidecar, where it does two jobs. Its <em>keys</em> are the filenames
+     * this round will write, which sibling compilations read as cleanup exclusions — without them a
+     * round deletes every rule file it did not itself write, which is every main-source rule file
+     * when the round is {@code test-compile}
+     * (<a href="https://github.com/PIsberg/vibetags/issues/330">issue #330</a>). Its <em>values</em>
+     * are what those files should contain, so a file several modules write is merged rather than
+     * replaced (issue #365).
+     *
+     * <p>Both come from {@link #plan}, the same method {@link #write} writes from, so a recorded
+     * contribution can never name or describe a file that would have been written differently.
+     */
+    public static Map<String, GranularContribution> contributionsFor(
+            Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig roles) {
+        Map<String, GranularContribution> contributions = new LinkedHashMap<>();
+        plan(elementRules, roles, "", List.of())
+            .forEach((stem, unit) -> contributions.put(stem, unit.content()));
+        return contributions;
+    }
+
+    private Set<String> write(Map<TaggedElement, GranularBody> elementRules,
+                              Map<String, Path> serviceFiles,
+                              Set<String> activeServices,
+                              @Nullable RoleConfig roles,
+                              String filePrefix,
+                              List<String> extraGlobs,
+                              Map<String, GranularContribution> mergedByStem) {
         Set<String> writtenQNames = new LinkedHashSet<>();
-        boolean cursorGranular    = activeServices.contains("cursor_granular");
-        boolean traeGranular      = activeServices.contains("trae_granular");
-        boolean rooGranular       = activeServices.contains("roo_granular");
-        boolean windsurfGranular  = activeServices.contains("windsurf_granular");
-        boolean continueGranular  = activeServices.contains("continue_granular");
-        boolean tabnineGranular   = activeServices.contains("tabnine_granular");
-        boolean amazonqGranular   = activeServices.contains("amazonq_granular");
-        boolean aiRulesGranular   = activeServices.contains("ai_rules_granular");
-        boolean pearaiGranular    = activeServices.contains("pearai_granular");
-        boolean kiroGranular      = activeServices.contains("kiro_granular");
-        if (!cursorGranular && !traeGranular && !rooGranular
-                && !windsurfGranular && !continueGranular
-                && !tabnineGranular && !amazonqGranular && !aiRulesGranular
-                && !pearaiGranular && !kiroGranular) return writtenQNames;
+        List<GranularFormat> formats = new ArrayList<>();
+        for (GranularFormat f : FORMATS) {
+            if (activeServices.contains(f.serviceKey)) {
+                formats.add(f);
+            }
+        }
+        if (formats.isEmpty()) {
+            return writtenQNames;
+        }
 
-        elementRules.forEach((element, builder) -> {
-            String qName = element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
-            writtenQNames.add(qName);
-            String simpleName = element.getSimpleName().toString();
-            String rulesContent = builder.toString().trim();
-            String glob = element.getKind() == ElementKind.PACKAGE
-                ? "**/" + simpleName + "/**/*.java"
-                : "**/" + simpleName + ".java";
+        for (Map.Entry<String, Unit> planned : plan(elementRules, roles, filePrefix, extraGlobs).entrySet()) {
+            String stem = planned.getKey();
+            Unit unit = planned.getValue();
+            writtenQNames.add(stem);
+            // The merged view wins when there is one, because it already contains this module's own
+            // contribution — the sidecar was written before it was read. Its globs are taken whole
+            // rather than unioned with the local ones so that every module writing this file writes
+            // the same bytes; a per-module union would order them per module and churn the diff.
+            GranularContribution merged = mergedByStem.get(stem);
+            List<String> globs = unit.content().globs();
+            String body = unit.content().body();
+            if (merged != null && !merged.isEmpty() && !merged.globs().isEmpty()) {
+                globs = merged.globs();
+                body = merged.body();
+            }
+            for (GranularFormat f : formats) {
+                Path serviceDir = serviceFiles.get(f.serviceKey);
+                if (serviceDir == null) {
+                    continue;  // service not configured for this run: nothing to write
+                }
+                fileWriter.writeFileIfChanged(
+                    serviceDir.resolve(stem + f.extension).toString(),
+                    f.render(unit.description(), unit.displayName(), globs, body), true);
+            }
+        }
 
-            if (cursorGranular) {
-                String mdc = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("cursor_granular").resolve(qName + ".mdc").toString(), mdc, true);
-            }
-            if (traeGranular) {
-                String md = "---\n"
-                    + "alwaysApply: false\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("trae_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (rooGranular) {
-                String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("roo_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (windsurfGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("windsurf_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (continueGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("continue_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (tabnineGranular) {
-                String md = "# AI Guidelines for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("tabnine_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (amazonqGranular) {
-                String md = "# Amazon Q Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("amazonq_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (aiRulesGranular) {
-                String md = "# Rules for " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("ai_rules_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (pearaiGranular) {
-                String md = "---\n"
-                    + "description: \"AI rules for " + element + "\"\n"
-                    + "globs: [\"" + glob + "\"]\n"
-                    + "alwaysApply: false\n"
-                    + "---\n\n"
-                    + "# Rules for " + simpleName + "\n\n"
-                    + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("pearai_granular").resolve(qName + ".md").toString(), md, true);
-            }
-            if (kiroGranular) {
-                String md = "# Amazon Kiro Steering: " + simpleName + "\n\n" + rulesContent;
-                fileWriter.writeFileIfChanged(
-                    serviceFiles.get("kiro_granular").resolve(qName + ".md").toString(), md, true);
-            }
-        });
         return writtenQNames;
     }
 
     /**
-     * Removes orphaned granular files for the three platforms, skipping {@code excludeQNames}
-     * (typically the names just written this round).
+     * Everything {@link #write} would write, as stem → file, with nothing rendered to disk. Split
+     * out of the write so the same plan can be recorded in the sidecar (see
+     * {@link #contributionsFor}) and so the merge has one definition of what a stem's content is.
      */
-    public void cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
-        if (activeServices.contains("cursor_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("cursor_granular"),   ".mdc", excludeQNames);
-        if (activeServices.contains("trae_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("trae_granular"),     ".md",  excludeQNames);
-        if (activeServices.contains("roo_granular"))      fileWriter.cleanupGranularDirectory(serviceFiles.get("roo_granular"),      ".md",  excludeQNames);
-        if (activeServices.contains("windsurf_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("windsurf_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("continue_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("continue_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("tabnine_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("tabnine_granular"),  ".md",  excludeQNames);
-        if (activeServices.contains("amazonq_granular"))  fileWriter.cleanupGranularDirectory(serviceFiles.get("amazonq_granular"),  ".md",  excludeQNames);
-        if (activeServices.contains("ai_rules_granular")) fileWriter.cleanupGranularDirectory(serviceFiles.get("ai_rules_granular"), ".md",  excludeQNames);
-        if (activeServices.contains("pearai_granular"))   fileWriter.cleanupGranularDirectory(serviceFiles.get("pearai_granular"),   ".md",  excludeQNames);
-        if (activeServices.contains("kiro_granular"))     fileWriter.cleanupGranularDirectory(serviceFiles.get("kiro_granular"),     ".md",  excludeQNames);
+    private static Map<String, Unit> plan(Map<TaggedElement, GranularBody> elementRules,
+                                          @Nullable RoleConfig roles,
+                                          String filePrefix,
+                                          List<String> extraGlobs) {
+        // One name for "roles are on", non-null when they are: a separate boolean flag says the
+        // same thing to a reader but nothing to the compiler, and every use below is in a lambda.
+        final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
+
+        // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
+        // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
+        Map<String, List<TaggedElement>> roleMembers = new LinkedHashMap<>();
+        Map<TaggedElement, GranularBody> unmatched = new LinkedHashMap<>();
+        elementRules.forEach((owner, body) -> {
+            String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
+            if (role != null) {
+                roleMembers.computeIfAbsent(role, k -> new ArrayList<>()).add(owner);
+            } else {
+                unmatched.put(owner, body);
+            }
+        });
+
+        Map<String, Unit> units = new LinkedHashMap<>();
+
+        // Unmatched elements → one file per class/package (unchanged output).
+        unmatched.forEach((owner, body) -> {
+            String qName = filePrefix + owner.granularQName();
+            units.put(qName, new Unit(owner.simpleName(), "AI rules for " + owner,
+                new GranularContribution(withExtra(List.of(defaultGlob(owner)), extraGlobs),
+                    body.toString().trim())));
+        });
+
+        // Role members → one grouped, human-named file per role.
+        roleMembers.forEach((roleName, members) -> {
+            String stem = filePrefix + RoleConfig.sanitize(roleName);
+            List<String> globs = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
+            if (globs.isEmpty()) {
+                // Role defined only by FQNs — derive globs from the members' own class/package globs.
+                Set<String> derived = new LinkedHashSet<>();
+                for (TaggedElement m : members) {
+                    derived.add(defaultGlob(m));
+                }
+                globs = new ArrayList<>(derived);
+            }
+            globs = withExtra(globs, extraGlobs);
+            // A role file spans several owners, so its stanzas are re-rendered together in
+            // qualified mode: organised by topic (section) with fully-qualified element headings,
+            // and with each section's shared rule sentence hoisted once instead of repeated per
+            // element (issue #313).
+            List<GranularBody.Entry> stanzas = new ArrayList<>();
+            for (TaggedElement m : members) {
+                GranularBody memberBody = elementRules.get(m);
+                if (memberBody != null) {
+                    stanzas.addAll(memberBody.entries());
+                }
+            }
+            units.put(stem, new Unit(roleName, "AI rules for role " + roleName,
+                new GranularContribution(globs, GranularSections.render(stanzas, true).trim())));
+        });
+
+        return units;
     }
+
+    /** One planned granular file: its frontmatter description, its heading name, and its content. */
+    private record Unit(String displayName, String description, GranularContribution content) {}
+
+    /**
+     * The rule's own globs followed by any mirror globs, de-duplicated and order-preserving. Returns
+     * {@code globs} untouched when there is nothing to add, so the ordinary single-glob per-class
+     * frontmatter stays byte-for-byte identical.
+     */
+    private static List<String> withExtra(List<String> globs, List<String> extraGlobs) {
+        if (extraGlobs.isEmpty()) {
+            return globs;
+        }
+        Set<String> merged = new LinkedHashSet<>(globs);
+        merged.addAll(extraGlobs);
+        return new ArrayList<>(merged);
+    }
+
+    private static String defaultGlob(TaggedElement owner) {
+        String simpleName = owner.simpleName();
+        return owner.kind() == ElementTag.PACKAGE
+            ? "**/" + simpleName + "/**/*.java"
+            : "**/" + simpleName + ".java";
+    }
+
+    private static String arr(List<String> globs) {
+        return "[\"" + String.join("\", \"", globs) + "\"]";
+    }
+
+    /**
+     * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
+     * (the per-class qNames and role stems just written this round).
+     */
+    public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
+        Set<String> removed = new LinkedHashSet<>();
+        for (GranularFormat f : FORMATS) {
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir != null && activeServices.contains(f.serviceKey)) {
+                removed.addAll(fileWriter.cleanupGranularDirectory(dir, f.extension, excludeQNames));
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * Removes orphaned <em>mirrored</em> files for one source module, leaving the target module's
+     * own rules and every other source module's mirrors alone. Scoped by {@code filePrefix}, which
+     * is what lets modules of a reactor compile independently without deleting each other's output.
+     */
+    public void cleanupMirrored(Map<String, Path> serviceFiles, Set<String> activeServices,
+                                String filePrefix, Set<String> excludeQNames) {
+        for (GranularFormat f : FORMATS) {
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir != null && activeServices.contains(f.serviceKey)) {
+                fileWriter.cleanupGranularDirectory(dir, f.extension, excludeQNames, filePrefix);
+            }
+        }
+    }
+
+    /**
+     * Per-platform granular file format: extension, frontmatter builder (from description + glob
+     * list), and heading builder. A file is {@code frontmatter + heading + body}; the single-glob
+     * case reproduces the historical per-class output byte-for-byte.
+     */
+    private static final class GranularFormat {
+        final String serviceKey;
+        final String extension;
+        private final BiFunction<String, List<String>, String> frontmatter;
+        private final Function<String, String> heading;
+
+        GranularFormat(String serviceKey, String extension,
+                       BiFunction<String, List<String>, String> frontmatter,
+                       Function<String, String> heading) {
+            this.serviceKey = serviceKey;
+            this.extension = extension;
+            this.frontmatter = frontmatter;
+            this.heading = heading;
+        }
+
+        String render(String description, String displayName, List<String> globs, String body) {
+            return frontmatter.apply(description, globs) + heading.apply(displayName) + body;
+        }
+    }
+
+    // YAML-frontmatter builders, keyed by the shape each platform uses. Methods rather than lambdas
+    // in constants: the method reference reads the same at the use site and the body gets a name.
+    private static String fmDescGlobsApply(String desc, List<String> globs) {
+        return "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
+    }
+
+    /** No front matter at all — the platform reads the file by path, not by a globs declaration. */
+    private static String fmNone(String desc, List<String> globs) {
+        return "";
+    }
+
+    // Order = historical per-class write order.
+    private static final List<GranularFormat> FORMATS = List.of(
+        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("trae_granular", ".md",
+            (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
+            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
+        new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
+        new GranularFormat("ai_rules_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
+        new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("claude_granular", ".md",
+            (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
+            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("copilot_granular", ".instructions.md",
+            (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
+            n -> "# Copilot Instructions for " + n + "\n\n")
+    );
 }

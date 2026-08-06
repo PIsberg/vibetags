@@ -4,25 +4,68 @@ A practical demonstration of **VibeTags** — Java annotations that act as AI gu
 
 ## 🎯 What This Example Demonstrates
 
-This is a sample e-commerce application that shows all fifteen VibeTags annotations in action:
+This is a sample e-commerce application that exercises **every one of the
+[44 annotations](../README.md#project-facts)** — not a representative subset. If an annotation
+exists, something here uses it, which makes this project the fastest way to see what a given
+annotation actually produces: annotate, compile, read the generated file.
 
-- **`@AILocked`** — Protects critical code from AI modifications
-- **`@AIIgnore`** — Excludes elements from AI context entirely (treat as non-existent)
-- **`@AIContext`** — Guides AI on how to work with specific classes (focus/avoid instructions)
-- **`@AIDraft`** — Marks methods/classes that need AI implementation with detailed instructions
-- **`@AIAudit`** — Tags critical infrastructure for continuous AI security auditing
-- **`@AIPrivacy`** — Marks PII-handling fields and methods; AI must never log or expose their values
-- **`@AICore`** — Marks well-tested core logic as highly sensitive (change with extreme caution)
-- **`@AIPerformance`** — Sets strict time/space complexity constraints for hot-path code
-- **`@AIContract`** — Freezes a public API signature while still inviting AI to refactor the body
-- **`@AITestDriven`** — Requires AI to supply a matching test update alongside any code change
-- **`@AIThreadSafe`** — Declares a thread-safety strategy that AI must preserve on every change
-- **`@AIImmutable`** — Declares a class immutable; the processor warns if any field is non-final
-- **`@AIDeprecated`** — Marks an element for removal and points AI at the replacement
-- **`@AIObservability`** — Names metrics/traces/logs the AI must not remove or rename silently
-- **`@AIRegulation`** — Ties code to a specific compliance clause (GDPR, PCI-DSS, HIPAA, …)
+The table below maps each annotation to the file that demonstrates it. It is checked by
+`ExampleCoverageTest`, so an annotation added to the library without an example here fails the
+build rather than quietly going undocumented. (This section previously claimed the example showed
+"all fifteen" annotations, and had said so through twenty-nine additions.)
 
-When compiled, the VibeTags annotation processor automatically generates AI configuration files for 33 platforms.
+| Annotation | Demonstrated in `src/main/java/` |
+|---|---|
+| **@AIArchitecture** | `com/example/service/LayeredDomainService.java` |
+| **@AIAudit** | `com/example/database/DatabaseConnector.java` |
+| **@AIBannedApi** | `com/example/service/EvidenceBasedShowcase.java` |
+| **@AICallersOnly** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIContext** | `com/example/utils/StringParser.java` (+6 more) |
+| **@AIContract** | `com/example/service/PricingService.java` |
+| **@AICore** | `com/example/security/SecurityConfig.java` (+1 more) |
+| **@AIDeprecated** | `com/example/legacy/OldPaymentApi.java` |
+| **@AIDomainModel** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIDraft** | `com/example/NotificationService.java` (+5 more) |
+| **@AIExplain** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIExtensible** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIFeatureFlag** | `com/example/service/InventoryService.java` |
+| **@AIGenerated** | `com/example/service/EvidenceBasedShowcase.java` |
+| **@AIIdempotent** | `com/example/compliance/GdprService.java` |
+| **@AIIgnore** | `com/example/internal/GeneratedMetadata.java` |
+| **@AIImmutable** | `com/example/config/AsyncTestConfig.java` |
+| **@AIInputSanitized** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIInternationalized** | `com/example/utils/I18nMessageHelper.java` |
+| **@AIKeepInSync** | `com/example/service/EvidenceBasedShowcase.java` |
+| **@AILegacyBridge** | `com/example/legacy/LegacyBridgeService.java` |
+| **@AILoadBearing** | `com/example/service/EvidenceBasedShowcase.java` |
+| **@AILocked** | `com/example/service/OrderService.java` (+2 more) |
+| **@AIMemoryBudget** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIObservability** | `com/example/metrics/OrderMetrics.java` |
+| **@AIParallelTests** | `com/example/config/ParallelTestSettings.java` |
+| **@AIPerformance** | `com/example/service/PricingService.java` (+2 more) |
+| **@AIPrivacy** | `com/example/service/OrderService.java` (+4 more) |
+| **@AIPrototype** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIPublicAPI** | `com/example/service/PublicPaymentController.java` |
+| **@AIPure** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIRegulation** | `com/example/compliance/GdprService.java` |
+| **@AISandboxOnly** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AISchemaSafe** | `com/example/database/UserEntity.java` |
+| **@AISecure** | `com/example/security/SecurityConfig.java` |
+| **@AISecureLogging** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AIStrictClasspath** | `com/example/utils/StrictUtility.java` |
+| **@AIStrictExceptions** | `com/example/service/TransactionalPaymentService.java` |
+| **@AIStrictTypes** | `com/example/payment/PaymentDetails.java` |
+| **@AISunset** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AITemporary** | `com/example/service/NewAnnotationsShowcase.java` |
+| **@AITestDriven** | `com/example/service/OrderService.java` |
+| **@AIThreadAffinity** | `com/example/service/EvidenceBasedShowcase.java` |
+| **@AIThreadSafe** | `com/example/concurrent/SessionCache.java` |
+
+Grouped by intent, with a sentence on what each one is for, they are documented once in the
+[main README](../README.md#key-features) — that is the single source of truth for what an
+annotation *means*; this table is the source of truth for where to *see* one.
+
+When compiled, the VibeTags annotation processor automatically generates AI configuration files for every supported platform (see the [project facts](../README.md#project-facts) in the main README).
 
 > **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../README.md).
 
@@ -124,6 +167,12 @@ touch .doubleignore .codeiumignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
 mkdir -p .junie && touch .junie/guidelines.md
 mkdir -p .idx && touch .idx/airules.md
+
+# AI PR reviewers, context packers, and editors
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml
+touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore
+mkdir -p .void && touch .void/rules.md
+touch .roomodes
 ```
 
 The `reset-ai-files.sh` script does the same thing and can be used to clear generated content for a clean rebuild:
@@ -168,9 +217,12 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.cursor/rules/*.mdc` | Cursor (granular, per-class) |
 | `.pearai/rules/*.md` | PearAI (granular, per-class) |
+| `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml` | AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis) |
+| `.void/rules.md` | Void Editor |
+| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
 | *(and more)* | |
 
-See the [main README](../README.md) for the complete list of 27 supported platforms.
+See the [main README](../README.md#supported-ai-platforms) for the complete list of supported platforms.
 
 ---
 
@@ -983,10 +1035,24 @@ The processor uses `Paths.get("")` which resolves to the JVM working directory. 
 
 ## 📚 Resources
 
-- **Main README:** [`../README.md`](../README.md) — installation, all 27 platforms, architecture overview
+- **Main README:** [`../README.md`](../README.md) — installation, the full platform list, architecture overview
 - **Architecture:** [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) — deep-dive into processor internals
 - **Issue Tracker:** [GitHub Issues](https://github.com/PIsberg/vibetags/issues)
 
 ## 📝 License
 
 This example project is licensed under the [MIT License](../LICENSE).
+
+
+## VibeTags tiers (single-module)
+
+This is a **single-module** project, so its `.claude/rules/` sits at the **repo root** — and that is
+exactly right: the root *is* the only module, so root granular is simply this project's **Tier-3**
+per-element detail (loaded on demand via each rule's `paths:` glob), alongside the always-loaded
+`CLAUDE.md` (**Tier 1**). Drop a `.vibetags-roles` here to group those per-class files into a few
+human-named topic files.
+
+In a **multi-module reactor** a root `.claude/rules/` can't aggregate across modules — put Tier-3
+rules per module and use an indexed root instead. See
+[`../example-multimodule-indexed`](../example-multimodule-indexed) and the repository README's
+*Organizing Context Files* section ([#295](https://github.com/PIsberg/vibetags/issues/295)).

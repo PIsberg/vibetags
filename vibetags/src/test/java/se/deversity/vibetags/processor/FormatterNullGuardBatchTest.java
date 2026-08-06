@@ -50,7 +50,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Audit");
         when(el.getAnnotation(AIAudit.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIAuditFormatter: null annotation must produce no output on " + p);
     }
 
@@ -63,7 +63,7 @@ class FormatterNullGuardBatchTest {
         when(ann.checkFor()).thenReturn(new String[0]);
         when(el.getAnnotation(AIAudit.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIAuditFormatter: empty checkFor must produce no output on " + p);
     }
 
@@ -78,7 +78,7 @@ class FormatterNullGuardBatchTest {
         AIIgnoreFormatter fmt = new AIIgnoreFormatter();
         Element el = mockEl("com.example.Ignored");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIIgnoreFormatter: unhandled platform must produce no output");
     }
 
@@ -87,7 +87,7 @@ class FormatterNullGuardBatchTest {
         AILegacyBridgeFormatter fmt = new AILegacyBridgeFormatter();
         Element el = mockEl("com.example.Legacy");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AILegacyBridgeFormatter: unhandled platform must produce no output");
     }
 
@@ -96,7 +96,7 @@ class FormatterNullGuardBatchTest {
         AIParallelTestsFormatter fmt = new AIParallelTestsFormatter();
         Element el = mockEl("com.example.Parallel");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIParallelTestsFormatter: unhandled platform must produce no output");
     }
 
@@ -105,7 +105,7 @@ class FormatterNullGuardBatchTest {
         AIPublicAPIFormatter fmt = new AIPublicAPIFormatter();
         Element el = mockEl("com.example.PubApi");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIPublicAPIFormatter: unhandled platform must produce no output");
     }
 
@@ -114,7 +114,7 @@ class FormatterNullGuardBatchTest {
         AIStrictClasspathFormatter fmt = new AIStrictClasspathFormatter();
         Element el = mockEl("com.example.Classpath");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIStrictClasspathFormatter: unhandled platform must produce no output");
     }
 
@@ -123,7 +123,7 @@ class FormatterNullGuardBatchTest {
         AIStrictExceptionsFormatter fmt = new AIStrictExceptionsFormatter();
         Element el = mockEl("com.example.Exc");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIStrictExceptionsFormatter: unhandled platform must produce no output");
     }
 
@@ -132,7 +132,7 @@ class FormatterNullGuardBatchTest {
         AIStrictTypesFormatter fmt = new AIStrictTypesFormatter();
         Element el = mockEl("com.example.Types");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIStrictTypesFormatter: unhandled platform must produce no output");
     }
 
@@ -141,7 +141,7 @@ class FormatterNullGuardBatchTest {
         AIInternationalizedFormatter fmt = new AIInternationalizedFormatter();
         Element el = mockEl("com.example.I18n");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIInternationalizedFormatter: unhandled platform must produce no output");
     }
 
@@ -156,7 +156,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Core");
         when(el.getAnnotation(AICore.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AICoreFormatter: null annotation must produce no output on " + p);
     }
 
@@ -171,7 +171,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Contract");
         when(el.getAnnotation(AIContract.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIContractFormatter: null annotation must produce no output on " + p);
     }
 
@@ -186,7 +186,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Draft");
         when(el.getAnnotation(AIDraft.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIDraftFormatter: null annotation must produce no output on " + p);
     }
 
@@ -201,7 +201,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Deprecated");
         when(el.getAnnotation(AIDeprecated.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIDeprecatedFormatter: null annotation must produce no output on " + p);
     }
 
@@ -216,7 +216,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Immutable");
         when(el.getAnnotation(AIImmutable.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIImmutableFormatter: null annotation must produce no output on " + p);
     }
 
@@ -231,7 +231,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Obs");
         when(el.getAnnotation(AIObservability.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIObservabilityFormatter: null annotation must produce no output on " + p);
     }
 
@@ -246,7 +246,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Perf");
         when(el.getAnnotation(AIPerformance.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIPerformanceFormatter: null annotation must produce no output on " + p);
     }
 
@@ -261,7 +261,7 @@ class FormatterNullGuardBatchTest {
         Element el = mockEl("com.example.Reg");
         when(el.getAnnotation(AIRegulation.class)).thenReturn(null);
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, p);
+        fmt.format(TaggedElements.tagged(el), sb, p);
         assertEquals(0, sb.length(), "AIRegulationFormatter: null annotation must produce no output on " + p);
     }
 
@@ -270,7 +270,7 @@ class FormatterNullGuardBatchTest {
         AISchemaSafeFormatter fmt = new AISchemaSafeFormatter();
         Element el = mockEl("com.example.Schema");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AISchemaSafeFormatter: unhandled platform must produce no output");
     }
 
@@ -279,7 +279,7 @@ class FormatterNullGuardBatchTest {
         AIInternationalizedFormatter fmt = new AIInternationalizedFormatter();
         Element el = mockEl("com.example.I18n");
         StringBuilder sb = new StringBuilder();
-        fmt.format(el, sb, DEFAULT_PLATFORM);
+        fmt.format(TaggedElements.tagged(el), sb, DEFAULT_PLATFORM);
         assertEquals(0, sb.length(), "AIInternationalizedFormatter: unhandled platform must produce no output (2)");
     }
 }

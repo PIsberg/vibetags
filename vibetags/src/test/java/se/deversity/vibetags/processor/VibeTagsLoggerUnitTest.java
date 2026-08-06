@@ -60,6 +60,56 @@ class VibeTagsLoggerUnitTest {
         assertSame(NOPLogger.NOP_LOGGER, logger);
     }
 
+    @Test
+    void forRootOffLevel_nullRoot_returnsNopWithoutThrowing() {
+        // projectRoot is declared @Nullable; OFF must not NPE trying to resolve a log
+        // file it will never create.
+        Logger logger = assertDoesNotThrow(() -> VibeTagsLogger.forRoot(null, null, "OFF"),
+            "forRoot(null, null, \"OFF\") must not throw — projectRoot is @Nullable");
+        assertSame(NOPLogger.NOP_LOGGER, logger);
+    }
+
+    @Test
+    void forRootOffLevel_doesNotDetachSiblingRootsActiveLogger(@TempDir Path rootA, @TempDir Path rootB)
+            throws Exception {
+        // Two roots on the same thread (e.g. two modules compiled by the same daemon
+        // thread). Turning logging OFF for root B must only release B's handle — it must
+        // not silently detach the appender of root A's still-active logger.
+        Logger loggerA = VibeTagsLogger.forRoot(rootA, null, "INFO");
+        loggerA.info("before-off");
+
+        VibeTagsLogger.forRoot(rootB, null, "OFF");
+
+        loggerA.info("after-off");
+        VibeTagsLogger.shutdown(rootA);
+
+        String logged = Files.readString(rootA.resolve(VibeTagsLogger.DEFAULT_LOG_FILE));
+        assertTrue(logged.contains("before-off"), "sanity: the first message must be on file");
+        assertTrue(logged.contains("after-off"),
+            "OFF for root B must not detach root A's appender — root A's messages were silently lost");
+    }
+
+    // --- one event per line ---
+
+    @Test
+    void logMessageWithLineBreaks_staysOnOneLine() throws Exception {
+        // The log is a machine-greppable event stream: `domain.event key=value`, one event
+        // per line. A value carrying CR/LF (a module id or root path taken from a compiler
+        // option, a path read out of .vibetags-baseline) would otherwise split one event
+        // across several lines and could forge an entry that looks like a separate event.
+        Logger logger = VibeTagsLogger.forRoot(tempDir, null, "INFO");
+
+        logger.info("write.skip file={} reason=cache-unchanged", "a\nERROR forged.event injected=true\nb");
+
+        VibeTagsLogger.shutdown(tempDir);
+        java.util.List<String> lines = Files.readAllLines(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE));
+
+        assertEquals(1, lines.size(),
+            "a value containing CR/LF must not split the event across lines, got: " + lines);
+        assertTrue(lines.get(0).contains("forged.event"),
+            "sanity: the value itself must survive, only its line breaks are collapsed");
+    }
+
     // --- resolveLogFile: relative path ---
 
     @Test

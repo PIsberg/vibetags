@@ -1,7 +1,13 @@
-# Normalise line endings to LF in the repository.
-# Shell scripts and workflow files must stay LF on checkout so that bash
-# line-continuation sequences (\<LF>) are not broken by Windows CRLF.
-* text=auto
+# Normalise line endings to LF in the repository AND in the working tree.
+#
+# eol=lf on everything (not just normalisation to LF in the index) because the
+# VibeTags processor itself writes generated files (example/CLAUDE.md,
+# example/.cursorrules, ...) with LF line endings: under core.autocrlf=true on
+# Windows those files checked out as CRLF, so every local example build left
+# dozens of files "modified" in git status with an empty diff. With eol=lf the
+# checkout matches what the processor writes and regeneration stays invisible.
+# No file in this repo requires CRLF (no .cmd/.bat/.ps1 committed).
+* text=auto eol=lf
 *.sh text eol=lf
 .github/workflows/*.yml text eol=lf
 Makefile text eol=lf

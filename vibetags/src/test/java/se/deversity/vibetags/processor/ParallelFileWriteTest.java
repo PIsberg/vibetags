@@ -50,9 +50,11 @@ class ParallelFileWriteTest {
     }
 
     @Test
-    void parallelWrites_agentsMdIsNonEmpty() throws IOException {
-        String content = harness.readFile("AGENTS.md");
-        assertTrue(content.contains("VIBETAGS-START"), "AGENTS.md must be written correctly by parallel writer");
+    void parallelWrites_qwenMdIsNonEmpty() throws IOException {
+        // AGENTS.md is skipped here (sole-file fallback rule), so QWEN.md stands in as another
+        // always-written markdown target to exercise the parallel writer.
+        String content = harness.readFile("QWEN.md");
+        assertTrue(content.contains("VIBETAGS-START"), "QWEN.md must be written correctly by parallel writer");
     }
 
     @Test

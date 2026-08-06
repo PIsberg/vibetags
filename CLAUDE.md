@@ -6,89 +6,126 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 VibeTags is a **compile-time Java annotation processor** (`se.deversity.vibetags.processor.AIGuardrailProcessor`) that generates AI platform-specific guardrail configuration files from Java annotations. Zero runtime overhead — all annotations use `RetentionPolicy.SOURCE`.
 
-The repo has these independent Maven (and where noted, Gradle) subprojects:
-- `vibetags-annotations/` — the 27 `@interface` classes, zero deps. Goes on the consumer's compile classpath. **Build first** — `vibetags/` depends on it.
-- `vibetags/` — the annotation processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). Pulls in slf4j/logback. Goes on the consumer's annotation-processor path only.
-- `vibetags-bom/` — pom-only BOM that manages `vibetags-annotations` + `vibetags-processor` versions. Maven only; Gradle consumers read it via `mavenLocal()` / `platform(...)`.
-- `example/` — a demo e-commerce app that consumes the library through the BOM (annotations on compile, processor on AP path).
-- `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly (intentional — cross-version comparison is the wrong workload for a BOM).
+Independent Maven (and where noted, Gradle) subprojects:
 
-Build order matters: `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example` (or `load-tests`). CI installs them in this order; do the same locally.
+- `vibetags-annotations/` — the 44 `@interface` classes, zero deps. On the consumer's compile classpath. **Build first.**
+- `vibetags/` — the processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). On the consumer's annotation-processor path only.
+- `vibetags-bom/` — pom-only BOM managing both versions. Maven only; Gradle reads it via `mavenLocal()` / `platform(...)`.
+- `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last two are reactors, asserted in CI).
+- `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly (intentional — cross-version comparison is the wrong workload for a BOM).
+- `action/locked-files/` — GitHub Action consuming `.vibetags-locks`.
+
+- `vibetags-parent/` — pom-only. **Every version in the repository is declared here and nowhere
+  else**: third-party dependencies, plugins, and `<revision>`, which is the VibeTags release
+  version. Not published: `flatten-maven-plugin` resolves it away before deploy, so the POMs on
+  Maven Central are self-contained and consumers gain nothing new to resolve. Subprojects reference
+  it by `<relativePath>`, so each still builds straight from a checkout with no install step.
+
+Build order matters: `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example` (or `load-tests`). CI installs them in this order; do the same locally. The parent needs no install of its own.
+
+**Never write a version literal into a managed pom.** `vibetags-annotations`, `vibetags`,
+`vibetags-bom` and `load-tests` inherit every version; a literal there is one the next release will
+miss. The Gradle builds and the standalone example poms cannot inherit, so they hold literals —
+`BuildVersionParityTest` fails the build when any of them disagrees with the parent. To bump:
+`scripts/set-version.sh <version>`, then that test.
 
 ## Build Commands
 
-All commands must be run from the correct subdirectory. The processor uses `Paths.get("")` (JVM working directory) for output, so always build from the project root of the relevant subproject.
-
-### Build and install the library
+Run from the relevant subproject's own directory — the processor uses the JVM working directory for output unless `vibetags.root` is set.
 
 ```bash
-# 1. Annotations first — vibetags/ depends on it
-cd vibetags-annotations
-mvn install                                # Maven
-gradle clean build publishToMavenLocal     # Gradle
+# Build and install the library, in order
+cd vibetags-annotations && mvn install          # or: gradle clean build publishToMavenLocal
+cd ../vibetags         && mvn clean install     # or: gradle clean build publishToMavenLocal
+cd ../vibetags-bom     && mvn install           # Maven only
 
-# 2. Then the processor
-cd ../vibetags
-mvn clean install                          # Maven
-gradle clean build publishToMavenLocal     # Gradle
-
-# 3. Then the BOM (Maven only — Gradle reads it via mavenLocal)
-cd ../vibetags-bom
-mvn install
-```
-
-### Run tests
-
-```bash
-cd vibetags
-mvn test                                   # unit tests only
-mvn test -Drun.integration.tests=true      # include integration tests
-gradle test                                # Gradle
-```
-
-### Run a single test class
-
-```bash
-cd vibetags
-mvn test -Dtest=AnnotationProcessorEndToEndTest
+# Tests (from vibetags/)
+mvn test                                   # fast tier: 80 classes, 910 tests, 35s. Skips @Tag("e2e").
+mvn test -Pe2e                             # everything: 132 classes, 1486 tests, 61s. What CI runs.
+mvn test -Dtest=AnnotationProcessorEndToEndTest   # -Dtest overrides the tag filter
 mvn test -Dtest=AIGuardrailProcessorUnitTest#methodName
+
+# Example (triggers annotation processing; library must be installed first)
+cd example && mvn clean compile            # or: gradle clean build
+
+# Dogfood: regenerate this repo's own guardrail files
+cd vibetags && mvn compile -Pself-annotate
 ```
 
-### Build the example (triggers annotation processing)
+## Architecture — invariants
 
-```bash
-cd example
-mvn clean compile     # Maven (library must be installed first)
-gradle clean build    # Gradle
-```
+The reasoning, the processing flow, the marker rules and the internal class map live in
+`docs/LOAD-BEARING.md`. Read it before changing the processor. These are the invariants themselves,
+kept here because breaking one of them fails silently:
 
-## Architecture
+- **File presence is the opt-in.** The processor regenerates only files that already exist, and
+  deleting one deactivates that platform permanently. Never "helpfully" create an output file.
+  One documented exception: activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
+  `.codex/rules/vibetags.rules`), creating `.codex/` if absent.
+- **`process()` returns `false`** so other processors still see the annotations; all writing happens
+  on `processingOver()`.
+- **Hand-authored content outside the markers must never be lost.** Generated content is written
+  strictly between `VIBETAGS-START` / `VIBETAGS-END` (HTML or hash form per file type); JSON and TOML
+  configs are whole-file overwrites.
+- **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
+  already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
+- **All 44 `@AI*` annotations are `RetentionPolicy.SOURCE`.** They must not leak into runtime.
+- **When a platform has both an aggregate and a granular directory opted in, the aggregate collapses
+  to a scoped-rules index:** only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`,
+  `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline. Gating is `GranularIndexSection.governingGranularKey`.
+- **The rendering layer must stay compiler-free.** `processor/internal/` talks to javac;
+  `processor/model/` is plain data (`GuardrailModel`, `TaggedElement`); `processor/internal/content/`
+  renders and must never import `javax.lang.model`, `javax.annotation.processing` or
+  `com.sun.source`. An `Element` is only valid while its round is live, and the parallel write phase
+  runs after the last one closes — `AnnotationCollector.model()` snapshots once, which is what makes
+  reading it afterwards safe. `ArchitectureRulesTest` enforces the direction.
+- **Adding a validation check** is a line in `ValidationRules.PAIRS` or an entry in `CoreRules` /
+  `ModernJavaRules` under `processor/internal/validation/` — never a new loop in
+  `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
+  `scans()`, and the registry runs one round query per annotation type however many rules share it.
+- **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
+  annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
+  `add-platform` / `add-annotation` skills rather than improvising.
+- **A renderer that emits a YAML document must declare `PlatformRenderer.mergeShape()`.** The
+  multi-module merge otherwise stacks whole renderings and repeats the document's top-level key once
+  per module — invalid to a strict parser, silently truncated to the last module by a lenient one.
+  `YamlMergeShapeContractTest` fails a missing or drifted declaration.
+- **A renderer whose marker-free file varies with the annotations must declare
+  `PlatformRenderer.wholeFileMerge()`.** A file with no markers is a whole-file overwrite, so
+  without one it publishes whichever module compiled last. `MultiModuleWholeFileMergeTest` derives
+  the rule — it renders each such service empty and populated, and fails any that differ without a
+  merge. Note the coupling that made this invisible: sidecar bodies are also what
+  `anyContributed` reads, so a service missing from the sidecar never refreshes at all.
+- **A granular rule file can have more than one author, so its content goes in the sidecar too.**
+  A role in a reactor-root `.vibetags-roles` routes on the package, not the module, so one file is
+  written by every module it matches — and each write replaced the last (issue #365). Anything that
+  renders a granular file must record its share via `GranularRulesWriter.contributionsFor` and write
+  through `ModuleSidecar.mergeGranular`; the stem alone only answers "may this be deleted?".
+  `MultiModuleGranularRoleMergeTest` fails a path that writes without merging.
 
-### Core processing flow
+This repo dogfoods the index: the block at the bottom of this file is a scoped-rules index, and the
+per-element detail lives in `.claude/rules/`, loaded on demand by glob.
+## Reference docs (read on demand)
 
-`AIGuardrailProcessor.process()` runs during `javac` compilation of the **consumer** project (not the library itself — the library disables annotation processing with `-proc:none`):
+- `docs/MULTI-MODULE.md` — reactors: sidecar merge, per-module output, `.vibetags-root-index`, `.vibetags-roles`, `.vibetags-mirror`, granular file layout.
+- `docs/PROCESSOR.md` — processor options, write cache + fingerprint short-circuit, check mode, `.vibetags-locks`, SPI/Gradle incremental.
+- `docs/ANNOTATIONS.md` — adding or changing an annotation: full table, semantics, validation warnings.
+- `docs/PLATFORMS.md` — adding a platform, or a question about a specific output file.
+- `docs/TESTS.md` — which test class covers what.
+- `docs/DEPENDENCIES.md` — every third-party artifact, why it is here, what ships to consumers and what only runs the build; where versions are declared and which newer versions were rejected.
+- `docs/LOAD-BEARING.md` — processing flow, file-existence opt-in, marker rules, the scoped-rules
+  index, and the internal class map. The reasoning behind the invariants above.
+- `docs/ARCHITECTURE.md` — deep dive: system diagram, data flow, design decisions, limitations.
+- `USAGE.md` — consumer-facing usage (how to add VibeTags to a project).
+- `README.md` — the test-enforced project facts (44 annotations, 37 platforms, 49 config files; pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
+- `docs/WORKFLOW.md` — what CI actually runs, step by step, and why each verification exists.
+- `docs/RELEASING.md` — the release process.
+- `docs/CHANGELOG.md` — what each release changed and why.
+- `docs/vibetags-in-practice.md` — survey of annotation/platform usage across five real consumer codebases (2026-07-16).
 
-1. Collects all annotation elements across **all compilation rounds** into `LinkedHashSet`s (one per annotation type)
-2. Returns `false` from `process()` so other processors can still see the annotations
-3. On `processingOver() == true`, calls `resolveActiveServices()` — only files that already exist on disk are regenerated (file presence = opt-in)
-4. Writes to `Paths.get("").toAbsolutePath()` (project root of the consumer), or to `vibetags.root` if set
+## Pre-commit Hooks
 
-### File-existence opt-in
-
-The processor never creates new files. To activate a platform, create the file first, then compile:
-
-```bash
-touch CLAUDE.md .cursorrules   # in the consumer project root
-mvn compile
-```
-
-To deactivate, delete the file — it will never come back.
-
-### Marker-based updates
-
-Generated content is written between markers so the file can contain hand-authored content alongside generated guardrails:
-
-- **HTML comments** (CLAUDE.md, llms.txt, llms-full.txt): `
+The repo uses `pre-commit` with Checkstyle, gitleaks (secret scanning), end-of-file fixer, and trailing-whitespace fixer. Run `pre-commit run --all-files` before committing.
 
 <!-- VIBETAGS-START -->
 <!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->
@@ -98,20 +135,6 @@ Generated content is written between markers so the file can contain hand-author
       <reason>Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output</reason>
     </file>
   </locked_files>
-  <contextual_instructions>
-    <file path="se.deversity.vibetags.processor.internal.AnnotationCollector">
-      <focus>Accumulates annotated elements across multiple javac processing rounds; one LinkedHashSet per annotation type preserves insertion order for stable BuildFingerprint output</focus>
-      <avoids>Replacing LinkedHashSet with HashSet — insertion order stability is required for deterministic fingerprints across recompiles</avoids>
-    </file>
-    <file path="se.deversity.vibetags.processor.internal.GranularRulesWriter">
-      <focus>Writes per-class granular rule files for Cursor, Windsurf, Trae, Roo, and similar platforms; cleanup runs AFTER write to avoid delete-then-recreate cycles</focus>
-      <avoids>Running cleanup before write — would delete files that are about to be recreated, causing spurious filesystem events and empty windows for incremental build tools</avoids>
-    </file>
-    <file path="se.deversity.vibetags.processor.internal.ServiceRegistry">
-      <focus>Maps platform service keys to output file paths; resolves active services by checking file existence on disk</focus>
-      <avoids>Creating output files that do not already exist — file presence on disk is the user's explicit opt-in signal</avoids>
-    </file>
-  </contextual_instructions>
   <core_elements>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor">
       <sensitivity>critical</sensitivity>
@@ -132,291 +155,50 @@ Generated content is written between markers so the file can contain hand-author
   </core_elements>
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
-  <performance_constraints>
-    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint.fingerprint(java.lang.String)">
-      <constraint>O(N) in string length; uses String.hashCode() which HotSpot intrinsifies on x86; must not allocate intermediate byte[]</constraint>
-    </element>
-    <element path="se.deversity.vibetags.processor.internal.WriteCache.isUnchanged(java.nio.file.Path,java.lang.String)">
-      <constraint>O(1): one stat(2) syscall plus one 8-char string compare; must not allocate byte[] — the prior CRC32C implementation did and was removed for this reason</constraint>
-    </element>
-  </performance_constraints>
+  <scoped_rules>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <element path="se.deversity.vibetags.processor.AIGuardrailProcessor" rules=".claude/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md"/>
+    <element path="se.deversity.vibetags.processor.internal.AnnotationCollector" rules=".claude/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md"/>
+    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
+    <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>
+    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
+    <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>
+    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
+    <element path="se.deversity.vibetags.processor.internal.WriteCache" rules=".claude/rules/se-deversity-vibetags-processor-internal-WriteCache.md"/>
+  </scoped_rules>
 
-<rule>Elements listed in <performance_constraints> are on a hot path. Never introduce O(n²) or worse complexity. Always reason about time and space complexity before suggesting changes.</rule>
-  <contract_signatures>
-    <element path="se.deversity.vibetags.processor.AIGuardrailProcessor.process(java.util.Set<? extends javax.lang.model.element.TypeElement>,javax.annotation.processing.RoundEnvironment)">
-      <reason>JSR 269 contract: must return false so peer annotation processors can claim the same annotations; return type is fixed by AbstractProcessor</reason>
-    </element>
-    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint.compute(se.deversity.vibetags.processor.internal.AnnotationCollector,java.util.Set<java.lang.String>)">
-      <reason>Same inputs must always produce the same 8-hex output across JVM restarts; changing the algorithm silently invalidates all existing .vibetags-cache files</reason>
-    </element>
-    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)">
-      <reason>Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics</reason>
-    </element>
-    <element path="se.deversity.vibetags.processor.internal.ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)">
-      <reason>Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile</reason>
-    </element>
-  </contract_signatures>
-
-<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>
-  <immutable_types>
-    <type path="se.deversity.vibetags.processor.internal.BuildFingerprint">
-      <note>Purely stateless; private constructor prevents instantiation; all computation results are returned as values</note>
-    </type>
-  </immutable_types>
-
-<rule>Types listed in <immutable_types> are immutable by design. Never introduce non-final fields, setters, or methods that mutate instance state.</rule>
+<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
 <!-- VIBETAGS-END -->
 
-`
-- **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
-- **No markers** (JSON/TOML config files): complete overwrite of the file
+## Logging
 
-YAML front-matter in `.mdc` and `.md` files (Cursor, Trae, Roo granular rules) is preserved — markers are placed after the front-matter block.
+VibeTags runs inside javac, so its output is somebody else's build log. Two audiences, two
+budgets.
 
-Files written by an older version of VibeTags (without markers) are automatically migrated to the marker format on the next compile.
+- **`messager` (NOTE/WARNING) is the user-facing channel.** It goes to the compiler output every
+  consumer sees. Add a line there only when a developer must act or would ask why a file changed.
+- **`log` (SLF4J to `vibetags.log`) is the diagnostic channel.** `INFO` stays scarce: version,
+  root, per-service status, the outcome of a run. `DEBUG` is where the narrative lives and it is
+  free to be generous, because it is off unless `-Avibetags.log.level=DEBUG` asks for it.
 
-### Output files
+Write events, not positions:
 
-| File | Platform | Format |
-|---|---|---|
-| `.cursorrules` | Cursor IDE | Markdown |
-| `.cursor/rules/*.mdc` | Cursor IDE (granular) | YAML front-matter + Markdown |
-| `CLAUDE.md` | Claude | XML + Markdown |
-| `.aiexclude` | Gemini | Glob patterns |
-| `AGENTS.md` | Codex CLI | Markdown |
-| `.codex/` | Codex CLI | Config + Starlark |
-| `gemini_instructions.md` | Gemini | Markdown |
-| `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
-| `CONVENTIONS.md` | Aider | Markdown |
-| `.aiderignore` | Aider | Glob patterns |
-| `QWEN.md` | Qwen | Markdown |
-| `.qwenignore` | Qwen | Glob patterns |
-| `.qwen/settings.json` | Qwen | JSON config |
-| `.qwen/commands/refactor.md` | Qwen | Markdown command template |
-| `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
-| `.roo/rules/*.md` | Roo Code (granular) | Markdown |
-| `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
-| `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
-| `.windsurfrules` | Windsurf IDE | Markdown |
-| `.windsurf/rules/*.md` | Windsurf IDE (granular) | YAML front-matter + Markdown |
-| `.rules` | Zed Editor | Markdown |
-| `.cody/config.json` | Sourcegraph Cody | JSON (custom commands) |
-| `.codyignore` | Sourcegraph Cody | Glob patterns |
-| `.supermavenignore` | Supermaven | Glob patterns |
-| `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
-| `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
-| `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
-| `.pearai/rules/*.md` | PearAI (granular) | YAML front-matter + Markdown |
-| `.kiro/steering/*.md` | Amazon Kiro (granular) | Markdown |
-| `.mentatconfig.json` | Mentat | JSON config |
-| `sweep.yaml` | Sweep (GitHub App) | YAML rules list |
-| `.plandex.yaml` | Plandex | YAML guardrails |
-| `.doubleignore` | Double.bot | Glob patterns |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
-| `.codeiumignore` | Codeium | Glob patterns |
-| `GEMINI.md` | Google Gemini (official markdown) | Markdown |
-| `.antigravityignore` | Antigravity AI | Glob patterns |
-| `.clinerules` | Cline AI assistant | Markdown |
-| `.junie/guidelines.md` | JetBrains Junie | Markdown |
-| `.idx/airules.md` | Firebase AI | Markdown |
-| `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) | Markdown |
+- `domain.event key=value key=value`, one event per line, lower-case dotted names
+  (`write.skip`, `write.commit`, `round.write`). A grep for `write.skip` should answer
+  "why was nothing written?" without a debugger.
+- Log the branch taken and the values that decided it: `write.skip file=CLAUDE.md
+  reason=cache-unchanged bytes=2481`, never `entering writeFileIfChanged`.
+- `reason=` is mandatory on any `.skip` event. A skip with no reason is the log line people
+  actually need and the one that is always missing.
+- Guard with `log.isDebugEnabled()` in hot paths (the writer and the cache run per file, per
+  build) so a disabled level formats nothing.
+- `ERROR` means the build is affected. Generation failures that are downgraded to a warning are
+  `WARN` at most.
+- **A log event asserted in a test is a contract.** `GuardrailFileWriterLogContractTest` pins the
+  skip reasons; renaming one of those events is a breaking change, not a cleanup.
+- When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
-#### Granular rules
-
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
-
-#### llms.txt vs llms-full.txt
-
-VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:
-
-- **`llms.txt`** — The Map: A concise directory listing all guardrail rules with links to the annotated class. Intended for LLM agents (e.g., Windsurf Cascade) to quickly understand the project's AI interaction rules without bloating the context window.
-- **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
-
-Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
-
-### Processor options
-
-Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Gradle:
-
-| Option | Default | Description |
-|---|---|---|
-| `vibetags.project` | `"This Project"` | Sets the `# H1` project name in llms.txt and llms-full.txt |
-| `vibetags.root` | JVM working directory | Override the output directory for all generated files |
-| `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
-| `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
-
-### Annotations (all `RetentionPolicy.SOURCE`)
-
-| Annotation | Targets | Key Attributes |
-|---|---|---|
-| `@AILocked` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIContext` | TYPE, METHOD | `focus: String`, `avoids: String` |
-| `@AIDraft` | TYPE, METHOD | `instructions: String` |
-| `@AIAudit` | TYPE, METHOD | `checkFor: String[]` |
-| `@AIIgnore` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIPrivacy` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AICore` | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` |
-| `@AIPerformance` | TYPE, METHOD | `constraint: String` |
-| `@AIContract` | TYPE, METHOD | `reason: String` |
-| `@AITestDriven` | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
-| `@AIThreadSafe` | TYPE, METHOD | `strategy: Strategy`, `note: String` |
-| `@AIImmutable` | TYPE | `note: String` |
-| `@AIDeprecated` | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
-| `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
-| `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
-| `@AIArchitecture` | TYPE | `belongsTo: String`, `cannotReference: String[]` |
-| `@AILegacyBridge` | TYPE, METHOD | *(none)* |
-| `@AIStrictClasspath` | TYPE, METHOD | *(none)* |
-| `@AIInternationalized` | TYPE, METHOD | *(none)* |
-| `@AIPublicAPI` | TYPE, METHOD | *(none)* |
-| `@AISchemaSafe` | TYPE, FIELD | *(none)* |
-| `@AIStrictExceptions` | TYPE, METHOD | *(none)* |
-| `@AIStrictTypes` | TYPE, METHOD, FIELD | *(none)* |
-| `@AIParallelTests` | TYPE, METHOD | *(none)* |
-| `@AIIdempotent` | TYPE, METHOD | `reason: String` |
-| `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
-| `@AISecure` | TYPE, METHOD | `aspect: String` |
-
-**Annotation semantics:**
-
-- `@AILocked` — code is visible but must not be modified by AI
-- `@AIIgnore` — code is excluded from AI context entirely (treat as non-existent); unlike `@AILocked`, the AI should not even be aware of it
-- `@AIPrivacy` — element handles PII; AI must never include its runtime values in logs, test fixtures, mock data, or API suggestions (GDPR/HIPAA/PCI-DSS use cases)
-- `@AICore` — marks well-tested, sensitive core logic (e.g., months to stabilize); AI is instructed to treat changes with extreme care
-- `@AIPerformance` — enforces strict time/space complexity on hot-path code; AI must not introduce O(n²) or worse solutions
-- `@AIContract` — freezes the public signature (method name, parameter types, parameter order, return type, checked exceptions); AI may change internal logic but must not alter the visible API surface
-- `@AITestDriven` — every change must include a matching test update; declares preferred framework, coverage goal, and mock policy
-- `@AIThreadSafe` — declares an explicit thread-safety strategy (`SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`); AI must preserve the synchronization invariant
-- `@AIImmutable` — declares the type immutable; the processor warns if any non-static field is non-final
-- `@AIDeprecated` — actively routes AI toward replacing callers; richer than Java's `@Deprecated` (replacement target, migration guide, removal deadline)
-- `@AIObservability` — names the metrics, trace spans, and log statements downstream dashboards depend on; AI must not silently remove or rename them
-- `@AIRegulation` — ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …); AI must document compliance impact and never weaken the requirement
-- `@AIArchitecture` — declares `belongsTo` layer and forbidden `cannotReference` layers; AI must not introduce cross-layer imports
-- `@AILegacyBridge` — marks compatibility shims for upstream quirks/bugs; AI must not modernize the structure, only internal logic may change
-- `@AIStrictClasspath` — prohibits dynamic class loading, custom `ClassLoader`s, and runtime reflection; all deps must resolve at compile time
-- `@AIInternationalized` — all user-visible text must come from i18n bundles; AI must never hardcode user-facing strings
-- `@AIPublicAPI` — all changes must be additive and backward-compatible; renaming or changing serialization is forbidden
-- `@AISchemaSafe` — maps to persistent storage; destructive schema changes require explicit backward-compatible migrations
-- `@AIStrictExceptions` — prohibits catching/throwing `Exception`/`Throwable`; requires specific types with descriptive messages
-- `@AIStrictTypes` — prohibits loose types (`Object`, raw collections, `double` for money); requires well-typed domain models
-- `@AIParallelTests` — generated/modified tests must be parallel-safe: no shared mutable state, fixed ports, or execution-order dependencies
-- `@AIIdempotent` — marks operations that must remain idempotent; AI must never introduce side effects that cause repeated invocations to produce different results
-- `@AIFeatureFlag` — marks code gated behind a feature flag; AI must preserve the flag check and never assume it is always active
-- `@AISecure` — marks security-critical code; AI must never weaken security properties and must flag every change for security review
-
-**Compile-time validation warnings:**
-
-- `@AIDraft` + `@AILocked` on the same element — contradictory (locked but needs drafting)
-- `@AIAudit` with empty `checkFor[]` — no-op; nothing to audit
-- `@AIPrivacy` + `@AIIgnore` on the same element — redundant; ignore already excludes
-- `@AIContract` + `@AIDraft` on the same element — contradictory (signature frozen but needs drafting)
-- `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; `@AIContract` is redundant)
-- `@AITestDriven` + `@AIIgnore` / `@AILocked` — contradictory (cannot enforce tests on excluded or locked code)
-- `@AITestDriven` with `coverageGoal` outside `[0, 100]` — invalid value
-- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
-- `@AIDeprecated` + `@AILocked` on the same element — contradictory (locked preserves; deprecated routes callers away)
-- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` — redundant; `@AIImmutable` already implies thread-safety
-- `@AIObservability` with no metrics, traces, or logs — no-op; nothing to preserve
-- `@AIRegulation` with a blank `standard` — required attribute missing
-- `@AIIdempotent` + `@AIDraft` on the same element — contradictory (idempotent declares a stable contract; draft marks it as unfinished)
-- `@AIFeatureFlag` + `@AILocked` on the same element — contradictory (locked freezes code; feature flag implies conditional execution)
-- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
-- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
-- `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
-- `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
-- `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
-
-### Top-level fingerprint short-circuit
-
-The processor records a fingerprint of the build inputs — every collected annotation (FQN + attribute values) plus the resolved active-services set — into `.vibetags-cache` under a `# fingerprint: <hex>` header. On the next compile, if the fingerprint still matches AND every previously written file is byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no `GuardrailContentBuilder.build()`, no per-file compares, no writes. The two-part guard means a manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no longer matches the cache entry).
-
-### Multi-module safety
-
-In multi-module builds, if a module has **no new annotations**, the processor skips updating shared files (`.cursorrules`, `llms.txt`, etc.) to avoid overwriting annotations contributed by sibling modules.
-
-### Internal class responsibilities
-
-Beyond what the VibeTags-generated section below describes, three additional internal classes handle cross-cutting concerns:
-
-- `AnnotationValidator` — all compile-time consistency checks (contradictory combinations, no-op annotations, invalid values) extracted from `AIGuardrailProcessor` into a single class; add new warnings here
-- `ElementNaming` — constructs fully-qualified element paths (e.g., `com.example.Foo.bar`) for use in generated output; handles TYPE, METHOD, FIELD, and PACKAGE kinds
-- `OrphanWarner` — emits warnings when an annotation is present but the corresponding platform opt-in file is absent (e.g., `@AIIgnore` with no `.cursorignore`)
-
-### SPI registration
-
-The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The wildcard `@SupportedAnnotationTypes("*")` means new annotations are picked up automatically without touching the processor configuration.
-
-### Gradle incremental annotation processing
-
-The processor is declared as **aggregating** in `META-INF/gradle/incremental.annotation.processors`. Gradle therefore re-runs it only when annotations change anywhere in the compile unit, not on every unrelated `.java` edit. The category is `aggregating` (not `isolating`) because the generated files (`CLAUDE.md`, `.cursorrules`, `llms.txt`, etc.) are aggregated from annotations across the entire compilation unit — a per-source-file `isolating` declaration would produce stale output.
-
-## Test Structure
-
-All tests live in `vibetags/src/test`.
-
-| Class | Coverage |
-|---|---|
-| `AnnotationDefinitionsTest` | Annotation structure and defaults (all 27 annotations) |
-| `AIGuardrailProcessorTest` | Processor configuration |
-| `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
-| `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
-| `AIPrivacyProcessorTest` | `@AIPrivacy` annotation definition, validation, and per-platform output |
-| `AIContractProcessorTest` | `@AIContract` annotation definition, validation (contradictory/overlap combinations), and per-platform output |
-| `AIGuardrailProcessorProcessTest` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
-| `AnnotationProcessorEndToEndTest` | Generated file content |
-| `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |
-| `NewPlatformsEndToEndTest` | Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, universal `.ai/rules/` |
-| `NewPlatformsV2EndToEndTest` | PearAI, Mentat, Sweep, Plandex, Double.bot, Open Interpreter, Codeium |
-| `QwenEndToEndTest` | Qwen-specific output |
-| `QwenProcessorUnitTest` | Qwen processor options |
-| `VibeTagsLoggerUnitTest` | File logging |
-| `VibeTagsLoggerAsyncTest` | Async/background logging behaviour |
-| `VibeTagsLoggerConcurrencyTest` | Logger thread-safety under concurrent writes |
-| `MultiModuleStabilityTest` | Multi-module safety (no-annotation module doesn't wipe shared files) |
-| `MultiModuleAggregationTest` | Sidecar aggregation and sub-marker output across multiple modules |
-| `MultiModuleProcessorTest` | Per-module sidecar write/read/merge cycle |
-| `AITestDrivenProcessorTest` | `@AITestDriven` annotation definition, validation (contradictory combinations), and per-platform output |
-| `NewAnnotationsV3DefinitionTest` | Definition-level tests for `@AIThreadSafe`, `@AIImmutable`, `@AIDeprecated`, `@AIObservability`, `@AIRegulation` |
-| `NewAnnotationsV3EndToEndTest` | End-to-end generated content for v0.9.5 annotations across all platforms |
-| `NewAnnotationsV3MinimalTest` | Minimal smoke tests for v0.9.5 annotation output |
-| `NewAnnotationsV3ValidationTest` | Compile-time validation warnings for v0.9.5 annotations |
-| `NewAnnotationsV4DefinitionTest` | Definition-level tests for the 9 new annotations (`@AIArchitecture`, `@AILegacyBridge`, etc.) |
-| `NewAnnotationsV4EndToEndTest` | End-to-end generated content for the 9 new annotations across all platforms |
-| `NewAnnotationsV4ValidationTest` | Compile-time validation warnings for the 9 new annotations |
-| `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
-| `BuildFingerprintUnitTest` | `BuildFingerprint.compute()` determinism and collision properties |
-| `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged |
-| `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
-| `GuardrailContentBuilderLazyAllocationTest` | Pre-sized `StringBuilder` allocation based on collected element count |
-| `GuardrailContentBuilderUnitTest` | Per-annotation content generation for each platform |
-| `GuardrailFileWriterCoverageTest` | `GuardrailFileWriter` branch coverage |
-| `GuardrailFileWriterEdgeCaseTest` | Edge cases: empty content, missing parent dir, read-only file |
-| `GranularRulesWriterUnitTest` | Per-class rule file writes and cleanup ordering |
-| `CleanupGranularDirectoryTest` | Orphan granular file removal after annotation deletion |
-| `AnnotationCollectorUnitTest` | `AnnotationCollector` accumulation across multiple rounds |
-| `AnnotationValidatorUnitTest` | All compile-time validation warning combinations |
-| `ElementNamingUnitTest` | FQN construction for TYPE, METHOD, FIELD, and PACKAGE elements |
-| `WriteCacheTest` | Cache hit/miss/invalidation/persistence/corruption-fallback |
-| `WriteCacheAsyncTest` | Write-cache correctness under concurrent access |
-| `WriteCacheProcessorIntegrationTest` | Cache integration: created on first compile, stable mtimes on second, rewrite on external edit |
-| `StreamingByteCompareTest` | Streaming byte-compare for non-marker overwrite files |
-| `StripLegacyVibeTagsBlockEdgeCasesTest` | Legacy marker migration edge cases (files without markers) |
-| `WriteFileFrontMatterTest` | YAML front-matter preservation in `.mdc`/`.md` granular rule files |
-| `DesignMdEndToEndTest` | `DESIGN.md` generation for AI design agents |
-| `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
-| `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
-| `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
-| `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
-| `ParallelFileWriteTest` | Parallel file-write correctness: 50+ active services written via `ForkJoinPool.commonPool()` without corruption (v0.9.7) |
-| `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
-| `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |
-| `NewAnnotationsV5ValidationTest` | Compile-time validation warnings for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
-| `AIGuardrailProcessorIntegrationTest` | Full workflow (requires `-Drun.integration.tests=true`) |
-
-## Pre-commit Hooks
-
-The repo uses `pre-commit` with Checkstyle, gitleaks (secret scanning), end-of-file fixer, and trailing-whitespace fixer. Run `pre-commit run --all-files` to check before committing.
+Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".

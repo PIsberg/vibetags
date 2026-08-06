@@ -2,10 +2,10 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
-import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AIDeprecated;
-import se.deversity.vibetags.processor.internal.ElementNaming;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 
 /**
@@ -13,10 +13,10 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIDeprecatedFormatter implements AnnotationFormatter {
     @Override
-    public void format(Element element, StringBuilder sb, Platform platform) {
-        AIDeprecated dep = element.getAnnotation(AIDeprecated.class);
+    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+        AIDeprecated dep = element.annotation(AIDeprecated.class);
         if (dep == null) return;
-        String className = ElementNaming.elementPath(element);
+        String className = element.path();
         String replacedBy = dep.replacedBy();
         String migrationGuide = dep.migrationGuide();
         String deadline = dep.deadline();
@@ -35,13 +35,13 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append("\n");
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(className).append("\">\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!replacedBy.isEmpty()) {
-                    sb.append("      <replaced_by>").append(replacedBy).append("</replaced_by>\n");
+                    sb.append("      <replaced_by>").append(Escape.xml(replacedBy)).append("</replaced_by>\n");
                 }
-                sb.append("      <migration_guide>").append(migrationGuide).append("</migration_guide>\n");
+                sb.append("      <migration_guide>").append(Escape.xml(migrationGuide)).append("</migration_guide>\n");
                 if (!deadline.isEmpty()) {
-                    sb.append("      <deadline>").append(deadline).append("</deadline>\n");
+                    sb.append("      <deadline>").append(Escape.xml(deadline)).append("</deadline>\n");
                 }
                 sb.append("    </element>\n");
                 break;
@@ -59,7 +59,7 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: ").append(summary).append("\n");
                 break;
             case LLMS:
-                sb.append("- [").append(ElementNaming.elementDisplayName(element)).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n");

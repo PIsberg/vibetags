@@ -1,7 +1,11 @@
 package se.deversity.vibetags.processor;
 
 import javax.lang.model.element.ElementKind;
+import se.deversity.vibetags.processor.internal.AnnotationValidator;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -37,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for AIGuardrailProcessor.
  * Tests the processor logic without full compilation.
  */
+@Tag("e2e")
 class AIGuardrailProcessorUnitTest {
 
     @AfterEach
@@ -55,7 +60,7 @@ class AIGuardrailProcessorUnitTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // The processor should support all four annotation types
         // This is configured via @SupportedAnnotationTypes annotation
-        SupportedAnnotationTypes annotation = 
+        SupportedAnnotationTypes annotation =
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(annotation);
         assertArrayEquals(
@@ -68,12 +73,13 @@ class AIGuardrailProcessorUnitTest {
     @Test
     void testProcessorSupportsCorrectSourceVersion() {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        SupportedSourceVersion versionAnnotation = 
-            AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class);
-        assertNotNull(versionAnnotation);
+        // getSupportedSourceVersion() is overridden to report SourceVersion.latestSupported()
+        // rather than a fixed @SupportedSourceVersion, so the annotation itself is absent.
+        assertNull(AIGuardrailProcessor.class.getAnnotation(SupportedSourceVersion.class));
+        assertEquals(SourceVersion.latestSupported(), processor.getSupportedSourceVersion());
         // Should support Java 11 or higher
         assertTrue(
-            versionAnnotation.value().compareTo(SourceVersion.RELEASE_11) >= 0,
+            processor.getSupportedSourceVersion().compareTo(SourceVersion.RELEASE_11) >= 0,
             "Should support at least Java 11"
         );
     }
@@ -83,10 +89,10 @@ class AIGuardrailProcessorUnitTest {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
-        
+
         assertEquals(3, warnings.size(), "Should have 3 warnings (cursor, claude, and qwen ignore missing)");
         assertTrue(warnings.get(0).contains(".cursorignore"));
         assertTrue(warnings.get(1).contains(".claudeignore"));
@@ -98,10 +104,10 @@ class AIGuardrailProcessorUnitTest {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        
+
         Set<String> active = Set.of("gemini");
         processor.checkOrphanedAnnotations(messager, active, true, true, false);
-        
+
         // Should have 2 warnings for @AIIgnore and @AILocked about .aiexclude
         assertEquals(2, warnings.size(), "Should have 2 warnings (gemini ignore and locked missing .aiexclude)");
         assertTrue(warnings.get(0).contains(".aiexclude"));
@@ -131,8 +137,8 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void testResolveActiveServices_noFilesExist_returnsEmpty(@TempDir Path tempDir) {
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertTrue(active.isEmpty(),
             "No output files present → nothing should be generated");
     }
@@ -142,8 +148,8 @@ class AIGuardrailProcessorUnitTest {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        ServiceRegistry.resolveActiveServices(messager, serviceFiles);
 
         assertEquals(1, notes.size(), "Exactly one NOTE should be emitted");
         String note = notes.get(0);
@@ -162,8 +168,8 @@ class AIGuardrailProcessorUnitTest {
         Files.createFile(tempDir.resolve("CLAUDE.md"));
         Files.createFile(tempDir.resolve(".cursorrules"));
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         assertEquals(Set.of("claude", "cursor"), active,
             "Only services with existing files should be active");
     }
@@ -174,15 +180,15 @@ class AIGuardrailProcessorUnitTest {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
 
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        AIGuardrailProcessor.resolveActiveServices(messager, serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        ServiceRegistry.resolveActiveServices(messager, serviceFiles);
 
         assertTrue(notes.isEmpty(), "No warning should be emitted when at least one file exists");
     }
 
     @Test
     void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
-        AIGuardrailProcessor.buildServiceFileMap(tempDir).forEach((key, p) -> {
+        ServiceRegistry.buildServiceFileMap(tempDir).forEach((key, p) -> {
             try {
                 if (key.endsWith("_granular")) {
                     Files.createDirectories(p);
@@ -196,10 +202,12 @@ class AIGuardrailProcessorUnitTest {
                 throw new java.io.UncheckedIOException(e);
             }
         });
-        Map<String, Path> serviceFiles = AIGuardrailProcessor.buildServiceFileMap(tempDir);
-        Set<String> active = AIGuardrailProcessor.resolveActiveServices(noopMessager(), serviceFiles);
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
+        // Note: "codex" (AGENTS.md) is intentionally absent — when other AI config files are
+        // present it is treated as a pointer and left untouched (sole-file fallback rule).
         Set<String> expected = Set.of(
-            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+            "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
@@ -215,9 +223,34 @@ class AIGuardrailProcessorUnitTest {
             // v0.9.7 platforms
             "cline", "junie", "kiro_granular",
             // Firebase AI
-            "firebase"
+            "firebase",
+            // Context-packer ignore files
+            "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+            // AI pull-request reviewers
+            "coderabbit", "pr_agent", "ellipsis",
+            // Editors & modes
+            "void", "roo_modes",
+            // Machine-readable @AILocked report
+            "locks_report",
+            // Claude Code local override, Skill, and granular rules; Copilot granular instructions
+            "claude_local", "claude_skill", "claude_granular", "copilot_granular",
+            "gemini_granular",
+            // Lean indexed root aggregate opt-in (multi-module)
+            "root_index"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
+        assertFalse(active.contains("codex"),
+            "AGENTS.md (codex) must be skipped when other AI config files are present");
+    }
+
+    @Test
+    void testResolveActiveServices_agentsMdAlone_codexActive(@TempDir Path tempDir) throws IOException {
+        // Sole-file fallback: AGENTS.md by itself activates the codex service.
+        Files.createFile(tempDir.resolve("AGENTS.md"));
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
+        assertEquals(Set.of("codex"), active,
+            "AGENTS.md alone must activate exactly the codex service");
     }
 
     // --- annotation removal ---
@@ -435,21 +468,24 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void stripLegacy_returnsNullSafeForEmpty() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         assertEquals("", p.stripLegacyVibeTagsBlock(""));
         assertNull(p.stripLegacyVibeTagsBlock(null));
     }
 
     @Test
     void stripLegacy_noVibeTagsHeader_unchanged() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         String input = "# My custom heading\n\nSome human content.";
         assertEquals(input, p.stripLegacyVibeTagsBlock(input));
     }
 
     @Test
     void stripLegacy_claudeMdLegacyBlock_keepsHumanContent() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Simulate CLAUDE.md before field: legacy VibeTags block + human content
         String legacy =
             "<!-- # Generated by VibeTags | https://github.com/PIsberg/vibetags -->\n" +
@@ -472,7 +508,8 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void stripLegacy_fullyAutoGeneratedFile_stripsAll() {
-        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        GuardrailFileWriter p = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Simulate .cursorrules entirely generated by old VibeTags (no human content)
         String before =
             "# AUTO-GENERATED AI RULES\n" +
@@ -547,17 +584,16 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.TestClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
-        
+
         // Mock presence of both annotations
         when(element.getAnnotation(AILocked.class)).thenReturn(mock(AILocked.class));
         when(element.getAnnotation(AIDraft.class)).thenReturn(mock(AIDraft.class));
-        
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
-        
+
+        AnnotationValidator.validate(messager, roundEnv, null);
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIDraft and @AILocked"));
     }
@@ -569,17 +605,16 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.TestClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIAudit.class);
-        
+
         AIAudit audit = mock(AIAudit.class);
         when(audit.checkFor()).thenReturn(new String[0]);
         when(element.getAnnotation(AIAudit.class)).thenReturn(audit);
-        
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
-        
+
+        AnnotationValidator.validate(messager, roundEnv, null);
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("has no 'checkFor' items list"));
     }
@@ -591,16 +626,15 @@ class AIGuardrailProcessorUnitTest {
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
         Element element = mock(Element.class);
         when(element.toString()).thenReturn("com.example.PrivacyClass");
-        
+
         Set<Element> elements = Set.of(element);
         doReturn(elements).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
-        
+
         when(element.getAnnotation(AIPrivacy.class)).thenReturn(mock(AIPrivacy.class));
         when(element.getAnnotation(AIIgnore.class)).thenReturn(mock(AIIgnore.class));
-        
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.validateAnnotations(messager, roundEnv);
-        
+
+        AnnotationValidator.validate(messager, roundEnv, null);
+
         assertEquals(1, warnings.size());
         assertTrue(warnings.get(0).contains("is annotated with both @AIPrivacy and @AIIgnore"));
     }
@@ -613,15 +647,15 @@ class AIGuardrailProcessorUnitTest {
         when(processingEnv.getOptions()).thenReturn(options);
         when(processingEnv.getMessager()).thenReturn(noopMessager());
         processor.init(processingEnv);
-        
+
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
-        
+
         Element coreElement = mock(Element.class);
         Element perfElement = mock(Element.class);
-        
+
         doReturn(Set.of(coreElement)).when(roundEnv).getElementsAnnotatedWith(AICore.class);
         doReturn(Set.of(perfElement)).when(roundEnv).getElementsAnnotatedWith(AIPerformance.class);
-        
+
         // Also need to return empty sets for other annotations to avoid NullPointerException or issues
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AIContext.class);
@@ -631,7 +665,7 @@ class AIGuardrailProcessorUnitTest {
         doReturn(Set.of()).when(roundEnv).getElementsAnnotatedWith(AIPrivacy.class);
 
         boolean result = processor.process(Set.of(), roundEnv);
-        
+
         // process should return false as it allows other processors to see the annotations
         assertFalse(result);
     }
@@ -659,30 +693,32 @@ class AIGuardrailProcessorUnitTest {
     @Test
     void testCleanupGranularDirectory_NonExistent(@TempDir Path tempDir) {
         Path missing = tempDir.resolve("missing_dir");
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        GuardrailFileWriter writer = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Should not throw when directory doesn't exist
-        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(missing, ".md"));
+        assertDoesNotThrow(() -> writer.cleanupGranularDirectory(missing, ".md"));
     }
 
     @Test
     void testCleanupGranularDirectory_IOException(@TempDir Path tempDir) throws IOException {
         Path fileAsDir = tempDir.resolve("file_as_dir");
         Files.createFile(fileAsDir);
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        GuardrailFileWriter writer = new GuardrailFileWriter(
+            "# Generated by VibeTags | https://github.com/PIsberg/vibetags\n", null, null);
         // Passing a file where a directory is expected for listing should handle errors gracefully
-        assertDoesNotThrow(() -> processor.cleanupGranularDirectory(fileAsDir, ".md"));
+        assertDoesNotThrow(() -> writer.cleanupGranularDirectory(fileAsDir, ".md"));
     }
 
     @Test
     void testMessager_MiscellaneousOverloads() {
         List<String> notes = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.NOTE, notes);
-        
+
         // These are mostly to cover the proxy calls in the anonymous messager class
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class));
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class));
         messager.printMessage(Diagnostic.Kind.NOTE, "test", mock(Element.class), mock(javax.lang.model.element.AnnotationMirror.class), mock(javax.lang.model.element.AnnotationValue.class));
-        
+
         assertEquals(3, notes.size());
     }
 
@@ -690,10 +726,10 @@ class AIGuardrailProcessorUnitTest {
     void testOptions_ComplexPaths(@TempDir Path tempDir) throws IOException {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         ProcessingEnvironment processingEnv = mock(ProcessingEnvironment.class);
-        
+
         Path rootPath = tempDir.resolve("my-root").toAbsolutePath();
         Files.createDirectories(rootPath);
-        
+
         Map<String, String> options = Map.of(
             "vibetags.root", rootPath.toString(),
             "vibetags.project", "My Special Project",
@@ -701,9 +737,9 @@ class AIGuardrailProcessorUnitTest {
         );
         when(processingEnv.getOptions()).thenReturn(options);
         when(processingEnv.getMessager()).thenReturn(noopMessager());
-        
+
         processor.init(processingEnv);
-        
+
         // Internal state is hard to check, but we verify it doesn't crash
         assertNotNull(processor);
     }
@@ -726,11 +762,11 @@ class AIGuardrailProcessorUnitTest {
         when(element.toString()).thenReturn("com.example.pkg");
         when(element.getSimpleName()).thenReturn(mock(javax.lang.model.element.Name.class));
         when(element.getSimpleName().toString()).thenReturn("pkg");
-        
+
         AILocked locked = mock(AILocked.class);
         when(locked.reason()).thenReturn("pkg locked");
         when(element.getAnnotation(AILocked.class)).thenReturn(locked);
-        
+
         doReturn(Set.of(element)).when(re).getElementsAnnotatedWith(AILocked.class);
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIContext.class);
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIIgnore.class);
@@ -741,11 +777,11 @@ class AIGuardrailProcessorUnitTest {
         doReturn(Set.of()).when(re).getElementsAnnotatedWith(AIPerformance.class);
 
         processor.process(Set.of(), re);
-        
+
         // Final round
         when(re.processingOver()).thenReturn(true);
         processor.process(Set.of(), re);
-        
+
         // Check if package-specific glob is generated: "**/pkg/**/*.java"
         Path mdcFile = granularDir.resolve("com-example-pkg.mdc");
         assertTrue(Files.exists(mdcFile), "Granular rule file should exist for package");

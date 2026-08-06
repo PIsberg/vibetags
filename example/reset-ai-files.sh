@@ -9,7 +9,9 @@ AI_FILES=(
   ".cursorrules"
   "CLAUDE.md"
   ".aiexclude"
-  "AGENTS.md"
+  # NOTE: AGENTS.md is intentionally NOT reset. Because this example ships other AI config
+  # files, VibeTags treats AGENTS.md as a hand-authored pointer (sole-file fallback rule) and
+  # never regenerates it — clearing it here would permanently blank the pointer.
   "QWEN.md"
   ".qwenignore"
   ".qwen/settings.json"
@@ -21,8 +23,6 @@ AI_FILES=(
   ".cursorignore"
   ".claudeignore"
   ".copilotignore"
-  ".codex/config.toml"
-  ".codex/rules/vibetags.rules"
   "CONVENTIONS.md"
   ".aiderignore"
   ".windsurfrules"
@@ -45,6 +45,22 @@ AI_FILES=(
   ".junie/guidelines.md"
   # Firebase AI
   ".idx/airules.md"
+  # Context-packer ignore files
+  ".repomixignore"
+  ".gitingestignore"
+  ".gptignore"
+  ".ghostcoderignore"
+  ".piecesignore"
+  # AI pull-request reviewers
+  ".coderabbit.yaml"
+  ".pr_agent.toml"
+  "ellipsis.yaml"
+  # Editors & modes
+  ".void/rules.md"
+  ".roomodes"
+  # Claude Code local override and Skill
+  "CLAUDE.local.md"
+  ".claude/skills/vibetags-guardrails/SKILL.md"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
@@ -67,7 +83,7 @@ fi
 find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
 
 # Cleanup granular rules in directories
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +

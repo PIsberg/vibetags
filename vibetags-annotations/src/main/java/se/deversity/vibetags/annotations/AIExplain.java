@@ -11,14 +11,20 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface AIExplain {
+    /** How much reasoning an agent must show before changing the annotated element. */
     enum ComplexityLevel {
+        /** Full derivation: every step, and why each alternative was rejected. */
         HIGH,
+        /** The reasoning behind the approach taken, without exhausting the alternatives. */
         MEDIUM,
+        /** A short statement of intent, enough to review the change against. */
         LOW
     }
 
     /**
      * Complexity level of explanations required.
+     *
+     * @return how much of its reasoning an agent must show; defaults to {@link ComplexityLevel#HIGH}
      */
     ComplexityLevel value() default ComplexityLevel.HIGH;
 }

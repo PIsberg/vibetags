@@ -4,10 +4,26 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>se.deversity.vibetags</groupId>
+    <!-- Versions, plugin declarations and the publishing setup all live in the parent.
+         relativePath keeps every subproject buildable straight from a checkout without
+         installing the parent first, and flatten-maven-plugin (inherited) removes this
+         parent from the POM that reaches Maven Central. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
     <artifactId>vibetags-annotations</artifactId>
-    <version>0.9.8</version>
     <packaging>jar</packaging>
+
+    <!-- Declared rather than inherited. Maven appends the child's artifactId to an inherited
+         project url, and unlike the scm entries it ignores child.project.url.inherit.append.path
+         here (verified on Maven 3.8.6), so inheriting produced .../vibetags/vibetags-annotations —
+         a URL that does not exist. Every published POM before this parent declared its own url;
+         this keeps that. -->
+    <url>https://github.com/PIsberg/vibetags</url>
 
     <name>VibeTags Annotations</name>
     <description>
@@ -23,48 +39,19 @@
             &lt;dependency&gt;
                 &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
                 &lt;artifactId&gt;vibetags-annotations&lt;/artifactId&gt;
-                &lt;version&gt;0.9.7&lt;/version&gt;
+                &lt;version&gt;1.0.1&lt;/version&gt;
             &lt;/dependency&gt;
 
         Gradle:
-            compileOnly 'se.deversity.vibetags:vibetags-annotations:0.9.7'
-            annotationProcessor 'se.deversity.vibetags:vibetags-processor:0.9.7'
+            compileOnly 'se.deversity.vibetags:vibetags-annotations:1.0.1'
+            annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.1'
     </description>
-    <url>https://github.com/PIsberg/vibetags</url>
-
-    <licenses>
-        <license>
-            <name>MIT License</name>
-            <url>https://opensource.org/licenses/MIT</url>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>PIsberg</id>
-            <name>Peter Isberg</name>
-            <url>https://github.com/PIsberg</url>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:git://github.com/PIsberg/vibetags.git</connection>
-        <developerConnection>scm:git:ssh://github.com/PIsberg/vibetags.git</developerConnection>
-        <url>https://github.com/PIsberg/vibetags/tree/main</url>
-    </scm>
-
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.15.0</version>
                 <configuration>
                     <!-- Annotation processing makes no sense for an annotation-only artifact. -->
                     <compilerArgument>-proc:none</compilerArgument>
@@ -73,7 +60,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.26.0</version>
                 <configuration>
                     <failOnViolation>true</failOnViolation>
                     <printFailingErrors>true</printFailingErrors>
@@ -89,23 +75,25 @@
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-core</artifactId>
-                        <version>7.24.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>net.sourceforge.pmd</groupId>
-                        <artifactId>pmd-java</artifactId>
-                        <version>7.24.0</version>
-                    </dependency>
-                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- Stable JPMS module name for modular consumers; changing it after 1.0 is breaking. -->
+                            <Automatic-Module-Name>se.deversity.vibetags.annotations</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -118,7 +106,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
+                <configuration>
+                    <!--
+                      This module IS the public API: 44 annotations whose members and enum constants
+                      are what a consumer's IDE shows on hover and what lands on javadoc.io. A
+                      missing @return or an undocumented enum constant leaves them guessing a
+                      guardrail's meaning from its name.
+
+                      Warnings were not fatal before, so 46 of them accumulated silently while the
+                      javadoc jar kept building successfully. Making them fatal is what stops the
+                      next annotation from re-opening the same gap.
+                    -->
+                    <doclint>all</doclint>
+                    <failOnWarnings>true</failOnWarnings>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -131,7 +132,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.6.0</version>
                 <configuration>
                     <configLocation>${project.basedir}/../checkstyle.xml</configLocation>
                     <consoleOutput>true</consoleOutput>
@@ -150,65 +150,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>central</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-        </snapshotRepository>
-        <repository>
-            <id>central</id>
-            <url>https://central.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
-    <profiles>
-        <profile>
-            <id>central-publish</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.10.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>central</publishingServerId>
-                            <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>sign-artifacts</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.8</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <configuration>
-                                    <gpgArguments>
-                                        <arg>--pinentry-mode</arg>
-                                        <arg>loopback</arg>
-                                    </gpgArguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

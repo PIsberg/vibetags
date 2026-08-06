@@ -1,290 +1,96 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import javax.lang.model.element.Element;
-import se.deversity.vibetags.processor.internal.AnnotationCollector;
+import se.deversity.vibetags.processor.model.TaggedElement;
+import java.util.List;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SectionCatalog;
+
+import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.section;
 
 /**
  * PlatformRenderer for generating `.github/copilot-instructions.md`.
  */
 public final class CopilotRenderer implements PlatformRenderer {
+
+    private static final List<AnnotationSections.Section> SECTIONS = List.of(
+        section(Platform.COPILOT, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),
+        section(Platform.COPILOT, SectionCatalog.Key.IGNORE, GuardrailModel::ignore, FormatterRegistry.ignore()),
+        section(Platform.COPILOT, SectionCatalog.Key.DRAFT, GuardrailModel::draft, FormatterRegistry.draft()),
+        section(Platform.COPILOT, SectionCatalog.Key.PRIVACY, GuardrailModel::privacy, FormatterRegistry.privacy()),
+        section(Platform.COPILOT, SectionCatalog.Key.CORE, GuardrailModel::core, FormatterRegistry.core()),
+        section(Platform.COPILOT, SectionCatalog.Key.PERFORMANCE, GuardrailModel::performance, FormatterRegistry.performance()),
+        section(Platform.COPILOT, SectionCatalog.Key.CONTRACT, GuardrailModel::contract, FormatterRegistry.contract()),
+        section(Platform.COPILOT, SectionCatalog.Key.TEST_DRIVEN, GuardrailModel::testDriven, FormatterRegistry.testDriven()),
+        section(Platform.COPILOT, SectionCatalog.Key.THREAD_SAFE, GuardrailModel::threadSafe, FormatterRegistry.threadSafe()),
+        section(Platform.COPILOT, SectionCatalog.Key.IMMUTABLE, GuardrailModel::immutable, FormatterRegistry.immutable()),
+        section(Platform.COPILOT, SectionCatalog.Key.DEPRECATED, GuardrailModel::deprecated, FormatterRegistry.deprecated()),
+        section(Platform.COPILOT, SectionCatalog.Key.OBSERVABILITY, GuardrailModel::observability, FormatterRegistry.observability()),
+        section(Platform.COPILOT, SectionCatalog.Key.REGULATION, GuardrailModel::regulation, FormatterRegistry.regulation()),
+        section(Platform.COPILOT, SectionCatalog.Key.PARALLEL_TESTS, GuardrailModel::parallelTests, FormatterRegistry.parallelTests()),
+        section(Platform.COPILOT, SectionCatalog.Key.LEGACY_BRIDGE, GuardrailModel::legacyBridge, FormatterRegistry.legacyBridge()),
+        section(Platform.COPILOT, SectionCatalog.Key.ARCHITECTURE, GuardrailModel::architecture, FormatterRegistry.architecture()),
+        section(Platform.COPILOT, SectionCatalog.Key.PUBLIC_API, GuardrailModel::publicApi, FormatterRegistry.publicApi()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_EXCEPTIONS, GuardrailModel::strictExceptions, FormatterRegistry.strictExceptions()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_TYPES, GuardrailModel::strictTypes, FormatterRegistry.strictTypes()),
+        section(Platform.COPILOT, SectionCatalog.Key.INTERNATIONALIZED, GuardrailModel::internationalized, FormatterRegistry.internationalized()),
+        section(Platform.COPILOT, SectionCatalog.Key.STRICT_CLASSPATH, GuardrailModel::strictClasspath, FormatterRegistry.strictClasspath()),
+        section(Platform.COPILOT, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
+        section(Platform.COPILOT, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
+        section(Platform.COPILOT, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
+        section(Platform.COPILOT, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
+        section(Platform.COPILOT, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.COPILOT, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.COPILOT, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.COPILOT, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
+        section(Platform.COPILOT, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.COPILOT, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
+        section(Platform.COPILOT, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.COPILOT, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.COPILOT, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
+        section(Platform.COPILOT, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
+        section(Platform.COPILOT, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
+        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
+        section(Platform.COPILOT, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
+        section(Platform.COPILOT, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.COPILOT, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.COPILOT, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.COPILOT, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+    );
+
     @Override
-    public String render(AnnotationCollector collector, Platform platform, RenderingContext context) {
-        StringBuilder sb = new StringBuilder(4096);
+    public String render(GuardrailModel model, Platform platform, RenderingContext context) {
+        StringBuilder sb = new StringBuilder(context.estimatedContentSize());
+        boolean indexed = GranularIndexSection.indexActive(platform, context);
         sb.append("# GitHub Copilot Instructions\n")
           .append(context.getGeneratedHeader())
-          .append("# AUTO-GENERATED BY VIBETAGS. Do not edit manually.\n\n## Locked Files — DO NOT MODIFY\nDo not suggest changes to the following files:\n\n");
+          .append("# AUTO-GENERATED BY VIBETAGS. Do not edit manually.\n");
 
-        for (Element e : collector.locked()) {
-            FormatterRegistry.locked().format(e, sb, Platform.COPILOT);
-        }
-
-        sb.append("\n## Contextual Guidelines\n");
-        for (Element e : collector.context()) {
-            FormatterRegistry.context().format(e, sb, Platform.COPILOT);
-        }
-
-        if (!collector.audit().isEmpty()) {
-            sb.append("\n## Security Audit Requirements\nBefore suggesting changes to the following files, audit for the listed vulnerabilities:\n\n");
-            for (Element e : collector.audit()) {
-                FormatterRegistry.audit().format(e, sb, Platform.COPILOT);
+        // In indexed mode the locked heading is dropped when nothing is locked: the reactor merge
+        // repeats this preamble once per module, and empty headings are what made a supposedly lean
+        // copilot-instructions.md bulkier than the full merge it replaced (issue #319).
+        if (!indexed || !model.locked().isEmpty()) {
+            sb.append("\n## Locked Files — DO NOT MODIFY\nDo not suggest changes to the following files:\n\n");
+            for (TaggedElement e : model.locked()) {
+                FormatterRegistry.locked().format(e, sb, Platform.COPILOT);
             }
         }
 
-        if (!collector.ignore().isEmpty()) {
-            sb.append("\n## Ignored Elements\nDo not reference or suggest changes to the following:\n\n");
-            for (Element e : collector.ignore()) {
-                FormatterRegistry.ignore().format(e, sb, Platform.COPILOT);
+        if (indexed) {
+            // Granular sibling opted in: keep the always-loaded safety buckets inline and index the
+            // rest to the scoped .github/instructions files (context detail moves there too).
+            AnnotationSections.renderInlineSafetySections(sb, model, Platform.COPILOT);
+            GranularIndexSection.appendMarkdownIndex(sb, platform, context);
+        } else {
+            sb.append("\n## Contextual Guidelines\n");
+            for (TaggedElement e : model.context()) {
+                FormatterRegistry.context().format(e, sb, Platform.COPILOT);
             }
-        }
 
-        if (!collector.draft().isEmpty()) {
-            sb.append("\n## Implementation Tasks\nFollow these instructions to implement the drafts:\n\n");
-            for (Element e : collector.draft()) {
-                FormatterRegistry.draft().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.privacy().isEmpty()) {
-            sb.append("\n## PII / Privacy Guardrails\nNever log, expose, or suggest code that outputs the runtime values of these elements:\n\n");
-            for (Element e : collector.privacy()) {
-                FormatterRegistry.privacy().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.core().isEmpty()) {
-            sb.append("\n## Core Functionality (Extreme Caution)\nThe following elements are well-tested core components — change with extreme caution:\n\n");
-            for (Element e : collector.core()) {
-                FormatterRegistry.core().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.performance().isEmpty()) {
-            sb.append("\n## Performance Constraints\nThe following elements are on a hot path — always reason about time and space complexity:\n\n");
-            for (Element e : collector.performance()) {
-                FormatterRegistry.performance().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.contract().isEmpty()) {
-            sb.append("\n## Contract-Frozen Signatures\nDo not modify the public signatures of the following elements. Internal implementation changes are permitted:\n\n");
-            for (Element e : collector.contract()) {
-                FormatterRegistry.contract().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.testDriven().isEmpty()) {
-            sb.append("\n## Test-Driven Requirements\nDo not suggest changes to the following elements without also providing the corresponding test update:\n\n");
-            for (Element e : collector.testDriven()) {
-                FormatterRegistry.testDriven().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.threadSafe().isEmpty()) {
-            sb.append("\n## Thread-Safe by Design\nDo not modify these elements without preserving their thread-safety strategy:\n\n");
-            for (Element e : collector.threadSafe()) {
-                FormatterRegistry.threadSafe().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.immutable().isEmpty()) {
-            sb.append("\n## Immutable Types\nThe following types are immutable. Do not add mutating methods or non-final fields:\n\n");
-            for (Element e : collector.immutable()) {
-                FormatterRegistry.immutable().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.deprecated().isEmpty()) {
-            sb.append("\n## Deprecated Elements\nDo not extend these elements. Migrate callers to the listed replacement:\n\n");
-            for (Element e : collector.deprecated()) {
-                FormatterRegistry.deprecated().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.observability().isEmpty()) {
-            sb.append("\n## Observability Instrumentation\nThe following elements have metrics/traces/logs watched by dashboards. Do not delete or rename them silently:\n\n");
-            for (Element e : collector.observability()) {
-                FormatterRegistry.observability().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.regulation().isEmpty()) {
-            sb.append("\n## Regulatory Compliance\nThese elements implement compliance clauses. Document the compliance impact of every change:\n\n");
-            for (Element e : collector.regulation()) {
-                FormatterRegistry.regulation().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.parallelTests().isEmpty()) {
-            sb.append("\n## Strict Test Isolation\nDo not share mutable state or external resources in tests for these elements:\n\n");
-            for (Element e : collector.parallelTests()) {
-                FormatterRegistry.parallelTests().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.legacyBridge().isEmpty()) {
-            sb.append("\n## Legacy Compatibility Bridge\nDo not refactor the structural patterns of these compatibility bridges:\n\n");
-            for (Element e : collector.legacyBridge()) {
-                FormatterRegistry.legacyBridge().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.architecture().isEmpty()) {
-            sb.append("\n## Architectural Boundary Constraints\nStrict layering must be respected. Boundary crossing references are prohibited:\n\n");
-            for (Element e : collector.architecture()) {
-                FormatterRegistry.architecture().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.publicApi().isEmpty()) {
-            sb.append("\n## Public API Surface Protection\nDo not modify public signatures or break compatibility for these elements:\n\n");
-            for (Element e : collector.publicApi()) {
-                FormatterRegistry.publicApi().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.strictExceptions().isEmpty()) {
-            sb.append("\n## Strict Exception Handling\nPrecise exception handling required. Do not catch or throw generic Exception/Throwable:\n\n");
-            for (Element e : collector.strictExceptions()) {
-                FormatterRegistry.strictExceptions().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.strictTypes().isEmpty()) {
-            sb.append("\n## Strict Type Safety\nLoose typing is prohibited. Strongly-typed objects must be used:\n\n");
-            for (Element e : collector.strictTypes()) {
-                FormatterRegistry.strictTypes().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.internationalized().isEmpty()) {
-            sb.append("\n## Internationalization Mandate\nAll user-visible text must be localized. Do not hardcode strings:\n\n");
-            for (Element e : collector.internationalized()) {
-                FormatterRegistry.internationalized().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.strictClasspath().isEmpty()) {
-            sb.append("\n## Strict Classpath Integrity\nDynamic class loading and reflection hacks are strictly prohibited:\n\n");
-            for (Element e : collector.strictClasspath()) {
-                FormatterRegistry.strictClasspath().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.schemaSafe().isEmpty()) {
-            sb.append("\n## Schema & Serialization Safety\nDo not change serialization formats or schemas without a backward-compatible migration plan:\n\n");
-            for (Element e : collector.schemaSafe()) {
-                FormatterRegistry.schemaSafe().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.idempotent().isEmpty()) {
-            sb.append("\n## Idempotency Guarantees\nThe following operations are idempotent — calling them multiple times is safe:\n\n");
-            for (Element e : collector.idempotent()) {
-                FormatterRegistry.idempotent().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.featureFlag().isEmpty()) {
-            sb.append("\n## Feature Flag Gated Code\nThe following elements are gated behind a feature flag — always preserve the flag check:\n\n");
-            for (Element e : collector.featureFlag()) {
-                FormatterRegistry.featureFlag().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.secure().isEmpty()) {
-            sb.append("\n## Security-Critical Code\nThe following elements are security-critical — do not weaken their security properties:\n\n");
-            for (Element e : collector.secure()) {
-                FormatterRegistry.secure().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        // New annotations formatting sections for Copilot
-        if (!collector.callersOnly().isEmpty()) {
-            sb.append("\n## Access Limitations\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries:\n\n");
-            for (Element e : collector.callersOnly()) {
-                FormatterRegistry.callersOnly().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.sandboxOnly().isEmpty()) {
-            sb.append("\n## Sandbox & Test Exclusion\nThe following elements are strictly sandbox/test code. Production code must never import or reference them:\n\n");
-            for (Element e : collector.sandboxOnly()) {
-                FormatterRegistry.sandboxOnly().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.memoryBudget().isEmpty()) {
-            sb.append("\n## Memory Allocation Budgets\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully:\n\n");
-            for (Element e : collector.memoryBudget()) {
-                FormatterRegistry.memoryBudget().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.pure().isEmpty()) {
-            sb.append("\n## Deterministic Pure Functions\nThe following elements must remain pure functions without side effects or mutations:\n\n");
-            for (Element e : collector.pure()) {
-                FormatterRegistry.pure().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.domainModel().isEmpty()) {
-            sb.append("\n## Framework-Free Domain Entities\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages:\n\n");
-            for (Element e : collector.domainModel()) {
-                FormatterRegistry.domainModel().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.extensible().isEmpty()) {
-            sb.append("\n## open-closed Extension Patterns\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals:\n\n");
-            for (Element e : collector.extensible()) {
-                FormatterRegistry.extensible().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.inputSanitized().isEmpty()) {
-            sb.append("\n## Mandatory Input Sanitization\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers:\n\n");
-            for (Element e : collector.inputSanitized()) {
-                FormatterRegistry.inputSanitized().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.secureLogging().isEmpty()) {
-            sb.append("\n## Secure Logging Masking\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams:\n\n");
-            for (Element e : collector.secureLogging()) {
-                FormatterRegistry.secureLogging().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.explain().isEmpty()) {
-            sb.append("\n## Required Chain-of-Thought Explanations\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough:\n\n");
-            for (Element e : collector.explain()) {
-                FormatterRegistry.explain().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.prototype().isEmpty()) {
-            sb.append("\n## Experimental Prototype Stubs\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them:\n\n");
-            for (Element e : collector.prototype()) {
-                FormatterRegistry.prototype().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.sunset().isEmpty()) {
-            sb.append("\n## Sunset Deprecated APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden:\n\n");
-            for (Element e : collector.sunset()) {
-                FormatterRegistry.sunset().format(e, sb, Platform.COPILOT);
-            }
-        }
-
-        if (!collector.temporary().isEmpty()) {
-            sb.append("\n## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit:\n\n");
-            for (Element e : collector.temporary()) {
-                FormatterRegistry.temporary().format(e, sb, Platform.COPILOT);
-            }
+            AnnotationSections.render(sb, model, Platform.COPILOT, SECTIONS);
         }
 
         return sb.toString();

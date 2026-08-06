@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>se.deversity.vibetags.example</groupId>
+  <artifactId>vibetags-example-multimodule</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>VibeTags Multi-Module Example (Reactor)</name>
+  <description>
+    Multi-module Maven reactor demonstrating VibeTags guardrail aggregation across modules.
+    Mirrors the setup of real multi-module consumers (blindbean, codekarta): the annotation
+    processor runs in EVERY module, all modules share the reactor root as the VibeTags root,
+    and the generated CLAUDE.md / .cursorrules / llms.txt merge every module's annotations
+    (regression example for https://github.com/PIsberg/vibetags/issues/278).
+  </description>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <modules>
+    <module>core</module>
+    <module>engine</module>
+    <module>cli</module>
+    <module>showcase</module>
+    <module>tests</module>
+  </modules>
+
+  <properties>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <vibetags.bom.version>1.0.1</vibetags.bom.version>
+    <!-- Flipped to true by CI (and by anyone running `mvn compile -Dvibetags.check=true`) so the
+         build verifies the committed guardrail files instead of rewriting them. -->
+    <vibetags.check>false</vibetags.check>
+    <!-- The diagnostic channel. INFO reports what ran; `mvn compile
+         -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,
+         which is how you find out why a file was or was not rewritten. -->
+    <vibetags.log.level>INFO</vibetags.log.level>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-bom</artifactId>
+        <version>${vibetags.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>se.deversity.vibetags</groupId>
+      <artifactId>vibetags-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.15.0</version>
+          <configuration>
+            <source>21</source>
+            <target>21</target>
+            <compilerArgs>
+              <!--
+                All modules share the REACTOR root as the VibeTags root, so the generated
+                guardrail files aggregate annotations from every module. The
+                maven.multiModuleProjectDirectory property is anchored by the .mvn/ directory
+                at the reactor root and resolves to it from any module.
+              -->
+              <arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg>
+              <arg>-Avibetags.project=VibeTags Multi-Module Example</arg>
+              <!--
+                Check mode, wired the way a consumer would wire it. Off by default so an ordinary
+                build regenerates; `mvn compile -Dvibetags.check=true` instead FAILS the build when
+                a generated file no longer matches the annotations, which is what you want in CI.
+
+                This is the answer to "how do I test my guardrails": not a test you write, but a
+                flag that makes the compiler check them. It also guards this example — before it,
+                editing an annotation here and forgetting to commit the regenerated file went
+                unnoticed, because CI only ever ran a plain `compile`.
+              -->
+              <arg>-Avibetags.check=${vibetags.check}</arg>
+              <arg>-Avibetags.log.level=${vibetags.log.level}</arg>
+            </compilerArgs>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>se.deversity.vibetags</groupId>
+                <artifactId>vibetags-processor</artifactId>
+                <version>${vibetags.bom.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

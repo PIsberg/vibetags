@@ -81,4 +81,98 @@
     <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
   </Match>
 
+  <!-- ==================================================================================
+       Find Security Bugs (findsecbugs-plugin). Escaped interpolation is NOT excluded here:
+       Escape.xml / Escape.json / Escape.tomlMultiline and CommonFormatterHelper.claudeReason
+       are declared as sanitizers in findsecbugs-taint-config.txt, so POTENTIAL_XML_INJECTION
+       stays live and an unescaped append into the CLAUDE.md XML block still fails the build.
+       ================================================================================== -->
+
+  <!-- CRLF_INJECTION_LOGS: mitigated centrally rather than per call site. The Logback
+       encoder in VibeTagsLogger.forRoot wraps %msg in %replace(...){'[\r\n]+', ' '}, so no
+       interpolated value can split an event across lines whatever it contains. The detector
+       reads the SLF4J call sites and cannot see the layout that neutralises them.
+       Pinned by VibeTagsLoggerUnitTest#logMessageWithLineBreaks_staysOnOneLine — if that
+       test is deleted, this exclusion is no longer earned. -->
+  <Match>
+    <Bug pattern="CRLF_INJECTION_LOGS"/>
+  </Match>
+
+  <!-- PREDICTABLE_RANDOM: scoped to the one method, so a ThreadLocalRandom used anywhere
+       else in the class is still reported. ModuleSidecar.jittered() spreads the wait between
+       two attempts at renaming a temp file over a sidecar; the value never leaves the method,
+       is never a token, key, nonce or filename, and an attacker who could predict it would
+       learn how long a build slept. Its job is decorrelating retries so modules that write
+       their sidecars at the same point in their compile stop re-colliding — a use where
+       SecureRandom would buy nothing and cost entropy on every retry. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
+    <Method name="jittered"/>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+  </Match>
+
+  <!-- PATH_TRAVERSAL_IN: listed per method, not project-wide, so a NEW path built from
+       input is still reported. Every site below is the processor going where the build told
+       it to go: -Avibetags.root and -Avibetags.log.path are documented as absolute-capable
+       (redirecting output is the feature), and the remaining three resolve paths the
+       processor itself composed from that root plus a constant file name. Whoever sets a
+       compiler option already controls the compilation. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="init"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="checkFiles"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.VibeTagsLogger"/>
+    <Method name="resolveLogFile"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
+    <Method name="writeFileIfChanged"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.ModuleRootResolver"/>
+    <Method name="directoryOf"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.WriteCache"/>
+    <Method name="loadIfNeeded"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+
+  <!-- IMPROPER_UNICODE: the flagged comparisons parse build configuration — the "true" /
+       "false" / "OFF" processor options and the lower-cased keys of .vibetags-mirror and
+       the enforce-families option. None of them is an authorization decision, so Unicode
+       case-folding collisions can only make somebody's own build flag parse the way they
+       spelled it. Case folding that does matter already passes Locale.ROOT explicitly.
+       Listed per method so a new case-insensitive comparison is still reported. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="init"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.VibeTagsLogger"/>
+    <Method name="forRoot"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailEnforcer"/>
+    <Method name="parseFamilies"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.MirrorConfig"/>
+    <Method name="stripGlobKey"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
+
 </FindBugsFilter>

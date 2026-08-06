@@ -135,6 +135,62 @@ class ElementNamingUnitTest {
     }
 
     @Test
+    void elementPath_parameter_includesEnclosingMethodAndType() {
+        // Issue #212: a parameter must be qualified by its enclosing method and class,
+        // not rendered as the bare parameter name.
+        Element type = mock(Element.class);
+        when(type.toString()).thenReturn("com.example.BlindContext");
+
+        Element method = mock(Element.class);
+        when(method.getKind()).thenReturn(ElementKind.METHOD);
+        when(method.toString()).thenReturn("exportKeys(java.lang.String)");
+        when(method.getEnclosingElement()).thenReturn(type);
+
+        Name paramName = mock(Name.class);
+        when(paramName.toString()).thenReturn("filePath");
+
+        Element param = mock(Element.class);
+        when(param.getKind()).thenReturn(ElementKind.PARAMETER);
+        when(param.getSimpleName()).thenReturn(paramName);
+        when(param.getEnclosingElement()).thenReturn(method);
+
+        assertEquals("com.example.BlindContext.exportKeys(java.lang.String)#filePath",
+            ElementNaming.elementPath(param));
+    }
+
+    @Test
+    void elementPath_constructorParameter_includesEnclosingConstructor() {
+        Element type = mock(Element.class);
+        when(type.toString()).thenReturn("com.example.Foo");
+
+        Element ctor = mock(Element.class);
+        when(ctor.getKind()).thenReturn(ElementKind.CONSTRUCTOR);
+        when(ctor.toString()).thenReturn("<init>(java.lang.String)");
+        when(ctor.getEnclosingElement()).thenReturn(type);
+
+        Name paramName = mock(Name.class);
+        when(paramName.toString()).thenReturn("name");
+
+        Element param = mock(Element.class);
+        when(param.getKind()).thenReturn(ElementKind.PARAMETER);
+        when(param.getSimpleName()).thenReturn(paramName);
+        when(param.getEnclosingElement()).thenReturn(ctor);
+
+        assertEquals("com.example.Foo.<init>(java.lang.String)#name",
+            ElementNaming.elementPath(param));
+    }
+
+    @Test
+    void elementPath_parameterWithNullEnclosing_usesToString() {
+        Element param = mock(Element.class);
+        when(param.getKind()).thenReturn(ElementKind.PARAMETER);
+        when(param.toString()).thenReturn("orphanParam");
+        when(param.getEnclosingElement()).thenReturn(null);
+
+        assertEquals("orphanParam", ElementNaming.elementPath(param));
+    }
+
+    @Test
     void elementPath_fieldWithNullEnclosing_usesToString() {
         // If enclosing is null, falls back to element.toString().
         Element field = mock(Element.class);
@@ -192,6 +248,31 @@ class ElementNamingUnitTest {
         when(ctor.getEnclosingElement()).thenReturn(enclosing);
 
         assertEquals("PaymentService.<init>(double)", ElementNaming.elementDisplayName(ctor));
+    }
+
+    @Test
+    void elementDisplayName_parameter_includesEnclosingMethodDisplayName() {
+        Name typeName = mock(Name.class);
+        when(typeName.toString()).thenReturn("BlindContext");
+
+        Element type = mock(Element.class);
+        when(type.getSimpleName()).thenReturn(typeName);
+
+        Element method = mock(Element.class);
+        when(method.getKind()).thenReturn(ElementKind.METHOD);
+        when(method.toString()).thenReturn("exportKeys(java.lang.String)");
+        when(method.getEnclosingElement()).thenReturn(type);
+
+        Name paramName = mock(Name.class);
+        when(paramName.toString()).thenReturn("filePath");
+
+        Element param = mock(Element.class);
+        when(param.getKind()).thenReturn(ElementKind.PARAMETER);
+        when(param.getSimpleName()).thenReturn(paramName);
+        when(param.getEnclosingElement()).thenReturn(method);
+
+        assertEquals("BlindContext.exportKeys(java.lang.String)#filePath",
+            ElementNaming.elementDisplayName(param));
     }
 
     @Test

@@ -7,6 +7,1244 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A module's sidecar could be dropped from a parallel reactor build when a rename lost a race
+  for more than 275 ms.** `ModuleSidecar.save()` writes a temp file and renames it over the live
+  sidecar; on Windows that rename fails while anything else holds the target open, so it retries.
+  The retry schedule was 10 attempts of 5 ms × attempt — 275 ms in total — and that was not enough:
+  `ModuleSidecarAsyncTest` failed in 6 of 13 full-suite runs, and the failure in production is a
+  module's guardrails silently missing from the merged output for that build.
+
+  Instrumenting the retry loop over five suite runs showed why. Of roughly 1057 renames per run,
+  985-1004 succeeded on the first attempt and the rest tailed off through attempts 2-9 — successes
+  at attempts 8 and 9 appeared in runs that passed, so the old budget sat directly on top of the
+  tail. Nothing succeeded at attempts 4, 5, 8, 9 or 10 in the first probe run while a give-up still
+  occurred, which says a blocker is either gone within ~15 ms or holds far longer than the whole
+  budget: the signature of a virus scanner, not of a sibling's `readAll()`.
+
+  The schedule is now 15 attempts backing off exponentially (5, 10, 20, 40, 80, 160, then 300 ms)
+  for a nominal 2.7 s, with each wait jittered into `[half, full]` so modules retrying in lockstep
+  spread out instead of re-colliding with the same reader sweep. 8 of 8 full-suite runs passed
+  afterwards, against 6 failures in the 13 before it. This is a probabilistic race, so that is
+  evidence rather than proof — but the budget is now roughly ten times the blocker that was
+  actually observed. `ModuleSidecarResilienceTest` pins the budget and the ride-out past the old
+  cap; both fail against the previous schedule.
+
+### Changed
+- **`mvn test` is now a fast local loop; CI runs the full suite with `-Pe2e`.** The suite had one
+  tier, so the cheapest local check cost the same as the most expensive: 131 classes, 1484 tests,
+  ~70s wall clock, of which 52 classes accounted for 599.66s of the 704.15s spent. Those 52 now
+  carry `@Tag("e2e")` and are skipped by default, taking `mvn test` to 80 classes / 910 tests / 35s
+  — with about 10s of that being compile and JaCoCo rather than tests. `mvn test -Pe2e` runs
+  everything (132 classes, 1486 tests, 61s) and every CI leg that runs tests passes it, so nothing
+  merges without a full run.
+
+  The split is by measured cost, not by name: `NewAnnotationsV4EndToEndTest` takes 0.01s and stays
+  local, `AIGuardrailProcessorUnitTest` takes 13.71s and does not. 21 fast-tier classes still drive
+  `javac` through `ProcessorTestHarness`, so the processor round-trip is genuinely covered locally;
+  the write cache, fingerprinting, reactors, mirroring and the async stress loops are not, and need
+  `-Pe2e`.
+
+  Two things keep this from rotting into the `-Drun.integration.tests=true` gate that was dropped in
+  2026-04 for gating nothing. `TestTagVocabularyTest` fails the build on a misspelled tag or when
+  `pom.xml` and `build.gradle` stop excluding the same one. And naming a test explicitly overrides
+  the filter in both build systems — without that, `mvn test -Dtest=WriteCacheProcessorIntegrationTest`
+  printed `Tests run: 0` and `BUILD SUCCESS`, which is the silent-green failure the split exists to
+  avoid rather than create.
+
+  The `build-maven`, `cross-platform` and `build-gradle` legs each used to run the whole suite twice
+  (once inside `install`/`build`, once in a dedicated step). The install pass now runs the fast tier
+  and the dedicated step runs `-Pe2e`, so coverage is unchanged and each leg does strictly less work.
+
+## [1.0.1] - 2026-08-06
+
+### Fixed
+- **Granular rule files at a reactor root are merged across modules instead of overwritten
+  ([#365](https://github.com/PIsberg/vibetags/issues/365)).** A role declared in a reactor-root
+  `.vibetags-roles` routes on the element's package, not on the module it lives in, so one role
+  routinely matches classes in several modules — and all of them resolve the same output path. Each
+  module's compile wrote the whole file and replaced the previous module's content: only the module
+  that happened to compile last kept its guardrails. Reported on a three-module reactor where
+  `.gemini/rules/` held **one module of three**, and an `@AICore` marked *critical* (nothing may
+  throw out of `premain`, an exception there aborts JVM startup) was absent from the scoped rules
+  entirely while still appearing in the aggregate `GEMINI.md` — so the guardrail existed and never
+  reached the tool that loads rules on file open. Which module won depended on which modules
+  recompiled, so an unrelated one-module edit also produced a spurious diff in a generated file.
+
+  Granular files now merge the way the aggregate files already did. Each compilation records its
+  contribution to every rule file it writes — the frontmatter globs and the rendered body — in its
+  own sidecar; the write assembles the file from every module's contribution, wrapping several
+  modules in the same `VIBETAGS-MODULE` sub-markers the aggregates use and unioning their globs. A
+  lone contributor's body is used verbatim, so single-module output is byte-for-byte unchanged. The
+  same merge covers two source sets of one module, at the reactor root and in a module's own nested
+  rules directory. A sidecar written by an older processor carries no contributions and falls back
+  to the previous behaviour rather than failing.
+
+  `example-multimodule` now routes its `core`, `engine` and `cli` classes into one root role file,
+  and CI asserts all three modules survive and that rebuilding a single module leaves the file
+  byte-identical.
+
+- **The documentation described a test gate that has not existed since April.**
+  `-Drun.integration.tests=true` stopped gating anything when the integration tests became
+  self-contained (commit `e6a6aba`, 2026-04-07), but CLAUDE.md, `docs/TESTS.md`, `docs/WORKFLOW.md`
+  and `docs/ARCHITECTURE.md` still documented the flag, and two of those claimed the end-to-end
+  tests read `example/` output; they compile fixture sources in-memory via `ProcessorTestHarness`.
+  Verified by running `AIGuardrailProcessorIntegrationTest` with and without the flag: all 23 tests
+  execute either way.
+- **Doc counts and phantom entries corrected against ground truth.** `DESIGN.md` was listed as a
+  generated platform file, and `DesignMdEndToEndTest` / `GuardrailContentBuilderLazyAllocationTest`
+  as tests; none exist in the source tree. `docs/LOAD-BEARING.md` said "50+ AI platforms" where the
+  test-pinned count is 37; `docs/ARCHITECTURE.md` said 33 internal helper classes (measured: 24
+  top-level, 129 with subpackages) and a 424-test total (measured: 1484); two per-class test counts
+  were stale. README's build-from-source section now installs `vibetags-annotations` before
+  `vibetags`, without which its own commands fail on a clean checkout; reproduced before fixing.
+  `SPEC.md` is marked as a historical design document.
+
+### Added
+- **CLAUDE.md links the rest of the map.** The always-loaded entry point now points at README's
+  test-enforced project facts, `docs/WORKFLOW.md`, `docs/RELEASING.md`, `docs/CHANGELOG.md` and
+  `docs/vibetags-in-practice.md`; none of them were reachable from it before, and an agent that
+  starts from CLAUDE.md had no path to the counts the build actually pins.
+- **`docs/DEPENDENCIES.md`: every third-party artifact, and why.** Split by what it costs a
+  consumer. Three artifacts reach the consumer's annotation-processor path (jspecify, slf4j-api,
+  logback-classic) and `vibetags-annotations` has none at all; everything else is test or build
+  scope and never leaves the repository. The document names the parent property that holds each
+  version rather than restating the number, and records the versions deliberately not taken, so the
+  next sweep does not re-derive that slf4j 2.1.0-alpha1, maven-compiler-plugin 4.0.0-beta-4 and
+  surefire 3.6.0-M1 are prereleases.
+- **`BuildVersionParityTest` now checks Gradle's PMD `toolVersion`.** It is not a dependency
+  coordinate, so the existing parity check never saw it, and it had already drifted:
+  `vibetags-annotations/build.gradle` sat on PMD 7.24.0 while the parent and `vibetags/build.gradle`
+  were on 7.26.0, which is two modules analysed by two rule sets.
+
+### Changed
+- **CI: the two "Run Integration Tests" steps are gone.** They passed
+  `-Drun.integration.tests=true`, which has gated nothing since 2026-04, so each step re-ran the
+  exact suite the "Run Unit Tests" step before it had just finished. Coverage is unchanged: the
+  Maven and Gradle jobs still run the full suite once each.
+- **async-test-lib 1.7.0-RC8 → 1.7.1.** The RC line's GA and its follow-up are on Maven Central as
+  of 2026-08-06 (verified against `maven-metadata.xml` on repo1.maven.org, the check the previous
+  sweep documented), so the "deliberately not taken" entry in `docs/DEPENDENCIES.md` is gone with
+  the pin.
+- **Dependencies:** ArchUnit 1.4.2 → 1.5.0, SnakeYAML 2.5 → 2.6, maven-shade-plugin 3.5.2 → 3.6.2,
+  exec-maven-plugin 3.2.0 → 3.6.3, spotbugs-maven-plugin 4.10.2.0 → 4.10.3.0, pitest-maven 1.25.8 →
+  1.25.9, pitest-junit5-plugin 1.2.2 → 1.2.3, cyclonedx-maven-plugin 2.9.2 → 2.9.3, and PMD 7.26.0
+  in `vibetags-annotations/build.gradle`, which the parent had declared since 1.0.0-RC8. Verified by
+  the full Maven build (1465 tests) and both Gradle builds.
+- **CI no longer builds async-test-lib from a git tag.** Four jobs cloned
+  `github.com/PIsberg/async-test-lib` at `v1.7.0-RC5` and ran `mvn install` on it before every
+  build. The artifact has been on Maven Central all along, so those four jobs were paying for an
+  artifact Maven then resolved from Central anyway; the tag had also been left at RC5 when the
+  dependency moved to RC8, and one of the clones failed transiently and reddened an unrelated PR.
+  Verified by resolving 1.7.0-RC8 from Central into an empty local repository.
+
+## [1.0.0] - 2026-08-04
+
+### Added
+- **`USAGE.md` documents the two silent ways to get nothing generated.** A new Troubleshooting
+  section covers JDK 23+ no longer running class-path annotation processors, which turned a
+  `provided`-scope `vibetags-processor` into a no-op with no error and no warning in a real
+  consumer project (`<proc>full</proc>` or the recommended `<annotationProcessorPaths>` setup
+  restores it), and incremental builds with no stale sources never starting `javac`, which
+  leaves a freshly opted-in file empty until a clean or touched-source compile. The README's
+  installation section gained the JDK 23+ note beside its existing `annotationProcessorPaths`
+  caveat.
+- **The five aggregate-granular pairs claim is derived, not asserted (#356).**
+  `DocsGranularPairsClaimTest` reads the pair count and directory list from
+  `GranularIndexSection` and fails `PLATFORMS.md` or `LOAD-BEARING.md` when either disagrees.
+  It catches the exact drift #355 fixed: the docs said four platforms while the code gated
+  five.
+
+### Changed
+- **PIT mutation testing runs on demand only.** It moved out of `build.yml` into its own
+  `mutation.yml`, whose sole trigger is `workflow_dispatch`. The job was the longest leg in CI and
+  carried `continue-on-error: true`, so no score it produced could fail a build — every push paid
+  for a number nothing acted on. The standalone workflow drops `continue-on-error`: when someone
+  asks for the run, a failure should read as one. Nothing about the `mutation` Maven profile
+  changed, so `mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage` still works
+  locally and from a dispatched run.
+- **Every published pom carries the complete MIT license block (#357).** The parent's existing
+  declaration gained `distribution=repo` and the four managed poms inherit it; the five
+  standalone example roots that cannot inherit each received the full block, and both
+  publishing Gradle builds now emit `distribution=repo` in their publication poms. Verified
+  through the effective pom of a managed pom and a reactor child, the flattened deploy pom,
+  and the Gradle-generated publication pom.
+
+### Fixed
+- **The Generating-files NOTE reports the resolved active-services set (#356).** With an
+  aggregate and its granular directory both opted in (`CLAUDE.md` plus `.claude/rules/`), the
+  NOTE counted only the aggregate content map and claimed one active service while
+  `vibetags.log` correctly said two. It now reports the same resolved set the log uses,
+  sorted. `ActiveServicesNoteTest` pins the message and failed red against the old one.
+- **A Trees-API failure is named instead of `null` (#356).** Under Gradle compiler workers a
+  classloader failure carries no message, so `@AIArchitecture`'s unchecked-layering note
+  rendered `Trees API not available: null`. The reason now falls back to the throwable's type
+  name and states that `cannotReference` was not checked this round.
+  `ArchitectureRuleReasonTest` covers message, null and blank.
+
+## [1.0.0-RC10] - 2026-08-03
+
+### Added
+- **Every example demonstrates all 44 annotations, and the README says where each one goes.**
+
+  `example-all-tiers/` went from 20 annotations to all 44 while keeping the structure it exists to
+  show, and `ExampleCoverageTest` now holds all four example projects to the full set, so an
+  annotation added without an example fails the build.
+
+  The README gained a 44-row reference: what each annotation can be attached to, which attributes
+  have no default, and whether its guardrail stays in the always-loaded aggregate or moves to a
+  scoped file. `AnnotationReferenceTest` derives all three columns from the code — `@Target` by
+  reflection, required attributes from members with no default, and the tier by reading back which
+  buckets the indexed renderer keeps inline. The tier column is the one worth deriving: "safety" is
+  not a property of an annotation, it is whichever buckets survive the aggregate collapsing to an
+  index, so moving one in the renderer now fails the README rather than quietly leaving it
+  describing a split that no longer happens.
+
+- **Opting a scoped-rules directory in and back out again is now tested, both directions.**
+
+  Tier 3 is controlled like every other output: the directory's presence is the opt-in. Opting *in*
+  fails loudly if it breaks, because the rule files are simply absent. Opting *out* fails silently,
+  and into the shape that looks correct — a smaller `CLAUDE.md` still carrying an index that points
+  at a directory nobody has, leaving those guardrails in neither place.
+
+  `ScopedRulesOptInOptOutEndToEndTest` drives both transitions over `example-all-tiers/billing`'s
+  own sources, so it also fails if that example stops exercising all three tiers. It covers the
+  collapse actually shrinking the aggregate, the safety buckets surviving it, opting out restoring
+  the detail and dropping every reference to the directory, opting out holding across two further
+  builds, and deleting a single rule file while still opted in regenerating it byte for byte.
+
+- **International characters in annotation values are proven, not assumed.**
+
+  A guardrail reason is prose, written in whatever language the team works in, and
+  "Får inte loggas enligt GDPR §9" is worthless to an agent if it arrives as "F?r inte loggas".
+  `InternationalCharactersEndToEndTest` drives a real compile with Swedish, German, French, CJK,
+  Japanese, Cyrillic, Greek, Arabic, Hebrew, emoji (surrogate pairs, outside the BMP) and combining
+  marks, then reads them back out of the XML-shaped aggregate, JSON parsed with a real parser, TOML,
+  the base64 sidecar round trip between two modules, a file-backed source so the compiler's own
+  decoding is exercised, and the raw bytes on disk.
+
+  Escaping is asserted separately from survival, because an escaper must act on `< > & " '` and
+  leave everything above U+007F alone; asserting both together lets one defect hide the other.
+
+- **The cross-module merge records which branch it took.**
+
+  It chooses between publishing the compiling module's own rendering and publishing the merged view
+  of every module. Both are well-formed documents and the wrong one differs only by the siblings it
+  is missing, which is what the JSON/TOML freeze below was and why it lasted. Every path now emits
+  its reason and every `.skip` carries one, so `contributions=4` answers "did my sibling's rules
+  make it in?" and `bodies=0` on a `sidecar.save` names the failure directly.
+
+  The diagnostic channel was also unreachable from any example — nothing passed
+  `-Avibetags.log.level` — so neither this logging nor the writer's existing events could be seen by
+  anyone following the docs. All four example poms now wire it, defaulting to `INFO`.
+
+- **All four examples verify their committed guardrails, and every documentation link resolves.**
+
+  `example-multimodule-indexed` was building with a plain `compile`, so drift in it was invisible;
+  it now runs check mode. `example/` cannot use check mode — its job empties the config files and
+  regenerates them, so check mode would compare the fresh tree against itself — and instead
+  compares against git, which additionally proves a from-empty regeneration reproduces exactly what
+  is committed.
+
+  `DocumentationLinksTest` checks every relative link and fragment across 738 Markdown files. Eight
+  were dead: two table-of-contents entries pointing at renamed headings, a fragment naming a section
+  that has never existed, a `LICENSE` and a workflow linked as though `docs/` were the repository
+  root, and two benchmark plots whose relative path was one directory short, so images committed
+  since 0.7.1 had never once rendered.
+
+- **The release script rewrites every file that states the version.**
+
+  `example-all-tiers/pom.xml` was checked by `BuildVersionParityTest` but never written by
+  `scripts/set-version.sh`, so the documented release procedure failed partway through. `README.md`
+  and the usage skill were checked by nothing, so a GA cut with that gap would have shipped eleven
+  install snippets telling every new user to depend on a release candidate.
+
+  `ReleaseScriptCoverageTest` derives the list instead of trusting it: any tracked file stating the
+  current version must either appear in the script or be recorded as historical with a reason. The
+  changelog, the benchmark results and the version-sort-order examples are recorded — a blanket
+  search-and-replace would have claimed this release shipped every past change and that
+  measurements were taken on versions that did not exist when they were run.
+
+- **`example-all-tiers/`: all three tiers at once, and a class annotated at every level.**
+
+  The tier model was documented in a table and demonstrated one slice at a time — `example/` shows
+  Tier 3 at a single-module root, `example-multimodule/` shows Tier 1 merged plus Tier 2,
+  `example-multimodule-indexed/` shows an indexed Tier 1 plus Tier 3. Nothing showed them composing,
+  which is the arrangement the README actually recommends for a reactor.
+
+  A two-module reactor now turns on all three: an indexed Tier-1 root, a Tier-2 `CLAUDE.md` in each
+  module, and Tier-3 scoped rules grouped by role through `.vibetags-roles`. The generated root is
+  the argument for the layout — six safety buckets inline, two pointers, and nothing else.
+
+  `InvoiceController` carries a guardrail at **every level a guardrail can attach to**, which no
+  other example does in one class: type, instance field, method, and method parameter. The parameter
+  case is the interesting one, since `renderInvoice(java.lang.String,java.lang.String)#customerNote`
+  is the finest addressing VibeTags produces and the one a hand-written rules file cannot express at
+  all.
+
+  CI asserts the split rather than just that the files exist: the six safety buckets are inline at
+  Tier 1 and no verbose bucket is, each module's Tier-1 pointer names both lower tiers, neither
+  Tier-2 file mentions the other module, every Tier-3 file is role-grouped and carries `paths:`
+  front-matter, and the parameter-level rule is present. Verified by deleting
+  `.vibetags-root-index` and watching it fail with "Tier 1 embedded a verbose bucket that belongs in
+  Tier 3: contextual_instructions". The example also runs check mode, so its committed guardrails
+  cannot drift from its annotations.
+
+- **Lifecycle coverage for the second compile, and check mode wired into an example.**
+
+  Everything was tested at the moment a guardrail is *created*. What happens afterwards — an
+  annotation's value edited, an annotation deleted, a platform opted out of — was covered only for
+  removal in a single module. Those are the cases that fail quietly: the file is regenerated, it
+  looks plausible, and the stale half is invisible unless you knew what used to be there.
+
+  `GuardrailLifecycleEndToEndTest` drives real second compiles for each. The opt-out case is the one
+  that had nothing at all behind it, despite being the load-bearing invariant of the design —
+  "file presence is the opt-in, and deleting one deactivates that platform permanently". The nearest
+  existing test deleted `.cursorrules` and asserted it came *back*, which was true only because its
+  harness re-creates every opt-in file before compiling.
+
+  It also pins the documented limitation rather than pretending it away: emptying a module of
+  *every* annotation leaves its last contribution in the merged files until its `.vibetags-mod-*` is
+  deleted. That is deliberate — the same guard stops a module compiled without annotations from
+  wiping everyone else's — so it is written as a passing test of current behaviour, with the
+  documented escape hatch exercised, so changing it later is a deliberate act with a failing test to
+  update.
+
+  `example-multimodule` now wires check mode the way a consumer would (`-Avibetags.check=true`,
+  off by default), and CI runs it. That is the honest answer to "how do I test my guardrails" — not
+  a test you write, but a flag that makes the compiler check them. It also closes a gap in this
+  repository: editing an annotation in an example and forgetting to commit the regenerated file
+  previously went unnoticed, because CI only ever ran a plain `compile`.
+
+  **It immediately earned itself.** Running it caught that the JSON/TOML fix below was incomplete:
+  the sidecar-population block is copied in both `generateFiles` and `checkFiles`, and only the
+  first was fixed, so check mode reported drift on a tree a real compile had just produced. The two
+  copies now share one method — the same fate, and the same remedy, as the merge block that carries
+  a comment about having drifted before.
+
+### Changed
+- **The published javadoc documents the API rather than the internals, and the next gap is fatal.**
+
+  The javadoc jar documented every class in the processor module and warned on most of them. That is
+  two problems in one artifact: it invites a consumer to bind to classes that are free to change
+  every release, and the noise is why nobody noticed the API itself was undocumented.
+  `processor.internal` is the compiler-facing half, which `ArchitectureRulesTest` polices precisely
+  because it carries no stability promise, and `processor.model` is the compiler-free data layer the
+  renderers read. Neither is called from outside, and both are now excluded from the published
+  artifact.
+
+  What is left is documented: `SourceLocation`'s three record components,
+  `AIGuardrailProcessor.writeFileIfChanged`, two deprecated delegates missing `@param`/`@return`,
+  and `VibeTagsLogger.shutdown(Path)`. `doclint=all` with `failOnWarnings` makes a regression a
+  build failure, matching what `vibetags-annotations` already did. `generateFiles()` was not
+  touched; it is `@AILocked` and none of the gaps were in it.
+
+  One measurement error is worth recording, because it changed the conclusion twice: javadoc caps
+  its output at `-Xmaxwarns`, 100 by default. Two runs reporting exactly 100 read as "unchanged"
+  when the first had been a truncated sample attributing everything to one package. A count equal to
+  the cap is a lower bound, not a total.
+
+### Fixed
+- **The README understated the number of generated files by a third.**
+
+  "37 config formats" was the platform count wearing the file count's label. 37 is how many AI
+  *tools* are supported; Cursor is one tool with both `.cursorrules` and `.cursorignore`. The
+  registry declares 62 outputs: 49 config files and 13 scoped-rule directories. The annotation and
+  platform figures were already pinned by `ProjectFactsConsistencyTest`; the output counts were not,
+  which is how this survived — it read like the figure beside it and nothing disagreed. All four are
+  now pinned, the output counts against the live registry rather than against prose.
+
+- **Four docs restated the annotation count, and had drifted from it.**
+
+  The README's project-facts line declares itself the single source of truth and asks other docs to
+  link back rather than restate the figure. Nothing enforced that. The README claimed "all 15 Java
+  annotations" and "all 8 VibeTags annotations" six lines below the pinned 44,
+  `docs/ARCHITECTURE.md` claimed "39 annotation `@interface` files in total" while linking to the
+  source of truth in the same sentence, and `docs/vibetags-in-practice.md` claimed 39 annotation
+  types.
+
+  `noDocRestatesADifferentAnnotationCount` pins it. The pattern matches only claims about the whole
+  set ("all N annotations", "the N annotations", "N annotation ... in total"), so true statements
+  about a subset, such as "7 annotations have zero real-world traction", still pass; narrowing the
+  pattern was chosen over exempting whole documents, which would have blinded the check to the next
+  drift inside them. Verified by reintroducing "all 15 Java annotations" and watching it fail with
+  the file and line.
+
+  Every annotation reference across all 741 Markdown files was audited against the annotations that
+  actually exist. Nothing else was wrong: no doc names an annotation that does not exist, passes an
+  attribute it does not have, or uses an enum constant outside its enum. The Contributing section
+  was also proposing two annotations that have shipped (`@AIPattern` is `@AIExtensible`, `@AITest`
+  is `@AITestDriven`), and now points at the `add-platform` and `add-annotation` skills instead.
+
+- **Multi-module reactors froze their JSON and TOML outputs after the first write, and the freeze
+  hid a second bug underneath it.** The remaining half of #265.
+
+  The write phase asks `anyContributed` whether any module has contributed to a service before it
+  will rewrite a shared file, and that question is answered from the sidecar — which stored bodies
+  only for marker-based services. For a JSON or TOML output the answer was permanently "no", so the
+  writer's `no-new-rules` guard skipped every update to an existing file. Whatever the first
+  successful write produced stayed there for good. On the four-module `example-multimodule`,
+  `.mentatconfig.json` carried **1 entry from 1 module of 4** and every later build logged
+  `no changes`; `.pr_agent.toml` carried 6 guardrail lines from the same single module.
+
+  Storing those bodies makes the files refresh — and immediately exposes the bug the freeze was
+  masking. A file with no markers is a whole-file overwrite, so refreshing it just replaces one
+  module's view of the project with another's. Last-writer-wins is not obviously better than frozen.
+
+  So the two renderers that emit per-element content also declare a
+  `PlatformRenderer.wholeFileMerge()`, which re-assembles the document from every module's
+  rendering: `.mentatconfig.json` unions each rules array inside its own key, and `.pr_agent.toml`
+  rewrites **both** `extra_instructions` blocks from the union of the instruction lines — updating
+  one and not the other would give PR-Agent two different views of the same project. Measured on the
+  same reactor:
+
+  | file | before | after |
+  |---|---|---|
+  | `.mentatconfig.json` | 1 section, 1 entry, 1 of 4 modules | 9 sections, 51 entries, all modules |
+  | `.pr_agent.toml` | 6 guardrail lines, 1 of 4 modules | 200 lines, all modules |
+
+  The merges are format-aware because there is no generic answer — concatenating two JSON documents
+  is not JSON. They parse only VibeTags' own output, whose shape is fixed by a renderer in the same
+  package, and decline by returning `null` rather than guessing when a document is not that shape.
+  A single-module build is byte-identical to before, and a rebuild of the reactor is byte-identical
+  to the previous one, so nothing churns.
+
+  The three static configs (`.cody/config.json`, `.qwen/settings.json`, `.codex/config.toml`)
+  declare no merge, because their content does not vary with the annotations. They still gain the
+  refresh: without it, upgrading VibeTags never updated them in a reactor either.
+
+  `MultiModuleWholeFileMergeTest` derives the rule instead of listing it — it renders every
+  marker-free service with an empty model and a populated one, and fails any whose output differs
+  but which declares no merge. Verified by deleting Mentat's declaration, which names it exactly.
+
+  Inside the `@AILocked` `generateFiles()` this is a single changed statement — the sidecar now
+  stores every rendered body rather than filtering on markers. No step was added, removed or
+  reordered, which is what that lock protects.
+
+## [1.0.0-RC9] - 2026-08-02
+
+### Added
+- **NullAway joins the static-analysis gate, at ERROR.** The codebase already annotated with
+  JSpecify `@Nullable`; nothing checked it, so the annotations documented an intention rather than
+  enforcing one. NullAway 0.13.8 runs through the Error Prone hook that was already configured, in
+  JSpecify mode. It reported 55 findings on the first run; bringing the build green touched 18
+  files, and almost every fix was a missing `@Nullable` on a return type or parameter whose Javadoc
+  already said "or `null`". Four were real defects the annotations had been hiding: `GuardrailFileWriter.getMarkersFor` was
+  declared `@Nullable String[]` (an array of nullable Strings) when it returns a nullable array,
+  which is `String @Nullable []`; `GranularIndexSection.scopedPath` could dereference a null
+  directory; `AIGuardrailProcessor.logSet` dereferenced `log` behind a null check in its caller
+  rather than its own; and check mode dereferenced a service's output path without establishing
+  that the service had one.
+
+  **No class is excluded.** The last finding was inside `AIGuardrailProcessor.generateFiles()`,
+  which is `@AILocked` because its step order is load-bearing: `serviceFiles.get(service)` was
+  dereferenced without a guard inside the parallel write phase. The lock was lifted for the edit
+  and restored, and the guard now skips the one unmapped entry instead of letting an NPE surface
+  as an `ExecutionException` that abandons the whole write phase — one unmapped key would
+  otherwise have cost every other file its update. The step order is untouched.
+
+- **Seven modern-Java detectors**, in a new `ModernJavaRules`. Every check VibeTags had compared
+  annotations against each other; these compare an annotation against the declaration it sits on,
+  and each exists because a language feature newer than Java 8 changed what that declaration
+  already guarantees — or already forbids. `@AIImmutable` on a type with an array field (records
+  make this easiest to miss: the generated accessor hands the array straight out); `@AIExtensible`
+  on a final type, record or enum, and separately on a sealed type, where following the annotation
+  also means editing the `permits` clause; `@AIPure` on a `void` method; `@AIPublicAPI` on
+  something no external caller can reach; `@AIThreadSafe(THREAD_LOCAL)` on a type that really does
+  hold a `ThreadLocal`, which under virtual threads is one copy per task rather than one per pooled
+  thread (`ScopedValue`, JEP 506); and `@AILocked`/`@AIContract`/`@AIPublicAPI` in the unnamed
+  package, reachable without meaning to since compact source files (JEP 512) and a collision in the
+  fully-qualified name VibeTags identifies elements by. All read `javax.lang.model` only, so unlike
+  `@AIArchitecture(cannotReference)` they still fire under Gradle's compiler. Each is paired with a
+  clean fixture asserting it stays quiet; removing the detectors turns 11 of `ModernJavaDetectorTest`'s
+  17 cases red, and the 6 that stay green are exactly the silence assertions.
+
+- **Tests for behaviour that had none.** Three of these were reachable, user-facing and entirely
+  unexercised, which is why they are listed here rather than filed under coverage:
+  the enforcing mode's *in-place shape change* — a method whose return type changes keeps its path,
+  so it is caught by comparing signatures rather than by the "approved but absent" sweep, and only
+  the second of those two paths had a test; `@AITemporary(expiresOn = "2026-02-31")`, which passes
+  the `YYYY-MM-DD` shape check and is still not a date; and a `.vibetags-roles` role defined by a
+  bare list of classes, whose rule file has to derive its `globs:` front-matter from its members
+  or the editor never loads it. Plus `@AIExtensible` on an enum, `@AIThreadAffinity` with a named
+  thread and no `marshalVia`, a blank entry in `cannotReference`, an on-demand import matched
+  through a trailing-dot package, and the degraded-environment guards that keep a non-javac
+  compiler from turning a warning into a failed build.
+
+- **`SignatureCaptureStressTest` runs in CI.** The `load-tests` job pins `-Dtest` to a named list,
+  so a new test there is invisible to CI by default. It asserts a direction rather than a duration
+  — a build with enforcement off must not allocate what only the enforcing mode reads — so unlike
+  the volume sweep's wall-clock it is safe on a shared runner.
+
+- **`SignatureCaptureStressTest` in `load-tests`.** The existing sweeps could not resolve the
+  signature-capture change below, and that is a property of their fixture rather than of the
+  change: `SyntheticClassGenerator` emits classes with one method each, so anything scaling with a
+  type's *member* count disappears into javac's own allocation. The new test measures wide types —
+  400 classes × 40 public members — with enforcement on and off.
+
+- **Two concurrency stress tests for the two components that corrupt output silently when they
+  race.** `GuardrailFileWriterAsyncTest` reproduces the parallel write phase's exact shape — one
+  file per worker over a shared `GuardrailFileWriter` and `WriteCache` — and asserts that
+  hand-authored content above and below the markers survives and that exactly one marker pair
+  remains; `ParallelFileWriteTest` already covered one real compile, but a single pass cannot
+  surface a race. `ModuleSidecarAsyncTest` runs concurrent `save()` and `readAll()` against one
+  reactor root and asserts both failure modes a parallel reactor could produce: a body that was
+  never saved (torn read), and a sibling's sidecar deleted as malformed because it was read
+  mid-write (wrongful prune). Both were confirmed to fail against deliberately broken versions of
+  the code they pin — marker handling disabled, and `save()` writing non-atomically to the live
+  target.
+
+- **Find Security Bugs joins the SpotBugs gate.** `findsecbugs-plugin` 1.14.0 adds its security
+  detectors to the existing `spotbugs-maven-plugin` run. The first run reported 94 findings, 60 of
+  them `POTENTIAL_XML_INJECTION` on formatter lines that already call `Escape.xml` — the taint
+  analysis had no way to know that method sanitizes. Rather than excluding the package, the four
+  escapers (`Escape.xml`, `Escape.json`, `Escape.tomlMultiline`,
+  `CommonFormatterHelper.claudeReason`) are declared `SAFE` in `vibetags/findsecbugs-taint-config.txt`,
+  loaded through the plugin's `<jvmArgs>`. That leaves the detector live: deleting the `Escape.xml`
+  call from `AILockedFormatter`'s Claude branch was confirmed to fail the build with exactly one
+  `POTENTIAL_XML_INJECTION` at that line.
+
+  The remaining 12 findings are excluded per method in `spotbugs-exclude.xml`, each with the
+  reason: `PATH_TRAVERSAL_IN` on the six sites that resolve `-Avibetags.root` / `-Avibetags.log.path`
+  or a path composed from them (redirecting output is the documented feature, and setting a
+  compiler option already means controlling the compilation), and `IMPROPER_UNICODE` on the four
+  that parse `"true"` / `"false"` / `"OFF"` build options and lower-case config keys, none of which
+  is an authorization decision. Listing them per method rather than per pattern keeps a *new*
+  path-from-input or case-insensitive comparison reportable.
+
+### Changed
+- **The build emits zero Error Prone warnings, and every silence is a decision.** It emitted 75.
+  The substantive ones are fixed rather than muted: `String.split(String)` at three call sites,
+  which silently drops trailing empty fields, so `-Avibetags.enforce=contract,` and a sidecar's
+  newline-joined list parsed correctly by accident rather than by decision (now an explicit `-1`
+  limit); four `catch (IOException ignored) {}` blocks in `ModuleSidecar`, each a deliberate
+  best-effort swallow that read identically to somebody forgetting, now saying which it is; a
+  redundant `continue`; and `LocalDate.now()`'s hidden default time zone in the `@AITemporary`
+  expiry check, now `ZoneId.systemDefault()` because the developer's own calendar day is the
+  clock that rule is about. Two lambdas held in constants became named methods.
+
+  Three checks are off, with the reason recorded in `vibetags/pom.xml`:
+  `StatementSwitchToExpressionSwitch` (58 hits, pure style, all in renderers and formatters),
+  `StringConcatToTextBlock` (the literals are generated file content, where an indented text
+  block's leading whitespace is a rendering bug waiting to happen) and `InlineMeSuggester`
+  (a caller-migration tool for published APIs; these are package-internal test seams). A warning
+  nobody is going to act on trains people to scroll past the ones that matter — which is the same
+  argument used for running NullAway at `ERROR`.
+
+- **`ElementSignature` is computed only when the enforcing mode will read it.** Rendering a type's
+  visible member set and sorting it is the most expensive thing the collector does per element, and
+  the only reader is `-Avibetags.enforce` (#284), which is off by default. Every ordinary build was
+  building those strings and dropping them. It cannot be made lazy — the javac element model is
+  valid only while its round is live, and the model is read after the last round closes — so the
+  processor decides up front, the same shape as the `.vibetags-locks` opt-in that already gates
+  source-position resolution. Measured on 400 wide classes: 36.4 MB less allocated, 6.9–7.2 % of
+  the processor's own allocation overhead, reproducible to within 0.3 % across three runs.
+  Generated output is byte-identical, confirmed by regenerating `example/` with the processor built
+  from before and after the change.
+
+- **`AnnotationValidator` is now a 40-line entry point over a rule registry.** It was one 450-line
+  method containing roughly forty hand-written `for` loops, and the repo's own health check flagged
+  it as the largest hotspot in the processor. The checks now live in
+  `processor/internal/validation/` as individually testable rules: `PairRule` (two annotations that
+  contradict each other, expressed as a table — 23 of them, one line each), `CoreRules` (an
+  annotation whose own attributes leave it instructing nobody), `ArchitectureRule` (the Tree-API
+  import scan), `ModernJavaRules` (above). Every diagnostic message is unchanged.
+
+  The registry is also the cheaper arrangement. Rules are indexed by the annotation they scan, so
+  `getElementsAnnotatedWith` runs once per annotation type however many rules share it —
+  `@AITestDriven` was queried four times per round, `@AILoadBearing` three. That query walks the
+  round's root elements, and this compounds with the existing short-circuit that skips annotations
+  javac reports absent.
+
+- **The concurrency-test dependency moves from async-test-lib 1.6.0 to 1.7.0-RC5.** The pin stayed
+  at 1.6.0 because 1.7.0 existed only as a local install, and a version CI cannot clone is a version
+  that breaks every machine except the one that installed it. `v1.7.0-RC5` is now a tag on
+  `github.com/PIsberg/async-test-lib`, so the four `git clone --branch` steps in `build.yml`, the
+  `pom.xml` pin, and the `build.gradle` pin all move together. Verified by building the artifact
+  from that tag on JDK 21 (the version CI uses) and running the suite against it.
+
+### Fixed
+- **Multi-module reactors wrote broken YAML, and lost most of their guardrails doing it.** The
+  sidecar merge stacked each module's *whole* rendered document between `VIBETAGS-MODULE`
+  sub-markers. That is right for Markdown; for the six generated YAML documents it repeated the
+  top-level key once per module. A strict parser rejects such a file outright. A lenient one
+  (SnakeYAML's default, PyYAML) keeps the last occurrence and discards the rest — so the AI reviewer
+  reading it saw one module's guardrails and no error anywhere. Measured on the four-module
+  `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml` exposed 1 module of 4,
+  `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
+
+  A YAML renderer now declares a `PlatformRenderer.mergeShape()`: where its shared scaffold ends,
+  which column its entries sit at, and what it emits when it has nothing to say. The merge writes
+  the scaffold once and puts every module's entries under it, so a reactor produces the same
+  document a single-module build does with more entries in it. Provenance survives — the
+  `VIBETAGS-MODULE` sub-markers are still there, indented to the entries' column, because a
+  dedented `#` line terminates a block scalar and would break the very files this fixes.
+  `.plandex.yaml` merges bucket by bucket, its `locked:` / `audit:` / `privacy:` keys being
+  conditional and otherwise free to repeat in turn.
+
+  The declaration is a twin of the renderer's output, so the build checks it:
+  `YamlMergeShapeContractTest` renders each platform and fails if the declared anchor, indent or
+  empty body no longer matches, or if a generated `.yaml` ships with no declaration at all.
+  `MultiModuleYamlValidityTest` parses the merged output for real, with duplicate keys forbidden,
+  and asserts both modules' elements survive the parse — the assertion the previous string-matching
+  tests could not make, and the reason the defect lived this long. SnakeYAML is a **test-scope**
+  dependency only; the processor still ships with no YAML library on the consumer's
+  annotation-processor path.
+- **A line break in a logged value split one event into several lines in `vibetags.log`.**
+  The log is meant to be read with grep — `domain.event key=value`, one event per line — but the
+  values interpolated into it come from outside the processor: module ids and roots taken from
+  compiler options, paths read back out of sidecar and baseline files. Any CR or LF in one of them
+  ended the line early, and the tail was indistinguishable from a separate event (`CRLF_INJECTION_LOGS`,
+  22 call sites). Fixed once in the Logback encoder rather than at each call site: the pattern in
+  `VibeTagsLogger.forRoot` now wraps `%msg` in `%replace(...){'[\r\n]+', ' '}`, so the value still
+  appears in full and the event stays on one line whatever it contains.
+  `VibeTagsLoggerUnitTest#logMessageWithLineBreaks_staysOnOneLine` pins it and was confirmed red
+  before the change (3 lines written for one event).
+- **Generated output depended on the order javac enumerated the sources in.**
+  `RoundEnvironment.getElementsAnnotatedWith` returns a `Set` with no specified iteration order;
+  javac fills it by walking the round's root elements, which is the order the file manager handed
+  them over. The collector's `LinkedHashSet` faithfully preserved that, so identical sources
+  produced different `CLAUDE.md` content and a different `BuildFingerprint` depending on who
+  compiled them — Maven versus Gradle, an IDE versus a command line, two machines whose directory
+  listings differ. Committed guardrail files churned whenever a colleague built, review diffs were
+  noise, and the write cache missed for no reason.
+
+  `GuardrailModel` now sorts every bucket by `TaggedElement.path()`, the element's own value
+  identity, so output is a function of the annotations and nothing else.
+  `OutputOrderDeterminismTest` compiles the same three classes twice with the file list reversed
+  and requires byte-identical output; it fails against the previous behaviour.
+
+  **This reorders generated files once for every consumer.** The content is unchanged — only the
+  order within each section — but the next build after upgrading will rewrite them.
+
+- **The repo's own committed guardrails were stale, and nothing said so.** `.claudeignore` still
+  carried the header-only block that #328 stopped emitting, and `CLAUDE.md` and `example/` still
+  carried the pre-sort ordering. All are regenerated here. CI now runs `-Pself-annotate` in check
+  mode (`-Dvibetags.selfcheck=true`) on the JDK 21 leg, so a stale committed guardrail file is a
+  red build rather than something the next person to run the profile by hand discovers. Verified in
+  both directions: the step passes on a clean tree and exits 1 on a deliberately edited `CLAUDE.md`.
+- **A sidecar that could not be read was deleted as if it were corrupt.** `load()` returned `null`
+  both for content that failed to parse and for a file it never managed to open, and `readAll()`
+  deletes on `null`. On Windows a sibling module's `save()` renames its sidecar into place, and a
+  concurrent reader's open fails with `AccessDeniedException` while that rename is in flight — so
+  the reader deleted a valid sibling's sidecar and took that module out of the merged output until
+  it recompiled. Failing to read a file is never evidence about its content: `load()` now returns
+  an `UNREADABLE` sentinel, which `readAll()` skips exactly as it already skips a future-version
+  sidecar, and only genuinely undecodable content is pruned. This is what
+  `ModuleSidecarAsyncTest` caught on the Windows CI runner after the save-side retry below was
+  already in place.
+- **A parallel reactor build on Windows could drop a whole module's guardrails.**
+  `ModuleSidecar.save()` writes a temp file and renames it over the live sidecar; Windows refuses
+  that rename while another process holds the target open, and `readAll()` in a sibling module's
+  compilation opens exactly that file. Under `mvn -T` or `gradle --parallel` the collision is
+  reachable, and it arrived as an `AccessDeniedException` that aborted the save — so the module's
+  entire contribution was missing from the merged output for that build, which is the failure the
+  sidecar exists to prevent. The rename now retries with a short backoff (10 attempts, ≈275 ms
+  worst case) before failing, since the reader's handle is open for microseconds. Found by the new
+  `ModuleSidecarAsyncTest`, which reproduces it in under a second on Windows; with the retry
+  removed it fails again.
+- **The release workflow reported a failed deploy as a successful one.** Each of the three deploy
+  steps ran `if mvn clean deploy ... 2>&1 | tee "$log"; then echo "deployed."`, and `if` tests the
+  exit status of the *pipeline* — which is tee's, and tee always succeeds. Maven's status was never
+  read, so neither the `already exists` branch nor the failure branch could be reached by anything.
+  On 2026-08-01 a transient `Connection timed out` to `central.sonatype.com` killed the annotations
+  deploy after a nine-minute upload; the run went green and 1.0.0-RC8 published `vibetags-processor`
+  and `vibetags-bom` but not `vibetags-annotations`, so every consumer pinning that version failed to
+  resolve. The three copies are now one `.github/scripts/deploy-to-central.sh`, which reads Maven's
+  status via `PIPESTATUS`, still tolerates an already-published component, and retries transport
+  errors with backoff instead of leaving a release half-published.
+  `.github/scripts/deploy-to-central.test.sh` covers all five outcomes against a stub `mvn` and runs
+  in CI; against the old inline code it fails three of them.
+
+### Performance
+- **Three quarters of the "processor overhead" the load tests have always reported was javac's,
+  not VibeTags'.**
+
+  ![Where the processor overhead goes](../load-tests/results/_plots/processor-tax-1.0.0-RC9.png)
+
+  `MemoryVolumeStressTest` subtracts a `-proc:none` compile from a VibeTags compile and calls the
+  difference the processor's cost. It is not. `-proc:none` switches off javac's whole
+  annotation-processing subsystem — the extra rounds, the `JavacProcessingEnvironment`, the retained
+  element model — and that subtraction charges every byte of it to VibeTags.
+
+  A new `ProcessorTaxStressTest` runs a third compile with `NoOpProcessor`: annotation processing
+  on, doing nothing. At N=1000 that control costs **171 MB**. VibeTags on top of it costs **57 MB**.
+  So the ~227 MB this harness has always reported is about **4x** VibeTags' actual allocation, and
+  every release baseline in `load-tests/results/` carries the same inflation.
+
+  This also redirects optimization effort. The 171 MB is not reachable from this codebase; the
+  57 MB is the entire addressable surface. Anyone tuning against the old number was, for three
+  bytes in four, tuning javac.
+
+  On the isolated metric, measured back-to-back in one session: 0.9.7 allocates 60906 KB, RC9
+  allocates 57409 KB — **5.7 % less**, which agrees with the 4.9 % the old metric shows for the
+  same pair. The correction changes the denominator, not the direction. **VibeTags did not get
+  faster here** — the measurement got honest.
+
+  Reproducibility: two RC9 runs agreed to 0.6 % on VibeTags' share, and the javac tax reproduced to
+  1.1 % across three runs including the 0.9.7 one, as it should, since it does not depend on which
+  processor is loaded.
+
+- **A 1.0.0-RC9 load-test baseline, and a comparison that is actually a comparison.**
+
+  ![Allocation overhead vs earlier releases](../load-tests/results/_plots/alloc-release-comparison-1.0.0-RC9.png)
+
+  Measured back-to-back in one session, switching only `-Dprocessor.version`, RC9 allocates
+  **4.9 % less than 0.9.7** at N=1000, **7.3 % less** at N=500 and **10.8 % less** at N=100. It is
+  level with 1.0.0-RC1 (0.15 % apart at N=1000, inside the noise floor) — which is the expected
+  result, since nothing between RC1 and RC9 claimed an allocation win. RC9 holds the RC1
+  optimizations rather than adding to them.
+
+  The same-session part is not ceremony. Comparing RC9's capture against RC1's *recorded* baseline
+  suggests a 4.4 % regression; comparing them on one machine shows no difference. The `baseline`
+  column — javac compiling the same sources with no processor at all — had moved 9 % between those
+  two capture days. The machine changed, not the processor.
+
+  **The wall-clock and JMH figures in this baseline are not comparable to earlier releases and are
+  marked as such.** Two runs of the identical RC9 build, minutes apart, differed by up to **1.93x**
+  on the JMH hot path, and re-running 0.9.7 today reproduced its own recorded numbers only to within
+  **1.4x–3.1x**. A noise floor that size swallows nearly anything worth reading off those charts, so
+  they now carry that warning on their face instead of inviting the comparison. Allocation is
+  immune — it counts bytes through `ThreadMXBean` rather than timing anything, and reproduced to
+  within 0.6 %.
+
+  One difference does clear that noise floor and is recorded in
+  `load-tests/results/1.0.0-RC9/env.txt` rather than glossed: `resolveActiveServices` is
+  substantially slower than in 0.9.7. It stats one path per registered service to decide which are
+  opted in, and the service count reached 50 in RC9, so some increase is the cost of the platforms
+  added since. Whether it is *only* that has not been established and is not claimed here.
+
+- **The load-test regression gate was gating Maven Central, and would have passed either way.**
+  CI's `Load Tests` job runs `SignatureCaptureStressTest`, described in its own Javadoc as the guard
+  that goes red if signature capture becomes unconditional again. It ran against whatever
+  `load-tests/pom.xml` pinned `<processor.version>` to — `0.9.5`, two releases behind — so the gate
+  was measuring an artifact downloaded from Maven Central rather than the code in the pull request.
+
+  Pointing it at the right code was only half the problem. The assertion was `off < on`: enforcement
+  off must allocate less than enforcement on. Run against 0.9.5, where signature capture *is*
+  unconditional and there is nothing to save, it reports `saved=216KB (0.0% of processor overhead)`
+  out of 556 MB — and passes, because two noisy measurements of identical work land on either side
+  of each other about half the time. A coin flip guarding a 36 MB optimization.
+
+  The gate now asserts the size of the saving, not its sign: enforcement-off must save at least
+  3.0 % of the processor's own allocation overhead. Measured on this fixture, the optimization
+  delivers 6.9 % (36 MB) and its absence delivers 0.0–0.1 %, so the threshold sits between them with
+  room for run-to-run variance on either side. Verified by running it both ways: red on 0.9.5 with
+  "got 0.1 %", green on RC9 with 6.9 %.
+
+  CI now resolves the version from `vibetags/pom.xml` after installing it, so the job tests what the
+  run built regardless of what the pom pins, and fails loudly if that resolution comes back empty
+  instead of falling back to the pin.
+
+  Tooling fixed along the way: `tools/plot-results.py` matched version directories with
+  `^\d+\.\d+\.\d+$`, so every `1.0.0-RCn` baseline was captured, committed, and then silently left
+  out of every chart — the folder was there, the line was not, and nothing said so. RC directories
+  now sort correctly too (`0.9.7 < 1.0.0-RC1 < 1.0.0-RC9 < 1.0.0`). The documented JMH capture
+  command also ran every benchmark into `jmh.json`, which is why 0.9.5 has 18 entries in a file
+  every other release has 6 in; both READMEs now carry the class filter.
+
+## [1.0.0-RC8] - 2026-08-01
+
+### Added
+- **Gemini granular rules (`.gemini/rules/`), so `GEMINI.md` can stop being a second copy (#320).**
+  Four platforms could already collapse their always-loaded aggregate to a scoped-rules index when a
+  granular sibling was opted in. Gemini could not, because it had no granular service at all, so
+  `GEMINI.md` embedded every module's rules verbatim and grew linearly with the number of annotated
+  elements while `CLAUDE.md` stayed flat. In one consumer that made `GEMINI.md` 72 percent of all
+  always-loaded agent context, with no way to fix it from the consumer side. Creating `.gemini/rules/`
+  now activates per-element rule files and collapses `GEMINI.md` to the same index the other four
+  platforms use: the always-inline safety buckets stay, everything else moves to the scoped files.
+  `gemini_instructions.md` is unaffected, and absent the new directory the output is byte-for-byte
+  unchanged.
+- **`-Avibetags.module=<name>`** names the compiling module explicitly, for builds where it cannot be
+  read off the compiled sources. A build that has to fall back to a content hash while named sidecars
+  already exist now emits a `[WARNING]` naming both, instead of silently filing itself as a new
+  module. (#331)
+- **Opt-in enforcing mode (`-Avibetags.enforce`) (#284).** Guardrails stay advisory by default —
+  that is the product's posture and it is unchanged. For the families whose promise the processor can
+  *prove* from the javac element model, naming them turns "the AI was told not to" into "the build
+  will not let it": `locked`, `contract` and `publicapi` are checked against a committed
+  `.vibetags-baseline`, recorded with `-Avibetags.baseline.update=true`. Signatures are stored in
+  full and sorted, so the approval shows up as a reviewable diff rather than a hash. Method bodies,
+  comments, formatting and private members are invisible to it, so reformatting a locked file is not
+  a violation; changing a contract-frozen parameter type is. `@AICallersOnly`, `@AIStrictClasspath`,
+  `@AIThreadSafe` and `@AITestDriven` are *not* enforceable — they need call-graph or body analysis a
+  processor cannot do portably — and naming one is reported rather than silently ignored. The
+  baseline is keyed by module id, so a reactor's modules merge into it instead of overwriting each
+  other. Enforcement runs before generation, so the fingerprint short-circuit cannot skip it.
+- **Warnings on destructive rewrites.** Every multi-module defect VibeTags has shipped failed the
+  same way — well-formed output, green build, guardrails quietly gone. Two diagnostics now make that
+  class of failure announce itself: a module whose recorded elements are replaced by a *disjoint*
+  set, and a round that removes more scoped rule files than it writes. Both are deliberately narrow —
+  editing an annotation, or deleting one of many, trips neither — because a warning that fires on
+  ordinary work is one people configure away. Every removal is also a NOTE naming what went.
+- **A module that compiles as its own root now says so (#296).** A module that does not inherit
+  `-Avibetags.root` — most often because it overrides the compiler plugin's `compilerArgs` or
+  `annotationProcessorPaths` — generates a complete, correct set of files into its own directory and
+  contributes nothing to the reactor, with no NOTE and no WARNING. When an ancestor's build
+  definition *declares this directory as one of its modules* (a Maven `<module>` entry or a Gradle
+  `include`), that is now a `[WARNING]` naming the reactor root and the option to set. Gated on the
+  build declaring the relationship, so a standalone project nested inside another repository is
+  never told it is detached.
+
+### Fixed
+- **The `test-compile` round no longer deletes a module's main-source guardrails (#330).** `compile`
+  and `test-compile` are two javac invocations over disjoint sources, and both mapped to one module
+  identity — so for any module with an annotated test class, the test round rewrote the module's whole
+  region from what it alone saw and orphan-cleaned every main-source rule file. In one 5-module
+  reactor a module went from 12 scoped rule files to 1, and `mvn compile` and `mvn test` produced
+  different `CLAUDE.md` files from identical sources. Silently: the build succeeded and the output
+  stayed well-formed. Each source set now owns its own sidecar (`.vibetags-mod-core__test`) but shares
+  the module's *region* id, so one module still renders as one `VIBETAGS-MODULE` region and a
+  single-module project with annotated tests keeps its historical sub-marker-free output. Every
+  sidecar records the granular stems it wrote, and each cleanup pass spares every other sidecar's —
+  which also stops one module from deleting another module's rule files in a shared scoped directory.
+  A module's own nested `CLAUDE.md` merges across its source sets the same way.
+- **Gradle identifies modules by name again, instead of appending a duplicate content-hash region
+  (#331).** VibeTags declares itself an `aggregating` incremental processor, so Gradle hands it a
+  wrapped `ProcessingEnvironment` — and `Trees.instance` accepts only javac's own. The Tree API was
+  therefore *never* available under Gradle, module resolution returned nothing for every module, and
+  they all collapsed onto the JVM working directory (`~/.gradle/workers`, under neither the module nor
+  the reactor). A dual-build project got a second complete set of regions under a hash id, restored on
+  every later build from a gitignored sidecar so `git checkout` could not fix it. Identity now falls
+  back to `Elements.getFileObjectOf` (Java 18+), which survives the wrapper, so Gradle and Maven agree
+  on module names and produce byte-identical output.
+- **The lean indexed reactor root keeps the always-on safety tier inline (#332).** The README promises
+  that when granular rules are on, the root keeps `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit` and `@AISecure` inline and indexes only the rest. In the reactor-lean layout
+  (`.vibetags-root-index` + per-module `.claude/rules/`) it kept *nothing*: every module's region
+  collapsed to a single pointer sentence, so a locked file's guardrail only loaded once the agent
+  opened the very file it protects — by which point it has become a comment. Each module now
+  contributes its safety digest inline, followed by the pointer; the verbose per-element tier still
+  lives only in the scoped files. A module with nothing in the safety tier contributes just the
+  pointer, so no empty shell appears. The context saving is largely preserved (one real reactor went
+  85 → 141 lines, against 537 for the fully merged root).
+- **The lean indexed root no longer bloats `.github/copilot-instructions.md` (#319).** Two things
+  were wrong where a reactor keeps Copilot's aggregate *and* its granular directory at the root while
+  each module keeps its own `.claude/rules/`. The shared `.github/instructions/` only ever retained
+  the last module's files, because cleanup deleted every rule it had not written itself — fixed by
+  the same cross-module exclusion as #330. And every module's contribution repeated its preamble
+  including an empty "Locked Files" heading, so a file whose entire purpose is to be a lean index
+  grew on a version bump. Indexed output now omits the locked section (and Claude's
+  `<locked_files/>`) when nothing is locked. Full, non-indexed output is byte-for-byte unchanged.
+  `example-multimodule-indexed/` now carries this layout so CI covers it.
+
+### Changed
+- **Test coverage for reactors.** `example-multimodule/` used 10 of the 44 annotations and 3 of the
+  ~50 services, so every renderer defect that only appears in the sidecar merge had nothing standing
+  in its way — which is exactly how #319 reached a release. It now carries a `showcase/` module with
+  all 44 annotations and opts the reactor root into every non-granular service, and CI asserts both
+  counts. `example-multimodule-indexed/` gained Copilot's aggregate and granular directory at the
+  root, the layout #319 was reported against.
+- **Dependencies:** PMD 7.24.0 → 7.26.0, maven-pmd-plugin 3.26.0 → 3.28.0, maven-jar-plugin 3.4.2 →
+  3.5.1, central-publishing-maven-plugin 0.10.0 → 0.11.0. `vibetags/build.gradle` had drifted behind
+  `pom.xml` on jspecify, logback and JUnit; the two builds share one generated `CLAUDE.md`, so a
+  version split makes the output depend on which build ran last. Resynced. SLF4J stays at 2.0.18 (the
+  only newer version is `2.1.0-alpha1`), and async-test-lib stays at 1.6.0 — it is not on Maven
+  Central and CI builds it from the upstream git tag, so the 1.7.0 that
+  `versions:display-dependency-updates` reports is a local install with no tag behind it.
+
+## [1.0.0-RC7] - 2026-07-29
+
+### Added
+- **Cross-module rule mirroring (`.vibetags-mirror`).** Guardrails are scoped to the module that owns
+  the annotated source, so a reactor that centralises its tests in a separate module left the code
+  actually exercising `@AILocked` bridges and `@AIPrivacy` key material with no rules in reach — and
+  silently, since a host tool that discovers rule directories by walking up from the edited file just
+  finds nothing. The consuming module now opts in by dropping a `.vibetags-mirror` file in its own
+  directory (optionally naming the source modules, and the globs to append); each source module then
+  writes its granular rules into the target's scoped-rules directories. The target needs no `@AI*`
+  annotations of its own; the mirrored file is the source module's rule verbatim with the target's
+  globs added to its frontmatter. Files are namespaced `mirrored-<sourceModuleId>-…`, so modules
+  compiling in separate javac invocations never clean up each other's output nor the target's own
+  rules, and stale mirrors are removed when their annotations go away. The config is registered as a
+  watched input in `.vibetags-cache` — it lives in a module the compiling module's fingerprint cannot
+  see — so editing it reliably regenerates. Check mode reports missing or stale mirrored files as
+  drift. Absent the opt-in, output is byte-for-byte unchanged. Demonstrated end-to-end by
+  `example-multimodule/tests/` and asserted in CI. (#312)
+- **Five evidence-based annotations (39 → 44).** Reverse-engineered from guardrails real maintainers
+  wrote *by hand* across 225 open-source `CLAUDE.md` files: a hand-written AI rule is a constraint
+  someone wished they could express in code, so a rule with no annotation was a gap in the library.
+  Four of the five close the same structural hole — VibeTags owned the *positive* pole of an axis and
+  was missing the *negative* one, and an AI reading the **absence** of a tag reliably does the wrong
+  thing. Evidence, frequency counts, and the candidates that did not make the cut are in
+  `docs/proposed-annotations.md`.
+  - **`@AIGenerated(from, regenerateWith, editInstead)`** — machine-generated code whose hand edits
+    are silently overwritten, plus where the change actually belongs. A *redirect* rather than a
+    wall: `@AILocked` can only say "stop", which makes an agent give up or route around the
+    obstacle, and `@AIIgnore` is wrong in the opposite direction because generated types must stay
+    readable. (35 repos, all 6 batches)
+  - **`@AILoadBearing(invariant, breaksIf, suppressAudit)`** — code that looks wrong, redundant, or
+    over-defensive and is deliberate. Unlike `@AILocked`, edits are welcome while the invariant
+    survives; it also covers the *intentional omission* case nothing else can express. (31 repos)
+  - **`@AIBannedApi(forbidden, useInstead, reason)`** — named symbols forbidden at this element even
+    though they compile. Hosted on the consumer and pointing outward, because the symbols teams ban
+    are stdlib or third-party and cannot be annotated. (27 repos)
+  - **`@AIThreadAffinity(value, thread, marshalVia, symptomIfViolated)`** — safe on *exactly one*
+    thread, the inverse of `@AIThreadSafe`. Closes a genuine correctness hole: the library previously
+    forced either a false statement or silence, and an agent asked to "make this thread-safe" adds a
+    lock — precisely the wrong fix. (12 repos)
+  - **`@AIKeepInSync(mirrors, reason, enforcedBy)`** — duplicated at named sites that must move
+    together; the element is free to change and the failure mode is a *partial* change that desyncs
+    a mirror no compiler checks. The most-written rule in the entire corpus. (41 repos)
+
+  All five are wired through every dispatch point: collector, build fingerprint, formatter registry,
+  the aggregate renderers (Claude XML blocks, Cursor/Windsurf/Zed/Copilot/Gemini sections),
+  granular rule files, `llms.txt`/`llms-full.txt`, Aider, Sweep and Open Interpreter — plus 15 new
+  compile-time validation warnings, plainly including `@AIThreadAffinity` + `@AIThreadSafe` and
+  `@AIGenerated` + `@AIIgnore`.
+
+### Changed
+- **Granular rule files no longer repeat an identical guardrail sentence per element.** For
+  annotations that carry little or no per-element configuration (`@AIPrivacy`, `@AISecure`,
+  `@AIAudit`, …) the rule line is a compile-time constant, so it repeated down the file once per
+  annotated element — and repetition inside an always-loaded file is a good way to make a rule stop
+  registering. Within a section covering two or more elements, the lines every stanza shares are now
+  hoisted once under the section heading and pluralized, with each element keeping only what differs
+  (typically its reason); elements whose whole stanza is shared collapse into a single
+  `- **Applies to**:` list. This works across owners inside a role/topic file — the case the issue
+  measured — where files are now organised by topic with fully-qualified element headings. A section
+  covering a single element, or one whose stanzas share no lines, is emitted byte-for-byte as before.
+  (#313)
+- **`AGENTS.md` can now opt in explicitly via VibeTags markers.** `AGENTS.md` is still only
+  generated when it is the sole AI config file present, because it is so often kept as a
+  hand-written pointer to another tool's file and clobbering that would be destructive. That rule
+  meant a project using both Claude and Codex could not have a generated `AGENTS.md` at all. An
+  `AGENTS.md` that already contains a `VIBETAGS-START` / `VIBETAGS-END` pair is now treated as an
+  active write target regardless of how many other AI config files exist: the markers prove
+  VibeTags authored the block, and `GuardrailFileWriter` only ever replaces the region between
+  them, so hand-authored content outside the markers is still preserved. Unmarked pointers are
+  left byte-for-byte untouched exactly as before, and the skipped-file NOTE now names the escape
+  hatch.
+
+## [1.0.0-RC6] - 2026-07-22
+
+### Added
+- **Lean indexed root aggregate for multi-module reactors (`.vibetags-root-index`).** By default the
+  reactor-root aggregate files (`CLAUDE.md`, `.cursorrules`, `.windsurfrules`,
+  `.github/copilot-instructions.md`) embed a full verbatim copy of every module's guardrails via the
+  sidecar merge. In a reactor where each module already carries its own scoped rules (`.claude/rules/`,
+  `.cursor/rules/`, …), that root block is a second copy of content the AI tool already auto-loads from
+  the module files. Touch `.vibetags-root-index` at the reactor root to opt into a **lean index**: for
+  the four aggregates that have a granular sibling, the merge replaces each module's embedded body with
+  a short pointer to that module's own scoped rules (and/or its own aggregate file), still wrapped in
+  the `VIBETAGS-MODULE` sub-markers. The root module's own body stays inline, and aggregates without a
+  granular sibling (`GEMINI.md`, `AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+  A losslessness guard links a module only when it actually emits its own per-module output for that
+  service, so a module with no output of its own keeps its embedded body and nothing is dropped. The
+  opt-in registers as the `root_index` service and folds into the build fingerprint, so toggling it
+  reliably regenerates; check mode mirrors it automatically. (#298, #304)
+
+## [1.0.0-RC5] - 2026-07-21
+
+### Added
+- **Role/topic-based granular rules (`.vibetags-roles`).** By default VibeTags writes one scoped
+  rule file per annotated class (FQN-named, single-class glob). Drop a `.vibetags-roles` config at
+  the repo (or module) root — `name = comma-separated globs and/or fully-qualified names` — and
+  matching elements are instead grouped into a few human-named topic files (e.g. `api-endpoints.md`
+  scoping `**/*Controller.java`) with a multi-glob `paths:`/`globs:` frontmatter, which is the layout
+  Claude Code's and Cursor's docs recommend. Routing is **first-match-wins** (config order);
+  elements matching no role keep their per-class file (non-lossy); a class that doesn't fit its glob
+  can be pulled into a role by listing its **FQN** on the role line (no new annotation). Applies to
+  every granular platform, composes with the scoped-rules index, and works per-module. The config's
+  content hash is folded into the build fingerprint so edits regenerate. When `.vibetags-roles` is
+  absent, granular output is byte-for-byte unchanged.
+- **Per-module (nested) output for multi-module reactor builds.** Opt into a guardrail file (or a
+  granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and
+  VibeTags writes that module's own guardrails there, scoped to that module's annotations, alongside
+  the merged reactor-root file. This is the idiomatic, context-optimal layout for tools that
+  auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules, Copilot `applyTo`).
+  Covers both aggregate files and granular directories, so a module can be fully self-contained; the
+  scoped-rules index composes per-module too (a module that opts into both its aggregate and its
+  granular dir gets an indexed aggregate). The reactor-**root** files and the per-module sidecar
+  aggregation are **unchanged and orthogonal** — the sidecar still merges every module into the root
+  file; per-module files are written directly from each module's own content, with no sidecar and no
+  cross-module merge. Opt-in is file/dir existence in the module directory, exactly like the root;
+  the module's own opt-in set is folded into the build fingerprint so a freshly-touched module file
+  isn't skipped by the short-circuit. Nothing is written for a module that doesn't opt in, and
+  single-module builds are unaffected. `example-multimodule/` demonstrates it end-to-end (its `cli`
+  module carries its own `CLAUDE.md`) and CI asserts the module file is module-scoped while the root
+  still merges all modules.
+- **Aggregate files collapse to a scoped-rules index when their granular sibling is also opted in.**
+  When a project opts into both a platform's always-loaded aggregate file **and** its glob-scoped
+  granular directory — `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`,
+  `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`
+  — the aggregate no longer duplicates every element's full guardrails. Instead it keeps only the
+  always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit`, `@AISecure`) and emits a lightweight **scoped-rules index**: one pointer line per
+  element to its scoped rule file. The scoped files carry the full per-element detail, so nothing is
+  lost — it stops being rendered twice, which keeps the high-value always-on guardrails from being
+  diluted in the model's context window. `CLAUDE.local.md` follows `CLAUDE.md`'s state (it mirrors
+  it). Platforms that merely reuse a renderer's format but read no scoped directory (Cline, Firebase,
+  Junie, Void, the Claude skill) are unaffected and always render in full. **Opting into only the
+  aggregate (the common case) is byte-for-byte unchanged** — the index appears only under dual
+  opt-in.
+
+### Changed
+- **Generated `CLAUDE.md` coalesces repeated identical `@AITestDriven` stanzas.**
+  ([#283](https://github.com/PIsberg/vibetags/issues/283)) When two or more `@AITestDriven`
+  elements share the same guardrail values, the `<test_driven_requirements>` section now emits a
+  single `<test_driven_default …>` block plus an `<applies-to>` member list instead of one full
+  `<element>` stanza per class. Mirror-convention test locations render as a
+  `test_location="src/test/java/{path}Test.java"` template; elements whose values diverge keep
+  their individual stanza. Same guardrail semantics, far fewer tokens spent on boilerplate — so
+  the high-value guardrails aren't diluted in the AI's context window.
+
+## [1.0.0-RC4] - 2026-07-18
+
+### Fixed
+- **Multi-module reactor builds no longer lose sibling modules' guardrails (last-writer-wins).**
+  ([#278](https://github.com/PIsberg/vibetags/issues/278)) Module identity for sidecar aggregation
+  was derived from the JVM working directory, which in an in-process Maven/Gradle reactor build is
+  the reactor root for *every* module — all modules collapsed onto one `_root_` sidecar and the
+  monolithic outputs (`CLAUDE.md`, `.cursorrules`, `llms.txt`, …) only kept the last module
+  compiled. A new `ModuleRootResolver` now derives the identity from the compiled sources (walking
+  up from a source file to the nearest `pom.xml`/`build.gradle(.kts)`, javac Tree API, graceful
+  fallback to the working directory under other compilers). Additionally, compiles that see no
+  annotations (Maven's test-compile pass) no longer overwrite the module's sidecar, and the sidecar
+  format was bumped to v2 so stale v1 files with the broken identity are pruned automatically on
+  the first build after upgrading.
+- **`GuardrailFileWriter.cleanupGranularDirectory()` mishandled multi-dot extensions.** It derived a
+  granular file's qName via `lastIndexOf('.')`, which is wrong for extensions like `.instructions.md`
+  (two dots) — it would strip only the last segment and never match the write round's exclude set,
+  so a file just written could be immediately scrubbed as orphaned on the same compile. Fixed to
+  strip the known extension length instead; added a regression test.
+- **Generated markdown outputs no longer contain trailing whitespace.** The `@AIAudit`,
+  `@AIContext`, and `@AIIgnore` formatters emitted a trailing space before the newline on list
+  items (e.g. ``* `com.example.Foo` ``), which made whitespace-normalizing tools (pre-commit
+  hooks, editors) fight the generator over committed output files.
+
+### Added
+- **`example-multimodule/`** — a three-module Maven reactor (core → engine → cli, annotation
+  processor active in every module, shared VibeTags root via
+  `${maven.multiModuleProjectDirectory}`) demonstrating cross-module guardrail aggregation; CI
+  builds it and asserts all modules' entries survive in the merged output.
+- **Four new AI-platform outputs**: `CLAUDE.local.md` (Claude Code local override, same content as
+  `CLAUDE.md`), `.claude/rules/*.md` (Claude Code granular rules, `paths:` frontmatter),
+  `.claude/skills/vibetags-guardrails/SKILL.md` (a Claude Code Skill with required `name`/
+  `description` frontmatter), and `.github/instructions/*.instructions.md` (GitHub Copilot granular
+  rules, `applyTo:` frontmatter). All four are new formats of already-supported platforms, so the
+  documented AI-platform count is unchanged.
+
+## [1.0.0-RC3] - 2026-07-17
+
+### Security
+- **Escape interpolated values in all structured outputs.** Annotation attribute text (`reason`,
+  `note`, `focus`, …) and element paths are now escaped per format before being written into the
+  structured guardrail files — XML (`CLAUDE.md`), JSON (`.mentatconfig.json`, `.vibetags-locks`),
+  and double-quoted YAML (`sweep.yaml`, `.plandex.yaml`, `ellipsis.yaml`) — via a new
+  `content.Escape` helper. Previously a value containing `<`, `"`, `\`, or a newline (whether from a
+  hostile annotation or simply a method signature with generics such as `Map<String, Object>`)
+  could break out of the document structure or forge entries (e.g. a fake `<file>` in `CLAUDE.md`,
+  which AI agents read as a locked-file directive). Markdown/plain-text outputs are unchanged
+  (free text, no structure to break). New `OutputEscapingSecurityTest` proves a hostile reason
+  cannot break out of the XML/JSON/YAML structure. This also fixes a latent correctness bug where
+  generic signatures produced malformed XML in `CLAUDE.md`. YAML flow-list items (e.g. the
+  `@AIAudit` `checkFor` list in `.plandex.yaml`) are now individually quoted and escaped so an item
+  containing `]`, `,`, or `"` cannot break out of the sequence.
+- **Hardened the locked-files GitHub Action** against git option-injection: reject a base ref that
+  starts with `-` and terminate the `git diff` argument list with `--`.
+- **Atomic writes now use a secure random staging file.** `GuardrailFileWriter` previously staged
+  output at the predictable path `<file>.vibetags-tmp` and followed symlinks, so a pre-planted
+  symlink there (local workspace write access) could redirect a write to an arbitrary file. It now
+  stages via `Files.createTempFile` (random name, `O_EXCL` creation) in the target directory and
+  cleans up on failure.
+- **Documented the threat model** in `docs/SECURITY.md` (compile-time only, no runtime surface;
+  generated files are AI instructions derived from source annotations — review annotation text as
+  code) and refreshed the supported-versions table to 1.0.x.
+
+## [1.0.0-RC2] - 2026-06-28
+
+Second release candidate for 1.0. Rolls up everything since RC1: ten new AI platforms (43 → see
+project facts), the `AGENTS.md` sole-file fallback, optional `reason` on the eleven marker
+annotations, processing-path performance work, and a documentation consistency pass with an
+enforced single source of truth for the project counts.
+
+### Documentation
+- **Single source of truth for the project counts.** The README "At a glance" line now states the
+  two headline numbers once — **39 annotations**, **37 AI platforms** — and every other doc links
+  back to it instead of restating them. Fixed stale/contradictory figures that had drifted across
+  the README, `docs/ARCHITECTURE.md`, and `example/README.md` (variously claiming 15/24/27 annotations
+  and 27/40+/43 platforms). New `ProjectFactsConsistencyTest` enforces both: the documented annotation
+  count must equal the number of `@interface` types, and the documented platform count must equal the
+  number of distinct platforms enumerated in the README list — so the docs can no longer silently
+  drift from the code.
+- **The example now passes a `reason` to all eleven marker annotations** (`@AIStrictTypes`,
+  `@AIPublicAPI`, `@AIPure`, `@AISandboxOnly`, `@AILegacyBridge`, `@AISchemaSafe`,
+  `@AIStrictExceptions`, `@AIStrictClasspath`, `@AIInternationalized`, `@AIParallelTests`,
+  `@AIPrototype`), showcasing the cross-session rationale capability. The example already exercises
+  all 39 annotations.
+- **The `vibetags-usage` skill now demonstrates `reason` on every marker annotation** (its examples
+  previously showed the bare markers).
+- **Added an ArchUnit badge** to the README, linking to `ArchitectureRulesTest` (the architecture
+  fitness functions run as part of the standard build).
+- **Closed gaps in the example's CI verification.** Cline (`.clinerules`), JetBrains Junie
+  (`.junie/guidelines.md`), and Firebase AI (`.idx/airules.md`) were opted-in/generatable but not
+  checked by the `build.yml` "Verify Generated AI Config Files" step — and Firebase's output was
+  never even committed. The Firebase output is now committed and all three are added to the verify
+  list (both the Maven and Gradle legs). The granular per-class platforms remain verified via one
+  representative file each.
+
+### Added
+- **Optional `reason` on the eleven marker annotations** — `@AILegacyBridge`, `@AIStrictClasspath`,
+  `@AIInternationalized`, `@AIPublicAPI`, `@AISchemaSafe`, `@AIStrictExceptions`, `@AIStrictTypes`,
+  `@AIParallelTests`, `@AISandboxOnly`, `@AIPure`, `@AIPrototype`. These previously carried no
+  attributes, so they could only emit a canned, generic instruction. They now accept an optional
+  `reason` (defaulting to `""`, so existing usages compile unchanged) that is surfaced in the
+  generated output — appended to the rule text on the markdown/plain-text platforms and as a
+  `<reason>…</reason>` element in `CLAUDE.md`. The point is to **carry the *why* across AI
+  sessions**: a marker preserves only a verdict ("be strict here"), but the rationale ("currency
+  math broke in INC-4412 when a double leaked in") is exactly the non-inferable context a later
+  agent — which no longer has the originating session — needs to weigh or safely override the
+  rule. Nothing is emitted when `reason` is left blank. Covered by `MarkerReasonEndToEndTest`.
+
+### Performance
+Four changes to the per-round processing and rendering paths, all behaviour-preserving (every one
+of the 1033 unit tests passes unchanged):
+
+- **Skip `getElementsAnnotatedWith` for annotation types that aren't present** — in both
+  `AnnotationCollector.collect()` *and* `AnnotationValidator.validate()`. Both consult the set of
+  annotation types javac reports present this round (the `annotations` argument of `process()`) and
+  query only those. Previously every round scanned all root elements ~39 times in collect and a
+  further ~30 times in validate; for a project that uses a handful of annotation types, ~60 of those
+  scans returned empty. Querying an absent type returns empty, so skipping it is equivalent.
+- **Skip Tree API position resolution unless the lock report is enabled.** Source positions for
+  `@AILocked` elements (javac Compiler Tree API) are consumed only by the `.vibetags-locks` report;
+  when it isn't opted in, that per-element work is skipped entirely.
+- **Pre-size renderer output buffers from the collected element count.** The nine large O(N) prose
+  renderers (Cursor, Claude, Gemini, Qwen, Copilot, Windsurf, Zed, Aider, llms.txt/-full) now start
+  their `StringBuilder` at an estimate derived from the element count instead of a fixed 4 KB,
+  avoiding repeated grow-and-copy reallocation on large projects.
+
+- **Measured impact** (`MemoryVolumeStressTest`, original 1.0.0-RC1 vs optimized, captured
+  back-to-back on the same machine — see `load-tests/results/1.0.0-RC1/`): processor-attributable
+  **allocation overhead drops ~4–5 % at N ≥ 500 annotated classes** (211.5 → 202.1 MB at N = 1000,
+  ≈ 9 MB less heap pressure per 1000-class module) and 16–37 % at small N where the avoided
+  per-round work dominates. The deterministic allocation win is driven mainly by the Tree API skip
+  and the collect-scan skip; the validator-scan skip is primarily a *CPU / scan-count* reduction
+  (~60 → ~k full element scans per round) and the buffer pre-sizing trims resize churn — neither
+  adds much to the byte count. Wall-clock overhead is unchanged within run-to-run variance: on
+  commodity hardware the synthetic `processorTime − baselineTime` delta is noise-dominated (baseline
+  runs occasionally even measured negative overhead), so deterministic allocation is the metric of
+  record.
+
+  ![Allocation overhead, baseline vs optimized](../load-tests/results/_plots/alloc-before-after-1.0.0-RC1.png)
+
+### Changed
+- **`AGENTS.md` is now only generated when it is the *sole* AI config file present.** When
+  `AGENTS.md` coexists with any other opted-in AI config file (e.g. `CLAUDE.md`, `.cursorrules`),
+  the `codex` service is dropped during `resolveActiveServices()` and `AGENTS.md` is left
+  untouched — which also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`)
+  it would otherwise drive.
+
+  **Why this changed:**
+  - `AGENTS.md` is no longer Codex-specific — it has become a *de facto cross-tool standard* that
+    many agents read. Unlike a tool-specific file such as `.cursorrules`, its mere presence is a
+    weak signal of intent: it does not tell us *which* tool put it there or what it is for.
+  - In practice, once a repo adopts more than one AI tool, teams routinely reduce `AGENTS.md` to a
+    thin **pointer** — `See CLAUDE.md` or an `@import` — so a single source of truth lives in one
+    file and the rest reference it. VibeTags writes between `# VIBETAGS-START/END` markers, but a
+    hand-authored pointer typically has no markers, so the previous behaviour appended a full
+    generated block to it and effectively buried the human's pointer.
+  - The opt-in model elsewhere relies on a file being *unambiguously* tied to one platform. For
+    `AGENTS.md` that assumption no longer holds, so "file exists ⇒ manage it" was too aggressive.
+    The narrower rule — *manage it only when nothing else has opted in* — keeps the convenience for
+    single-tool projects (where `AGENTS.md` clearly is the guardrail file) while refusing to clobber
+    a likely pointer in multi-tool projects. Users who genuinely want VibeTags to own `AGENTS.md`
+    can still get that by opting in to `AGENTS.md` alone.
+  - The Codex sidecar (`.codex/*`) is gated on the same `codex` activation, so it follows
+    `AGENTS.md`: skipping the prose pointer while still rewriting Codex's operational config would
+    be an inconsistent half-active state, so the whole Codex platform is treated as one unit.
+
+  Covered by `AgentsMdSoleFallbackTest` in both directions (sole-file → written, coexisting →
+  skipped); the example now ships `AGENTS.md` as a hand-authored pointer to `CLAUDE.md` to
+  demonstrate the rule, and CI asserts it is left untouched.
+
+### Added
+- **10 new generated platform targets** (43 platforms total), all opt-in via the existing
+  file-presence model and adding zero overhead to projects that don't enable them:
+  - **AI pull-request reviewers** — `.coderabbit.yaml` (CodeRabbit `reviews.path_instructions`),
+    `.pr_agent.toml` (Qodo/Codium PR-Agent `extra_instructions`), and `ellipsis.yaml`
+    (one `pr_review.rules` entry per guardrail). These flag PRs that violate VibeTags guardrails
+    even when a local agent ignores them.
+  - **Context-packer ignore files** — `.repomixignore`, `.gitingestignore`, `.gptignore`,
+    `.ghostcoderignore`, `.piecesignore` (reuse the existing `IgnoreFileRenderer`).
+  - **Void Editor** — `.void/rules.md` (mirrors the `.cursorrules` markdown layout).
+  - **Roo Code custom mode** — `.roomodes` defining a "VibeTags Architect" mode whose
+    `customInstructions` carry the project guardrails.
+  - The reviewer/mode configs share a `GuardrailInstructionBlock` helper that reuses the
+    existing per-annotation formatters, so their content stays in lock-step with the rest of
+    the generated guardrails. New `NewPlatformsV4EndToEndTest` covers all ten; CI now resets,
+    regenerates, and verifies them in the example project on both the Maven and Gradle legs.
+
+### Documentation
+- Updated the platform lists and counts (now **43 platforms**) across `README.md`, root
+  `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/WORKFLOW.md`, `example/README.md`, and the
+  `vibetags-usage` skill (opt-in commands + Supported Output Files table).
+
+## [1.0.0-RC1] - 2026-06-13
+
+First release candidate for 1.0. All on-disk machine formats are now version-stamped, the
+build fingerprint folds in the processor version, and the public API surface is frozen ahead
+of the stable 1.0.0 release.
+
+### Added
+- **`Automatic-Module-Name` in both jar manifests** (`se.deversity.vibetags.annotations`,
+  `se.deversity.vibetags.processor`) so JPMS consumers get a stable module name instead of a
+  filename-derived automatic one. `Implementation-Version` is now also written to the manifest
+  (Maven and Gradle builds).
+- **Format-version fields on every on-disk machine format** ahead of 1.0:
+  - `.vibetags-cache` carries a `# format: 1` header; caches written in a newer, unknown format
+    are discarded wholesale instead of mis-parsed.
+  - `.vibetags-mod-*` sidecars: the existing `# version=1` header is now *enforced* on load —
+    a sidecar written by a newer processor is skipped (never deleted) in mixed-version
+    multi-module builds.
+  - `.vibetags-locks` starts with a `{"type":"format","version":1}` JSON record; consumers that
+    filter on `type == "locked"` (like the bundled GitHub Action) are unaffected.
+
+### Changed
+- **The processor version is now part of the build fingerprint** (`BuildFingerprint`). Upgrading
+  VibeTags invalidates the previous `.vibetags-cache` fingerprint, so a release that renders
+  different content from unchanged annotations can no longer be skipped by the short-circuit.
+  Expect one full regeneration on the first compile after any upgrade.
+
+### Fixed
+- **`@AIInputSanitized` / `@AISecureLogging` on method parameters now emit the fully qualified
+  element path** (e.g. `com.example.Foo.exportKeys(java.lang.String)#filePath`) instead of the
+  bare parameter name, which made same-named parameters on different methods indistinguishable
+  (#212). **Migration note:** generated guardrail files containing parameter-level entries will
+  show a one-time diff on the first compile after upgrading; CI check mode (`-Avibetags.check=true`)
+  will flag this as drift until the files are regenerated.
+
+### Build
+- Bumped `spotbugs-maven-plugin` 4.9.8.3 → 4.10.2.0 (its JSpecify-aware analyzer found a missing
+  null guard in `JunieRenderer`, now fixed) and `jacoco-maven-plugin` 0.8.14 → 0.8.15.
+
+### Documentation
+- Documented all 39 annotations consistently: `CLAUDE.md` (annotation table, semantics, and
+  validation warnings for the 12 v0.9.9 annotations) and `USAGE.md` (new sections for
+  `@AIFeatureFlag`, `@AISecure`, and the twelve v0.9.9 precision guardrails).
+
+## [0.9.9] - 2026-05-31
+
+### Added
+- **12 new AI guardrail annotations** with compile-time validation rules, formatters, and showcase examples.
+- **Firebase AI support** with `.idx/airules.md` output integration.
+- **Static analysis enhancements**: Checkstyle and Error Prone integrated into the build. Replaced inline PMD suppressions with a central `pmd-ruleset.xml`.
+- **CI/CD**: Added Windows and macOS cross-platform test jobs, bumped Java target to 21.
+
+### Refactored
+- Extracted duplicate formatter logic to satisfy CPD.
+- Improved resilient sidecar and cache logic for different filesystem roots and symlinked temp dirs.
+
+### Performance
+- Isolated parallel file writes from the host `commonPool`.
+
+### Fixed
+- Disabled `UnsafeFinalization` check for JDK 26 compatibility.
+- Ensure consumer build never fails on guardrail errors by downgrading failures to WARNING.
+- Achieved full branch coverage for all 12 V5 AI guardrail annotations.
+
 ## [0.9.8] - 2026-05-25
 
 ### Added
@@ -706,7 +1944,20 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v0.9.8...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/PIsberg/vibetags/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC10...v1.0.0
+[1.0.0-RC10]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC9...v1.0.0-RC10
+[1.0.0-RC9]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...v1.0.0-RC9
+[1.0.0-RC8]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC7...v1.0.0-RC8
+[1.0.0-RC7]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC6...v1.0.0-RC7
+[1.0.0-RC6]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC5...v1.0.0-RC6
+[1.0.0-RC5]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC4...v1.0.0-RC5
+[1.0.0-RC4]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC3...v1.0.0-RC4
+[1.0.0-RC3]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC2...v1.0.0-RC3
+[1.0.0-RC2]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC1...v1.0.0-RC2
+[1.0.0-RC1]: https://github.com/PIsberg/vibetags/compare/v0.9.9...v1.0.0-RC1
+[0.9.9]: https://github.com/PIsberg/vibetags/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/PIsberg/vibetags/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/PIsberg/vibetags/compare/v0.9.5...v0.9.7
 [0.9.5]: https://github.com/PIsberg/vibetags/compare/v0.8.0...v0.9.5
