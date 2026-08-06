@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-06
+
 ### Fixed
 - **Granular rule files at a reactor root are merged across modules instead of overwritten
   ([#365](https://github.com/PIsberg/vibetags/issues/365)).** A role declared in a reactor-root
@@ -1893,7 +1895,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/PIsberg/vibetags/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC10...v1.0.0
 [1.0.0-RC10]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC9...v1.0.0-RC10
 [1.0.0-RC9]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC8...v1.0.0-RC9
