@@ -829,3 +829,4 @@ VibeTags is built and maintained by a single developer in his spare time. If it 
 This project is licensed under the [MIT License](LICENSE).
 
 **Built with ❤️ for safer AI-assisted development**
+
