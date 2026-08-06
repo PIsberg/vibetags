@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'se.deversity.vibetags'
-version = '1.0.0'
+version = '1.0.1'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -20,7 +20,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'se.deversity.vibetags'
             artifactId = 'vibetags-processor'
-            version = '1.0.0'
+            version = '1.0.1'
             from components.java
 
             pom {
@@ -78,7 +78,7 @@ repositories {
 dependencies {
     // Annotation classes the processor scans for; backwards-compatible transitive
     // dep so existing consumers still get the annotations via vibetags-processor.
-    api 'se.deversity.vibetags:vibetags-annotations:1.0.0'
+    api 'se.deversity.vibetags:vibetags-annotations:1.0.1'
 
     // JSpecify null annotations (@NullMarked, @Nullable, @NonNull)
     implementation 'org.jspecify:jspecify:1.0.1'
@@ -90,7 +90,7 @@ dependencies {
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.5.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
     // Concurrency-test harness, matching pom.xml. Resolves from Maven Central like any other dep.
-    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.0-RC8'
+    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.7.1'
     testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
     // Test-only, matching pom.xml. The processor writes six YAML documents but must not gain a

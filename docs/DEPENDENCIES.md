@@ -122,7 +122,6 @@ Checked 2026-08-04 against `maven-metadata.xml` on repo1.maven.org, not against 
 | `maven-compiler-plugin` | 4.0.0-beta-4 | Beta. |
 | `maven-surefire-plugin` | 3.6.0-M1 | Milestone. |
 | `maven-jar-plugin`, `maven-source-plugin` | 4.0.0-beta-1 | Beta. |
-| `se.deversity.async-test-lib` | 1.7.0-RC8 | `versions:display-dependency-updates` offers 1.7.0. That version exists only as a local install on the maintainer's machine and is a 404 on Central, so taking the suggestion breaks every other environment. Check the metadata URL before believing the plugin here. |
 
 Re-run the check with, from `vibetags/`:
 
