@@ -128,7 +128,10 @@ projects are unaffected: one module is the whole project, so the first compile a
 
 An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits
 one JSON object per `@AILocked` element: element path, kind, source file, 1-based
-`startLine`/`endLine`, and reason. The first JSON record is `{"type":"format","version":N}` so
+`startLine`/`endLine`, and reason. `file` is **relative to the VibeTags root**, because the report is
+meant to be committed and an absolute path would make it differ on every machine and every CI runner;
+a source the root cannot claim (generated output, another drive, an in-memory JSR 199 unit) is
+reported verbatim instead. The first JSON record is `{"type":"format","version":N}` so
 consumers can reject reports written in a future, incompatible schema (filter on `type == "locked"`
 to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a
 `.json` file, so it rides the module-sidecar merge in multi-module builds instead of
