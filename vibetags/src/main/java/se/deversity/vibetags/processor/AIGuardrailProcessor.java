@@ -22,9 +22,11 @@ import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
+import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.MethodBodyGuardrailScanner;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import org.slf4j.Logger;
@@ -118,6 +120,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
     /**
+     * Warns about guardrail annotations inside method bodies (local and anonymous declarations),
+     * which JSR 269 processing cannot see at all — without this they are a silent no-op.
+     */
+    private MethodBodyGuardrailScanner bodyScanner = MethodBodyGuardrailScanner.noop();
+
+    /**
      * Module root directory <em>and</em> source set of the compilation being processed, resolved
      * from the sources of the first non-empty processing round (see {@link ModuleRootResolver}).
      * {@code null} until resolved — and stays {@code null} when no compiler API exposes the source
@@ -205,12 +213,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv);
+        this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
         String useCache = options.getOrDefault("vibetags.cache", "true");
         if ("false".equalsIgnoreCase(useCache)) {
             this.writeCache = null;
         } else {
             this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+            // Options that shape output without being part of the annotation fingerprint: the
+            // project name (the llms.txt H1) and the module override (the region a reactor merge
+            // files this module under). Bound as the cache's run context so an option edit
+            // regenerates instead of short-circuiting past the change (the fingerprint check
+            // itself lives in the step-order-locked generateFiles and stays untouched).
+            this.writeCache.bindContext(ContentHash.of(
+                "project=" + this.projectName + ";module="
+                    + (this.moduleIdOverride == null ? "" : this.moduleIdOverride)));
         }
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
@@ -233,6 +250,22 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // see the annotations.
         try {
             if (roundEnv.processingOver()) {
+                if (roundEnv.errorRaised()) {
+                    // An earlier round reported an ERROR: any remaining source-generation rounds
+                    // were abandoned, so the collected annotation set may be incomplete — and the
+                    // build is failing anyway. Writing from that state would overwrite committed
+                    // guardrail files and this module's sidecar with a shrunken view, delete
+                    // granular rules as orphans, and record a fingerprint for a compile that never
+                    // succeeded. Leave every artifact exactly as this build found it.
+                    getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                        "VibeTags: compilation raised errors before the final round; guardrail files left untouched.");
+                    if (log != null) {
+                        log.info("Compilation raised errors; skipping generate phase (files untouched).");
+                        log.debug("round.skip reason=error-raised");
+                    }
+                    VibeTagsLogger.shutdown(root);
+                    return false;
+                }
                 // compareAndSet guarantees exactly one thread enters generateFiles() even if
                 // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
                 if (processed.compareAndSet(false, true)) {
@@ -278,6 +311,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 }
             }
             validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns);
+            // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
+            // are a silent no-op; the Tree API can still see them, so say so. Needs the live
+            // round for the same reason the position resolver does.
+            bodyScanner.scanAndWarn(roundEnv);
         } catch (RuntimeException e) {
             if (checkMode) {
                 getSafeMessager().printMessage(Diagnostic.Kind.ERROR,

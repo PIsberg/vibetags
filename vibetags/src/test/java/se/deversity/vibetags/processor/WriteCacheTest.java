@@ -521,4 +521,81 @@ class WriteCacheTest {
         assertFalse(cache.isUnchanged(config, "../core\n"),
             "an input entry must never satisfy a write-skip check");
     }
+
+    // ------------------------------------------------------------------
+    // Run context (options that shape output without changing annotations)
+    // ------------------------------------------------------------------
+
+    @Test
+    void contextMismatch_hidesTheStoredFingerprint(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache writer = new WriteCache(cachePath);
+        writer.bindContext("aaaa1111");
+        writer.setBuildFingerprint("deadbeef");
+        writer.flush();
+
+        WriteCache sameContext = new WriteCache(cachePath);
+        sameContext.bindContext("aaaa1111");
+        assertEquals("deadbeef", sameContext.getBuildFingerprint(),
+            "same run context must expose the stored fingerprint");
+
+        WriteCache otherContext = new WriteCache(cachePath);
+        otherContext.bindContext("bbbb2222");
+        assertNull(otherContext.getBuildFingerprint(),
+            "a changed run context (e.g. -Avibetags.project) must hide the stored fingerprint");
+    }
+
+    @Test
+    void unboundInstance_preservesTheStoredContextOnFlush(@TempDir Path tmp) throws IOException {
+        // Tests patch the persisted cache through a fresh instance that never binds a context
+        // (FingerprintShortCircuitTest does exactly that); its flush must carry the stored
+        // context forward rather than dropping the header.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache writer = new WriteCache(cachePath);
+        writer.bindContext("aaaa1111");
+        writer.setBuildFingerprint("deadbeef");
+        writer.flush();
+
+        WriteCache patcher = new WriteCache(cachePath);
+        patcher.setSidecarStamp("0");
+        patcher.flush();
+
+        WriteCache reader = new WriteCache(cachePath);
+        reader.bindContext("aaaa1111");
+        assertEquals("deadbeef", reader.getBuildFingerprint(),
+            "an unbound patch flush must not strip the persisted context header");
+    }
+
+    @Test
+    void missingStoredContext_isAMismatchForABoundReader(@TempDir Path tmp) throws IOException {
+        // A cache written without a context (an older processor, or direct WriteCache use) must
+        // not satisfy a context-bound fingerprint check — the safe direction is to regenerate.
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache writer = new WriteCache(cachePath);
+        writer.setBuildFingerprint("deadbeef");
+        writer.flush();
+
+        WriteCache boundReader = new WriteCache(cachePath);
+        boundReader.bindContext("aaaa1111");
+        assertNull(boundReader.getBuildFingerprint(),
+            "a fingerprint recorded without a context must not be trusted by a context-bound run");
+        assertEquals("deadbeef", new WriteCache(cachePath).getBuildFingerprint(),
+            "an unbound reader still sees the stored fingerprint (compatibility)");
+    }
+
+    @Test
+    void rebindingTheSameContext_doesNotDirtyTheCache(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache writer = new WriteCache(cachePath);
+        writer.bindContext("aaaa1111");
+        writer.setBuildFingerprint("deadbeef");
+        writer.flush();
+        long firstMtime = Files.getLastModifiedTime(cachePath).toMillis();
+
+        WriteCache rebound = new WriteCache(cachePath);
+        rebound.bindContext("aaaa1111");
+        rebound.flush();
+        assertEquals(firstMtime, Files.getLastModifiedTime(cachePath).toMillis(),
+            "re-binding the unchanged context must not rewrite the cache file");
+    }
 }

@@ -144,6 +144,73 @@ class FingerprintShortCircuitTest {
             ".cursorrules must be recreated when deleted (short-circuit must not fire)");
     }
 
+    @Test
+    void shortCircuit_doesNotFire_whenProjectNameChanges(@TempDir Path tmp) throws Exception {
+        // Compile with one project name; llms.txt renders it as the H1.
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h1.compile("-Avibetags.project=AlphaCorp");
+        assertTrue(Files.readString(tmp.resolve("llms.txt")).contains("AlphaCorp"),
+            "precondition: the first compile must render the project name into llms.txt");
+
+        // Engineer matching sidecar stamp (delete sidecars, set stamp to "0").
+        deleteSidecars(tmp);
+        WriteCache patchedCache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        patchedCache.setSidecarStamp("0");
+        patchedCache.flush();
+
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+
+        // Recompile with a DIFFERENT project name and identical annotations. The annotation
+        // fingerprint alone cannot see the rename, so without a run-context stamp on the cache
+        // the short-circuit fires and llms.txt keeps the old name until some annotation changes.
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h2.compile("-Avibetags.project=BetaCorp");
+
+        assertTrue(Files.readString(tmp.resolve("llms.txt")).contains("BetaCorp"),
+            "llms.txt must be regenerated when -Avibetags.project changes");
+    }
+
+    @Test
+    void shortCircuit_doesNotFire_whenModuleOverrideChanges(@TempDir Path tmp) throws Exception {
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h1.compile("-Avibetags.module=alpha");
+
+        deleteSidecars(tmp);
+        WriteCache patchedCache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        patchedCache.setSidecarStamp("0");
+        patchedCache.flush();
+
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+
+        // Same annotations, new module name: this compilation owns a sidecar under the new id,
+        // which can only be written if the short-circuit does not fire.
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h2.compile("-Avibetags.module=beta");
+
+        assertTrue(Files.exists(tmp.resolve(".vibetags-mod-beta")),
+            "the module sidecar must be re-saved under the new -Avibetags.module id");
+    }
+
     // -----------------------------------------------------------------------
     // Helper
     // -----------------------------------------------------------------------

@@ -51,6 +51,10 @@ public final class GuardrailFileWriter {
     public static final String MARKER_END_HASH = "# VIBETAGS-END";
 
     private final String generatedHeaderTrim;
+
+    /** The header in its HTML-commented legacy form; matched only where it owns its line. */
+    private final String commentedHeaderTrim;
+
     private final Messager messager;
     private final @Nullable Logger log;
     private final @Nullable WriteCache writeCache;
@@ -83,6 +87,7 @@ public final class GuardrailFileWriter {
     public GuardrailFileWriter(String generatedHeader, @Nullable Messager messager, @Nullable Logger log,
                                @Nullable WriteCache writeCache, boolean dryRun) {
         this.generatedHeaderTrim = generatedHeader.trim();
+        this.commentedHeaderTrim = "<!-- " + this.generatedHeaderTrim + " -->";
         this.messager = messager != null ? messager : noopMessager();
         this.log = log;
         this.writeCache = writeCache;
@@ -281,7 +286,7 @@ public final class GuardrailFileWriter {
             writeAndCache(filePath, finalContent, content);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
-        } else if (!existing.isEmpty() && existing.contains(generatedHeaderTrim)) {
+        } else if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
             // Legacy file (no markers but has VibeTags header): upgrade to markers
             String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
             if (contentMatches(existing, finalContent)) {
@@ -444,14 +449,28 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * True when {@code content} carries the generated header as a line of its own — the shape a
+     * real legacy (pre-marker) VibeTags block starts with. A header merely <em>quoted</em> inside
+     * a hand-written sentence must not count: the caller's next step is a whole-file rewrite that
+     * keeps only the generated block, so a false positive here deletes every hand-authored line.
+     */
+    private boolean hasLegacyHeaderLine(String content) {
+        return indexOfMarkerLine(content, commentedHeaderTrim, 0) >= 0
+            || indexOfMarkerLine(content, generatedHeaderTrim, 0) >= 0;
+    }
+
+    /**
      * Strips a legacy (pre-marker) VibeTags block, preserving genuine human content.
      */
     public String stripLegacyVibeTagsBlock(String before) {
         if (before == null || before.isEmpty()) return before;
 
-        String commentedHeader = "<!-- " + generatedHeaderTrim + " -->";
-        int legacyStart = before.indexOf(commentedHeader);
-        if (legacyStart == -1) legacyStart = before.indexOf(generatedHeaderTrim);
+        // Line-anchored on purpose: a bare indexOf also matches the header *quoted* in
+        // hand-authored prose, and everything from that citation onward was then treated as a
+        // legacy generated block and eaten — the same corruption the marker matching already
+        // survived (see indexOfMarkerLine). A real legacy header always owns its line.
+        int legacyStart = indexOfMarkerLine(before, commentedHeaderTrim, 0);
+        if (legacyStart == -1) legacyStart = indexOfMarkerLine(before, generatedHeaderTrim, 0);
         if (legacyStart == -1) return before;
 
         String rawPrefix = before.substring(0, legacyStart).stripTrailing();
