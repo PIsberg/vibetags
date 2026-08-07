@@ -329,10 +329,10 @@ class ValidationRuleUnitTest {
     }
 
     @Test
-    void architectureRule_skipsTheScan_whenTheOnlyForbiddenEntryIsBlank() {
+    void architectureRule_skipsTheScan_whenTheOnlyForbiddenEntryIsBlank(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp) {
         // A blank entry in cannotReference matches every import if it is not skipped, so this is
         // the difference between "you configured nothing" and "you forbade everything".
-        List<String> messages = compileAndCollect(
+        List<String> messages = compileAndCollect(tmp,
             "package com.example.blank;\n"
                 + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
                 + "import java.util.List;\n"
@@ -345,11 +345,11 @@ class ValidationRuleUnitTest {
     }
 
     @Test
-    void architectureRule_matchesAnOnDemandImport_whenTheForbiddenEntryEndsWithADot() {
+    void architectureRule_matchesAnOnDemandImport_whenTheForbiddenEntryEndsWithADot(@org.junit.jupiter.api.io.TempDir java.nio.file.Path tmp) {
         // cannotReference = "com.example.forbidden." is how a package-with-trailing-dot reads to
         // somebody writing the annotation, and `import com.example.forbidden.*` is the import it is
         // most obviously meant to catch. The prefix-star arm is what makes that pair work.
-        List<String> messages = compileAndCollect(
+        List<String> messages = compileAndCollect(tmp,
             "package com.example.star;\n"
                 + "import se.deversity.vibetags.annotations.AIArchitecture;\n"
                 + "import java.util.*;\n"
@@ -361,8 +361,16 @@ class ValidationRuleUnitTest {
             "An on-demand import of a forbidden package must be reported: " + messages);
     }
 
-    /** Compiles one source with the real processor and returns {@code KIND|message} lines. */
-    private static List<String> compileAndCollect(String code, String name) {
+    /**
+     * Compiles one source with the real processor and returns {@code KIND|message} lines.
+     *
+     * <p>{@code -Avibetags.root} pins the processor's write root to the JUnit temp dir. Without it
+     * the processor falls back to the real working directory, so any opt-in file
+     * (CONVENTIONS.md, gemini_instructions.md, .github/copilot-instructions.md, ...) that happens to
+     * exist there gets silently overwritten with this test's fixture content on every {@code mvn
+     * test} — see issue found 2026-08-07.
+     */
+    private static List<String> compileAndCollect(java.nio.file.Path tmp, String code, String name) {
         List<String> messages = new ArrayList<>();
         javax.tools.JavaCompiler compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
         javax.tools.DiagnosticCollector<javax.tools.JavaFileObject> diagnostics =
@@ -377,7 +385,8 @@ class ValidationRuleUnitTest {
         try (javax.tools.StandardJavaFileManager fm =
                  compiler.getStandardFileManager(diagnostics, null, null)) {
             javax.tools.JavaCompiler.CompilationTask task = compiler.getTask(null, fm, diagnostics,
-                List.of("-classpath", System.getProperty("java.class.path"), "-proc:only"),
+                List.of("-classpath", System.getProperty("java.class.path"), "-proc:only",
+                    "-Avibetags.root=" + tmp.toAbsolutePath()),
                 null, List.of(source));
             task.setProcessors(List.of(new AIGuardrailProcessor()));
             task.call();
