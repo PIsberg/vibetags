@@ -105,6 +105,31 @@ class WrappedProcessingEnvironmentTest {
         assertTrue(claude.contains("owned by module-cli"), "and the second's are added");
     }
 
+    /**
+     * Positions in the {@code .vibetags-locks} report come from the javac Tree API, and
+     * {@code Trees.instance} rejects a wrapped environment just as it does for module identity
+     * above. Module identity has a standard-API fallback ({@code Elements.getFileObjectOf});
+     * positions have none, so the resolver must reflectively unwrap the decorator or every entry
+     * in the report silently loses its line range under Gradle.
+     */
+    @Test
+    void lockReportPositions_surviveAWrappedEnvironment() throws IOException {
+        Files.createFile(reactorRoot.resolve(".vibetags-locks"));
+        Files.createDirectories(reactorRoot.resolve("module-core"));
+        Files.writeString(reactorRoot.resolve("module-core").resolve("pom.xml"),
+            "<project><artifactId>module-core</artifactId></project>", StandardCharsets.UTF_8);
+
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        harness.writeSourceFile("module-core/src/main/java/com/example/core/IrNode.java", CORE_SOURCE);
+        harness.compileWith(new WrappedEnvProcessor());
+
+        String report = Files.readString(reactorRoot.resolve(".vibetags-locks"), StandardCharsets.UTF_8);
+        assertTrue(report.contains("IrNode"),
+            "the locked element must appear in the report:\n" + report);
+        assertTrue(report.contains("\"startLine\""),
+            "positions must survive the ProcessingEnvironment wrapper (reflective unwrap):\n" + report);
+    }
+
     private String sidecarNames() throws IOException {
         try (Stream<Path> files = Files.list(reactorRoot)) {
             return files.map(p -> p.getFileName().toString())

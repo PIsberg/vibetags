@@ -52,9 +52,14 @@ import java.util.TreeSet;
  * content-build + per-file-compare phase.
  *
  * <p>Stability is the only correctness requirement here: the same inputs must always produce the
- * same hex output across processor invocations. Collisions are tolerable because the per-file
- * {@link WriteCache} still validates each output's size+mtime; the worst a fingerprint collision
- * can do is skip work that would have produced byte-identical files.
+ * same hex output across processor invocations. A collision is not free, and the claim this
+ * paragraph used to make — that one could only skip byte-identical work — was wrong in direction:
+ * when the <em>changed</em> input string collides with the previous one, the short-circuit skips a
+ * regeneration whose output would have differed, and the per-file size+mtime checks cannot notice
+ * (they guard against on-disk drift, not against the inputs changing). The risk is accepted for
+ * non-adversarial input — see {@link se.deversity.vibetags.processor.model.ContentHash} for the
+ * honest version of the trade — and revisiting the hash width belongs to the next cache-format
+ * bump.
  *
  * <p>Stateless. All methods are static.
  */

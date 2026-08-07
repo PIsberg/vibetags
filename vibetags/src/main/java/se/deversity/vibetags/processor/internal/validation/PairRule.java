@@ -54,10 +54,13 @@ public final class PairRule implements ValidationRule {
         if (element.getAnnotation(other) == null) {
             return;
         }
+        // Anchored at the *other* annotation's mirror: resolving a contradiction means removing
+        // one of the two annotations, so the caret belongs on an annotation line, not on the
+        // declaration the IDE would otherwise highlight.
         if (advisory) {
-            ctx.note(element, element + message);
+            ctx.note(element, other, element + message);
         } else {
-            ctx.warn(element, element + message);
+            ctx.warn(element, other, element + message);
         }
     }
 

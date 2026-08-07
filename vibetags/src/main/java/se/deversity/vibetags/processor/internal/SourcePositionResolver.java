@@ -31,12 +31,66 @@ public final class SourcePositionResolver {
      * expose the javac Tree API. Never throws.
      */
     public static SourcePositionResolver forEnv(ProcessingEnvironment env) {
-        try {
-            return new SourcePositionResolver(Trees.instance(env));
-        } catch (RuntimeException | Error e) {
-            // Not javac (ECJ, mocked test environments, ...) — positions unavailable.
-            return new SourcePositionResolver(null);
+        return new SourcePositionResolver(treesFor(env));
+    }
+
+    /**
+     * The Tree API for {@code env}, unwrapping build-tool decorators, or {@code null} when no
+     * compiler exposes it.
+     *
+     * <p>{@code Trees.instance} accepts only javac's own {@code ProcessingEnvironment}, and
+     * Gradle's incremental annotation processing always hands the processor a wrapper — so
+     * without unwrapping, every Gradle build silently lost the {@code .vibetags-locks} line
+     * ranges (the same failure {@code ModuleRootResolver} documents for module identity, which
+     * has a standard-API fallback; positions have none). The wrapper is unwrapped reflectively:
+     * a field holding another {@code ProcessingEnvironment} (Gradle's
+     * {@code IncrementalProcessingEnvironment.delegate}), then a {@code delegate()} accessor.
+     * Every reflective step is best-effort — a sealed or unknown wrapper degrades to the old
+     * no-position behaviour rather than throwing.
+     */
+    static @Nullable Trees treesFor(ProcessingEnvironment env) {
+        ProcessingEnvironment current = env;
+        for (int depth = 0; current != null && depth < 5; depth++) {
+            try {
+                return Trees.instance(current);
+            } catch (RuntimeException | Error e) {
+                // Not javac's own environment: ECJ, a mocked test environment, or a build-tool
+                // wrapper. Try to unwrap one layer and probe again.
+                current = delegateOf(current);
+            }
         }
+        return null;
+    }
+
+    /** The {@code ProcessingEnvironment} wrapped by {@code env}, or {@code null} when none is found. */
+    private static @Nullable ProcessingEnvironment delegateOf(ProcessingEnvironment env) {
+        for (Class<?> c = env.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            for (java.lang.reflect.Field field : c.getDeclaredFields()) {
+                if (!ProcessingEnvironment.class.isAssignableFrom(field.getType())) {
+                    continue;
+                }
+                try {
+                    field.setAccessible(true);
+                    if (field.get(env) instanceof ProcessingEnvironment inner && inner != env) {
+                        return inner;
+                    }
+                } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
+                    // Inaccessible under this runtime (JPMS, records) — try the next candidate.
+                }
+            }
+        }
+        for (String accessor : new String[]{"delegate", "getDelegate"}) {
+            try {
+                java.lang.reflect.Method method = env.getClass().getMethod(accessor);
+                if (ProcessingEnvironment.class.isAssignableFrom(method.getReturnType())
+                        && method.invoke(env) instanceof ProcessingEnvironment inner && inner != env) {
+                    return inner;
+                }
+            } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
+                // No such accessor — try the next name.
+            }
+        }
+        return null;
     }
 
     /** A resolver that always returns {@code null} — for tests and non-javac environments. */

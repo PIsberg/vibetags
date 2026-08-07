@@ -26,6 +26,7 @@ import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.MethodBodyGuardrailScanner;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import org.slf4j.Logger;
@@ -119,6 +120,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private SourcePositionResolver positionResolver = SourcePositionResolver.noop();
 
     /**
+     * Warns about guardrail annotations inside method bodies (local and anonymous declarations),
+     * which JSR 269 processing cannot see at all — without this they are a silent no-op.
+     */
+    private MethodBodyGuardrailScanner bodyScanner = MethodBodyGuardrailScanner.noop();
+
+    /**
      * Module root directory <em>and</em> source set of the compilation being processed, resolved
      * from the sources of the first non-empty processing round (see {@link ModuleRootResolver}).
      * {@code null} until resolved — and stays {@code null} when no compiler API exposes the source
@@ -206,6 +213,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv);
+        this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
         String useCache = options.getOrDefault("vibetags.cache", "true");
         if ("false".equalsIgnoreCase(useCache)) {
@@ -303,6 +311,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 }
             }
             validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns);
+            // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
+            // are a silent no-op; the Tree API can still see them, so say so. Needs the live
+            // round for the same reason the position resolver does.
+            bodyScanner.scanAndWarn(roundEnv);
         } catch (RuntimeException e) {
             if (checkMode) {
                 getSafeMessager().printMessage(Diagnostic.Kind.ERROR,

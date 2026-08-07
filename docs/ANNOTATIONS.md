@@ -19,6 +19,22 @@ the rest of the parsed set is described in
 [ARCHITECTURE.md](ARCHITECTURE.md#parsed-diagrams-code-karta). Adding an annotation means
 rerunning that script — see the `add-annotation` skill for the full checklist.
 
+### Visibility boundaries
+
+Two places an annotation can be written and silently mean nothing, both inherent to JSR 269
+rather than to VibeTags:
+
+- **Method bodies.** Annotation processing sees declarations, not statements: `@AI*` on a local
+  class or an anonymous class member never reaches the processor. Whenever the processor runs at
+  all it detects these through the javac Tree API and emits a WARNING (hoist the guarded logic to
+  a named member); a compilation whose *only* VibeTags annotations sit inside bodies never
+  triggers the processor in the first place — see the SPI section of
+  [PROCESSOR.md](PROCESSOR.md#spi-registration).
+- **Overrides and subclasses.** SOURCE retention plus the absence of `@Inherited` means a lock
+  does not follow an override. A same-compilation override of an `@AILocked` concrete method
+  draws a WARNING (`LockedOverrideRule`); an override compiled separately cannot be seen at all —
+  annotate it explicitly if the guardrail should apply there too.
+
 ### Annotations (all `RetentionPolicy.SOURCE`)
 
 | Annotation | Targets | Key Attributes |

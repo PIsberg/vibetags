@@ -169,6 +169,7 @@ public final class ValidationRules {
         List<ValidationRule> rules = new ArrayList<>(PAIRS);
         rules.addAll(CoreRules.all());
         rules.add(new ArchitectureRule());
+        rules.add(new LockedOverrideRule());
         rules.addAll(ModernJavaRules.all());
         return List.copyOf(rules);
     }

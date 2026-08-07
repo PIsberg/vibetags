@@ -113,8 +113,9 @@ consumers can reject reports written in a future, incompatible schema (filter on
 to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — deliberately *not* a
 `.json` file, so it rides the module-sidecar merge in multi-module builds instead of
 last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in
-`process()` while rounds are live) as `model.SourceLocation`; under non-javac compilers entries omit
-position fields.
+`process()` while rounds are live) as `model.SourceLocation`. Gradle's incremental-processing
+wrapper is reflectively unwrapped so positions survive Gradle-run javac (`treesFor`); under
+genuinely non-javac compilers (ECJ) entries omit position fields.
 
 The `kind` field is `ElementTag.name()`, which mirrors `javax.lang.model.element.ElementKind`
 name-for-name (`CLASS`, `METHOD`, `FIELD`, …), plus `UNKNOWN` when the compiler reports no kind.
@@ -136,6 +137,11 @@ The flip side: javac only invokes the processor when at least one VibeTags annot
 in the compiled sources. A source set whose last `@AI*` annotation was just removed does not run
 VibeTags — nothing is regenerated or cleaned up for it, and `-Avibetags.check=true` verifies
 nothing either, so a CI drift gate passes vacuously until some VibeTags annotation exists again.
+The round universe is also declaration-scoped: an `@AI*` annotation inside a method body (a local
+class, an anonymous class member) neither triggers the processor nor reaches it. When the
+processor runs for some other reason, `MethodBodyGuardrailScanner` spots those through the Tree
+API and warns instead of letting them be a silent no-op; a compilation whose only guardrails sit
+inside bodies stays wholly invisible.
 
 ## Gradle incremental annotation processing
 

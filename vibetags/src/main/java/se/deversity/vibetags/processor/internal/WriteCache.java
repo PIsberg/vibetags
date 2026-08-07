@@ -421,9 +421,11 @@ public final class WriteCache {
      * <p>Why {@code String.hashCode()} and not a heavier hash:
      * <ul>
      *   <li>Same 32-bit collision space as CRC32C; for two non-adversarial VibeTags bodies the
-     *       collision probability is 2^-32 ≈ 1 in 4 billion, and a collision could only cause us
-     *       to skip writing identical content (never silently corrupt output, since size + mtime
-     *       are checked first).</li>
+     *       collision probability is 2^-32 ≈ 1 in 4 billion. A collision is a skipped <em>real</em>
+     *       update: {@link #isUnchanged} compares the new body's hash against the recorded one, so
+     *       colliding bodies make a changed file look current — the size+mtime checks guard only
+     *       against external edits, not against the body changing. Accepted for non-adversarial
+     *       input; see {@code ContentHash} for the same trade stated at the fingerprint level.</li>
      *   <li>{@link String} caches its {@code hashCode()} after first computation — subsequent calls
      *       on the same String reference are O(1). When the same body String is asked about
      *       multiple times in one compile, we pay O(N) once.</li>

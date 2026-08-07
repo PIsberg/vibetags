@@ -75,7 +75,8 @@ The processor has two halves and one seam between them.
 
 **Above the seam (`processor/internal/`)** is everything that talks to javac: `AnnotationCollector`
 drains `RoundEnvironment`, `ElementNaming` walks the `Element` hierarchy, `SourcePositionResolver`
-reads the Compiler Tree API, `AnnotationValidator` reports through the `Messager`.
+and `MethodBodyGuardrailScanner` read the Compiler Tree API, `AnnotationValidator` reports through
+the `Messager`.
 
 **The seam (`processor/model/`)** is plain data: `GuardrailModel` (the buckets), `TaggedElement`
 (one annotated element, with its name forms precomputed and its `@AI*` annotation instances carried
@@ -128,14 +129,20 @@ Beyond what the generated section below describes:
 - `AnnotationValidator` — the entry point for all compile-time consistency checks. The checks
   themselves are individually testable rules in `internal/validation/`: `PairRule` (two annotations
   that contradict each other, as a table), `CoreRules` (an annotation whose own attributes leave it
-  instructing nobody), `ArchitectureRule` (the Tree-API import scan), `ModernJavaRules` (an
-  annotation that contradicts the declaration it sits on — records, sealed types, virtual threads,
-  the unnamed package). Add new warnings there, not in the entry point.
+  instructing nobody), `ArchitectureRule` (the Tree-API import scan), `LockedOverrideRule` (an
+  unlocked override of a locked concrete method), `ModernJavaRules` (an annotation that contradicts
+  the declaration it sits on — records, sealed types, virtual threads, the unnamed package). Add
+  new warnings there, not in the entry point.
 
   `ValidationRules` indexes rules by the annotation each one scans and runs
   `getElementsAnnotatedWith` **once per annotation type**, however many rules share it. That is
   load-bearing for build time on a large compilation unit: the query walks the round's root
   elements, and the pre-registry validator issued one per check — four for `@AITestDriven` alone
+- `MethodBodyGuardrailScanner` — Tree-API scan for `@AI*` annotations on local and anonymous
+  declarations, which JSR 269 processing cannot reach at all; each one draws a WARNING instead of
+  being a silent no-op. Best-effort by design: javac only (the Gradle wrapper is unwrapped via
+  `SourcePositionResolver.treesFor`), and a unit is scanned only when it imports the annotations
+  package
 - `GuardrailModel` — sorts every bucket by `TaggedElement.path()` when it snapshots. Load-bearing:
   `getElementsAnnotatedWith` returns a `Set` with no specified iteration order, so preserving the
   order the collector received makes generated output and the `BuildFingerprint` depend on which
