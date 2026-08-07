@@ -23,7 +23,7 @@ class MissingFormatterCoverageTest {
     @Test
     void testAllPlatformsForLowCoverageFormatters() {
         TaggedElement el = mockEl("com.example.TestClass");
-        
+
         AnnotationFormatter[] formatters = {
             new AILegacyBridgeFormatter(),
             new AISchemaSafeFormatter(),

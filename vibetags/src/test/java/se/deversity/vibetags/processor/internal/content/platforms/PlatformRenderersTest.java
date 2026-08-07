@@ -76,7 +76,7 @@ class PlatformRenderersTest {
         assertNotNull(output);
         assertTrue(output.contains("AUTO-GENERATED"));
     }
-    
+
     @Test
     void codyRenderer_rendersEmptyModel() {
         CodyRenderer renderer = new CodyRenderer();
@@ -84,7 +84,7 @@ class PlatformRenderersTest {
         assertNotNull(output);
         assertTrue(output.contains("vibetags-review"));
     }
-    
+
     @Test
     void rooModesRenderer_rendersEmptyModel() {
         RooModesRenderer renderer = new RooModesRenderer();
@@ -206,7 +206,7 @@ class PlatformRenderersTest {
         when(load.breaksIf()).thenReturn("Failure");
         when(load.suppressAudit()).thenReturn(false);
         when(mockElement.annotation(AILoadBearing.class)).thenReturn(load);
-        
+
         AIFeatureFlag flag = mock(AIFeatureFlag.class);
         when(flag.flag()).thenReturn("FLAG_A");
         when(flag.defaultValue()).thenReturn(true);

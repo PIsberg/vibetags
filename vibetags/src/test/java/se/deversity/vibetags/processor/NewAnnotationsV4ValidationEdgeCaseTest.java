@@ -245,14 +245,14 @@ class NewAnnotationsV4ValidationEdgeCaseTest {
             }
             return null;
         }).when(m).printMessage(any(Diagnostic.Kind.class), any(CharSequence.class), any());
-        
+
         doAnswer(inv -> {
             if (Diagnostic.Kind.WARNING.equals(inv.getArgument(0))) {
                 sink.add(inv.getArgument(1, CharSequence.class).toString());
             }
             return null;
         }).when(m).printMessage(any(Diagnostic.Kind.class), any(CharSequence.class));
-        
+
         return m;
     }
 }
