@@ -103,6 +103,17 @@ function computed *before* the write so the `@AILocked` `generateFiles()` step o
 Every cleanup pass adds every *other* sidecar's stems to its exclusion list, which is what stops a
 round from deleting rule files belonging to another source set — or another module.
 
+That list is necessary but not sufficient, because it can only exclude what it can see. Sidecars are
+gitignored, so on a fresh clone they arrive one module at a time and a module round looking at the
+shared root sees a directory full of files nothing has claimed *yet*. Sweeping on that evidence
+deleted 256 committed rule files on a cold `mvn -B -pl core clean compile`, exit 0 (issue #383). So
+the rule is jurisdiction, not arithmetic: **a reactor module round never sweeps the shared root.**
+It cleans its own per-module directory and its own mirrors, both already scoped to it; only a round
+whose compilation root *is* the VibeTags root may retire a root rule file. Counting sidecars instead
+does not work — the sweep simply moves to reactor module 3, which sees two siblings and still not
+the fourth. The cost is the same one the next paragraph describes: an orphan can outlive the build
+that orphaned it.
+
 Two preservation guards keep compiles with **no annotations** from destroying content: the module's
 sidecar is only saved when annotations were found, and shared-file writes with no contributions
 preserve the existing file content. Consequence: removing *all* annotations from a module leaves its

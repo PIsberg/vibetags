@@ -572,7 +572,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             granularWriter.writeAll(elementRules, serviceFiles, activeServices, rootRoles,
                 ModuleSidecar.mergeGranular(allSidecars)));
         writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
-        Set<String> removedQNames = granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames);
+        // Only a round compiling the root itself may sweep the root's granular directory. A module
+        // round cannot tell an orphan from a sibling it has not been shown: `.vibetags-mod-*` is
+        // gitignored, so on a fresh clone the sidecars appear one module at a time, and every module
+        // before the last sees a directory full of files nothing has claimed yet. Sweeping on that
+        // evidence deleted 256 tracked rule files on a cold `mvn -pl core clean compile`, exit 0
+        // (issue #383); a full reactor hid it because a later module rewrote them before the end.
+        //
+        // Counting sidecars is not a strong enough test — it was tried, and the sweep simply moved
+        // to reactor module 3, which sees two siblings and still not the fourth. Jurisdiction, not
+        // arithmetic, is the rule: a module owns its own directory (ModuleOutputWriter) and its own
+        // mirrors (cleanupMirrored, already scoped this way), never the shared root. The cost is a
+        // genuinely orphaned root rule file surviving until the root compiles, which matches the
+        // trade already documented for an emptied module's last contribution.
+        //
+        // The predicate is the one lines 366 and 372 already use for "this is a reactor module
+        // round". `compilationRoot.equals(root)` alone is NOT equivalent and was tried: a
+        // single-module project with no pom.xml to anchor the compilation root fails it, and five
+        // rename/delete cleanup tests went red because ordinary orphan cleanup stopped happening.
+        boolean maySweepRoot = moduleIdentity == null || compilationRoot.equals(root);
+        Set<String> removedQNames = maySweepRoot
+            ? granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames)
+            : Set.of();
+        if (!maySweepRoot && log != null && log.isDebugEnabled()) {
+            log.debug("granular.sweep.skip reason=module-round-not-root module={} written={}",
+                moduleId, writtenQNames.size());
+        }
         // myGranular's keys ARE the stems this round planned — the same map the sidecar recorded,
         // so the sweep can never be judged against a differently-computed set.
         destructiveWarner().orphanSweep("the reactor root", removedQNames, myGranular.keySet());

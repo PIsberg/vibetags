@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **A cold reactor build deleted every other module's scoped rule files.** On a fresh clone,
+  `mvn -B -pl core clean compile` in `example-multimodule` removed 256 tracked rule files and
+  exited 0. `.vibetags-mod-*` sidecars are gitignored, so after a clone the exclusion list a module
+  round builds from them is empty of every sibling, and `cleanupAll` treats each sibling's
+  committed file as an orphan. A full reactor hid it: the files were deleted mid-build and
+  rewritten by a later module before the end, leaving a clean diff and one warning
+  (`removed 32 scoped rule file(s) ... while writing only 1`) that had been in CI on `main` for
+  some time. `DestructiveRewriteWarner` worked exactly as designed; the message was read as noise.
+  A reactor module round now sweeps nothing at the shared root, keeping only its own directory
+  (`ModuleOutputWriter`) and its own mirrors (`cleanupMirrored`, already scoped that way).
+  Counting sidecars was tried first and is not sufficient — the sweep merely moves to reactor
+  module 3, which sees two siblings and still not the fourth. The cost is a genuinely orphaned root
+  rule file surviving until the root compiles, which is the trade already documented for an emptied
+  module's last contribution. `DestructiveRewriteWarningTest.coldReactorModule_withNoSiblingSidecars_leavesTheOtherModulesRulesAlone`
+  pins it, written red first. Issue #383.
 - **Three Error Prone `VoidUsed` warnings in `MethodBodyGuardrailScanner`.** The body scanner
   passed its always-null `Void p` through to `super.visitMethod`, `super.visitClass` and
   `super.visitAnnotation` instead of a `null` literal. They arrived with the scanner in 1.0.3 and

@@ -184,6 +184,74 @@ class DestructiveRewriteWarningTest {
             "removing one annotation of three is not a destructive rewrite: " + messages(sweep));
     }
 
+    /**
+     * The fresh-clone case: {@code .vibetags-mod-*} is gitignored, so the first module of a reactor
+     * to compile after a clone has no sibling sidecars on disk. Its exclusion list is therefore
+     * empty of every other module's stems, and a sweep judged on that evidence deletes rule files
+     * whose sources it was never shown.
+     *
+     * <p>This is not hypothetical arithmetic. On a cold clone of this repository,
+     * {@code cd example-multimodule && mvn -B -pl core clean compile} deleted 256 committed rule
+     * files and exited 0. The full reactor hid it, because a later module rewrote them all before
+     * the build ended.
+     *
+     * <p>A round that cannot see the project has no basis for the word "orphan", so it must not
+     * sweep at all. Deleting on no information is the failure; the warning was only ever the symptom.
+     */
+    @Test
+    void coldReactorModule_withNoSiblingSidecars_leavesTheOtherModulesRulesAlone() throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule("module-core", "com.example.core.IrNode", "Core IR node");
+        compileModule("module-cli", "com.example.cli.Cli", "CLI entry point");
+
+        Path siblingRule = root.resolve(".claude/rules/com-example-cli-Cli.md");
+        assertTrue(Files.exists(siblingRule), "precondition: both modules own a scoped rule file");
+
+        // The fresh clone: rule files are committed, sidecars are not.
+        deleteAllSidecars();
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        List<Diagnostic<? extends JavaFileObject>> cold =
+            compileModuleReturningDiagnostics("module-core", "com.example.core.IrNode", "Core IR node");
+
+        assertTrue(Files.exists(siblingRule),
+            "a reactor module with no sibling sidecars cannot tell an orphan from a file it simply "
+                + "never saw, so it must delete nothing: " + messages(cold));
+        assertFalse(warns(cold, "while writing only"),
+            "and with nothing swept there is nothing to report: " + messages(cold));
+    }
+
+    private void deleteAllSidecars() throws IOException {
+        try (java.util.stream.Stream<Path> files = Files.list(root)) {
+            for (Path p : files.filter(f -> f.getFileName().toString().startsWith(".vibetags-mod-")).toList()) {
+                Files.delete(p);
+            }
+        }
+    }
+
+    private void compileModule(String module, String fqn, String reason) throws IOException {
+        compileModuleReturningDiagnostics(module, fqn, reason);
+    }
+
+    private List<Diagnostic<? extends JavaFileObject>> compileModuleReturningDiagnostics(
+            String module, String fqn, String reason) throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        int lastDot = fqn.lastIndexOf('.');
+        harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java",
+            "package " + fqn.substring(0, lastDot) + ";\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"" + reason + "\")\n"
+                + "public class " + fqn.substring(lastDot + 1) + " {}\n");
+        List<Diagnostic<? extends JavaFileObject>> diagnostics = harness.compileReturningDiagnostics();
+        VibeTagsLogger.shutdown();
+        return diagnostics;
+    }
+
     private int ruleFileCount() throws IOException {
         try (java.util.stream.Stream<Path> files = Files.list(root.resolve(".claude/rules"))) {
             return (int) files.filter(Files::isRegularFile).count();
