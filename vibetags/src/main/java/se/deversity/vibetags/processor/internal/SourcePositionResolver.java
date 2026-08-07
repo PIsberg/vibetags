@@ -50,6 +50,8 @@ public final class SourcePositionResolver {
      */
     static @Nullable Trees treesFor(ProcessingEnvironment env) {
         ProcessingEnvironment current = env;
+        // The depth bound is also the cycle guard: a wrapper whose "delegate" leads back to
+        // itself just re-probes and gives up, so no identity comparison is needed below.
         for (int depth = 0; current != null && depth < 5; depth++) {
             try {
                 return Trees.instance(current);
@@ -70,12 +72,15 @@ public final class SourcePositionResolver {
                     continue;
                 }
                 try {
-                    field.setAccessible(true);
-                    if (field.get(env) instanceof ProcessingEnvironment inner && inner != env) {
+                    // trySetAccessible rather than setAccessible: it reports a sealed-off field
+                    // (JPMS, record trusted-finals) as false instead of throwing, which is the
+                    // right shape for a best-effort probe.
+                    if (field.trySetAccessible()
+                            && field.get(env) instanceof ProcessingEnvironment inner) {
                         return inner;
                     }
                 } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
-                    // Inaccessible under this runtime (JPMS, records) — try the next candidate.
+                    // Unreadable under this runtime — try the next candidate.
                 }
             }
         }
@@ -83,7 +88,7 @@ public final class SourcePositionResolver {
             try {
                 java.lang.reflect.Method method = env.getClass().getMethod(accessor);
                 if (ProcessingEnvironment.class.isAssignableFrom(method.getReturnType())
-                        && method.invoke(env) instanceof ProcessingEnvironment inner && inner != env) {
+                        && method.invoke(env) instanceof ProcessingEnvironment inner) {
                     return inner;
                 }
             } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
