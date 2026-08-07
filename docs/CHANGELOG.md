@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`.vibetags-locks` recorded absolute source paths, so a committed report differed on every
+  machine.** The `file` field carried whatever directory the repository happened to sit in
+  (`C:/dev/private/vibetags/example-multimodule/core/src/...`), which is a permanent diff for anyone
+  who commits the report and useless to any tool reading it on another checkout. Paths under the
+  VibeTags root are now relative to it (`core/src/main/java/...`); anything the root cannot claim —
+  a generated source, another drive, an in-memory JSR 199 unit — is still reported verbatim rather
+  than turned into a `../../` chain. The bundled locked-files Action already normalised absolute
+  paths to relative and matched either form, so this tightens what it receives rather than changing
+  what it accepts. `LocksReportEndToEndTest.locksReport_recordsPathsRelativeToTheRoot` pins it,
+  written red first against a real on-disk source (an in-memory one never had a path to bake in).
+  Consumers who commit `.vibetags-locks` will see it rewritten once on the next build. That also
+  unblocked the `git status --porcelain` CI gate on `example-multimodule/`, added in the same
+  change: it is the gate that would have caught the cold-reactor sweep below, and it could not
+  exist while the report differed on every runner.
 - **A cold reactor build deleted every other module's scoped rule files.** On a fresh clone,
   `mvn -B -pl core clean compile` in `example-multimodule` removed 256 tracked rule files and
   exited 0. `.vibetags-mod-*` sidecars are gitignored, so after a clone the exclusion list a module

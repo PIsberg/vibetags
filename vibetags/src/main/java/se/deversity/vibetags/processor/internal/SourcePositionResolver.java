@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import java.nio.file.Path;
 
 /**
  * Resolves an annotated {@link Element} to its source file and line range using the javac
@@ -22,16 +23,26 @@ public final class SourcePositionResolver {
 
     private final @Nullable Trees trees;
 
-    private SourcePositionResolver(@Nullable Trees trees) {
+    /**
+     * The VibeTags root that reported paths are made relative to, or {@code null} to report them
+     * verbatim. {@code .vibetags-locks} is a committed file, so an absolute path there would make
+     * its content differ on every machine and every CI runner.
+     */
+    private final @Nullable Path root;
+
+    private SourcePositionResolver(@Nullable Trees trees, @Nullable Path root) {
         this.trees = trees;
+        this.root = root;
     }
 
     /**
      * Creates a resolver for {@code env}, or a no-op resolver when the compiler does not
      * expose the javac Tree API. Never throws.
+     *
+     * @param root the VibeTags root; paths under it are reported relative to it
      */
-    public static SourcePositionResolver forEnv(ProcessingEnvironment env) {
-        return new SourcePositionResolver(treesFor(env));
+    public static SourcePositionResolver forEnv(ProcessingEnvironment env, Path root) {
+        return new SourcePositionResolver(treesFor(env), root);
     }
 
     /**
@@ -100,7 +111,7 @@ public final class SourcePositionResolver {
 
     /** A resolver that always returns {@code null} — for tests and non-javac environments. */
     public static SourcePositionResolver noop() {
-        return new SourcePositionResolver(null);
+        return new SourcePositionResolver(null, null);
     }
 
     /**
@@ -120,7 +131,7 @@ public final class SourcePositionResolver {
             LineMap lineMap = unit.getLineMap();
             long startLine = lineMap.getLineNumber(start);
             long endLine = end >= 0 ? lineMap.getLineNumber(end) : startLine;
-            String file = sourceFilePath(unit);
+            String file = relativize(sourceFilePath(unit));
             if (file == null) return null;
             return new SourceLocation(file, startLine, endLine);
         } catch (RuntimeException e) {
@@ -141,5 +152,25 @@ public final class SourcePositionResolver {
             path = path.substring(1);
         }
         return path.replace('\\', '/');
+    }
+
+    /**
+     * Rewrites an absolute source path as one relative to the VibeTags root, so the committed
+     * {@code .vibetags-locks} does not carry the checkout directory and differ on every machine.
+     *
+     * <p>Anything the root cannot claim is returned untouched: a generated source under
+     * {@code target/}, a file on another drive, or an in-memory JSR 199 unit whose URI is not a real
+     * path. Those are already unusable as repository-relative locations, and inventing a
+     * {@code ../../} chain for them would be worse than saying what javac said.
+     */
+    private @Nullable String relativize(@Nullable String file) {
+        if (file == null || root == null) return file;
+        try {
+            Path absolute = Path.of(file);
+            if (!absolute.isAbsolute() || !absolute.startsWith(root)) return file;
+            return root.relativize(absolute).toString().replace('\\', '/');
+        } catch (java.nio.file.InvalidPathException e) {
+            return file;
+        }
     }
 }

@@ -102,6 +102,24 @@ jobs:
           cd example-multimodule
           mvn clean verify -B
 
+      - name: Verify The Multi-Module Example's Committed Guardrails Match Its Annotations
+        run: |
+          # The gate example/ has had for a while, now that this reactor can pass it. It could not
+          # before: .vibetags-locks recorded absolute source paths, so the file differed on every
+          # runner and this check would have failed on every clean run.
+          #
+          # Issue #383 stayed invisible for exactly as long as nothing compared this reactor against
+          # git. A module round was deleting 256 committed rule files mid-build and a later module
+          # was putting them back, so the only trace was one warning in a 5000-line log.
+          if [ -n "$(git status --porcelain -- example-multimodule/)" ]; then
+            echo "::error::example-multimodule/ guardrail files are out of date with its annotations."
+            echo "Run: cd example-multimodule && mvn clean verify   then commit the regenerated files."
+            git status --porcelain -- example-multimodule/
+            git --no-pager diff -- example-multimodule/
+            exit 1
+          fi
+          echo "example-multimodule/ regenerates byte-for-byte to the committed files."
+
       - name: Verify Multi-Module Aggregation (issue #278)
         run: |
           cd example-multimodule

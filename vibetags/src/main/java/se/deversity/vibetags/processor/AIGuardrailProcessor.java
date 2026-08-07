@@ -212,7 +212,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
-        this.positionResolver = SourcePositionResolver.forEnv(processingEnv);
+        this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
         String useCache = options.getOrDefault("vibetags.cache", "true");

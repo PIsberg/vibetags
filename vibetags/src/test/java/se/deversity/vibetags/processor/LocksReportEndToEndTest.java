@@ -60,6 +60,44 @@ class LocksReportEndToEndTest {
         assertTrue(endLine >= startLine, "endLine must not precede startLine");
     }
 
+    /**
+     * {@code .vibetags-locks} is meant to be committed, so its content must not depend on where the
+     * repository happens to sit on disk. An absolute {@code file} makes the report differ on every
+     * machine and every CI runner, which is a permanent diff for anyone who commits it and the
+     * reason a reactor cannot be gated on {@code git status --porcelain}.
+     *
+     * <p>The bundled Action already normalises absolute paths back to relative and matches on a
+     * suffix either way, so this tightens what it receives rather than changing what it accepts.
+     */
+    @Test
+    void locksReport_recordsPathsRelativeToTheRoot(@TempDir Path tmp) throws Exception {
+        // A real file on disk, not an in-memory source: only a source javac resolves to a genuine
+        // path can carry the checkout directory into the report.
+        ProcessorTestHarness h = new ProcessorTestHarness(tmp);
+        h.writeSourceFile("src/main/java/com/example/vault/Vault.java",
+            "package com.example.vault;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"audited\")\n"
+                + "public class Vault {}\n");
+        h.compile();
+
+        String entry = jsonLines(h.readFile(".vibetags-locks")).stream()
+            .filter(l -> l.contains("\"element\":\"com.example.vault.Vault\""))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Vault lock entry missing"));
+
+        Matcher file = Pattern.compile("\"file\":\"([^\"]*)\"").matcher(entry);
+        assertTrue(file.find(), "entry must carry a file path: " + entry);
+        String path = file.group(1);
+
+        assertFalse(path.contains(tmp.toAbsolutePath().toString().replace('\\', '/')),
+            "the report must not bake in the checkout directory: " + path);
+        assertFalse(path.startsWith("/") || path.matches("^[A-Za-z]:/.*"),
+            "the file path must be relative to the VibeTags root: " + path);
+        assertEquals("src/main/java/com/example/vault/Vault.java", path,
+            "a relative path still has to locate the source");
+    }
+
     @Test
     void locksReport_containsMethodLevelLock(@TempDir Path tmp) throws Exception {
         ProcessorTestHarness h = new ProcessorTestHarness(tmp);
