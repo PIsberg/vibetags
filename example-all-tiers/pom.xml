@@ -31,8 +31,7 @@
   </modules>
 
   <properties>
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <vibetags.bom.version>1.0.3</vibetags.bom.version>
     <!-- Flipped to true by CI so the build verifies the committed guardrail files instead of
@@ -72,8 +71,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.15.0</version>
           <configuration>
-            <source>21</source>
-            <target>21</target>
+            <release>21</release>
             <compilerArgs>
               <!-- Every module shares the reactor root as the VibeTags root, anchored by the
                    .mvn/ directory. .vibetags-root-index at that root makes Tier 1 an index. -->

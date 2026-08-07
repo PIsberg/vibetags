@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Three Error Prone `VoidUsed` warnings in `MethodBodyGuardrailScanner`.** The body scanner
+  passed its always-null `Void p` through to `super.visitMethod`, `super.visitClass` and
+  `super.visitAnnotation` instead of a `null` literal. They arrived with the scanner in 1.0.3 and
+  falsified the claim in `vibetags/pom.xml` that the build emits zero Error Prone warnings, which
+  is the property that makes the next one visible. No behaviour change: `p` is `Void` and is only
+  ever null.
+- **Every Maven module warned `location of system modules is not set in conjunction with
+  -source 21` when built on a JDK newer than 21.** `<source>/<target>` compiles against the
+  *running* JDK's API while stamping class-file version 21, so a JDK 26 build could link a method
+  that does not exist on 21 and fail there at runtime. CI builds 21, 25 and 26, so two thirds of
+  the matrix carried the risk. Replaced with `<release>21</release>` (`maven.compiler.release` in
+  `vibetags-parent`, plus the six poms that cannot inherit it). Error Prone still runs under
+  `--release`, verified by the `VoidUsed` warnings above firing before they were fixed. The Gradle
+  builds needed no change: Gradle already infers `--release` when `sourceCompatibility` equals
+  `targetCompatibility`.
+
 ## [1.0.3] - 2026-08-07
 
 ### Fixed
