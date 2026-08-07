@@ -131,7 +131,7 @@ public final class MethodBodyGuardrailScanner {
         public Void visitMethod(MethodTree method, Void p) {
             methodDepth++;
             try {
-                return super.visitMethod(method, p);
+                return super.visitMethod(method, null);
             } finally {
                 methodDepth--;
             }
@@ -144,7 +144,7 @@ public final class MethodBodyGuardrailScanner {
                 reportEveryGuardrailIn(type);
                 return null; // the whole subtree was just reported; do not visit it twice
             }
-            return super.visitClass(type, p);
+            return super.visitClass(type, null);
         }
 
         /** Reports every guardrail annotation anywhere inside an unreachable declaration. */
@@ -166,7 +166,7 @@ public final class MethodBodyGuardrailScanner {
                                 + " member, or move the annotation to the enclosing declaration.",
                             annotation, unit);
                     }
-                    return super.visitAnnotation(annotation, p);
+                    return super.visitAnnotation(annotation, null);
                 }
             }.scan((Tree) unreachable, null);
         }
