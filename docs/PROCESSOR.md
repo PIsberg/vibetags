@@ -104,6 +104,26 @@ recorded path fails the build via `Messager.ERROR`. The fingerprint short-circui
 bypassed so the verdict never depends on cache state; internal failures in check mode fail closed
 (ERROR, not the usual downgrade-to-WARNING).
 
+**In a reactor, check mode needs a normal build first.** It reads the same `.vibetags-mod-*`
+sidecars the merge does, and those are gitignored, so on a fresh clone they do not exist yet. Run as
+the *first* command after cloning, check mode sees each module in isolation, judges the committed
+root files to be missing every other module's content, and fails at the first module:
+
+```
+$ git clone <repo> && cd <reactor> && mvn -B clean compile -Dvibetags.check=true
+[ERROR] VibeTags: check failed — 306 guardrail file(s) are out of date with the annotations
+[INFO] BUILD FAILURE          (module [2/6])
+```
+
+Nothing is wrong with the tree. Build once, then check:
+
+```
+mvn -B clean compile && mvn -B compile -Dvibetags.check=true
+```
+
+CI does exactly this — the check step runs after the ordinary build, not instead of it. Single-module
+projects are unaffected: one module is the whole project, so the first compile already sees everything.
+
 ## Machine-readable lock report (`.vibetags-locks`)
 
 An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits
