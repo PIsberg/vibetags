@@ -75,6 +75,12 @@ public final class WriteCache {
     /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
     private @Nullable String sidecarStamp = null;
 
+    /** Run context bound by the current compilation ({@link #bindContext}). {@code null} when unbound. */
+    private @Nullable String currentContext = null;
+
+    /** Run context persisted by the previous run's flush. {@code null} when none is on file. */
+    private @Nullable String storedContext = null;
+
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
         Path parent = cachePath.getParent();
@@ -99,10 +105,17 @@ public final class WriteCache {
     /**
      * Returns the persisted top-level build fingerprint from the previous successful run, or
      * {@code null} if no fingerprint is on file. The fingerprint covers the entire annotation
-     * input set plus the active service set — see {@link BuildFingerprint}.
+     * input set plus the active service set — see {@link BuildFingerprint}. Reported as absent
+     * when the run context bound via {@link #bindContext} differs from the stored one.
      */
     public synchronized @Nullable String getBuildFingerprint() {
         loadIfNeeded();
+        if (currentContext != null && !currentContext.equals(storedContext)) {
+            // Recorded under a different run context (project name or module override): the
+            // annotations may be identical, but the rendered output would not be. Report no
+            // fingerprint so the caller regenerates rather than short-circuits.
+            return null;
+        }
         return buildFingerprint;
     }
 
@@ -133,6 +146,25 @@ public final class WriteCache {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.sidecarStamp, stamp)) {
             this.sidecarStamp = stamp;
+            this.dirty = true;
+        }
+    }
+
+    /**
+     * Binds the run context this compilation renders under: a stable hash of the option values
+     * that shape generated output without being part of the annotation fingerprint —
+     * {@code -Avibetags.project} (the llms.txt H1) and {@code -Avibetags.module} (the region a
+     * reactor merge files this module under). {@link #getBuildFingerprint()} hides the stored
+     * fingerprint when the context it was recorded under differs, so an option edit regenerates
+     * instead of short-circuiting past it; an instance that never binds (tests patching the cache
+     * directly) keeps and re-persists whatever context is already on file.
+     */
+    public synchronized void bindContext(String context) {
+        loadIfNeeded();
+        this.currentContext = context;
+        if (!context.equals(this.storedContext)) {
+            // The persisted header must converge on the new context even when nothing else
+            // changes this run — otherwise the same mismatch re-fires on every later compile.
             this.dirty = true;
         }
     }
@@ -263,6 +295,10 @@ public final class WriteCache {
         if (sidecarStamp != null) {
             sb.append("# sidecar-stamp: ").append(sidecarStamp).append('\n');
         }
+        String effectiveContext = currentContext != null ? currentContext : storedContext;
+        if (effectiveContext != null) {
+            sb.append("# context: ").append(effectiveContext).append('\n');
+        }
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             sb.append(e.getKey()).append('\t')
               .append(e.getValue().hash).append('\t')
@@ -315,6 +351,7 @@ public final class WriteCache {
                                 entries.clear();
                                 buildFingerprint = null;
                                 sidecarStamp = null;
+                                storedContext = null;
                                 return;
                             }
                         } catch (NumberFormatException ignored) {
@@ -322,6 +359,7 @@ public final class WriteCache {
                             entries.clear();
                             buildFingerprint = null;
                             sidecarStamp = null;
+                            storedContext = null;
                             return;
                         }
                     }
@@ -335,6 +373,11 @@ public final class WriteCache {
                     if (line.startsWith(sidecarPrefix)) {
                         String st = line.substring(sidecarPrefix.length()).trim();
                         if (!st.isEmpty()) sidecarStamp = st;
+                    }
+                    String contextPrefix = "# context: ";
+                    if (line.startsWith(contextPrefix)) {
+                        String cx = line.substring(contextPrefix.length()).trim();
+                        if (!cx.isEmpty()) storedContext = cx;
                     }
                     continue;
                 }

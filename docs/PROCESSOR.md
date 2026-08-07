@@ -68,6 +68,10 @@ every collected annotation (FQN + attribute values), plus the resolved active-se
 processor invalidates the previous fingerprint, so a release that renders different content from
 unchanged annotations can never be skipped. The cache file also carries a `# format: <n>` header; a
 cache written by a newer (unknown) format is discarded wholesale rather than mis-parsed.
+The project name (`-Avibetags.project`) and module override (`-Avibetags.module`) shape rendered
+output without being part of the annotation fingerprint, so they are bound separately as a *run
+context* (`# context: <hex>` in the same cache file, via `WriteCache.bindContext`); a stored
+fingerprint recorded under a different context is treated as absent and the build regenerates.
 
 On the next compile, if the fingerprint still matches AND every previously written file is
 byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no
@@ -122,19 +126,31 @@ touch locked line ranges, strip `@AILocked` annotations, or delete locked files.
 
 ## SPI registration
 
-The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. The
-wildcard `@SupportedAnnotationTypes("*")` means new annotations are picked up automatically without
-touching the processor configuration.
+The processor is discovered via `META-INF/services/javax.annotation.processing.Processor`. It
+claims `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")` — the package wildcard,
+not the universal `"*"` this section used to claim — so a new VibeTags annotation is picked up
+automatically without touching the processor configuration, and a compilation carrying no VibeTags
+annotations never pays for the processor at all.
 
-Note that javac only invokes a `"*"` processor for a compilation round that actually contains
-annotations — a source set with no annotation of any kind (not even `@Override`) never runs VibeTags,
-so nothing is regenerated or cleaned up for it.
+The flip side: javac only invokes the processor when at least one VibeTags annotation is present
+in the compiled sources. A source set whose last `@AI*` annotation was just removed does not run
+VibeTags — nothing is regenerated or cleaned up for it, and `-Avibetags.check=true` verifies
+nothing either, so a CI drift gate passes vacuously until some VibeTags annotation exists again.
 
 ## Gradle incremental annotation processing
 
 The processor is declared as **aggregating** in
-`META-INF/gradle/incremental.annotation.processors`. Gradle therefore re-runs it only when
-annotations change anywhere in the compile unit, not on every unrelated `.java` edit. The category is
-`aggregating` (not `isolating`) because the generated files (`CLAUDE.md`, `.cursorrules`, `llms.txt`,
-etc.) are aggregated from annotations across the entire compilation unit — a per-source-file
-`isolating` declaration would produce stale output.
+`META-INF/gradle/incremental.annotation.processors`, the truthful category: the generated files
+(`CLAUDE.md`, `.cursorrules`, `llms.txt`, etc.) aggregate annotations from the entire compilation
+unit, and an `isolating` declaration would produce stale output.
+
+Do not read that declaration as a promise of incremental behaviour. Gradle's incremental
+annotation processing contract says aggregating processors "can only read `CLASS` or `RUNTIME`
+retention annotations", and every VibeTags annotation is deliberately `SOURCE` retention (zero
+runtime footprint) — which puts VibeTags outside the documented support envelope. What Gradle
+does with a rule-breaking processor is version-dependent; its userguide promises nothing better
+than "silent failures". The output stays correct whenever the processor re-sees every annotated
+source (the full-recompilation case); treat a Gradle build where only a subset of sources
+recompiled as suspect and prefer a clean build before trusting regenerated guardrails. The
+"re-runs only when annotations change" incrementality this section previously claimed is not
+something a consumer should count on.

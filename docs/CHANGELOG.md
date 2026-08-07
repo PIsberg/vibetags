@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A failed compilation could rewrite guardrail files, sidecars, and the write cache.** The
+  final-round handler never consulted `RoundEnvironment.errorRaised()`, so a build failed by a
+  peer annotation processor (or by a generated source that does not compile) still ran the full
+  generate phase: committed guardrail files were rewritten from a possibly incomplete annotation
+  set, the module sidecar was overwritten with that shrunken view, orphan cleanup could delete
+  granular rule files, and a fingerprint was recorded for a compile that never succeeded. The
+  final round now leaves every artifact untouched when errors were raised, says so in a NOTE, and
+  logs `round.skip reason=error-raised`. `ErrorRaisedRoundGuardTest` pins it — written red first,
+  it showed a hand-authored CLAUDE.md gaining a generated block from a failing build.
+- **Changing `-Avibetags.project` or `-Avibetags.module` was silently swallowed by the
+  fingerprint short-circuit.** The build fingerprint covers annotations and active services but
+  neither option — yet the project name is the llms.txt H1 and the module override names the
+  region a reactor merge files the module under. With unchanged annotations the short-circuit
+  matched and skipped the generate phase, so llms.txt kept the old project name until some
+  unrelated annotation edit regenerated it. The options are now bound as a run context
+  (`# context: <hex>` in `.vibetags-cache`, `WriteCache.bindContext`); a stored fingerprint
+  recorded under a different context reads as absent and the build regenerates. Implemented in
+  `WriteCache` and `init()` because the fingerprint check itself lives in the step-order-locked
+  `generateFiles()`. `FingerprintShortCircuitTest` gained both non-skip cases, red before the fix.
+
+### Changed
+- `docs/PROCESSOR.md` claimed the universal `@SupportedAnnotationTypes("*")` and promised that
+  Gradle re-runs the aggregating processor only when annotations change. The processor actually
+  claims `se.deversity.vibetags.annotations.*`, and Gradle's incremental-processing contract
+  limits aggregating processors to `CLASS`/`RUNTIME` retention annotations — VibeTags annotations
+  are `SOURCE`, so incremental behaviour must not be assumed. Both sections now state what the
+  code does, including the consequence that removing the last `@AI*` annotation stops
+  regeneration and check mode alike.
+
 ## [1.0.2] - 2026-08-07
 
 ### Fixed

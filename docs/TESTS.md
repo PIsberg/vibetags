@@ -93,7 +93,8 @@ stop excluding the same one.
 | `NewAnnotationsV4ValidationTest` | Compile-time validation warnings for the 9 new annotations |
 | `BuildFingerprintIntegrationTest` | Top-level fingerprint short-circuit: cache creation, stable mtimes on unchanged rebuild, fingerprint invalidation on annotation change |
 | `BuildFingerprintUnitTest` | `BuildFingerprint.compute()` determinism and collision properties |
-| `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged |
+| `FingerprintShortCircuitTest` | End-to-end short-circuit skip behaviour when inputs are unchanged, and non-skip when `-Avibetags.project` / `-Avibetags.module` change |
+| `ErrorRaisedRoundGuardTest` | The final round leaves guardrail files, sidecars and cache untouched when the compilation already raised errors |
 | `CheckModeTest` | Opt-in check mode (`-Avibetags.check=true`): pass/fail verdicts, zero writes, multi-module merge parity, dry-run `GuardrailFileWriter` |
 | `LocksReportEndToEndTest` | `.vibetags-locks` machine-readable lock report: class/method positions via the javac Tree API, JSON escaping, opt-in behaviour |
 | `IncrementalProcessorDeclarationTest` | Verifies `META-INF/gradle/incremental.annotation.processors` is present and declares the processor as `aggregating` |
