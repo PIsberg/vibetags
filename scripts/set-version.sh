@@ -89,13 +89,50 @@ replace_in_file() {
     echo "  updated ${file#"$ROOT_DIR"/}"
 }
 
-# The one authoritative edit.
-replace_in_file "$PARENT_POM"
+# Scoped edit for files that also pin third-party dependency versions which can coincidentally
+# equal $OLD_VERSION (e.g. jspecify.version matched the VibeTags version once, and a blanket
+# replace_in_file bumped it right along with <revision>). Only two shapes are VibeTags's own:
+# the parent POM's <revision> property, and Gradle's `version = '...'` / `se.deversity.vibetags:
+# artifact:version` coordinate strings. Anything else on the line is left untouched.
+replace_xml_property() {
+    file="$1"
+    property="$2"
+    if [ ! -f "$file" ]; then
+        echo "warning: $file not found, skipping" >&2
+        return 0
+    fi
+    sed -i.bak -E "s#(<${property}>)$OLD_ESCAPED(</${property}>)#\1$NEW_VERSION\2#" "$file"
+    rm -f "$file.bak"
+    echo "  updated ${file#"$ROOT_DIR"/} (<$property> only)"
+}
+
+replace_gradle_vibetags_refs() {
+    file="$1"
+    if [ ! -f "$file" ]; then
+        echo "warning: $file not found, skipping" >&2
+        return 0
+    fi
+    sed -i.bak -E \
+        -e "s/^([[:space:]]*version = )'$OLD_ESCAPED'/\1'$NEW_VERSION'/" \
+        -e "s#(se\.deversity\.vibetags:[A-Za-z0-9_-]+:)$OLD_ESCAPED#\1$NEW_VERSION#g" \
+        "$file"
+    rm -f "$file.bak"
+    echo "  updated ${file#"$ROOT_DIR"/} (se.deversity.vibetags refs only)"
+}
+
+# The one authoritative edit — <revision> only, so a third-party version pin that happens to
+# equal $OLD_VERSION (jspecify.version has collided with it before) is never touched.
+replace_xml_property "$PARENT_POM" "revision"
 
 # Everything that cannot inherit it.
 for rel in \
     vibetags-annotations/build.gradle \
     vibetags/build.gradle \
+; do
+    replace_gradle_vibetags_refs "$ROOT_DIR/$rel"
+done
+
+for rel in \
     vibetags-annotations/pom.xml \
     vibetags-bom/pom.xml \
     example/pom.xml \

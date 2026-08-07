@@ -27,7 +27,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- BOM is the single source of truth for vibetags-* versions. Bumping this one
              value rolls the processor and any future vibetags-* artifact in lockstep. -->
-        <vibetags.bom.version>1.0.1</vibetags.bom.version>
+        <vibetags.bom.version>1.0.2</vibetags.bom.version>
         <vibetags.log.path>vibetags.log</vibetags.log.path>
       <!-- The diagnostic channel. INFO reports what ran; `mvn compile
          -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,

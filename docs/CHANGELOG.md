@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-07
+
 ### Fixed
+- **`scripts/set-version.sh` could silently bump an unrelated third-party dependency pin that
+  happened to equal the outgoing VibeTags version.** The parent POM edit was a blanket
+  `sed -i "s/$OLD/$NEW/g"` over the whole file, not scoped to `<revision>`. `jspecify.version`
+  had been pinned at `1.0.1` — the same string as the pre-1.0.2 VibeTags release — so bumping to
+  1.0.2 quietly rewrote it to `1.0.2` too, in both `vibetags-parent/pom.xml` and the mirrored
+  literal in `vibetags/build.gradle`. Caught during 1.0.2 release prep while investigating the
+  untracked-file trail left by the test-isolation bug below, not by any gate —
+  `BuildVersionParityTest` only checks that every VibeTags coordinate agrees with `<revision>`,
+  so a wrong-but-consistent jspecify version passes it. The script now edits `<revision>` in
+  isolation via a scoped tag match, and the two `build.gradle` files it must still hand-edit go
+  through a second scoped helper that only touches `version = '...'` and
+  `se.deversity.vibetags:<artifact>:<version>` coordinates, leaving any other pinned dependency
+  on that line alone.
+- **`ValidationRuleUnitTest`'s in-process compile ran the real `AIGuardrailProcessor` with no
+  `-Avibetags.root`, so it wrote into the actual working directory instead of an isolated temp
+  dir.** Every other test that compiles real sources through the processor
+  (`AnnotationValidatorArchitectureTest`, `AIGuardrailProcessorProcessTest`, ...) passes
+  `-Avibetags.root=<tempDir>`; this one did not. The processor's file-presence-is-the-opt-in
+  invariant means it never creates an opt-in file that does not already exist, but any opt-in
+  file that *does* exist in `vibetags/` at test time — `CONVENTIONS.md`,
+  `gemini_instructions.md`, `.github/copilot-instructions.md`, and the rest — got silently
+  overwritten with the test's `com.example.blank.BlankForbidden` fixture content on every
+  `mvn test`. Fixed by threading a `@TempDir` through both call sites of `compileAndCollect` and
+  passing it as `-Avibetags.root`, matching the existing pattern.
+
 - **A module's sidecar could be dropped from a parallel reactor build when a rename lost a race
   for more than 275 ms.** `ModuleSidecar.save()` writes a temp file and renames it over the live
   sidecar; on Windows that rename fails while anything else holds the target open, so it retries.
@@ -1944,7 +1971,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/PIsberg/vibetags/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/PIsberg/vibetags/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC10...v1.0.0
 [1.0.0-RC10]: https://github.com/PIsberg/vibetags/compare/v1.0.0-RC9...v1.0.0-RC10
