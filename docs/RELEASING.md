@@ -143,6 +143,25 @@ For manual releases from your machine, add servers to `~/.m2/settings.xml`:
 
 ## Release Process
 
+### 0. Check the consumers still build
+
+The suite in `vibetags/` proves the processor works. It does not prove a real project still
+compiles against it. Before cutting anything, build every downstream consumer against what is
+about to be released:
+
+```bash
+# only if main is ahead of the newest tag, which it usually is
+cd vibetags-annotations && mvn install -DskipTests
+cd ../vibetags         && mvn install -DskipTests
+cd ../vibetags-bom     && mvn install
+
+bash scripts/consumer-sweep.sh <version>
+```
+
+The `consumer-regression-suite` skill drives this and covers how to read the results — in
+particular, that a failure is not a regression until it has been shown to pass on the
+consumer's existing pinned version.
+
 ### 1. Prepare the release
 
 Create a new branch from `main` (or your default branch):
