@@ -80,16 +80,15 @@ class SignatureCaptureTest {
         CapturingProcessor processor = new CapturingProcessor(capture);
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics,
-                List.of("-classpath", System.getProperty("java.class.path"), "-proc:only"),
-                null,
-                List.of(new StringSource("com/example/sig/Charger.java", SOURCE)));
-            task.setProcessors(List.of(processor));
-            task.call();
-        }
+        StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+        JavaCompiler.CompilationTask task = compiler.getTask(
+            null, fm, diagnostics,
+            List.of("-classpath", System.getProperty("java.class.path"), "-proc:only"),
+            null,
+            List.of(new StringSource("com/example/sig/Charger.java", SOURCE)));
+        task.setProcessors(List.of(processor));
+        task.call();
         return processor.signature;
     }
 

@@ -104,28 +104,27 @@ class ErrorRaisedRoundGuardTest {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null, "JavaCompiler unavailable — run tests with a JDK, not a JRE");
 
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
-            Path classOut = tempDir.resolve("classes");
-            Files.createDirectories(classOut);
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+        StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        Path classOut = tempDir.resolve("classes");
+        Files.createDirectories(classOut);
+        fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
 
-            JavaFileObject source = new StringSource(
-                "com/example/Locked.java",
-                "package com.example;\n"
-                    + "import se.deversity.vibetags.annotations.AILocked;\n"
-                    + "@AILocked(reason = \"core logic\")\n"
-                    + "public class Locked {}\n");
+        JavaFileObject source = new StringSource(
+            "com/example/Locked.java",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"core logic\")\n"
+                + "public class Locked {}\n");
 
-            List<String> options = List.of(
-                "-classpath", System.getProperty("java.class.path"),
-                "-proc:only",
-                "-Avibetags.root=" + tempDir.toAbsolutePath());
+        List<String> options = List.of(
+            "-classpath", System.getProperty("java.class.path"),
+            "-proc:only",
+            "-Avibetags.root=" + tempDir.toAbsolutePath());
 
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics, options, null, List.of(source));
-            task.setProcessors(List.of(new AIGuardrailProcessor(), new ErrorRaisingPeerProcessor()));
-            return task.call();
-        }
+        JavaCompiler.CompilationTask task = compiler.getTask(
+            null, fm, diagnostics, options, null, List.of(source));
+        task.setProcessors(List.of(new AIGuardrailProcessor(), new ErrorRaisingPeerProcessor()));
+        return task.call();
     }
 
     private static final class StringSource extends SimpleJavaFileObject {

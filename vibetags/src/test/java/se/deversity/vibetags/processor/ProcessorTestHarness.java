@@ -33,6 +33,48 @@ import java.util.List;
  */
 class ProcessorTestHarness {
 
+    /**
+     * One file manager per test thread, reused across every compilation that thread runs.
+     *
+     * <p>A {@code StandardJavaFileManager} caches its view of the classpath and of the JDK image:
+     * building a fresh one per compile made javac re-open and re-index all 26 classpath entries
+     * and rebuild its {@code jrt:} index for each of the 278 compilations the suite performs.
+     * Measured on the {@code e2e} tier, reuse cut compile time from 931 s to 643 s of thread time.
+     *
+     * <p>That is CPU, not wall clock, and the distinction matters: at the default thread count the
+     * tier takes the same time either way (48.2 s against 48.4 s, three alternating runs each),
+     * and CI's e2e step is unchanged too (26 s and 28 s, against a 20 s to 31 s spread over eight
+     * runs of {@code main}). Neither a 16-core desktop nor a GitHub runner is CPU-bound here;
+     * instrumenting the harness put the wall clock on filesystem contention instead. Keep this for
+     * the CPU it saves, and do not cite a wall-clock figure for it without measuring again.
+     *
+     * <p>Per-thread rather than global because {@code JavacFileManager} is not thread-safe and the
+     * suite runs test classes and methods concurrently. Everything a compilation varies —
+     * {@code CLASS_OUTPUT}, the options, the compilation units — is set per call, so nothing
+     * leaks between tests on the same thread; the 1537 tests of the {@code e2e} tier are the
+     * regression check on that. Never closed: the instance lives for the lifetime of the fork.
+     */
+    private static final ThreadLocal<StandardJavaFileManager> SHARED_FILE_MANAGER =
+        ThreadLocal.withInitial(
+            () -> ToolProvider.getSystemJavaCompiler().getStandardFileManager(null, null, null));
+
+    /**
+     * This thread's shared file manager. Test classes that drive javac themselves should use this
+     * instead of {@code getStandardFileManager}; see {@link #SHARED_FILE_MANAGER} for the
+     * measurement that motivates it.
+     *
+     * <p>Never put the result in a try-with-resources, and never wrap it in a forwarding manager
+     * to absorb the {@code close()}. javac wraps any file manager that is not its own
+     * {@code JavacFileManager} in {@code ClientCodeWrapper$WrappedJavaFileManager}, and CodeQL's
+     * Java extractor reflects into that wrapper's {@code clientJavaFileManager} field — which
+     * {@code jdk.compiler} does not open, so the whole suite fails under CodeQL with
+     * {@code InaccessibleObjectException}. Handing javac its own class back keeps the compilation
+     * indistinguishable from one that built a fresh manager.
+     */
+    static StandardJavaFileManager sharedFileManager() {
+        return SHARED_FILE_MANAGER.get();
+    }
+
     private final Path root;
     private final List<JavaFileObject> sources = new ArrayList<>();
     private final List<Path> fileSources = new ArrayList<>();
@@ -236,7 +278,8 @@ class ProcessorTestHarness {
             throw new IllegalStateException("JavaCompiler unavailable — run tests with a JDK, not a JRE");
         }
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        StandardJavaFileManager fm = sharedFileManager();
+        try {
             Path classOut = root.resolve("classes");
             Files.createDirectories(classOut);
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
