@@ -383,7 +383,7 @@ class ValidationRuleUnitTest {
             }
         };
         try (javax.tools.StandardJavaFileManager fm =
-                 compiler.getStandardFileManager(diagnostics, null, null)) {
+                 ProcessorTestHarness.sharedFileManager()) {
             javax.tools.JavaCompiler.CompilationTask task = compiler.getTask(null, fm, diagnostics,
                 List.of("-classpath", System.getProperty("java.class.path"), "-proc:only",
                     "-Avibetags.root=" + tmp.toAbsolutePath()),

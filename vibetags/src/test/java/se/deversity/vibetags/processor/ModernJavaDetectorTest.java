@@ -175,7 +175,7 @@ class ModernJavaDetectorTest {
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
             List<String> options = List.of(
                 "-classpath", System.getProperty("java.class.path"),

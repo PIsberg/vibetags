@@ -104,7 +104,7 @@ class ErrorRaisedRoundGuardTest {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null, "JavaCompiler unavailable — run tests with a JDK, not a JRE");
 
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
             Path classOut = tempDir.resolve("classes");
             Files.createDirectories(classOut);
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));

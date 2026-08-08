@@ -62,7 +62,7 @@ class ProcessorFailureGuardTest {
 
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         boolean ok;
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
             Path classOut = tempDir.resolve("classes");
             Files.createDirectories(classOut);
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));

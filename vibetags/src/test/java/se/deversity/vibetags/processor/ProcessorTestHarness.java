@@ -1,12 +1,14 @@
 package se.deversity.vibetags.processor;
 
 import javax.tools.DiagnosticCollector;
+import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -32,6 +34,35 @@ import java.util.List;
  * }</pre>
  */
 class ProcessorTestHarness {
+
+    /**
+     * One file manager per test thread, reused across every compilation that thread runs.
+     *
+     * <p>A {@code StandardJavaFileManager} caches its view of the classpath and of the JDK image:
+     * building a fresh one per compile made javac re-open and re-index all 26 classpath entries
+     * and rebuild its {@code jrt:} index for each of the 278 compilations the suite performs.
+     * Measured on the {@code e2e} tier, reuse cut compile time from 931 s to 643 s of thread time.
+     * Pinned to 4 threads, which is the vCPU count CI gets, the tier went from 69 s to 47 s of
+     * wall clock once the twelve test classes that drive javac themselves were switched over too.
+     *
+     * <p>Per-thread rather than global because {@code JavacFileManager} is not thread-safe and the
+     * suite runs test classes and methods concurrently. Everything a compilation varies —
+     * {@code CLASS_OUTPUT}, the options, the compilation units — is set per call, so nothing
+     * leaks between tests on the same thread; the 1537 tests of the {@code e2e} tier are the
+     * regression check on that. Never closed: the instance lives for the lifetime of the fork.
+     */
+    private static final ThreadLocal<StandardJavaFileManager> SHARED_FILE_MANAGER =
+        ThreadLocal.withInitial(
+            () -> ToolProvider.getSystemJavaCompiler().getStandardFileManager(null, null, null));
+
+    /**
+     * This thread's shared file manager, wrapped so that closing it is a no-op. Test classes that
+     * drive javac themselves should use this instead of {@code getStandardFileManager}; see
+     * {@link #SHARED_FILE_MANAGER} for the measurement that motivates it.
+     */
+    static StandardJavaFileManager sharedFileManager() {
+        return new NonClosing(SHARED_FILE_MANAGER.get());
+    }
 
     private final Path root;
     private final List<JavaFileObject> sources = new ArrayList<>();
@@ -236,7 +267,7 @@ class ProcessorTestHarness {
             throw new IllegalStateException("JavaCompiler unavailable — run tests with a JDK, not a JRE");
         }
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        try (StandardJavaFileManager fm = sharedFileManager()) {
             Path classOut = root.resolve("classes");
             Files.createDirectories(classOut);
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
@@ -389,6 +420,64 @@ class ProcessorTestHarness {
             "    @AIContract(reason = \"External payment gateway API — breaking changes will violate SLA\")\n" +
             "    double charge(String customerId, double amount);\n" +
             "}\n");
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal: non-closing wrapper around the shared file manager
+    // -----------------------------------------------------------------------
+
+    /**
+     * Hands the shared {@link #SHARED_FILE_MANAGER} to a compilation task without letting the
+     * task's try-with-resources close it. Every other call forwards unchanged.
+     *
+     * <p>{@link ForwardingJavaFileManager} covers the {@code JavaFileManager} half; the four
+     * {@code getJavaFileObjects*} overloads and the {@code File}-based {@code setLocation} /
+     * {@code getLocation} come from {@code StandardJavaFileManager} and have to be forwarded by
+     * hand.
+     */
+    private static final class NonClosing
+            extends ForwardingJavaFileManager<StandardJavaFileManager>
+            implements StandardJavaFileManager {
+
+        NonClosing(StandardJavaFileManager delegate) {
+            super(delegate);
+        }
+
+        /** No-op: the delegate is shared with every other compilation on this thread. */
+        @Override
+        public void close() {
+            // deliberately not closed
+        }
+
+        @Override
+        public Iterable<? extends JavaFileObject> getJavaFileObjectsFromFiles(Iterable<? extends File> files) {
+            return fileManager.getJavaFileObjectsFromFiles(files);
+        }
+
+        @Override
+        public Iterable<? extends JavaFileObject> getJavaFileObjects(File... files) {
+            return fileManager.getJavaFileObjects(files);
+        }
+
+        @Override
+        public Iterable<? extends JavaFileObject> getJavaFileObjectsFromStrings(Iterable<String> names) {
+            return fileManager.getJavaFileObjectsFromStrings(names);
+        }
+
+        @Override
+        public Iterable<? extends JavaFileObject> getJavaFileObjects(String... names) {
+            return fileManager.getJavaFileObjects(names);
+        }
+
+        @Override
+        public void setLocation(Location location, Iterable<? extends File> files) throws IOException {
+            fileManager.setLocation(location, files);
+        }
+
+        @Override
+        public Iterable<? extends File> getLocation(Location location) {
+            return fileManager.getLocation(location);
+        }
     }
 
     // -----------------------------------------------------------------------

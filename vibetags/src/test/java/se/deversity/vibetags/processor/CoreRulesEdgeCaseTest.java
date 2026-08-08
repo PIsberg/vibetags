@@ -77,7 +77,7 @@ class CoreRulesEdgeCaseTest {
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = compiler.getStandardFileManager(diagnostics, null, null)) {
+        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
             fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
             JavaCompiler.CompilationTask task = compiler.getTask(
                 null, fm, diagnostics,
