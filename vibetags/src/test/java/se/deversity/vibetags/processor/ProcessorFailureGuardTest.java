@@ -62,28 +62,27 @@ class ProcessorFailureGuardTest {
 
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         boolean ok;
-        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
-            Path classOut = tempDir.resolve("classes");
-            Files.createDirectories(classOut);
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+        StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        Path classOut = tempDir.resolve("classes");
+        Files.createDirectories(classOut);
+        fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
 
-            JavaFileObject source = new StringSource(
-                "com/example/Locked.java",
-                "package com.example;\n"
-                    + "import se.deversity.vibetags.annotations.AILocked;\n"
-                    + "@AILocked(reason = \"core logic\")\n"
-                    + "public class Locked {}\n");
+        JavaFileObject source = new StringSource(
+            "com/example/Locked.java",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"core logic\")\n"
+                + "public class Locked {}\n");
 
-            List<String> options = List.of(
-                "-classpath", System.getProperty("java.class.path"),
-                "-proc:only",
-                "-Avibetags.root=" + tempDir.toAbsolutePath());
+        List<String> options = List.of(
+            "-classpath", System.getProperty("java.class.path"),
+            "-proc:only",
+            "-Avibetags.root=" + tempDir.toAbsolutePath());
 
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics, options, null, List.of(source));
-            task.setProcessors(List.of(new FaultyProcessor()));
-            ok = task.call();
-        }
+        JavaCompiler.CompilationTask task = compiler.getTask(
+            null, fm, diagnostics, options, null, List.of(source));
+        task.setProcessors(List.of(new FaultyProcessor()));
+        ok = task.call();
 
         // 1. The build must NOT fail because of the processor blowing up.
         assertTrue(ok, "Compilation should succeed: a guardrail failure must never break the build");

@@ -382,16 +382,14 @@ class ValidationRuleUnitTest {
                 return code;
             }
         };
-        try (javax.tools.StandardJavaFileManager fm =
-                 ProcessorTestHarness.sharedFileManager()) {
+        javax.tools.StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        try {
             javax.tools.JavaCompiler.CompilationTask task = compiler.getTask(null, fm, diagnostics,
                 List.of("-classpath", System.getProperty("java.class.path"), "-proc:only",
                     "-Avibetags.root=" + tmp.toAbsolutePath()),
                 null, List.of(source));
             task.setProcessors(List.of(new AIGuardrailProcessor()));
             task.call();
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException(e);
         } finally {
             VibeTagsLogger.shutdown();
         }

@@ -175,17 +175,16 @@ class ModernJavaDetectorTest {
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
-            List<String> options = List.of(
-                "-classpath", System.getProperty("java.class.path"),
-                "-proc:only",
-                "-Avibetags.root=" + tempDir.toAbsolutePath()
-            );
-            JavaCompiler.CompilationTask task = compiler.getTask(null, fm, diagnostics, options, null, sources);
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
-            task.call();
-        }
+        StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+        List<String> options = List.of(
+            "-classpath", System.getProperty("java.class.path"),
+            "-proc:only",
+            "-Avibetags.root=" + tempDir.toAbsolutePath()
+        );
+        JavaCompiler.CompilationTask task = compiler.getTask(null, fm, diagnostics, options, null, sources);
+        task.setProcessors(List.of(new AIGuardrailProcessor()));
+        task.call();
 
         for (var d : diagnostics.getDiagnostics()) {
             messages.add(d.getMessage(Locale.ROOT));

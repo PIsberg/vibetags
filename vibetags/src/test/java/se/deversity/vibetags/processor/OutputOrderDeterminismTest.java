@@ -92,17 +92,16 @@ class OutputOrderDeterminismTest {
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager()) {
-            fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
-            JavaCompiler.CompilationTask task = compiler.getTask(
-                null, fm, diagnostics,
-                List.of("-classpath", System.getProperty("java.class.path"),
-                        "-Avibetags.root=" + root.toAbsolutePath(),
-                        "-Avibetags.cache=false"),
-                null, sources);
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
-            task.call();
-        }
+        StandardJavaFileManager fm = ProcessorTestHarness.sharedFileManager();
+        fm.setLocation(StandardLocation.CLASS_OUTPUT, List.of(classOut.toFile()));
+        JavaCompiler.CompilationTask task = compiler.getTask(
+            null, fm, diagnostics,
+            List.of("-classpath", System.getProperty("java.class.path"),
+                    "-Avibetags.root=" + root.toAbsolutePath(),
+                    "-Avibetags.cache=false"),
+            null, sources);
+        task.setProcessors(List.of(new AIGuardrailProcessor()));
+        task.call();
         return Files.readString(claudeMd, StandardCharsets.UTF_8);
     }
 
