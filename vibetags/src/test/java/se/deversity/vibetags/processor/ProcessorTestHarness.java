@@ -40,8 +40,13 @@ class ProcessorTestHarness {
      * building a fresh one per compile made javac re-open and re-index all 26 classpath entries
      * and rebuild its {@code jrt:} index for each of the 278 compilations the suite performs.
      * Measured on the {@code e2e} tier, reuse cut compile time from 931 s to 643 s of thread time.
-     * Pinned to 4 threads, which is the vCPU count CI gets, the tier went from 69 s to 51 s of
-     * wall clock once the twelve test classes that drive javac themselves were switched over too.
+     *
+     * <p>That is CPU, not wall clock, and the distinction matters: at the default thread count the
+     * tier takes the same time either way (48.2 s against 48.4 s, three alternating runs each),
+     * and CI's e2e step is unchanged too (26 s and 28 s, against a 20 s to 31 s spread over eight
+     * runs of {@code main}). Neither a 16-core desktop nor a GitHub runner is CPU-bound here;
+     * instrumenting the harness put the wall clock on filesystem contention instead. Keep this for
+     * the CPU it saves, and do not cite a wall-clock figure for it without measuring again.
      *
      * <p>Per-thread rather than global because {@code JavacFileManager} is not thread-safe and the
      * suite runs test classes and methods concurrently. Everything a compilation varies —
