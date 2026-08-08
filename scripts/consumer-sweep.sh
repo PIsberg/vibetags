@@ -5,8 +5,12 @@
 # Usage:
 #   scripts/consumer-sweep.sh <vibetags-version> [repo ...]
 #
-#   scripts/consumer-sweep.sh 1.0.3                 # every known consumer
-#   scripts/consumer-sweep.sh 1.0.3 blindbean       # just one
+#   scripts/consumer-sweep.sh <version>             # every known consumer
+#   scripts/consumer-sweep.sh <version> blindbean   # just one
+#
+# The examples deliberately say <version> rather than a real one: a literal release version
+# here would be a second place the release has to be remembered, and ReleaseScriptCoverageTest
+# fails the build for exactly that.
 #
 # What it does per repo: fetch, branch off origin/main (never off whatever happens to be
 # checked out), rewrite the VibeTags version in every place that repo declares it, build,

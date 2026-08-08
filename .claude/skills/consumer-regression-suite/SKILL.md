@@ -43,8 +43,8 @@ the result.
 ## Step 2 — Run the sweep
 
 ```bash
-bash scripts/consumer-sweep.sh 1.0.3              # every consumer
-bash scripts/consumer-sweep.sh 1.0.3 blindbean    # one
+bash scripts/consumer-sweep.sh <version>            # every consumer
+bash scripts/consumer-sweep.sh <version> blindbean  # one
 ```
 
 Per repo it fetches, branches off `origin/main`, rewrites every place that repo declares the
@@ -130,3 +130,11 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
   Windows and inventing drift in files the bump never needed to touch.
 - Sweeping a repo with uncommitted work either fails or drags that work into the branch. The
   script skips dirty repos on purpose; do not force past it.
+- **Run this repo's gates after `git add`, not before.** `ReleaseScriptCoverageTest` reads
+  `git ls-files`, so a brand-new file is invisible to it while untracked. A local
+  `mvn verify -Pe2e` went green on these very files and CI then failed on all 17 jobs, because
+  both of them quoted a real release version in an example. Never put a literal release version
+  in a new file: say `<version>`.
+- Six PRs opening at once made Maven Central answer 429 and failed an unrelated consumer job.
+  A resolution failure naming artifacts you did not touch (`junit-bom` here) is infrastructure;
+  rerun it rather than investigating it.
