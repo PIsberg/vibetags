@@ -8,15 +8,16 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 everything, and that is what CI runs on all three legs that execute tests (`build-maven`,
 `cross-platform`, `build-gradle`). Gradle mirrors both: `gradlew test` and `gradlew test -Pe2e`.
 
-Measured on a 16-core Windows machine on 2026-08-06, warm compile, `-Dmaven.pmd.skip -Dspotbugs.skip`:
+Measured on a 16-core Windows machine on 2026-08-10, warm compile, `-Dmaven.pmd.skip -Dspotbugs.skip`:
 
 | Command | Classes | Tests | Wall clock |
 |---|---|---|---|
-| `mvn test` | 80 | 910 | 35s |
-| `mvn test -Pe2e` | 132 | 1486 | 61s |
+| `mvn test` | 88 | 957 | 41s |
+| `mvn test -Pe2e` | 142 | 1546 | 61s |
 
-Roughly 10s of either figure is compile, Error Prone and JaCoCo rather than tests — `mvn test
--DskipTests` costs 10s on the same machine — so the tests themselves go from ~51s to ~25s.
+Compile, Error Prone and JaCoCo account for the first few seconds of either figure rather than
+tests — `mvn test -DskipTests` costs 4.6s fully warm on the same machine — so the tests themselves
+go from ~36s to ~56s.
 
 **What is tagged, and why.** The 52 classes that took over 5s in the full-suite baseline of
 2026-08-06: 599.66s of the 704.15s the suite spent. The rule is cost, not category.
@@ -74,6 +75,8 @@ stop excluding the same one.
 | `YamlMergeShapeContractTest` | Each `PlatformRenderer.mergeShape()` still describes what its renderer writes, and no generated `.yaml` ships without one |
 | `MultiModuleWholeFileMergeTest` | The marker-free JSON/TOML outputs survive a reactor: sidecar bodies exist so the file is allowed to refresh at all, every module's guardrails are in the merged document, `.mentatconfig.json` stays valid JSON, and a new marker-free service whose content varies without a declared merge fails the build (#265) |
 | `GuardrailLifecycleEndToEndTest` | The second compile: editing an annotation's value replaces the old text everywhere, removing one drops it from the merged root and the whole-file JSON/TOML, and deleting a generated file opts that platform out permanently (and restoring it opts back in). Also pins the documented limitation that emptying a module of *every* annotation leaves its last contribution until its sidecar is deleted |
+| `GuardrailFileRecoveryEndToEndTest` | The generated file is still there but no longer looks the way VibeTags left it: the marker block deleted by a merge-conflict resolution, a start marker with no end from a half-applied patch, a file truncated to empty, an edit made *inside* the block, and a `.vibetags-cache` lost to `git clean` (output must stay byte-identical without it). As much a test of `WriteCache.allCachedFilesStable()` as of the writer — an unchanged annotation set is exactly when the short-circuit would skip past the damage |
+| `AnnotationTransitionEndToEndTest` | The element survives and what is true about it changes: the annotation *type* swapped on the same FQN (the old bucket must go, or the file states two contradictory things about one class), a class moved between modules in a reactor (the losing module's sidecar must drop it — the failure here is a duplicate, not an absence), a role renamed in `.vibetags-roles`, and the roles config deleted entirely (per-class fallback, old role files retired) |
 | *(CI step)* `example-all-tiers` | Not a JUnit class: the workflow builds the all-tiers example and asserts the split — six safety buckets inline at Tier 1 and no verbose bucket, a Tier-1 pointer naming both lower tiers per module, Tier-2 files that do not leak each other, role-grouped Tier-3 files with `paths:` front-matter, and a parameter-level rule |
 | `SourceSetIsolationEndToEndTest` | `compile` and `test-compile` are separate rounds over the same module: neither erases the other's guardrails or rule files, two source sets still render as one region, and a module's own aggregate merges across them (#330) |
 | `MultiModuleGranularRoleMergeTest` | A role matched in several modules resolves to one shared rule file: every module's guardrails survive, a one-module rebuild leaves the file byte-identical, reactor order does not change it, check mode agrees with generation, unrouted classes keep their per-class file, and the same merge covers two source sets of one module and a module's own nested rules (#365) |
