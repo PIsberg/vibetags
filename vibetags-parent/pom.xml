@@ -84,7 +84,7 @@
 
         <!-- Test dependencies. Keep in step with vibetags/build.gradle and
              load-tests/pom.xml; BuildVersionParityTest enforces it. -->
-        <junit.version>6.1.2</junit.version>
+        <junit.version>6.1.3</junit.version>
         <junit.platform.version>6.1.2</junit.platform.version>
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
