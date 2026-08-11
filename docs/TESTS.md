@@ -153,3 +153,14 @@ stop excluding the same one.
 | `GranularSectionsTest` | Granular section collapsing (#313): shared-line hoisting (leading and trailing), `Applies to` lists, per-section independence, qualified (role-file) headings, pluralization, and byte-identical single-stanza output |
 | `GranularHoistingEndToEndTest` | End-to-end #313: three `@AIPrivacy` fields state the constant rule once; a lone field keeps the historical singular form; a role file spanning two classes collapses across owners |
 | `MirrorEndToEndTest` | Cross-module mirroring (#312): `.vibetags-mirror` opt-in, empty vs. explicit source list, `glob =` override, namespaced filenames surviving the target's and siblings' cleanups, orphan removal, config-edit cache invalidation, check-mode drift, and no-op when unconfigured |
+
+## Other modules
+
+`vibetags-cli/src/test` has its own small suite, run by `cd vibetags-cli && mvn test` and by the
+`build-maven` and `cross-platform` CI legs (the latter are the only place its filesystem behaviour
+is exercised on Windows and macOS path separators):
+
+| Test class | What it covers |
+|---|---|
+| `InitCommandTest` | `vibetags init`: `--list` shows opt-in keys without creating anything; `--platforms` creates empty opt-in files (directories for `*_granular` keys, parents for nested paths); an existing file is reported active and never truncated; an unknown key rejects the whole request before creating the valid half; bare `init` creates nothing; `--dir` targets another root |
+| `DoctorCommandTest` | `vibetags doctor`: exit 0 only for a wired project with intact markers; findings (exit 1) for missing processor/annotations wiring, no opt-in files, unbalanced `VIBETAGS-START`/`END` pairs, and no build file; the AGENTS.md pointer rule is explained as a note, not a finding |

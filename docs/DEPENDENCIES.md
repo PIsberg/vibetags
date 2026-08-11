@@ -29,6 +29,11 @@ to the consumer's compile and runtime classpath. A consumer who wires VibeTags i
 compile dependency does get them, which is one more reason `USAGE.md` treats the processor-path
 form as the recommended setup and the class-path form as a fallback with caveats.
 
+`vibetags-cli` adds **no third-party dependency**: it is plain JDK code plus
+`vibetags-processor` as a library (for `ServiceRegistry` and the marker constants — the one
+source of truth for the platform list). Whoever launches it (jbang, `java -cp`) resolves the
+processor's transitive slf4j/logback, which is the full closure.
+
 `vibetags-annotations` has **no** third-party dependencies at all, by design. It is on the
 consumer's compile classpath, and anything added there is something a consumer's build has to
 resolve, shade or exclude.

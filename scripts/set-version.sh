@@ -18,6 +18,7 @@
 #   vibetags/build.gradle              Same. Both publish under this version.
 #   vibetags-annotations/pom.xml       Prose only: the <description> shows consumers a
 #   vibetags-bom/pom.xml               copy-pasteable snippet with a literal version in it.
+#   vibetags-cli/pom.xml               Same: the jbang one-liner in its <description>.
 #   example/pom.xml                    Standalone on purpose, so a user can lift them into
 #   example/build.gradle               their own project. Their vibetags.bom.version is a
 #   example-multimodule/pom.xml        literal, and CI builds them against the artifacts
@@ -138,6 +139,7 @@ done
 for rel in \
     vibetags-annotations/pom.xml \
     vibetags-bom/pom.xml \
+    vibetags-cli/pom.xml \
     example/pom.xml \
     example/build.gradle \
     example-multimodule/pom.xml \

@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`vibetags-cli`: `init` and `doctor`.** The gap between "read the README" and "first
+  generated file" was the opt-in model itself — the processor never creates files, and a new
+  user's most common failure is compiling with nothing opted in and concluding VibeTags does
+  nothing. `vibetags init --platforms claude,cursor` creates exactly the named opt-in files
+  (empty, directories for `*_granular` keys) and refuses unknown keys before creating
+  anything; `vibetags doctor` reports build-tool wiring, active platforms, the AGENTS.md
+  pointer rule, and `VIBETAGS-START`/`END` marker balance, exiting 1 when a finding needs
+  action. The platform keys, paths and marker strings come from `vibetags-processor` at
+  runtime (`ServiceRegistry.optInKeys()` is new for this), so the CLI cannot drift from the
+  processor — the alternative was a second hand-maintained platform list, which is the exact
+  failure mode this repository keeps tests against. Published as
+  `se.deversity.vibetags:vibetags-cli` (same version, in the BOM), runnable via
+  `jbang se.deversity.vibetags:vibetags-cli:<version> init --list`. 15 tests in
+  `vibetags-cli/src/test`, run on the Linux, Windows and macOS CI legs; deploy step added to
+  `publish.yml`. The full generation-capable CLI remains deliberately unbuilt — see the
+  decision note in `docs/CONCEPT_PLUGIN.md`.
 - **Kotlin support via kapt, documented and asserted in CI.** The processor always was plain
   JSR 269, so it ran under kapt in principle; nothing proved it, and nothing told a Kotlin
   user how to wire it. `example-kotlin/` is a standalone Gradle (Kotlin DSL) consumer —

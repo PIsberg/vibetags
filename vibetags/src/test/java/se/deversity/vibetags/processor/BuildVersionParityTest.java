@@ -67,7 +67,7 @@ class BuildVersionParityTest {
     /** Poms that inherit from the parent and must therefore declare no version of their own. */
     private static final List<String> MANAGED_POMS = List.of(
         "vibetags/pom.xml", "vibetags-annotations/pom.xml", "vibetags-bom/pom.xml",
-        "load-tests/pom.xml");
+        "vibetags-cli/pom.xml", "load-tests/pom.xml");
 
     /**
      * Consumer-shaped poms: standalone on purpose, so a user can lift them into their own project

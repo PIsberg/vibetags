@@ -61,6 +61,17 @@ public final class ServiceRegistry {
     private ServiceRegistry() {}
 
     /**
+     * The service keys whose file's presence on disk is the user's opt-in signal, as an
+     * immutable copy. Exposed for tooling (the {@code vibetags-cli} {@code init} and
+     * {@code doctor} commands) so the opt-in list has exactly one home; the CLI creating a
+     * file from this set is the user opting in explicitly — the processor itself still never
+     * creates one.
+     */
+    public static Set<String> optInKeys() {
+        return Set.copyOf(OPT_IN_KEYS);
+    }
+
+    /**
      * Returns the canonical map of service key → output file path for a given project root.
      */
     public static Map<String, Path> buildServiceFileMap(Path root) {
