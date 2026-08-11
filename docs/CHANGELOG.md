@@ -36,7 +36,8 @@ and get both sets of changes.
   their first Gradle run failed to resolve an unpublished 1.0.4 and never reached `compileJava`.
   That is a publication artifact, not a regression: with `mavenLocal()` injected for the
   duration of the run — reverted afterwards, nothing committed — both build clean. Their real
-  bumps cannot be opened until 1.0.4 is published.
+  bumps target 1.1.0, since 1.0.4 was never published, and cannot be opened until 1.1.0 is on
+  Maven Central.
 
   **Load-test baseline** (`load-tests/results/1.0.4/`), measured on JDK 26, i7-1260P, cap
   `-Dstress.max.classes=1000`:
