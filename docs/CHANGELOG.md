@@ -7,7 +7,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Verified
+- **Every downstream consumer still builds against `main`, and a 1.0.4 load-test baseline says
+  the work product did not move.** Both suites were run against the processor built from
+  main @ 341b655 and installed locally, because 1.0.4 is not on Maven Central — the newest
+  published release is 1.0.3, so the published artifact is not the code under test.
+
+  **Consumer regression suite** (`scripts/consumer-sweep.sh`, all five repos):
+
+  | repo | build | result | drift |
+  |---|---|---|---|
+  | `blindbean` | Maven | PASS | none |
+  | `codekarta` | Maven + Gradle | PASS | none |
+  | `common-license-lib` | Maven + Gradle | PASS | none |
+  | `skill3` | Gradle | PASS | none |
+  | `async-test-lib` | Maven + Gradle | PASS | none |
+
+  Two of those results carry a caveat that belongs in the report rather than in a footnote.
+  `common-license-lib` and `skill3` declare only `mavenCentral()` in their Gradle builds, so
+  their first Gradle run failed to resolve an unpublished 1.0.4 and never reached `compileJava`.
+  That is a publication artifact, not a regression: with `mavenLocal()` injected for the
+  duration of the run — reverted afterwards, nothing committed — both build clean. Their real
+  bumps cannot be opened until 1.0.4 is published.
+
+  **Load-test baseline** (`load-tests/results/1.0.4/`), measured on JDK 26, i7-1260P, cap
+  `-Dstress.max.classes=1000`:
+
+  ![Allocation overhead, 1.0.3 vs 1.0.4](../load-tests/results/_plots/alloc-release-comparison-1.0.4.png)
+
+  Measured back-to-back in one session, switching only `-Dprocessor.version`, 1.0.4 differs from
+  1.0.3 by **-0.02 % at N=100, -0.24 % at N=500 and +0.35 % at N=1000**. Every one of those is
+  inside the 0.6 % floor this harness reproduces at, so the claim is *no measurable allocation
+  change*, not "identical" and not "0.35 % worse". That is the expected result — everything
+  merged since 1.0.3 is an example consumer, a separate CLI module, or a guard inside the CLI,
+  and none of it touches the processor's write path. A moving number would have been the finding.
+
+  `OutputSize(B)` is byte-identical to 1.0.0-RC9 at every N (14 179 / 101 296 / 495 656 /
+  988 897), which is the useful reading of the capture: the generated files did not change.
+
+  **The wall-clock and JMH figures in this baseline are worse than noise and are marked as
+  such.** Four of the six hot-path benchmarks came back with a confidence interval wider than
+  their own score (`buildServiceFileMap` at 26.6 ± 41.6 µs/op, `writeFileIfChanged_largeWrite`
+  at 4531 ± 4474). Read literally the table shows 1.0.4 roughly twice as fast as RC9 on four
+  benchmarks; read honestly it shows two noisy afternoons. Nothing about processor speed may be
+  taken from it. The one timing result that survives is the cache-hit ratio, because it is
+  20x-200x rather than 2x: `cacheHit` holds 26-116 µs/op across all body sizes while `noCache`
+  runs 534 µs/op at 1 KB to 23 283 µs/op at 1 MB.
+
+  `ProcessorTaxStressTest` and `SignatureCaptureStressTest` were not run in this capture, and
+  the baseline has no `processor-tax.txt` of its own. Skipped is recorded as skipped: the sweep
+  cap leaves N=5000 and N=10000 unmeasured, which is the `Tests run: 13, Skipped: 4` in the
+  surefire output.
+
+- **Two long-standing claims in `load-tests/results/README.md` were false and are corrected.**
+  Both were found by running the harness rather than by reading it.
+
+  `OutputSize(B)` was documented as byte-identical across every release at every N
+  (17 156 / 122 555 / 599 895 / 1 196 918). It held from 0.5.4 through 0.9.7, then moved at
+  1.0.0-RC1 and again at 1.0.0-RC9 — the committed baselines say so, and have since RC1 was
+  captured. A reader checking a new capture against the prose would have concluded the output
+  had broken. The README now names the three eras and says to compare against the previous
+  baseline file instead.
+
+  The Windows `@TempDir` cleanup failure was documented as a standing caveat, with
+  `concurrent.xml` reporting `errors=1` because `vibetags.log` is held open by the file logger.
+  That is true of the 0.5.4-0.8.0 baselines and has not recurred since: 0.9.7, 1.0.0-RC9 and
+  1.0.4 all report `errors="0"`. Left as written, it was an instruction to ignore a real failure
+  the next time one appears.
+
+### Fixed
+- **The consumer sweep reported a generated pom as guardrail drift.** `codekarta` came back as
+  `GUARDRAIL DRIFT in 1 file(s)` for `code-karta-cli/dependency-reduced-pom.xml`, which
+  maven-shade regenerates from the POM on every build — so it echoed the `1.0.3 -> 1.0.4` bump
+  the sweep had just made. The whole point of the drift column is to distinguish "the processor
+  renders something new" from bookkeeping, and a false positive there costs a review round every
+  release. `scripts/consumer-sweep.sh` now excludes it alongside `pom.xml`; the count on that
+  same working tree goes 1 to 0.
+
 ### Added
+- **A `load-tests` skill.** The harness had a thorough README and no guidance on which of its
+  numbers may be quoted, which is the part that actually decides whether a run means anything.
+  `.claude/skills/load-tests/SKILL.md` carries the judgement: allocation is the metric to make
+  claims from (ThreadMXBean, immune to a busy machine, reproduces to 0.6 %), wall-clock and JMH
+  are not (identical builds have differed by up to 1.93x), N=10 is excluded from any comparison,
+  the reported overhead is roughly 4x the processor's real cost because the `-proc:none` baseline
+  charges javac's whole annotation-processing subsystem to VibeTags, and the one-method-per-class
+  fixture is blind to anything that scales with a type's member count. It also pins the two
+  mechanical traps that have already cost a capture: the JMH class filter is load-bearing (0.9.5
+  has 18 benchmarks in a file every other release has 6 in), and `mvn dependency:tree` is the only
+  proof that `-Dprocessor.version` reached the dependency.
 - **Groovy support via joint-compilation stubs, and an honest answer for Scala and
   Clojure.** Language support for a JSR 269 processor is decided by whether the toolchain
   ever hands javac the annotations, so nothing in the processor changed — each language is

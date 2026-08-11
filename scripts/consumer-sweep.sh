@@ -160,9 +160,16 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   # that is most of them; numstat compares after git's own EOL normalisation, so a non-empty
   # numstat means the new VibeTags genuinely renders something different and the consumer's
   # committed files are stale. EOL-only churn is reported separately rather than as drift.
+  #
+  # dependency-reduced-pom.xml is excluded for the same reason as pom.xml: maven-shade
+  # regenerates it from the POM on every build, so it echoes the version this script just
+  # bumped. Counting it reported codekarta as "GUARDRAIL DRIFT in 1 file(s)" for a one-line
+  # version diff in a generated pom, which is the bump working, not the processor rendering
+  # something new.
   drift=$(git -C "$work" diff --numstat -- . \
             ':(exclude)pom.xml' ':(exclude)build.gradle' \
             ':(exclude)build.gradle.kts' ':(exclude)gradle.properties' \
+            ':(exclude)**/dependency-reduced-pom.xml' ':(exclude)dependency-reduced-pom.xml' \
             | wc -l | tr -d ' ')
   eolonly=$(git -C "$work" status --porcelain | wc -l | tr -d ' ')
 
