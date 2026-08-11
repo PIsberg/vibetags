@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Kotlin support via kapt, documented and asserted in CI.** The processor always was plain
+  JSR 269, so it ran under kapt in principle; nothing proved it, and nothing told a Kotlin
+  user how to wire it. `example-kotlin/` is a standalone Gradle (Kotlin DSL) consumer —
+  `kotlin("kapt")`, the processor on the `kapt` configuration, `vibetags.root` passed
+  explicitly because kapt's working directory is a Gradle worker dir, not the project. The
+  JDK 21 Gradle CI leg builds it and greps the regenerated `CLAUDE.md` / `.cursorrules` for
+  the annotated Kotlin elements, so "Kotlin works" is now a gate rather than a claim. README
+  and USAGE.md gained the setup snippet plus the two stub-inherited limitations: method-body
+  annotations are invisible (stubs have no bodies), and `.vibetags-locks` positions would
+  describe the stub, not the `.kt` file. KSP remains unsupported — it does not run JSR 269
+  processors.
+
 ## [1.0.4] - 2026-08-08
 
 ### Fixed

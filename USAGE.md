@@ -5,6 +5,7 @@
 ## Contents
 
 - [Logging Configuration](#logging-configuration)
+- [Kotlin (kapt) Configuration](#kotlin-kapt-configuration)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
 - [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
@@ -70,6 +71,48 @@ tasks.withType(JavaCompile) {
     ]
 }
 ```
+
+### Kotlin (kapt) Configuration
+
+Every `@AI*` annotation is a plain Java annotation with `SOURCE` retention, so it applies to
+Kotlin classes and functions unchanged. VibeTags is a JSR 269 processor, which means Kotlin
+projects run it under [kapt](https://kotlinlang.org/docs/kapt.html) — KSP does not run JSR 269
+processors and is not supported.
+
+```kotlin
+plugins {
+    kotlin("jvm")
+    kotlin("kapt")
+}
+
+dependencies {
+    compileOnly("se.deversity.vibetags:vibetags-annotations")
+    kapt("se.deversity.vibetags:vibetags-processor")
+}
+
+kapt {
+    arguments {
+        // kapt's working directory is not the project directory — pass the root explicitly.
+        arg("vibetags.root", projectDir.absolutePath)
+    }
+}
+```
+
+Processor options (`vibetags.log.path`, `vibetags.check`, …) are passed through the same
+`kapt { arguments { ... } }` block, without the `-A` prefix.
+
+Two kapt-specific limitations, both consequences of kapt processing generated Java stubs
+rather than the Kotlin sources:
+
+- **Method-body-scoped annotations are invisible.** Stubs carry no method bodies, so an
+  annotation on a local declaration inside a function body is never seen. Class-level and
+  function-level annotations — the normal usage — work fully.
+- **Source positions describe the stub.** The `.vibetags-locks` report's line ranges would
+  point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
+  the locks report.
+
+A complete working consumer is in [`example-kotlin/`](example-kotlin/README.md), built in CI
+on the JDK 21 Gradle leg.
 
 ### Check Mode — CI Drift Enforcement (Opt-in)
 

@@ -148,6 +148,66 @@ gradle compileJava
 
 </details>
 
+<details>
+<summary><b>Kotlin (Gradle + kapt)</b></summary>
+
+Every `@AI*` annotation is a plain Java annotation with `SOURCE` retention, so it works on
+Kotlin classes and functions unchanged. VibeTags runs under [kapt](https://kotlinlang.org/docs/kapt.html)
+— KSP is not supported (it does not run JSR 269 processors).
+
+**1. Add to `build.gradle.kts`:**
+
+```kotlin
+plugins {
+    kotlin("jvm") version "2.3.21"
+    kotlin("kapt") version "2.3.21"
+}
+
+dependencies {
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.0.4"))
+    kapt(platform("se.deversity.vibetags:vibetags-bom:1.0.4"))
+
+    compileOnly("se.deversity.vibetags:vibetags-annotations")
+    kapt("se.deversity.vibetags:vibetags-processor")
+}
+
+kapt {
+    arguments {
+        // kapt's working directory is not the project directory — pass the root explicitly.
+        arg("vibetags.root", projectDir.absolutePath)
+    }
+}
+```
+
+**2. Opt in to the AI platforms you use:**
+
+```bash
+touch CLAUDE.md .cursorrules AGENTS.md
+```
+
+**3. Annotate your first class:**
+
+```kotlin
+@AILocked(reason = "Legacy payment integration — changes will break production.")
+class PaymentProcessor {
+    fun processPayment(amount: Double, currency: String, merchantId: String): String = TODO()
+}
+```
+
+**4. Compile:**
+
+```bash
+gradle build
+```
+
+One caveat: kapt processes generated Java stubs, which carry no method bodies — so
+annotations on declarations *inside* a function body are invisible, and `.vibetags-locks`
+line ranges would describe the stub rather than the `.kt` file. Class-level and
+function-level annotations — the normal usage — work fully. A complete working consumer
+is in [`example-kotlin/`](example-kotlin/README.md).
+
+</details>
+
 ---
 
 ## Table of Contents
@@ -675,9 +735,10 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 **Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
 [`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
 [`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
-and [`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
+[`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
 every level — type, instance field, method, and method parameter — so you can see which tier each
-one lands in).
+one lands in), and [`example-kotlin/`](example-kotlin/) (Kotlin sources under kapt — same
+annotations, same generated files).
 
 ## 📚 Documentation
 
