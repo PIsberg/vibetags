@@ -33,7 +33,7 @@
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vibetags.bom.version>1.0.4</vibetags.bom.version>
+    <vibetags.bom.version>1.1.0</vibetags.bom.version>
     <!-- Flipped to true by CI so the build verifies the committed guardrail files instead of
          rewriting them. See the README's "Verifying" section. -->
     <vibetags.check>false</vibetags.check>

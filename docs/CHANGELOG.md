@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-11
+
+A minor rather than a patch because this release adds three JVM languages and a CLI, none of
+which changes the processor's behaviour for existing users. It also carries everything from
+1.0.4, which was prepared on 2026-08-08 but never tagged or published — there is no
+`v1.0.4` tag and no 1.0.4 on Maven Central, so consumers move from 1.0.3 straight to 1.1.0
+and get both sets of changes.
+
 ### Verified
 - **Every downstream consumer still builds against `main`, and a 1.0.4 load-test baseline says
   the work product did not move.** Both suites were run against the processor built from
@@ -161,7 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   describe the stub, not the `.kt` file. KSP remains unsupported — it does not run JSR 269
   processors.
 
-## [1.0.4] - 2026-08-08
+## [1.0.4] - 2026-08-08 — prepared, never published; shipped as part of 1.1.0
 
 ### Fixed
 - **`.vibetags-locks` recorded absolute source paths, so a committed report differed on every
@@ -2250,8 +2258,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.0.4...HEAD
-[1.0.4]: https://github.com/PIsberg/vibetags/compare/v1.0.3...v1.0.4
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/PIsberg/vibetags/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/PIsberg/vibetags/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/PIsberg/vibetags/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/PIsberg/vibetags/compare/v1.0.0...v1.0.1
