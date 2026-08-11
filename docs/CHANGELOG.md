@@ -83,6 +83,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   renders something new" from bookkeeping, and a false positive there costs a review round every
   release. `scripts/consumer-sweep.sh` now excludes it alongside `pom.xml`; the count on that
   same working tree goes 1 to 0.
+- **The consumer sweep stopped after two repos and printed its completion footer anyway.**
+  Gradle reads standard input, and standard input inside the loop was the heredoc feeding
+  `while read` the list of repos — so the first Gradle build that ran to completion swallowed the
+  remaining lines, and the sweep ended having covered `blindbean` and `codekarta`, then printed
+  "Nothing was committed, pushed or opened" exactly as it does after a full run. Three of five
+  consumers were never built and nothing said so. Every build now runs with `</dev/null`.
+  Verified by rerunning the whole sweep: five rows out where the same command previously produced
+  two.
+- **The sweep reported FAIL for consumers that never compiled a line.** `common-license-lib` and
+  `skill3` declare only `mavenCentral()` in their Gradle builds, which is correct for them and
+  fatal when sweeping a version that has not been published — Gradle cannot resolve it from a
+  repository it was never told about, so the build dies at dependency resolution. Reported as
+  FAIL, that is an invitation to hunt a regression that cannot exist. The script now checks once
+  whether the version is on Maven Central and, when it is not, adds `mavenLocal()` to such builds
+  for the duration of the run, restores the file before anything counts the working tree, and
+  names the injection in the notes column. Both repos now build clean against an unpublished
+  version.
+- **A second sweep of the same version failed on the one repo swept in a worktree.**
+  `git worktree add -b` refuses a branch that already exists, and the branch outlives the
+  worktree that `rm -rf` removes, so re-running the sweep reported `ERROR / worktree add failed`
+  for `async-test-lib` without attempting its build. Now `-B`, matching what the non-worktree
+  path has always done with `checkout -B`.
 
 ### Added
 - **A `load-tests` skill.** The harness had a thorough README and no guidance on which of its

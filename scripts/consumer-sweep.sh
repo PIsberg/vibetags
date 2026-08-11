@@ -94,6 +94,22 @@ bump() {
   return $((1 - declared))
 }
 
+# Is the version under test actually published? This decides whether a Gradle consumer that
+# declares only mavenCentral() can resolve it at all, and it is worth answering once up front
+# rather than diagnosing a resolution failure per repo. A missing curl is not fatal: assume
+# published, which is the behaviour this script had before.
+UNPUBLISHED=0
+if command -v curl >/dev/null 2>&1; then
+  if ! curl -sfI --max-time 20 \
+       "https://repo1.maven.org/maven2/se/deversity/vibetags/vibetags-processor/${VERSION}/vibetags-processor-${VERSION}.pom" \
+       >/dev/null 2>&1; then
+    UNPUBLISHED=1
+    echo "note: ${VERSION} is not on Maven Central. Gradle builds that declare only"
+    echo "      mavenCentral() get a temporary mavenLocal() so they can resolve it; the file is"
+    echo "      restored afterwards. Install the processor locally first or the sweep tests nothing."
+    echo
+  fi
+fi
 printf '%-22s %-8s %-9s %s\n' REPO RESULT EXIT NOTES
 printf '%s\n' "----------------------------------------------------------------------"
 
@@ -122,7 +138,11 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
       wt="$LOGDIR/wt-$repo"
       rm -rf "$wt"
       git -C "$ROOT/$repo" worktree prune
-      git -C "$ROOT/$repo" worktree add -q -b "$BRANCH" "$wt" origin/main || {
+      # -B, not -b: the branch survives the worktree being removed, so a second sweep of the
+      # same version died with "a branch named ... already exists" and reported ERROR for a
+      # repo whose build was never attempted. The non-worktree path already used checkout -B
+      # for exactly this reason.
+      git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
         printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "worktree add failed"; continue; }
       work="$wt"
       ;;
@@ -142,18 +162,45 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   if [ -x "$work/mvnw" ]; then MVN=./mvnw; else MVN=mvn; fi
   if [ -x "$work/gradlew" ]; then GRADLE=./gradlew; else GRADLE=gradle; fi
 
+  # Gradle resolves only from the repositories a build declares, and several consumers declare
+  # mavenCentral() and nothing else. That is correct for them and fatal here: sweeping a version
+  # that has not been published yet means the artifact exists only in the local repository, so
+  # those builds die at dependency resolution without compiling a line. Reporting that as FAIL
+  # sends someone hunting a regression that cannot exist. Add mavenLocal() for the duration of
+  # the build instead, put the file back afterwards, and say so in the notes.
+  restored=""
+  if [ "$UNPUBLISHED" -eq 1 ]; then
+    for f in build.gradle build.gradle.kts; do
+      [ -f "$work/$f" ] || continue
+      grep -q 'mavenLocal()' "$work/$f" && continue
+      grep -q 'mavenCentral()' "$work/$f" || continue
+      cp "$work/$f" "$work/$f.sweepbak"
+      awk '{ if (!done && /mavenCentral\(\)/) { print; sub(/mavenCentral\(\)/, "mavenLocal()"); print; done=1 } else print }' \
+          "$work/$f.sweepbak" > "$work/$f"
+      restored="$restored $f"
+    done
+  fi
+
   log="$LOGDIR/$repo.log"
   status=0
+  # </dev/null on every build. Gradle reads stdin, and stdin here is the heredoc feeding the
+  # `while read` loop below — so one successful Gradle build consumed the remaining repo lines
+  # and the sweep stopped early, having printed its "nothing was committed" footer as though it
+  # had finished. A sweep that silently covers two repos of five is worse than one that fails.
   case "$tool" in
-    maven) (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 || status=$? ;;
-    gradle) (cd "$work" && $GRADLE -q $gradlecmd) > "$log" 2>&1 || status=$? ;;
+    maven) (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 </dev/null || status=$? ;;
+    gradle) (cd "$work" && $GRADLE -q $gradlecmd) > "$log" 2>&1 </dev/null || status=$? ;;
     both)
-      (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 || status=$?
+      (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 </dev/null || status=$?
       if [ "$status" -eq 0 ]; then
-        (cd "$work" && $GRADLE -q $gradlecmd) > "$log.gradle" 2>&1 || status=$?
+        (cd "$work" && $GRADLE -q $gradlecmd) > "$log.gradle" 2>&1 </dev/null || status=$?
       fi
       ;;
   esac
+
+  # Put the injected repositories back before anything counts the working tree, so the
+  # injection never shows up as drift or as a touched file.
+  for f in $restored; do mv "$work/$f.sweepbak" "$work/$f"; done
 
   # Generated-guardrail drift, counted from `git diff --numstat` rather than `git status`.
   # status lists a file whose line endings changed even when its text did not, and on Windows
@@ -179,6 +226,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
     result=FAIL
   fi
   notes="log: $log"
+  [ -n "$restored" ] && notes="mavenLocal() injected for$restored; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
   printf '%-22s %-8s %-9s %s\n' "$repo" "$result" "$status" "$notes"
