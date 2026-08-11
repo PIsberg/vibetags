@@ -58,6 +58,13 @@ jobs:
           cd vibetags-bom
           mvn install -B
 
+      # After the BOM: the CLI consumes vibetags-processor as a library, so it needs the
+      # artifacts this run just installed, and its 15 tests are the gate on init/doctor.
+      - name: Build VibeTags CLI (Maven)
+        run: |
+          cd vibetags-cli
+          mvn clean install -B
+
       # The repo dogfoods its own guardrails but never verified them, so the committed
       # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
       # processor writes and nothing said so — which is exactly what happened, and is only
@@ -485,6 +492,13 @@ jobs:
         run: |
           cd vibetags-bom
           mvn install -B -q
+
+      # The CLI's init/doctor are filesystem-heavy, which is exactly what varies by OS —
+      # these legs are the only ones running its tests on Windows and macOS path behaviour.
+      - name: Build VibeTags CLI (Maven)
+        run: |
+          cd vibetags-cli
+          mvn clean install -B -q
 
       - name: Reset AI Config Files (Maven)
         run: |

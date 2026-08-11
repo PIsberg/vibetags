@@ -55,6 +55,17 @@ jobs:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
+      # After the processor: the CLI consumes it as a library, so the deploy build resolves
+      # the sibling from the local repository the previous step just installed into. Its 15
+      # tests run here as a last gate — they are fast and filesystem-only.
+      - name: Build, sign, and deploy CLI to Maven Central
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags-cli vibetags-cli \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
       - name: Sign and deploy BOM to Maven Central
         run: |
           bash .github/scripts/deploy-to-central.sh vibetags-bom vibetags-bom \
@@ -73,4 +84,6 @@ jobs:
             vibetags-annotations/target/*.jar.asc
             vibetags/target/*.jar
             vibetags/target/*.jar.asc
+            vibetags-cli/target/*.jar
+            vibetags-cli/target/*.jar.asc
             vibetags-bom/target/*.pom.asc
