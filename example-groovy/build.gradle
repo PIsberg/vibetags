@@ -1,0 +1,39 @@
+plugins {
+    id 'groovy'
+}
+
+group = 'se.deversity.vibetags.example'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.groovy:groovy:5.0.8'
+
+    // BOM is the single source of truth for vibetags-* versions.
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.4')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.4')
+
+    // Annotations on compile, processor on the annotation-processor path only.
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+
+tasks.withType(GroovyCompile).configureEach {
+    // Joint compilation generates Java stubs for the Groovy sources; this switch (off by
+    // default in Gradle) runs the JSR 269 annotation processors over those stubs — the
+    // Groovy analogue of kapt. Without it the processor never sees a Groovy class.
+    groovyOptions.javaAnnotationProcessing = true
+    options.annotationProcessorPath = configurations.annotationProcessor
+    // The compile runs in a Gradle worker directory, so the root must be passed explicitly.
+    options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
+}

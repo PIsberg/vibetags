@@ -212,6 +212,12 @@ line ranges would describe the stub rather than the `.kt` file. Class-level and
 function-level annotations — the normal usage — work fully. A complete working consumer
 is in [`example-kotlin/`](example-kotlin/README.md).
 
+**Other JVM languages:** Groovy is fully supported via joint-compilation stubs
+(`javaAnnotationProcessing = true` — see [`example-groovy/`](example-groovy/README.md));
+Scala and Clojure toolchains never run JSR 269 processors, so guardrails there live on
+annotated Java neighbours ([`example-scala/`](example-scala/README.md)). The full support
+matrix is in [USAGE.md](USAGE.md#other-jvm-languages-groovy-scala-clojure).
+
 </details>
 
 ---
@@ -461,6 +467,8 @@ vibetags/
 │   ├── pom.xml
 │   └── src/              # Reads platform keys and marker rules from the processor — no second list
 ├── example-kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
+├── example-groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
+├── example-scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)

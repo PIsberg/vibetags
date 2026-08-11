@@ -1,0 +1,31 @@
+# VibeTags Groovy Example (joint-compilation stubs)
+
+A minimal Groovy consumer showing VibeTags running under Gradle's joint compilation.
+groovyc generates Java stubs for the Groovy sources, and one switch — off by default —
+runs JSR 269 annotation processors over them, the Groovy analogue of kapt:
+
+```groovy
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.javaAnnotationProcessing = true
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
+}
+```
+
+## Build
+
+The VibeTags artifacts must be installed locally first (see the repository README), then:
+
+```bash
+./gradlew clean build
+```
+
+The opted-in files (`CLAUDE.md`, `.cursorrules`) are regenerated on every build; CI greps
+them for the annotated Groovy elements, so "Groovy works" is a gate, not a claim.
+
+## Limitations
+
+The same two as kapt, both stub-inherited: stubs carry no method bodies, so
+annotations on declarations inside a method body are invisible; and source positions
+describe the stub, so this example does not opt in to the `.vibetags-locks` report.
+Class-level and method-level annotations — the normal usage — work fully.

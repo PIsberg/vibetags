@@ -13,7 +13,7 @@ Independent Maven (and where noted, Gradle) subprojects:
 - `vibetags-bom/` — pom-only BOM managing the published versions. Maven only; Gradle reads it via `mavenLocal()` / `platform(...)`.
 - `vibetags-cli/` — companion CLI (`init` creates opt-in files, `doctor` reports project health). Depends on `vibetags` as a library for `ServiceRegistry.optInKeys()` and the marker constants — it must never carry its own platform list. Build after `vibetags`.
 - `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last two are reactors, asserted in CI).
-- `example-kotlin/` — Kotlin consumer via kapt (Gradle only; kapt processes Java stubs, so body-scoped annotations and `.vibetags-locks` positions do not apply). Built on the JDK 21 Gradle CI leg.
+- `example-kotlin/`, `example-groovy/`, `example-scala/` — JVM-language consumers, all built on the JDK 21 Gradle CI leg. Kotlin (kapt) and Groovy (joint-compilation stubs + `javaAnnotationProcessing`) get full support with the same stub caveats (no body-scoped annotations, stub positions); Scala is Java-sources-only (scalac has no JSR 269) and its CI step asserts the annotated Scala class does NOT appear. Clojure is documented as impossible (no javac; SOURCE retention inexpressible) — support matrix in USAGE.md.
 - `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly (intentional — cross-version comparison is the wrong workload for a BOM).
 - `action/locked-files/` — GitHub Action consuming `.vibetags-locks`.
 

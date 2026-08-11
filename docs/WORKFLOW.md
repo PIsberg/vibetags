@@ -85,6 +85,8 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
 - BOM install: `cd vibetags-bom && mvn install -B`. The BOM is Maven-only; Gradle reads it from `mavenLocal()` when resolving `platform('se.deversity.vibetags:vibetags-bom:...')` in `example/build.gradle`. This step runs after the library build and before the example build.
 - Example build: `cd example && ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon`.
 - Kotlin example build (JDK 21 leg only): `cd example-kotlin && ./gradlew clean build --no-daemon`, then greps the regenerated `CLAUDE.md` / `.cursorrules` for the annotated Kotlin elements — the proof that kapt actually ran the processor. Gated to 21 because the Kotlin Gradle plugin trails new JDK releases and the example pins a 21 toolchain anyway.
+- Groovy example build (JDK 21 leg only, same shape): joint-compilation stubs with `javaAnnotationProcessing = true`; greps prove the processor saw the Groovy class.
+- Scala example build (JDK 21 leg only): asserts the feature *and* the limitation — the annotated Java class must appear in the generated files, and the annotated Scala class must **not** (`! grep`), because scalac has no JSR 269 support. If the negative assertion ever fails, the docs' support matrix is wrong, not the build.
 - Tests use `cd vibetags && ./gradlew test --no-daemon`.
 - Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml`, uploads under flag `unittests-gradle`, and passes `fail_ci_if_error: false`.
 

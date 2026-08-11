@@ -1,0 +1,36 @@
+plugins {
+    id 'scala'
+}
+
+group = 'se.deversity.vibetags.example'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.scala-lang:scala-library:2.13.18'
+
+    // BOM is the single source of truth for vibetags-* versions.
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.0.4')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.0.4')
+
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+
+// scalac has no JSR 269 support, so only the Java sources (src/main/java, compiled by
+// javac) go through the processor. The annotated Scala class in src/main/scala compiles
+// fine — Java annotations are legal in Scala — but the processor never sees it, and CI
+// asserts that honestly (the generated files must NOT mention it).
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
+}

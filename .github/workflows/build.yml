@@ -654,6 +654,30 @@ jobs:
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
 
+      # Same JDK 21 gating and same shape as the Kotlin step. Groovy's joint compilation
+      # generates Java stubs and (with javaAnnotationProcessing=true) runs JSR 269
+      # processors over them — the Groovy analogue of kapt.
+      - name: Build Groovy Example Project (Gradle, joint-compilation stubs)
+        if: matrix.java == '21'
+        run: |
+          cd example-groovy
+          ./gradlew clean build --no-daemon
+          grep -qF "com.example.groovy.InventoryService.reserve(java.lang.String,int)" CLAUDE.md
+          grep -qF "com.example.groovy.InventoryService" .cursorrules
+
+      # The Scala example asserts the limitation as well as the feature: scalac has no
+      # JSR 269 support, so the annotated Java class must appear and the annotated Scala
+      # class must NOT — if ReportEngine ever shows up, the assertion below goes red and
+      # the docs are wrong, not the build.
+      - name: Build Scala Example Project (Gradle, Java sources only)
+        if: matrix.java == '21'
+        run: |
+          cd example-scala
+          ./gradlew clean build --no-daemon
+          grep -qF "com.example.scala.AuditLog" CLAUDE.md
+          ! grep -q "ReportEngine" CLAUDE.md
+          ! grep -q "ReportEngine" .cursorrules
+
       # -Pe2e mirrors the Maven profile; see vibetags/build.gradle. The `build` step above
       # ran the fast tier only, so without this the Gradle legs never see the e2e classes.
       - name: Run Full Test Suite (VibeTags Library, incl. e2e)
