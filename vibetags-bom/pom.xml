@@ -90,6 +90,11 @@
                 <artifactId>vibetags-processor</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>se.deversity.vibetags</groupId>
+                <artifactId>vibetags-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

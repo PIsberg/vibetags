@@ -6,6 +6,7 @@
 
 - [Logging Configuration](#logging-configuration)
 - [Kotlin (kapt) Configuration](#kotlin-kapt-configuration)
+- [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
 - [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
@@ -216,6 +217,35 @@ jobs:
 ```
 
 The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
+
+### The Companion CLI: `vibetags init` and `vibetags doctor`
+
+Two commands, runnable without installing anything (any Maven-resolving launcher works;
+[jbang](https://www.jbang.dev) shown here — the artifact is `se.deversity.vibetags:vibetags-cli`,
+same version as the processor):
+
+```bash
+jbang se.deversity.vibetags:vibetags-cli:<version> init --list
+jbang se.deversity.vibetags:vibetags-cli:<version> init --platforms claude,cursor,claude_granular
+jbang se.deversity.vibetags:vibetags-cli:<version> doctor
+```
+
+- **`init --list`** prints every opt-in platform key with the file it maps to, marking the
+  ones already active in the current directory.
+- **`init --platforms <key,...>`** creates the named opt-in files empty (directories for
+  `*_granular` keys), for the next compile to fill. It refuses unknown keys before creating
+  anything, and never touches a file that already exists. This is the documented way to state
+  the opt-in the processor honours — the processor itself never creates output files.
+- **`doctor`** reports project health without compiling: which build file it found, whether
+  `vibetags-processor` / `vibetags-annotations` are wired into it, which platforms are active
+  (the same file-existence resolution the processor runs), the AGENTS.md pointer rule when it
+  applies, and whether every active marker file still carries a balanced
+  `VIBETAGS-START` / `VIBETAGS-END` pair. Exit code 0 means healthy, 1 means at least one
+  finding needs action — usable as a cheap CI step.
+- **`--dir <path>`** points either command at another project root.
+
+The platform keys, file paths and marker strings are read from `vibetags-processor` at
+runtime, so the CLI cannot drift from the processor's actual behaviour.
 
 ### Choosing Which AI Services to Support (Opt-in Model)
 

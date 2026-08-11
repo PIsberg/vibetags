@@ -1,0 +1,111 @@
+package se.deversity.vibetags.cli;
+
+import se.deversity.vibetags.processor.internal.ServiceRegistry;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+/**
+ * {@code vibetags init} — activates AI platforms by creating their opt-in files.
+ *
+ * <p>The processor's contract is that file presence is the user's opt-in signal, and the
+ * processor itself never creates an output file. This command is the documented way a user
+ * states that intent: {@code --platforms claude,cursor} creates exactly the named files,
+ * empty, for the next compile to fill. Keys and paths come from
+ * {@link ServiceRegistry}, so the list shown here is the list the processor honours.
+ */
+final class InitCommand {
+
+    private final PrintStream out;
+    private final PrintStream err;
+    private final Path dir;
+
+    InitCommand(PrintStream out, PrintStream err, Path dir) {
+        this.out = out;
+        this.err = err;
+        this.dir = dir;
+    }
+
+    int run(List<String> args) {
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(dir);
+        Set<String> optIn = ServiceRegistry.optInKeys();
+
+        if (args.contains("--list")) {
+            list(serviceFiles, optIn);
+            return 0;
+        }
+        int at = args.indexOf("--platforms");
+        if (at < 0 || at + 1 >= args.size()) {
+            out.println("Nothing created. Pick platforms first:");
+            out.println();
+            list(serviceFiles, optIn);
+            out.println();
+            out.println("then: vibetags init --platforms <key,key,...>");
+            return 2;
+        }
+
+        List<String> requested = List.of(args.get(at + 1).split(","));
+        List<String> unknown = requested.stream()
+            .filter(key -> !optIn.contains(key.trim()))
+            .toList();
+        if (!unknown.isEmpty()) {
+            err.println("error: unknown platform key(s): " + String.join(", ", unknown));
+            err.println("valid keys come from `vibetags init --list`");
+            return 2;
+        }
+
+        List<String> created = new ArrayList<>();
+        List<String> alreadyActive = new ArrayList<>();
+        for (String rawKey : requested) {
+            String key = rawKey.trim();
+            Path path = serviceFiles.get(key);
+            if (Files.exists(path)) {
+                alreadyActive.add(key + " (" + dir.relativize(path) + ")");
+                continue;
+            }
+            try {
+                // Granular services opt in with a directory, everything else with a file. The
+                // key suffix is the stable, documented convention for that distinction.
+                if (key.endsWith("_granular")) {
+                    Files.createDirectories(path);
+                } else {
+                    if (path.getParent() != null) {
+                        Files.createDirectories(path.getParent());
+                    }
+                    Files.createFile(path);
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException("could not create " + path, e);
+            }
+            created.add(key + " (" + dir.relativize(path) + ")");
+        }
+
+        created.forEach(line -> out.println("created:        " + line));
+        alreadyActive.forEach(line -> out.println("already active: " + line));
+        if (!created.isEmpty()) {
+            out.println();
+            out.println("Now compile (mvn compile / gradle build) and the processor fills them in.");
+            out.println("Processor not wired into the build yet? `vibetags doctor` will tell you.");
+        }
+        return 0;
+    }
+
+    private void list(Map<String, Path> serviceFiles, Set<String> optIn) {
+        out.println("Opt-in platform keys (file presence = opt-in):");
+        // TreeMap: stable, scannable order for humans and for tests.
+        new TreeMap<>(serviceFiles).forEach((key, path) -> {
+            if (optIn.contains(key)) {
+                String marker = Files.exists(path) ? "  [active]" : "";
+                out.println("  " + key + " -> " + dir.relativize(path) + marker);
+            }
+        });
+    }
+}

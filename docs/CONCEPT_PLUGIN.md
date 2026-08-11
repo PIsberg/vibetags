@@ -1,5 +1,16 @@
 # VibeTags Plugin Architecture
 
+> **Decision note (2026-08-11).** The migration below — extract `vibetags-core`, then a
+> generation-capable CLI, then build plugins — remains deliberately unbuilt. What shipped
+> instead is `vibetags-cli` with exactly two commands, `init` and `doctor`, which need no
+> core extraction because they read `ServiceRegistry` and the marker constants from the
+> processor as a library and never render anything. The full CLI is still the right shape
+> the day VibeTags wants non-JVM consumers (comment-tag scanning in TypeScript/Python
+> sources feeding the same 37 renderers); until that demand is real, the annotation
+> processor stays the single generation path and this document records the plan, not a
+> commitment. If phases 1–2 are picked up, `vibetags-cli` is the natural home for the new
+> commands — its `init`/`doctor` contract must not change underneath existing users.
+
 ## Current State: Annotation Processor
 
 VibeTags currently uses a Java annotation processor to generate AI guardrail files. This works well for Java projects and requires zero configuration — just add the dependency and annotate your code.

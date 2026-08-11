@@ -91,6 +91,12 @@
 touch CLAUDE.md .cursorrules AGENTS.md   # Claude, Cursor, Codex CLI — add whichever you use
 ```
 
+Or let the companion CLI do it (and `vibetags doctor` checks your setup afterwards):
+
+```bash
+jbang se.deversity.vibetags:vibetags-cli:1.0.4 init --platforms claude,cursor
+```
+
 **3. Annotate your first class:**
 
 ```java
@@ -447,10 +453,14 @@ vibetags/
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
 │   └── src/              # Example source code with annotations
-├── vibetags-annotations/ # The 24 @interface classes (zero deps, RetentionPolicy.SOURCE)
+├── vibetags-annotations/ # The @interface classes (zero deps, RetentionPolicy.SOURCE); count pinned in the project facts above
 │   ├── pom.xml
 │   ├── build.gradle
-│   └── src/main/java/    # AIArchitecture, AIAudit, AIContract, AIContext, AICore, AIDeprecated, AIDraft, AIIdempotent, AIIgnore, AIImmutable, AIInternationalized, AILegacyBridge, AILocked, AIObservability, AIParallelTests, AIPerformance, AIPrivacy, AIPublicAPI, AIRegulation, AISchemaSafe, AIStrictClasspath, AIStrictExceptions, AIStrictTypes, AITestDriven, AIThreadSafe
+│   └── src/main/java/    # One @interface per annotation — see the annotation reference
+├── vibetags-cli/         # Companion CLI: `init` (create opt-in files) and `doctor` (project health)
+│   ├── pom.xml
+│   └── src/              # Reads platform keys and marker rules from the processor — no second list
+├── example-kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -871,6 +881,20 @@ configuration files at compile time; the annotations themselves live in `vibetag
 ### [example/](example/README.md)
 A practical e-commerce application demonstrating every VibeTags annotation
 (see [project facts](#project-facts) for the count), held to that by `ExampleCoverageTest`. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
+
+### vibetags-cli/
+The companion CLI. `vibetags init --platforms claude,cursor` creates the opt-in files whose
+presence the processor honours (the processor itself never creates them), and
+`vibetags doctor` reports project health: build-tool wiring, active platforms, and
+`VIBETAGS-START`/`END` marker integrity. Run it without installing anything:
+
+```bash
+jbang se.deversity.vibetags:vibetags-cli:1.0.4 init --list
+jbang se.deversity.vibetags:vibetags-cli:1.0.4 doctor
+```
+
+The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
+cannot drift from what the processor actually does.
 
 ### [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 Technical reference for the annotation processor internals. Read this before contributing or if you need to understand why a particular file is (or is not) being generated.

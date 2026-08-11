@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Versions, plugin declarations and the publishing setup all live in the parent.
+         relativePath keeps every subproject buildable straight from a checkout without
+         installing the parent first, and flatten-maven-plugin (inherited) removes this
+         parent from the POM that reaches Maven Central. -->
+    <parent>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../vibetags-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>vibetags-cli</artifactId>
+    <packaging>jar</packaging>
+
+    <!-- Declared rather than inherited; see vibetags-annotations/pom.xml for why. -->
+    <url>https://github.com/PIsberg/vibetags</url>
+
+    <name>VibeTags CLI</name>
+    <description>
+        Companion command-line tool for VibeTags: `init` bootstraps a project's opt-in
+        files (file presence is the opt-in signal the processor honours), `doctor`
+        reports the project's VibeTags health — build-tool wiring, active platforms,
+        marker integrity. Run it without installing anything:
+
+            jbang se.deversity.vibetags:vibetags-cli:1.0.4 init --list
+
+        The platform list and marker rules are read from vibetags-processor, so this
+        tool cannot drift from what the processor actually does.
+    </description>
+
+    <dependencies>
+        <!-- ServiceRegistry (the opt-in platform list), GuardrailFileWriter (marker
+             constants). One source of truth: the CLI must never carry its own copy. -->
+        <dependency>
+            <groupId>se.deversity.vibetags</groupId>
+            <artifactId>vibetags-processor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- The processor is on the compile classpath as a library; running it
+                         over the CLI's own sources would need an opted-in file layout this
+                         module does not have. -->
+                    <compilerArgument>-proc:none</compilerArgument>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+                    <failOnViolation>true</failOnViolation>
+                    <printFailingErrors>true</printFailingErrors>
+                    <rulesets>
+                        <ruleset>${project.basedir}/../pmd-ruleset.xml</ruleset>
+                    </rulesets>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                            <goal>cpd-check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <!-- Implementation-Version is how the CLI knows its own version
+                                 at runtime (Main.version()); jbang and java -jar both read
+                                 Main-Class. -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <mainClass>se.deversity.vibetags.cli.Main</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <Automatic-Module-Name>se.deversity.vibetags.cli</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>${project.basedir}/../checkstyle.xml</configLocation>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <linkXRef>false</linkXRef>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
