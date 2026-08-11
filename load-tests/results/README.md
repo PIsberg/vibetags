@@ -120,9 +120,13 @@ cp target/surefire-reports/TEST-se.deversity.vibetags.loadtest.ConcurrentBuildTe
 
 Same machine (i7-1260P), JDK Temurin 26, cap `stress.max.classes=1000`.
 
-`OutputSize(B)` is byte-identical across every release at every N
-(17 156 / 122 555 / 599 895 / 1 196 918), so the work product is unchanged — only
-the cost varies.
+`OutputSize(B)` is byte-identical across long runs of releases, so within one of those runs the
+work product is unchanged and only the cost varies. It is **not** constant across the whole
+history, and this line used to claim it was: it held at
+17 156 / 122 555 / 599 895 / 1 196 918 from 0.5.4 through 0.9.7, moved at 1.0.0-RC1
+(14 214 / 101 607 / 497 199 / 991 983), moved again at 1.0.0-RC9, and has been
+14 179 / 101 296 / 495 656 / 988 897 since (1.0.4 matches RC9 byte for byte). Compare a new
+capture against the previous baseline's file, never against a number quoted in prose here.
 
 ### Stress sweep — `Overhead(ms)` (processor − baseline)
 
@@ -219,7 +223,7 @@ body size because it must `readString` the entire file every call.
 
 1. **JMH error bars vary wildly across releases** because each baseline was measured during a different machine-state window. The 0.5.5 `writeFileIfChanged_smallWrite` ±5186 µs/op is system noise, not a real 5× regression. The narrow-error metrics across all releases (`buildServiceFileMap`, the 0.7.1 `_noChange` and `_smallWrite`) are trustworthy. When in doubt, re-run on a quiet machine.
 2. **Stress times include process-launch jitter on Windows** — a single high-overhead leg (e.g. 0.7.0 N=500=16ms vs 0.7.1 N=500=376ms) is not enough to call a regression on its own. CI should accept ±15% variance, and large deltas should be reproduced before fixing.
-3. **JUnit `@TempDir` cleanup fails on Windows** because `vibetags.log` is held open by the file logger during processing. `concurrent.xml` reports `errors=1` for this reason; the test body itself completes and assertions pass. Same applies to the per-N stress test legs in `surefire-reports/` (not stored here). Pre-existing harness issue affecting Windows runs only.
+3. **JUnit `@TempDir` cleanup used to fail on Windows** because `vibetags.log` was held open by the file logger during processing. `concurrent.xml` reports `errors=1` for this reason in the `0.5.4` through `0.8.0` baselines; the test body itself completed and assertions passed. It has not recurred since: `0.9.7`, `1.0.0-RC9` and `1.0.4` all report `errors="0"`. Treat a fresh `errors=1` as something to check rather than as this known issue.
 4. **All baselines used JDK Temurin 26**. Re-baseline on the JDK that CI uses (currently 21/25/26 across the matrix) before comparing CI artifacts against these numbers.
 5. **No 0.6.0 baseline exists** — that release was a packaging change with no processor-source changes, so its perf profile is identical to 0.5.6.
 

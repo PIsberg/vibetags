@@ -1,0 +1,80 @@
+Same-session allocation comparison — 1.0.3 / 1.0.4
+==================================================
+
+Why this file exists
+--------------------
+The per-release `memory.txt` baselines were each captured on the day that release was cut, and
+they are not comparable to one another at the precision this table needs. The RC9 capture proved
+it: reading two cross-day baselines against each other suggested a 4.4 % regression that turned
+out to be the *baseline* column moving, not the processor. So every row below was measured
+back-to-back in one session, same JDK, same machine, same working set, switching only
+`-Dprocessor.version`.
+
+What is being compared
+----------------------
+1.0.3 is the newest published release. 1.0.4 is not on Maven Central; it was built from
+main @ 341b655 and installed locally, so the 1.0.4 column covers 1.0.4 plus everything merged
+since: Kotlin/kapt support (#394), vibetags-cli (#395/#396), Groovy support (#397) and the CLI
+symlink guard (#398). None of those touches the processor's write path, so no movement was
+expected here.
+
+Method
+------
+    cd load-tests
+    mvn test -Dprocessor.version=<V> -Dtest=MemoryVolumeStressTest -Dstress.max.classes=1000
+
+Version resolution was verified rather than assumed:
+    mvn dependency:tree -Dprocessor.version=1.0.3 | grep vibetags-processor:jar
+    -> se.deversity.vibetags:vibetags-processor:jar:1.0.3:compile
+    mvn dependency:tree -Dprocessor.version=1.0.4 | grep vibetags-processor:jar
+    -> se.deversity.vibetags:vibetags-processor:jar:1.0.4:compile
+
+Both runs resolved `vibetags-annotations:jar:1.0.4`, because the harness declares the annotations
+at the parent's `${revision}` independently of `-Dprocessor.version`. The annotations are 44
+SOURCE-retention `@interface` declarations with no code in them, so this does not affect what is
+being measured — but the 1.0.3 column is the 1.0.3 processor, not the exact 1.0.3 release
+pairing, and saying otherwise would be sloppier than the number deserves.
+
+Environment
+-----------
+JDK:    java version "26" 2026-03-17 (build 26+35-2893)
+OS:     Windows 11 (MINGW64_NT-10.0-26200), x86-64
+CPU:    12th Gen Intel(R) Core(TM) i7-1260P — developer workstation, NOT quiescent
+Date:   2026-08-11
+Commit: main @ 341b655, captured from branch chore/loadtests-and-regression-sweep
+
+OverheadAlloc (KB) = processorAlloc - baselineAlloc, via ThreadMXBean
+--------------------------------------------------------------------
+   N        1.0.3      1.0.4
+   10       13064      13046
+  100       23425      23420
+  500      110545     110277
+ 1000      219067     219828
+
+PeakHeap (MB)
+-------------
+   N        1.0.3      1.0.4
+   10          30         30
+  100          32         32
+  500          87         87
+ 1000         148        147
+
+Reading this honestly
+---------------------
+N=10 is excluded from every chart drawn from this file. The RC9 session produced 2995 KB and
+12187 KB for it across two runs of one build, and this session's two measurements of 1.0.4
+disagree by 4.3x (3021 KB in the standalone sweep, 13046 KB here). At that size the number is
+JIT warmup and classloading, not processor cost.
+
+N=100, 500 and 1000 reproduce to within 0.6 % on this harness, so differences larger than about
+1 % there are the processor and differences smaller are not.
+
+What the numbers say:
+  * 1.0.4 against 1.0.3: -0.02 % at N=100, -0.24 % at N=500, +0.35 % at N=1000. All three are
+    inside the reproducibility floor, in both directions. The honest statement is "no measurable
+    allocation change", not "identical" and not "0.35 % worse".
+  * That is the expected result. Nothing merged since 1.0.3 claimed an allocation win or touched
+    the processor's write path, so a flat line is the outcome that would have been predicted, and
+    a moving one would have been the finding.
+  * PeakHeap is reported for completeness and supports no claim here. It depends on when GC
+    happened to run.

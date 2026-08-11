@@ -138,3 +138,13 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
 - Six PRs opening at once made Maven Central answer 429 and failed an unrelated consumer job.
   A resolution failure naming artifacts you did not touch (`junit-bom` here) is infrastructure;
   rerun it rather than investigating it.
+- **Count the rows against the `CONSUMERS` list.** The footer prints after the loop whatever the
+  loop did, so a sweep that covered two repos of five looked exactly like a complete one. The
+  cause was Gradle reading the heredoc that feeds `while read`; every build now runs with
+  `</dev/null`. Keep it that way, and keep counting rows — the footer is not evidence.
+- **A Gradle consumer can only resolve what its `repositories` block names.** `common-license-lib`
+  and `skill3` declare `mavenCentral()` alone, so an unpublished version fails at resolution
+  before compiling anything. The script detects an unpublished version and injects `mavenLocal()`
+  for the duration of the build, restoring the file afterwards and saying so in the notes. A row
+  carrying that note is a real build result; do not silently promote it to "1.0.x works for this
+  consumer as shipped" — as shipped, that consumer cannot see the artifact at all.
