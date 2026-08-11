@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -21,6 +22,9 @@ import java.util.TreeSet;
  * resolution the processor runs, via {@link ServiceRegistry}), and whether every active
  * marker file still carries a balanced {@code VIBETAGS-START} / {@code VIBETAGS-END} pair.
  * Exit code 0 means healthy; 1 means at least one finding needs action.
+ *
+ * <p>A file doctor cannot read (permissions, not UTF-8) is a finding, never a silent pass:
+ * "could not check" reported as "checked, fine" is the one lie a health tool must not tell.
  */
 final class DoctorCommand {
 
@@ -68,7 +72,15 @@ final class DoctorCommand {
         if (buildFile == null) {
             return;
         }
-        String text = readOrEmpty(dir.resolve(buildFile));
+        Optional<String> read = tryRead(dir.resolve(buildFile));
+        if (read.isEmpty()) {
+            out.println("processor wired: unknown — could not read " + buildFile);
+            out.println("annotations dep: unknown — could not read " + buildFile);
+            problems.add("could not read " + buildFile + " (permissions? not UTF-8?) — "
+                + "doctor cannot verify the build wiring");
+            return;
+        }
+        String text = read.get();
         boolean processor = text.contains("vibetags-processor");
         boolean annotations = text.contains("vibetags-annotations");
         out.println("processor wired: " + (processor ? "yes" : "NO — not found in " + buildFile));
@@ -109,7 +121,8 @@ final class DoctorCommand {
     /**
      * A marker file with a START but no END (or the reverse) is how a half-lost merge or a
      * hand edit silently turns partial regeneration into whole-file confusion — the exact
-     * state the writer refuses to touch. Only balanced-or-absent passes.
+     * state the writer refuses to touch. Only balanced-or-absent passes, and only a file
+     * that could actually be read counts as checked.
      */
     private void checkMarkers(Set<String> active) {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(dir);
@@ -119,7 +132,15 @@ final class DoctorCommand {
             if (!Files.isRegularFile(path)) {
                 continue;
             }
-            String text = readOrEmpty(path);
+            Optional<String> read = tryRead(path);
+            if (read.isEmpty()) {
+                broken++;
+                problems.add("could not read " + dir.relativize(path)
+                    + " (permissions? not UTF-8?) — marker state unknown, and the writer must "
+                    + "be able to read this file to preserve hand-authored content around the block");
+                continue;
+            }
+            String text = read.get();
             boolean brokenMd = text.contains(GuardrailFileWriter.MARKER_START_MD)
                 != text.contains(GuardrailFileWriter.MARKER_END_MD);
             boolean brokenHash = text.contains(GuardrailFileWriter.MARKER_START_HASH)
@@ -131,14 +152,15 @@ final class DoctorCommand {
                     + "the next build, or hand-authored content around the block is at risk");
             }
         }
-        out.println("markers:         " + (broken == 0 ? "all intact" : broken + " file(s) unbalanced"));
+        out.println("markers:         "
+            + (broken == 0 ? "all intact" : broken + " file(s) unbalanced or unreadable"));
     }
 
-    private static String readOrEmpty(Path path) {
+    private static Optional<String> tryRead(Path path) {
         try {
-            return Files.readString(path);
+            return Optional.of(Files.readString(path));
         } catch (IOException e) {
-            return "";
+            return Optional.empty();
         }
     }
 }

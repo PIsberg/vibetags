@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -87,6 +88,30 @@ class DoctorCommandTest {
 
         assertEquals(1, doctor(), out());
         assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    @Test
+    void unreadableMarkerFile_isAFindingNotAHealthyPass() throws Exception {
+        // 0xFF can never appear in UTF-8, so Files.readString fails on this file. A file
+        // doctor cannot read is exactly the state it must not report as "all intact":
+        // the writer needs to read it to preserve hand-authored content.
+        mavenProjectWiredForVibeTags();
+        Files.write(dir.resolve("CLAUDE.md"), new byte[]{(byte) 0xFF, (byte) 0xFE});
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("could not read CLAUDE.md"), out());
+        assertFalse(out().contains("result: healthy"), out());
+    }
+
+    @Test
+    void unreadableBuildFile_reportsUnknownWiringInsteadOfGuessing() throws Exception {
+        Files.write(dir.resolve("pom.xml"), new byte[]{(byte) 0xFF});
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("could not read pom.xml"), out());
+        assertFalse(out().contains("not found in pom.xml"),
+            "doctor must not claim the wiring is missing when it could not read the file");
     }
 
     @Test

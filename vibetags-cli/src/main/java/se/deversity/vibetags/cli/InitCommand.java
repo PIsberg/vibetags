@@ -5,7 +5,9 @@ import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,11 +66,18 @@ final class InitCommand {
 
         List<String> created = new ArrayList<>();
         List<String> alreadyActive = new ArrayList<>();
+        int refused = 0;
         for (String rawKey : requested) {
             String key = rawKey.trim();
             Path path = serviceFiles.get(key);
             if (Files.exists(path)) {
                 alreadyActive.add(key + " (" + dir.relativize(path) + ")");
+                continue;
+            }
+            if (escapesRoot(path)) {
+                err.println("error: refusing " + key + " — " + dir.relativize(path)
+                    + " resolves outside the project root (symlinked parent?); nothing was created");
+                refused++;
                 continue;
             }
             try {
@@ -80,7 +89,14 @@ final class InitCommand {
                     if (path.getParent() != null) {
                         Files.createDirectories(path.getParent());
                     }
-                    Files.createFile(path);
+                    try {
+                        Files.createFile(path);
+                    } catch (FileAlreadyExistsException e) {
+                        // Appeared between the exists() check and the create: someone else's
+                        // opt-in, which is the same thing as already active.
+                        alreadyActive.add(key + " (" + dir.relativize(path) + ")");
+                        continue;
+                    }
                 }
             } catch (IOException e) {
                 throw new UncheckedIOException("could not create " + path, e);
@@ -95,7 +111,32 @@ final class InitCommand {
             out.println("Now compile (mvn compile / gradle build) and the processor fills them in.");
             out.println("Processor not wired into the build yet? `vibetags doctor` will tell you.");
         }
-        return 0;
+        return refused > 0 ? 1 : 0;
+    }
+
+    /**
+     * True when creating {@code path} would land outside the project root: the deepest
+     * ancestor that already exists on disk resolves, symlinks and all, to somewhere the
+     * root does not contain. Only components that exist before the create can redirect it,
+     * so checking the existing prefix is sufficient — and it runs before anything is
+     * written. A checkout can carry a hostile symlink ({@code .github} pointing at an
+     * absolute path, say), and init must not follow it out of the tree it was asked to
+     * operate on. Unresolvable ancestry (a broken link at the target, an unreadable
+     * parent) refuses too rather than guessing.
+     */
+    private boolean escapesRoot(Path path) {
+        Path existing = path;
+        while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
+            existing = existing.getParent();
+        }
+        if (existing == null) {
+            return true;
+        }
+        try {
+            return !existing.toRealPath().startsWith(dir.toRealPath());
+        } catch (IOException e) {
+            return true;
+        }
     }
 
     private void list(Map<String, Path> serviceFiles, Set<String> optIn) {
