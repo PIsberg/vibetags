@@ -18,8 +18,8 @@ repositories {
 dependencies {
     // BOM is the single source of truth for vibetags-* versions. Apply it to both the
     // compile and kapt configurations so neither needs an explicit version.
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.0.4"))
-    kapt(platform("se.deversity.vibetags:vibetags-bom:1.0.4"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.1.0"))
+    kapt(platform("se.deversity.vibetags:vibetags-bom:1.1.0"))
 
     // Annotations on compile, processor on the kapt path only — keeps the processor's
     // slf4j/logback off the consumer's compile classpath. compileOnly is enough:
