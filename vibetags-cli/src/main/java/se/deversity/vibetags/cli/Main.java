@@ -1,6 +1,8 @@
 package se.deversity.vibetags.cli;
 
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +39,12 @@ public final class Main {
                 err.println("error: --dir needs a path");
                 return 2;
             }
-            dir = Path.of(rest.get(dirAt + 1)).toAbsolutePath();
+            try {
+                dir = Path.of(rest.get(dirAt + 1)).toAbsolutePath();
+            } catch (InvalidPathException e) {
+                err.println("error: --dir is not a valid path: " + e.getMessage());
+                return 2;
+            }
             rest.remove(dirAt + 1);
             rest.remove(dirAt);
         }
@@ -46,19 +53,25 @@ public final class Main {
             return rest.isEmpty() ? 2 : 0;
         }
         String command = rest.remove(0);
-        return switch (command) {
-            case "init" -> new InitCommand(out, err, dir).run(rest);
-            case "doctor" -> new DoctorCommand(out, dir).run();
-            case "--version", "version" -> {
-                out.println("vibetags-cli " + version());
-                yield 0;
-            }
-            default -> {
-                err.println("error: unknown command '" + command + "'");
-                usage(err);
-                yield 2;
-            }
-        };
+        try {
+            return switch (command) {
+                case "init" -> new InitCommand(out, err, dir).run(rest);
+                case "doctor" -> new DoctorCommand(out, dir).run();
+                case "--version", "version" -> {
+                    out.println("vibetags-cli " + version());
+                    yield 0;
+                }
+                default -> {
+                    err.println("error: unknown command '" + command + "'");
+                    usage(err);
+                    yield 2;
+                }
+            };
+        } catch (UncheckedIOException e) {
+            err.println("error: " + e.getMessage()
+                + (e.getCause() != null ? ": " + e.getCause().getMessage() : ""));
+            return 1;
+        }
     }
 
     /** The jar's Implementation-Version, or a placeholder when run from unpackaged classes. */
