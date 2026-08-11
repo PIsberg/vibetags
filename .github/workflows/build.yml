@@ -627,6 +627,19 @@ jobs:
           cd example
           ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
 
+      # JDK 21 only: the Kotlin Gradle plugin trails new JDK releases, and the example pins a
+      # 21 toolchain anyway — the 25/26 legs would only re-test whether Kotlin tolerates a host
+      # JDK it does not yet claim to support.
+      - name: Build Kotlin Example Project (Gradle + kapt)
+        if: matrix.java == '21'
+        run: |
+          cd example-kotlin
+          ./gradlew clean build --no-daemon
+          # Proof kapt actually ran the processor over the Kotlin sources: the regenerated
+          # files must name the annotated Kotlin elements, stub signatures included.
+          grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
+          grep -qF "com.example.kotlin.CustomerVault" .cursorrules
+
       # -Pe2e mirrors the Maven profile; see vibetags/build.gradle. The `build` step above
       # ran the fast tier only, so without this the Gradle legs never see the e2e classes.
       - name: Run Full Test Suite (VibeTags Library, incl. e2e)

@@ -52,7 +52,8 @@ class BuildVersionParityTest {
 
     /** Gradle builds whose literal coordinates must agree with the parent. */
     private static final List<String> GRADLE_FILES = List.of(
-        "vibetags/build.gradle", "vibetags-annotations/build.gradle", "example/build.gradle");
+        "vibetags/build.gradle", "vibetags-annotations/build.gradle", "example/build.gradle",
+        "example-kotlin/build.gradle.kts");
 
     /**
      * The Gradle builds that publish a VibeTags artifact, and so must carry the release version.

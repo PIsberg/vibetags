@@ -12,6 +12,7 @@ Independent Maven (and where noted, Gradle) subprojects:
 - `vibetags/` — the processor itself (`AIGuardrailProcessor` + `VibeTagsLogger`). On the consumer's annotation-processor path only.
 - `vibetags-bom/` — pom-only BOM managing both versions. Maven only; Gradle reads it via `mavenLocal()` / `platform(...)`.
 - `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last two are reactors, asserted in CI).
+- `example-kotlin/` — Kotlin consumer via kapt (Gradle only; kapt processes Java stubs, so body-scoped annotations and `.vibetags-locks` positions do not apply). Built on the JDK 21 Gradle CI leg.
 - `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly (intentional — cross-version comparison is the wrong workload for a BOM).
 - `action/locked-files/` — GitHub Action consuming `.vibetags-locks`.
 
