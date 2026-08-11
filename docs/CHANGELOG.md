@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Codex, Qwen, Open Interpreter and Aider silently dropped annotations they had formatting
+  for.** `AGENTS.md` and `QWEN.md` were missing 17 of the 44 annotations, and the Open Interpreter
+  profile and `CONVENTIONS.md` were missing 12 — everything added after `@AISecure`. The
+  formatters carried hand-written arms for those platforms the whole time; the renderers just
+  never called them. Annotate a method `@AISecureLogging` and it reached `.cursorrules` and
+  `CLAUDE.md` and quietly did not reach `AGENTS.md`, with no warning anywhere.
+
+  Cause is one shape repeated four times: each renderer hand-lists the buckets it walks, and the
+  lists stopped being extended while the annotation set kept growing. Cursor and Windsurf had
+  already grown a shared tail for the newer annotations; Codex and Qwen were never switched to it,
+  and Interpreter and Aider grow theirs as `for` loops that were extended for the last five
+  annotations but not the twelve before them.
+
+  `AnnotationSections.newestAnnotationSections(Platform)` is now the single list, built per
+  platform from `SectionCatalog`, and all four renderers take it. Codex's and Qwen's
+  `SectionCatalog` overrides stop at `SECURE`, so the seventeen recovered sections use the shared
+  default heading wording; Cursor and Windsurf output is byte-identical to before.
+
+  **This changes generated output.** Projects using `@AICallersOnly`, `@AISandboxOnly`,
+  `@AIMemoryBudget`, `@AIPure`, `@AIDomainModel`, `@AIExtensible`, `@AIInputSanitized`,
+  `@AISecureLogging`, `@AIExplain`, `@AIPrototype`, `@AISunset` or `@AITemporary` will see new
+  sections appear in `AGENTS.md`, `QWEN.md`, `CONVENTIONS.md` and the Interpreter profile on the
+  next build; `@AIGenerated`, `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity` and
+  `@AIKeepInSync` additionally appear in `AGENTS.md` and `QWEN.md`. That is the fix, not a
+  side effect.
+
+### Added
+- **`RendererDropsNoSupportedAnnotationTest` — a platform may not drop an annotation it has
+  formatting for.** For every platform and every annotation it asks the formatter directly
+  whether it emits anything there, and if it does, requires the element to appear in that
+  platform's rendered file. It is derived from `GuardrailAnnotations.ALL` and `Platform.values()`
+  rather than a hand-written list, so annotation 45 and platform 38 are covered the day they land.
+
+  The test it replaces was the reason the bug survived: `RendererBranchCoverageTest` hand-lists
+  its fixture, and that list had 39 of the 44 annotations, silently missing `@AIGenerated`,
+  `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity` and `@AIKeepInSync` — the five newest.
+  A fixture that has to be remembered is one that stops being true.
+
+- **`GuardrailModels`, a test fixture carrying all 44 annotations at once.** Annotation instances
+  are reflection proxies rather than hand-written anonymous classes, so the fixture cannot drift
+  from the annotation surface. Most renderer unit tests rendered `GuardrailModel.EMPTY`, which
+  exercises the header and none of the 44 per-annotation branches.
+
 ## [1.1.0] - 2026-08-11
 
 A minor rather than a patch because this release adds three JVM languages and a CLI, none of

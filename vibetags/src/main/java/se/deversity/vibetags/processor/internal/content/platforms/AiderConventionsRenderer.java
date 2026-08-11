@@ -100,6 +100,42 @@ public final class AiderConventionsRenderer implements PlatformRenderer {
         for (TaggedElement e : model.secure()) {
             FormatterRegistry.secure().format(e, sb, Platform.AIDER_CONVENTIONS);
         }
+        for (TaggedElement e : model.callersOnly()) {
+            FormatterRegistry.callersOnly().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.sandboxOnly()) {
+            FormatterRegistry.sandboxOnly().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.memoryBudget()) {
+            FormatterRegistry.memoryBudget().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.pure()) {
+            FormatterRegistry.pure().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.domainModel()) {
+            FormatterRegistry.domainModel().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.extensible()) {
+            FormatterRegistry.extensible().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.inputSanitized()) {
+            FormatterRegistry.inputSanitized().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.secureLogging()) {
+            FormatterRegistry.secureLogging().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.explain()) {
+            FormatterRegistry.explain().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.prototype()) {
+            FormatterRegistry.prototype().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.sunset()) {
+            FormatterRegistry.sunset().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
+        for (TaggedElement e : model.temporary()) {
+            FormatterRegistry.temporary().format(e, sb, Platform.AIDER_CONVENTIONS);
+        }
         for (TaggedElement e : model.generated()) {
             FormatterRegistry.generated().format(e, sb, Platform.AIDER_CONVENTIONS);
         }

@@ -44,6 +44,14 @@ public final class QwenRenderer implements PlatformRenderer {
         section(Platform.QWEN, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
     );
 
+    /**
+     * The list above stopped at {@code @AISecure}, so QWEN.md silently omitted the seventeen
+     * annotations added after it even though their formatters carry Qwen arms. Taking the tail
+     * from {@link AnnotationSections} instead of re-listing it here is what stops that recurring.
+     */
+    private static final List<AnnotationSections.Section> ALL_SECTIONS = AnnotationSections.concat(
+        SECTIONS, AnnotationSections.newestAnnotationSections(Platform.QWEN));
+
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         if (platform == Platform.QWEN_SETTINGS) {
@@ -65,7 +73,7 @@ public final class QwenRenderer implements PlatformRenderer {
             FormatterRegistry.context().format(e, sb, Platform.QWEN);
         }
 
-        AnnotationSections.render(sb, model, Platform.QWEN, SECTIONS);
+        AnnotationSections.render(sb, model, Platform.QWEN, ALL_SECTIONS);
 
         return sb.toString();
     }
