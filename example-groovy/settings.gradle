@@ -1,0 +1,8 @@
+plugins {
+    // Provisions the JDK 21 toolchain automatically when the host JDK is newer; the
+    // annotation processing runs inside javac over the joint-compilation stubs, so the
+    // example pins the JDK the rest of the repository targets.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vibetags-example-groovy'

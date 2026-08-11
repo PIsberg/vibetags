@@ -25,8 +25,9 @@
 #   example-multimodule-indexed/pom.xml  this repo just installed, so they track the
 #   example-all-tiers/pom.xml          current version rather than the last released one.
 #   tools/demo/pom.xml
-#   example-kotlin/build.gradle.kts    Same standalone-consumer shape, Kotlin DSL: its BOM
-#                                      coordinates are literals kept in step here.
+#   example-kotlin/build.gradle.kts    Same standalone-consumer shape: their BOM
+#   example-groovy/build.gradle        coordinates are literals kept in step here
+#   example-scala/build.gradle         (Kotlin DSL for the first, Groovy DSL for the rest).
 #
 #   README.md                          Install snippets. A consumer copies these verbatim, so a
 #   .claude/skills/vibetags-usage/     GA that still says RC9 hands every new user the wrong
@@ -132,6 +133,8 @@ for rel in \
     vibetags-annotations/build.gradle \
     vibetags/build.gradle \
     example-kotlin/build.gradle.kts \
+    example-groovy/build.gradle \
+    example-scala/build.gradle \
 ; do
     replace_gradle_vibetags_refs "$ROOT_DIR/$rel"
 done

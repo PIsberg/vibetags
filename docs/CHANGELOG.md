@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Groovy support via joint-compilation stubs, and an honest answer for Scala and
+  Clojure.** Language support for a JSR 269 processor is decided by whether the toolchain
+  ever hands javac the annotations, so nothing in the processor changed — each language is
+  a standalone example consumer plus a support matrix in USAGE.md. `example-groovy/` proves
+  Groovy works like kapt does: groovyc's joint compilation generates Java stubs and
+  Gradle's `javaAnnotationProcessing = true` (off by default) runs processors over them;
+  the JDK 21 Gradle CI leg greps the generated files for the Groovy class. `example-scala/`
+  asserts the *limitation* as carefully as the feature: scalac has no JSR 269 support, so
+  its annotated Scala class compiles cleanly, is proven absent from the generated files by
+  a negative CI grep (`! grep`), and the annotated Java neighbour in the same module is
+  proven present — the supported pattern for Scala codebases. Clojure is documented as
+  impossible in principle rather than unimplemented: no javac in the pipeline, and Clojure
+  metadata annotations emit only CLASS/RUNTIME retention into bytecode, so a SOURCE
+  annotation cannot even be expressed. Both new builds join `BuildVersionParityTest` and
+  `set-version.sh`.
 - **`vibetags-cli`: `init` and `doctor`.** The gap between "read the README" and "first
   generated file" was the opt-in model itself — the processor never creates files, and a new
   user's most common failure is compiling with nothing opted in and concluding VibeTags does

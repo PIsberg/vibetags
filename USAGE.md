@@ -6,6 +6,7 @@
 
 - [Logging Configuration](#logging-configuration)
 - [Kotlin (kapt) Configuration](#kotlin-kapt-configuration)
+- [Other JVM Languages: Groovy, Scala, Clojure](#other-jvm-languages-groovy-scala-clojure)
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
@@ -114,6 +115,54 @@ rather than the Kotlin sources:
 
 A complete working consumer is in [`example-kotlin/`](example-kotlin/README.md), built in CI
 on the JDK 21 Gradle leg.
+
+### Other JVM Languages: Groovy, Scala, Clojure
+
+VibeTags is a JSR 269 processor, so language support is decided by one question: does the
+language's toolchain ever hand javac something carrying the annotations? Nothing in VibeTags
+itself is language-specific — each language below is a standalone example consumer plus this
+matrix, and adding one never touches the processor.
+
+| Language | Support | Mechanism |
+|---|---|---|
+| Java | Full | javac runs the processor directly |
+| Kotlin | Full (kapt) | kapt generates Java stubs and runs JSR 269 processors over them |
+| Groovy | Full (joint compilation) | groovyc generates Java stubs; `javaAnnotationProcessing = true` runs processors over them |
+| Scala | Java sources only | scalac has no JSR 269 support; annotated Scala classes compile but are never seen |
+| Clojure | Not possible | no javac in the pipeline, and Clojure metadata annotations emit only CLASS/RUNTIME retention into bytecode — `SOURCE` annotations cannot be expressed at all |
+
+**Groovy** is the kapt of the Groovy world — one switch, off by default in Gradle:
+
+```groovy
+plugins { id 'groovy' }
+
+dependencies {
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.javaAnnotationProcessing = true
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
+}
+```
+
+The stub caveats are the same as kapt's: no method bodies (body-scoped annotations are
+invisible) and stub-relative source positions. Working consumer:
+[`example-groovy/`](example-groovy/README.md).
+
+**Scala**: put guardrails on thin annotated Java types next to the Scala code they protect —
+javac compiles `src/main/java` normally in a mixed module. An `@AI*` annotation directly on
+a Scala class compiles without warning and silently does nothing, which is why CI asserts
+the negative: [`example-scala/`](example-scala/README.md) contains an annotated Scala class
+and the build fails if it ever *appears* in the generated files. In a Scala codebase the
+hand-authored region outside the `VIBETAGS-START`/`END` markers is the right home for
+Scala-specific rules.
+
+**Clojure**: same fallback as Scala (annotated Java types, or hand-authored rules outside
+the markers), but with no path to direct support even in principle — this is a
+compile-model incompatibility, not a missing feature.
 
 ### Check Mode — CI Drift Enforcement (Opt-in)
 
