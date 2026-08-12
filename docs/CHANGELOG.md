@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-12
+
+A patch release that changes generated output. Four renderers were dropping annotations they
+already had formatting for, and `@AIIgnore`'s reason never reached a file at all. Projects using
+any of the affected annotations will see new sections appear on the next build. No annotation,
+option or public API changed.
+
 ### Fixed
 - **`Platform.GEMINI_GRANULAR` had no arm in `PlatformRendererRegistry`.** `findRenderer` listed
   twelve of the thirteen `*_GRANULAR` constants by hand, so `getRenderer(GEMINI_GRANULAR)` threw
@@ -2365,7 +2372,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/PIsberg/vibetags/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PIsberg/vibetags/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/PIsberg/vibetags/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/PIsberg/vibetags/compare/v1.0.1...v1.0.2
