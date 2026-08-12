@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`Platform.GEMINI_GRANULAR` had no arm in `PlatformRendererRegistry`.** `findRenderer` listed
+  twelve of the thirteen `*_GRANULAR` constants by hand, so `getRenderer(GEMINI_GRANULAR)` threw
+  `IllegalArgumentException: Unsupported platform`. Nothing ever failed, because
+  `GuardrailContentBuilder` filters `*_granular` service keys out before the registry is asked —
+  a latent crash one refactor away from the call site that stops filtering.
+
+  Fixed by deriving the granular case from the platform's own name instead of listing it. That
+  suffix already routes the content builder, so this reads an existing convention rather than
+  inventing one, and constant fourteen needs no edit here. `PlatformRendererRegistryCoverageTest`
+  now walks `Platform.values()` and fails on any platform the registry cannot answer for.
 - **`@AIIgnore(reason = "...")` never reached any file.** `AIIgnoreFormatter` did not read the
   annotation at all, so the reason a developer wrote went nowhere on all 37 platforms. The
   exclusion itself rendered, which is what hid this: the file looked right and only the
