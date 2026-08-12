@@ -194,4 +194,90 @@ These elements are gated behind a feature flag. Never assume it is always active
 Never weaken security properties of these elements. Flag any change for security review:
 
 * `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
+
+## 🚫 ACCESS & CALLS LIMITATIONS
+The following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.
+
+* `com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()` - Only callable by: [com.example.service.PricingService, com.example.payment.PaymentProcessor]
+
+## 🛡️ SANDBOX & TEST HARNESS EXCLUSION
+The following elements are strictly sandbox/test code. Production code must never import or reference them.
+
+* `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` - Strictly sandbox or test environment only. Production code must never import or invoke. Reason: Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging
+
+## ⚡ MEMORY ALLOCATION BUDGETS
+The following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.
+
+* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Strict memory budget policy: ZERO_ALLOCATION. Minimize or prevent runtime allocations.
+
+## 🧠 DETERMINISTIC PURE FUNCTIONS
+The following elements must remain pure functions without side effects or mutations.
+
+* `com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)` - Must remain a pure function. Forbid assignments to enclosing state, fields, or static members. Reason: Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers
+
+## 🧱 FRAMEWORK-FREE DOMAIN ENTITIES
+The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
+
+* `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` - Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. Allowed imports: [java.math.BigDecimal]
+
+## ❄️ open-closed EXTENSION PATTERNS
+The following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.
+
+* `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` - Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
+
+## 🚨 MANDATORY INPUT SANITIZATION
+The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
+
+* `com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput` - Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+
+## 🔒 SECURE LOGGING MASKING
+The following sensitive elements must be masked, hashed, or omitted from log/stdout streams.
+
+* `com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+* `com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw` - Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+
+## 📋 REQUIRED CHAIN-OF-THOUGHT EXPLANATIONS
+Any change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.
+
+* `com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])` - Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: HIGH
+
+## 🛠️ EXPERIMENTAL PROTOTYPE STUBS
+Strict QA constraints and tests are relaxed for these elements, but production classes must never import them.
+
+* `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` - Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it. Reason: Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it
+
+## ⚠️ SUNSET DEPRACTED APIs
+Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.
+
+* `com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)` - Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DEBT-742. Replacement: `com.example.service.PricingService`
+
+## 🚧 TEMPORARY CODE WORKAROUNDS
+Temporary stubs or hacks that must be refactored or removed before their expiration limit.
+
+* `com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()` - Temporary logic/workaround. Expires on: 2028-12-31. Reason: Hotfix workaround until upstream payment provider updates their API.
+
+## 🤖 GENERATED CODE — EDIT THE SOURCE
+These elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them. Change the named source and regenerate.
+
+* `com.example.service.EvidenceBasedShowcase` - Generated from `src/main/resources/openapi/checkout.yaml`. Hand edits are overwritten — edit `src/main/resources/openapi/checkout.yaml` instead, then run `mvn generate-sources`.
+
+## 🧩 LOAD-BEARING ODDITIES
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+* `com.example.service.EvidenceBasedShowcase.settledOrderIds` - Looks removable but is deliberate. Invariant: Settled orders stay in the list until the reconciliation job drains it Breaks if changed: Clearing eagerly drops in-flight settlements and silently under-reports revenue Not a defect — do not flag.
+
+## ⛔ BANNED APIs AT THIS ELEMENT
+The following APIs compile here but are prohibited. Use the sanctioned replacement instead.
+
+* `com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)` - Must not use: java.lang.System.out, java.util.Date, java.lang.Double. Use the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal instead. (Console output bypasses structured logging; Date and Double are unsafe for money and time)
+
+## 🧵 THREAD AFFINITY (NOT THREAD-SAFE)
+These elements are safe on exactly one thread. Do NOT add locks to "make them thread-safe" — marshal the call onto the required thread instead.
+
+* `com.example.service.EvidenceBasedShowcase.refreshCartBadge()` - Pinned to the checkout-ui thread only. NOT thread-safe — adding a lock is the wrong fix. Marshal via CheckoutDispatcher.runOnUiThread. If violated: Cart totals render stale under load; no exception is thrown
+
+## 🔗 MIRRORED — EDIT ALL SITES TOGETHER
+These elements are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.
+
+* `com.example.service.EvidenceBasedShowcase.CATALOG_VERSION` - Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
 <!-- VIBETAGS-END -->

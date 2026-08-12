@@ -272,6 +272,48 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Aspect**: authentication
 - **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.
 
+#### CALLERS LIMIT: com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()
+- **Allowed Callers**: com.example.service.PricingService, com.example.payment.PaymentProcessor
+
+#### SANDBOX ONLY: com.example.service.NewAnnotationsShowcase.SandboxTestHelper
+- **Policy**: Sandbox/testing environments only.
+
+#### MEMORY BUDGET: com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Policy**: ZERO_ALLOCATION
+
+#### PURE FUNCTION: com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Policy**: Pure function (no state mutations allowed).
+
+#### DOMAIN MODEL: com.example.service.NewAnnotationsShowcase.ImmutableProductPrice
+- **Policy**: Pure Domain model, framework-free.
+- **Allowed**: java.math.BigDecimal
+
+#### POLYMORPHIC EXTENSION: com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy
+- **Strategy**: STRATEGY_PATTERN
+
+#### INPUT SANITIZATION: com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput
+- **Required Filters**: SQL_INJECTION
+
+#### SECURE LOGGING: com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber
+- **Required Masking**: MASK_CREDIT_CARD
+
+#### SECURE LOGGING: com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
+- **Required Masking**: HASH
+
+#### EXPLAIN RATIONALE: com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])
+- **Complexity**: HIGH
+
+#### EXPERIMENTAL PROTOTYPE: com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike
+- **Policy**: Prototype stub (suspends strict QA constraints).
+
+#### SUNSET API: com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)
+- **Ticket**: DEBT-742
+- **Replacement**: com.example.service.PricingService
+
+#### TEMPORARY WORKAROUND: com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()
+- **Expires On**: 2028-12-31
+- **Reason**: Hotfix workaround until upstream payment provider updates their API.
+
 #### GENERATED: com.example.service.EvidenceBasedShowcase
 - **Source**: src/main/resources/openapi/checkout.yaml
 - **Edit instead**: src/main/resources/openapi/checkout.yaml
