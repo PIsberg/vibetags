@@ -63,7 +63,7 @@ public final class GuardrailModels {
 
     /** An instance of {@code type} answering every member with a value {@link #member} chose. */
     @SuppressWarnings("unchecked")
-    public static <A extends Annotation> A instance(Class<A> type) {
+    private static <A extends Annotation> A instance(Class<A> type) {
         return (A) Proxy.newProxyInstance(
             type.getClassLoader(),
             new Class<?>[]{type},
@@ -92,7 +92,7 @@ public final class GuardrailModels {
     }
 
     /**
-     * A value for one annotation member. Strings carry the member's own name so a formatter that
+     * A value for one annotation member. Strings carry the member's own name, so a formatter that
      * prints the wrong member is visible in the failure, and booleans answer {@code true} so the
      * "flag is set" branch is the one exercised.
      */
@@ -102,7 +102,7 @@ public final class GuardrailModels {
             return "fixture-" + method.getName();
         }
         if (returnType == boolean.class) {
-            return Boolean.TRUE;
+            return true;
         }
         if (returnType == int.class) {
             return 7;
@@ -115,7 +115,7 @@ public final class GuardrailModels {
             return declared != null ? declared : Object.class;
         }
         if (returnType.isEnum()) {
-            return firstConstant(returnType);
+            return constant(returnType);
         }
         if (returnType.isArray()) {
             Class<?> component = returnType.getComponentType();
@@ -123,7 +123,7 @@ public final class GuardrailModels {
                 return new String[]{"fixture-" + method.getName()};
             }
             Object array = Array.newInstance(component, 1);
-            Array.set(array, 0, component.isEnum() ? firstConstant(component) : null);
+            Array.set(array, 0, component.isEnum() ? constant(component) : null);
             return array;
         }
         Object declared = method.getDefaultValue();
@@ -136,7 +136,8 @@ public final class GuardrailModels {
                 + " — add a case to GuardrailModels.member");
     }
 
-    private static Object firstConstant(Class<?> enumType) {
+    /** The enum's first constant; every enum member here has at least one. */
+    private static Object constant(Class<?> enumType) {
         Object[] constants = enumType.getEnumConstants();
         if (constants.length == 0) {
             throw new IllegalStateException(enumType + " has no constants");

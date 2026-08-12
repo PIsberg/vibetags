@@ -51,6 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the annotation surface. Most renderer unit tests rendered `GuardrailModel.EMPTY`, which
   exercises the header and none of the 44 per-annotation branches.
 
+### Changed
+- **The mutation workflow measured the fast test tier and reported it as the project's score.**
+  `pitest-maven` parses surefire's configuration, which carries `<excludedGroups>` defaulting to
+  `e2e`, so `mutation.yml` ran PIT against 77 of the repository's 132 test classes and scored the
+  other 55 classes' code as untested. Seven classes were reported as having no coverage at all;
+  they are covered, by tests PIT was never allowed to run. Measured on `main` over exactly those
+  seven: 19% line coverage and 16 of 211 mutants killed without `-Pe2e`, 88% and 142 of 211 with
+  it. The job now passes `-Pe2e`, as every other CI leg already did.
+
+  The README badge moves from 56% to **80%** (3198 mutants, 2548 killed, 110 with no coverage,
+  83% test strength), measured on this branch with the corrected command.
+
 ## [1.1.0] - 2026-08-11
 
 A minor rather than a patch because this release adds three JVM languages and a CLI, none of

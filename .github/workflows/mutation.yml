@@ -35,10 +35,17 @@ jobs:
           cd vibetags-annotations
           mvn install -B
 
+      # -Pe2e is not optional here. pitest-maven parses surefire's configuration, which carries
+      # <excludedGroups>${vibetags.test.excludedGroups}</excludedGroups> = "e2e" by default, so
+      # without it PIT runs the fast tier and scores the project as if the other 55 test classes
+      # did not exist. Measured on main @ edab0c2 over the seven classes PIT reported as entirely
+      # uncovered: 19% line coverage and 16/211 mutants killed without -Pe2e, 88% and 142/211 with
+      # it, for 12m22s against 19m27s. The uncovered code was never untested, only unmeasured.
+      # Every other CI leg passes -Pe2e; this job was the one that did not.
       - name: Run Mutation Coverage (PIT)
         run: |
           cd vibetags
-          mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+          mvn -B -Pmutation -Pe2e test-compile org.pitest:pitest-maven:mutationCoverage
 
       - name: Upload PIT mutation report
         if: always()
