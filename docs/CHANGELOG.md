@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`@AIIgnore(reason = "...")` never reached any file.** `AIIgnoreFormatter` did not read the
+  annotation at all, so the reason a developer wrote went nowhere on all 37 platforms. The
+  exclusion itself rendered, which is what hid this: the file looked right and only the
+  explanation was missing, and an exclusion without its reason is the one an agent cannot weigh
+  and a reviewer cannot audit.
+
+  The reason now renders wherever the platform's output is prose. The path-list platforms are
+  deliberately unchanged — the fifteen `*_IGNORE` globs, `.aiexclude` and Mentat's JSON are
+  machine-parsed and have nowhere to put a sentence.
+
+  The annotation's *default* reason is not printed. It says "Excluded from AI context", which is
+  what the section heading above the entry already says, so printing it would add a line of
+  repetition to every entry in every project that never set one. The default is read from the
+  annotation reflectively rather than copied into the formatter, so it cannot drift out of
+  agreement.
+
+  **This changes generated output** for anyone who wrote a reason.
 - **Codex, Qwen, Open Interpreter and Aider silently dropped annotations they had formatting
   for.** `AGENTS.md` and `QWEN.md` were missing 17 of the 44 annotations, and the Open Interpreter
   profile and `CONVENTIONS.md` were missing 12 — everything added after `@AISecure`. The

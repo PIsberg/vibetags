@@ -121,7 +121,7 @@ When proposing edits or writing code for the following files, you MUST perform a
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI's memory and context:
 
-* `com.example.internal.GeneratedMetadata`
+* `com.example.internal.GeneratedMetadata` - Auto-generated at build time. Manual edits are overwritten on every build.
 
 ## IMPLEMENTATION TASKS
 The following elements are drafts that need implementation:

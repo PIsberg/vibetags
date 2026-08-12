@@ -33,7 +33,9 @@ Guardrails for module `app` are maintained in that module's own files, in the sc
     </file>
   </locked_files>
   <ignored_elements>
-    <file path="com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay"/>
+    <file path="com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay">
+      <reason>Cached derived value with no meaning outside this instance</reason>
+    </file>
   </ignored_elements>
 
 <rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>
