@@ -107,7 +107,7 @@ Critical Vulnerabilities to Prevent:
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI context and completions:
 
-- `com.example.internal.GeneratedMetadata`
+- `com.example.internal.GeneratedMetadata` - Auto-generated at build time. Manual edits are overwritten on every build.
 ## IMPLEMENTATION TASKS
 The following elements are drafts that need implementation:
 

@@ -20,6 +20,9 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### IDEMPOTENT: com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)
 - **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.
 - **Reason**: Derives output path from inputs only
+
+#### PURE FUNCTION: com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)
+- **Policy**: Pure function (no state mutations allowed).
 <!-- VIBETAGS-MODULE-END: cli -->
 <!-- VIBETAGS-MODULE: core -->
 # VibeTags Multi-Module Example CONVENTIONS
@@ -34,6 +37,9 @@ This file contains project-specific coding conventions and AI guardrails extract
 
 #### IMMUTABLE: com.example.multimodule.core.IrGraph
 - **Rule**: This type is immutable. Never introduce non-final fields, setters, or mutating methods.
+
+#### DOMAIN MODEL: com.example.multimodule.core.IrNode
+- **Policy**: Pure Domain model, framework-free.
 <!-- VIBETAGS-MODULE-END: core -->
 <!-- VIBETAGS-MODULE: engine -->
 # VibeTags Multi-Module Example CONVENTIONS
@@ -45,6 +51,9 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### THREAD-SAFE: com.example.multimodule.engine.LayoutEngine
 - **Strategy**: SYNCHRONIZED
 - **Note**: Stateless; safe to share across render threads
+
+#### POLYMORPHIC EXTENSION: com.example.multimodule.engine.LayoutEngine
+- **Strategy**: STRATEGY_PATTERN
 <!-- VIBETAGS-MODULE-END: engine -->
 <!-- VIBETAGS-MODULE: showcase -->
 # VibeTags Multi-Module Example CONVENTIONS
@@ -119,6 +128,7 @@ This file contains project-specific coding conventions and AI guardrails extract
 
 #### IGNORE: com.example.internal.GeneratedMetadata
 - **Instruction**: This element is strictly excluded from AI context. Do not reference it.
+- **Reason**: Auto-generated at build time. Manual edits are overwritten on every build.
 
 #### SECURITY AUDIT: com.example.database.DatabaseConnector
 - **Required Checks**: SQL Injection, Thread Safety issues
@@ -319,6 +329,48 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### SECURITY-CRITICAL: com.example.security.SecurityConfig
 - **Aspect**: authentication
 - **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.
+
+#### CALLERS LIMIT: com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()
+- **Allowed Callers**: com.example.service.PricingService, com.example.payment.PaymentProcessor
+
+#### SANDBOX ONLY: com.example.service.NewAnnotationsShowcase.SandboxTestHelper
+- **Policy**: Sandbox/testing environments only.
+
+#### MEMORY BUDGET: com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Policy**: ZERO_ALLOCATION
+
+#### PURE FUNCTION: com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
+- **Policy**: Pure function (no state mutations allowed).
+
+#### DOMAIN MODEL: com.example.service.NewAnnotationsShowcase.ImmutableProductPrice
+- **Policy**: Pure Domain model, framework-free.
+- **Allowed**: java.math.BigDecimal
+
+#### POLYMORPHIC EXTENSION: com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy
+- **Strategy**: STRATEGY_PATTERN
+
+#### INPUT SANITIZATION: com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput
+- **Required Filters**: SQL_INJECTION
+
+#### SECURE LOGGING: com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber
+- **Required Masking**: MASK_CREDIT_CARD
+
+#### SECURE LOGGING: com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
+- **Required Masking**: HASH
+
+#### EXPLAIN RATIONALE: com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])
+- **Complexity**: HIGH
+
+#### EXPERIMENTAL PROTOTYPE: com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike
+- **Policy**: Prototype stub (suspends strict QA constraints).
+
+#### SUNSET API: com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)
+- **Ticket**: DEBT-742
+- **Replacement**: com.example.service.PricingService
+
+#### TEMPORARY WORKAROUND: com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()
+- **Expires On**: 2028-12-31
+- **Reason**: Hotfix workaround until upstream payment provider updates their API.
 
 #### GENERATED: com.example.service.EvidenceBasedShowcase
 - **Source**: src/main/resources/openapi/checkout.yaml

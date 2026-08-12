@@ -169,21 +169,17 @@ public final class PlatformRendererRegistry {
                 return ROO_MODES_RENDERER;
             case LOCKS_REPORT:
                 return LOCKS_REPORT_RENDERER;
-            case CURSOR_GRANULAR:
-            case TRAE_GRANULAR:
-            case ROO_GRANULAR:
-            case WINDSURF_GRANULAR:
-            case CONTINUE_GRANULAR:
-            case TABNINE_GRANULAR:
-            case AMAZONQ_GRANULAR:
-            case AI_RULES_GRANULAR:
-            case PEARAI_GRANULAR:
-            case KIRO_GRANULAR:
-            case CLAUDE_GRANULAR:
-            case COPILOT_GRANULAR:
-                return GRANULAR_RENDERER;
             default:
-                return null;
+                // Every *_GRANULAR service shares one renderer, and this used to be thirteen case
+                // labels written by hand — of which only twelve were ever written. GEMINI_GRANULAR
+                // was missing, so getRenderer threw "Unsupported platform" for it. Nothing failed,
+                // because GuardrailContentBuilder filters *_granular keys out before asking, which
+                // is exactly what a latent crash looks like. Deriving it from the platform's own
+                // name means the fourteenth constant needs no edit here.
+                //
+                // The suffix is already load-bearing elsewhere (the content builder routes on it),
+                // so this reads the same convention rather than inventing one.
+                return platform.name().endsWith("_GRANULAR") ? GRANULAR_RENDERER : null;
         }
     }
 

@@ -44,6 +44,14 @@ public final class CodexRenderer implements PlatformRenderer {
         section(Platform.CODEX, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
     );
 
+    /**
+     * The list above stopped at {@code @AISecure}, so AGENTS.md silently omitted the seventeen
+     * annotations added after it even though their formatters carry Codex arms. Taking the tail
+     * from {@link AnnotationSections} instead of re-listing it here is what stops that recurring.
+     */
+    private static final List<AnnotationSections.Section> ALL_SECTIONS = AnnotationSections.concat(
+        SECTIONS, AnnotationSections.newestAnnotationSections(Platform.CODEX));
+
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         if (platform == Platform.CODEX_CONFIG) {
@@ -72,7 +80,7 @@ public final class CodexRenderer implements PlatformRenderer {
             FormatterRegistry.context().format(e, sb, Platform.CODEX);
         }
 
-        AnnotationSections.render(sb, model, Platform.CODEX, SECTIONS);
+        AnnotationSections.render(sb, model, Platform.CODEX, ALL_SECTIONS);
 
         return sb.toString();
     }

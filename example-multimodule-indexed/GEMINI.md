@@ -144,7 +144,7 @@ Apply the following context when assisting with these files:
 ## IGNORED ELEMENTS
 The following elements must be completely excluded from AI context and completions:
 
-- `com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay`
+- `com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay` - Cached derived value with no meaning outside this instance
 ## PII / PRIVACY GUARDRAILS
 The following elements handle Personally Identifiable Information (PII).
 Never include their runtime values in logs, console output, external API calls,

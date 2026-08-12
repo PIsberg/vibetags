@@ -136,27 +136,41 @@ final class AnnotationSections {
     }
 
     /**
-     * The twelve newest annotation sections, in the emoji-headed wording shared verbatim by
-     * {@link CursorRenderer} and {@link WindsurfRenderer} — sourced from {@link SectionCatalog}'s
-     * default (Cursor) wording so the text isn't duplicated source-side across both files.
+     * The seventeen annotations added after {@code @AISecure}, as sections carrying
+     * {@code platform}'s own heading wording from {@link SectionCatalog}.
+     *
+     * <p>Built per platform rather than shared as one constant because every markdown renderer
+     * that walks these buckets has to walk <em>all</em> of them, and a hand-maintained tail per
+     * renderer is how Codex and Qwen ended up rendering 27 of 44 annotations while Cursor rendered
+     * 44 — the formatters had the arms, the bucket lists had stopped growing. One list, taken by
+     * every caller, means annotation 45 is added here once.
      */
-    static final List<Section> EMOJI_STYLE_NEWEST_ANNOTATIONS = List.of(
-        section(Platform.CURSOR, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.CURSOR, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.CURSOR, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.CURSOR, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
-        section(Platform.CURSOR, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.CURSOR, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
-        section(Platform.CURSOR, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.CURSOR, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.CURSOR, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
-        section(Platform.CURSOR, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
-        section(Platform.CURSOR, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
-        section(Platform.CURSOR, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
-        section(Platform.CURSOR, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
-        section(Platform.CURSOR, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.CURSOR, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.CURSOR, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.CURSOR, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
-    );
+    static List<Section> newestAnnotationSections(Platform platform) {
+        return List.of(
+            section(platform, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
+            section(platform, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
+            section(platform, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
+            section(platform, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
+            section(platform, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
+            section(platform, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
+            section(platform, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
+            section(platform, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
+            section(platform, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
+            section(platform, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
+            section(platform, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
+            section(platform, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
+            section(platform, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
+            section(platform, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
+            section(platform, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
+            section(platform, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
+            section(platform, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+        );
+    }
+
+    /**
+     * The same sections in Cursor's emoji-headed wording, shared verbatim by
+     * {@link CursorRenderer} and {@link WindsurfRenderer}.
+     */
+    static final List<Section> EMOJI_STYLE_NEWEST_ANNOTATIONS =
+        newestAnnotationSections(Platform.CURSOR);
 }

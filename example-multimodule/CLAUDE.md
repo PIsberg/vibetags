@@ -185,7 +185,9 @@ or refresh it.
   If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
 </rule>
   <ignored_elements>
-    <file path="com.example.internal.GeneratedMetadata"/>
+    <file path="com.example.internal.GeneratedMetadata">
+      <reason>Auto-generated at build time. Manual edits are overwritten on every build.</reason>
+    </file>
   </ignored_elements>
 
 <rule>Never reference or suggest changes to any element listed in <ignored_elements>. Treat these as if they do not exist.</rule>

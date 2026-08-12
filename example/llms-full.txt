@@ -79,6 +79,7 @@ The following elements must be completely excluded from AI context. Treat them a
 
 ### com.example.internal.GeneratedMetadata
 - Excluded from AI context entirely - treat as non-existent
+- Reason: Auto-generated at build time. Manual edits are overwritten on every build.
 
 
 ## Implementation Tasks

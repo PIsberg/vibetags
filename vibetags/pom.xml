@@ -511,7 +511,10 @@
             </build>
         </profile>
 
-        <!-- Mutation testing: mvn -B -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+        <!-- Mutation testing: mvn -B -Pmutation -Pe2e test-compile org.pitest:pitest-maven:mutationCoverage
+             -Pe2e is required, not a nicety: pitest-maven reads surefire's configuration, which excludes
+             the "e2e" tag by default, so omitting it hides 55 of the 132 test classes from PIT and the
+             score comes back as if the code they cover were untested. See docs/WORKFLOW.md section 7.
              pitest-junit5-plugin 1.2.2 is the latest release on Maven Central (Feb 2025); it has not
              been certified against JUnit 6 by its maintainers, but 1.2.2's fix ("set junit-platform-launcher
              to provided scope") removed the shaded-classes conflict that caused earlier JUnit-version

@@ -29,7 +29,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [DatabaseConnector](com.example.database.DatabaseConnector): check for SQL Injection, Thread Safety issues
 
 ## Ignored Elements
-- [GeneratedMetadata](com.example.internal.GeneratedMetadata): excluded from AI context
+- [GeneratedMetadata](com.example.internal.GeneratedMetadata): excluded from AI context - Auto-generated at build time. Manual edits are overwritten on every build.
 
 ## Implementation Tasks
 - [NotificationService](com.example.NotificationService): Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.

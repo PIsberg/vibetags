@@ -35,7 +35,7 @@ Do not suggest changes to the following files:
 ## Ignored Elements
 Do not reference or suggest changes to the following:
 
-- `com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay`
+- `com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay` - Cached derived value with no meaning outside this instance
 
 ## PII / Privacy Guardrails
 Never log, expose, or suggest code that outputs the runtime values of these elements:

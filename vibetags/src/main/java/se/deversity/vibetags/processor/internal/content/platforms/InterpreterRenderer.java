@@ -48,6 +48,18 @@ public final class InterpreterRenderer implements PlatformRenderer {
         for (TaggedElement e : model.idempotent()) FormatterRegistry.idempotent().format(e, rules, Platform.INTERPRETER);
         for (TaggedElement e : model.featureFlag()) FormatterRegistry.featureFlag().format(e, rules, Platform.INTERPRETER);
         for (TaggedElement e : model.secure()) FormatterRegistry.secure().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.callersOnly()) FormatterRegistry.callersOnly().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.memoryBudget()) FormatterRegistry.memoryBudget().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.pure()) FormatterRegistry.pure().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.domainModel()) FormatterRegistry.domainModel().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.extensible()) FormatterRegistry.extensible().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.inputSanitized()) FormatterRegistry.inputSanitized().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.secureLogging()) FormatterRegistry.secureLogging().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.explain()) FormatterRegistry.explain().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.prototype()) FormatterRegistry.prototype().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.sunset()) FormatterRegistry.sunset().format(e, rules, Platform.INTERPRETER);
+        for (TaggedElement e : model.temporary()) FormatterRegistry.temporary().format(e, rules, Platform.INTERPRETER);
         for (TaggedElement e : model.generated()) FormatterRegistry.generated().format(e, rules, Platform.INTERPRETER);
         for (TaggedElement e : model.loadBearing()) FormatterRegistry.loadBearing().format(e, rules, Platform.INTERPRETER);
         for (TaggedElement e : model.bannedApi()) FormatterRegistry.bannedApi().format(e, rules, Platform.INTERPRETER);

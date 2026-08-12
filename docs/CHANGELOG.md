@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`Platform.GEMINI_GRANULAR` had no arm in `PlatformRendererRegistry`.** `findRenderer` listed
+  twelve of the thirteen `*_GRANULAR` constants by hand, so `getRenderer(GEMINI_GRANULAR)` threw
+  `IllegalArgumentException: Unsupported platform`. Nothing ever failed, because
+  `GuardrailContentBuilder` filters `*_granular` service keys out before the registry is asked —
+  a latent crash one refactor away from the call site that stops filtering.
+
+  Fixed by deriving the granular case from the platform's own name instead of listing it. That
+  suffix already routes the content builder, so this reads an existing convention rather than
+  inventing one, and constant fourteen needs no edit here. `PlatformRendererRegistryCoverageTest`
+  now walks `Platform.values()` and fails on any platform the registry cannot answer for.
+- **`@AIIgnore(reason = "...")` never reached any file.** `AIIgnoreFormatter` did not read the
+  annotation at all, so the reason a developer wrote went nowhere on all 37 platforms. The
+  exclusion itself rendered, which is what hid this: the file looked right and only the
+  explanation was missing, and an exclusion without its reason is the one an agent cannot weigh
+  and a reviewer cannot audit.
+
+  The reason now renders wherever the platform's output is prose. The path-list platforms are
+  deliberately unchanged — the fifteen `*_IGNORE` globs, `.aiexclude` and Mentat's JSON are
+  machine-parsed and have nowhere to put a sentence.
+
+  The annotation's *default* reason is not printed. It says "Excluded from AI context", which is
+  what the section heading above the entry already says, so printing it would add a line of
+  repetition to every entry in every project that never set one. The default is read from the
+  annotation reflectively rather than copied into the formatter, so it cannot drift out of
+  agreement.
+
+  **This changes generated output** for anyone who wrote a reason.
+- **Codex, Qwen, Open Interpreter and Aider silently dropped annotations they had formatting
+  for.** `AGENTS.md` and `QWEN.md` were missing 17 of the 44 annotations, and the Open Interpreter
+  profile and `CONVENTIONS.md` were missing 12 — everything added after `@AISecure`. The
+  formatters carried hand-written arms for those platforms the whole time; the renderers just
+  never called them. Annotate a method `@AISecureLogging` and it reached `.cursorrules` and
+  `CLAUDE.md` and quietly did not reach `AGENTS.md`, with no warning anywhere.
+
+  Cause is one shape repeated four times: each renderer hand-lists the buckets it walks, and the
+  lists stopped being extended while the annotation set kept growing. Cursor and Windsurf had
+  already grown a shared tail for the newer annotations; Codex and Qwen were never switched to it,
+  and Interpreter and Aider grow theirs as `for` loops that were extended for the last five
+  annotations but not the twelve before them.
+
+  `AnnotationSections.newestAnnotationSections(Platform)` is now the single list, built per
+  platform from `SectionCatalog`, and all four renderers take it. Codex's and Qwen's
+  `SectionCatalog` overrides stop at `SECURE`, so the seventeen recovered sections use the shared
+  default heading wording; Cursor and Windsurf output is byte-identical to before.
+
+  **This changes generated output.** Projects using `@AICallersOnly`, `@AISandboxOnly`,
+  `@AIMemoryBudget`, `@AIPure`, `@AIDomainModel`, `@AIExtensible`, `@AIInputSanitized`,
+  `@AISecureLogging`, `@AIExplain`, `@AIPrototype`, `@AISunset` or `@AITemporary` will see new
+  sections appear in `AGENTS.md`, `QWEN.md`, `CONVENTIONS.md` and the Interpreter profile on the
+  next build; `@AIGenerated`, `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity` and
+  `@AIKeepInSync` additionally appear in `AGENTS.md` and `QWEN.md`. That is the fix, not a
+  side effect.
+
+### Added
+- **`RendererDropsNoSupportedAnnotationTest` — a platform may not drop an annotation it has
+  formatting for.** For every platform and every annotation it asks the formatter directly
+  whether it emits anything there, and if it does, requires the element to appear in that
+  platform's rendered file. It is derived from `GuardrailAnnotations.ALL` and `Platform.values()`
+  rather than a hand-written list, so annotation 45 and platform 38 are covered the day they land.
+
+  The test it replaces was the reason the bug survived: `RendererBranchCoverageTest` hand-lists
+  its fixture, and that list had 39 of the 44 annotations, silently missing `@AIGenerated`,
+  `@AILoadBearing`, `@AIBannedApi`, `@AIThreadAffinity` and `@AIKeepInSync` — the five newest.
+  A fixture that has to be remembered is one that stops being true.
+
+- **`GuardrailModels`, a test fixture carrying all 44 annotations at once.** Annotation instances
+  are reflection proxies rather than hand-written anonymous classes, so the fixture cannot drift
+  from the annotation surface. Most renderer unit tests rendered `GuardrailModel.EMPTY`, which
+  exercises the header and none of the 44 per-annotation branches.
+
+- **Three gates over code the mutation report showed was unverified.** None of them fixes shipped
+  output — all three subjects behave correctly today. What PIT showed is that nothing would have
+  noticed if they stopped:
+
+  - `CoreRulesEveryRuleFiresTest` — six validation warnings had no test at all. Searching the test
+    tree for their message text returned nothing for `@AIKeepInSync`, `@AIGenerated`,
+    `@AIBannedApi`, `@AISunset`, `@AIObservability` and `@AIRegulation`; deleting any of those
+    `ctx.warn` calls left the suite green. Derived from `CoreRules.all()`, and checks both
+    directions: a blank annotation must be reported, a filled-in one must not be. The second
+    matters more in a build — a rule that warns on correct code is how a team ends up muting the
+    whole processor.
+  - `IgnoreFileHeaderNamesTest` — the fifteen `*_IGNORE` platforms share one renderer and differ
+    only in one word of the header, taken from a fifteen-arm switch that nothing asserted. Twelve
+    of those arms could return the empty string with no failure, so `# -specific exclusion list.`
+    could have shipped, or Cody's file could have named Cursor.
+  - `GranularRendererDropsNoAnnotationTest` — nineteen of `renderGranular`'s forty-four
+    `appendToGranular` calls could be deleted outright without a failure. That is the aggregate
+    renderer bug above, one file over, waiting for the next annotation to be added.
+
+  Each was verified by breaking its subject deliberately and confirming it goes red: the
+  `@AIKeepInSync` stanza suppressed, `@AIRegulation`'s warning suppressed, Cody's name emptied —
+  4 failures across the 56 tests, green again on revert.
+
+### Changed
+- **The mutation workflow measured the fast test tier and reported it as the project's score.**
+  `pitest-maven` parses surefire's configuration, which carries `<excludedGroups>` defaulting to
+  `e2e`, so `mutation.yml` ran PIT against 77 of the repository's 132 test classes and scored the
+  other 55 classes' code as untested. Seven classes were reported as having no coverage at all;
+  they are covered, by tests PIT was never allowed to run. Measured on `main` over exactly those
+  seven: 19% line coverage and 16 of 211 mutants killed without `-Pe2e`, 88% and 142 of 211 with
+  it. The job now passes `-Pe2e`, as every other CI leg already did.
+
+  The README badge moves from 56% to **80%** (3198 mutants, 2548 killed, 110 with no coverage,
+  83% test strength), measured on this branch with the corrected command.
+
 ## [1.1.0] - 2026-08-11
 
 A minor rather than a patch because this release adds three JVM languages and a CLI, none of

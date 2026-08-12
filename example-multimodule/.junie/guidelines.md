@@ -130,7 +130,7 @@ When proposing edits or writing code for the following files, you MUST perform a
 ## 🚫 IGNORED ELEMENTS (EXCLUDE FROM CONTEXT)
 Do not reference, suggest changes to, or include the following in completions or answers.
 
-* `com.example.internal.GeneratedMetadata`
+* `com.example.internal.GeneratedMetadata` - Auto-generated at build time. Manual edits are overwritten on every build.
 
 ## 📝 IMPLEMENTATION TASKS (TODO)
 The following elements are currently in DRAFT mode. Follow the instructions to implement them:

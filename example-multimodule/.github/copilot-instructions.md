@@ -129,7 +129,7 @@ Before suggesting changes to the following files, audit for the listed vulnerabi
 ## Ignored Elements
 Do not reference or suggest changes to the following:
 
-- `com.example.internal.GeneratedMetadata`
+- `com.example.internal.GeneratedMetadata` - Auto-generated at build time. Manual edits are overwritten on every build.
 
 ## Implementation Tasks
 Follow these instructions to implement the drafts:
