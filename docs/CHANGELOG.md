@@ -51,6 +51,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the annotation surface. Most renderer unit tests rendered `GuardrailModel.EMPTY`, which
   exercises the header and none of the 44 per-annotation branches.
 
+- **Three gates over code the mutation report showed was unverified.** None of them fixes shipped
+  output — all three subjects behave correctly today. What PIT showed is that nothing would have
+  noticed if they stopped:
+
+  - `CoreRulesEveryRuleFiresTest` — six validation warnings had no test at all. Searching the test
+    tree for their message text returned nothing for `@AIKeepInSync`, `@AIGenerated`,
+    `@AIBannedApi`, `@AISunset`, `@AIObservability` and `@AIRegulation`; deleting any of those
+    `ctx.warn` calls left the suite green. Derived from `CoreRules.all()`, and checks both
+    directions: a blank annotation must be reported, a filled-in one must not be. The second
+    matters more in a build — a rule that warns on correct code is how a team ends up muting the
+    whole processor.
+  - `IgnoreFileHeaderNamesTest` — the fifteen `*_IGNORE` platforms share one renderer and differ
+    only in one word of the header, taken from a fifteen-arm switch that nothing asserted. Twelve
+    of those arms could return the empty string with no failure, so `# -specific exclusion list.`
+    could have shipped, or Cody's file could have named Cursor.
+  - `GranularRendererDropsNoAnnotationTest` — nineteen of `renderGranular`'s forty-four
+    `appendToGranular` calls could be deleted outright without a failure. That is the aggregate
+    renderer bug above, one file over, waiting for the next annotation to be added.
+
+  Each was verified by breaking its subject deliberately and confirming it goes red: the
+  `@AIKeepInSync` stanza suppressed, `@AIRegulation`'s warning suppressed, Cody's name emptied —
+  4 failures across the 56 tests, green again on revert.
+
 ### Changed
 - **The mutation workflow measured the fast test tier and reported it as the project's score.**
   `pitest-maven` parses surefire's configuration, which carries `<excludedGroups>` defaulting to
