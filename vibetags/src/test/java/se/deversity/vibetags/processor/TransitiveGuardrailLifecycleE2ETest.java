@@ -259,6 +259,27 @@ class TransitiveGuardrailLifecycleE2ETest {
     }
 
     @Test
+    void anExplicitPackageListResolvesOffTheClasspathWithoutReadingImports() throws Exception {
+        // -Avibetags.manifest.packages is the fallback for a build whose compiler exposes no Tree
+        // API. It still goes through Filer.getResource, and it runs in the final round rather than
+        // a live one — worth an end-to-end test rather than trusting that a Filer read is legal
+        // there, which is the kind of assumption javac punishes quietly.
+        Path jar = buildLibraryJar(tmp, "com.acme:crypto-core:2.4.0");
+        Path app = consumerRoot(tmp, true);
+
+        compile(app,
+            List.of("-classpath", classpathWith(jar),
+                    "-Avibetags.manifest.packages=com.acme.crypto.api,com.nothing.here"),
+            // Imports nothing, so import-driven discovery finds nothing and only the option can.
+            sourceFile(app, "app/App.java", "package app;\npublic class App {}\n"));
+
+        String claude = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains("Never construct a raw Cipher"),
+            "the explicit key list should have resolved the manifest:\n" + report(app, "CLAUDE.md"));
+        assertTrue(claude.contains("com.acme:crypto-core:2.4.0"), claude);
+    }
+
+    @Test
     void theAdvisoryCapDropsAdvisoryRulesButNeverSafetyOnes() throws Exception {
         // The fixture package carries one safety rule (@AISecure) and two advisory ones
         // (@AIContext, @AIThreadSafe), so a cap of 1 has something to drop and something to
