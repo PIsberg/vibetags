@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * which could be sensitive to changes. Make modifications with extreme caution.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE})
 public @interface AICore {
     /**
      * Level of sensitivity or impact of changes (e.g. "High", "Critical").

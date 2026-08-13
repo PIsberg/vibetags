@@ -13,6 +13,17 @@
     <Bug pattern="URF_UNREAD_FIELD"/>
   </Match>
 
+  <!-- EI_EXPOSE_REP2: GuardrailContentBuilder stores the processor's live AnnotationCollector.
+       Sharing it is the point: the builder reads collector.model(), whose snapshot must be the
+       one the processor just populated, including the guardrails inherited from dependencies that
+       are folded in immediately before the generate phase. Copying the collector would give the
+       renderers a stale view of the round. Same reasoning as GuardrailFileWriter and WriteCache
+       below. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.GuardrailContentBuilder"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
   <!-- DE_MIGHT_IGNORE: ModuleSidecar.computeSidecarStamp() catches IOException on
        getLastModifiedTime() to treat unreadable sidecars as "stamp=0" rather than
        failing the build. tryDelete() swallows IOException because a failed cleanup
@@ -55,6 +66,17 @@
   <Match>
     <Class name="se.deversity.vibetags.processor.internal.GranularRulesWriter"/>
     <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- EI_EXPOSE_REP: TransitiveRule.members() returns a map the constructor already wrapped with
+       Collections.unmodifiableMap over a private copy (or Map.of() when empty), so a caller cannot
+       mutate the rule. SpotBugs reports the field type, not the wrapping. Copying on every call
+       would allocate once per rule per rendered platform for no gain — the type is immutable and
+       TransitiveRuleTest pins that. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.model.TransitiveRule"/>
+    <Method name="members"/>
+    <Bug pattern="EI_EXPOSE_REP"/>
   </Match>
 
   <!-- DB_DUPLICATE_SWITCH_CLAUSES: formatter switch cases that currently emit identical

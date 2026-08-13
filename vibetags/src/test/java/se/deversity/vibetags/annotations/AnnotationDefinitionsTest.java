@@ -62,7 +62,7 @@ class AnnotationDefinitionsTest {
         Target target = AIContext.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -115,7 +115,7 @@ class AnnotationDefinitionsTest {
         Target target = AIAudit.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -244,7 +244,7 @@ class AnnotationDefinitionsTest {
         Target target = AIPrivacy.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -282,7 +282,7 @@ class AnnotationDefinitionsTest {
         Target target = AICore.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
             target.value()
         );
     }

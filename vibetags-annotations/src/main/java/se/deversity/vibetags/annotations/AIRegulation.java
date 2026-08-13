@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * requirement.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE})
 public @interface AIRegulation {
 
     /**

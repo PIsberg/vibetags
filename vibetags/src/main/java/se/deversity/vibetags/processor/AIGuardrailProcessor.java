@@ -28,7 +28,10 @@ import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.MethodBodyGuardrailScanner;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
+import se.deversity.vibetags.processor.internal.TransitiveManifestReader;
+import se.deversity.vibetags.processor.internal.TransitiveManifestWriter;
 import se.deversity.vibetags.processor.internal.WriteCache;
+import se.deversity.vibetags.processor.model.TransitiveRule;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.*;
@@ -62,7 +65,9 @@ import java.util.stream.Collectors;
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level",
                    "vibetags.cache", "vibetags.check", "vibetags.module",
-                   "vibetags.enforce", "vibetags.baseline.update"})
+                   "vibetags.enforce", "vibetags.baseline.update",
+                   "vibetags.manifest.origin", "vibetags.manifest.dir",
+                   "vibetags.manifest.packages", "vibetags.manifest.max"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -77,6 +82,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     @Override
     public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported();
+    }
+
+    /**
+     * The annotation types this processor claims: normally VibeTags' own, and {@code "*"} when the
+     * project opted into transitive guardrails.
+     *
+     * <p>javac only invokes a processor whose supported types match something present in the
+     * round. A project that inherits all of its guardrails from dependencies annotates nothing of
+     * its own, so under the declared list the processor would never be called at all and the
+     * inherited rules would never be written — the feature would appear to do nothing, with the
+     * only clue being javac's unrelated "options were not recognized by any processor" warning.
+     *
+     * <p>Widened only for projects carrying the {@code .vibetags-transitive} marker, never by
+     * default. Claiming {@code "*"} unconditionally would run VibeTags on every compilation of
+     * every consumer, including those with opt-in files and no annotations at all, which today
+     * produce nothing and would start producing empty scaffolding.
+     *
+     * <p>{@code "*"} claims no annotation exclusively: JSR 269 defines it as matching rounds with
+     * no annotations too, and claiming is governed by {@code process()}'s return value, which is
+     * always {@code false} here.
+     */
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+        return transitiveReader != null
+            ? Set.of("*", "se.deversity.vibetags.annotations.*")
+            : super.getSupportedAnnotationTypes();
     }
 
     static final String VERSION = ProcessorVersion.get();
@@ -151,6 +182,35 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** {@code -Avibetags.baseline.update=true}: record the current shapes instead of checking them. */
     private boolean baselineUpdate;
+
+    /**
+     * Whether this build publishes its package-level guardrails for downstream consumers
+     * ({@code .vibetags-manifest} present at the root). Opt-in, like every other VibeTags output:
+     * upgrading the processor must never start putting a library's internals into its JAR.
+     */
+    private boolean manifestEmitEnabled;
+
+    /** Artifact coordinate stamped into emitted manifests; {@code ""} when the build did not name itself. */
+    private String manifestOrigin = "";
+
+    /**
+     * Reads dependency manifests off the compile classpath; {@code null} unless the project opted
+     * in with {@code .vibetags-transitive}. Held across rounds because discovery needs the live
+     * Tree API and the result is consumed once, at the end.
+     */
+    private @Nullable TransitiveManifestReader transitiveReader;
+
+    /**
+     * Cap on inherited advisory rules ({@code -Avibetags.manifest.max}); non-positive means no
+     * limit. Safety-tier rules are never dropped, and a cap that drops anything says so as a NOTE.
+     */
+    private int maxTransitiveAdvisory;
+
+    /** {@code -Avibetags.manifest.dir}: a directory of pre-extracted manifests, or {@code null}. */
+    private @Nullable Path manifestDir;
+
+    /** {@code -Avibetags.manifest.packages}: explicit lookup keys for builds with no Tree API. */
+    private List<String> manifestPackages = List.of();
 
     private final AnnotationCollector collector = new AnnotationCollector();
     // Only the three sets actually read in generateFiles() are kept as fields.
@@ -232,6 +292,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
 
+        // --- Transitive guardrails (dependency tree propagation) ---
+        // Both halves are file-presence opt-ins, matching every other VibeTags output.
+        this.manifestEmitEnabled = TransitiveManifestWriter.optedIn(this.root);
+        if (this.manifestEmitEnabled) {
+            String originOption = options.get("vibetags.manifest.origin");
+            this.manifestOrigin = (originOption != null && !originOption.isBlank())
+                ? originOption.strip() : TransitiveManifestWriter.originFrom(this.root);
+        } else {
+            this.manifestOrigin = "";
+        }
+        this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
+            ? new TransitiveManifestReader(log) : null;
+        this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
+        String dirOption = options.get("vibetags.manifest.dir");
+        this.manifestDir = (dirOption != null && !dirOption.isBlank())
+            ? this.root.resolve(dirOption.strip()).normalize() : null;
+        String packagesOption = options.get("vibetags.manifest.packages");
+        this.manifestPackages = (packagesOption == null || packagesOption.isBlank())
+            ? List.of()
+            : java.util.Arrays.stream(packagesOption.split(",")).map(String::strip)
+                .filter(s -> !s.isEmpty()).toList();
+
         // Reset for potential reuse (tests reuse the processor instance via init).
         this.processed.set(false);
         this.moduleIdentity = null;
@@ -269,6 +351,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // compareAndSet guarantees exactly one thread enters generateFiles() even if
                 // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
                 if (processed.compareAndSet(false, true)) {
+                    // Publishing this build's own package guardrails, and folding in the ones read
+                    // off the classpath, both run here rather than inside generateFiles(): its step
+                    // order is locked, and its fingerprint short-circuit returns before any of it.
+                    // The inherited rules must reach the collector BEFORE that fingerprint is
+                    // computed, or a dependency upgrade would be short-circuited past in silence.
+                    applyTransitiveRules();
+                    emitTransitiveManifests();
                     // Enforcement runs BEFORE generation, and outside generateFiles(), for two
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
@@ -302,6 +391,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
 
             collector.collect(roundEnv, presentFqns);
+            // Dependency manifests are looked up from this round's import list, so this must run
+            // while the round is live: once processing is over the Tree API can no longer map an
+            // element back to its compilation unit.
+            if (transitiveReader != null) {
+                transitiveReader.scanRound(processingEnv, roundEnv);
+            }
             // Positions must be resolved while the round is live — the Tree API cannot map
             // elements back to source once processing is over. Only needed for the .vibetags-locks
             // report; skip when it isn't opted in, or when no @AILocked is present this round.
@@ -336,6 +431,138 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Path compilationRoot() {
         return moduleIdentity != null ? moduleIdentity.root() : Paths.get("").toAbsolutePath();
+    }
+
+    /**
+     * Parses a non-negative integer option, warning and falling back to "no limit" on nonsense.
+     * A mistyped cap must not fail somebody's compile over an advisory feature.
+     */
+    private static int parsePositiveInt(@Nullable String value, Messager messager) {
+        if (value == null || value.isBlank()) {
+            return 0;
+        }
+        try {
+            int parsed = Integer.parseInt(value.strip());
+            return Math.max(parsed, 0);
+        } catch (NumberFormatException e) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: -Avibetags.manifest.max is not a number ('" + value + "'); no limit applied.");
+            return 0;
+        }
+    }
+
+    /**
+     * Folds the guardrails discovered on the compile classpath into the collector, so they reach
+     * the model every renderer and the build fingerprint read from.
+     *
+     * <p>Runs before {@link #generateFiles()} for a reason worth stating: that method's first act
+     * is a fingerprint short-circuit, and inherited rules are the one input the annotation set
+     * cannot speak for. A dependency upgrade changes what the files should say while every
+     * annotation in this project is byte-identical, so rules arriving after the fingerprint would
+     * simply never be written, with nothing anywhere reporting a problem.
+     */
+    private void applyTransitiveRules() {
+        TransitiveManifestReader reader = this.transitiveReader;
+        if (reader == null) {
+            return;
+        }
+        // A build tool that resolved the dependency graph itself, or a compiler with no Tree API,
+        // supplies its keys explicitly. Both run in addition to import discovery, never instead:
+        // a project may legitimately use one for the module path and the other for the classpath.
+        if (manifestDir != null) {
+            List<String> rejected = reader.resolveDirectory(manifestDir);
+            for (String bad : rejected) {
+                getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: could not read dependency manifest " + bad);
+            }
+        }
+        if (!manifestPackages.isEmpty()) {
+            reader.resolveExplicit(processingEnv.getFiler(), manifestPackages);
+        }
+
+        if (reader.treesUnavailable() && manifestDir == null && manifestPackages.isEmpty()) {
+            // Unchecked, not clean. Reporting nothing here would read exactly like "no dependency
+            // publishes guardrails", which is the answer a reader would act on.
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: transitive guardrails opted in, but this compiler exposes no Tree API ("
+                    + reader.treesUnavailableReason() + "); dependency manifests were not discovered. "
+                    + "Use -Avibetags.manifest.dir or -Avibetags.manifest.packages.");
+            if (log != null) {
+                log.info("Transitive discovery skipped: no Tree API ({}).", reader.treesUnavailableReason());
+            }
+            return;
+        }
+
+        List<TransitiveRule> rules = new java.util.ArrayList<>(reader.rules());
+        java.util.Collections.sort(rules);
+        int total = rules.size();
+        int dropped = 0;
+        if (maxTransitiveAdvisory > 0) {
+            List<TransitiveRule> kept = new java.util.ArrayList<>(rules.size());
+            int advisoryKept = 0;
+            for (TransitiveRule rule : rules) {
+                if (rule.tier() == TransitiveRule.Tier.SAFETY) {
+                    kept.add(rule);
+                } else if (advisoryKept < maxTransitiveAdvisory) {
+                    kept.add(rule);
+                    advisoryKept++;
+                } else {
+                    dropped++;
+                }
+            }
+            rules = kept;
+        }
+        collector.addTransitiveRules(rules);
+
+        if (total > 0) {
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: inherited " + rules.size() + " guardrail(s) from dependencies"
+                    + (dropped > 0 ? " (" + dropped + " advisory rule(s) dropped by -Avibetags.manifest.max="
+                        + maxTransitiveAdvisory + ")" : "")
+                    + " after " + reader.lookupCount() + " classpath lookup(s).");
+        }
+        if (log != null) {
+            log.info("Transitive guardrails: {} kept, {} dropped, {} lookups.",
+                rules.size(), dropped, reader.lookupCount());
+            if (dropped > 0) {
+                // A cap that reports nothing is indistinguishable from full coverage.
+                log.warn("transitive.skip reason=advisory-cap cap={} dropped={}", maxTransitiveAdvisory, dropped);
+            }
+        }
+    }
+
+    /**
+     * Publishes this build's package-level guardrails into its own class output, where the JAR task
+     * picks them up. No-op unless {@code .vibetags-manifest} opted the build in.
+     */
+    private void emitTransitiveManifests() {
+        if (!manifestEmitEnabled) {
+            return;
+        }
+        try {
+            List<String> written = TransitiveManifestWriter.emit(
+                processingEnv.getFiler(), collector.model(), manifestOrigin, VERSION, log);
+            if (!written.isEmpty()) {
+                getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                    "VibeTags: published " + written.size() + " dependency manifest(s) for "
+                        + String.join(", ", written)
+                        + (manifestOrigin.isEmpty()
+                            ? " (no origin coordinate set; consumers will see the rules unattributed)"
+                            : " as " + manifestOrigin));
+            }
+            if (log != null) {
+                log.info("Published {} transitive manifest(s).", written.size());
+            }
+        } catch (IOException | RuntimeException e) {
+            // Publishing is advisory. A Filer that refuses the write (a second annotation-processing
+            // pass over the same output, a read-only build directory) must not fail the library's
+            // build over a file only its consumers read.
+            getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: could not publish dependency manifests (build not affected): " + e);
+            if (log != null) {
+                log.warn("manifest.skip reason=write-failed detail={}", e.toString());
+            }
+        }
     }
 
     @AILocked(reason = "Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output")

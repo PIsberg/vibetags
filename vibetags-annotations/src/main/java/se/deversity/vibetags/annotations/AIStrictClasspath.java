@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * of dynamic, external code.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
 public @interface AIStrictClasspath {
 
     /**

@@ -33,7 +33,7 @@ class NewAnnotationsV3DefinitionTest {
     void threadSafe_targetsTypeAndMethod() {
         Target t = AIThreadSafe.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
     }
 
     @Test
@@ -69,10 +69,10 @@ class NewAnnotationsV3DefinitionTest {
     }
 
     @Test
-    void immutable_targetsTypeOnly() {
+    void immutable_targetsTypeAndPackage() {
         Target t = AIImmutable.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.PACKAGE}, t.value());
     }
 
     @Test
@@ -95,7 +95,7 @@ class NewAnnotationsV3DefinitionTest {
         Target t = AIDeprecated.class.getAnnotation(Target.class);
         assertNotNull(t);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
             t.value());
     }
 
@@ -164,7 +164,7 @@ class NewAnnotationsV3DefinitionTest {
         Target t = AIRegulation.class.getAnnotation(Target.class);
         assertNotNull(t);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
             t.value());
     }
 

@@ -66,10 +66,10 @@ class NewAnnotationsV4DefinitionTest {
     }
 
     @Test
-    void architecture_targetsTypeOnly() {
+    void architecture_targetsTypeAndPackage() {
         Target t = AIArchitecture.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.PACKAGE}, t.value());
     }
 
     @Test
@@ -97,7 +97,7 @@ class NewAnnotationsV4DefinitionTest {
     void publicApi_targetsTypeAndMethod() {
         Target t = AIPublicAPI.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
     }
 
     // ----------------- @AIStrictExceptions -----------------
@@ -163,7 +163,7 @@ class NewAnnotationsV4DefinitionTest {
     void strictClasspath_targetsTypeAndMethod() {
         Target t = AIStrictClasspath.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
     }
 
     // ----------------- @AISchemaSafe -----------------

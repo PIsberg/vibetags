@@ -127,6 +127,34 @@ jobs:
           fi
           echo "example-multimodule/ regenerates byte-for-byte to the committed files."
 
+      - name: Verify Transitive Guardrails Propagate Through The Reactor
+        run: |
+          cd example-multimodule
+          # The manifest has to land in the module's own class output at a package-named path, or
+          # nothing downstream can read it. javac's CLASS_PATH location skips archive directories
+          # that are not valid package names, so META-INF/ is unreadable from an annotation
+          # processor — this asserts the path that works, from the artifact that ships it.
+          manifest=core/target/classes/vibetags/manifests/com.example.multimodule.core.json
+          if [ ! -f "$manifest" ]; then
+            echo "::error::core/ published no transitive manifest at $manifest"
+            find core/target/classes -name '*.json' -print || true
+            exit 1
+          fi
+          grep -q '"origin"' "$manifest" || { echo "::error::manifest carries no origin"; cat "$manifest"; exit 1; }
+          echo "core/ published $manifest"
+
+          # And the consuming modules have to show it. A reactor that publishes a manifest nobody
+          # reads still builds, still regenerates byte-for-byte, and demonstrates nothing.
+          for module in engine cli; do
+            region=$(awk "/VIBETAGS-MODULE: $module /{f=1} f; /VIBETAGS-MODULE-END: $module /{f=0}" CLAUDE.md)
+            if ! echo "$region" | grep -q 'Inherited Guardrails (dependencies)'; then
+              echo "::error::$module imports com.example.multimodule.core but inherited nothing"
+              echo "$region"
+              exit 1
+            fi
+          done
+          echo "engine/ and cli/ inherit core/'s package guardrails."
+
       - name: Verify Multi-Module Aggregation (issue #278)
         run: |
           cd example-multimodule

@@ -53,6 +53,14 @@ stop excluding the same one.
 | Class | Coverage |
 |---|---|
 | `AnnotationDefinitionsTest` | Annotation structure and defaults (the original 27 annotations; the 12 newest are covered by `NewAnnotationsV4`/`V5` definition tests) |
+| `JsonTest` | The dependency-free JSON reader: escapes, ordering, and above all what it does with malformed input from a JAR the build did not write |
+| `TransitiveRuleTest` | The inherited-rule value type: immutability (which earns a SpotBugs exclusion), ordering, equality |
+| `TransitiveManifestTest` | Manifest format: round-trip, byte-stable serialisation, version skip, and re-deriving the tier rather than trusting the JAR's claim |
+| `TransitiveManifestReaderTest` | Candidate-key derivation from imports, skipped prefixes, and the pre-extracted directory fallback |
+| `TransitiveSectionTest` | The inherited-guardrail appendix: attribution, tier order, and which platforms carry it (pinned both ways) |
+| `TransitiveFingerprintTest` | That inherited rules reach `BuildFingerprint` — the check the end-to-end test cannot make |
+| `TransitiveExampleCoverageTest` | That `example-multimodule/` still demonstrates the feature rather than quietly demonstrating nothing |
+| `TransitiveGuardrailLifecycleE2ETest` (`e2e`) | The whole lifecycle through a real `javac`: library compiled and jarred, consumer resolving it off the compile classpath. Includes the negative that shaped the design — a manifest under `META-INF/` is invisible |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |

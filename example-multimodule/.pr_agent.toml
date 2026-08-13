@@ -11,7 +11,10 @@ Enforce the following VibeTags guardrails. Flag any change that violates them:
 - `com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)` (idempotent): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Derives output path from inputs only
 - `com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)` (pure): Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
 - `com.example.multimodule.core.IrNode` (locked): Core IR node: structural changes break every downstream module
+- `com.example.multimodule.core` (context): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+- `com.example.multimodule.core` (thread-safe): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
 - `com.example.multimodule.core.IrGraph` (immutable)
+- `com.example.multimodule.core` (security-critical): Security-critical code [Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.]. Do not weaken security properties. Flag any change for security review.
 - `com.example.multimodule.core.IrNode` (domain model): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. No external framework imports permitted.
 - `com.example.multimodule.engine.LayoutEngine` (thread-safe): Strategy: SYNCHRONIZED. Note: Stateless; safe to share across render threads
 - `com.example.multimodule.engine.LayoutEngine` (extensible): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
@@ -116,7 +119,10 @@ Enforce the following VibeTags guardrails. Flag any change that violates them:
 - `com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)` (idempotent): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Derives output path from inputs only
 - `com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)` (pure): Must remain a pure function. Forbid assignments to enclosing state, fields, or static members.
 - `com.example.multimodule.core.IrNode` (locked): Core IR node: structural changes break every downstream module
+- `com.example.multimodule.core` (context): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+- `com.example.multimodule.core` (thread-safe): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
 - `com.example.multimodule.core.IrGraph` (immutable)
+- `com.example.multimodule.core` (security-critical): Security-critical code [Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.]. Do not weaken security properties. Flag any change for security review.
 - `com.example.multimodule.core.IrNode` (domain model): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. No external framework imports permitted.
 - `com.example.multimodule.engine.LayoutEngine` (thread-safe): Strategy: SYNCHRONIZED. Note: Stateless; safe to share across render threads
 - `com.example.multimodule.engine.LayoutEngine` (extensible): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN

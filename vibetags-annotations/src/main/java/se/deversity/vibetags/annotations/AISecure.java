@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * session management, input-validation routines.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
 public @interface AISecure {
 
     /**

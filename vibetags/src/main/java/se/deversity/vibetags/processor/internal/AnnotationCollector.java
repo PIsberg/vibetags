@@ -50,6 +50,7 @@ import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.SourceLocation;
 import se.deversity.vibetags.processor.model.TaggedElement;
+import se.deversity.vibetags.processor.model.TransitiveRule;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -100,6 +101,13 @@ public final class AnnotationCollector {
      * without positions and are simply absent from this map.
      */
     private final Map<Element, SourceLocation> lockedPositions = new LinkedHashMap<>();
+
+    /**
+     * Guardrails read from dependency JARs this compilation. A {@link LinkedHashSet} so the same
+     * manifest reached through several import prefixes contributes once; final order is settled in
+     * {@link GuardrailModel}, which sorts.
+     */
+    private final Set<TransitiveRule> transitiveRules = new java.util.LinkedHashSet<>();
 
     private boolean anyAnnotationsFound;
 
@@ -216,12 +224,56 @@ public final class AnnotationCollector {
     public void reset() {
         buckets.values().forEach(Set::clear);
         lockedPositions.clear();
+        transitiveRules.clear();
         anyAnnotationsFound = false;
         memo = null;
     }
 
+    /**
+     * True when this compilation produced guardrail content: an annotation in its own sources, or
+     * a rule inherited from a dependency.
+     *
+     * <p>The question this answers is "did this round have anything to say?", and the writer uses
+     * it as {@code hasNewRules} to decide whether an <em>existing</em> generated file may be
+     * rewritten. Counting only local annotations made a project whose guardrails all come from
+     * dependencies write its files exactly once, on the run that created them, and then refuse
+     * every update forever after with "no annotations found in this module, preserving existing
+     * rules" — so a dependency upgrade could never reach the file.
+     *
+     * <p>It also gates the module sidecar write, and inherited rules belong there for the same
+     * reason: they are part of the body this module contributes to a reactor's merged output.
+     * Sidecars are keyed per module <em>and</em> source set, so a test-compile round recording its
+     * own inherited rules cannot overwrite the main compile's (issue #330).
+     */
     public boolean anyAnnotationsFound() {
+        return anyAnnotationsFound || !transitiveRules.isEmpty();
+    }
+
+    /** True when this compilation's own sources carried at least one guardrail annotation. */
+    public boolean anyLocalAnnotationsFound() {
         return anyAnnotationsFound;
+    }
+
+    /**
+     * Records guardrails read from dependency manifests, so they reach the snapshot every renderer
+     * and the build fingerprint read from.
+     *
+     * <p>Kept here rather than threaded separately into the renderers because the model is the one
+     * boundary between the javac-facing and compiler-free halves. A second channel for the same
+     * kind of data would be a second thing to remember to fingerprint, and forgetting that is
+     * silent: the output would simply stop tracking dependency upgrades.
+     */
+    public void addTransitiveRules(java.util.Collection<TransitiveRule> rules) {
+        if (rules == null || rules.isEmpty()) {
+            return;
+        }
+        transitiveRules.addAll(rules);
+        memo = null;
+    }
+
+    /** The transitive rules recorded so far, deduplicated in insertion order. */
+    public Set<TransitiveRule> transitiveRules() {
+        return Collections.unmodifiableSet(transitiveRules);
     }
 
     /**
@@ -326,6 +378,7 @@ public final class AnnotationCollector {
         });
         lockedPositions.forEach((e, position) ->
             model.lockedPosition(materialize(e, builders, tagged, signatures), position));
+        model.transitiveRules(transitiveRules);
         return model.build();
     }
 

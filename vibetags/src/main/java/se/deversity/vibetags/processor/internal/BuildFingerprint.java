@@ -39,6 +39,7 @@ import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
+import se.deversity.vibetags.processor.model.TransitiveRule;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -274,6 +275,22 @@ public final class BuildFingerprint {
         sb.append("S{");
         for (String s : new TreeSet<>(activeServices)) {
             sb.append(s).append(',');
+        }
+        sb.append('}');
+
+        // Guardrails inherited from dependency JARs. Folded in because they are an input to the
+        // generated files that the element set says nothing about: upgrading a dependency changes
+        // what should be written while every annotation in this project stays byte-identical. Left
+        // out, the short-circuit above would match, the generate phase would be skipped, and the
+        // committed files would keep describing the previous version of the dependency — with no
+        // diagnostic anywhere, because nothing failed. TransitiveFingerprintTest pins it.
+        sb.append("X{");
+        for (TransitiveRule rule : model.transitiveRules()) {
+            sb.append(rule.packageName()).append(':')
+              .append(rule.annotation()).append(':')
+              .append(rule.origin()).append(':')
+              .append(rule.tier().name()).append(':')
+              .append(rule.memberSummary()).append(';');
         }
         sb.append('}');
 

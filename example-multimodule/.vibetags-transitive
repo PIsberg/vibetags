@@ -1,0 +1,15 @@
+# Opts this project into reading guardrails published by its dependencies.
+#
+# Presence of this file is the opt-in; it needs no content. With it, VibeTags derives lookup keys
+# from the packages this project's sources actually import and reads any vibetags/manifests/
+# entry it finds for them on the compile classpath.
+#
+# Here that means engine/, cli/ and tests/ inherit the package guardrails declared in
+# core/src/main/java/com/example/multimodule/core/package-info.java, because they import that
+# package. A package nobody imports is never looked up, so the volume of inherited text is bounded
+# by what the project actually uses.
+#
+# Options for builds where classpath discovery cannot work (kapt, ECJ, JPMS):
+#   -Avibetags.manifest.dir=<dir>        read pre-extracted manifests from a directory
+#   -Avibetags.manifest.packages=a.b,c.d supply lookup keys explicitly
+#   -Avibetags.manifest.max=<n>          cap inherited advisory rules (safety rules are never cut)

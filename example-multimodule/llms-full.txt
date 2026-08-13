@@ -49,6 +49,22 @@ The following elements must remain pure functions without side effects or mutati
 
 ### com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)
 - **Requirement**: Mathematically pure function. No side effects.
+
+
+## Inherited Guardrails (dependencies)
+
+These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AISecure: aspect=Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.
+
+## Inherited Context (dependencies)
+
+Conventions the dependency's authors documented. Follow them unless this project's own rules above say otherwise.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
+  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
 <!-- VIBETAGS-MODULE-END: cli -->
 <!-- VIBETAGS-MODULE: core -->
 # VibeTags Multi-Module Example — AI Guardrail Rules
@@ -66,12 +82,32 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
 
+### com.example.multimodule.core
+- **Focus**: Immutable IR data model shared across every module of the reactor.
+- **Avoid**: Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+
+## 🧵 Thread-Safe by Design
+These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
+
+### com.example.multimodule.core
+- **Strategy**: IMMUTABLE
+- **Note**: Every type in this package is safe to publish across threads without synchronization.
+
 
 ## ❄️ Immutable Types
 The following types are immutable. Never introduce non-final fields, setters, or mutating methods.
 
 ### com.example.multimodule.core.IrGraph
 - Immutable type — never introduce non-final fields, setters, or mutating methods.
+
+
+## 🔐 Security-Critical Code
+These elements are security-critical. Do not weaken security properties. Every change requires security review.
+
+### com.example.multimodule.core
+- Security-critical code (aspect: Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.).
+- Never weaken security properties. Every change requires explicit security review.
 
 
 ## Framework-Free Domain Entities
@@ -107,6 +143,22 @@ The following elements require extension using polymorphic patterns (Strategy/Vi
 
 ### com.example.multimodule.engine.LayoutEngine
 - **Extension Design**: STRATEGY_PATTERN. Use polymorphism.
+
+
+## Inherited Guardrails (dependencies)
+
+These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AISecure: aspect=Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.
+
+## Inherited Context (dependencies)
+
+Conventions the dependency's authors documented. Follow them unless this project's own rules above say otherwise.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
+  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
 <!-- VIBETAGS-MODULE-END: engine -->
 <!-- VIBETAGS-MODULE: showcase -->
 # VibeTags Multi-Module Example — AI Guardrail Rules
@@ -615,4 +667,33 @@ These are duplicated elsewhere. They may change freely, but a partial change sil
 - **Enforced by**: ProjectFactsConsistencyTest
 - The element itself is free to change; changing only one side is the bug.
 <!-- VIBETAGS-MODULE-END: showcase -->
+<!-- VIBETAGS-MODULE: tests -->
+# VibeTags Multi-Module Example — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+
+## Contextual Rules
+These files have specific context and focus areas for AI assistance.
+
+
+## Inherited Guardrails (dependencies)
+
+These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AISecure: aspect=Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.
+
+## Inherited Context (dependencies)
+
+Conventions the dependency's authors documented. Follow them unless this project's own rules above say otherwise.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
+  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
+<!-- VIBETAGS-MODULE-END: tests -->
 <!-- VIBETAGS-END -->

@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Transitive guardrails: package-level rules travel from a library into the projects that depend
+  on it.** An agent working in an application reads the application's `CLAUDE.md`, not the one
+  belonging to a dependency — so a constraint the library's author knows about is invisible at
+  exactly the moment it matters. A library now annotates its `package-info.java`, and any consuming
+  project that opts in renders those rules into its own AI configuration under `## Inherited
+  Guardrails (dependencies)` (the six safety buckets) and `## Inherited Context (dependencies)`
+  (everything else), after everything the project says about itself.
+
+  Both halves are file-presence opt-ins, like every other VibeTags output: `.vibetags-manifest` to
+  publish, `.vibetags-transitive` to consume. Neither exists by default, so upgrading the processor
+  changes nothing for anyone — `example/` and `example-multimodule-indexed/` regenerate byte-for-byte
+  against the previous release.
+
+  Thirteen annotations gained `ElementType.PACKAGE`: `@AISecure`, `@AIPrivacy`, `@AICore`,
+  `@AIAudit`, `@AIRegulation`, `@AIArchitecture`, `@AIPublicAPI`, `@AIBannedApi`, `@AIThreadSafe`,
+  `@AIImmutable`, `@AIDeprecated`, `@AIContext`, `@AIStrictClasspath`. Widening `@Target` is
+  source-compatible; nothing that compiled before stops compiling. Only package-level annotations
+  propagate — class- and method-level guardrails stay local, because propagating them would scale a
+  manifest with the library's whole API surface and a consumer cannot act on a rule about a class it
+  never sees.
+
+  New options: `-Avibetags.manifest.origin`, `-Avibetags.manifest.dir`,
+  `-Avibetags.manifest.packages`, `-Avibetags.manifest.max`. See
+  [PROCESSOR.md](PROCESSOR.md#transitive-guardrails-dependency-tree-propagation).
+
+  Three findings shaped the design, all measured against `javac 26` rather than assumed:
+
+  - **A manifest under `META-INF/` cannot be read by an annotation processor at all.** javac's
+    `CLASS_PATH` location skips archive directories whose names are not valid Java package
+    identifiers: `Filer.getResource` throws `FileNotFoundException` with the JAR provably on the
+    classpath, and javac's own file manager lists zero entries there even with `--add-exports`
+    granted. The manifest therefore lives at `vibetags/manifests/<package>.json`, and
+    `TransitiveGuardrailLifecycleE2ETest` repacks a fixture JAR under `META-INF/` to assert the
+    conventional location stays broken — moving it back fails the build instead of silently
+    disabling the feature.
+  - **There is no supported way to enumerate the compile classpath.**
+    `ClassLoader.getResources` sees the processor path, not the classpath, and returns nothing under
+    the documented `annotationProcessorPaths` setup. Listing works only behind
+    `--add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED`, which a library may not
+    demand of every consumer. Discovery is therefore driven by the packages the compilation actually
+    imports, which also bounds the volume of inherited text structurally rather than by a filter
+    applied afterwards.
+  - **A processor is not invoked at all when nothing in the round matches its supported types.** A
+    project that inherits all of its guardrails annotates nothing itself, so the feature would have
+    appeared to do nothing. `getSupportedAnnotationTypes()` now returns `"*"` — but only for
+    projects carrying the `.vibetags-transitive` marker, never by default.
+
+  The tier a rule renders under is re-derived from its annotation on read rather than trusted from
+  the manifest, so a JAR cannot claim the always-on tier for advisory advice.
+
+### Fixed
+- **`AnnotationCollector.anyAnnotationsFound()` now counts inherited rules too.** It gates
+  `hasNewRules`, which decides whether an *existing* generated file may be rewritten. Counting only
+  local annotations meant a project whose guardrails all come from dependencies wrote its files
+  exactly once and then refused every update with "no annotations found in this module, preserving
+  existing rules" — so a dependency upgrade could never reach the file.
+
 ## [1.1.1] - 2026-08-12
 
 A patch release that changes generated output. Four renderers were dropping annotations they

@@ -7,6 +7,7 @@
 - [Logging Configuration](#logging-configuration)
 - [Kotlin (kapt) Configuration](#kotlin-kapt-configuration)
 - [Other JVM Languages: Groovy, Scala, Clojure](#other-jvm-languages-groovy-scala-clojure)
+- [Transitive Guardrails: Rules That Travel With a Dependency](#transitive-guardrails-rules-that-travel-with-a-dependency)
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
@@ -266,6 +267,80 @@ jobs:
 ```
 
 The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
+
+### Transitive Guardrails: Rules That Travel With a Dependency
+
+An agent working in your application reads your `CLAUDE.md`, not the one belonging to the library
+you depend on. So a constraint the library's author knows about — "never construct a raw `Cipher`,
+go through the factory" — is invisible at exactly the moment it matters. Transitive guardrails
+close that gap: a library declares guardrails on a **package**, and every project that imports that
+package renders them into its own AI configuration.
+
+Both halves are opt-in, and both are just a file at your project root.
+
+**Publishing (the library).** Annotate `package-info.java` and add `.vibetags-manifest`:
+
+```java
+// src/main/java/com/acme/crypto/api/package-info.java
+@AISecure(aspect = "Never construct a raw Cipher; go through CryptoManagerFactory.")
+@AIThreadSafe(strategy = AIThreadSafe.Strategy.IMMUTABLE,
+    note = "Every product of the factory is safe to share between threads.")
+package com.acme.crypto.api;
+
+import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AIThreadSafe;
+```
+
+```bash
+# .vibetags-manifest — the first non-comment line is the coordinate consumers will see
+echo "com.acme:crypto-core:2.4.0" > .vibetags-manifest
+```
+
+The build writes `vibetags/manifests/com.acme.crypto.api.json` into your class output, and the
+normal `jar` task packages it. Nothing else to configure, and nothing is published without the
+marker.
+
+**Consuming (the application).** Add `.vibetags-transitive` and rebuild:
+
+```bash
+touch .vibetags-transitive
+```
+
+```markdown
+<!-- appended to your CLAUDE.md, after everything your own code declares -->
+## Inherited Guardrails (dependencies)
+
+- `com.acme.crypto.api` (from com.acme:crypto-core:2.4.0)
+  - @AISecure: aspect=Never construct a raw Cipher; go through CryptoManagerFactory.
+
+## Inherited Context (dependencies)
+
+- `com.acme.crypto.api` (from com.acme:crypto-core:2.4.0)
+  - @AIThreadSafe: strategy=IMMUTABLE; note=Every product of the factory is safe to share between threads.
+```
+
+Worth knowing before you turn it on:
+
+- **Your own rules come first, always.** The inherited block is appended after everything your
+  project says about itself. That ordering is the whole precedence model — the output is prose an
+  agent reads, not a ruleset a compiler applies, so a library cannot outrank you.
+- **Every rule names its artifact.** A dependency is contributing text to instructions an agent
+  will act on, and you should always be able to see whose text it is.
+- **Only packages you import are looked up.** The lookup key is derived from your imports, so a
+  hundred instrumented dependencies do not become a hundred pages of prompt. Cap the advisory tier
+  further with `-Avibetags.manifest.max=<n>` if you need to; safety-tier rules are never dropped,
+  and a cap that drops anything says so in the build output.
+- **Only package-level annotations travel.** Class- and method-level guardrails stay local.
+  Thirteen annotations accept `ElementType.PACKAGE` — see the target column in the
+  [annotation reference](README.md#annotation-reference).
+- **kapt, ECJ and JPMS need a hand.** Classpath discovery needs the compiler's Tree API and the
+  classpath. Where either is missing, VibeTags says so as a `NOTE` rather than pretending it found
+  nothing, and you supply the manifests with `-Avibetags.manifest.dir=<dir>` or
+  `-Avibetags.manifest.packages=a.b,c.d`.
+
+A working demonstration lives in [`example-multimodule/`](example-multimodule), where `core`
+publishes and `engine`, `cli` and `tests` inherit. Full details in
+[docs/PROCESSOR.md](docs/PROCESSOR.md#transitive-guardrails-dependency-tree-propagation).
 
 ### The Companion CLI: `vibetags init` and `vibetags doctor`
 
