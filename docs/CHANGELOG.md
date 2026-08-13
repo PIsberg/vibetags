@@ -58,6 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The tier a rule renders under is re-derived from its annotation on read rather than trusted from
   the manifest, so a JAR cannot claim the always-on tier for advisory advice.
 
+  An annotation's attributes are ordered by name in both the manifest and the rendered output.
+  `Class.getDeclaredMethods()` has no specified order and genuinely differs between releases — JDK
+  26 reported `@AIContext`'s `focus` before `avoids`, JDK 25 the reverse — so leaving it as-reported
+  made the same sources publish different manifests and regenerate different files depending on
+  which JDK compiled them. Same class of defect, and the same fix, as `GuardrailModel` sorting its
+  buckets rather than keeping `getElementsAnnotatedWith`'s unspecified order.
+  `TransitiveManifestMemberOrderTest` pins it.
+
 ### Fixed
 - **`AnnotationCollector.anyAnnotationsFound()` now counts inherited rules too.** It gates
   `hasNewRules`, which decides whether an *existing* generated file may be rewritten. Counting only

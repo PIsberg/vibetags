@@ -49,7 +49,7 @@ Conventions the dependency's authors documented. Follow them unless this project
 
 - `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
   - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
-  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
+  - @AIThreadSafe: note=Every type in this package is safe to publish across threads without synchronization.; strategy=IMMUTABLE
 <!-- VIBETAGS-MODULE-END: cli -->
 <!-- VIBETAGS-MODULE: core -->
 # GitHub Copilot Instructions
@@ -120,7 +120,7 @@ Conventions the dependency's authors documented. Follow them unless this project
 
 - `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
   - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
-  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
+  - @AIThreadSafe: note=Every type in this package is safe to publish across threads without synchronization.; strategy=IMMUTABLE
 <!-- VIBETAGS-MODULE-END: engine -->
 <!-- VIBETAGS-MODULE: showcase -->
 # GitHub Copilot Instructions
@@ -430,6 +430,6 @@ Conventions the dependency's authors documented. Follow them unless this project
 
 - `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
   - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
-  - @AIThreadSafe: strategy=IMMUTABLE; note=Every type in this package is safe to publish across threads without synchronization.
+  - @AIThreadSafe: note=Every type in this package is safe to publish across threads without synchronization.; strategy=IMMUTABLE
 <!-- VIBETAGS-MODULE-END: tests -->
 <!-- VIBETAGS-END -->

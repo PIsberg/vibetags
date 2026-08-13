@@ -56,6 +56,7 @@ stop excluding the same one.
 | `JsonTest` | The dependency-free JSON reader: escapes, ordering, and above all what it does with malformed input from a JAR the build did not write |
 | `TransitiveRuleTest` | The inherited-rule value type: immutability (which earns a SpotBugs exclusion), ordering, equality |
 | `TransitiveManifestTest` | Manifest format: round-trip, byte-stable serialisation, version skip, and re-deriving the tier rather than trusting the JAR's claim |
+| `TransitiveManifestMemberOrderTest` | That an annotation's attributes are ordered by name. `Class.getDeclaredMethods()` is unordered and differs between JDK 25 and 26, which made the same sources publish different manifests depending on who compiled them |
 | `TransitiveManifestReaderTest` | Candidate-key derivation from imports, skipped prefixes, and the pre-extracted directory fallback |
 | `TransitiveSectionTest` | The inherited-guardrail appendix: attribution, tier order, and which platforms carry it (pinned both ways) |
 | `TransitiveFingerprintTest` | That inherited rules reach `BuildFingerprint` — the check the end-to-end test cannot make |

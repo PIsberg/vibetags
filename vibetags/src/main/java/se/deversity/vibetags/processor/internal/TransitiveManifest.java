@@ -99,9 +99,17 @@ public final class TransitiveManifest {
      * declared default.
      *
      * <p>Defaults are skipped so a library that annotates a package with {@code @AICore} and sets
-     * only {@code note} does not publish six empty strings for an agent to read past. Attribute
-     * order is the declaration order javac reports, which is stable for a given compiled
-     * annotation class.
+     * only {@code note} does not publish six empty strings for an agent to read past.
+     *
+     * <p><strong>Attributes are ordered by name, and that is load-bearing.</strong>
+     * {@link Class#getDeclaredMethods()} has no specified order, and it genuinely differs between
+     * JDK versions: on JDK 26 {@code @AIContext} reported {@code focus} then {@code avoids}, on JDK
+     * 25 the reverse. Left as-reported, the same sources produced different manifests and different
+     * generated files depending on which JDK compiled them — committed guardrails churning on every
+     * colleague's machine, and a published JAR that is not byte-reproducible. Declaration order
+     * would read marginally better and is not available through reflection at all. Same class of
+     * defect, and the same fix, as {@code GuardrailModel} sorting its buckets rather than keeping
+     * {@code getElementsAnnotatedWith}'s unspecified order.
      *
      * <p>Array attributes are joined with {@code ", "}. A {@code Class}-valued attribute is
      * rendered by its name; that path cannot throw {@code MirroredTypeException} here because this
@@ -110,7 +118,9 @@ public final class TransitiveManifest {
      */
     public static Map<String, String> membersOf(Annotation annotation) {
         Map<String, String> members = new LinkedHashMap<>();
-        for (Method m : annotation.annotationType().getDeclaredMethods()) {
+        Method[] declared = annotation.annotationType().getDeclaredMethods().clone();
+        Arrays.sort(declared, java.util.Comparator.comparing(Method::getName));
+        for (Method m : declared) {
             if (m.getParameterCount() != 0) {
                 continue;
             }
