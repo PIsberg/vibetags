@@ -20,8 +20,8 @@ dependencies {
     implementation 'org.scala-lang:scala-library:2.13.18'
 
     // BOM is the single source of truth for vibetags-* versions.
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.1.1')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.1.1')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.0')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
