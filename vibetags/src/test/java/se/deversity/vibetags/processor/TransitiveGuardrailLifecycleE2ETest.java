@@ -5,6 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.Processor;
+import javax.lang.model.SourceVersion;
 import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -408,6 +411,76 @@ class TransitiveGuardrailLifecycleE2ETest {
         return jar;
     }
 
+    /**
+     * A build tool that hands the processor a wrapped {@link ProcessingEnvironment} — which is
+     * every Gradle build there is.
+     *
+     * <p>Gradle passes {@code IncrementalProcessingEnvironment} so it can track the files a
+     * processor touches. {@code Trees.instance} rejects anything that is not javac's own
+     * environment, so discovery reported "no Tree API" and inherited nothing at all: the feature
+     * was Maven-only in practice, silently, with the build green and the file simply missing a
+     * section. Measured on async-test-lib, which publishes and consumes with both build tools.
+     *
+     * <p>The wrapper below is shaped like Gradle's — the delegate in a private field, nothing else
+     * — which is what the unwrap in {@code SourcePositionResolver.treesFor} looks for.
+     */
+    @Test
+    void aWrappedProcessingEnvironmentStillDiscoversManifests() throws Exception {
+        Path jar = buildLibraryJar(tmp, "com.acme:crypto-core:2.4.0");
+        Path app = consumerRoot(tmp, true);
+
+        List<String> options = new ArrayList<>(List.of("-classpath", classpathWith(jar)));
+        options.add("-Avibetags.root=" + app.toAbsolutePath());
+        Path classes = app.resolve("classes");
+        Files.createDirectories(classes);
+        run(classes, options, List.of(sourceFile(app, "app/App.java", CONSUMER_CLASS)),
+            new WrappingProcessor());
+
+        String claude = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains("Inherited Guardrails (dependencies)"),
+            "a wrapped environment must not disable discovery:\n" + report(app, "CLAUDE.md"));
+        assertTrue(claude.contains("Never construct a raw Cipher"), claude);
+    }
+
+    /** Delegates to the real processor, handing it a wrapped environment as Gradle does. */
+    private static final class WrappingProcessor implements Processor {
+        private final AIGuardrailProcessor delegate = new AIGuardrailProcessor();
+
+        @Override
+        public void init(ProcessingEnvironment processingEnv) {
+            delegate.init(new WrappedEnvironment(processingEnv));
+        }
+
+        @Override public java.util.Set<String> getSupportedOptions() { return delegate.getSupportedOptions(); }
+        @Override public java.util.Set<String> getSupportedAnnotationTypes() { return delegate.getSupportedAnnotationTypes(); }
+        @Override public SourceVersion getSupportedSourceVersion() { return delegate.getSupportedSourceVersion(); }
+
+        @Override
+        public boolean process(java.util.Set<? extends javax.lang.model.element.TypeElement> annotations,
+                               javax.annotation.processing.RoundEnvironment roundEnv) {
+            return delegate.process(annotations, roundEnv);
+        }
+
+        @Override
+        public Iterable<? extends javax.annotation.processing.Completion> getCompletions(
+                javax.lang.model.element.Element element,
+                javax.lang.model.element.AnnotationMirror annotation, javax.lang.model.element.ExecutableElement member,
+                String userText) {
+            return delegate.getCompletions(element, annotation, member, userText);
+        }
+    }
+
+    /** Shaped like Gradle's {@code IncrementalProcessingEnvironment}: the delegate in a field. */
+    private record WrappedEnvironment(ProcessingEnvironment delegate) implements ProcessingEnvironment {
+        @Override public java.util.Map<String, String> getOptions() { return delegate.getOptions(); }
+        @Override public javax.annotation.processing.Messager getMessager() { return delegate.getMessager(); }
+        @Override public javax.annotation.processing.Filer getFiler() { return delegate.getFiler(); }
+        @Override public javax.lang.model.util.Elements getElementUtils() { return delegate.getElementUtils(); }
+        @Override public javax.lang.model.util.Types getTypeUtils() { return delegate.getTypeUtils(); }
+        @Override public SourceVersion getSourceVersion() { return delegate.getSourceVersion(); }
+        @Override public java.util.Locale getLocale() { return delegate.getLocale(); }
+    }
+
     /** A consumer project root with CLAUDE.md opted in, and optionally transitive discovery too. */
     private static Path consumerRoot(Path base, boolean transitive) throws IOException {
         Path app = base.resolve("app");
@@ -438,7 +511,12 @@ class TransitiveGuardrailLifecycleE2ETest {
      * back (rather than a forwarding wrapper) keeps the CodeQL constraint the harness documents.
      */
     private static void run(Path classOutput, List<String> options, List<Path> sources) throws IOException {
-        List<String> errors = runAllowingFailure(classOutput, options, sources);
+        run(classOutput, options, sources, new AIGuardrailProcessor());
+    }
+
+    private static void run(Path classOutput, List<String> options, List<Path> sources,
+                            Processor processor) throws IOException {
+        List<String> errors = runAllowingFailure(classOutput, options, sources, processor);
         assertTrue(errors.isEmpty(), "compilation failed:\n  " + String.join("\n  ", errors));
     }
 
@@ -452,6 +530,12 @@ class TransitiveGuardrailLifecycleE2ETest {
      */
     private static List<String> runAllowingFailure(Path classOutput, List<String> options,
                                                    List<Path> sources) throws IOException {
+        return runAllowingFailure(classOutput, options, sources, new AIGuardrailProcessor());
+    }
+
+    private static List<String> runAllowingFailure(Path classOutput, List<String> options,
+                                                   List<Path> sources, Processor processor)
+            throws IOException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null, "run the tests on a JDK, not a JRE");
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
@@ -461,7 +545,7 @@ class TransitiveGuardrailLifecycleE2ETest {
             Iterable<? extends JavaFileObject> units = fm.getJavaFileObjectsFromPaths(sources);
             JavaCompiler.CompilationTask task =
                 compiler.getTask(null, fm, diagnostics, options, null, units);
-            task.setProcessors(List.of(new AIGuardrailProcessor()));
+            task.setProcessors(List.of(processor));
             ok = task.call();
         }
 

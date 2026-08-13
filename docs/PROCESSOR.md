@@ -68,10 +68,22 @@ walk: `import a.b.C` probes `a.b` and `a`-rooted parents but never `a.b.C`, and
 class-name lookup is a guaranteed miss — one per import in the project, which is bounded but
 entirely avoidable.
 
-Where the Tree API is absent (kapt, ECJ, some Gradle workers) or the dependencies live on the
-module path rather than the classpath, discovery finds nothing and says so as a `NOTE` — unchecked
-is reported distinctly from clean. `-Avibetags.manifest.dir` and `-Avibetags.manifest.packages` are
-the supported ways through.
+Where the Tree API is absent (kapt, ECJ) or the dependencies live on the module path rather than
+the classpath, discovery finds nothing and says so as a `NOTE` — unchecked is reported distinctly
+from clean. `-Avibetags.manifest.dir` and `-Avibetags.manifest.packages` are the supported ways
+through.
+
+Gradle is **not** one of those cases, though it looks like one. It hands every processor an
+`IncrementalProcessingEnvironment` rather than javac's own, and `Trees.instance` rejects anything
+that is not javac's — so discovery reported "no Tree API" on every Gradle build and inherited
+nothing, with the build green and the section simply absent. Discovery goes through
+`SourcePositionResolver.treesFor`, which already unwraps that wrapper for `@AILocked` positions.
+`TransitiveGuardrailLifecycleE2ETest.aWrappedProcessingEnvironmentStillDiscoversManifests` compiles
+through a Gradle-shaped wrapper and fails if the unwrap is bypassed.
+
+One consequence worth stating: every marker is resolved against the resolved root, so a build that
+pins `-Avibetags.root` at a *module* directory (as a Gradle reactor often does per module) needs
+`.vibetags-transitive` in that module directory, not only at the reactor root.
 
 ### Check mode still publishes
 

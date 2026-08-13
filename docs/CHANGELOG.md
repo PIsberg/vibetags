@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-13
+
+A minor release: guardrails a library declares on a package now reach the projects that depend on
+it. Both halves are file-presence opt-ins that do not exist by default, so upgrading changes nothing
+for a project that does not ask for it — `example/` and `example-multimodule-indexed/` regenerate
+byte-for-byte against 1.1.1. Thirteen annotations gained `ElementType.PACKAGE`, which is
+source-compatible: nothing that compiled before stops compiling.
+
 ### Added
 - **Transitive guardrails: package-level rules travel from a library into the projects that depend
   on it.** An agent working in an application reads the application's `CLAUDE.md`, not the one
@@ -76,6 +84,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests` module now appears for exactly this reason.
 
 ### Fixed
+- **Transitive guardrails did nothing under Gradle.** Gradle hands every annotation processor an
+  `IncrementalProcessingEnvironment` rather than javac's own, and `Trees.instance` rejects anything
+  that is not javac's. Discovery therefore reported `transitive.skip reason=trees-unavailable` and
+  inherited nothing on every Gradle build — green, silent, and with the section simply missing from
+  the generated file. Found by wiring the feature up in `async-test-lib`, which publishes and
+  consumes with both build tools: Maven inherited two rules, Gradle inherited none from the same
+  sources.
+
+  VibeTags already had the answer. `SourcePositionResolver.treesFor` unwraps that same wrapper so
+  `@AILocked` positions survive a Gradle build; the new reader called `Trees.instance` directly and
+  the two drifted apart the moment the second one was written. Discovery now goes through
+  `treesFor`, which is one call site instead of two implementations.
+  `TransitiveGuardrailLifecycleE2ETest.aWrappedProcessingEnvironmentStillDiscoversManifests`
+  compiles through a Gradle-shaped wrapper and fails when the unwrap is bypassed — it was written
+  against the broken code first and reproduced it.
 - **A split package no longer misattributes its second artifact.** The inherited-rule block grouped
   bullets under one header per package, so when two artifacts published rules for the same package
   the second rendered under the first one's coordinate — telling the reader a constraint came from a
@@ -101,6 +124,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   local annotations meant a project whose guardrails all come from dependencies wrote its files
   exactly once and then refused every update with "no annotations found in this module, preserving
   existing rules" — so a dependency upgrade could never reach the file.
+
+### Documentation
+- **The `vibetags-usage` skill documents transitive guardrails.** `USAGE.md` and `PROCESSOR.md`
+  gained the feature when it shipped; the packaged skill did not, so an agent answering "how do I
+  use VibeTags" from the skill alone would have said package annotations do not exist. It now
+  carries the publish/consume walkthrough, the thirteen annotations that accept
+  `ElementType.PACKAGE`, and the four `-Avibetags.manifest.*` options.
+- **`scripts/consumer-sweep.sh` can build a Gradle consumer that already mentions
+  `mavenLocal()`.** The injection it used skipped any build file containing that string, and
+  codekarta has one behind `if (project.hasProperty("useMavenLocal"))` — present in the text, off
+  in the build. The sweep injected nothing and reported codekarta FAIL for a resolution error that
+  said nothing about VibeTags. Gradle builds now get `--init-script` instead, which needs no edit
+  to a consumer's file and leaves nothing to restore. `pluginManagement` is deliberately untouched:
+  declaring one repository there removes Gradle's implicit `gradlePluginPortal()`, which broke
+  codekarta's shadow plugin on the first attempt.
+- **`DocumentationLinksTest` walked the build output it was running inside.** Its skip list
+  filtered the results of `Files.walk` instead of pruning the walk, so it still descended into
+  `build/`, `target/` and `.gradle/` while Gradle was writing there. A file that vanished between
+  the listing and the visit surfaced as `UncheckedIOException: NoSuchFileException` and failed a
+  test about links in documentation — red on CI, green everywhere else, and about nothing. It now
+  prunes those directories in a `FileVisitor`, which checks exactly the same files and is faster.
 
 ## [1.1.1] - 2026-08-12
 
@@ -2467,7 +2511,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/PIsberg/vibetags/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/PIsberg/vibetags/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PIsberg/vibetags/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/PIsberg/vibetags/compare/v1.0.2...v1.0.3

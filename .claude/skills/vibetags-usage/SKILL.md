@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
-version: 1.1.1
+version: 1.2.0
 ---
 
 # VibeTags Usage Guide
@@ -17,15 +17,15 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-processor</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.0</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:1.1.1'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.1.1'
+compileOnly 'se.deversity.vibetags:vibetags-processor:1.2.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.0'
 ```
 
 ### 2. Opt in to AI platforms (file-presence model)
@@ -1066,7 +1066,7 @@ Use on: **class, method, field**
 @AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
               reason = "The release version is asserted in three places and drifts silently",
               enforcedBy = "ProjectFactsConsistencyTest")
-public static final String VERSION = "1.1.1";
+public static final String VERSION = "1.2.0";
 ```
 
 The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
@@ -1179,6 +1179,79 @@ mkdir -p .claude/rules .github/instructions
 
 ---
 
+## Transitive Guardrails — rules that arrive from a dependency
+
+An agent working in an application reads *that* application's `CLAUDE.md`, never the one belonging
+to a library it depends on. A library can publish its package-level guardrails, and any project
+that opts in renders them into its own AI configuration.
+
+Both halves are file-presence opt-ins, like everything else here. Neither file exists by default.
+
+**Publishing (the library).** Annotate `package-info.java`, then add `.vibetags-manifest`:
+
+```java
+// src/main/java/com/acme/crypto/api/package-info.java
+@AISecure(aspect = "Never construct a raw Cipher; go through CryptoManagerFactory.")
+@AIThreadSafe(strategy = AIThreadSafe.Strategy.IMMUTABLE,
+    note = "Every product of the factory is safe to share between threads.")
+package com.acme.crypto.api;
+
+import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AIThreadSafe;
+```
+
+```bash
+# first non-comment line is the coordinate consumers will see
+echo "com.acme:crypto-core:2.4.0" > .vibetags-manifest
+```
+
+The build writes `vibetags/manifests/com.acme.crypto.api.json` into the class output and the normal
+`jar` task packages it. (Not `META-INF/` — javac's `CLASS_PATH` location skips archive directories
+whose names are not valid package identifiers, so a manifest there is unreadable from a processor.)
+
+**Consuming (the application).**
+
+```bash
+touch .vibetags-transitive
+```
+
+```markdown
+<!-- appended to CLAUDE.md, after everything your own code declares -->
+## Inherited Guardrails (dependencies)
+
+- `com.acme.crypto.api` (from com.acme:crypto-core:2.4.0)
+  - @AISecure: aspect=Never construct a raw Cipher; go through CryptoManagerFactory.
+
+## Inherited Context (dependencies)
+
+- `com.acme.crypto.api` (from com.acme:crypto-core:2.4.0)
+  - @AIThreadSafe: strategy=IMMUTABLE; note=Every product of the factory is safe to share between threads.
+```
+
+Worth knowing:
+
+- **The project's own rules come first, always.** The inherited block is appended last. That
+  ordering *is* the precedence model — the output is prose an agent reads, not a ruleset a compiler
+  applies, so a library cannot outrank the project consuming it.
+- **Every inherited rule names its artifact**, because a dependency is contributing text an agent
+  will act on and the reader has to see whose text it is.
+- **Only packages the compilation imports are looked up**, so a hundred instrumented dependencies
+  do not become a hundred pages of prompt. `-Avibetags.manifest.max=<n>` caps the advisory tier
+  further; the six safety buckets are never dropped, and a cap that drops anything says so.
+- **Only package-level annotations travel.** Class- and method-level guardrails stay local — a
+  consumer cannot act on a rule about a class it never sees. Thirteen annotations accept
+  `ElementType.PACKAGE`: `@AISecure`, `@AIPrivacy`, `@AICore`, `@AIAudit`, `@AIRegulation`,
+  `@AIArchitecture`, `@AIPublicAPI`, `@AIBannedApi`, `@AIThreadSafe`, `@AIImmutable`,
+  `@AIDeprecated`, `@AIContext`, `@AIStrictClasspath`.
+- **kapt, ECJ and JPMS need a hand.** Discovery needs the compiler's Tree API and the classpath;
+  where either is missing VibeTags reports a `NOTE` rather than pretending it found nothing, and
+  the manifests are supplied with `-Avibetags.manifest.dir=<dir>` or
+  `-Avibetags.manifest.packages=a.b,c.d`. Plain Gradle needs none of that.
+- **Markers are resolved against `-Avibetags.root`.** A build that pins the root at a module
+  directory needs `.vibetags-transitive` in that directory, not only at the reactor root.
+
+---
+
 ## Advanced Configuration
 
 ### Processor options (Maven)
@@ -1203,6 +1276,14 @@ mkdir -p .claude/rules .github/instructions
             <arg>-Avibetags.check=true</arg>
             <!-- Opt-in enforcement: fail the build on a guarded signature change -->
             <arg>-Avibetags.enforce=locked,contract,publicapi</arg>
+            <!-- Transitive: coordinate published in this library's manifests -->
+            <arg>-Avibetags.manifest.origin=com.acme:crypto-core:2.4.0</arg>
+            <!-- Transitive: read manifests from a directory (kapt/ECJ/JPMS fallback) -->
+            <arg>-Avibetags.manifest.dir=build/vibetags-manifests</arg>
+            <!-- Transitive: look up these packages explicitly, when imports cannot be read -->
+            <arg>-Avibetags.manifest.packages=com.acme.crypto.api,com.acme.audit</arg>
+            <!-- Transitive: cap inherited advisory rules (safety buckets are never dropped) -->
+            <arg>-Avibetags.manifest.max=50</arg>
         </compilerArgs>
     </configuration>
 </plugin>

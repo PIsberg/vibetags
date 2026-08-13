@@ -110,7 +110,12 @@ class ReleaseScriptCoverageTest {
         // This file, which quotes the same sort-order example a few lines above while explaining
         // why those tools are exempt. It flagged itself the moment it was committed, which is the
         // scan working: it reads `git ls-files`, so a file becomes visible when it becomes real.
-        "vibetags/src/test/java/se/deversity/vibetags/processor/ReleaseScriptCoverageTest.java");
+        "vibetags/src/test/java/se/deversity/vibetags/processor/ReleaseScriptCoverageTest.java",
+        // A design proposal, dated by the release it was written for. Its worked example shows a
+        // manifest stamped "vibetags/1.2.0" because 1.2.0 is the release that shipped the feature;
+        // rewriting it on every later release would make the document claim it proposed something
+        // that already existed.
+        "docs/proposals/transitive-guardrails.md");
 
     /** Build outputs and local scratch that are not part of the release. */
     private static final Set<String> IGNORED_SUFFIXES =

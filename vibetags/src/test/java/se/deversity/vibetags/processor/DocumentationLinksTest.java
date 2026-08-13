@@ -6,9 +6,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -18,7 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -175,23 +177,42 @@ class DocumentationLinksTest {
         return out.toString();
     }
 
+    /**
+     * Every committed Markdown file, without ever entering a build-output directory.
+     *
+     * <p>The skip list prunes the walk rather than filtering its results. {@code Files.walk} is
+     * lazy, so filtering afterwards still descends into {@code build/}, {@code target/} and
+     * {@code .gradle/} — the three directories a build that is running this very test is writing
+     * and deleting inside. A file that vanished between the directory listing and the visit then
+     * surfaced as {@code UncheckedIOException: NoSuchFileException} and failed a test about links
+     * in documentation, on CI, roughly one Gradle run in three. Pruning is also the faster walk.
+     */
     private List<Path> markdownFiles() throws IOException {
-        try (Stream<Path> paths = Files.walk(REPO_ROOT)) {
-            return paths
-                .filter(p -> p.toString().endsWith(".md"))
-                .filter(DocumentationLinksTest::isNotInSkippedDirectory)
-                .sorted()
-                .toList();
-        }
-    }
-
-    private static boolean isNotInSkippedDirectory(Path p) {
-        for (Path part : p) {
-            if (SKIP_DIRS.contains(part.toString())) {
-                return false;
+        List<Path> found = new ArrayList<>();
+        Files.walkFileTree(REPO_ROOT, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                Path name = dir.getFileName();
+                return name != null && SKIP_DIRS.contains(name.toString())
+                    ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
             }
-        }
-        return true;
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (file.toString().endsWith(".md")) {
+                    found.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException unreadable) {
+                // A file that disappeared under a concurrent build is not a documentation defect.
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        found.sort(null);
+        return found;
     }
 
     private static String read(Path p) throws IOException {

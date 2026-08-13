@@ -336,7 +336,10 @@ Worth knowing before you turn it on:
 - **kapt, ECJ and JPMS need a hand.** Classpath discovery needs the compiler's Tree API and the
   classpath. Where either is missing, VibeTags says so as a `NOTE` rather than pretending it found
   nothing, and you supply the manifests with `-Avibetags.manifest.dir=<dir>` or
-  `-Avibetags.manifest.packages=a.b,c.d`.
+  `-Avibetags.manifest.packages=a.b,c.d`. Plain Gradle needs nothing: its environment wrapper is
+  unwrapped for you.
+- **The markers live at whatever `-Avibetags.root` resolves to.** If your build pins that at a
+  module directory, `.vibetags-transitive` belongs there too, not only at the reactor root.
 
 A working demonstration lives in [`example-multimodule/`](example-multimodule), where `core`
 publishes and `engine`, `cli` and `tests` inherit. Full details in
