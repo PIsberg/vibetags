@@ -15,7 +15,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
 | `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
 | `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |
-| `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes nothing — no output files, no sidecars, no cache |
+| `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes none of the files VibeTags manages in the project — no output files, no sidecars, no cache. Dependency manifests still go to `CLASS_OUTPUT`; see below |
 | `vibetags.enforce` | (off) | Opt-in **enforcing mode**: comma-separated families (`locked`, `contract`, `publicapi`, or `all`) whose guarded elements must match `.vibetags-baseline`. A drift is a compile **error**. See below |
 | `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file |
 | `vibetags.manifest.origin` | read from `.vibetags-manifest` | The `group:artifact:version` stamped into published manifests, overriding the marker file's first line |
@@ -72,6 +72,15 @@ Where the Tree API is absent (kapt, ECJ, some Gradle workers) or the dependencie
 module path rather than the classpath, discovery finds nothing and says so as a `NOTE` — unchecked
 is reported distinctly from clean. `-Avibetags.manifest.dir` and `-Avibetags.manifest.packages` are
 the supported ways through.
+
+### Check mode still publishes
+
+Check mode writes none of the files VibeTags manages in the project, but it does publish manifests
+into `CLASS_OUTPUT`. That is the compiler's own output directory, which javac is filling with class
+files regardless, and skipping the write would break the check rather than tighten it: in a reactor
+that both publishes and consumes, one module's manifest is what the next module reads off the
+classpath. Without it every consuming module inherits nothing, compares that against committed files
+that correctly carry the inherited rules, and reports drift on a build where nothing is wrong.
 
 ### Split packages
 

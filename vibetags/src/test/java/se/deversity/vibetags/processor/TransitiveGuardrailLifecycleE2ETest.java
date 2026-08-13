@@ -259,12 +259,17 @@ class TransitiveGuardrailLifecycleE2ETest {
     }
 
     @Test
-    void checkModePublishesNothing() throws Exception {
-        // Check mode promises, in checkFiles()' own javadoc and in PROCESSOR.md, to write nothing
-        // at all. Publishing goes through Filer.createResource(CLASS_OUTPUT, ...) — the first
-        // VibeTags path that writes there — so it has to sit on the generate side of the branch.
-        // The manifests are deterministic and land in a build directory, which is exactly why this
-        // would have gone unnoticed: no committed file drifts, the promise is just untrue.
+    void checkModePublishesManifestsButTouchesNoProjectFile() throws Exception {
+        // Check mode's guarantee is about the files VibeTags manages in the project. It is NOT
+        // "writes nothing at all", and the difference matters: in a reactor that both publishes and
+        // consumes, one module's manifest is what the next reads off the classpath, so a check-mode
+        // run that skipped publishing would leave every consuming module inheriting nothing and
+        // reporting drift against committed files that are perfectly correct. That is not
+        // hypothetical — moving the publish below the check/generate branch turned
+        // example-multimodule's check-mode gate red on all three Maven legs.
+        //
+        // CLASS_OUTPUT is the compiler's own directory, which javac is filling with class files
+        // regardless. The project tree is what must stay untouched.
         Path lib = tmp.resolve("lib");
         Files.createDirectories(lib);
         Files.writeString(lib.resolve(".vibetags-manifest"), "com.acme:crypto-core:2.4.0\n");
@@ -272,8 +277,8 @@ class TransitiveGuardrailLifecycleE2ETest {
         Path classes = lib.resolve("classes");
         Files.createDirectories(classes);
 
-        // The compile itself is expected to fail: check mode reports the empty CLAUDE.md as drift,
-        // which is the whole point of the mode. What matters here is only what reached disk.
+        // The compile is expected to fail: check mode reports the empty CLAUDE.md as drift, which
+        // is the whole point of the mode. What matters here is what reached disk.
         runAllowingFailure(classes,
             List.of("-classpath", System.getProperty("java.class.path"),
                     "-Avibetags.root=" + lib.toAbsolutePath(),
@@ -281,8 +286,23 @@ class TransitiveGuardrailLifecycleE2ETest {
             List.of(sourceFile(lib, "com/acme/crypto/api/package-info.java", LIB_PACKAGE_INFO),
                     sourceFile(lib, "com/acme/crypto/api/CryptoManagerFactory.java", LIB_CLASS)));
 
-        assertFalse(Files.exists(classes.resolve("vibetags").resolve("manifests")),
-            "check mode wrote manifests into the class output despite promising to write nothing");
+        assertTrue(Files.isRegularFile(classes.resolve("vibetags").resolve("manifests")
+                .resolve("com.acme.crypto.api.json")),
+            "check mode must still publish, or a reactor that consumes its own modules cannot be "
+                + "checked at all");
+
+        assertEquals("", Files.readString(lib.resolve("CLAUDE.md"), StandardCharsets.UTF_8),
+            "check mode must not write the project's generated files");
+        assertFalse(Files.exists(lib.resolve(".vibetags-cache")), "check mode must not write the cache");
+        try (Stream<Path> entries = Files.list(lib)) {
+            assertTrue(entries.noneMatch(p -> fileName(p).startsWith(".vibetags-mod-")),
+                "check mode must not write a module sidecar");
+        }
+    }
+
+    private static String fileName(Path path) {
+        Path name = path.getFileName();
+        return name == null ? "" : name.toString();
     }
 
     @Test

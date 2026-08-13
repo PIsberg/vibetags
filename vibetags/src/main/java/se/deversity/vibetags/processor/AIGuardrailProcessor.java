@@ -357,6 +357,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // The inherited rules must reach the collector BEFORE that fingerprint is
                     // computed, or a dependency upgrade would be short-circuited past in silence.
                     applyTransitiveRules();
+                    // Publishing runs in check mode too, and must. In a reactor that both
+                    // publishes and consumes, a module's manifest is what the next module reads
+                    // off the classpath — so a check-mode run that skipped publishing would have
+                    // every consuming module inherit nothing, compare that against committed files
+                    // that correctly carry the inherited rules, and report drift on a build where
+                    // nothing is wrong. Verified the hard way: moving this below the branch turned
+                    // example-multimodule's check-mode gate red on every Maven leg.
+                    //
+                    // This does not weaken what check mode promises. CLASS_OUTPUT is the
+                    // compiler's own output directory, which javac is filling with class files
+                    // regardless; the guarantee is about the files VibeTags manages in the
+                    // project, and those are still untouched. See checkFiles().
+                    emitTransitiveManifests();
                     // Enforcement runs BEFORE generation, and outside generateFiles(), for two
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
@@ -364,11 +377,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (checkMode) {
                         checkFiles();
                     } else {
-                        // Publishing writes to CLASS_OUTPUT, so it belongs on this side of the
-                        // branch: check mode promises, in its own javadoc and in PROCESSOR.md, to
-                        // write nothing at all. Reading dependency manifests still happens above,
-                        // because check mode has to verify the same content a real build produces.
-                        emitTransitiveManifests();
                         generateFiles();
                     }
                 }
@@ -859,11 +867,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /**
      * Opt-in verification mode ({@code -Avibetags.check=true}). Runs the same service
      * resolution, content build, and multi-module merge as {@link #generateFiles()}, but
-     * touches NOTHING on disk — no output files, no sidecar, no cache. Every file a normal
-     * compile would create, update, scrub, or delete is instead reported as a compile ERROR,
-     * failing the build until the consumer regenerates and commits. Intended for CI drift
-     * detection; the fingerprint short-circuit and write cache are deliberately bypassed so
-     * the verdict never depends on cache state.
+     * touches none of the files VibeTags manages in the project — no output files, no sidecar,
+     * no cache. Every file a normal compile would create, update, scrub, or delete is instead
+     * reported as a compile ERROR, failing the build until the consumer regenerates and commits.
+     * Intended for CI drift detection; the fingerprint short-circuit and write cache are
+     * deliberately bypassed so the verdict never depends on cache state.
+     *
+     * <p>The one thing still written is the dependency manifest, into {@code CLASS_OUTPUT} — the
+     * compiler's own output directory, which javac is filling with class files regardless. It has
+     * to be: in a reactor that both publishes and consumes, one module's manifest is what the next
+     * reads off the classpath, so skipping it would make every consuming module inherit nothing and
+     * report drift against committed files that are perfectly correct. Nothing in the project tree
+     * changes, which is the guarantee this mode exists to give.
      */
     private void checkFiles() {
         if (log != null) {

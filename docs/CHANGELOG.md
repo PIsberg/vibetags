@@ -81,10 +81,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the second rendered under the first one's coordinate — telling the reader a constraint came from a
   dependency that never made it. Grouping is now by package *and* origin. Reachable by combining
   `-Avibetags.manifest.dir` with classpath discovery, which run additively by design.
-- **Check mode no longer writes dependency manifests.** Publishing goes through
-  `Filer.createResource(CLASS_OUTPUT, ...)` and ran before the check/generate branch, so
-  `-Avibetags.check=true` wrote `vibetags/manifests/*.json` into the class output despite check
-  mode's documented promise to write nothing at all.
+- **Check mode's documented guarantee is now precise.** It said "writes nothing"; it publishes
+  dependency manifests into `CLASS_OUTPUT`, and has to. In a reactor that both publishes and
+  consumes, one module's manifest is what the next reads off the classpath, so a check-mode run that
+  skipped publishing leaves every consuming module inheriting nothing and reporting drift on a build
+  where nothing is wrong. `CLASS_OUTPUT` is the compiler's own directory, which javac fills with
+  class files regardless; the guarantee that matters — and that is unchanged — is that no file
+  VibeTags manages in the project is touched.
 - **The JSON reader rejects malformed numbers.** The scan accepted a character set rather than a
   grammar, so `-`, `.`, `--5`, `1.2.3` and `1e+e-.3` all parsed as numbers — in a parser whose
   stated contract is that anything malformed raises rather than being guessed at, reading documents
