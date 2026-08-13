@@ -52,11 +52,14 @@ import java.util.TreeSet;
  *
  * <h2>When the Tree API is missing</h2>
  *
- * <p>kapt, ECJ and Gradle's isolated compiler workers may expose no {@link Trees}. Discovery then
- * finds nothing, which is reported as unchecked rather than as a failure, and the build can supply
- * keys explicitly with {@code -Avibetags.manifest.packages} or a pre-extracted directory with
+ * <p>kapt and ECJ may expose no {@link Trees}. Discovery then finds nothing, which is reported as
+ * unchecked rather than as a failure, and the build can supply keys explicitly with
+ * {@code -Avibetags.manifest.packages} or a pre-extracted directory with
  * {@code -Avibetags.manifest.dir}. The same fallback covers JPMS builds, where dependencies are on
  * the module path and {@code CLASS_PATH} does not see them.
+ *
+ * <p>Gradle looks like that case and is not: it wraps the environment rather than hiding the trees,
+ * so discovery goes through {@link SourcePositionResolver#treesFor}, which unwraps it.
  */
 public final class TransitiveManifestReader {
 
@@ -268,7 +271,14 @@ public final class TransitiveManifestReader {
      * must find a manifest published for {@code com.acme.crypto}.
      */
     static Set<String> candidatesFrom(ProcessingEnvironment env, RoundEnvironment roundEnv) {
-        Trees trees = Trees.instance(env);
+        // Not Trees.instance(env): Gradle hands every processor an IncrementalProcessingEnvironment
+        // and Trees.instance rejects anything that is not javac's own, so discovery skipped itself
+        // on every Gradle build. SourcePositionResolver already had to solve this for @AILocked
+        // positions; using it here is what keeps the two from drifting apart again.
+        Trees trees = SourcePositionResolver.treesFor(env);
+        if (trees == null) {
+            throw new IllegalStateException("the compiler exposes no Tree API");
+        }
         List<ImportedName> imports = new ArrayList<>();
         Set<CompilationUnitTree> seen = new LinkedHashSet<>();
         for (Element root : roundEnv.getRootElements()) {

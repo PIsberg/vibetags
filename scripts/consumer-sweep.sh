@@ -99,15 +99,37 @@ bump() {
 # rather than diagnosing a resolution failure per repo. A missing curl is not fatal: assume
 # published, which is the behaviour this script had before.
 UNPUBLISHED=0
+GRADLE_INIT=""
 if command -v curl >/dev/null 2>&1; then
   if ! curl -sfI --max-time 20 \
        "https://repo1.maven.org/maven2/se/deversity/vibetags/vibetags-processor/${VERSION}/vibetags-processor-${VERSION}.pom" \
        >/dev/null 2>&1; then
     UNPUBLISHED=1
-    echo "note: ${VERSION} is not on Maven Central. Gradle builds that declare only"
-    echo "      mavenCentral() get a temporary mavenLocal() so they can resolve it; the file is"
-    echo "      restored afterwards. Install the processor locally first or the sweep tests nothing."
+    echo "note: ${VERSION} is not on Maven Central. Gradle builds get a temporary mavenLocal()"
+    echo "      through an init script so they can resolve it; no consumer file is edited."
+    echo "      Install the processor locally first or the sweep tests nothing."
     echo
+
+    # An init script rather than a rewrite of the consumer's build file. The rewrite this
+    # replaced skipped any file that already contained the string mavenLocal(), and codekarta
+    # has one behind `if (project.hasProperty("useMavenLocal"))` — present in the text, off in
+    # the build. The sweep therefore injected nothing and reported codekarta FAIL for a
+    # resolution error that says nothing about VibeTags.
+    #
+    # pluginManagement is deliberately left alone: declaring even one repository there removes
+    # Gradle's implicit gradlePluginPortal(), and codekarta's shadow plugin then resolves
+    # nowhere. Only dependency repositories need the local one.
+    GRADLE_INIT="$LOGDIR/mavenlocal-init.gradle"
+    cat > "$GRADLE_INIT" <<'INITEOF'
+beforeSettings { settings ->
+    settings.dependencyResolutionManagement.repositories.mavenLocal()
+}
+allprojects {
+    repositories {
+        mavenLocal()
+    }
+}
+INITEOF
   fi
 fi
 printf '%-22s %-8s %-9s %s\n' REPO RESULT EXIT NOTES
@@ -162,24 +184,14 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   if [ -x "$work/mvnw" ]; then MVN=./mvnw; else MVN=mvn; fi
   if [ -x "$work/gradlew" ]; then GRADLE=./gradlew; else GRADLE=gradle; fi
 
-  # Gradle resolves only from the repositories a build declares, and several consumers declare
-  # mavenCentral() and nothing else. That is correct for them and fatal here: sweeping a version
-  # that has not been published yet means the artifact exists only in the local repository, so
-  # those builds die at dependency resolution without compiling a line. Reporting that as FAIL
-  # sends someone hunting a regression that cannot exist. Add mavenLocal() for the duration of
-  # the build instead, put the file back afterwards, and say so in the notes.
-  restored=""
-  if [ "$UNPUBLISHED" -eq 1 ]; then
-    for f in build.gradle build.gradle.kts; do
-      [ -f "$work/$f" ] || continue
-      grep -q 'mavenLocal()' "$work/$f" && continue
-      grep -q 'mavenCentral()' "$work/$f" || continue
-      cp "$work/$f" "$work/$f.sweepbak"
-      awk '{ if (!done && /mavenCentral\(\)/) { print; sub(/mavenCentral\(\)/, "mavenLocal()"); print; done=1 } else print }' \
-          "$work/$f.sweepbak" > "$work/$f"
-      restored="$restored $f"
-    done
-  fi
+  # Gradle resolves only from the repositories a build declares, and no consumer declares the
+  # local one for real. That is correct for them and fatal here: sweeping a version that has
+  # not been published yet means the artifact exists only in the local repository, so those
+  # builds die at dependency resolution without compiling a line. Reporting that as FAIL sends
+  # someone hunting a regression that cannot exist. $GRADLE_INIT supplies mavenLocal() from
+  # outside the build, so nothing the consumer owns is edited and nothing has to be restored.
+  ginit=""
+  [ -n "$GRADLE_INIT" ] && ginit="--init-script $GRADLE_INIT"
 
   log="$LOGDIR/$repo.log"
   status=0
@@ -189,18 +201,14 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   # had finished. A sweep that silently covers two repos of five is worse than one that fails.
   case "$tool" in
     maven) (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 </dev/null || status=$? ;;
-    gradle) (cd "$work" && $GRADLE -q $gradlecmd) > "$log" 2>&1 </dev/null || status=$? ;;
+    gradle) (cd "$work" && $GRADLE -q $ginit $gradlecmd) > "$log" 2>&1 </dev/null || status=$? ;;
     both)
       (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 </dev/null || status=$?
       if [ "$status" -eq 0 ]; then
-        (cd "$work" && $GRADLE -q $gradlecmd) > "$log.gradle" 2>&1 </dev/null || status=$?
+        (cd "$work" && $GRADLE -q $ginit $gradlecmd) > "$log.gradle" 2>&1 </dev/null || status=$?
       fi
       ;;
   esac
-
-  # Put the injected repositories back before anything counts the working tree, so the
-  # injection never shows up as drift or as a touched file.
-  for f in $restored; do mv "$work/$f.sweepbak" "$work/$f"; done
 
   # Generated-guardrail drift, counted from `git diff --numstat` rather than `git status`.
   # status lists a file whose line endings changed even when its text did not, and on Windows
@@ -226,7 +234,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
     result=FAIL
   fi
   notes="log: $log"
-  [ -n "$restored" ] && notes="mavenLocal() injected for$restored; $notes"
+  [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
   printf '%-22s %-8s %-9s %s\n' "$repo" "$result" "$status" "$notes"

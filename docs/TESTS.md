@@ -61,7 +61,7 @@ stop excluding the same one.
 | `TransitiveSectionTest` | The inherited-guardrail appendix: attribution, tier order, and which platforms carry it (pinned both ways) |
 | `TransitiveFingerprintTest` | That inherited rules reach `BuildFingerprint` — the check the end-to-end test cannot make |
 | `TransitiveExampleCoverageTest` | That `example-multimodule/` still demonstrates the feature rather than quietly demonstrating nothing |
-| `TransitiveGuardrailLifecycleE2ETest` (`e2e`) | The whole lifecycle through a real `javac`: library compiled and jarred, consumer resolving it off the compile classpath. Includes the negative that shaped the design — a manifest under `META-INF/` is invisible |
+| `TransitiveGuardrailLifecycleE2ETest` (`e2e`) | The whole lifecycle through a real `javac`: library compiled and jarred, consumer resolving it off the compile classpath. Includes the negative that shaped the design — a manifest under `META-INF/` is invisible — and a compilation driven through a Gradle-shaped `ProcessingEnvironment` wrapper, which is what discovery silently failed on |
 | `AIGuardrailProcessorTest` | Processor configuration |
 | `AIGuardrailProcessorUnitTest` | Processor logic, opt-in, warning emission |
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |

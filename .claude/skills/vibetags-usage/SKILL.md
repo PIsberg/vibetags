@@ -1246,7 +1246,9 @@ Worth knowing:
 - **kapt, ECJ and JPMS need a hand.** Discovery needs the compiler's Tree API and the classpath;
   where either is missing VibeTags reports a `NOTE` rather than pretending it found nothing, and
   the manifests are supplied with `-Avibetags.manifest.dir=<dir>` or
-  `-Avibetags.manifest.packages=a.b,c.d`.
+  `-Avibetags.manifest.packages=a.b,c.d`. Plain Gradle needs none of that.
+- **Markers are resolved against `-Avibetags.root`.** A build that pins the root at a module
+  directory needs `.vibetags-transitive` in that directory, not only at the reactor root.
 
 ---
 
