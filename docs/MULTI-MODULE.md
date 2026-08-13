@@ -14,6 +14,14 @@ Every module contributes to the shared marker files via per-module sidecars
 reads all sibling sidecars, and merges them into the shared files with `VIBETAGS-MODULE: <id>`
 sub-markers.
 
+A module contributes a region when it has guardrail content — an annotation in its own sources, or
+a rule inherited from a dependency it imports (see
+[PROCESSOR.md](PROCESSOR.md#transitive-guardrails-dependency-tree-propagation)). Inherited rules
+land inside that module's own region rather than once at the root, which is the answer that is true
+per module: a module inherits what *its* sources import, and two modules of a reactor rarely depend
+on the same set. `.vibetags-mirror` on its own still creates no region — mirrored rules are scoped
+files, and they never reach the aggregate.
+
 ### YAML outputs merge differently
 
 Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the six

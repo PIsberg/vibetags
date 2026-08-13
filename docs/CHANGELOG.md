@@ -66,6 +66,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   buckets rather than keeping `getElementsAnnotatedWith`'s unspecified order.
   `TransitiveManifestMemberOrderTest` pins it.
 
+### Changed
+- **A reactor module that inherits guardrails now contributes a region to the merged root, even
+  with no annotations of its own.** Previously the root aggregated only modules whose own sources
+  carried annotations. A module that imports an instrumented dependency genuinely has something to
+  say about its own code, so it appears — carrying its inherited rules and nothing else. What has
+  not changed is that `.vibetags-mirror` alone still creates no region: mirrored rules are scoped
+  files, and they still never reach the aggregate. Visible in `example-multimodule/`, where the
+  `tests` module now appears for exactly this reason.
+
 ### Fixed
 - **`AnnotationCollector.anyAnnotationsFound()` now counts inherited rules too.** It gates
   `hasNewRules`, which decides whether an *existing* generated file may be rewritten. Counting only

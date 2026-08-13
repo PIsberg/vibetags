@@ -312,9 +312,27 @@ jobs:
             || { echo "mirrored rule lost the source module's guardrail"; exit 1; }
           grep -qF '"**/tests/src/test/java/**/*.java"' tests/.claude/rules/mirrored-core-com-example-multimodule-core-IrNode.md \
             || { echo "mirrored rule is not scoped to the target module's sources"; exit 1; }
-          # Mirroring must not disturb the reactor root: tests/ contributes no annotations.
-          if grep -qF "VIBETAGS-MODULE: tests" CLAUDE.md; then
-            echo "a mirror target with no annotations must not appear in the root merge"; exit 1
+          # Mirroring itself must still not put a module into the reactor root. tests/ does appear
+          # there now, but for an unrelated reason: it imports com.example.multimodule.core, so it
+          # inherits that package's published guardrails and genuinely has something to say. The
+          # invariant being defended is that MIRRORING creates no region, so the check is that
+          # tests/'s region contains ONLY inherited rules and none of its own element sections —
+          # a mirrored rule reaching the root merge would show up as a populated section here.
+          region=$(awk '/VIBETAGS-MODULE: tests /{f=1} f; /VIBETAGS-MODULE-END: tests /{f=0}' CLAUDE.md)
+          if [ -n "$region" ]; then
+            if ! echo "$region" | grep -q 'Inherited Guardrails (dependencies)'; then
+              echo "tests/ has no annotations of its own, so the only thing that may put it in the"
+              echo "root merge is an inherited rule — and its region carries none:"
+              echo "$region"
+              exit 1
+            fi
+            # Populated own-sections would mean a mirrored rule leaked into the aggregate.
+            if echo "$region" | grep -E '^    <(file|element) ' >/dev/null; then
+              echo "a mirrored rule must not reach the reactor root's aggregate:"
+              echo "$region"
+              exit 1
+            fi
+            echo "tests/ appears in the root merge with inherited rules only, as expected."
           fi
           echo "Sibling module rules mirrored into the centralised test module."
 

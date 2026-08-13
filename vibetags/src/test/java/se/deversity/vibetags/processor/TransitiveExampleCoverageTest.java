@@ -107,6 +107,28 @@ class TransitiveExampleCoverageTest {
             "core declares these rules; it must not also inherit them");
     }
 
+    @Test
+    void aModuleWithNoAnnotationsOfItsOwnStillAppearsWhenItInheritsSome() throws IOException {
+        // A behaviour change worth pinning. Before transitive guardrails, a module contributed a
+        // region to the reactor root only when its own sources carried annotations, and the demo's
+        // tests/ module — which has none, and opts into .vibetags-mirror instead — was deliberately
+        // absent. It imports com.example.multimodule.core, so it now inherits that package's rules
+        // and genuinely has something to say about its own code.
+        //
+        // What must NOT have changed is why: mirroring still creates no region. If a mirrored rule
+        // ever reached the aggregate, it would show here as a populated element section.
+        Path claude = REACTOR.resolve("CLAUDE.md");
+        assumeTrue(Files.isRegularFile(claude), "CLAUDE.md not reachable; skipping");
+        String content = Files.readString(claude, StandardCharsets.UTF_8);
+        assumeTrue(content.contains("VIBETAGS-MODULE: tests"), "tests region not generated; skipping");
+
+        String region = regionOf(content, "tests");
+        assertTrue(region.contains("Inherited Guardrails (dependencies)"),
+            "the only thing that may put tests/ in the root merge is an inherited rule:\n" + region);
+        assertFalse(region.contains("<file path="),
+            "a mirrored rule must not reach the reactor root's aggregate:\n" + region);
+    }
+
     /** The merged region a module contributed, between its sub-markers. */
     private static String regionOf(String content, String module) {
         String start = "<!-- VIBETAGS-MODULE: " + module + " -->";

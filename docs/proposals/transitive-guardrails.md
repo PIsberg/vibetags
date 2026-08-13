@@ -323,7 +323,7 @@ phase whose bug is invisible.
 
 ## 7. Where the implementation departed from this plan
 
-Five changes, all of them things the build taught rather than things the plan got wrong on paper.
+Six changes, all of them things the build taught rather than things the plan got wrong on paper.
 
 **A fourth finding, not in the spike: a processor with no matching annotations is never invoked.**
 This plan assumed the consumer's compilation would call `process()`. It does not — javac skips a
@@ -350,6 +350,15 @@ build reports the drop as a `NOTE` rather than a line in the file.
 which decides whether an *existing* generated file may be rewritten; counting only local annotations
 meant a project whose guardrails all come from dependencies wrote its files exactly once and then
 refused every update. Inherited rules now count.
+
+**A sixth thing, found by CI rather than by the plan: `Class.getDeclaredMethods()` is unordered.**
+§4.1 required deterministic serialisation and the implementation sorted the rules — but read each
+rule's *attributes* straight off reflection. That order is unspecified and differs between JDK
+releases: JDK 26 reported `@AIContext`'s `focus` before `avoids`, JDK 25 the reverse. Every local
+gate was green, and all three of CI's Maven legs failed on the reactor example's byte-for-byte
+check. Attributes are now sorted by name. The lesson generalises past this feature: the repo already
+sorts `GuardrailModel`'s buckets for exactly this reason, and "reflection order" is another
+unspecified order that looks stable until somebody else's JDK disagrees.
 
 **Phase 5's test could not be written as specified.** The plan called for an end-to-end test proving
 a dependency upgrade defeats the fingerprint short-circuit. That test passes whether or not the
