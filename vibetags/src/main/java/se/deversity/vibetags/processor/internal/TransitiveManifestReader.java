@@ -269,7 +269,7 @@ public final class TransitiveManifestReader {
      */
     static Set<String> candidatesFrom(ProcessingEnvironment env, RoundEnvironment roundEnv) {
         Trees trees = Trees.instance(env);
-        Set<String> imports = new LinkedHashSet<>();
+        List<ImportedName> imports = new ArrayList<>();
         Set<CompilationUnitTree> seen = new LinkedHashSet<>();
         for (Element root : roundEnv.getRootElements()) {
             TreePath path = trees.getPath(root);
@@ -284,26 +284,65 @@ public final class TransitiveManifestReader {
                 if (imp.getQualifiedIdentifier() == null) {
                     continue;
                 }
-                imports.add(imp.getQualifiedIdentifier().toString());
+                imports.add(ImportedName.of(imp.getQualifiedIdentifier().toString(), imp.isStatic()));
             }
         }
         return candidatesFromImports(imports);
     }
 
-    /** The prefix expansion of {@code imports}, in a stable (sorted) order. */
-    static Set<String> candidatesFromImports(Collection<String> imports) {
-        Set<String> out = new TreeSet<>();
-        for (String raw : imports) {
-            String identifier = raw.strip();
-            if (identifier.endsWith(".*")) {
+    /**
+     * One import statement, reduced to what the candidate walk needs.
+     *
+     * <p>The two flags are what tells a package apart from a type. Discarding them and walking the
+     * raw identifier means every ordinary {@code import a.b.C} also probes {@code a.b.C} — a name
+     * that can never host a manifest, because manifests are keyed by the package they govern. That
+     * is one guaranteed-miss lookup per import in the project, which is bounded and harmless but
+     * also entirely avoidable.
+     */
+    record ImportedName(String identifier, boolean isStatic, boolean isWildcard) {
+
+        /** Parses one import's qualified identifier, stripping any trailing {@code .*}. */
+        static ImportedName of(String qualifiedIdentifier, boolean isStatic) {
+            String identifier = qualifiedIdentifier.strip();
+            boolean wildcard = identifier.endsWith(".*");
+            if (wildcard) {
                 identifier = identifier.substring(0, identifier.length() - 2);
             }
+            return new ImportedName(identifier, isStatic, wildcard);
+        }
+
+        /** A plain type import, for tests and callers with no {@code ImportTree} to hand. */
+        static ImportedName of(String qualifiedIdentifier) {
+            return of(qualifiedIdentifier, false);
+        }
+
+        /**
+         * How many trailing segments name something other than a package.
+         *
+         * <p>{@code import a.b.*} is already a package. {@code import a.b.C} ends in a type.
+         * {@code import static a.b.C.*} ends in a type. {@code import static a.b.C.m} ends in a
+         * type and a member.
+         */
+        int nonPackageSegments() {
+            if (isWildcard) {
+                return isStatic ? 1 : 0;
+            }
+            return isStatic ? 2 : 1;
+        }
+    }
+
+    /** The prefix expansion of {@code imports}, in a stable (sorted) order. */
+    static Set<String> candidatesFromImports(Collection<ImportedName> imports) {
+        Set<String> out = new TreeSet<>();
+        for (ImportedName imported : imports) {
+            String identifier = imported.identifier();
             if (identifier.isEmpty() || isSkipped(identifier)) {
                 continue;
             }
             String[] segments = identifier.split("\\.");
+            int limit = segments.length - imported.nonPackageSegments();
             StringBuilder prefix = new StringBuilder(identifier.length());
-            for (int i = 0; i < segments.length; i++) {
+            for (int i = 0; i < limit; i++) {
                 if (segments[i].isEmpty()) {
                     break;
                 }
@@ -317,6 +356,15 @@ public final class TransitiveManifestReader {
             }
         }
         return out;
+    }
+
+    /** Convenience for tests and callers holding plain type-import strings. */
+    static Set<String> candidatesFromTypeImports(Collection<String> imports) {
+        List<ImportedName> parsed = new ArrayList<>(imports.size());
+        for (String raw : imports) {
+            parsed.add(ImportedName.of(raw));
+        }
+        return candidatesFromImports(parsed);
     }
 
     /**

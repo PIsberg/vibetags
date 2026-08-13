@@ -62,6 +62,12 @@ the cost is one lookup per distinct imported package prefix — `java.*`, `javax
 and the JVM languages' runtimes are skipped, and the total is capped at 4096 per compilation, with
 the cap logged when reached.
 
+A candidate is a *package*, so the type and member an import names are dropped before the prefix
+walk: `import a.b.C` probes `a.b` and `a`-rooted parents but never `a.b.C`, and
+`import static a.b.C.m` drops both `C` and `m`. A manifest is keyed by the package it governs, so a
+class-name lookup is a guaranteed miss — one per import in the project, which is bounded but
+entirely avoidable.
+
 Where the Tree API is absent (kapt, ECJ, some Gradle workers) or the dependencies live on the
 module path rather than the classpath, discovery finds nothing and says so as a `NOTE` — unchecked
 is reported distinctly from clean. `-Avibetags.manifest.dir` and `-Avibetags.manifest.packages` are
@@ -73,6 +79,11 @@ Two JARs shipping a manifest for the same package is a split package. `Filer.get
 the first on the classpath and the processor cannot see the second, so the collision is undetectable
 on that path and the documentation says so rather than promising detection. `-Avibetags.manifest.dir`
 *can* see both, because the build tool did the resolving.
+
+When both rules do reach the model — combining the directory with classpath discovery, which is
+supported and additive — the rendered output groups by package *and* origin, so each rule sits under
+its own artifact. Grouping by package alone would print the second under the first one's coordinate
+and misattribute a constraint to a dependency that never made it.
 
 ## Enforcing mode (`-Avibetags.enforce`)
 

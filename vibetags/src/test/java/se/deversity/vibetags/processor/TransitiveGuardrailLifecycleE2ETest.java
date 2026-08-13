@@ -259,6 +259,33 @@ class TransitiveGuardrailLifecycleE2ETest {
     }
 
     @Test
+    void checkModePublishesNothing() throws Exception {
+        // Check mode promises, in checkFiles()' own javadoc and in PROCESSOR.md, to write nothing
+        // at all. Publishing goes through Filer.createResource(CLASS_OUTPUT, ...) — the first
+        // VibeTags path that writes there — so it has to sit on the generate side of the branch.
+        // The manifests are deterministic and land in a build directory, which is exactly why this
+        // would have gone unnoticed: no committed file drifts, the promise is just untrue.
+        Path lib = tmp.resolve("lib");
+        Files.createDirectories(lib);
+        Files.writeString(lib.resolve(".vibetags-manifest"), "com.acme:crypto-core:2.4.0\n");
+        Files.writeString(lib.resolve("CLAUDE.md"), "");
+        Path classes = lib.resolve("classes");
+        Files.createDirectories(classes);
+
+        // The compile itself is expected to fail: check mode reports the empty CLAUDE.md as drift,
+        // which is the whole point of the mode. What matters here is only what reached disk.
+        runAllowingFailure(classes,
+            List.of("-classpath", System.getProperty("java.class.path"),
+                    "-Avibetags.root=" + lib.toAbsolutePath(),
+                    "-Avibetags.check=true"),
+            List.of(sourceFile(lib, "com/acme/crypto/api/package-info.java", LIB_PACKAGE_INFO),
+                    sourceFile(lib, "com/acme/crypto/api/CryptoManagerFactory.java", LIB_CLASS)));
+
+        assertFalse(Files.exists(classes.resolve("vibetags").resolve("manifests")),
+            "check mode wrote manifests into the class output despite promising to write nothing");
+    }
+
+    @Test
     void anExplicitPackageListResolvesOffTheClasspathWithoutReadingImports() throws Exception {
         // -Avibetags.manifest.packages is the fallback for a build whose compiler exposes no Tree
         // API. It still goes through Filer.getResource, and it runs in the final round rather than
@@ -391,6 +418,20 @@ class TransitiveGuardrailLifecycleE2ETest {
      * back (rather than a forwarding wrapper) keeps the CodeQL constraint the harness documents.
      */
     private static void run(Path classOutput, List<String> options, List<Path> sources) throws IOException {
+        List<String> errors = runAllowingFailure(classOutput, options, sources);
+        assertTrue(errors.isEmpty(), "compilation failed:\n  " + String.join("\n  ", errors));
+    }
+
+    /**
+     * As {@link #run}, but returns the compile errors instead of asserting there were none.
+     *
+     * <p>Check mode reports drift as a compile {@code ERROR} by design, so a test about what check
+     * mode wrote to disk has to be able to let the compilation fail.
+     *
+     * @return the ERROR diagnostics, empty when the compilation succeeded
+     */
+    private static List<String> runAllowingFailure(Path classOutput, List<String> options,
+                                                   List<Path> sources) throws IOException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null, "run the tests on a JDK, not a JRE");
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
@@ -404,12 +445,15 @@ class TransitiveGuardrailLifecycleE2ETest {
             ok = task.call();
         }
 
-        List<String> errors = diagnostics.getDiagnostics().stream()
-            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
-            .map(Object::toString).toList();
-        assertTrue(ok && errors.isEmpty(), "compilation failed:\n  " + String.join("\n  ", errors));
         LAST_NOTES.set(diagnostics.getDiagnostics().stream()
             .map(d -> d.getKind() + ": " + d.getMessage(null)).toList());
+        List<String> errors = new ArrayList<>(diagnostics.getDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
+            .map(Object::toString).toList());
+        if (!ok && errors.isEmpty()) {
+            errors.add("compilation reported failure with no ERROR diagnostic");
+        }
+        return errors;
     }
 
     /**

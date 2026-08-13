@@ -23,35 +23,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TransitiveManifestReaderTest {
 
     @Test
-    void expandsAnImportIntoEveryPackagePrefix() {
+    void expandsATypeImportIntoItsPackageAndEveryParent() {
         // Prefixes, because a library may govern a whole subtree from one package-info.java: an
         // import of a deep type must still find a manifest published for its parent package.
-        Set<String> candidates = TransitiveManifestReader.candidatesFromImports(
+        // The type's own name is not among them — a manifest is keyed by the package it governs,
+        // so probing a class name is a guaranteed miss, once per import in the project.
+        Set<String> candidates = TransitiveManifestReader.candidatesFromTypeImports(
             List.of("com.acme.crypto.api.CipherGateway"));
-        assertEquals(Set.of("com.acme", "com.acme.crypto", "com.acme.crypto.api",
-            "com.acme.crypto.api.CipherGateway"), candidates);
+        assertEquals(Set.of("com.acme", "com.acme.crypto", "com.acme.crypto.api"), candidates);
     }
 
     @Test
     void neverProbesASingleSegment() {
         // A one-segment key would collide across unrelated vendors and is not a package anyone
-        // publishes a governing manifest for.
-        Set<String> candidates = TransitiveManifestReader.candidatesFromImports(List.of("acme.Thing"));
-        assertFalse(candidates.contains("acme"), "single-segment keys must not be probed: " + candidates);
-        assertTrue(candidates.contains("acme.Thing"));
+        // publishes a governing manifest for. `acme.Thing` reduces to the package `acme`, which
+        // leaves nothing worth looking up.
+        assertEquals(Set.of(), TransitiveManifestReader.candidatesFromTypeImports(List.of("acme.Thing")));
     }
 
     @Test
-    void stripsWildcardImports() {
+    void aWildcardImportIsAlreadyAPackage() {
         assertEquals(Set.of("com.acme", "com.acme.crypto"),
-            TransitiveManifestReader.candidatesFromImports(List.of("com.acme.crypto.*")));
+            TransitiveManifestReader.candidatesFromTypeImports(List.of("com.acme.crypto.*")));
+    }
+
+    @Test
+    void aStaticImportDropsBothTheTypeAndTheMember() {
+        // `import static a.b.c.Helper.method` names a package, a type and a member. Only the
+        // package part can host a manifest.
+        assertEquals(Set.of("com.acme", "com.acme.crypto"),
+            TransitiveManifestReader.candidatesFromImports(List.of(
+                TransitiveManifestReader.ImportedName.of("com.acme.crypto.Helper.method", true))));
+    }
+
+    @Test
+    void aStaticWildcardImportDropsOnlyTheType() {
+        assertEquals(Set.of("com.acme", "com.acme.crypto"),
+            TransitiveManifestReader.candidatesFromImports(List.of(
+                TransitiveManifestReader.ImportedName.of("com.acme.crypto.Helper.*", true))));
     }
 
     @Test
     void skipsThePlatformAndLanguageRuntimes() {
         // These ship no manifests, and a project with a hundred java.util imports would otherwise
         // pay for a hundred guaranteed misses on every compile.
-        Set<String> candidates = TransitiveManifestReader.candidatesFromImports(List.of(
+        Set<String> candidates = TransitiveManifestReader.candidatesFromTypeImports(List.of(
             "java.util.List", "javax.tools.Diagnostic", "jdk.internal.X", "sun.misc.Unsafe",
             "com.sun.source.tree.Tree", "org.w3c.dom.Node", "org.xml.sax.XMLReader",
             "kotlin.collections.CollectionsKt", "scala.collection.Seq", "groovy.lang.Closure",
@@ -61,18 +77,17 @@ class TransitiveManifestReaderTest {
 
     @Test
     void deduplicatesAcrossImportsAndReturnsAStableOrder() {
-        Set<String> candidates = TransitiveManifestReader.candidatesFromImports(List.of(
+        Set<String> candidates = TransitiveManifestReader.candidatesFromTypeImports(List.of(
             "com.acme.crypto.api.A", "com.acme.crypto.api.B", "com.acme.crypto.spi.C"));
         assertEquals(List.of("com.acme", "com.acme.crypto", "com.acme.crypto.api",
-                "com.acme.crypto.api.A", "com.acme.crypto.api.B",
-                "com.acme.crypto.spi", "com.acme.crypto.spi.C"),
+                "com.acme.crypto.spi"),
             List.copyOf(candidates),
             "order must be a function of the imports, not of the order javac walked them");
     }
 
     @Test
     void toleratesMalformedImportText() {
-        Set<String> candidates = TransitiveManifestReader.candidatesFromImports(
+        Set<String> candidates = TransitiveManifestReader.candidatesFromTypeImports(
             List.of("", "   ", ".", "..", "a.", "com..acme"));
         assertFalse(candidates.contains(""), "empty keys must never be probed");
         for (String candidate : candidates) {

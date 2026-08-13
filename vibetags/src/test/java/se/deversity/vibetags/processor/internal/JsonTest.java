@@ -98,6 +98,32 @@ class JsonTest {
     }
 
     @Test
+    void rejectsMalformedNumbers() {
+        // The scan accepts a character set, not a grammar, so without a check on the accumulated
+        // lexeme all of these parse as numbers — in a class whose contract is that anything
+        // malformed raises rather than being guessed at, reading documents from JARs the build
+        // did not write.
+        for (String bad : List.of("-", ".", "--5", "1.2.3", "1e+e-.3", "01", "1.", ".5", "1e", "+1")) {
+            assertThrows(Json.JsonException.class, () -> Json.parse(bad),
+                "'" + bad + "' is not a JSON number");
+        }
+    }
+
+    @Test
+    void acceptsEveryShapeTheGrammarAllows() {
+        for (String good : List.of("0", "-0", "42", "-42", "1.5", "-1.5", "1e3", "1E3",
+                "1e+3", "1e-3", "-1.5e-3", "0.0")) {
+            assertEquals(new Json.Num(good), Json.parse(good), good);
+        }
+    }
+
+    @Test
+    void aMalformedNumberIsRejectedInsideADocumentToo() {
+        assertThrows(Json.JsonException.class, () -> Json.parse("{\"manifestVersion\": 1.2.3}"));
+        assertThrows(Json.JsonException.class, () -> Json.parse("[1, --2]"));
+    }
+
+    @Test
     void rejectsUnterminatedString() {
         assertThrows(Json.JsonException.class, () -> Json.parse("{\"a\":\"unclosed"));
     }

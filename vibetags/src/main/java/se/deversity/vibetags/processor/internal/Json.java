@@ -65,6 +65,65 @@ public final class Json {
     static final int MAX_INPUT = 4 * 1024 * 1024;
 
     /**
+     * Whether {@code s} is a JSON number per RFC 8259 §6: an optional minus, an integer part with
+     * no leading zeros, an optional fraction, and an optional exponent.
+     *
+     * <p>Hand-written rather than a regex. The equivalent pattern is linear and has no nested
+     * quantifier to backtrack over, but Find Security Bugs reports it as a ReDoS candidate, and a
+     * suppression for a parser reading untrusted JAR entries is a worse trade than twenty lines
+     * that cannot backtrack at all. It is also a single left-to-right pass with no allocation,
+     * which suits a check that runs once per numeric token.
+     */
+    private static boolean isJsonNumber(String s) {
+        int i = 0;
+        int n = s.length();
+        if (i < n && s.charAt(i) == '-') {
+            i++;
+        }
+        if (i >= n) {
+            return false;
+        }
+        // Integer part: a lone zero, or a non-zero digit followed by any digits. "01" is invalid.
+        if (s.charAt(i) == '0') {
+            i++;
+        } else if (isDigit(s.charAt(i))) {
+            while (i < n && isDigit(s.charAt(i))) {
+                i++;
+            }
+        } else {
+            return false;
+        }
+        if (i < n && s.charAt(i) == '.') {
+            i++;
+            int fractionStart = i;
+            while (i < n && isDigit(s.charAt(i))) {
+                i++;
+            }
+            if (i == fractionStart) {
+                return false;
+            }
+        }
+        if (i < n && (s.charAt(i) == 'e' || s.charAt(i) == 'E')) {
+            i++;
+            if (i < n && (s.charAt(i) == '+' || s.charAt(i) == '-')) {
+                i++;
+            }
+            int exponentStart = i;
+            while (i < n && isDigit(s.charAt(i))) {
+                i++;
+            }
+            if (i == exponentStart) {
+                return false;
+            }
+        }
+        return i == n;
+    }
+
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    /**
      * Parses one JSON document into {@link Map}, {@link List}, {@link String}, {@link Boolean} or
      * {@code null}. Objects keep their document order.
      *
@@ -276,6 +335,15 @@ public final class Json {
             }
         }
 
+        /**
+         * Reads a number, then checks the lexeme is actually one.
+         *
+         * <p>The scan accepts a character set rather than a grammar, which on its own would let
+         * {@code -}, {@code .}, {@code --5} and {@code 1.2.3} through as numbers. That contradicts
+         * this class's whole contract: a manifest arrives from a JAR the consuming build did not
+         * write, and the promise is that anything malformed raises rather than being guessed at.
+         * Validating the accumulated lexeme keeps the scan simple and the contract honest.
+         */
         Num readNumber() {
             int start = pos;
             if (peek() == '-') {
@@ -292,7 +360,11 @@ public final class Json {
             if (pos == start) {
                 throw new JsonException("unexpected character '" + src.charAt(pos) + "' at offset " + pos);
             }
-            return new Num(src.substring(start, pos));
+            String lexeme = src.substring(start, pos);
+            if (!isJsonNumber(lexeme)) {
+                throw new JsonException("malformed number '" + lexeme + "' at offset " + start);
+            }
+            return new Num(lexeme);
         }
 
         @Nullable Object readLiteral(String literal, @Nullable Object value) {

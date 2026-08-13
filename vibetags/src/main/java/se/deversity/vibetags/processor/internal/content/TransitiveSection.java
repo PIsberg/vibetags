@@ -113,14 +113,31 @@ public final class TransitiveSection {
         return sb.toString();
     }
 
+    /**
+     * Groups rules under one header per <em>package and origin</em>, not per package.
+     *
+     * <p>Grouping on the package alone loses attribution the moment two artifacts publish rules for
+     * the same package. That is a split package, and it is reachable: a build may combine
+     * {@code -Avibetags.manifest.dir} with classpath discovery, and both feed the same reader
+     * additively. The rules survive deduplication because {@code TransitiveRule.equals} includes
+     * the origin, and they sort adjacent because the comparator orders by package first — so the
+     * second one would print its bullet under the first one's header and read as though it came
+     * from an artifact it has nothing to do with.
+     *
+     * <p>Silently attributing a constraint to the wrong dependency is worse than repeating a
+     * header: the reader's next move is to go and argue with, or override, the library named
+     * above it.
+     */
     private static void appendRules(StringBuilder sb, List<TransitiveRule> rules) {
         String currentPackage = null;
+        String currentOrigin = null;
         for (TransitiveRule rule : rules) {
-            if (!rule.packageName().equals(currentPackage)) {
+            if (!rule.packageName().equals(currentPackage) || !rule.origin().equals(currentOrigin)) {
                 currentPackage = rule.packageName();
+                currentOrigin = rule.origin();
                 sb.append("- `").append(currentPackage).append('`');
-                if (!rule.origin().isEmpty()) {
-                    sb.append(" (from ").append(rule.origin()).append(')');
+                if (!currentOrigin.isEmpty()) {
+                    sb.append(" (from ").append(currentOrigin).append(')');
                 }
                 sb.append('\n');
             }

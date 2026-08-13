@@ -86,6 +86,41 @@ class TransitiveSectionTest {
     }
 
     @Test
+    void twoArtifactsPublishingTheSamePackageAreBothAttributed() {
+        // A split package: reachable when a build combines -Avibetags.manifest.dir with classpath
+        // discovery, since both feed the reader additively and TransitiveRule.equals includes the
+        // origin, so neither rule deduplicates the other away. They sort adjacent because the
+        // comparator orders by package first, which is exactly when grouping on the package alone
+        // would print the second rule under the first one's artifact.
+        String out = TransitiveSection.render(modelWith(
+            rule("com.acme.api", "@AISecure", "com.acme:core:1.0", "from acme"),
+            rule("com.acme.api", "@AISecure", "org.other:lib:2.0", "from other")), Platform.CLAUDE);
+
+        assertTrue(out.contains("com.acme:core:1.0"), out);
+        assertTrue(out.contains("org.other:lib:2.0"),
+            "the second artifact must not vanish into the first one's header:\n" + out);
+
+        // Each rule must sit under its own artifact, not merely have it mentioned somewhere.
+        int otherHeader = out.indexOf("(from org.other:lib:2.0)");
+        int otherRule = out.indexOf("from other");
+        int acmeRule = out.indexOf("from acme");
+        assertTrue(otherHeader >= 0 && otherHeader < otherRule,
+            "org.other's rule must follow its own header:\n" + out);
+        assertTrue(acmeRule < otherHeader,
+            "acme's rule must stay above org.other's header:\n" + out);
+    }
+
+    @Test
+    void oneArtifactPerPackageStillPrintsOneHeader() {
+        // The other half: repeating the header for every rule would be noise. Grouping is on
+        // (package, origin), so an ordinary single-origin package is unchanged.
+        String out = TransitiveSection.render(modelWith(
+            rule("com.acme.api", "@AISecure", "com.acme:core:1.0", "one"),
+            rule("com.acme.api", "@AICore", "com.acme:core:1.0", "two")), Platform.CLAUDE);
+        assertEquals(1, out.lines().filter(l -> l.startsWith("- `com.acme.api`")).count(), out);
+    }
+
+    @Test
     void collapsesMultiLineAttributesOntoOneBullet() {
         // A text-block attribute is legal on the publishing side. Emitted raw, its second line
         // would leave the markdown list and become prose attributed to nobody.

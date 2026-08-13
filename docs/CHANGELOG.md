@@ -76,6 +76,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests` module now appears for exactly this reason.
 
 ### Fixed
+- **A split package no longer misattributes its second artifact.** The inherited-rule block grouped
+  bullets under one header per package, so when two artifacts published rules for the same package
+  the second rendered under the first one's coordinate — telling the reader a constraint came from a
+  dependency that never made it. Grouping is now by package *and* origin. Reachable by combining
+  `-Avibetags.manifest.dir` with classpath discovery, which run additively by design.
+- **Check mode no longer writes dependency manifests.** Publishing goes through
+  `Filer.createResource(CLASS_OUTPUT, ...)` and ran before the check/generate branch, so
+  `-Avibetags.check=true` wrote `vibetags/manifests/*.json` into the class output despite check
+  mode's documented promise to write nothing at all.
+- **The JSON reader rejects malformed numbers.** The scan accepted a character set rather than a
+  grammar, so `-`, `.`, `--5`, `1.2.3` and `1e+e-.3` all parsed as numbers — in a parser whose
+  stated contract is that anything malformed raises rather than being guessed at, reading documents
+  from JARs the consuming build did not write.
+- **Discovery no longer probes class names.** Candidate keys expanded every prefix of the raw
+  import, so `import a.b.C` also looked up `a.b.C` — a name that cannot host a manifest, costing one
+  guaranteed-miss classpath lookup per import in the project. Type and member segments are now
+  dropped first, static imports included.
 - **`AnnotationCollector.anyAnnotationsFound()` now counts inherited rules too.** It gates
   `hasNewRules`, which decides whether an *existing* generated file may be rewritten. Counting only
   local annotations meant a project whose guardrails all come from dependencies wrote its files

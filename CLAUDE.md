@@ -42,8 +42,8 @@ cd ../vibetags         && mvn clean install     # or: gradle clean build publish
 cd ../vibetags-bom     && mvn install           # Maven only
 
 # Tests (from vibetags/)
-mvn test                                   # fast tier: 102 classes, 1296 tests. Skips @Tag("e2e").
-mvn test -Pe2e                             # everything: 157 classes, 1896 tests. What CI runs.
+mvn test                                   # fast tier: 102 classes, 1303 tests. Skips @Tag("e2e").
+mvn test -Pe2e                             # everything: 157 classes, 1904 tests. What CI runs.
 mvn test -Dtest=AnnotationProcessorEndToEndTest   # -Dtest overrides the tag filter
 mvn test -Dtest=AIGuardrailProcessorUnitTest#methodName
 

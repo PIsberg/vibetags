@@ -357,7 +357,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // The inherited rules must reach the collector BEFORE that fingerprint is
                     // computed, or a dependency upgrade would be short-circuited past in silence.
                     applyTransitiveRules();
-                    emitTransitiveManifests();
                     // Enforcement runs BEFORE generation, and outside generateFiles(), for two
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
@@ -365,6 +364,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (checkMode) {
                         checkFiles();
                     } else {
+                        // Publishing writes to CLASS_OUTPUT, so it belongs on this side of the
+                        // branch: check mode promises, in its own javadoc and in PROCESSOR.md, to
+                        // write nothing at all. Reading dependency manifests still happens above,
+                        // because check mode has to verify the same content a real build produces.
+                        emitTransitiveManifests();
                         generateFiles();
                     }
                 }
