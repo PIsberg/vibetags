@@ -15,9 +15,84 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.log.path` | `vibetags.log` in root | Custom log file path (relative to root, or absolute) |
 | `vibetags.log.level` | `INFO` | Log level: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF` |
 | `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |
-| `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes nothing — no output files, no sidecars, no cache |
+| `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes none of the files VibeTags manages in the project — no output files, no sidecars, no cache. Dependency manifests still go to `CLASS_OUTPUT`; see below |
 | `vibetags.enforce` | (off) | Opt-in **enforcing mode**: comma-separated families (`locked`, `contract`, `publicapi`, or `all`) whose guarded elements must match `.vibetags-baseline`. A drift is a compile **error**. See below |
 | `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file |
+| `vibetags.manifest.origin` | read from `.vibetags-manifest` | The `group:artifact:version` stamped into published manifests, overriding the marker file's first line |
+| `vibetags.manifest.dir` | (off) | Read dependency manifests from a directory of extracted `*.json` files instead of, or in addition to, the compile classpath |
+| `vibetags.manifest.packages` | (off) | Comma-separated package names to look up explicitly, for builds where the compiler exposes no Tree API |
+| `vibetags.manifest.max` | (no limit) | Cap on inherited **advisory** rules. Safety-tier rules are never dropped, and a cap that drops anything says so as a `NOTE` |
+
+## Transitive guardrails (dependency tree propagation)
+
+Package-level `@AI...` annotations can travel from a library into the projects that depend on it.
+Both halves are file-presence opt-ins, like every other VibeTags output.
+
+| Marker at the VibeTags root | Effect |
+|---|---|
+| `.vibetags-manifest` | **Publish.** Each module writes one manifest per annotated package into its own `CLASS_OUTPUT`, at `vibetags/manifests/<package>.json`, which the JAR task packages with no further configuration. The file's first non-blank, non-comment line is the artifact coordinate stamped as `origin` |
+| `.vibetags-transitive` | **Consume.** Manifests found on the compile classpath are rendered into the aggregate instruction files under `## Inherited Guardrails (dependencies)` (safety tier) and `## Inherited Context (dependencies)` (advisory tier), after everything the project says about itself |
+
+Only annotations on `package-info.java` propagate. Type-level and method-level guardrails stay
+local: propagating them would scale a manifest with the library's whole API surface, and a consumer
+cannot act on a rule about a class it never sees. Thirteen annotations accept `ElementType.PACKAGE`
+— see the target column in [`ANNOTATIONS.md`](ANNOTATIONS.md).
+
+### Why the resource path is `vibetags/manifests/`, not `META-INF/`
+
+Measured, not chosen. javac's `CLASS_PATH` location skips archive directories whose names are not
+valid Java package identifiers, so a resource under `META-INF/` is unreadable from an annotation
+processor: `Filer.getResource` throws `FileNotFoundException`, and javac's own file manager lists
+zero entries there even with `--add-exports` granted. `TransitiveGuardrailLifecycleE2ETest`
+repacks a fixture JAR under `META-INF/` and asserts the rules do **not** arrive, so moving the
+manifest to the conventional location fails the build rather than silently disabling the feature.
+
+### How discovery works, and what it costs
+
+There is no supported way for a processor to *enumerate* the compile classpath.
+`ClassLoader.getResources` sees the processor path, not the classpath, and returns nothing under the
+documented `annotationProcessorPaths` setup. `Filer.getResource` works, but needs the exact name up
+front — so manifests are keyed by the package they govern, and the keys come from the packages this
+compilation actually imports (read through the Tree API, as `@AIArchitecture` already does).
+
+Three things follow. A package the project never imports is never looked up, so inherited volume is
+bounded by what the project uses rather than by the size of the dependency graph. A library cannot
+publish a rule under another library's key, because the key is a filename inside its own JAR. And
+the cost is one lookup per distinct imported package prefix — `java.*`, `javax.*`, `jdk.*`, `sun.*`
+and the JVM languages' runtimes are skipped, and the total is capped at 4096 per compilation, with
+the cap logged when reached.
+
+A candidate is a *package*, so the type and member an import names are dropped before the prefix
+walk: `import a.b.C` probes `a.b` and `a`-rooted parents but never `a.b.C`, and
+`import static a.b.C.m` drops both `C` and `m`. A manifest is keyed by the package it governs, so a
+class-name lookup is a guaranteed miss — one per import in the project, which is bounded but
+entirely avoidable.
+
+Where the Tree API is absent (kapt, ECJ, some Gradle workers) or the dependencies live on the
+module path rather than the classpath, discovery finds nothing and says so as a `NOTE` — unchecked
+is reported distinctly from clean. `-Avibetags.manifest.dir` and `-Avibetags.manifest.packages` are
+the supported ways through.
+
+### Check mode still publishes
+
+Check mode writes none of the files VibeTags manages in the project, but it does publish manifests
+into `CLASS_OUTPUT`. That is the compiler's own output directory, which javac is filling with class
+files regardless, and skipping the write would break the check rather than tighten it: in a reactor
+that both publishes and consumes, one module's manifest is what the next module reads off the
+classpath. Without it every consuming module inherits nothing, compares that against committed files
+that correctly carry the inherited rules, and reports drift on a build where nothing is wrong.
+
+### Split packages
+
+Two JARs shipping a manifest for the same package is a split package. `Filer.getResource` returns
+the first on the classpath and the processor cannot see the second, so the collision is undetectable
+on that path and the documentation says so rather than promising detection. `-Avibetags.manifest.dir`
+*can* see both, because the build tool did the resolving.
+
+When both rules do reach the model — combining the directory with classpath discovery, which is
+supported and additive — the rendered output groups by package *and* origin, so each rule sits under
+its own artifact. Grouping by package alone would print the second under the first one's coordinate
+and misattribute a constraint to a dependency that never made it.
 
 ## Enforcing mode (`-Avibetags.enforce`)
 
@@ -84,6 +159,14 @@ runs *before* the sidecar write, which runs before the merge, which runs before 
 is visible in the parsed call order,
 [`diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg`](diagrams/codekarta/sequence/aiguardrailprocessor-sequence-diagram.svg)
 ([why it exists](LOAD-BEARING.md#core-processing-flow)).
+
+Guardrails inherited from dependencies are folded into the fingerprint alongside the annotation
+set. They have to be: a dependency upgrade changes what the generated files should say while every
+annotation in the consuming project stays byte-identical, so a fingerprint blind to them would
+match, the generate phase would be skipped, and the committed files would keep describing the
+previous version with nothing anywhere reporting a problem. `TransitiveFingerprintTest` asserts it
+directly rather than through the end-to-end path, because that path also rewrites the module
+sidecar every run and would pass either way.
 
 ### Watched inputs
 

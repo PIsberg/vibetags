@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * {@code @AIImmutable} class declares non-final instance fields.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.PACKAGE})
 public @interface AIImmutable {
 
     /**

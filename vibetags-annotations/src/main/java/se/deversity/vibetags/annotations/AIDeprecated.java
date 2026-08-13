@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  * extending or building on the deprecated element.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE})
 public @interface AIDeprecated {
 
     /**

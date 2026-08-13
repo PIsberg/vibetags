@@ -48,6 +48,7 @@ import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -87,6 +88,13 @@ public final class GuardrailModel {
     private final boolean anyAnnotationsFound;
 
     /**
+     * Guardrails that arrived from dependency JARs rather than from this project's sources, sorted
+     * by {@link TransitiveRule}'s natural order. Empty unless the project opted in with a
+     * {@code .vibetags-transitive} marker file.
+     */
+    private final List<TransitiveRule> transitiveRules;
+
+    /**
      * The element's own value identity — the same {@code (path, kind)} pair {@code equals} uses, so
      * the ordering can never disagree with set membership.
      */
@@ -107,6 +115,12 @@ public final class GuardrailModel {
         this.buckets = Collections.unmodifiableMap(copy);
         this.lockedPositions = Collections.unmodifiableMap(sortedByKey(b.lockedPositions));
         this.anyAnnotationsFound = any;
+        // Deduplicated: the same manifest is reachable through several import prefixes, and two
+        // modules of a reactor legitimately import the same library. Sorted for the same reason the
+        // buckets are — discovery order is import-walk order, which is not stable across builds.
+        List<TransitiveRule> rules = new ArrayList<>(new LinkedHashSet<>(b.transitiveRules));
+        Collections.sort(rules);
+        this.transitiveRules = Collections.unmodifiableList(rules);
     }
 
     /** The bucket ordered by element identity, in a set that keeps that order on iteration. */
@@ -140,6 +154,25 @@ public final class GuardrailModel {
     /** True when this compilation saw at least one guardrail annotation. */
     public boolean anyAnnotationsFound() {
         return anyAnnotationsFound;
+    }
+
+    /**
+     * Guardrails inherited from dependency JARs, sorted and deduplicated. Empty unless the project
+     * opted into transitive discovery.
+     *
+     * <p>Deliberately separate from {@link #anyAnnotationsFound()}, which stays a statement about
+     * <em>this</em> project's own sources. The two are combined where a caller needs "did this
+     * round have anything to say at all" — see {@code AnnotationCollector.anyAnnotationsFound} —
+     * but a renderer asking whether the project annotated anything itself must still get the
+     * honest answer.
+     */
+    public List<TransitiveRule> transitiveRules() {
+        return transitiveRules;
+    }
+
+    /** True when at least one dependency contributed a guardrail. */
+    public boolean anyTransitiveRules() {
+        return !transitiveRules.isEmpty();
     }
 
     /**
@@ -244,8 +277,25 @@ public final class GuardrailModel {
     public static final class Builder {
         private final Map<Class<? extends Annotation>, Set<TaggedElement>> buckets = new LinkedHashMap<>();
         private final Map<TaggedElement, SourceLocation> lockedPositions = new LinkedHashMap<>();
+        private final List<TransitiveRule> transitiveRules = new ArrayList<>();
 
         private Builder() {}
+
+        /** Records a guardrail inherited from a dependency JAR; {@code null} is ignored. */
+        public Builder transitiveRule(@Nullable TransitiveRule rule) {
+            if (rule != null) {
+                transitiveRules.add(rule);
+            }
+            return this;
+        }
+
+        /** Records every rule of {@code rules}; a {@code null} collection is ignored. */
+        public Builder transitiveRules(@Nullable Collection<TransitiveRule> rules) {
+            if (rules != null) {
+                rules.forEach(this::transitiveRule);
+            }
+            return this;
+        }
 
         /** Appends {@code element} to {@code type}'s bucket, preserving insertion order. */
         public Builder add(Class<? extends Annotation> type, TaggedElement element) {

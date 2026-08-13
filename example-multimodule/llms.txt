@@ -36,9 +36,16 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [IrNode](com.example.multimodule.core.IrNode): Core IR node: structural changes break every downstream module
 
 ## Contextual Rules
+- [core](com.example.multimodule.core): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+## 🧵 Thread-Safe by Design
+- [core](com.example.multimodule.core): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
 
 ## ❄️ Immutable Types
 - [IrGraph](com.example.multimodule.core.IrGraph): immutable type
+
+## 🔐 Security-Critical Code
+- [core](com.example.multimodule.core): Security-critical code [Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.]. Do not weaken security properties. Flag any change for security review.
 
 ## Framework-Free Domain Entities
 - [IrNode](com.example.multimodule.core.IrNode): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. No external framework imports permitted.
@@ -245,4 +252,15 @@ AI tools reading this file should respect the guardrails defined below. These ru
 ## Mirrored Elements
 - [EvidenceBasedShowcase.CATALOG_VERSION](com.example.service.EvidenceBasedShowcase.CATALOG_VERSION): Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
 <!-- VIBETAGS-MODULE-END: showcase -->
+<!-- VIBETAGS-MODULE: tests -->
+# VibeTags Multi-Module Example
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+<!-- VIBETAGS-MODULE-END: tests -->
 <!-- VIBETAGS-END -->

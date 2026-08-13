@@ -23,4 +23,19 @@
 </project_guardrails>
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
+
+## Inherited Guardrails (dependencies)
+
+These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AISecure: aspect=Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.
+
+## Inherited Context (dependencies)
+
+Conventions the dependency's authors documented. Follow them unless this project's own rules above say otherwise.
+
+- `com.example.multimodule.core` (from se.deversity.vibetags.example:multimodule-core:1.0)
+  - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
+  - @AIThreadSafe: note=Every type in this package is safe to publish across threads without synchronization.; strategy=IMMUTABLE
 <!-- VIBETAGS-END -->

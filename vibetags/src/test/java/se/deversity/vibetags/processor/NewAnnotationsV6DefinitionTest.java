@@ -82,7 +82,7 @@ class NewAnnotationsV6DefinitionTest {
     @Test
     void aiBannedApi_retentionAndTargets() {
         assertSourceRetention(AIBannedApi.class);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
             AIBannedApi.class.getAnnotation(Target.class).value());
     }
 

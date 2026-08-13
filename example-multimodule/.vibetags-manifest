@@ -1,0 +1,16 @@
+# Publishes this reactor's package-level guardrails for downstream consumers.
+#
+# Presence of this file is the opt-in. Each module writes one manifest per annotated package into
+# its own class output (vibetags/manifests/<package>.json), which the JAR task packages with no
+# further configuration.
+#
+# The first non-blank, non-comment line is the artifact coordinate stamped into every manifest as
+# "origin". Consumers render it next to each inherited rule, so a reader can always see which
+# dependency is talking. Leave it out and the rules still work, just unattributed.
+#
+# The version here is deliberately NOT the VibeTags release version. The origin string is rendered
+# into every generated file of every consuming module, so a coordinate tracking the release would
+# put the release version into a dozen committed demo files and oblige scripts/set-version.sh to
+# rewrite generated output — which ReleaseScriptCoverageTest correctly refuses to let happen.
+# A two-segment version cannot collide with VibeTags' three-segment releases.
+se.deversity.vibetags.example:multimodule-core:1.0

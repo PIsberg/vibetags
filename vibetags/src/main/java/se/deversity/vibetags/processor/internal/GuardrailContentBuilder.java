@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.TransitiveSection;
 
 /**
  * A highly decoupled, thin coordinator that builds AI guardrail files by delegating
@@ -53,6 +54,8 @@ public final class GuardrailContentBuilder {
         this.safetyDigest = true;
         return this;
     }
+
+
 
     /**
      * Result of {@link #build} — service-key → file content, plus per-element granular rule map.
@@ -104,7 +107,7 @@ public final class GuardrailContentBuilder {
             if (platform != null) {
                 String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
                 if (content != null) {
-                    contentByService.put(serviceKey, content);
+                    contentByService.put(serviceKey, withTransitiveAppendix(content, model, platform));
                 }
             }
         }
@@ -149,5 +152,29 @@ public final class GuardrailContentBuilder {
         // (granular owner set + elementRules are computed above, before the render loop)
 
         return new Result(contentByService, elementRules);
+    }
+
+    /**
+     * Appends the inherited-guardrail block to a rendered file, when the model has transitive rules
+     * and the platform is one that carries them.
+     *
+     * <p>Applied here rather than inside each renderer for two reasons. Every renderer would
+     * otherwise need the same three lines, and thirty copies of a rule is twenty-nine chances for
+     * one to drift. More importantly, appending centrally means a platform that has <em>no</em>
+     * transitive rules to show renders byte-identically to before this feature existed, so the
+     * existing golden-output tests keep their meaning.
+     *
+     * <p>The block lands inside the module's own rendered body, which is what carries it through
+     * the reactor merge into that module's region. A module inherits the rules its own sources
+     * import, which is the answer that is true per module rather than per repository.
+     */
+    private String withTransitiveAppendix(String content, GuardrailModel model, Platform platform) {
+        if (!model.anyTransitiveRules() || safetyDigest) {
+            // safetyDigest renders the lean indexed reactor root's inline slice. Inherited rules
+            // are not a safety tier of this project's own code, so they stay out of it.
+            return content;
+        }
+        String appendix = TransitiveSection.render(model, platform);
+        return appendix.isEmpty() ? content : content + appendix;
     }
 }

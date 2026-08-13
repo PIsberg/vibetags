@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Transitive guardrails: package-level rules travel from a library into the projects that depend
+  on it.** An agent working in an application reads the application's `CLAUDE.md`, not the one
+  belonging to a dependency — so a constraint the library's author knows about is invisible at
+  exactly the moment it matters. A library now annotates its `package-info.java`, and any consuming
+  project that opts in renders those rules into its own AI configuration under `## Inherited
+  Guardrails (dependencies)` (the six safety buckets) and `## Inherited Context (dependencies)`
+  (everything else), after everything the project says about itself.
+
+  Both halves are file-presence opt-ins, like every other VibeTags output: `.vibetags-manifest` to
+  publish, `.vibetags-transitive` to consume. Neither exists by default, so upgrading the processor
+  changes nothing for anyone — `example/` and `example-multimodule-indexed/` regenerate byte-for-byte
+  against the previous release.
+
+  Thirteen annotations gained `ElementType.PACKAGE`: `@AISecure`, `@AIPrivacy`, `@AICore`,
+  `@AIAudit`, `@AIRegulation`, `@AIArchitecture`, `@AIPublicAPI`, `@AIBannedApi`, `@AIThreadSafe`,
+  `@AIImmutable`, `@AIDeprecated`, `@AIContext`, `@AIStrictClasspath`. Widening `@Target` is
+  source-compatible; nothing that compiled before stops compiling. Only package-level annotations
+  propagate — class- and method-level guardrails stay local, because propagating them would scale a
+  manifest with the library's whole API surface and a consumer cannot act on a rule about a class it
+  never sees.
+
+  New options: `-Avibetags.manifest.origin`, `-Avibetags.manifest.dir`,
+  `-Avibetags.manifest.packages`, `-Avibetags.manifest.max`. See
+  [PROCESSOR.md](PROCESSOR.md#transitive-guardrails-dependency-tree-propagation).
+
+  Three findings shaped the design, all measured against `javac 26` rather than assumed:
+
+  - **A manifest under `META-INF/` cannot be read by an annotation processor at all.** javac's
+    `CLASS_PATH` location skips archive directories whose names are not valid Java package
+    identifiers: `Filer.getResource` throws `FileNotFoundException` with the JAR provably on the
+    classpath, and javac's own file manager lists zero entries there even with `--add-exports`
+    granted. The manifest therefore lives at `vibetags/manifests/<package>.json`, and
+    `TransitiveGuardrailLifecycleE2ETest` repacks a fixture JAR under `META-INF/` to assert the
+    conventional location stays broken — moving it back fails the build instead of silently
+    disabling the feature.
+  - **There is no supported way to enumerate the compile classpath.**
+    `ClassLoader.getResources` sees the processor path, not the classpath, and returns nothing under
+    the documented `annotationProcessorPaths` setup. Listing works only behind
+    `--add-exports jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED`, which a library may not
+    demand of every consumer. Discovery is therefore driven by the packages the compilation actually
+    imports, which also bounds the volume of inherited text structurally rather than by a filter
+    applied afterwards.
+  - **A processor is not invoked at all when nothing in the round matches its supported types.** A
+    project that inherits all of its guardrails annotates nothing itself, so the feature would have
+    appeared to do nothing. `getSupportedAnnotationTypes()` now returns `"*"` — but only for
+    projects carrying the `.vibetags-transitive` marker, never by default.
+
+  The tier a rule renders under is re-derived from its annotation on read rather than trusted from
+  the manifest, so a JAR cannot claim the always-on tier for advisory advice.
+
+  An annotation's attributes are ordered by name in both the manifest and the rendered output.
+  `Class.getDeclaredMethods()` has no specified order and genuinely differs between releases — JDK
+  26 reported `@AIContext`'s `focus` before `avoids`, JDK 25 the reverse — so leaving it as-reported
+  made the same sources publish different manifests and regenerate different files depending on
+  which JDK compiled them. Same class of defect, and the same fix, as `GuardrailModel` sorting its
+  buckets rather than keeping `getElementsAnnotatedWith`'s unspecified order.
+  `TransitiveManifestMemberOrderTest` pins it.
+
+### Changed
+- **A reactor module that inherits guardrails now contributes a region to the merged root, even
+  with no annotations of its own.** Previously the root aggregated only modules whose own sources
+  carried annotations. A module that imports an instrumented dependency genuinely has something to
+  say about its own code, so it appears — carrying its inherited rules and nothing else. What has
+  not changed is that `.vibetags-mirror` alone still creates no region: mirrored rules are scoped
+  files, and they still never reach the aggregate. Visible in `example-multimodule/`, where the
+  `tests` module now appears for exactly this reason.
+
+### Fixed
+- **A split package no longer misattributes its second artifact.** The inherited-rule block grouped
+  bullets under one header per package, so when two artifacts published rules for the same package
+  the second rendered under the first one's coordinate — telling the reader a constraint came from a
+  dependency that never made it. Grouping is now by package *and* origin. Reachable by combining
+  `-Avibetags.manifest.dir` with classpath discovery, which run additively by design.
+- **Check mode's documented guarantee is now precise.** It said "writes nothing"; it publishes
+  dependency manifests into `CLASS_OUTPUT`, and has to. In a reactor that both publishes and
+  consumes, one module's manifest is what the next reads off the classpath, so a check-mode run that
+  skipped publishing leaves every consuming module inheriting nothing and reporting drift on a build
+  where nothing is wrong. `CLASS_OUTPUT` is the compiler's own directory, which javac fills with
+  class files regardless; the guarantee that matters — and that is unchanged — is that no file
+  VibeTags manages in the project is touched.
+- **The JSON reader rejects malformed numbers.** The scan accepted a character set rather than a
+  grammar, so `-`, `.`, `--5`, `1.2.3` and `1e+e-.3` all parsed as numbers — in a parser whose
+  stated contract is that anything malformed raises rather than being guessed at, reading documents
+  from JARs the consuming build did not write.
+- **Discovery no longer probes class names.** Candidate keys expanded every prefix of the raw
+  import, so `import a.b.C` also looked up `a.b.C` — a name that cannot host a manifest, costing one
+  guaranteed-miss classpath lookup per import in the project. Type and member segments are now
+  dropped first, static imports included.
+- **`AnnotationCollector.anyAnnotationsFound()` now counts inherited rules too.** It gates
+  `hasNewRules`, which decides whether an *existing* generated file may be rewritten. Counting only
+  local annotations meant a project whose guardrails all come from dependencies wrote its files
+  exactly once and then refused every update with "no annotations found in this module, preserving
+  existing rules" — so a dependency upgrade could never reach the file.
+
 ## [1.1.1] - 2026-08-12
 
 A patch release that changes generated output. Four renderers were dropping annotations they

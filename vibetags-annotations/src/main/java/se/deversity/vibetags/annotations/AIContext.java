@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Guides the AI on how to work with specific classes or methods.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
 public @interface AIContext {
     /**
      * Instructions on what the AI should focus on or prioritize.

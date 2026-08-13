@@ -42,8 +42,8 @@ cd ../vibetags         && mvn clean install     # or: gradle clean build publish
 cd ../vibetags-bom     && mvn install           # Maven only
 
 # Tests (from vibetags/)
-mvn test                                   # fast tier: 88 classes, 957 tests. Skips @Tag("e2e").
-mvn test -Pe2e                             # everything: 142 classes, 1546 tests. What CI runs.
+mvn test                                   # fast tier: 102 classes, 1303 tests. Skips @Tag("e2e").
+mvn test -Pe2e                             # everything: 157 classes, 1904 tests. What CI runs.
 mvn test -Dtest=AnnotationProcessorEndToEndTest   # -Dtest overrides the tag filter
 mvn test -Dtest=AIGuardrailProcessorUnitTest#methodName
 
@@ -98,6 +98,17 @@ kept here because breaking one of them fails silently:
   the rule — it renders each such service empty and populated, and fails any that differ without a
   merge. Note the coupling that made this invisible: sidecar bodies are also what
   `anyContributed` reads, so a service missing from the sidecar never refreshes at all.
+- **A dependency manifest must live under a valid Java package path, never `META-INF/`.** javac's
+  `CLASS_PATH` location skips archive directories whose names are not valid package identifiers, so
+  a resource under `META-INF/` is unreadable from an annotation processor — `Filer.getResource`
+  throws and javac's own file manager lists zero entries. `vibetags/manifests/<package>.json` works;
+  the conventional location does not. `TransitiveGuardrailLifecycleE2ETest` pins both directions.
+- **Anything that becomes generated content must reach `BuildFingerprint`.** Guardrails inherited
+  from dependencies are an input the annotation set cannot speak for: a dependency upgrade changes
+  the correct output while every local annotation is byte-identical. Left out of the fingerprint,
+  `generateFiles()` short-circuits and the files silently stop tracking reality.
+  `TransitiveFingerprintTest` asserts it directly — the end-to-end path passes either way, because
+  it also rewrites the sidecar whose mtime feeds the other half of the same check.
 - **A granular rule file can have more than one author, so its content goes in the sidecar too.**
   A role in a reactor-root `.vibetags-roles` routes on the package, not the module, so one file is
   written by every module it matches — and each write replaced the last (issue #365). Anything that

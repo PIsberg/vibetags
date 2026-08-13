@@ -40,32 +40,32 @@ rather than to VibeTags:
 | Annotation | Targets | Key Attributes |
 |---|---|---|
 | `@AILocked` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIContext` | TYPE, METHOD | `focus: String`, `avoids: String` |
+| `@AIContext` | TYPE, METHOD, PACKAGE | `focus: String`, `avoids: String` |
 | `@AIDraft` | TYPE, METHOD | `instructions: String` |
-| `@AIAudit` | TYPE, METHOD | `checkFor: String[]` |
+| `@AIAudit` | TYPE, METHOD, PACKAGE | `checkFor: String[]` |
 | `@AIIgnore` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIPrivacy` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AICore` | TYPE, METHOD, FIELD | `sensitivity: String`, `note: String` |
+| `@AIPrivacy` | TYPE, METHOD, FIELD, PACKAGE | `reason: String` |
+| `@AICore` | TYPE, METHOD, FIELD, PACKAGE | `sensitivity: String`, `note: String` |
 | `@AIPerformance` | TYPE, METHOD | `constraint: String` |
 | `@AIContract` | TYPE, METHOD | `reason: String` |
 | `@AITestDriven` | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
-| `@AIThreadSafe` | TYPE, METHOD | `strategy: Strategy`, `note: String` |
-| `@AIImmutable` | TYPE | `note: String` |
-| `@AIDeprecated` | TYPE, METHOD, FIELD | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
+| `@AIThreadSafe` | TYPE, METHOD, PACKAGE | `strategy: Strategy`, `note: String` |
+| `@AIImmutable` | TYPE, PACKAGE | `note: String` |
+| `@AIDeprecated` | TYPE, METHOD, FIELD, PACKAGE | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
 | `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
-| `@AIRegulation` | TYPE, METHOD, FIELD | `standard: String`, `clause: String`, `description: String` |
-| `@AIArchitecture` | TYPE | `belongsTo: String`, `cannotReference: String[]` |
+| `@AIRegulation` | TYPE, METHOD, FIELD, PACKAGE | `standard: String`, `clause: String`, `description: String` |
+| `@AIArchitecture` | TYPE, PACKAGE | `belongsTo: String`, `cannotReference: String[]` |
 | `@AILegacyBridge` | TYPE, METHOD | `reason: String` |
-| `@AIStrictClasspath` | TYPE, METHOD | `reason: String` |
+| `@AIStrictClasspath` | TYPE, METHOD, PACKAGE | `reason: String` |
 | `@AIInternationalized` | TYPE, METHOD | `reason: String` |
-| `@AIPublicAPI` | TYPE, METHOD | `reason: String` |
+| `@AIPublicAPI` | TYPE, METHOD, PACKAGE | `reason: String` |
 | `@AISchemaSafe` | TYPE, FIELD | `reason: String` |
 | `@AIStrictExceptions` | TYPE, METHOD | `reason: String` |
 | `@AIStrictTypes` | TYPE, METHOD, FIELD | `reason: String` |
 | `@AIParallelTests` | TYPE, METHOD | `reason: String` |
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
 | `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
-| `@AISecure` | TYPE, METHOD | `aspect: String` |
+| `@AISecure` | TYPE, METHOD, PACKAGE | `aspect: String` |
 | `@AICallersOnly` | TYPE, METHOD | `value: String[]` |
 | `@AISandboxOnly` | TYPE, METHOD | `reason: String` |
 | `@AIMemoryBudget` | TYPE, METHOD | `value: AllocationPolicy` |
@@ -80,7 +80,7 @@ rather than to VibeTags:
 | `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
 | `@AIGenerated` | TYPE, METHOD, FIELD | `from: String`, `regenerateWith: String`, `editInstead: String` |
 | `@AILoadBearing` | TYPE, METHOD, FIELD, PARAMETER | `invariant: String`, `breaksIf: String`, `suppressAudit: boolean` |
-| `@AIBannedApi` | TYPE, METHOD | `forbidden: String[]`, `useInstead: String`, `reason: String` |
+| `@AIBannedApi` | TYPE, METHOD, PACKAGE | `forbidden: String[]`, `useInstead: String`, `reason: String` |
 | `@AIThreadAffinity` | TYPE, METHOD | `value: Affinity`, `thread: String`, `marshalVia: String`, `symptomIfViolated: String` |
 | `@AIKeepInSync` | TYPE, METHOD, FIELD | `mirrors: String[]`, `reason: String`, `enforcedBy: String` |
 

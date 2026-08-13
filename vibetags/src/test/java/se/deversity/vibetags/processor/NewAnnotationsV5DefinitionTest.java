@@ -81,7 +81,7 @@ class NewAnnotationsV5DefinitionTest {
     void secure_targetsTypeAndMethod() {
         Target t = AISecure.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
     }
 
     @Test

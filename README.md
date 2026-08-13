@@ -274,14 +274,14 @@ file demonstrating it — and all four example projects exercise the full set.
 
 | Annotation | Can annotate | Required attributes | Tier |
 |---|---|---|---|
-| `@AIArchitecture` | type | — | scoped |
-| `@AIAudit` | type, method | — | **safety** |
-| `@AIBannedApi` | type, method | `forbidden` | scoped |
+| `@AIArchitecture` | type, package | — | scoped |
+| `@AIAudit` | type, method, package | — | **safety** |
+| `@AIBannedApi` | type, method, package | `forbidden` | scoped |
 | `@AICallersOnly` | type, method | `value` | scoped |
-| `@AIContext` | type, method | — | scoped |
+| `@AIContext` | type, method, package | — | scoped |
 | `@AIContract` | type, method | — | scoped |
-| `@AICore` | type, method, field | — | **safety** |
-| `@AIDeprecated` | type, method, field | — | scoped |
+| `@AICore` | type, method, field, package | — | **safety** |
+| `@AIDeprecated` | type, method, field, package | — | scoped |
 | `@AIDomainModel` | type | — | scoped |
 | `@AIDraft` | type, method | — | scoped |
 | `@AIExplain` | type, method | — | scoped |
@@ -290,7 +290,7 @@ file demonstrating it — and all four example projects exercise the full set.
 | `@AIGenerated` | type, method, field | `from` | scoped |
 | `@AIIdempotent` | type, method | — | scoped |
 | `@AIIgnore` | type, method, field | — | **safety** |
-| `@AIImmutable` | type | — | scoped |
+| `@AIImmutable` | type, package | — | scoped |
 | `@AIInputSanitized` | parameter, field | `value` | scoped |
 | `@AIInternationalized` | type, method | — | scoped |
 | `@AIKeepInSync` | type, method, field | `mirrors` | scoped |
@@ -301,23 +301,23 @@ file demonstrating it — and all four example projects exercise the full set.
 | `@AIObservability` | type, method | — | scoped |
 | `@AIParallelTests` | type, method | — | scoped |
 | `@AIPerformance` | type, method, field | — | scoped |
-| `@AIPrivacy` | type, method, field | — | **safety** |
+| `@AIPrivacy` | type, method, field, package | — | **safety** |
 | `@AIPrototype` | type | — | scoped |
-| `@AIPublicAPI` | type, method | — | scoped |
+| `@AIPublicAPI` | type, method, package | — | scoped |
 | `@AIPure` | method | — | scoped |
-| `@AIRegulation` | type, method, field | `standard` | scoped |
+| `@AIRegulation` | type, method, field, package | `standard` | scoped |
 | `@AISandboxOnly` | type, method | — | scoped |
 | `@AISchemaSafe` | type, field | — | scoped |
-| `@AISecure` | type, method | — | **safety** |
+| `@AISecure` | type, method, package | — | **safety** |
 | `@AISecureLogging` | field, parameter | — | scoped |
-| `@AIStrictClasspath` | type, method | — | scoped |
+| `@AIStrictClasspath` | type, method, package | — | scoped |
 | `@AIStrictExceptions` | type, method | — | scoped |
 | `@AIStrictTypes` | type, method, field | — | scoped |
 | `@AISunset` | type, method, field | `jira` | scoped |
 | `@AITemporary` | type, method | `expiresOn`, `reason` | scoped |
 | `@AITestDriven` | type, method | — | scoped |
 | `@AIThreadAffinity` | type, method | `value` | scoped |
-| `@AIThreadSafe` | type, method | — | scoped |
+| `@AIThreadSafe` | type, method, package | — | scoped |
 
 `AnnotationReferenceTest` regenerates this table from the annotation sources and the renderer and
 fails if it drifts, so the targets and tiers here are the ones the compiler and processor actually

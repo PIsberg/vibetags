@@ -7,13 +7,32 @@
     </file>
   </locked_files>
   <contextual_instructions>
+    <file path="com.example.multimodule.core">
+      <focus>Immutable IR data model shared across every module of the reactor.</focus>
+      <avoids>Adding mutable state, framework annotations, or a dependency on any sibling module.</avoids>
+    </file>
   </contextual_instructions>
+  <thread_safe_elements>
+    <element path="com.example.multimodule.core">
+      <strategy>IMMUTABLE</strategy>
+      <note>Every type in this package is safe to publish across threads without synchronization.</note>
+    </element>
+  </thread_safe_elements>
+
+<rule>Elements listed in <thread_safe_elements> are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning in the change description.</rule>
   <immutable_types>
     <type path="com.example.multimodule.core.IrGraph">
     </type>
   </immutable_types>
 
 <rule>Types listed in <immutable_types> are immutable by design. Never introduce non-final fields, setters, or methods that mutate instance state.</rule>
+  <security_elements>
+    <element path="com.example.multimodule.core">
+      <aspect>Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.</aspect>
+    </element>
+  </security_elements>
+
+<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <domain_model_elements>
     <file path="com.example.multimodule.core.IrNode">
       <domain_model_boundary>Pure Domain Model</domain_model_boundary>
