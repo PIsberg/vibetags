@@ -139,6 +139,12 @@ source-compatible: nothing that compiled before stops compiling.
   to a consumer's file and leaves nothing to restore. `pluginManagement` is deliberately untouched:
   declaring one repository there removes Gradle's implicit `gradlePluginPortal()`, which broke
   codekarta's shadow plugin on the first attempt.
+- **`DocumentationLinksTest` walked the build output it was running inside.** Its skip list
+  filtered the results of `Files.walk` instead of pruning the walk, so it still descended into
+  `build/`, `target/` and `.gradle/` while Gradle was writing there. A file that vanished between
+  the listing and the visit surfaced as `UncheckedIOException: NoSuchFileException` and failed a
+  test about links in documentation — red on CI, green everywhere else, and about nothing. It now
+  prunes those directories in a `FileVisitor`, which checks exactly the same files and is faster.
 
 ## [1.1.1] - 2026-08-12
 
