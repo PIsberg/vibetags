@@ -40,19 +40,30 @@ jobs:
           ref: ${{ github.event.inputs.ref || '' }}
 
       # `all` on a release event, so the selection below is a no-op there.
+      #
+      # SELECTED arrives through env, never through ${{ }} inside the script. An expression
+      # interpolated into `run:` is substituted into the script *text* before bash sees it, so a
+      # dispatch input of `all"; …; "` would execute as commands — in the one job that holds the
+      # GPG private key, its passphrase and the Central token. Dispatching needs write access, so
+      # this is defence in depth rather than an open door, but the blast radius is the project's
+      # publishing identity and the safe form costs nothing.
       - name: Resolve which modules to deploy
         id: selection
+        env:
+          SELECTED: ${{ github.event.inputs.modules || 'all' }}
         run: |
-          selected="${{ github.event.inputs.modules || 'all' }}"
-          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          case "$SELECTED" in
+            *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,bom,cli"; exit 1 ;;
+          esac
+          echo "selected=$SELECTED" >> "$GITHUB_OUTPUT"
           for m in annotations processor bom cli; do
-            if [ "$selected" = "all" ] || echo ",$selected," | grep -q ",$m,"; then
+            if [ "$SELECTED" = "all" ] || echo ",$SELECTED," | grep -q ",$m,"; then
               echo "$m=true" >> "$GITHUB_OUTPUT"
             else
               echo "$m=false" >> "$GITHUB_OUTPUT"
             fi
           done
-          echo "Deploying: $selected"
+          echo "Deploying: $SELECTED"
 
       - name: Set up JDK 21
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
