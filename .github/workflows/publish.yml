@@ -3,6 +3,20 @@ name: Publish to Maven Central
 on:
   release:
     types: [ created ]
+  # Resume a release that published some modules and not others. A deploy can fail with the
+  # bundle already uploaded — Central's validation is occasionally slow rather than stuck — and
+  # without this the only way to finish the release was to cut another tag. deploy-to-central.sh
+  # treats an already-published version as success, so re-running over the modules that did land
+  # is safe and skips them.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag or SHA to build and publish — the tag of the release being resumed'
+        required: true
+      modules:
+        description: 'Which modules to deploy: all, or a comma-separated subset of annotations,processor,bom,cli'
+        required: false
+        default: 'all'
 
 permissions:
   contents: read
@@ -21,6 +35,35 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Empty on a release event, which keeps the default checkout of the tag.
+          ref: ${{ github.event.inputs.ref || '' }}
+
+      # `all` on a release event, so the selection below is a no-op there.
+      #
+      # SELECTED arrives through env, never through ${{ }} inside the script. An expression
+      # interpolated into `run:` is substituted into the script *text* before bash sees it, so a
+      # dispatch input of `all"; …; "` would execute as commands — in the one job that holds the
+      # GPG private key, its passphrase and the Central token. Dispatching needs write access, so
+      # this is defence in depth rather than an open door, but the blast radius is the project's
+      # publishing identity and the safe form costs nothing.
+      - name: Resolve which modules to deploy
+        id: selection
+        env:
+          SELECTED: ${{ github.event.inputs.modules || 'all' }}
+        run: |
+          case "$SELECTED" in
+            *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,bom,cli"; exit 1 ;;
+          esac
+          echo "selected=$SELECTED" >> "$GITHUB_OUTPUT"
+          for m in annotations processor bom cli; do
+            if [ "$SELECTED" = "all" ] || echo ",$SELECTED," | grep -q ",$m,"; then
+              echo "$m=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$m=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+          echo "Deploying: $SELECTED"
 
       - name: Set up JDK 21
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
@@ -40,6 +83,7 @@ jobs:
           GPG_TTY: /dev/tty
 
       - name: Sign and deploy annotations to Maven Central
+        if: steps.selection.outputs.annotations == 'true'
         run: |
           bash .github/scripts/deploy-to-central.sh vibetags-annotations vibetags-annotations \
             -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
@@ -48,6 +92,7 @@ jobs:
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
       - name: Build, sign, and deploy processor to Maven Central
+        if: steps.selection.outputs.processor == 'true'
         run: |
           bash .github/scripts/deploy-to-central.sh vibetags vibetags-processor -DskipTests \
             -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
@@ -55,18 +100,14 @@ jobs:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
-      # After the processor: the CLI consumes it as a library, so the deploy build resolves
-      # the sibling from the local repository the previous step just installed into. Its 15
-      # tests run here as a last gate — they are fast and filesystem-only.
-      - name: Build, sign, and deploy CLI to Maven Central
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-cli vibetags-cli \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
+      # The BOM goes out before the CLI, and the order is the point. Every install snippet in
+      # the README resolves through the BOM, so it is the artifact a consumer cannot do without;
+      # the CLI is a convenience tool nobody's build depends on. It used to be last, and when a
+      # CLI deploy timed out waiting on Central the BOM was skipped with it — leaving annotations
+      # and processor published, every documented way of depending on them broken, and the release
+      # notes already out. Put the thing consumers need ahead of the thing they do not.
       - name: Sign and deploy BOM to Maven Central
+        if: steps.selection.outputs.bom == 'true'
         run: |
           bash .github/scripts/deploy-to-central.sh vibetags-bom vibetags-bom \
             -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
@@ -74,9 +115,24 @@ jobs:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
 
+      # After the processor: the CLI consumes it as a library, so the deploy build resolves
+      # the sibling from the local repository the earlier step installed into. Its tests run
+      # here as a last gate — they are fast and filesystem-only.
+      - name: Build, sign, and deploy CLI to Maven Central
+        if: steps.selection.outputs.cli == 'true'
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags-cli vibetags-cli \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
       # Attach the GPG-signed jars/poms (and their .asc signatures) to the
       # GitHub release so Scorecard's Signed-Releases check can verify them.
+      # Release events only. A manual resume has no release payload to attach to, and its
+      # target/ directories hold just the subset of modules it was asked to deploy.
       - name: Attach signed artifacts to the GitHub release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: |

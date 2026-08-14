@@ -366,6 +366,13 @@
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
+                            <!-- The default gave up on vibetags-cli 1.2.1 after 30 minutes, with
+                                 the bundle uploaded and still validating. The deploy is then
+                                 neither done nor undone: the job fails, every later module is
+                                 skipped, and the artifact may publish itself minutes later.
+                                 Central's own validation is occasionally slow rather than stuck,
+                                 so wait an hour before calling it a failure. -->
+                            <waitMaxTime>3600</waitMaxTime>
                         </configuration>
                     </plugin>
                 </plugins>
