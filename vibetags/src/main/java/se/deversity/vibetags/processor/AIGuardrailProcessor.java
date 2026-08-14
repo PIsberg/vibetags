@@ -625,11 +625,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (moduleRoles != null) {
             fingerprintServices.add("modroles:" + moduleRoles.contentHash());
         }
+        // Which module is compiling is an input, not context. Two modules of a reactor can carry
+        // byte-identical annotations — a renamed module is the same annotations under a new
+        // identity — and without this they share a fingerprint, so the second one would skip and
+        // never write its own sidecar. Latent while the stamp below could never match; live the
+        // moment the short-circuit started working.
+        fingerprintServices.add("module:" + moduleId);
         String fingerprint = BuildFingerprint.compute(collector, fingerprintServices);
         String sidecarStampHex = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
         if (writeCache != null
                 && fingerprint.equals(writeCache.getBuildFingerprint())
                 && sidecarStampHex.equals(writeCache.getSidecarStamp())
+                // A sidecar whose module directory is gone has to be pruned, and pruning happens
+                // in the merge this skip jumps over. Deleting a module changes no annotation and
+                // no sidecar mtime, so nothing else in this condition can notice it.
+                && !ModuleSidecar.anyStale(root)
                 && writeCache.allCachedFilesStable()) {
             Messager m = getSafeMessager();
             m.printMessage(Diagnostic.Kind.NOTE,
@@ -856,7 +866,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         if (writeCache != null) {
             writeCache.setBuildFingerprint(fingerprint);
-            writeCache.setSidecarStamp(sidecarStampHex);
+            // Recomputed here rather than reusing sidecarStampHex from the top of this method. That
+            // value was read BEFORE the sidecar write above, and the stamp hashes sidecar mtimes —
+            // so storing it guaranteed a mismatch on the next round and the short-circuit could
+            // never fire in any build that writes a sidecar, which is every build. What the next
+            // round compares against is the sidecars as this round leaves them, so that is what has
+            // to be recorded. No step moved: this is the same flush, with the value it needed.
+            writeCache.setSidecarStamp(Long.toHexString(ModuleSidecar.computeSidecarStamp(root)));
             writeCache.flush();
         }
         collector.reset();

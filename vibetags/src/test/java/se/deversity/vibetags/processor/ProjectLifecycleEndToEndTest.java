@@ -125,30 +125,25 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
-     * LIMITATION, measured. The top-level fingerprint short-circuit in {@code generateFiles()}
-     * cannot fire in a build that writes a sidecar, which is every build.
+     * The fingerprint short-circuit has to fire on an ordinary unchanged rebuild, and keep firing.
      *
-     * <p>The mechanism: the sidecar stamp is a hash over the last-modified times of every
-     * {@code .vibetags-mod-*} file under the root. It is read <em>before</em> this round writes its
-     * own sidecar, and that pre-write value is what gets stored in the cache. The round then
-     * rewrites its sidecar — unconditionally, even when the content is identical — so the stamp the
-     * next round computes always includes an mtime that moved after the stored value was taken. The
-     * three conditions can therefore never all hold, and the generate phase runs in full every time.
+     * <p>It could not, until the stamp it compares was fixed. The sidecar stamp hashes the
+     * last-modified times of every {@code .vibetags-mod-*} file under the root; it was read at the
+     * top of {@code generateFiles()}, <em>before</em> the round wrote its own sidecar, and that
+     * pre-write value was what got stored. The round then rewrote its sidecar, so the stamp the
+     * next round computed always included an mtime that moved after the stored value was taken.
+     * The three conditions could never all hold and the generate phase ran in full every time.
      *
-     * <p>{@code FingerprintShortCircuitTest} passes because it engineers the one state in which the
-     * stamp can match: it deletes every sidecar and patches the stored stamp to {@code "0"}. That
-     * proves the branch works. It does not prove a real build ever reaches it, and this test is the
-     * missing half of that pair.
+     * <p>{@code FingerprintShortCircuitTest} covers the branch itself, but cannot show a real build
+     * reaching it: it engineers the one state in which the old stamp could match, by deleting every
+     * sidecar and patching the stored stamp to {@code "0"}. This test is the other half of that
+     * pair — no fixture surgery, just two ordinary rebuilds.
      *
-     * <p>What it costs: the skip is an optimisation, not a correctness gate — the per-file write
-     * cache still keeps the output stable, which is why nothing visible is wrong. It costs the
-     * content-build and per-file compare on every compile of every consumer.
-     *
-     * <p>{@code generateFiles()} is {@code @AILocked} on step order, so the fix belongs to whoever
-     * owns that method. When it lands, this test flips.
+     * <p>Two of them, deliberately. A skip that works once and not twice is the same defect one
+     * build further out, and that is exactly what a stamp stored from the wrong moment produces.
      */
     @Test
-    void steadyState_theFingerprintShortCircuitCannotFireWhileTheRoundRewritesItsOwnSidecar(
+    void steadyState_theFingerprintShortCircuitFiresOnAnUnchangedRebuild(
             @TempDir Path root) throws Exception {
         ProcessorTestHarness first = new ProcessorTestHarness(root);
         first.addSource("com.example.Ledger", locked("com.example", "Ledger", "Reconciliation is load-bearing"));
@@ -157,24 +152,29 @@ class ProjectLifecycleEndToEndTest {
 
         String storedStamp = new WriteCache(root.resolve(".vibetags-cache")).getSidecarStamp();
         String stampOnDiskNow = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
-        // Both have to be real values, or "they differ" would be an artefact of one being absent.
+        // Both have to be real values, or "they match" would be an artefact of one being absent.
         assertFalse(storedStamp == null || storedStamp.isBlank(),
             "the first build must have stored a sidecar stamp to compare against");
         assertNotEquals("0", stampOnDiskNow,
             "a sidecar must exist on disk after the first build, or the stamp is trivially zero");
-        assertNotEquals(stampOnDiskNow, storedStamp,
-            "the stored sidecar stamp was taken before this round wrote its own sidecar, so it can "
-                + "never match what the next round reads. If this now passes, the short-circuit has "
-                + "become reachable — assert that it fires instead of that it cannot");
+        assertEquals(stampOnDiskNow, storedStamp,
+            "the stored sidecar stamp must describe the sidecars as this round left them, or it "
+                + "can never match what the next round reads and the short-circuit is dead code");
 
         Path sidecar = onlySidecar(root);
         long sidecarMtime = Files.getLastModifiedTime(sidecar).toMillis();
 
         rebuildUnchanged(root);
 
-        assertTrue(Files.getLastModifiedTime(sidecar).toMillis() > sidecarMtime,
-            "the sidecar is rewritten on every build even when its content is unchanged — this is "
-                + "what moves the stamp out from under the short-circuit");
+        assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
+            "a build whose inputs are unchanged must short-circuit before the sidecar write. A "
+                + "rewritten sidecar moves the stamp out from under the next build too, so the "
+                + "skip could never happen twice running");
+
+        rebuildUnchanged(root);
+        assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
+            "and it must keep short-circuiting: a skip that only works once is the same bug "
+                + "one build further out");
     }
 
     // -----------------------------------------------------------------------
@@ -269,6 +269,54 @@ class ProjectLifecycleEndToEndTest {
         assertFalse(mentat.contains("com.example.cli.Cli"),
             "the whole-file JSON is assembled from sidecars, so the removal has to reach it too");
         assertTrue(mentat.contains("com.example.core.IrNode"), "and must keep the surviving module");
+    }
+
+    /**
+     * The same removal with nothing else changed, which is the case the fingerprint short-circuit
+     * can skip past.
+     *
+     * <p>{@code moduleRemovedFromTheReactor_leavesEveryMergedFile} rebuilds the surviving module
+     * with an edited reason, so its fingerprint differs and the round runs in full whatever the
+     * short-circuit does. Deleting a module changes no annotation and moves no sidecar mtime, so a
+     * rebuild that edits nothing is invisible to every other term of the skip condition — and a
+     * skipped round never reaches the merge that prunes the stale sidecar. Without the staleness
+     * term in that condition the deleted module's guardrails would survive until some unrelated
+     * edit happened to change the fingerprint.
+     */
+    @Test
+    void moduleRemovedFromTheReactor_isNoticedEvenWhenNothingElseChanges(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
+            "both modules must be present before one is removed");
+
+        // module-core compiles again BEFORE the deletion, so the cache's fingerprint and stamp are
+        // the ones its next round will present. Without this the last round belonged to a different
+        // module, the fingerprint differed on module identity alone, and the round would run in
+        // full for that reason rather than because anything noticed the deletion — which is how an
+        // earlier version of this test passed with the staleness term deleted.
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        // Byte-identical to the compile just above: no annotation edited, nothing touched.
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+
+        String claude = Files.readString(root.resolve("CLAUDE.md"));
+        assertFalse(claude.contains("com.example.cli.Cli"),
+            "a deleted module must leave the merged output on the next build even when that build "
+                + "has nothing of its own to report. Skipping the round on an unchanged fingerprint "
+                + "leaves the repository describing a module that is gone");
+        assertTrue(claude.contains("com.example.core.IrNode"),
+            "and the surviving module must still be there");
     }
 
     /**
