@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Lifecycle coverage: the project's timeline, not one compile.** `ProjectLifecycleEndToEndTest`
+  (7 tests) and `OnboardingLifecycleTest` (2 tests, `vibetags-cli`) cover the transitions a
+  consumer's repository goes through over months, which the existing suite tested one compile at a
+  time. New ground: day zero with nothing opted in, where the footprint is now pinned to VibeTags'
+  own three state files, so any new untracked file appearing in a non-participating project fails
+  the build; three consecutive no-change builds, asserting every generated file is byte-identical
+  *and* untouched, because identical bytes at a new mtime still invalidate every downstream
+  incremental task; a module deleted or renamed out of a reactor; and `init` to real compile to
+  `doctor`, the only place the CLI and the processor run against one directory, which is the only
+  way to catch doctor and the writer disagreeing about what a managed file looks like. Each of the
+  five behavioural tests was verified by breaking the invariant it guards and confirming it went
+  red; the four production breaks are listed in the PR body.
+
+### Documented
+- **Three measured limitations are now pinned by passing tests** rather than left to be
+  rediscovered.
+  1. The top-level fingerprint short-circuit in `generateFiles()` cannot fire in a build that
+     writes a sidecar, which is every build. The sidecar stamp is read *before* the round rewrites
+     its own sidecar, and that pre-write value is what gets stored, so the next round's stamp always
+     includes an mtime that moved. `FingerprintShortCircuitTest` passes because it deletes every
+     sidecar and patches the stored stamp to `0`, which proves the branch works but not that a real
+     build reaches it. The cost is wall-clock only: the per-file write cache still keeps the output
+     stable.
+  2. Creating an opt-in file at a reactor root fills it only from the modules that have recompiled
+     since, because a sidecar carries bodies only for the services that were active when its module
+     last ran. An incremental build therefore publishes a plausible, well-formed, partial file with
+     no warning, until a full reactor pass heals it.
+  3. A module deleted from a reactor leaves the aggregates correctly, its sidecar being pruned by
+     module path, but leaves its granular rule files behind permanently. Nothing names a pruned
+     module's stems for cleanup, so `.claude/rules/<its-class>.md` keeps being loaded by glob after
+     every aggregate agrees the class is gone.
+
 ## [1.2.0] - 2026-08-13
 
 A minor release: guardrails a library declares on a package now reach the projects that depend on
