@@ -21,9 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   five behavioural tests was verified by breaking the invariant it guards and confirming it went
   red; the four production breaks are listed in the PR body.
 
+- **Withdrawal coverage for transitive guardrails**, the 1.2.0 feature, in
+  `TransitiveGuardrailLifecycleE2ETest` (four tests, 13 to 17). The existing suite covered a
+  dependency whose rules *change*; nothing covered a rule that *goes away*, which is the case a
+  preservation guard gets wrong. Also two dependencies at once, where the substance is that both
+  contribute under their own attribution.
+
 ### Documented
-- **Three measured limitations are now pinned by passing tests** rather than left to be
-  rediscovered.
+- **Inherited rules are never withdrawn from a project that has no annotations of its own.** Found
+  by the new withdrawal tests and pinned by two of them, one per trigger: the library stops
+  publishing a manifest, or the consumer's sources stop importing the package. Either way the
+  project keeps publishing the retracted rule, still attributed to the library, and every build
+  reports "no changes". The guard is `AnnotationCollector.anyAnnotationsFound()`, which does count
+  inherited rules, deliberately, and that is why a *changed* rule reaches the file. What it cannot
+  do is act when the count reaches zero: "nothing to write because everything was withdrawn" and
+  "nothing to write because this round never saw the sources" are the same observation, and the
+  second must not wipe the file. The boundary is exactly one annotation, which is also the only
+  verified remedy: the same scenario with a single `@AILocked` in the project withdraws correctly,
+  and that case is pinned as a passing feature test beside the two limitations. Worth weighing
+  because a project with no annotations of its own, opting into `.vibetags-transitive` purely to
+  pick up its libraries' rules, is the headline case for the feature.
+
+- **Three further measured limitations, in the single-project and reactor lifecycle,** are pinned
+  by passing tests rather than left to be rediscovered.
   1. The top-level fingerprint short-circuit in `generateFiles()` cannot fire in a build that
      writes a sidecar, which is every build. The sidecar stamp is read *before* the round rewrites
      its own sidecar, and that pre-write value is what gets stored, so the next round's stamp always
