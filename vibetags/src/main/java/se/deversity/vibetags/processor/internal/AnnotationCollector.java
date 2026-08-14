@@ -112,6 +112,26 @@ public final class AnnotationCollector {
     private boolean anyAnnotationsFound;
 
     /**
+     * Whether any round of this compilation was handed sources of its own to look at.
+     *
+     * <p>The distinction {@link #anyAnnotationsFound()} needs and could not otherwise make: a round
+     * that saw the project's sources and found nothing is stating a fact about the code, while a
+     * round that saw no sources at all is stating a fact about the build. Only the first is
+     * authoritative about what the project no longer has.
+     */
+    private boolean sawSourceRoots;
+
+    /**
+     * Whether this project opted into inheriting guardrails from its dependencies
+     * ({@code .vibetags-transitive}).
+     *
+     * <p>Read only by {@link #anyAnnotationsFound()}, and only to bound the withdrawal case below
+     * to projects where content can change without any local source changing. A project that has
+     * not opted in cannot be in that situation, and keeps the older, stricter guard untouched.
+     */
+    private boolean transitiveOptIn;
+
+    /**
      * Whether to compute {@link ElementSignature} for each snapshotted element.
      *
      * <p>Off by default, and that is a measurable saving rather than a micro-optimisation:
@@ -226,6 +246,7 @@ public final class AnnotationCollector {
         lockedPositions.clear();
         transitiveRules.clear();
         anyAnnotationsFound = false;
+        sawSourceRoots = false;
         memo = null;
     }
 
@@ -244,9 +265,43 @@ public final class AnnotationCollector {
      * reason: they are part of the body this module contributes to a reactor's merged output.
      * Sidecars are keyed per module <em>and</em> source set, so a test-compile round recording its
      * own inherited rules cannot overwrite the main compile's (issue #330).
+     *
+     * <p>The third term is the same argument carried to zero. Counting inherited rules let a
+     * dependency upgrade that <em>changed</em> a rule reach the file, but a dependency that
+     * <em>withdrew</em> its rules — or a source file that dropped the last import of the package —
+     * lands back on "nothing to say", and the file froze with the retracted rule still in it,
+     * attributed to the library, on a build reporting no changes. Both readings of "nothing" are
+     * indistinguishable in general, which is why the guard exists; they are distinguishable here,
+     * because a round handed the project's own sources has seen everything there is to see. The
+     * term is bounded to projects that opted into inheritance: only there can the correct output
+     * change while every local source stays byte-identical, so only there does an empty round need
+     * to be believed. Everywhere else the older, stricter guard is untouched.
+     *
+     * <p>That bound is deliberate conservatism rather than a demonstrated requirement, and the
+     * distinction is worth recording. Dropping {@code transitiveOptIn} and keeping only
+     * {@code sawSourceRoots} was measured against the full suite: nothing failed except the unit
+     * test that pins this expression. So the evidence does not show the reactor preservation
+     * guards depend on it — the multi-module path resolves {@code hasNewRules} from the sidecars
+     * of every module rather than from this method, and source-set keying already separates a
+     * test-compile round from the main one (#330). The bound stays because widening the guard for
+     * every project on the strength of "no test objected" is not the same as knowing it is safe,
+     * and the withdrawal case does not need the extra reach.
      */
     public boolean anyAnnotationsFound() {
-        return anyAnnotationsFound || !transitiveRules.isEmpty();
+        return anyAnnotationsFound || !transitiveRules.isEmpty() || (transitiveOptIn && sawSourceRoots);
+    }
+
+    /**
+     * Records that a round was handed at least one root element, i.e. that this compilation is
+     * looking at the project's own sources rather than running over an empty source set.
+     */
+    public void noteSourceRoots() {
+        this.sawSourceRoots = true;
+    }
+
+    /** Declares whether this project inherits guardrails from its dependencies. */
+    public void transitiveOptIn(boolean optedIn) {
+        this.transitiveOptIn = optedIn;
     }
 
     /** True when this compilation's own sources carried at least one guardrail annotation. */

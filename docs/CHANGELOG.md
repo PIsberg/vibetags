@@ -27,20 +27,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preservation guard gets wrong. Also two dependencies at once, where the substance is that both
   contribute under their own attribution.
 
-### Documented
-- **Inherited rules are never withdrawn from a project that has no annotations of its own.** Found
-  by the new withdrawal tests and pinned by two of them, one per trigger: the library stops
-  publishing a manifest, or the consumer's sources stop importing the package. Either way the
-  project keeps publishing the retracted rule, still attributed to the library, and every build
-  reports "no changes". The guard is `AnnotationCollector.anyAnnotationsFound()`, which does count
-  inherited rules, deliberately, and that is why a *changed* rule reaches the file. What it cannot
-  do is act when the count reaches zero: "nothing to write because everything was withdrawn" and
-  "nothing to write because this round never saw the sources" are the same observation, and the
-  second must not wipe the file. The boundary is exactly one annotation, which is also the only
-  verified remedy: the same scenario with a single `@AILocked` in the project withdraws correctly,
-  and that case is pinned as a passing feature test beside the two limitations. Worth weighing
-  because a project with no annotations of its own, opting into `.vibetags-transitive` purely to
-  pick up its libraries' rules, is the headline case for the feature.
+### Fixed
+- **An inherited guardrail could never be withdrawn from a project with no annotations of its
+  own.** Found by the new withdrawal tests above. A library that stopped publishing its rules, or
+  a source file that dropped the last import of the package, left the retracted rule in the
+  consumer's generated file, still attributed to the library, on a build reporting "no changes".
+  Both triggers, and both now regression-tested through a real `javac`.
+
+  The guard is `AnnotationCollector.anyAnnotationsFound()`, which already counted inherited rules
+  deliberately — that is why a *changed* rule reached the file. What it could not do is act when
+  the count reached zero, because "nothing to write because everything was withdrawn" and "nothing
+  to write because this round never saw the sources" were the same observation, and the second
+  must never empty a file. They are now distinguishable: the processor records whether a round was
+  handed any root elements, so a round that saw the project's sources and found nothing is treated
+  as authoritative about what the project no longer has.
+
+  Scope is deliberately narrow. The new term is `transitiveOptIn && sawSourceRoots`, so it applies
+  only to projects that opted into `.vibetags-transitive`, where the correct output can change
+  while every local source stays byte-identical. Every other project keeps the older, stricter
+  guard unchanged. That bound is conservatism rather than a measured requirement, and the code says
+  so: dropping it and keeping only `sawSourceRoots` was run against the full suite and nothing
+  failed except the unit test pinning the expression, so the reactor guards are not shown to depend
+  on it. It stays because "no test objected" is not the same as "known safe".
+
+  This matters because a project that adds no annotations of its own and opts into
+  `.vibetags-transitive` purely to pick up its libraries' rules is the headline case for the
+  feature.
 
 - **Three further measured limitations, in the single-project and reactor lifecycle,** are pinned
   by passing tests rather than left to be rediscovered.
