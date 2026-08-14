@@ -625,11 +625,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (moduleRoles != null) {
             fingerprintServices.add("modroles:" + moduleRoles.contentHash());
         }
+        // Which module is compiling is an input, not context. Two modules of a reactor can carry
+        // byte-identical annotations — a renamed module is the same annotations under a new
+        // identity — and without this they share a fingerprint, so the second one would skip and
+        // never write its own sidecar. Latent while the stamp below could never match; live the
+        // moment the short-circuit started working.
+        fingerprintServices.add("module:" + moduleId);
         String fingerprint = BuildFingerprint.compute(collector, fingerprintServices);
         String sidecarStampHex = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
         if (writeCache != null
                 && fingerprint.equals(writeCache.getBuildFingerprint())
                 && sidecarStampHex.equals(writeCache.getSidecarStamp())
+                // A sidecar whose module directory is gone has to be pruned, and pruning happens
+                // in the merge this skip jumps over. Deleting a module changes no annotation and
+                // no sidecar mtime, so nothing else in this condition can notice it.
+                && !ModuleSidecar.anyStale(root)
                 && writeCache.allCachedFilesStable()) {
             Messager m = getSafeMessager();
             m.printMessage(Diagnostic.Kind.NOTE,
@@ -720,7 +730,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         warnIfDetachedFromReactor(compilationRoot);
 
         // Read all sidecars (this module + any siblings that have already compiled).
+        // Read BEFORE readAll, which deletes the stale sidecars that are the only record of which
+        // rule files a departed module wrote. Acted on after the claim set below is known.
+        Set<String> departedStems = ModuleSidecar.staleGranularStems(root);
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
+        // Diagnostic only, and it reads the sidecars this round just resolved. No step moved.
+        warnAboutPlatformsOptedInAfterAModuleLastCompiled(activeServices, serviceFiles, allSidecars);
         if (log != null && log.isDebugEnabled()) {
             log.debug("sidecar.read count={} regions={} ids={}",
                 allSidecars.size(), ModuleSidecar.regionCount(allSidecars),
@@ -841,6 +856,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // so the sweep can never be judged against a differently-computed set.
         destructiveWarner().orphanSweep("the reactor root", removedQNames, myGranular.keySet());
 
+        // Rule files whose module has left the build. Not the sweep above and not bound by its
+        // jurisdiction rule: these stems were named by a sidecar whose module directory is gone,
+        // which is evidence rather than the absence #383 forbids arguing from. Stems a surviving
+        // module still claims are excluded, so a shared role file is rewritten by the merge rather
+        // than deleted here.
+        Set<String> orphanedByDeparture = new java.util.LinkedHashSet<>(departedStems);
+        orphanedByDeparture.removeAll(writtenQNames);
+        Set<String> departedRemoved =
+            granularWriter.removeStems(serviceFiles, activeServices, orphanedByDeparture);
+        if (!departedRemoved.isEmpty()) {
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: removed " + departedRemoved.size()
+                    + " granular rule file(s) belonging to a module that is no longer in the build.");
+            if (log != null) {
+                log.info("granular.departed.removed stems={} module={}", departedRemoved, moduleId);
+            }
+        }
+
         // Per-module (nested) output — write this module's own guardrails into its own directory.
         // Independent of the cross-module aggregation above (which serves only the shared root
         // files): module content only, merged across this module's source sets. No-op for
@@ -856,12 +889,68 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         if (writeCache != null) {
             writeCache.setBuildFingerprint(fingerprint);
-            writeCache.setSidecarStamp(sidecarStampHex);
+            // Recomputed here rather than reusing sidecarStampHex from the top of this method. That
+            // value was read BEFORE the sidecar write above, and the stamp hashes sidecar mtimes —
+            // so storing it guaranteed a mismatch on the next round and the short-circuit could
+            // never fire in any build that writes a sidecar, which is every build. What the next
+            // round compares against is the sidecars as this round leaves them, so that is what has
+            // to be recorded. No step moved: this is the same flush, with the value it needed.
+            writeCache.setSidecarStamp(Long.toHexString(ModuleSidecar.computeSidecarStamp(root)));
             writeCache.flush();
         }
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Warns when a platform was opted into after some module last compiled, so the merged file is
+     * missing that module's guardrails.
+     *
+     * <p>Creating an opt-in file at a reactor root activates a platform for the whole build, but a
+     * sidecar only carries bodies for the services that were active when its module last ran. An
+     * incremental build recompiles the modules whose sources changed and no others, so the new
+     * file is assembled from a subset — well-formed, plausible, and missing whole modules. Nothing
+     * about it looks wrong, and check mode would compare a later build against it happily.
+     *
+     * <p>The content cannot be repaired from here: rendering a module's body needs that module's
+     * annotations, which only its own compilation sees. So the honest remedy is to say so, name the
+     * modules, and let the developer run the full build that fixes it. A WARNING rather than a NOTE
+     * because the file on disk is wrong until they do.
+     */
+    private void warnAboutPlatformsOptedInAfterAModuleLastCompiled(
+            Set<String> activeServices, Map<String, Path> serviceFiles,
+            List<ModuleSidecar> allSidecars) {
+        if (allSidecars.size() < 2) {
+            return; // Single module: its own round is by definition current.
+        }
+        for (String service : activeServices) {
+            Path optIn = serviceFiles.get(service);
+            if (optIn == null || !Files.isRegularFile(optIn)) {
+                continue;
+            }
+            long optedInAt;
+            try {
+                optedInAt = Files.getLastModifiedTime(optIn).toMillis();
+            } catch (IOException e) {
+                continue;
+            }
+            List<String> behind =
+                ModuleSidecar.modulesPredatingOptIn(root, service, optedInAt, allSidecars);
+            if (behind.isEmpty()) {
+                continue;
+            }
+            Path file = serviceFiles.get(service);
+            getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: " + root.relativize(file).toString().replace('\\', '/')
+                    + " was opted into after " + String.join(", ", behind)
+                    + " last compiled, so " + (behind.size() == 1 ? "its guardrails are" : "their guardrails are")
+                    + " missing from it. Run a full build to complete the file.");
+            if (log != null) {
+                log.warn("merge.partial service={} modulesBehind={} reason=opted-in-after-last-compile",
+                    service, behind);
+            }
+        }
     }
 
     /**

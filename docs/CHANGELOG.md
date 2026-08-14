@@ -21,27 +21,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   five behavioural tests was verified by breaking the invariant it guards and confirming it went
   red; the four production breaks are listed in the PR body.
 
-### Documented
-- **Three measured limitations are now pinned by passing tests** rather than left to be
-  rediscovered.
-  1. The top-level fingerprint short-circuit in `generateFiles()` cannot fire in a build that
-     writes a sidecar, which is every build. The sidecar stamp is read *before* the round rewrites
-     its own sidecar, and that pre-write value is what gets stored, so the next round's stamp always
-     includes an mtime that moved. `FingerprintShortCircuitTest` passes because it deletes every
-     sidecar and patches the stored stamp to `0`, which proves the branch works but not that a real
-     build reaches it. The cost is wall-clock only: the per-file write cache still keeps the output
-     stable.
-  2. Creating an opt-in file at a reactor root fills it only from the modules that have recompiled
-     since, because a sidecar carries bodies only for the services that were active when its module
-     last ran. An incremental build therefore publishes a plausible, well-formed, partial file with
-     no warning, until a full reactor pass heals it.
-  3. A module deleted from a reactor leaves the aggregates as soon as any sibling recompiles, its
-     sidecar being pruned by module path, but its granular rule files wait for a compilation rooted
-     at the reactor root. In the gap, `.claude/rules/<its-class>.md` is still loaded by glob after
-     every aggregate agrees the class is gone. The delay is the jurisdiction rule from #383 — a
-     module round may not sweep the shared root, because on a cold clone it cannot tell an orphan
-     from a sibling whose sidecar it has not been shown — so the cost is bounded to module-only
-     rebuilds and any full build clears it. Both halves are asserted.
+### Fixed
+- **The fingerprint short-circuit could never fire.** The skip in `generateFiles()` compares a
+  sidecar stamp that hashes `.vibetags-mod-*` mtimes. It was read at the top of the method, before
+  the round wrote its own sidecar, and that pre-write value was stored, so the next round's stamp
+  always included an mtime that had moved. Three conditions, never all true, in any build that
+  writes a sidecar, which is every build. `FingerprintShortCircuitTest` passed throughout because it
+  engineers the one state where the old stamp could match: delete every sidecar, patch the stored
+  stamp to `0`. The stamp is now recorded after the sidecar write, and an unchanged rebuild skips
+  the content build and per-file compare. Correctness was never affected; this is wall-clock.
+
+  Turning the skip on exposed two hazards it had been masking, both now guarded and regression
+  tested. Module identity was not an input to the fingerprint, so two modules with byte-identical
+  annotations, which is what a renamed module is, shared one: the second would skip and never write
+  its sidecar. And a skipped round never reaches the merge that prunes a sidecar whose module
+  directory is gone, which no other term of the condition can notice, because deleting a module
+  changes no annotation and moves no mtime.
+
+- **A platform opted into after a module last compiled now says so.** A sidecar carries bodies only
+  for the services active when its module last ran, so creating an opt-in file at a reactor root and
+  running an incremental build assembles the new file from a subset: well-formed, plausible, missing
+  whole modules, with nothing about it looking wrong. The content cannot be repaired from the round
+  that notices, because rendering a module's body needs that module's annotations, so the build now
+  emits a WARNING naming the file, the modules missing from it, and the remedy.
+
+- **A module deleted from a reactor now takes its granular rule files with it.** The aggregates
+  already forgot it as soon as any sibling recompiled, but `.claude/rules/<its-class>.md` waited for
+  a compilation rooted at the reactor root, and a rule file loads by glob: an agent kept reading a
+  guardrail about a class every aggregate agreed was gone. That delay was not the #383 jurisdiction
+  rule doing its job. The rule forbids a module round from arguing that an *unclaimed* file is an
+  orphan, and rightly, since on a cold clone the sidecars appear one module at a time and sweeping
+  on that evidence once deleted 256 tracked rule files. A sidecar whose module directory is gone is
+  the opposite kind of evidence: it names the stems that module wrote. The catch was ordering, since
+  `readAll` deletes the stale sidecar and threw the record away before anything could act on it. The
+  stems are now read first, and only those no surviving module claims are removed, so a role file
+  shared between modules is rewritten rather than deleted.
 
 ## [1.2.0] - 2026-08-13
 
