@@ -236,6 +236,7 @@ matrix is in [USAGE.md](USAGE.md#other-jvm-languages-groovy-scala-clojure).
 - [Advanced Features & Annotation Reference](#-advanced-features--annotation-reference) → full guide in **[USAGE.md](USAGE.md)**
 - [Contributing](#-contributing)
 - [Project Components](#-project-components)
+- [Mentioned in Publications](#-mentioned-in-publications)
 - [License](#-license)
 
 ## 🎯 What is VibeTags?
@@ -909,6 +910,16 @@ Technical reference for the annotation processor internals. Read this before con
 
 ### [.claude/skills/vibetags-usage/SKILL.md](.claude/skills/vibetags-usage/SKILL.md)
 A Claude Code skill that gives your AI assistant a full working knowledge of VibeTags — annotation semantics, valid combinations, processor configuration, and troubleshooting. Activate it in Claude Code with `/vibetags-usage`.
+
+## 📕 Mentioned in Publications
+
+**[Vibe Architecture: Designing, Scaling, and Guardrailing Large-Scale Systems in the Age of AI
+Orchestration](https://www.amazon.com/dp/B0HF3MLBB8)** by Peter Isberg (first edition, 2026).
+
+Chapter 4, "Annotation-Driven Design", uses VibeTags as its worked example: the per-element
+annotation vocabulary, the granular `.claude/rules/` layout, and the scoped-rules index that the
+book reports cutting one real reactor's always-loaded context from 537 to 137 lines. VibeTags also
+appears in the chapters on context budgets, spec-driven development, and multi-agent CI.
 
 ## 💛 Support VibeTags
 
