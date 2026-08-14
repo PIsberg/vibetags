@@ -272,18 +272,28 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
-     * LIMITATION, measured. The aggregates forget a deleted module (above); its granular rule files
-     * do not go with it. Granular cleanup deletes rule files that no module claims, and the claim
-     * list is built from the sidecars — but the pruned module's stems leave the claim list at the
-     * same moment the file that recorded them is deleted, so nothing ever names them for removal.
+     * The aggregates forget a deleted module the moment any sibling recompiles (above); its
+     * granular rule files wait for a root compile. Both halves are asserted here, because the gap
+     * between them is a real window in which a rule file contradicts every aggregate in the repo.
      *
-     * <p>What it costs: {@code .claude/rules/com-example-cli-Cli.md} stays in the repository, and a
-     * rule file is loaded by glob. The agent keeps reading a guardrail about a class that no longer
-     * exists, in a project where every aggregate agrees it is gone. Three further builds do not
-     * clear it — this is permanent until somebody deletes the file by hand.
+     * <p>The delay is deliberate and is the jurisdiction rule from
+     * <a href="https://github.com/PIsberg/vibetags/issues/383">issue #383</a>: a reactor module
+     * round may not sweep the shared root, because it cannot tell an orphan from a sibling it has
+     * not been shown — {@code .vibetags-mod-*} is gitignored, so on a cold clone the sidecars
+     * appear one module at a time. Sweeping on that evidence deleted 256 tracked rule files on a
+     * cold {@code mvn -pl core clean compile}, exit 0. A module owns its own directory and its own
+     * mirrors, never the shared root.
+     *
+     * <p>So the cost is bounded: a deleted module's rule file survives module-only rebuilds and is
+     * retired by the first compilation rooted at the reactor root, which any full build performs.
+     *
+     * <p>Recorded because the first version of this test asserted the leftover file was permanent
+     * until deleted by hand. That was wrong — it never tried a root compile, and the sweep guard's
+     * own comment says "surviving until the root compiles". The remedy is now the second half of
+     * the test rather than a claim in a comment.
      */
     @Test
-    void moduleRemovedFromTheReactor_leavesItsGranularRuleFilesBehind(@TempDir Path root)
+    void moduleRemovedFromTheReactor_granularRuleFilesWaitForARootCompile(@TempDir Path root)
             throws Exception {
         Files.createFile(root.resolve("CLAUDE.md"));
         Files.createDirectories(root.resolve(".claude/rules"));
@@ -310,9 +320,26 @@ class ProjectLifecycleEndToEndTest {
             "the aggregate has forgotten the deleted module, which is what makes the leftover "
                 + "rule file contradict it");
         assertTrue(Files.exists(cliRule),
-            "measured limitation: the deleted module's granular rule file survives every later "
-                + "build. If this now fails, orphan cleanup has learned to retire a pruned "
-                + "module's stems — assert the file is GONE instead");
+            "a module-only round must not sweep the shared root (#383), so the deleted module's "
+                + "rule file is still here. If this now fails, either the jurisdiction rule "
+                + "changed or the sweep has learned to retire a pruned module's stems safely");
+
+        // The remedy, and the half this test originally got wrong: a compilation rooted at the
+        // reactor root may sweep, and does.
+        ProcessorTestHarness rootRound = new ProcessorTestHarness(root, false);
+        Files.writeString(root.resolve("pom.xml"),
+            "<project><artifactId>reactor</artifactId></project>", StandardCharsets.UTF_8);
+        rootRound.writeSourceFile("src/main/java/com/example/Root.java",
+            locked("com.example", "Root", "Root aggregator"));
+        rootRound.compile();
+        VibeTagsLogger.shutdown();
+
+        assertFalse(Files.exists(cliRule),
+            "a root compile must retire the deleted module's rule file. This is what bounds the "
+                + "staleness to 'until the root compiles' rather than leaving it in the repository "
+                + "for good");
+        assertTrue(Files.exists(root.resolve(".claude/rules/com-example-core-IrNode.md")),
+            "and the surviving module's rule file must not be swept with it");
     }
 
     /** A module directory renamed: merged once, under the new identity, with no ghost of the old. */

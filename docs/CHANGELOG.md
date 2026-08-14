@@ -35,10 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
      since, because a sidecar carries bodies only for the services that were active when its module
      last ran. An incremental build therefore publishes a plausible, well-formed, partial file with
      no warning, until a full reactor pass heals it.
-  3. A module deleted from a reactor leaves the aggregates correctly, its sidecar being pruned by
-     module path, but leaves its granular rule files behind permanently. Nothing names a pruned
-     module's stems for cleanup, so `.claude/rules/<its-class>.md` keeps being loaded by glob after
-     every aggregate agrees the class is gone.
+  3. A module deleted from a reactor leaves the aggregates as soon as any sibling recompiles, its
+     sidecar being pruned by module path, but its granular rule files wait for a compilation rooted
+     at the reactor root. In the gap, `.claude/rules/<its-class>.md` is still loaded by glob after
+     every aggregate agrees the class is gone. The delay is the jurisdiction rule from #383 — a
+     module round may not sweep the shared root, because on a cold clone it cannot tell an orphan
+     from a sibling whose sidecar it has not been shown — so the cost is bounded to module-only
+     rebuilds and any full build clears it. Both halves are asserted.
 
 ## [1.2.0] - 2026-08-13
 
