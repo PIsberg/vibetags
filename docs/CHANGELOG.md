@@ -88,6 +88,15 @@ finally go. That is the correction landing, not churn.
   that notices, because rendering a module's body needs that module's annotations, so the build now
   emits a WARNING naming the file, the modules missing from it, and the remedy.
 
+- **`ProjectFactsConsistencyTest` no longer fails on a file that vanishes mid-walk.** It walked the
+  repository with `Files.walk`, which throws out of its iterator when a listed path can no longer be
+  stat'ed. The repository is a live directory while the suite runs: the JVM writes
+  `.attach_pid<n>` into the working directory when an agent self-attaches, which Mockito's inline
+  mock maker does from tests running in parallel with this one, and removes it immediately. On Linux
+  CI the race was reliable enough to fail every Maven job; on Windows it never appeared, which is
+  how it reached CI unnoticed. The walk now skips entries it cannot read, and the drift detection is
+  unchanged — verified by planting a document with a wrong count and watching it fail.
+
 - **A module deleted from a reactor now takes its granular rule files with it.** The aggregates
   already forgot it as soon as any sibling recompiled, but `.claude/rules/<its-class>.md` waited for
   a compilation rooted at the reactor root, and a rule file loads by glob: an agent kept reading a
