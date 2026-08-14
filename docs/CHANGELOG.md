@@ -21,7 +21,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   five behavioural tests was verified by breaking the invariant it guards and confirming it went
   red; the four production breaks are listed in the PR body.
 
+- **Withdrawal coverage for transitive guardrails**, the 1.2.0 feature, in
+  `TransitiveGuardrailLifecycleE2ETest` (four tests, 13 to 17). The existing suite covered a
+  dependency whose rules *change*; nothing covered a rule that *goes away*, which is the case a
+  preservation guard gets wrong. Also two dependencies at once, where the substance is that both
+  contribute under their own attribution.
+
 ### Fixed
+- **An inherited guardrail could never be withdrawn from a project with no annotations of its
+  own.** Found by the new withdrawal tests above. A library that stopped publishing its rules, or
+  a source file that dropped the last import of the package, left the retracted rule in the
+  consumer's generated file, still attributed to the library, on a build reporting "no changes".
+  Both triggers, and both now regression-tested through a real `javac`.
+
+  The guard is `AnnotationCollector.anyAnnotationsFound()`, which already counted inherited rules
+  deliberately — that is why a *changed* rule reached the file. What it could not do is act when
+  the count reached zero, because "nothing to write because everything was withdrawn" and "nothing
+  to write because this round never saw the sources" were the same observation, and the second
+  must never empty a file. They are now distinguishable: the processor records whether a round was
+  handed any root elements, so a round that saw the project's sources and found nothing is treated
+  as authoritative about what the project no longer has.
+
+  Scope is deliberately narrow. The new term is `transitiveOptIn && sawSourceRoots`, so it applies
+  only to projects that opted into `.vibetags-transitive`, where the correct output can change
+  while every local source stays byte-identical. Every other project keeps the older, stricter
+  guard unchanged. That bound is conservatism rather than a measured requirement, and the code says
+  so: dropping it and keeping only `sawSourceRoots` was run against the full suite and nothing
+  failed except the unit test pinning the expression, so the reactor guards are not shown to depend
+  on it. It stays because "no test objected" is not the same as "known safe".
+
+  This matters because a project that adds no annotations of its own and opts into
+  `.vibetags-transitive` purely to pick up its libraries' rules is the headline case for the
+  feature.
+
 - **The fingerprint short-circuit could never fire.** The skip in `generateFiles()` compares a
   sidecar stamp that hashes `.vibetags-mod-*` mtimes. It was read at the top of the method, before
   the round wrote its own sidecar, and that pre-write value was stored, so the next round's stamp
