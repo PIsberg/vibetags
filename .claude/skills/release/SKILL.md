@@ -67,9 +67,13 @@ inherits its version from, so `vibetags-annotations/pom.xml`, `vibetags/pom.xml`
 places that cannot inherit it: both `build.gradle` files, the copy-pasteable
 snippets in the `<description>` blocks, and the standalone example/demo poms.
 
-Then confirm nothing was missed, rather than assuming:
+Then confirm nothing was missed, rather than assuming. Install the annotations at the new
+version first, or the test cannot run at all — `vibetags` now depends on
+`vibetags-annotations:<version>`, which does not exist in the local repository until you
+build it, and the failure is a dependency-resolution error rather than a parity one:
 
 ```bash
+cd vibetags-annotations && mvn -q install -DskipTests && cd ..
 cd vibetags && mvn test -Dtest=BuildVersionParityTest
 ```
 
@@ -78,19 +82,17 @@ That test fails if any Gradle file, example pom or managed pom disagrees with
 `load-tests/`, and `load-tests/` consequently sat two releases behind while CI
 believed it was benchmarking the branch.
 
-It deliberately does **not** touch the consumers, which you must update by hand with
-`Edit` — they track a *released* BOM version, which only now exists:
+It also updates the consumers, which track a *released* BOM version: `example/pom.xml`,
+`example/build.gradle`, `example-multimodule/pom.xml`, `example-multimodule-indexed/pom.xml`,
+`example-all-tiers/pom.xml`, `tools/demo/pom.xml`, the Kotlin/Groovy/Scala example builds,
+`vibetags-cli/pom.xml`, `README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
+every file it touched, so read that list rather than assuming this one is current.
 
-| File | What to change |
-|---|---|
-| `example/pom.xml` | `<vibetags.bom.version>` |
-| `example/build.gradle` | both `platform('se.deversity.vibetags:vibetags-bom:…')` lines |
-| `example-multimodule/pom.xml` | `<vibetags.bom.version>` |
-| `example-multimodule-indexed/pom.xml` | `<vibetags.bom.version>` |
-| `tools/demo/pom.xml` | `<vibetags.bom.version>` |
-| `README.md` | every dependency and BOM snippet (several occurrences — check them all) |
-| `.claude/skills/vibetags-usage/SKILL.md` | version in the install snippets |
-| `docs/vibetags-in-practice.md` | version references, if any |
+Do not hand-edit those files first. This section used to say the script left the consumers
+alone and listed eight of them to edit by hand; the script had grown to cover them and the
+instruction had not, so following it meant editing over work already done and then wondering
+why the diff looked strange. `BuildVersionParityTest` is the check that settles it either
+way — run it and believe it, rather than either this list or the script's output.
 
 Leave `load-tests/pom.xml` alone. Its `<processor.version>` is pinned independently
 so benchmarks can compare across versions — force-bumping it is a bug, not a chore.
@@ -136,8 +138,27 @@ because there is no parent POM tying the modules together:
 cd vibetags-annotations && mvn -q install && cd ..
 cd vibetags && mvn -q clean install && cd ..
 cd vibetags-bom && mvn -q install && cd ..
+cd vibetags-cli && mvn -q clean install && cd ..
 cd example && mvn -q clean compile && cd ..
+cd example-multimodule && mvn -q clean compile && cd ..
+cd example-multimodule-indexed && mvn -q clean compile && cd ..
 ```
+
+`vibetags-cli` is in that list because it is published too, and it depends on the processor
+as a library. Both reactor examples are there because they exercise the sidecar merge, which
+the single-module `example` cannot reach.
+
+Then check that the examples produced **no** guardrail-file drift:
+
+```bash
+git status --porcelain    # only version bumps and the CHANGELOG should appear
+```
+
+This is the check worth not skipping. The processor version feeds `BuildFingerprint`, so a
+release invalidates every consumer's fingerprint and reruns the whole generate phase: if any
+rendering changed, the examples' committed output moves and you find out here rather than in
+a consumer's diff. A clean result is what justifies claiming the examples regenerate
+byte-for-byte, which the changelog entry usually does.
 
 The `example` compile is the real end-to-end check: it consumes the freshly installed
 BOM and triggers annotation processing. If it fails, the release is not ready — report
@@ -148,6 +169,19 @@ Also run the pre-commit hooks, since the repo enforces them:
 ```bash
 pre-commit run --all-files
 ```
+
+The `checkstyle` hook runs in a Docker image, so on a machine without a running Docker
+daemon that command aborts before any hook runs — including the two that matter most here,
+gitleaks and the whitespace fixers. Run the rest rather than skipping the step entirely:
+
+```bash
+SKIP=checkstyle pre-commit run --all-files
+```
+
+Checkstyle itself is not lost by that: it is bound to the `validate` phase, so the Maven
+build above already ran it over the whole project. Report which hooks actually ran — a
+skipped gate is not a passed gate, and "pre-commit passed" is the wrong thing to say when
+only three of four did.
 
 ## Step 6 — Commit and open the PR
 
