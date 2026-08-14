@@ -730,6 +730,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         warnIfDetachedFromReactor(compilationRoot);
 
         // Read all sidecars (this module + any siblings that have already compiled).
+        // Read BEFORE readAll, which deletes the stale sidecars that are the only record of which
+        // rule files a departed module wrote. Acted on after the claim set below is known.
+        Set<String> departedStems = ModuleSidecar.staleGranularStems(root);
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
         // Diagnostic only, and it reads the sidecars this round just resolved. No step moved.
         warnAboutPlatformsOptedInAfterAModuleLastCompiled(activeServices, serviceFiles, allSidecars);
@@ -852,6 +855,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // myGranular's keys ARE the stems this round planned — the same map the sidecar recorded,
         // so the sweep can never be judged against a differently-computed set.
         destructiveWarner().orphanSweep("the reactor root", removedQNames, myGranular.keySet());
+
+        // Rule files whose module has left the build. Not the sweep above and not bound by its
+        // jurisdiction rule: these stems were named by a sidecar whose module directory is gone,
+        // which is evidence rather than the absence #383 forbids arguing from. Stems a surviving
+        // module still claims are excluded, so a shared role file is rewritten by the merge rather
+        // than deleted here.
+        Set<String> orphanedByDeparture = new java.util.LinkedHashSet<>(departedStems);
+        orphanedByDeparture.removeAll(writtenQNames);
+        Set<String> departedRemoved =
+            granularWriter.removeStems(serviceFiles, activeServices, orphanedByDeparture);
+        if (!departedRemoved.isEmpty()) {
+            getSafeMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: removed " + departedRemoved.size()
+                    + " granular rule file(s) belonging to a module that is no longer in the build.");
+            if (log != null) {
+                log.info("granular.departed.removed stems={} module={}", departedRemoved, moduleId);
+            }
+        }
 
         // Per-module (nested) output — write this module's own guardrails into its own directory.
         // Independent of the cross-module aggregation above (which serves only the shared root

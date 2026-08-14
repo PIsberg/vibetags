@@ -1137,6 +1137,42 @@ public final class ModuleSidecar {
      * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
      */
     /**
+     * The granular stems recorded by sidecars whose module directory no longer exists.
+     *
+     * <p>Must be called <em>before</em> {@link #readAll(Path)}, which deletes those sidecars: they
+     * are the only record of which rule files the departed module wrote, and once they are gone
+     * nothing can name the files for removal. That is why an orphaned rule file used to wait for
+     * the root to compile — not because the evidence was weak, but because it had already been
+     * thrown away by the time anyone could act on it.
+     *
+     * <p>A stale sidecar is positive evidence, unlike the absence a module round cannot argue from
+     * (issue #383): the file existed, it named its stems, and its module's directory is gone.
+     */
+    public static Set<String> staleGranularStems(Path root) {
+        Set<String> stems = new LinkedHashSet<>();
+        if (!Files.isDirectory(root)) return stems;
+        try (Stream<Path> stream = Files.list(root)) {
+            for (Path p : stream.toList()) {
+                Path fn = p.getFileName();
+                String name = fn == null ? "" : fn.toString();
+                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
+                String modulePath = readModulePathHeader(p);
+                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                    continue;
+                }
+                if (Files.isDirectory(root.resolve(modulePath))) continue;
+                ModuleSidecar stale = load(p);
+                if (stale != null && stale != UNREADABLE && stale != FUTURE_VERSION) {
+                    stems.addAll(stale.getGranularStems());
+                }
+            }
+        } catch (IOException ignored) {
+            // A root we cannot list names no stems, which is the same outcome as one with none.
+        }
+        return stems;
+    }
+
+    /**
      * The region ids of modules that carry guardrails but nothing for {@code service}, and whose
      * sidecar was last written before {@code optedInAt} — that is, modules that last compiled
      * before this platform was opted into.

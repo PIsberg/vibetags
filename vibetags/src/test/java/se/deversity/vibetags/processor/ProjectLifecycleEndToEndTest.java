@@ -338,16 +338,21 @@ class ProjectLifecycleEndToEndTest {
      * cold {@code mvn -pl core clean compile}, exit 0. A module owns its own directory and its own
      * mirrors, never the shared root.
      *
-     * <p>So the cost is bounded: a deleted module's rule file survives module-only rebuilds and is
-     * retired by the first compilation rooted at the reactor root, which any full build performs.
+     * <p>None of that stops a departure being handled, though, and it used to: the sweep is not the
+     * only way to name a file for removal. A sidecar whose module directory is gone <em>names</em>
+     * the stems that module wrote, which is evidence rather than absence, so those files can be
+     * removed from any round. The catch was ordering — {@code readAll} deletes the stale sidecar,
+     * so the record was thrown away before anything could act on it. Reading the stems first is
+     * the whole fix.
      *
-     * <p>Recorded because the first version of this test asserted the leftover file was permanent
-     * until deleted by hand. That was wrong — it never tried a root compile, and the sweep guard's
-     * own comment says "surviving until the root compiles". The remedy is now the second half of
-     * the test rather than a claim in a comment.
+     * <p>Two earlier versions of this test were wrong in opposite directions, which is why the
+     * history is here. The first asserted the leftover file was permanent until deleted by hand; it
+     * never tried a root compile, and the sweep guard's own comment says "surviving until the root
+     * compiles". The second asserted it waits for that root compile, which was true but treated a
+     * consequence of discarding the evidence as if it were the design.
      */
     @Test
-    void moduleRemovedFromTheReactor_granularRuleFilesWaitForARootCompile(@TempDir Path root)
+    void moduleRemovedFromTheReactor_takesItsGranularRuleFilesWithIt(@TempDir Path root)
             throws Exception {
         Files.createFile(root.resolve("CLAUDE.md"));
         Files.createDirectories(root.resolve(".claude/rules"));
@@ -363,37 +368,56 @@ class ProjectLifecycleEndToEndTest {
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
 
-        for (int build = 1; build <= 3; build++) {
-            compileModule(root, "module-core", "com.example.core.IrNode",
-                locked("com.example.core", "IrNode", "Core IR node, revision " + build));
-            ProcessorTestHarness.awaitFilesystemTick(root);
-            VibeTagsLogger.shutdown();
-        }
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node, revised"));
 
         assertFalse(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
-            "the aggregate has forgotten the deleted module, which is what makes the leftover "
-                + "rule file contradict it");
-        assertTrue(Files.exists(cliRule),
-            "a module-only round must not sweep the shared root (#383), so the deleted module's "
-                + "rule file is still here. If this now fails, either the jurisdiction rule "
-                + "changed or the sweep has learned to retire a pruned module's stems safely");
+            "the aggregate must forget the deleted module");
+        assertFalse(Files.exists(cliRule),
+            "the departed module's rule file must go with its guardrails, on the same build. A "
+                + "rule file loads by glob, so leaving it means the agent keeps reading a "
+                + "guardrail about a class every aggregate in the repository agrees is gone");
+        assertTrue(Files.exists(root.resolve(".claude/rules/com-example-core-IrNode.md")),
+            "and the surviving module's rule file must not go with it");
+    }
 
-        // The remedy, and the half this test originally got wrong: a compilation rooted at the
-        // reactor root may sweep, and does.
-        ProcessorTestHarness rootRound = new ProcessorTestHarness(root, false);
-        Files.writeString(root.resolve("pom.xml"),
-            "<project><artifactId>reactor</artifactId></project>", StandardCharsets.UTF_8);
-        rootRound.writeSourceFile("src/main/java/com/example/Root.java",
-            locked("com.example", "Root", "Root aggregator"));
-        rootRound.compile();
+    /**
+     * The bound on the rule above: only stems no surviving module claims are removed. A role file
+     * written by several modules is shared, so a departure has to rewrite it rather than delete it,
+     * or removing one module from a reactor takes its co-authors' guardrails with it.
+     */
+    @Test
+    void aDepartedModuleDoesNotTakeASharedRoleFileWithIt(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.writeString(root.resolve(".vibetags-roles"),
+            "shared = **/core/**, **/cli/**\n", StandardCharsets.UTF_8);
+
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+
+        Path roleFile = root.resolve(".claude/rules/shared.md");
+        assertTrue(Files.exists(roleFile), "both modules must route into one shared role file");
+        assertTrue(Files.readString(roleFile).contains("com.example.cli.Cli")
+                && Files.readString(roleFile).contains("com.example.core.IrNode"),
+            "and both must be in it before one module leaves:\n" + Files.readString(roleFile));
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
 
-        assertFalse(Files.exists(cliRule),
-            "a root compile must retire the deleted module's rule file. This is what bounds the "
-                + "staleness to 'until the root compiles' rather than leaving it in the repository "
-                + "for good");
-        assertTrue(Files.exists(root.resolve(".claude/rules/com-example-core-IrNode.md")),
-            "and the surviving module's rule file must not be swept with it");
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node, revised"));
+
+        assertTrue(Files.exists(roleFile),
+            "a role file the surviving module still writes must never be deleted as an orphan");
+        String role = Files.readString(roleFile);
+        assertTrue(role.contains("com.example.core.IrNode"),
+            "the surviving module's guardrail must still be in it:\n" + role);
+        assertFalse(role.contains("com.example.cli.Cli"),
+            "and the departed module's share must be gone from it:\n" + role);
     }
 
     /** A module directory renamed: merged once, under the new identity, with no ghost of the old. */
