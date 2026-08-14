@@ -192,6 +192,64 @@ class AnnotationCollectorUnitTest {
     }
 
     // ------------------------------------------------------------------
+    // anyAnnotationsFound(): the three-term truth table
+    //
+    // The third term decides whether a project whose guardrails are entirely inherited may have
+    // an inherited rule withdrawn, or is frozen with a rule its library has retracted. It is not
+    // reachable from the end-to-end suite in isolation — TransitiveGuardrailLifecycleE2ETest
+    // exercises the true case through a real javac, but nothing there can hold "opted in" true
+    // while driving "saw sources" false, so the bound would go untested and could be deleted
+    // without a red test. Pinned here term by term.
+    // ------------------------------------------------------------------
+
+    @Test
+    void anyAnnotationsFound_falseWhenNothingWasFoundAndNothingIsInherited() {
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.noteSourceRoots();
+
+        assertFalse(collector.anyAnnotationsFound(),
+            "a project that inherits nothing and annotates nothing has nothing to write, and the "
+                + "preservation guard must keep its existing file");
+    }
+
+    @Test
+    void anyAnnotationsFound_trueWhenInheritanceIsOptedInAndTheRoundSawTheSources() {
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.transitiveOptIn(true);
+        collector.noteSourceRoots();
+
+        assertTrue(collector.anyAnnotationsFound(),
+            "a round that was handed the project's sources and found no rules is authoritative "
+                + "for a project that inherits: it is how a withdrawn dependency rule leaves the "
+                + "file instead of being frozen into it");
+    }
+
+    @Test
+    void anyAnnotationsFound_falseWhenInheritanceIsOptedInButTheRoundSawNoSources() {
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.transitiveOptIn(true);
+
+        assertFalse(collector.anyAnnotationsFound(),
+            "this is the bound on the withdrawal term. A round with no sources in view has not "
+                + "learned that the project has nothing — it has learned nothing — and must not be "
+                + "allowed to empty a file on that basis");
+    }
+
+    @Test
+    void anyAnnotationsFound_resetForgetsThatSourcesWereSeen() {
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.transitiveOptIn(true);
+        collector.noteSourceRoots();
+        assertTrue(collector.anyAnnotationsFound());
+
+        collector.reset();
+
+        assertFalse(collector.anyAnnotationsFound(),
+            "reset() hands the collector to the next compilation; a source sighting carried over "
+                + "from the previous one would let a round with no sources believe it had them");
+    }
+
+    // ------------------------------------------------------------------
     // No annotations present → added=false
     // ------------------------------------------------------------------
 

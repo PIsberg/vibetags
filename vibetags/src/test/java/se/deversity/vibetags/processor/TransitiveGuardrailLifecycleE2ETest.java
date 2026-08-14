@@ -72,6 +72,70 @@ class TransitiveGuardrailLifecycleE2ETest {
         """;
 
     /**
+     * The same consumer, carrying one guardrail of its own. The difference between this and
+     * {@link #CONSUMER_CLASS} is the whole boundary of the withdrawal limitation below.
+     */
+    private static final String SELF_ANNOTATED_CONSUMER_CLASS = """
+        package app;
+        import com.acme.crypto.api.CryptoManagerFactory;
+        import se.deversity.vibetags.annotations.AILocked;
+        @AILocked(reason = "Wiring order is load-bearing")
+        public class App {
+            Object gateway = CryptoManagerFactory.create();
+        }
+        """;
+
+    /** A second library, so a test can be about two dependencies rather than one. */
+    private static final String LEDGER_PACKAGE_INFO = """
+        @se.deversity.vibetags.annotations.AISecure(
+            aspect = "Postings are append-only; never update a row in place.")
+        @se.deversity.vibetags.annotations.AIContext(
+            focus = "Amounts are minor units as long; never a double.")
+        package com.acme.ledger.api;
+        """;
+
+    private static final String LEDGER_CLASS = """
+        package com.acme.ledger.api;
+        public final class PostingBook {
+            public static Object open() { return new Object(); }
+        }
+        """;
+
+    /**
+     * A consumer of both libraries. It carries a guardrail of its own deliberately: without one,
+     * the preservation guard pinned by
+     * {@code aWithdrawnRuleIsStrandedInAProjectWithNoAnnotationsOfItsOwn} freezes the file on the
+     * second compile, and an ordering test whose second compile cannot write proves nothing.
+     */
+    private static final String TWO_LIBRARY_CONSUMER_CLASS = """
+        package app;
+        import com.acme.crypto.api.CryptoManagerFactory;
+        import com.acme.ledger.api.PostingBook;
+        import se.deversity.vibetags.annotations.AILocked;
+        @AILocked(reason = "Wiring order is load-bearing")
+        public class App {
+            Object gateway = CryptoManagerFactory.create();
+            Object book = PostingBook.open();
+        }
+        """;
+
+    /**
+     * The same file with the two library imports swapped. Manifest discovery walks the imports, so
+     * this is the permutation that varies discovery order — reversing the classpath does not.
+     */
+    private static final String TWO_LIBRARY_CONSUMER_CLASS_REVERSED = """
+        package app;
+        import com.acme.ledger.api.PostingBook;
+        import com.acme.crypto.api.CryptoManagerFactory;
+        import se.deversity.vibetags.annotations.AILocked;
+        @AILocked(reason = "Wiring order is load-bearing")
+        public class App {
+            Object gateway = CryptoManagerFactory.create();
+            Object book = PostingBook.open();
+        }
+        """;
+
+    /**
      * Fixture root for one test.
      *
      * <p>Managed here rather than with {@code @TempDir} so cleanup can tolerate a locked file;
@@ -243,6 +307,176 @@ class TransitiveGuardrailLifecycleE2ETest {
         assertEquals(first, second, "identical inputs must produce identical bytes");
     }
 
+    // ------------------------------------------------------------------- withdrawing an inherited rule
+
+    /**
+     * The upgrade that removes rules rather than changing them. A library drops the emit opt-in, or
+     * deletes the guardrails from its {@code package-info}, and ships: same coordinates in the
+     * consumer's pom, same imports in its code, no manifest in the JAR.
+     *
+     * <p>Distinct from {@link #upgradingADependencyRewritesTheGeneratedFile()}, which changes a
+     * rule. Going to <em>zero</em> is the case a preservation guard gets wrong, and the next two
+     * tests are the boundary: this one, where the project has an annotation of its own, works.
+     */
+    @Test
+    void aWithdrawnRuleLeavesAProjectThatHasAnnotationsOfItsOwn() throws Exception {
+        Path app = consumerRoot(tmp, true);
+        Path source = sourceFile(app, "app/App.java", SELF_ANNOTATED_CONSUMER_CLASS);
+
+        Path v1 = buildLibraryJar(tmp.resolve("v1"), "com.acme:crypto-core:2.4.0");
+        compile(app, List.of("-classpath", classpathWith(v1)), source);
+        assertTrue(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+                .contains("Never construct a raw Cipher"),
+            "the inherited rule must be there before the library withdraws it:\n"
+                + report(app, "CLAUDE.md"));
+
+        Path v2 = buildSilentLibraryJar(tmp.resolve("v2"));
+        compile(app, List.of("-classpath", classpathWith(v2)), source);
+
+        String second = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertFalse(second.contains("Never construct a raw Cipher"),
+            "a withdrawn rule must leave the consumer's file. Keeping it publishes a guardrail the "
+                + "library no longer stands behind, attributed to the library:\n"
+                + report(app, "CLAUDE.md"));
+        assertFalse(second.contains("Inherited Guardrails"),
+            "with nothing left to inherit, the section must go rather than stand empty:\n"
+                + report(app, "CLAUDE.md"));
+        assertTrue(second.contains("Wiring order is load-bearing"),
+            "and the project's own rule must survive the withdrawal:\n" + report(app, "CLAUDE.md"));
+    }
+
+    /**
+     * LIMITATION, measured. The same withdrawal, in a project that carries no {@code @AI*}
+     * annotations of its own: the rule never leaves.
+     *
+     * <p>The mechanism is in the processor's own diagnostic, which this compile emits:
+     * {@code "Skipping update of CLAUDE.md (no annotations found in this module, preserving
+     * existing rules)"}. The guard behind it is {@code AnnotationCollector.anyAnnotationsFound()},
+     * and it does count inherited rules — deliberately, with a javadoc saying so — which is why a
+     * dependency whose rules merely <em>change</em> reaches the file. What it cannot do is fire
+     * correctly when the count reaches zero: "nothing to write because everything was withdrawn"
+     * and "nothing to write because this round never saw the sources" are the same observation,
+     * and the second one must not be allowed to wipe the file. So the file is frozen whole, and the
+     * withdrawn rule stays, still attributed to the library.
+     *
+     * <p>What it costs: a project whose guardrails are <em>entirely</em> inherited, which is the
+     * headline case for the feature — an application that adds no annotations of its own and opts
+     * into {@code .vibetags-transitive} purely to pick up its libraries' rules — can never see an
+     * inherited rule withdrawn. It keeps publishing a security rule the library has retracted, and
+     * every build says "no changes". The boundary is exactly one annotation:
+     * {@link #aWithdrawnRuleLeavesAProjectThatHasAnnotationsOfItsOwn()} is the same scenario with a
+     * single {@code @AILocked} in the project, and there the withdrawal lands. That is also the
+     * only remedy verified here.
+     *
+     * <p>A fix belongs in the {@code hasNewRules} decision, which would have to count inherited
+     * rules as something to write. When it lands, this test flips.
+     */
+    @Test
+    void aWithdrawnRuleIsStrandedInAProjectWithNoAnnotationsOfItsOwn() throws Exception {
+        Path app = consumerRoot(tmp, true);
+        Path source = sourceFile(app, "app/App.java", CONSUMER_CLASS);
+
+        Path v1 = buildLibraryJar(tmp.resolve("v1"), "com.acme:crypto-core:2.4.0");
+        compile(app, List.of("-classpath", classpathWith(v1)), source);
+        assertTrue(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+                .contains("Never construct a raw Cipher"),
+            "the inherited rule must be there before the library withdraws it:\n"
+                + report(app, "CLAUDE.md"));
+
+        Path v2 = buildSilentLibraryJar(tmp.resolve("v2"));
+        compile(app, List.of("-classpath", classpathWith(v2)), source);
+
+        String second = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertFalse(second.contains("Never construct a raw Cipher"),
+            "a withdrawn rule must leave a project whose guardrails are entirely inherited, which "
+                + "is the headline case for the feature. Keeping it publishes a rule the library "
+                + "has retracted, attributed to the library, on a build that reports no changes:\n"
+                + report(app, "CLAUDE.md"));
+        assertFalse(second.contains("Inherited Guardrails"),
+            "with nothing left to inherit, the section must go rather than stand empty:\n"
+                + report(app, "CLAUDE.md"));
+    }
+
+    /**
+     * LIMITATION, measured. The second trigger for the same freeze, and the likelier one in
+     * practice: the JAR stays on the classpath, pulled in transitively by something else, and the
+     * application simply stops importing the package. The lookup key is derived from the imports,
+     * so the rule should leave with the last import of its package, and in a project with no
+     * annotations of its own it does not.
+     *
+     * <p>Kept separate from the withdrawal case because a fix has to satisfy both paths: one
+     * changes what the dependency publishes, the other changes what the consumer asks for. Both are
+     * stranded by the same guard. See
+     * {@link #aWithdrawnRuleIsStrandedInAProjectWithNoAnnotationsOfItsOwn()} for the mechanism.
+     */
+    @Test
+    void aPackageTheSourcesStopImportingIsStrandedInAProjectWithNoAnnotationsOfItsOwn()
+            throws Exception {
+        Path jar = buildLibraryJar(tmp, "com.acme:crypto-core:2.4.0");
+        Path app = consumerRoot(tmp, true);
+        List<String> classpath = List.of("-classpath", classpathWith(jar));
+
+        compile(app, classpath, sourceFile(app, "app/App.java", CONSUMER_CLASS));
+        assertTrue(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+                .contains("com.acme.crypto.api"),
+            "the inherited rule must be there before the import is removed:\n"
+                + report(app, "CLAUDE.md"));
+
+        compile(app, classpath, sourceFile(app, "app/App.java", """
+            package app;
+            public class App { int unrelated = 1; }
+            """));
+
+        assertFalse(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+                .contains("com.acme.crypto.api"),
+            "dropping the last import of a package must take its inherited rules with it, even "
+                + "while the JAR is still on the classpath:\n" + report(app, "CLAUDE.md"));
+    }
+
+    /**
+     * Two dependencies, which is what a real application has. The risk is not that one of them is
+     * dropped — it is the order they come out in. Manifest discovery walks a classpath and fills a
+     * map; if the rendered order follows that iteration rather than a sort, two developers whose
+     * build resolves the classpath differently rewrite each other's committed {@code CLAUDE.md} on
+     * every build, and the diff blames whoever compiled last.
+     *
+     * <p>Two things are asserted, and it is worth being exact about which is load-bearing. That
+     * both dependencies contribute, each attributed to its own artifact, is the substance: build
+     * the second library without its publish opt-in and this test fails. That reshuffling the two
+     * {@code import} lines does not change a byte is a stability pin, and measurement says it is
+     * currently guarded by more than one layer — with {@code Collections.sort} deleted from
+     * {@code GuardrailModel} the output stayed identical under both an import swap and a reversed
+     * classpath, so nothing reachable from a real compile perturbs the order in the first place.
+     * The sort remains the documented guarantee and {@code TransitiveRule.compareTo} is what
+     * {@code TransitiveSection} relies on to group by package; this test guards the observable end
+     * of that, not the sort itself. Recorded here so the next person does not read a passing test
+     * as proof the sort is exercised.
+     */
+    @Test
+    void twoDependenciesBothContribute_inAnOrderTheImportsCannotChange() throws Exception {
+        Path crypto = buildLibraryJar(tmp.resolve("crypto"), "com.acme:crypto-core:2.4.0");
+        Path ledger = buildLedgerLibraryJar(tmp.resolve("ledger"), "com.acme:ledger-api:1.1.0");
+        List<String> classpath = List.of("-classpath", classpathWith(crypto, ledger));
+
+        Path app = consumerRoot(tmp, true);
+
+        compile(app, classpath, sourceFile(app, "app/App.java", TWO_LIBRARY_CONSUMER_CLASS));
+        String forward = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(forward.contains("com.acme.crypto.api") && forward.contains("com.acme.ledger.api"),
+            "both dependencies must contribute:\n" + report(app, "CLAUDE.md"));
+        assertTrue(forward.contains("com.acme:crypto-core:2.4.0")
+                && forward.contains("com.acme:ledger-api:1.1.0"),
+            "each rule must name the artifact it came from:\n" + report(app, "CLAUDE.md"));
+
+        compile(app, classpath, sourceFile(app, "app/App.java", TWO_LIBRARY_CONSUMER_CLASS_REVERSED));
+        String reversed = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+
+        assertEquals(forward, reversed,
+            "swapping two import lines changed the generated bytes. Inherited rules would then be "
+                + "ordered by import-walk order, and two developers on the same commit rewrite "
+                + "each other's CLAUDE.md over an import reshuffle their IDE did for them");
+    }
+
     // ----------------------------------------------------------------------- the directory fallback
 
     @Test
@@ -382,6 +616,21 @@ class TransitiveGuardrailLifecycleE2ETest {
 
     /** Compiles the fixture library and returns its class-output directory. */
     private static Path compileLibrary(Path libRoot, String origin) throws IOException {
+        return compileLibrary(libRoot, origin, "com/acme/crypto/api", "CryptoManagerFactory",
+            LIB_PACKAGE_INFO, LIB_CLASS);
+    }
+
+    /**
+     * Compiles one fixture library. Parameterised over the package so a test can build a second,
+     * different dependency without a second copy of this method.
+     *
+     * @param origin the artifact coordinate stamped into every manifest, or {@code null} to leave
+     *               out {@code .vibetags-manifest} entirely, which is a library that has not opted
+     *               into publishing
+     */
+    private static Path compileLibrary(Path libRoot, String origin, String packageDir,
+                                       String className, String packageInfo, String classSource)
+            throws IOException {
         Files.createDirectories(libRoot);
         if (origin != null) {
             Files.writeString(libRoot.resolve(".vibetags-manifest"),
@@ -391,8 +640,8 @@ class TransitiveGuardrailLifecycleE2ETest {
         Files.createDirectories(classes);
 
         List<Path> sources = List.of(
-            sourceFile(libRoot, "com/acme/crypto/api/package-info.java", LIB_PACKAGE_INFO),
-            sourceFile(libRoot, "com/acme/crypto/api/CryptoManagerFactory.java", LIB_CLASS));
+            sourceFile(libRoot, packageDir + "/package-info.java", packageInfo),
+            sourceFile(libRoot, packageDir + "/" + className + ".java", classSource));
 
         run(classes, List.of("-classpath", System.getProperty("java.class.path"),
             "-Avibetags.root=" + libRoot.toAbsolutePath()), sources);
@@ -406,6 +655,30 @@ class TransitiveGuardrailLifecycleE2ETest {
         assertTrue(Files.isRegularFile(
                 classes.resolve("vibetags").resolve("manifests").resolve("com.acme.crypto.api.json")),
             "the library build should have published a manifest at the package-named path");
+        Path jar = base.resolve("lib.jar");
+        jar(classes, jar);
+        return jar;
+    }
+
+    /** The same library, upgraded to a version that publishes no manifest at all. */
+    private static Path buildSilentLibraryJar(Path base) throws IOException {
+        Files.createDirectories(base);
+        Path classes = compileLibrary(base.resolve("lib"), null);
+        assertFalse(Files.isDirectory(classes.resolve("vibetags").resolve("manifests")),
+            "the silent build must publish no manifest, or the fixture proves nothing");
+        Path jar = base.resolve("lib.jar");
+        jar(classes, jar);
+        return jar;
+    }
+
+    /** A second, unrelated dependency, for the tests that are about having more than one. */
+    private static Path buildLedgerLibraryJar(Path base, String origin) throws IOException {
+        Files.createDirectories(base);
+        Path classes = compileLibrary(base.resolve("lib"), origin, "com/acme/ledger/api",
+            "PostingBook", LEDGER_PACKAGE_INFO, LEDGER_CLASS);
+        assertTrue(Files.isRegularFile(
+                classes.resolve("vibetags").resolve("manifests").resolve("com.acme.ledger.api.json")),
+            "the second library build should have published its own manifest");
         Path jar = base.resolve("lib.jar");
         jar(classes, jar);
         return jar;
@@ -581,8 +854,13 @@ class TransitiveGuardrailLifecycleE2ETest {
         return file;
     }
 
-    private static String classpathWith(Path jar) {
-        return jar.toAbsolutePath() + java.io.File.pathSeparator + System.getProperty("java.class.path");
+    /** The test classpath with {@code jars} prepended, in the order given — order is the point. */
+    private static String classpathWith(Path... jars) {
+        StringBuilder cp = new StringBuilder();
+        for (Path jar : jars) {
+            cp.append(jar.toAbsolutePath()).append(java.io.File.pathSeparator);
+        }
+        return cp + System.getProperty("java.class.path");
     }
 
     /** Packs {@code dir} into {@code jar}, entry names relative to {@code dir}. */
