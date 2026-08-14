@@ -731,6 +731,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // Read all sidecars (this module + any siblings that have already compiled).
         List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
+        // Diagnostic only, and it reads the sidecars this round just resolved. No step moved.
+        warnAboutPlatformsOptedInAfterAModuleLastCompiled(activeServices, serviceFiles, allSidecars);
         if (log != null && log.isDebugEnabled()) {
             log.debug("sidecar.read count={} regions={} ids={}",
                 allSidecars.size(), ModuleSidecar.regionCount(allSidecars),
@@ -878,6 +880,56 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Warns when a platform was opted into after some module last compiled, so the merged file is
+     * missing that module's guardrails.
+     *
+     * <p>Creating an opt-in file at a reactor root activates a platform for the whole build, but a
+     * sidecar only carries bodies for the services that were active when its module last ran. An
+     * incremental build recompiles the modules whose sources changed and no others, so the new
+     * file is assembled from a subset — well-formed, plausible, and missing whole modules. Nothing
+     * about it looks wrong, and check mode would compare a later build against it happily.
+     *
+     * <p>The content cannot be repaired from here: rendering a module's body needs that module's
+     * annotations, which only its own compilation sees. So the honest remedy is to say so, name the
+     * modules, and let the developer run the full build that fixes it. A WARNING rather than a NOTE
+     * because the file on disk is wrong until they do.
+     */
+    private void warnAboutPlatformsOptedInAfterAModuleLastCompiled(
+            Set<String> activeServices, Map<String, Path> serviceFiles,
+            List<ModuleSidecar> allSidecars) {
+        if (allSidecars.size() < 2) {
+            return; // Single module: its own round is by definition current.
+        }
+        for (String service : activeServices) {
+            Path optIn = serviceFiles.get(service);
+            if (optIn == null || !Files.isRegularFile(optIn)) {
+                continue;
+            }
+            long optedInAt;
+            try {
+                optedInAt = Files.getLastModifiedTime(optIn).toMillis();
+            } catch (IOException e) {
+                continue;
+            }
+            List<String> behind =
+                ModuleSidecar.modulesPredatingOptIn(root, service, optedInAt, allSidecars);
+            if (behind.isEmpty()) {
+                continue;
+            }
+            Path file = serviceFiles.get(service);
+            getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: " + root.relativize(file).toString().replace('\\', '/')
+                    + " was opted into after " + String.join(", ", behind)
+                    + " last compiled, so " + (behind.size() == 1 ? "its guardrails are" : "their guardrails are")
+                    + " missing from it. Run a full build to complete the file.");
+            if (log != null) {
+                log.warn("merge.partial service={} modulesBehind={} reason=opted-in-after-last-compile",
+                    service, behind);
+            }
+        }
     }
 
     /**

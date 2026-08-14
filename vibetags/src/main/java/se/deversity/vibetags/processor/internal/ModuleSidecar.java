@@ -1137,6 +1137,40 @@ public final class ModuleSidecar {
      * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
      */
     /**
+     * The region ids of modules that carry guardrails but nothing for {@code service}, and whose
+     * sidecar was last written before {@code optedInAt} — that is, modules that last compiled
+     * before this platform was opted into.
+     *
+     * <p>A sidecar records a body for every service active when its module ran, so a module that
+     * has bodies but not this one has simply not been rebuilt since the opt-in file appeared. Its
+     * guardrails are therefore missing from the merged file, which is well-formed and looks
+     * complete. The mtime comparison is what keeps this from firing on a healthy build: absence
+     * alone would also match a module that legitimately renders nothing for the service.
+     *
+     * <p>Returned rather than warned about here so the diagnostic stays in the processor, which
+     * owns the messager and the user-facing wording.
+     */
+    public static List<String> modulesPredatingOptIn(Path root, String service, long optedInAt,
+                                                     List<ModuleSidecar> sidecars) {
+        List<String> behind = new ArrayList<>();
+        for (ModuleSidecar sidecar : sidecars) {
+            if (sidecar.getBodies().isEmpty() || sidecar.getBodies().containsKey(service)) {
+                continue;
+            }
+            try {
+                Path file = root.resolve(SIDECAR_PREFIX + sidecar.getModuleId());
+                if (Files.getLastModifiedTime(file).toMillis() < optedInAt) {
+                    behind.add(sidecar.getRegionId());
+                }
+            } catch (IOException ignored) {
+                // Cannot date it, so cannot claim it is behind. Silence beats a wrong warning.
+            }
+        }
+        java.util.Collections.sort(behind);
+        return behind;
+    }
+
+    /**
      * True when any sidecar under {@code root} names a module directory that no longer exists, i.e.
      * when {@link #readAll(Path)} would prune something.
      *

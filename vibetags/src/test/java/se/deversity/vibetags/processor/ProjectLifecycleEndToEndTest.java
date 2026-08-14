@@ -207,8 +207,14 @@ class ProjectLifecycleEndToEndTest {
         VibeTagsLogger.shutdown();
 
         // An incremental build: only the module whose sources changed compiles.
-        compileModule(root, "module-cli", "com.example.cli.Cli",
-            locked("com.example.cli", "Cli", "CLI entry point, revised"));
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-cli",
+            "com.example.cli.Cli", locked("com.example.cli", "Cli", "CLI entry point, revised"));
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains(".pr_agent.toml")
+                && w.contains("module-core") && w.contains("Run a full build")),
+            "the build that produces the partial file has to say so, naming the file and the "
+                + "module missing from it. Silence here is the whole defect: the output is "
+                + "well-formed and looks complete. Warnings were:\n  " + String.join("\n  ", warnings));
 
         String partial = Files.readString(root.resolve(".pr_agent.toml"), StandardCharsets.UTF_8);
         assertTrue(partial.contains("com.example.cli.Cli"),
@@ -500,6 +506,23 @@ class ProjectLifecycleEndToEndTest {
             + "import se.deversity.vibetags.annotations.AILocked;\n"
             + "@AILocked(reason = \"" + reason + "\")\n"
             + "public class " + type + " {}\n";
+    }
+
+    /** As {@link #compileModule}, returning the WARNING diagnostics the round emitted. */
+    private static List<String> compileModuleCapturingWarnings(Path root, String module, String fqn,
+                                                               String source) throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
+        List<String> warnings = harness.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING
+                || d.getKind() == javax.tools.Diagnostic.Kind.MANDATORY_WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
     }
 
     /** One module's compile into the shared reactor root, as a reactor pass would do it. */
