@@ -39,12 +39,12 @@
             &lt;dependency&gt;
                 &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
                 &lt;artifactId&gt;vibetags-annotations&lt;/artifactId&gt;
-                &lt;version&gt;1.2.0&lt;/version&gt;
+                &lt;version&gt;1.2.1&lt;/version&gt;
             &lt;/dependency&gt;
 
         Gradle:
-            compileOnly 'se.deversity.vibetags:vibetags-annotations:1.2.0'
-            annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.0'
+            compileOnly 'se.deversity.vibetags:vibetags-annotations:1.2.1'
+            annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.1'
     </description>
 
     <build>

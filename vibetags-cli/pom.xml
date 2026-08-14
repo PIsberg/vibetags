@@ -28,7 +28,7 @@
         reports the project's VibeTags health — build-tool wiring, active platforms,
         marker integrity. Run it without installing anything:
 
-            jbang se.deversity.vibetags:vibetags-cli:1.2.0 init --list
+            jbang se.deversity.vibetags:vibetags-cli:1.2.1 init --list
 
         The platform list and marker rules are read from vibetags-processor, so this
         tool cannot drift from what the processor actually does.

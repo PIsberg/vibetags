@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-14
+
+A patch release of lifecycle fixes, all found by testing the project's timeline rather than a single
+compile: what happens over months as a repository is rebuilt, opted into, and reshaped around its
+annotations. Nothing here changes an API or an annotation, and `example/`, `example-multimodule/`
+and `example-multimodule-indexed/` regenerate byte-for-byte against 1.2.0.
+
+Three of the four fixes change what a build writes, so a first build on 1.2.1 may update files that
+1.2.0 had frozen: a withdrawn dependency rule finally leaves, and a deleted module's rule files
+finally go. That is the correction landing, not churn.
+
 ### Added
 - **Lifecycle coverage: the project's timeline, not one compile.** `ProjectLifecycleEndToEndTest`
   (7 tests) and `OnboardingLifecycleTest` (2 tests, `vibetags-cli`) cover the transitions a
@@ -2593,7 +2604,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/PIsberg/vibetags/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/PIsberg/vibetags/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/PIsberg/vibetags/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PIsberg/vibetags/compare/v1.0.3...v1.1.0
