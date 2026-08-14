@@ -386,12 +386,15 @@ class TransitiveGuardrailLifecycleE2ETest {
         Path v2 = buildSilentLibraryJar(tmp.resolve("v2"));
         compile(app, List.of("-classpath", classpathWith(v2)), source);
 
-        assertTrue(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
-                .contains("Never construct a raw Cipher"),
-            "measured limitation: the no-annotations preservation guard freezes the whole file, so "
-                + "the withdrawn rule stays. If this now fails, the guard has learned about "
-                + "inherited rules — assert the rule is GONE instead, and delete this test's twin "
-                + "for the import-removal trigger too:\n" + report(app, "CLAUDE.md"));
+        String second = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertFalse(second.contains("Never construct a raw Cipher"),
+            "a withdrawn rule must leave a project whose guardrails are entirely inherited, which "
+                + "is the headline case for the feature. Keeping it publishes a rule the library "
+                + "has retracted, attributed to the library, on a build that reports no changes:\n"
+                + report(app, "CLAUDE.md"));
+        assertFalse(second.contains("Inherited Guardrails"),
+            "with nothing left to inherit, the section must go rather than stand empty:\n"
+                + report(app, "CLAUDE.md"));
     }
 
     /**
@@ -424,11 +427,10 @@ class TransitiveGuardrailLifecycleE2ETest {
             public class App { int unrelated = 1; }
             """));
 
-        assertTrue(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+        assertFalse(Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8)
                 .contains("com.acme.crypto.api"),
-            "measured limitation: dropping the last import of the package leaves its inherited "
-                + "rules in the file. If this now fails, the freeze has been fixed — assert the "
-                + "package is GONE instead:\n" + report(app, "CLAUDE.md"));
+            "dropping the last import of a package must take its inherited rules with it, even "
+                + "while the JAR is still on the classpath:\n" + report(app, "CLAUDE.md"));
     }
 
     /**

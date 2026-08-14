@@ -318,6 +318,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.processed.set(false);
         this.moduleIdentity = null;
         collector.reset();
+        collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
     }
 
@@ -400,6 +401,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 for (TypeElement te : annotations) {
                     presentFqns.add(te.getQualifiedName().toString());
                 }
+            }
+
+            // Recorded before collecting, and regardless of what is found: this says the round was
+            // given the project's sources to look at, which is what lets an empty result be read as
+            // "the project has nothing" rather than "the build showed us nothing". See
+            // AnnotationCollector.anyAnnotationsFound().
+            if (!roundEnv.getRootElements().isEmpty()) {
+                collector.noteSourceRoots();
             }
 
             collector.collect(roundEnv, presentFqns);
