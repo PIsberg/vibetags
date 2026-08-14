@@ -6,9 +6,12 @@ import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -75,6 +78,40 @@ class ProjectFactsConsistencyTest {
         "(?:all|the)\\s+(\\d+)\\s+(?:Java\\s+|VibeTags\\s+)?annotations?\\b"
             + "|(?<![\\d.])(\\d+)\\s+(?:Java\\s+|VibeTags\\s+)?annotation\\b[^.\\n]*?\\bin total\\b");
 
+    /**
+     * Every {@code .md} file under {@code root}, tolerating a file that disappears mid-walk.
+     *
+     * <p>{@link Files#walk} throws {@link java.io.UncheckedIOException} out of its iterator when a
+     * path it has listed can no longer be stat'ed, which fails the test with a
+     * {@code NoSuchFileException} for a file nobody cares about. The repository is a live directory
+     * while the suite runs: the JVM writes {@code .attach_pid<n>} into the working directory when an
+     * agent self-attaches — Mockito's inline mock maker does exactly that, from tests running in
+     * parallel with this one — and deletes it again immediately. On Linux CI the race is reliable
+     * enough to fail every job; on Windows it is invisible, which is why it reached CI unnoticed.
+     *
+     * <p>Skipping unreadable entries is right rather than merely convenient: this test is about
+     * what the committed documents claim, and a path that vanished during the walk is not one of
+     * them.
+     */
+    private static List<Path> markdownFilesUnder(Path root) throws IOException {
+        List<Path> found = new ArrayList<>();
+        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (file.toString().endsWith(".md")) {
+                    found.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) {
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return found;
+    }
+
     @Test
     void noDocRestatesADifferentAnnotationCount() throws IOException {
         Path annotationsDir = REPO_ROOT.resolve(
@@ -89,28 +126,26 @@ class ProjectFactsConsistencyTest {
         }
 
         List<String> drifted = new ArrayList<>();
-        try (Stream<Path> docs = Files.walk(REPO_ROOT)) {
-            for (Path doc : docs.filter(p -> p.toString().endsWith(".md")).toList()) {
-                String rel = REPO_ROOT.relativize(doc).toString().replace('\\', '/');
-                if (rel.contains("/target/") || rel.contains("/node_modules/")
-                    || rel.startsWith("target/") || HISTORICAL_DOCS.contains(rel)) {
-                    continue;
-                }
-                String text;
-                try {
-                    text = Files.readString(doc, StandardCharsets.UTF_8);
-                } catch (IOException notText) {
-                    continue;
-                }
-                Matcher m = PROSE_COUNT.matcher(text);
-                while (m.find()) {
-                    String captured = m.group(1) != null ? m.group(1) : m.group(2);
-                    int stated = Integer.parseInt(captured);
-                    if (stated != actual) {
-                        int line = (int) text.substring(0, m.start()).chars()
-                            .filter(c -> c == '\n').count() + 1;
-                        drifted.add(rel + ":" + line + " says \"" + m.group() + "\"");
-                    }
+        for (Path doc : markdownFilesUnder(REPO_ROOT)) {
+            String rel = REPO_ROOT.relativize(doc).toString().replace('\\', '/');
+            if (rel.contains("/target/") || rel.contains("/node_modules/")
+                || rel.startsWith("target/") || HISTORICAL_DOCS.contains(rel)) {
+                continue;
+            }
+            String text;
+            try {
+                text = Files.readString(doc, StandardCharsets.UTF_8);
+            } catch (IOException notText) {
+                continue;
+            }
+            Matcher m = PROSE_COUNT.matcher(text);
+            while (m.find()) {
+                String captured = m.group(1) != null ? m.group(1) : m.group(2);
+                int stated = Integer.parseInt(captured);
+                if (stated != actual) {
+                    int line = (int) text.substring(0, m.start()).chars()
+                        .filter(c -> c == '\n').count() + 1;
+                    drifted.add(rel + ":" + line + " says \"" + m.group() + "\"");
                 }
             }
         }
