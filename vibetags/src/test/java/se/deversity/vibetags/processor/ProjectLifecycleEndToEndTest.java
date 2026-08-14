@@ -125,30 +125,25 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
-     * LIMITATION, measured. The top-level fingerprint short-circuit in {@code generateFiles()}
-     * cannot fire in a build that writes a sidecar, which is every build.
+     * The fingerprint short-circuit has to fire on an ordinary unchanged rebuild, and keep firing.
      *
-     * <p>The mechanism: the sidecar stamp is a hash over the last-modified times of every
-     * {@code .vibetags-mod-*} file under the root. It is read <em>before</em> this round writes its
-     * own sidecar, and that pre-write value is what gets stored in the cache. The round then
-     * rewrites its sidecar — unconditionally, even when the content is identical — so the stamp the
-     * next round computes always includes an mtime that moved after the stored value was taken. The
-     * three conditions can therefore never all hold, and the generate phase runs in full every time.
+     * <p>It could not, until the stamp it compares was fixed. The sidecar stamp hashes the
+     * last-modified times of every {@code .vibetags-mod-*} file under the root; it was read at the
+     * top of {@code generateFiles()}, <em>before</em> the round wrote its own sidecar, and that
+     * pre-write value was what got stored. The round then rewrote its sidecar, so the stamp the
+     * next round computed always included an mtime that moved after the stored value was taken.
+     * The three conditions could never all hold and the generate phase ran in full every time.
      *
-     * <p>{@code FingerprintShortCircuitTest} passes because it engineers the one state in which the
-     * stamp can match: it deletes every sidecar and patches the stored stamp to {@code "0"}. That
-     * proves the branch works. It does not prove a real build ever reaches it, and this test is the
-     * missing half of that pair.
+     * <p>{@code FingerprintShortCircuitTest} covers the branch itself, but cannot show a real build
+     * reaching it: it engineers the one state in which the old stamp could match, by deleting every
+     * sidecar and patching the stored stamp to {@code "0"}. This test is the other half of that
+     * pair — no fixture surgery, just two ordinary rebuilds.
      *
-     * <p>What it costs: the skip is an optimisation, not a correctness gate — the per-file write
-     * cache still keeps the output stable, which is why nothing visible is wrong. It costs the
-     * content-build and per-file compare on every compile of every consumer.
-     *
-     * <p>{@code generateFiles()} is {@code @AILocked} on step order, so the fix belongs to whoever
-     * owns that method. When it lands, this test flips.
+     * <p>Two of them, deliberately. A skip that works once and not twice is the same defect one
+     * build further out, and that is exactly what a stamp stored from the wrong moment produces.
      */
     @Test
-    void steadyState_theFingerprintShortCircuitCannotFireWhileTheRoundRewritesItsOwnSidecar(
+    void steadyState_theFingerprintShortCircuitFiresOnAnUnchangedRebuild(
             @TempDir Path root) throws Exception {
         ProcessorTestHarness first = new ProcessorTestHarness(root);
         first.addSource("com.example.Ledger", locked("com.example", "Ledger", "Reconciliation is load-bearing"));
@@ -157,24 +152,29 @@ class ProjectLifecycleEndToEndTest {
 
         String storedStamp = new WriteCache(root.resolve(".vibetags-cache")).getSidecarStamp();
         String stampOnDiskNow = Long.toHexString(ModuleSidecar.computeSidecarStamp(root));
-        // Both have to be real values, or "they differ" would be an artefact of one being absent.
+        // Both have to be real values, or "they match" would be an artefact of one being absent.
         assertFalse(storedStamp == null || storedStamp.isBlank(),
             "the first build must have stored a sidecar stamp to compare against");
         assertNotEquals("0", stampOnDiskNow,
             "a sidecar must exist on disk after the first build, or the stamp is trivially zero");
-        assertNotEquals(stampOnDiskNow, storedStamp,
-            "the stored sidecar stamp was taken before this round wrote its own sidecar, so it can "
-                + "never match what the next round reads. If this now passes, the short-circuit has "
-                + "become reachable — assert that it fires instead of that it cannot");
+        assertEquals(stampOnDiskNow, storedStamp,
+            "the stored sidecar stamp must describe the sidecars as this round left them, or it "
+                + "can never match what the next round reads and the short-circuit is dead code");
 
         Path sidecar = onlySidecar(root);
         long sidecarMtime = Files.getLastModifiedTime(sidecar).toMillis();
 
         rebuildUnchanged(root);
 
-        assertTrue(Files.getLastModifiedTime(sidecar).toMillis() > sidecarMtime,
-            "the sidecar is rewritten on every build even when its content is unchanged — this is "
-                + "what moves the stamp out from under the short-circuit");
+        assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
+            "a build whose inputs are unchanged must short-circuit before the sidecar write. A "
+                + "rewritten sidecar moves the stamp out from under the next build too, so the "
+                + "skip could never happen twice running");
+
+        rebuildUnchanged(root);
+        assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
+            "and it must keep short-circuiting: a skip that only works once is the same bug "
+                + "one build further out");
     }
 
     // -----------------------------------------------------------------------
@@ -207,8 +207,14 @@ class ProjectLifecycleEndToEndTest {
         VibeTagsLogger.shutdown();
 
         // An incremental build: only the module whose sources changed compiles.
-        compileModule(root, "module-cli", "com.example.cli.Cli",
-            locked("com.example.cli", "Cli", "CLI entry point, revised"));
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-cli",
+            "com.example.cli.Cli", locked("com.example.cli", "Cli", "CLI entry point, revised"));
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains(".pr_agent.toml")
+                && w.contains("module-core") && w.contains("Run a full build")),
+            "the build that produces the partial file has to say so, naming the file and the "
+                + "module missing from it. Silence here is the whole defect: the output is "
+                + "well-formed and looks complete. Warnings were:\n  " + String.join("\n  ", warnings));
 
         String partial = Files.readString(root.resolve(".pr_agent.toml"), StandardCharsets.UTF_8);
         assertTrue(partial.contains("com.example.cli.Cli"),
@@ -272,18 +278,81 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
-     * LIMITATION, measured. The aggregates forget a deleted module (above); its granular rule files
-     * do not go with it. Granular cleanup deletes rule files that no module claims, and the claim
-     * list is built from the sidecars — but the pruned module's stems leave the claim list at the
-     * same moment the file that recorded them is deleted, so nothing ever names them for removal.
+     * The same removal with nothing else changed, which is the case the fingerprint short-circuit
+     * can skip past.
      *
-     * <p>What it costs: {@code .claude/rules/com-example-cli-Cli.md} stays in the repository, and a
-     * rule file is loaded by glob. The agent keeps reading a guardrail about a class that no longer
-     * exists, in a project where every aggregate agrees it is gone. Three further builds do not
-     * clear it — this is permanent until somebody deletes the file by hand.
+     * <p>{@code moduleRemovedFromTheReactor_leavesEveryMergedFile} rebuilds the surviving module
+     * with an edited reason, so its fingerprint differs and the round runs in full whatever the
+     * short-circuit does. Deleting a module changes no annotation and moves no sidecar mtime, so a
+     * rebuild that edits nothing is invisible to every other term of the skip condition — and a
+     * skipped round never reaches the merge that prunes the stale sidecar. Without the staleness
+     * term in that condition the deleted module's guardrails would survive until some unrelated
+     * edit happened to change the fingerprint.
      */
     @Test
-    void moduleRemovedFromTheReactor_leavesItsGranularRuleFilesBehind(@TempDir Path root)
+    void moduleRemovedFromTheReactor_isNoticedEvenWhenNothingElseChanges(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
+            "both modules must be present before one is removed");
+
+        // module-core compiles again BEFORE the deletion, so the cache's fingerprint and stamp are
+        // the ones its next round will present. Without this the last round belonged to a different
+        // module, the fingerprint differed on module identity alone, and the round would run in
+        // full for that reason rather than because anything noticed the deletion — which is how an
+        // earlier version of this test passed with the staleness term deleted.
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        // Byte-identical to the compile just above: no annotation edited, nothing touched.
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+
+        String claude = Files.readString(root.resolve("CLAUDE.md"));
+        assertFalse(claude.contains("com.example.cli.Cli"),
+            "a deleted module must leave the merged output on the next build even when that build "
+                + "has nothing of its own to report. Skipping the round on an unchanged fingerprint "
+                + "leaves the repository describing a module that is gone");
+        assertTrue(claude.contains("com.example.core.IrNode"),
+            "and the surviving module must still be there");
+    }
+
+    /**
+     * The aggregates forget a deleted module the moment any sibling recompiles (above); its
+     * granular rule files wait for a root compile. Both halves are asserted here, because the gap
+     * between them is a real window in which a rule file contradicts every aggregate in the repo.
+     *
+     * <p>The delay is deliberate and is the jurisdiction rule from
+     * <a href="https://github.com/PIsberg/vibetags/issues/383">issue #383</a>: a reactor module
+     * round may not sweep the shared root, because it cannot tell an orphan from a sibling it has
+     * not been shown — {@code .vibetags-mod-*} is gitignored, so on a cold clone the sidecars
+     * appear one module at a time. Sweeping on that evidence deleted 256 tracked rule files on a
+     * cold {@code mvn -pl core clean compile}, exit 0. A module owns its own directory and its own
+     * mirrors, never the shared root.
+     *
+     * <p>None of that stops a departure being handled, though, and it used to: the sweep is not the
+     * only way to name a file for removal. A sidecar whose module directory is gone <em>names</em>
+     * the stems that module wrote, which is evidence rather than absence, so those files can be
+     * removed from any round. The catch was ordering — {@code readAll} deletes the stale sidecar,
+     * so the record was thrown away before anything could act on it. Reading the stems first is
+     * the whole fix.
+     *
+     * <p>Two earlier versions of this test were wrong in opposite directions, which is why the
+     * history is here. The first asserted the leftover file was permanent until deleted by hand; it
+     * never tried a root compile, and the sweep guard's own comment says "surviving until the root
+     * compiles". The second asserted it waits for that root compile, which was true but treated a
+     * consequence of discarding the evidence as if it were the design.
+     */
+    @Test
+    void moduleRemovedFromTheReactor_takesItsGranularRuleFilesWithIt(@TempDir Path root)
             throws Exception {
         Files.createFile(root.resolve("CLAUDE.md"));
         Files.createDirectories(root.resolve(".claude/rules"));
@@ -299,20 +368,56 @@ class ProjectLifecycleEndToEndTest {
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
 
-        for (int build = 1; build <= 3; build++) {
-            compileModule(root, "module-core", "com.example.core.IrNode",
-                locked("com.example.core", "IrNode", "Core IR node, revision " + build));
-            ProcessorTestHarness.awaitFilesystemTick(root);
-            VibeTagsLogger.shutdown();
-        }
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node, revised"));
 
         assertFalse(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
-            "the aggregate has forgotten the deleted module, which is what makes the leftover "
-                + "rule file contradict it");
-        assertTrue(Files.exists(cliRule),
-            "measured limitation: the deleted module's granular rule file survives every later "
-                + "build. If this now fails, orphan cleanup has learned to retire a pruned "
-                + "module's stems — assert the file is GONE instead");
+            "the aggregate must forget the deleted module");
+        assertFalse(Files.exists(cliRule),
+            "the departed module's rule file must go with its guardrails, on the same build. A "
+                + "rule file loads by glob, so leaving it means the agent keeps reading a "
+                + "guardrail about a class every aggregate in the repository agrees is gone");
+        assertTrue(Files.exists(root.resolve(".claude/rules/com-example-core-IrNode.md")),
+            "and the surviving module's rule file must not go with it");
+    }
+
+    /**
+     * The bound on the rule above: only stems no surviving module claims are removed. A role file
+     * written by several modules is shared, so a departure has to rewrite it rather than delete it,
+     * or removing one module from a reactor takes its co-authors' guardrails with it.
+     */
+    @Test
+    void aDepartedModuleDoesNotTakeASharedRoleFileWithIt(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.writeString(root.resolve(".vibetags-roles"),
+            "shared = **/core/**, **/cli/**\n", StandardCharsets.UTF_8);
+
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+
+        Path roleFile = root.resolve(".claude/rules/shared.md");
+        assertTrue(Files.exists(roleFile), "both modules must route into one shared role file");
+        assertTrue(Files.readString(roleFile).contains("com.example.cli.Cli")
+                && Files.readString(roleFile).contains("com.example.core.IrNode"),
+            "and both must be in it before one module leaves:\n" + Files.readString(roleFile));
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node, revised"));
+
+        assertTrue(Files.exists(roleFile),
+            "a role file the surviving module still writes must never be deleted as an orphan");
+        String role = Files.readString(roleFile);
+        assertTrue(role.contains("com.example.core.IrNode"),
+            "the surviving module's guardrail must still be in it:\n" + role);
+        assertFalse(role.contains("com.example.cli.Cli"),
+            "and the departed module's share must be gone from it:\n" + role);
     }
 
     /** A module directory renamed: merged once, under the new identity, with no ghost of the old. */
@@ -425,6 +530,23 @@ class ProjectLifecycleEndToEndTest {
             + "import se.deversity.vibetags.annotations.AILocked;\n"
             + "@AILocked(reason = \"" + reason + "\")\n"
             + "public class " + type + " {}\n";
+    }
+
+    /** As {@link #compileModule}, returning the WARNING diagnostics the round emitted. */
+    private static List<String> compileModuleCapturingWarnings(Path root, String module, String fqn,
+                                                               String source) throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
+        List<String> warnings = harness.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING
+                || d.getKind() == javax.tools.Diagnostic.Kind.MANDATORY_WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
     }
 
     /** One module's compile into the shared reactor root, as a reactor pass would do it. */

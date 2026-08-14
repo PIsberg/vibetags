@@ -278,6 +278,50 @@ public final class GranularRulesWriter {
      * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
      * (the per-class qNames and role stems just written this round).
      */
+    /**
+     * Removes the rule files for {@code stems} from every active granular directory, whatever the
+     * round's jurisdiction over that directory otherwise is.
+     *
+     * <p>Named stems only, and that is the whole difference from {@link #cleanupAll}. The sweep
+     * cannot run from a reactor module round because it argues from absence — a file nothing has
+     * claimed might belong to a sibling whose sidecar this round has not been shown, which is how a
+     * cold clone lost 256 tracked rule files (issue #383). These stems are the opposite kind of
+     * evidence: they were read out of a sidecar that named them, whose module directory is now
+     * gone. That is a positive statement that the module which wrote them has left the build, and
+     * it does not get stronger by waiting for the root to compile.
+     *
+     * <p>The caller is responsible for excluding stems a surviving module still claims, so a role
+     * file shared by several modules is never deleted here — it is rewritten without the departed
+     * module's share by the ordinary merge.
+     *
+     * @return the stems whose files were actually removed, sorted, for the destructive-sweep report
+     */
+    public Set<String> removeStems(Map<String, Path> serviceFiles, Set<String> activeServices,
+                                   Set<String> stems) {
+        Set<String> removed = new LinkedHashSet<>();
+        if (stems.isEmpty()) {
+            return removed;
+        }
+        for (GranularFormat f : FORMATS) {
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir == null || !activeServices.contains(f.serviceKey)) {
+                continue;
+            }
+            for (String stem : stems) {
+                Path file = dir.resolve(stem + f.extension);
+                try {
+                    if (java.nio.file.Files.deleteIfExists(file)) {
+                        removed.add(stem);
+                    }
+                } catch (java.io.IOException ignored) {
+                    // A rule file we cannot delete stays; the next build tries again. Failing a
+                    // compile over housekeeping would be the larger bug.
+                }
+            }
+        }
+        return removed;
+    }
+
     public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
         Set<String> removed = new LinkedHashSet<>();
         for (GranularFormat f : FORMATS) {

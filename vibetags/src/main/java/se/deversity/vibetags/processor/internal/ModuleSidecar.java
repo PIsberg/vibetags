@@ -1136,6 +1136,130 @@ public final class ModuleSidecar {
      * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
      * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
      */
+    /**
+     * The granular stems recorded by sidecars whose module directory no longer exists.
+     *
+     * <p>Must be called <em>before</em> {@link #readAll(Path)}, which deletes those sidecars: they
+     * are the only record of which rule files the departed module wrote, and once they are gone
+     * nothing can name the files for removal. That is why an orphaned rule file used to wait for
+     * the root to compile — not because the evidence was weak, but because it had already been
+     * thrown away by the time anyone could act on it.
+     *
+     * <p>A stale sidecar is positive evidence, unlike the absence a module round cannot argue from
+     * (issue #383): the file existed, it named its stems, and its module's directory is gone.
+     */
+    public static Set<String> staleGranularStems(Path root) {
+        Set<String> stems = new LinkedHashSet<>();
+        if (!Files.isDirectory(root)) return stems;
+        try (Stream<Path> stream = Files.list(root)) {
+            for (Path p : stream.toList()) {
+                Path fn = p.getFileName();
+                String name = fn == null ? "" : fn.toString();
+                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
+                String modulePath = readModulePathHeader(p);
+                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                    continue;
+                }
+                if (Files.isDirectory(root.resolve(modulePath))) continue;
+                ModuleSidecar stale = load(p);
+                if (stale != null && stale != UNREADABLE && stale != FUTURE_VERSION) {
+                    stems.addAll(stale.getGranularStems());
+                }
+            }
+        } catch (IOException ignored) {
+            // A root we cannot list names no stems, which is the same outcome as one with none.
+        }
+        return stems;
+    }
+
+    /**
+     * The region ids of modules that carry guardrails but nothing for {@code service}, and whose
+     * sidecar was last written before {@code optedInAt} — that is, modules that last compiled
+     * before this platform was opted into.
+     *
+     * <p>A sidecar records a body for every service active when its module ran, so a module that
+     * has bodies but not this one has simply not been rebuilt since the opt-in file appeared. Its
+     * guardrails are therefore missing from the merged file, which is well-formed and looks
+     * complete. The mtime comparison is what keeps this from firing on a healthy build: absence
+     * alone would also match a module that legitimately renders nothing for the service.
+     *
+     * <p>Returned rather than warned about here so the diagnostic stays in the processor, which
+     * owns the messager and the user-facing wording.
+     */
+    public static List<String> modulesPredatingOptIn(Path root, String service, long optedInAt,
+                                                     List<ModuleSidecar> sidecars) {
+        List<String> behind = new ArrayList<>();
+        for (ModuleSidecar sidecar : sidecars) {
+            if (sidecar.getBodies().isEmpty() || sidecar.getBodies().containsKey(service)) {
+                continue;
+            }
+            try {
+                Path file = root.resolve(SIDECAR_PREFIX + sidecar.getModuleId());
+                if (Files.getLastModifiedTime(file).toMillis() < optedInAt) {
+                    behind.add(sidecar.getRegionId());
+                }
+            } catch (IOException ignored) {
+                // Cannot date it, so cannot claim it is behind. Silence beats a wrong warning.
+            }
+        }
+        java.util.Collections.sort(behind);
+        return behind;
+    }
+
+    /**
+     * True when any sidecar under {@code root} names a module directory that no longer exists, i.e.
+     * when {@link #readAll(Path)} would prune something.
+     *
+     * <p>Exists for the fingerprint short-circuit, which returns before the merge that does the
+     * pruning. Deleting a module from a reactor changes no annotation and moves no sidecar mtime,
+     * so it is invisible to every other term of that condition: without this the merged files would
+     * keep a deleted module's guardrails until some unrelated edit happened to change the
+     * fingerprint.
+     *
+     * <p>Deliberately cheaper than {@code readAll}: it reads only far enough into each file to find
+     * the {@code modulePath} header and decodes no bodies. An unreadable or headerless file counts
+     * as not stale — the conservative answer, since the only cost of a false negative is one more
+     * full round, while a false positive would delete a sibling's work.
+     */
+    public static boolean anyStale(Path root) {
+        if (!Files.isDirectory(root)) return false;
+        try (Stream<Path> stream = Files.list(root)) {
+            for (Path p : stream.toList()) {
+                Path fn = p.getFileName();
+                String name = fn == null ? "" : fn.toString();
+                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
+                String modulePath = readModulePathHeader(p);
+                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                    continue;
+                }
+                if (!Files.isDirectory(root.resolve(modulePath))) return true;
+            }
+        } catch (IOException ignored) {
+            // A root we cannot list tells us nothing; treat it as "nothing to prune" and let the
+            // ordinary round decide. Failing a build over a directory listing would be the larger bug.
+        }
+        return false;
+    }
+
+    /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */
+    private static @Nullable String readModulePathHeader(Path sidecar) {
+        try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
+            for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+                if (line.startsWith(KEY_MODULE_PATH + "=")) {
+                    return line.substring(KEY_MODULE_PATH.length() + 1).trim();
+                }
+                // The headers are written first; once a body line appears there is no header left.
+                if (line.indexOf('=') > 0 && !line.startsWith("#") && !line.startsWith(KEY_MODULE_ID)
+                        && !line.startsWith(KEY_REGION_ID)) {
+                    return null;
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // Unreadable, mid-rename, or not UTF-8: not evidence of staleness. See the javadoc.
+        }
+        return null;
+    }
+
     public static long computeSidecarStamp(Path root) {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
