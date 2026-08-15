@@ -26,6 +26,7 @@ The following elements are well-tested core components. Make changes with extrem
 Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
 
 - `se.deversity.vibetags.processor.AIGuardrailProcessor` → `.gemini/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md`
+- `se.deversity.vibetags.processor.VibeTagsLogger` → `.gemini/rules/se-deversity-vibetags-processor-VibeTagsLogger.md`
 - `se.deversity.vibetags.processor.internal.AnnotationCollector` → `.gemini/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md`
 - `se.deversity.vibetags.processor.internal.BuildFingerprint` → `.gemini/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md`
 - `se.deversity.vibetags.processor.internal.GranularRulesWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md`

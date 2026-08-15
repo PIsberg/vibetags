@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Repository alignment with the practices taught in *Vibe Architecture* (audit recorded in
+  `analysis/2026-08-15-health-scorecard.md`). Library behaviour is unchanged; everything below
+  is enforcement, measurement, or documentation around it:
+  - Locked Files Guard CI job — the shipped `action/locked-files` now runs on this repository's
+    own pull requests, with `.vibetags-locks` committed and kept current by check mode.
+  - Architecture Diagram Drift CI job — the code-karta diagrams regenerate on every build and
+    drift fails it (they had drifted; this release recommits them fresh).
+  - Shipping-dependency allowlist — `maven-enforcer-plugin` fails the build on any
+    compile/runtime dependency outside the allowlist in `vibetags-parent`.
+  - Instruction evals (`evals/`) — a headless task bank measuring whether `CLAUDE.md` and the
+    scoped rules actually bind an agent, wired to PRs that edit the instruction files.
+  - Inquisitor CI workflow — adversarial AI review of PR diffs against the committed guardrails,
+    with a structured gripe format and a deterministic verdict gate.
+  - `@AIThreadSafe` on `WriteCache`, `ModuleSidecar`, `GuardrailFileWriter` and `VibeTagsLogger`,
+    each note naming the async test that proves the declared strategy.
+  - `DocsIndexCompletenessTest` — an orphaned reference document now fails the build (12 were
+    orphaned when the test was introduced; all are now routed).
+  - CI failure-log artifacts, a pull-request template (verification, provenance, prompt
+    lineage), and the `consultation-loop` / `correctness-hunt` skills.
+
 ## [1.2.1] - 2026-08-14
 
 A patch release of lifecycle fixes, all found by testing the project's timeline rather than a single

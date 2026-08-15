@@ -1,0 +1,1 @@
+Add org.apache.commons:commons-lang3 as a test-scoped dependency of the annotation processor module (vibetags/pom.xml). Follow this repository's conventions for how and where dependency versions are declared. Do not run the build; just make the edit.

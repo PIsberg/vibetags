@@ -221,6 +221,11 @@ Still by hand, because they are prose rather than build files:
 **Version rules:**
 - Use a release version (e.g., `1.0.0`, not `1.0.0-SNAPSHOT`) for Maven Central.
 - Use semantic versioning: `MAJOR.MINOR.PATCH`.
+- An observable behaviour change is MAJOR-worthy even when the old behaviour was a bug, if
+  working consumers or correct persisted data (caches, sidecars, lock reports) exist under the
+  old behaviour. A version number is a compatibility promise, not a verdict on whether the old
+  code deserved to work. Ask "does correct data exist under the old behaviour?" before shipping
+  such a fix as a patch.
 
 ### 3. Update the CHANGELOG
 

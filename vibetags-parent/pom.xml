@@ -107,6 +107,7 @@
         <pmd.version>7.26.0</pmd.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.6.0</maven-enforcer-plugin.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <pitest-maven.version>1.25.9</pitest-maven.version>
@@ -301,6 +302,53 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>flatten-maven-plugin</artifactId>
                     <version>${flatten-maven-plugin.version}</version>
+                </plugin>
+                <!--
+                  Supply-chain gate for the dependency surface that ships. Everything on the
+                  compile/runtime classpath of the published artifacts is allowlisted here;
+                  docs/DEPENDENCIES.md is the human ledger and this rule is its executable
+                  form - policy the build does not read is a comment. Test-scoped and
+                  provided-scoped dependencies are exempt: they never reach a consumer, and
+                  gating them would make every test-library bump a two-file change for no
+                  consumer-facing risk reduction.
+
+                  A new shipping dependency therefore enters this project by editing this
+                  list, in a reviewed diff, never by an agent resolving one mid-task. The
+                  modules that publish artifacts (vibetags-annotations, vibetags,
+                  vibetags-cli) activate the plugin; load-tests and the examples do not,
+                  because their dependency surface is a workbench, not a shipment.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${maven-enforcer-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-shipping-dependency-allowlist</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <bannedDependencies>
+                                        <excludes>
+                                            <exclude>*</exclude>
+                                        </excludes>
+                                        <includes>
+                                            <include>*:*:*:*:test</include>
+                                            <include>*:*:*:*:provided</include>
+                                            <include>se.deversity.vibetags:*</include>
+                                            <include>org.jspecify:jspecify</include>
+                                            <include>org.slf4j:slf4j-api</include>
+                                            <include>ch.qos.logback:*</include>
+                                        </includes>
+                                        <searchTransitive>true</searchTransitive>
+                                        <message>A dependency outside the shipping allowlist reached the compile/runtime classpath. If it belongs here, add it to the allowlist in vibetags-parent/pom.xml and record it in docs/DEPENDENCIES.md, in the same reviewed change.</message>
+                                    </bannedDependencies>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

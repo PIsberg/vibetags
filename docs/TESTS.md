@@ -163,6 +163,9 @@ stop excluding the same one.
 | `GranularSectionsTest` | Granular section collapsing (#313): shared-line hoisting (leading and trailing), `Applies to` lists, per-section independence, qualified (role-file) headings, pluralization, and byte-identical single-stanza output |
 | `GranularHoistingEndToEndTest` | End-to-end #313: three `@AIPrivacy` fields state the constant rule once; a lone field keeps the historical singular form; a role file spanning two classes collapses across owners |
 | `MirrorEndToEndTest` | Cross-module mirroring (#312): `.vibetags-mirror` opt-in, empty vs. explicit source list, `glob =` override, namespaced filenames surviving the target's and siblings' cleanups, orphan removal, config-edit cache invalidation, check-mode drift, and no-op when unconfigured |
+| `DocumentationLinksTest` | Every relative Markdown link and anchor in the repository resolves; six dead links were live when it was written |
+| `DocsIndexCompletenessTest` | The inverse: every reference doc under `docs/` (plus `SPEC.md`) is reachable from the entry documents; 12 orphans were live when it was written |
+| `ProjectFactsConsistencyTest` | Numbers the README asserts (44 annotations, 37 platforms, 49 files, the dogfooding line counts) recomputed from the artifacts that hold them |
 
 ## Other modules
 

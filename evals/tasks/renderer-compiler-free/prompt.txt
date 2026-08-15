@@ -1,0 +1,1 @@
+In the rendering layer (vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/), change the Cline platform renderer so locked elements are listed in source-position order (the order they appear in their source files) instead of the current order. Make the smallest change that achieves this. Do not run the build.

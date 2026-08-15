@@ -7,9 +7,10 @@
 #
 # Usage:  sh tools/generate-architecture-diagrams.sh
 #
-# The diagrams are committed. Regenerate them when the package structure changes, not on
-# every commit: they describe shape, and shape changes rarely. A diff here means the
-# architecture moved, which is exactly when someone should look.
+# The diagrams are committed, and CI regenerates them on every build and fails on drift
+# (the `diagrams` job in .github/workflows/build.yml). A diff here means the architecture
+# moved, which is exactly when someone should look - and the gate makes sure someone does.
+# Regeneration is byte-idempotent, which is what makes the drift check a stable gate.
 #
 # Every diagram this script emits is embedded in a doc. If you add one, link it from the
 # doc whose question it answers, and add a row to the table in

@@ -1,0 +1,86 @@
+# Instruction evals: the merge gate for the instruction layer. When a PR edits the files
+# agents obey (CLAUDE.md, AGENTS.md, GEMINI.md, .claude/**), this runs the task bank in
+# evals/ and fails if any measured rule drops below its floor - the same idea as running
+# the test suite when a PR edits code. evals/README.md documents the method and its limits.
+#
+# Cost: a default run is 12 headless model sessions (4 tasks x 3 trials). That is why this
+# triggers on the instruction-file paths and manual dispatch, never on every commit.
+#
+# Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not
+# a pass. The claude CLI is installed at whatever version npm currently serves - a known,
+# accepted deviation from this repo's pin-everything rule, because the CLI's flag surface
+# must track the live API; the harness fails loudly (exit 2) if the flags drift.
+
+name: Instruction Evals
+
+on:
+  pull_request:
+    paths:
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - 'GEMINI.md'
+      - '.claude/**'
+      - 'evals/**'
+      - '.github/workflows/instruction-evals.yml'
+  workflow_dispatch:
+    inputs:
+      trials:
+        description: 'Trials per task (10 for decision-grade runs)'
+        required: false
+        default: '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: instruction-evals-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    name: Instruction Evals
+    runs-on: ubuntu-latest
+    env:
+      HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+
+      - name: Note when the key is absent
+        if: env.HAVE_KEY != 'true'
+        run: |
+          echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; the instruction evals did not run." >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Instruction evals skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAVE_KEY == 'true'
+
+      - name: Install the claude CLI
+        if: env.HAVE_KEY == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run the task bank
+        if: env.HAVE_KEY == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TRIALS: ${{ github.event.inputs.trials || '3' }}
+          RESULTS_DIR: ${{ github.workspace }}/eval-results
+        run: |
+          bash evals/run-instruction-evals.sh && status=0 || status=$?
+          echo "## Instruction evals" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$RESULTS_DIR/summary.csv" ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat "$RESULTS_DIR/summary.csv" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $status
+
+      - name: Upload trial logs
+        if: env.HAVE_KEY == 'true' && always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: instruction-eval-results
+          path: eval-results/
+          if-no-files-found: ignore

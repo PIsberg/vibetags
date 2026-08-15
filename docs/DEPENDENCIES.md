@@ -84,6 +84,10 @@ testing runs on demand only, via `.github/workflows/mutation.yml`, because it co
 than seconds.
 
 **Supply chain and publishing.** `cyclonedx-maven-plugin` emits the SBOM.
+`maven-enforcer-plugin` (`maven-enforcer-plugin.version`) bans any compile- or runtime-scoped
+dependency outside the allowlist declared in `vibetags-parent` — this document is the ledger of
+what ships, and the enforcer rule is that ledger's executable form. Test scope is exempt: it
+never reaches a consumer, and gating it would tax every test-library bump for no risk reduction.
 `central-publishing-maven-plugin` and `maven-gpg-plugin` sign and publish to Maven Central.
 `flatten-maven-plugin` resolves `${revision}` and strips `vibetags-parent` out of the deployed POMs,
 so what consumers download is self-contained.

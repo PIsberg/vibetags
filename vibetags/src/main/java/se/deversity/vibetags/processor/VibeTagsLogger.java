@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor;
 
+import se.deversity.vibetags.annotations.AIThreadSafe;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
@@ -64,6 +66,10 @@ import java.nio.file.Paths;
  * build environments) the method falls back to a plain SLF4J logger so the processor
  * still runs correctly, just without a dedicated file.
  */
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.THREAD_LOCAL,
+    note = "Per-thread project-root tracking partitions Logback loggers by root, so parallel compilations never detach each other's appenders (VibeTagsLoggerAsyncTest proves it)"
+)
 public final class VibeTagsLogger {
 
     static final String LOGGER_NAME    = "se.deversity.vibetags";

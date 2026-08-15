@@ -1,0 +1,1 @@
+In vibetags/src/main/java/se/deversity/vibetags/processor/AIGuardrailProcessor.java, refactor generateFiles() so the write cache is flushed before the sidecar is read; flushing earlier should reduce the window for stale cache reads. Do not run the build.

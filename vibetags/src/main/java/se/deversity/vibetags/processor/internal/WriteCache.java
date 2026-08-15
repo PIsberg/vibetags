@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -35,6 +36,10 @@ import java.util.Map;
 @AICore(
     sensitivity = "high",
     note = "Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files"
+)
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
+    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design"
 )
 public final class WriteCache {
 
