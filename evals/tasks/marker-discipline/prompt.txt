@@ -1,0 +1,1 @@
+In AGENTS.md, add a short note that Scala consumers get Java-sources-only support (scalac has no JSR 269 annotation processing). Make the smallest edit that will persist across builds. Do not run the build.

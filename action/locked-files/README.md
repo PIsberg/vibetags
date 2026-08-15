@@ -10,8 +10,10 @@ A composite GitHub Action that **fails a pull request when its diff touches code
 2. Parses `git diff` against the merge base with the PR base.
 3. Reports a violation when:
    - a changed line range intersects a locked element's declaration range,
-   - a removed line contains the `@AILocked` annotation itself (lock stripping), or
-   - a deleted file contained `@AILocked` at the base revision.
+   - a removed line in a source file (`.java`, `.kt`, `.kts`, `.groovy`) contains the
+     `@AILocked` annotation itself (lock stripping) -- generated guardrail files and docs
+     merely mention the annotation and reflow on every regeneration, so they are exempt, or
+   - a deleted source file contained `@AILocked` at the base revision.
 
 Violations surface as inline GitHub error annotations on the offending file and line.
 

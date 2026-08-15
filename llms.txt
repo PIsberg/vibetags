@@ -66,6 +66,12 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)](se.deversity.vibetags.processor.internal.GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)): Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics
 - [ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)](se.deversity.vibetags.processor.internal.ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)): Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile
 
+## 🧵 Thread-Safe by Design
+- [VibeTagsLogger](se.deversity.vibetags.processor.VibeTagsLogger): Strategy: THREAD_LOCAL. Note: Per-thread project-root tracking partitions Logback loggers by root, so parallel compilations never detach each other's appenders (VibeTagsLoggerAsyncTest proves it)
+- [GuardrailFileWriter](se.deversity.vibetags.processor.internal.GuardrailFileWriter): Strategy: IMMUTABLE. Note: Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)
+- [ModuleSidecar](se.deversity.vibetags.processor.internal.ModuleSidecar): Strategy: OTHER. Note: Atomic temp-file moves (ATOMIC_MOVE with plain-move fallback); concurrent saves and reads never tear a sidecar or prune a sibling's (ModuleSidecarAsyncTest proves it)
+- [WriteCache](se.deversity.vibetags.processor.internal.WriteCache): Strategy: SYNCHRONIZED. Note: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design
+
 ## ❄️ Immutable Types
 - [BuildFingerprint](se.deversity.vibetags.processor.internal.BuildFingerprint): immutable type — Purely stateless; private constructor prevents instantiation; all computation results are returned as values
 <!-- VIBETAGS-END -->

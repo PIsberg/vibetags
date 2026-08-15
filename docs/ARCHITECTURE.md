@@ -14,6 +14,7 @@
 - [Testing Strategy](#testing-strategy)
 - [Limitations](#limitations)
 - [Future Architecture](#future-architecture)
+- [Design History](#design-history)
 - [Dependencies](#dependencies)
 - [Build Commands](#build-commands)
 - [AI Platform Integration](#ai-platform-integration)
@@ -66,6 +67,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - [Testing Strategy](#testing-strategy)
 - [Limitations](#limitations)
 - [Future Architecture](#future-architecture)
+- [Design History](#design-history)
 
 ---
 
@@ -1147,4 +1149,28 @@ The format hierarchy, a sample `llms.txt` output, opt-in commands, and the `vibe
 
 ---
 
-*Last updated: 2026-08-01 — replaced the restated annotation counts and the `AIGuardrailProcessor` line count with links and properties. Restating a number the README already pins is how the previous "39 annotations" here outlived the 44 that exist; a line count in prose rots on the next commit. `ProjectFactsConsistencyTest` guards the README's figures, and nothing guards a copy of them.*
+## Design History
+
+The documents below are point-in-time records, kept for provenance. They describe decisions as
+they were made, not the system as it is; for current behaviour, the reference docs above win.
+
+- [SPEC.md](../SPEC.md) — the pre-1.0 design specification for parallel test execution and the
+  nine annotations added in that initiative. Implemented; superseded by the reference docs.
+- [PLAN.md](PLAN.md) — the step-by-step execution plan for that same initiative. All shipped.
+- [proposals/transitive-guardrails.md](proposals/transitive-guardrails.md) — the design proposal
+  behind guardrails inherited from dependencies.
+- [diagrams/archive/](diagrams/archive/README.md) — superseded diagram generations, kept so a
+  reader of an old release can see what its docs pictured.
+
+Dated analyses that were never reference material (benchmark captures, audits, surveys) live
+under `analysis/` at the repository root, dated in the filename.
+
+---
+
+*Last updated: 2026-08-15 — added the Design History section so the historical spec, plan,
+proposals, and archived diagrams are routed from exactly one place (`DocsIndexCompletenessTest`
+now fails an orphaned doc). Previous update 2026-08-01 — replaced the restated annotation counts
+and the `AIGuardrailProcessor` line count with links and properties. Restating a number the
+README already pins is how the previous "39 annotations" here outlived the 44 that exist; a line
+count in prose rots on the next commit. `ProjectFactsConsistencyTest` guards the README's
+figures, and nothing guards a copy of them.*

@@ -7,8 +7,10 @@ before this script), parses ``git diff`` against the merge base, and reports a
 violation when:
 
   1. a changed line range intersects a locked element's line range,
-  2. a removed line contains the ``@AILocked`` annotation itself (lock stripping),
-  3. a deleted file contained ``@AILocked`` at the base revision.
+  2. a removed line in a source file contains the ``@AILocked`` annotation itself
+     (lock stripping; scoped to source files because generated guardrail files and
+     docs merely *mention* the annotation and reflow on every regeneration),
+  3. a deleted source file contained ``@AILocked`` at the base revision.
 
 Environment:
   VIBETAGS_BASE_REF    ref/SHA to diff against (required)
@@ -24,6 +26,19 @@ import subprocess
 import sys
 
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+# Files that can carry @AILocked as an annotation on code. The lock-stripping and
+# deleted-file checks are scoped to these: generated guardrail files and docs legitimately
+# *mention* @AILocked, and regenerating them reflows those lines on every unrelated change.
+# The first PR this guard ever ran on was flagged for exactly that (its own dogfooding PR,
+# which reflowed generated Markdown), while a real stripped lock lives in a source file --
+# and must stay a string check on the base side, because a stripped lock is absent from the
+# regenerated report and so invisible to any report-based check.
+SOURCE_EXTS = (".java", ".kt", ".kts", ".groovy")
+
+
+def is_lock_carrying_source(path):
+    return path is not None and path.endswith(SOURCE_EXTS)
 
 
 def run_git(*args):
@@ -152,19 +167,22 @@ def main():
         if display.endswith(".vibetags-locks"):
             continue  # report regeneration is expected, not a violation
 
-        # 3. Deleted file that contained @AILocked at base.
+        # 3. Deleted source file that contained @AILocked at base.
         if path is None and old_path is not None:
-            base_blob = subprocess.run(
-                ["git", "show", f"{merge_base}:{old_path}"],
-                capture_output=True, text=True, encoding="utf-8", errors="replace",
-            )
-            if base_blob.returncode == 0 and "@AILocked" in base_blob.stdout:
-                violations += 1
-                print(f"::{kind} file={old_path}::Deleted file contained @AILocked code")
+            if is_lock_carrying_source(old_path):
+                base_blob = subprocess.run(
+                    ["git", "show", f"{merge_base}:{old_path}"],
+                    capture_output=True, text=True, encoding="utf-8", errors="replace",
+                )
+                if base_blob.returncode == 0 and "@AILocked" in base_blob.stdout:
+                    violations += 1
+                    print(f"::{kind} file={old_path}::Deleted file contained @AILocked code")
             continue
 
-        # 2. Lock stripping: the @AILocked annotation itself was removed.
-        if any("@AILocked" in line for line in removed_lines):
+        # 2. Lock stripping: the @AILocked annotation itself was removed from source.
+        if is_lock_carrying_source(display) and any(
+            "@AILocked" in line for line in removed_lines
+        ):
             violations += 1
             print(f"::{kind} file={display}::A line containing @AILocked was removed -- "
                   "removing a lock requires explicit human review")

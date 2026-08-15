@@ -8,4 +8,8 @@
 ### Rules for method writeFileIfChanged
 - **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.
 - **Reason**: Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics
+
+## Thread-Safety Guarantee
+- **Strategy**: IMMUTABLE
+- **Note**: Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)
 <!-- VIBETAGS-END -->

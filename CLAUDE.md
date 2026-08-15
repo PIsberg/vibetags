@@ -120,21 +120,23 @@ This repo dogfoods the index: the block at the bottom of this file is a scoped-r
 per-element detail lives in `.claude/rules/`, loaded on demand by glob.
 ## Reference docs (read on demand)
 
-- `docs/MULTI-MODULE.md` — reactors: sidecar merge, per-module output, `.vibetags-root-index`, `.vibetags-roles`, `.vibetags-mirror`, granular file layout.
-- `docs/PROCESSOR.md` — processor options, write cache + fingerprint short-circuit, check mode, `.vibetags-locks`, SPI/Gradle incremental.
-- `docs/ANNOTATIONS.md` — adding or changing an annotation: full table, semantics, validation warnings.
-- `docs/PLATFORMS.md` — adding a platform, or a question about a specific output file.
-- `docs/TESTS.md` — which test class covers what.
-- `docs/DEPENDENCIES.md` — every third-party artifact, why it is here, what ships to consumers and what only runs the build; where versions are declared and which newer versions were rejected.
-- `docs/LOAD-BEARING.md` — processing flow, file-existence opt-in, marker rules, the scoped-rules
+- [docs/MULTI-MODULE.md](docs/MULTI-MODULE.md) — reactors: sidecar merge, per-module output, `.vibetags-root-index`, `.vibetags-roles`, `.vibetags-mirror`, granular file layout.
+- [docs/PROCESSOR.md](docs/PROCESSOR.md) — processor options, write cache + fingerprint short-circuit, check mode, `.vibetags-locks`, SPI/Gradle incremental.
+- [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md) — adding or changing an annotation: full table, semantics, validation warnings.
+- [docs/PLATFORMS.md](docs/PLATFORMS.md) — adding a platform, or a question about a specific output file.
+- [docs/TESTS.md](docs/TESTS.md) — which test class covers what.
+- [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) — every third-party artifact, why it is here, what ships to consumers and what only runs the build; where versions are declared and which newer versions were rejected.
+- [docs/LOAD-BEARING.md](docs/LOAD-BEARING.md) — processing flow, file-existence opt-in, marker rules, the scoped-rules
   index, and the internal class map. The reasoning behind the invariants above.
-- `docs/ARCHITECTURE.md` — deep dive: system diagram, data flow, design decisions, limitations.
-- `USAGE.md` — consumer-facing usage (how to add VibeTags to a project).
-- `README.md` — the test-enforced project facts (44 annotations, 37 platforms, 49 config files; pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
-- `docs/WORKFLOW.md` — what CI actually runs, step by step, and why each verification exists.
-- `docs/RELEASING.md` — the release process.
-- `docs/CHANGELOG.md` — what each release changed and why.
-- `docs/vibetags-in-practice.md` — survey of annotation/platform usage across five real consumer codebases (2026-07-16).
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — deep dive: system diagram, data flow, design decisions, limitations, design history.
+- [USAGE.md](USAGE.md) — consumer-facing usage (how to add VibeTags to a project).
+- [README.md](README.md) — the test-enforced project facts (44 annotations, 37 platforms, 49 config files; pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
+- [docs/WORKFLOW.md](docs/WORKFLOW.md) — what CI actually runs, step by step, and why each verification exists.
+- [docs/RELEASING.md](docs/RELEASING.md) — the release process.
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) — what each release changed and why.
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — contribution workflow; [docs/SECURITY.md](docs/SECURITY.md) — reporting vulnerabilities.
+- [evals/README.md](evals/README.md) — instruction evals: whether the rules in this file actually bind an agent, measured.
+- [docs/vibetags-in-practice.md](docs/vibetags-in-practice.md) — survey of annotation/platform usage across five real consumer codebases (2026-07-16).
 
 ## Pre-commit Hooks
 
@@ -171,6 +173,7 @@ The repo uses `pre-commit` with Checkstyle, gitleaks (secret scanning), end-of-f
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor" rules=".claude/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md"/>
+    <element path="se.deversity.vibetags.processor.VibeTagsLogger" rules=".claude/rules/se-deversity-vibetags-processor-VibeTagsLogger.md"/>
     <element path="se.deversity.vibetags.processor.internal.AnnotationCollector" rules=".claude/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md"/>
     <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
     <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>

@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
@@ -49,6 +50,10 @@ import java.util.stream.Stream;
 @AICore(
     sensitivity = "high",
     note = "Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility"
+)
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.OTHER,
+    note = "Atomic temp-file moves (ATOMIC_MOVE with plain-move fallback); concurrent saves and reads never tear a sidecar or prune a sibling's (ModuleSidecarAsyncTest proves it)"
 )
 public final class ModuleSidecar {
 

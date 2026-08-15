@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.Messager;
@@ -35,6 +36,10 @@ import java.util.stream.Stream;
 @AICore(
     sensitivity = "high",
     note = "Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost"
+)
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.IMMUTABLE,
+    note = "Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)"
 )
 public final class GuardrailFileWriter {
 

@@ -1,0 +1,80 @@
+# The Inquisitor: an adversarial AI reviewer with the opposite objective function from
+# whoever produced the diff. It reads only the diff and the committed law (.github/
+# INQUISITOR.md names the sources), emits structured gripes, and fails this job when a
+# committed rule is violated. The gating is deliberately dumb bash over files the reviewer
+# writes; the model never decides its own exit code.
+#
+# Runs only when the ANTHROPIC_API_KEY secret exists; otherwise every step is skipped and
+# the summary says SKIPPED, which is not a pass. The job is intentionally not in the
+# required-checks set while it earns trust; promote it once its verdict record justifies
+# blocking merges (docs/WORKFLOW.md tracks that decision).
+#
+# Each run is a fresh context: no conversation history, no session memory. That separation
+# is the point, not an accident. Model pinned by exact ID below; upgrades to it should be
+# deliberate commits, reviewed like any other change to an enforcer.
+
+name: Inquisitor
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inquisitor-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  inquisitor:
+    name: Adversarial Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+
+      - name: Note when the key is absent
+        if: env.HAVE_KEY != 'true'
+        run: |
+          echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; no review ran." >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Inquisitor skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAVE_KEY == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Run the Inquisitor
+        if: env.HAVE_KEY == 'true'
+        uses: anthropics/claude-code-action@9d7150bc8a3dae8149739a88019d192b579ad90c # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Read the file .github/INQUISITOR.md and follow it exactly. The base ref for
+            the diff is origin/${{ github.base_ref }}. Produce inquisitor-report.md (and
+            inquisitor-violations only if violations exist) as its output contract states.
+          claude_args: >-
+            --model claude-opus-5
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+
+      - name: Publish the verdict (deterministic gate)
+        if: env.HAVE_KEY == 'true'
+        run: |
+          if [ ! -f inquisitor-report.md ]; then
+            echo "::error::The Inquisitor produced no report. That is a harness failure, not an all-clear."
+            exit 1
+          fi
+          cat inquisitor-report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f inquisitor-violations ]; then
+            echo "::error::Inquisitor found violations of committed rules. See the job summary for the gripes."
+            exit 1
+          fi
+          echo "Inquisitor: ALL CLEAR."

@@ -58,6 +58,14 @@ Internal logic may be modified, but never change method names, parameter types, 
 - **se.deversity.vibetags.processor.internal.GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)**: Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics
 - **se.deversity.vibetags.processor.internal.ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)**: Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile
 
+## 🧵 THREAD-SAFE BY DESIGN
+These elements are explicitly designed to be thread-safe. Preserve the synchronization invariant on every change.
+
+- **se.deversity.vibetags.processor.VibeTagsLogger**: Strategy: THREAD_LOCAL. Note: Per-thread project-root tracking partitions Logback loggers by root, so parallel compilations never detach each other's appenders (VibeTagsLoggerAsyncTest proves it)
+- **se.deversity.vibetags.processor.internal.GuardrailFileWriter**: Strategy: IMMUTABLE. Note: Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)
+- **se.deversity.vibetags.processor.internal.ModuleSidecar**: Strategy: OTHER. Note: Atomic temp-file moves (ATOMIC_MOVE with plain-move fallback); concurrent saves and reads never tear a sidecar or prune a sibling's (ModuleSidecarAsyncTest proves it)
+- **se.deversity.vibetags.processor.internal.WriteCache**: Strategy: SYNCHRONIZED. Note: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design
+
 ## ❄️ IMMUTABLE TYPES
 The following types are immutable. Do not introduce non-final fields, setters, or mutating methods.
 
