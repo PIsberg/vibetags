@@ -166,6 +166,8 @@ stop excluding the same one.
 | `DocumentationLinksTest` | Every relative Markdown link and anchor in the repository resolves; six dead links were live when it was written |
 | `DocsIndexCompletenessTest` | The inverse: every reference doc under `docs/` (plus `SPEC.md`) is reachable from the entry documents; 12 orphans were live when it was written |
 | `ProjectFactsConsistencyTest` | Numbers the README asserts (44 annotations, 37 platforms, 49 files, the dogfooding line counts) recomputed from the artifacts that hold them |
+| `CoreFlowsBddTest` (`e2e`) | Executes the Gherkin scenarios in `src/test/resources/features/` against a real compile; scenario-level bindings, and the file and the bindings must match exactly in both directions, so a scenario without a binding (or a binding without a scenario) is a red build |
+| `ProcessorAllocationBudgetTest` (`e2e`) | The inner-loop performance contract: compiling 100 annotated classes must stay inside a 768 MB per-thread allocation budget (3.04x the measured 264,955,400 bytes; wall-clock is deliberately not asserted, allocation is the stable metric) |
 
 ## Other modules
 

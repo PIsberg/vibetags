@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/capture-lineage.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

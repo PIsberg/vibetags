@@ -43,10 +43,23 @@ jobs:
     env:
       HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     steps:
-      - name: Harden the runner
+      # The agent lane runs sandboxed: ephemeral runner, the API key as its only secret,
+      # egress BLOCKED except what the job demonstrably needs (Anthropic API, GitHub, npm
+      # for the CLI install). Extend the list in a reviewed commit if a legitimate endpoint
+      # gets blocked; never flip back to audit.
+      - name: Harden the runner (Block egress, allowlist only)
         uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            api.anthropic.com:443
+            statsig.anthropic.com:443
+            api.github.com:443
+            github.com:443
+            codeload.github.com:443
+            objects.githubusercontent.com:443
+            raw.githubusercontent.com:443
+            registry.npmjs.org:443
 
       - name: Note when the key is absent
         if: env.HAVE_KEY != 'true'

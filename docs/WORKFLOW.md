@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Eleven workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the demo recording runs when the code it demonstrates changes; and the two AI-backed workflows (Inquisitor, Instruction Evals) run on pull requests but skip themselves, loudly, when the `ANTHROPIC_API_KEY` secret is absent.
+This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) run on pull requests but skip themselves, loudly, when the `ANTHROPIC_API_KEY` secret is absent.
 
 ## Overview
 
@@ -17,6 +17,8 @@ This document describes what happens during CI builds in `.github/workflows/`. E
 | Gradle Wrapper Validation | `gradle-wrapper-validation.yml` | Push to `main`; PRs touching a wrapper |
 | Inquisitor (adversarial AI review) | `inquisitor.yml` | Pull requests; needs `ANTHROPIC_API_KEY` |
 | Instruction Evals | `instruction-evals.yml` | PRs touching `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`/`.claude/**`/`evals/**`, manual |
+| Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
+| Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
 
 All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow is `contents: read`; jobs that need more (e.g. CodeQL writes `security-events`) escalate explicitly.
 
@@ -245,6 +247,42 @@ job fails if a measured rule drops below its floor. The same idea as running the
 when a PR edits code, applied to the one load-bearing artifact that otherwise cannot go red.
 Method, floors, and honest limits: `evals/README.md`. Requires `ANTHROPIC_API_KEY`; skips
 loudly without it. Trial logs upload as the `instruction-eval-results` artifact.
+
+---
+
+## 12. Copilot Review (`copilot-review.yml`)
+
+The always-available adversarial review lane: on every opened, reopened, or
+ready-for-review PR, the job requests a GitHub Copilot code review via the reviewer API.
+Copilot needs no repository secret and spends the maintainer's Copilot Free quota, so this
+lane works when the Inquisitor's does not; together they mean every PR gets at least one
+machine reviewer whenever either lane has credit. The job requests and then VERIFIES: the
+request API returns success even when GitHub silently drops the reviewer (observed live on
+this repo's PR #417 - a 2xx and then no review-request event at all, from the Actions token
+and from the maintainer's own token alike, with the equivalent ruleset parameter silently
+stripped too), so only a recorded pending request counts as requested. Anything else - quota
+exhausted, code review not available on the account or plan, rollout - skips loudly and stays
+green: an advisory reviewer must never block a merge, but the summary says SKIPPED, because
+skipped is not passed. `synchronize` is deliberately not a trigger, so work-in-progress
+pushes do not drain the quota; re-request from the PR page when a revised diff deserves
+fresh eyes. The lane's
+model is GitHub-managed and unpinnable, which `.github/MODEL-ROSTER.md` records as a known
+property, acceptable exactly because the lane is advisory.
+
+---
+
+## 13. Nightly Perf Ring (`nightly-perf.yml`)
+
+The scheduled half of the performance contract (the inner-loop half is
+`ProcessorAllocationBudgetTest`, which asserts an allocation budget on every e2e run). Weekly,
+it runs the load-tests allocation sweep and compares `ProcessorAlloc(KB)` at N=100 and N=500
+against the newest committed baseline under `load-tests/results/`, warning at more than 35%
+deviation. It compares allocation and not wall-clock because allocation is the only metric
+the harness's own documentation certifies as stable (0.6% between runs; wall-clock has
+varied 1.93x). Deviations warn rather than fail: the committed baselines were captured on a
+different machine and JDK, so a hard gate would fail on environment rather than regression;
+a warning that repeats weekly is the signal to capture a fresh baseline and investigate.
+Sweep output uploads as an artifact either way.
 
 ---
 

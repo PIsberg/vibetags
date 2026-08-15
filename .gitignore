@@ -63,3 +63,12 @@ __pycache__/
 # would put a second copy of every version under source control — the opposite of the
 # point. `mvn clean` removes it via the plugin's flatten.clean execution.
 .flattened-pom.xml
+
+# Prompt-lineage staging written by the SessionEnd hook (.claude/hooks/capture-lineage.sh).
+# Raw per-session trail; load-bearing intent gets promoted into commits and PR bodies by a
+# human, and the raw trail itself never belongs in history.
+.claude/lineage/
+
+# Instruction-eval trial output (evals/run-instruction-evals.sh). Point-in-time measurement
+# artifacts; the summary worth keeping goes into the PR or scorecard that acted on it.
+evals/results/

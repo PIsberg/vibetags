@@ -65,6 +65,13 @@ variable under measurement is the committed instruction stack of this repository
 - **Same-model rule.** Run evals on the model that writes production code in this repo
   (`EVAL_MODEL`, default `claude-opus-5`). A cheaper model's adherence is a different
   experiment, not a discount.
+- **The copilot engine is a different experiment, on purpose.** `ENGINE=copilot` drives the
+  GitHub Copilot CLI instead of `claude -p`, so the bank can run on Copilot Free quota with
+  no Anthropic key. Its results measure whether the instruction stack binds *that* agent,
+  which is worth knowing in its own right, but they are not interchangeable with the
+  claude-engine numbers (different model, GitHub-managed routing, non-hermetic user config).
+  A missing CLI or exhausted quota exits 2 or surfaces as HARNESS-ERROR trials: a visible
+  skip, never a false pass.
 - **Cost.** A default run is 12 headless sessions (4 tasks x 3 trials); each trial's
   `total_cost_usd` is in its `results/<ts>/<task>-trialN.json`.
 

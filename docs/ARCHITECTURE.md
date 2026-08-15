@@ -14,6 +14,7 @@
 - [Testing Strategy](#testing-strategy)
 - [Limitations](#limitations)
 - [Future Architecture](#future-architecture)
+- [Repository Layout Notes](#repository-layout-notes)
 - [Design History](#design-history)
 - [Dependencies](#dependencies)
 - [Build Commands](#build-commands)
@@ -67,6 +68,7 @@ The split keeps `slf4j` / `logback` (the processor's internal logging deps) off 
 - [Testing Strategy](#testing-strategy)
 - [Limitations](#limitations)
 - [Future Architecture](#future-architecture)
+- [Repository Layout Notes](#repository-layout-notes)
 - [Design History](#design-history)
 
 ---
@@ -1095,7 +1097,7 @@ vibetags-processor/     # Legacy wrapper (deprecated)
 
 ## Build Commands
 
-Build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example`, for both Maven and Gradle. The full command sequences (build, test, single-test-class) are maintained in one place: **[../CLAUDE.md#build-commands](../CLAUDE.md#build-commands)** (agent briefing) and the "Building from Source" section of [../README.md](../README.md).
+Build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `example`, for both Maven and Gradle. The full command sequences (build, test, single-test-class) are maintained in one place: **[../CLAUDE.md#build-and-test](../CLAUDE.md#build-and-test)** (agent briefing) and the "Building from Source" section of [../README.md](../README.md).
 
 ---
 
@@ -1148,6 +1150,38 @@ Sample `QWEN.md` / `.qwen/settings.json` output and the `.qwen/commands/refactor
 The format hierarchy, a sample `llms.txt` output, opt-in commands, and the `vibetags.project` naming option are documented in one place: [USAGE.md § llms.txt Standard](../USAGE.md#-llmstxt-standard-windsurf-cascade--llm-agents).
 
 ---
+
+## Repository Layout Notes
+
+The developer-facing facts about each subproject that the directory tree alone does not say
+(moved here from `CLAUDE.md` when that file went on its context diet; the build order and the
+one-line map stay there):
+
+- `vibetags-annotations/` — the 44 `@interface` classes, zero dependencies. On the consumer's
+  compile classpath. Build first.
+- `vibetags/` — the processor (`AIGuardrailProcessor` + `VibeTagsLogger`). On the consumer's
+  annotation-processor path only.
+- `vibetags-bom/` — pom-only BOM managing the published versions. Maven only; Gradle reads it
+  via `mavenLocal()` / `platform(...)`.
+- `vibetags-cli/` — companion CLI (`init` creates opt-in files, `doctor` reports project
+  health). Depends on `vibetags` as a library for `ServiceRegistry.optInKeys()` and the marker
+  constants — it must never carry its own platform list. Build after `vibetags`.
+- `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last
+  two are reactors, asserted in CI).
+- `example-kotlin/`, `example-groovy/`, `example-scala/` — JVM-language consumers, all built on
+  the JDK 21 Gradle CI leg. Kotlin (kapt) and Groovy (joint-compilation stubs +
+  `javaAnnotationProcessing`) get full support with the same stub caveats (no body-scoped
+  annotations, stub positions); Scala is Java-sources-only (scalac has no JSR 269) and its CI
+  step asserts the annotated Scala class does NOT appear. Clojure is documented as impossible
+  (no javac; SOURCE retention inexpressible) — support matrix in USAGE.md.
+- `load-tests/` — standalone benchmark harness; pins `<processor.version>` directly
+  (intentional — cross-version comparison is the wrong workload for a BOM).
+- `action/locked-files/` — GitHub Action consuming `.vibetags-locks`.
+- `vibetags-parent/` — pom-only. Every version in the repository is declared here and nowhere
+  else: third-party dependencies, plugins, and `<revision>`, the VibeTags release version. Not
+  published: `flatten-maven-plugin` resolves it away before deploy, so the POMs on Maven
+  Central are self-contained and consumers gain nothing new to resolve. Subprojects reference
+  it by `<relativePath>`, so each builds straight from a checkout with no install step.
 
 ## Design History
 

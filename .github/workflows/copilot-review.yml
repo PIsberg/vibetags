@@ -1,0 +1,71 @@
+# The always-available adversarial review lane: GitHub Copilot code review, requested
+# automatically on every PR. It complements the Inquisitor (inquisitor.yml): Copilot needs no
+# repository secret and spends the maintainer's Copilot Free quota; the Inquisitor enforces
+# this repo's committed law but needs ANTHROPIC_API_KEY. Together they mean every PR gets at
+# least one machine reviewer whenever either lane has credit.
+#
+# When Copilot cannot review (monthly quota exhausted, Copilot not enabled for the account,
+# or the bot not requestable), the request fails and this job SKIPS LOUDLY and stays green:
+# a missing advisory reviewer must not block a merge, but the summary must say it was
+# skipped, because skipped is not passed.
+#
+# Trigger types deliberately exclude `synchronize`: re-requesting on every push would drain
+# the free quota on work-in-progress pushes. Re-request manually from the PR page when a
+# revised diff deserves fresh eyes.
+
+name: Copilot Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    name: Request Copilot Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden the runner (Block all egress except GitHub)
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+
+      - name: Request a Copilot review, verify it landed, or skip loudly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          post_ok=false
+          if gh api --method POST \
+               "repos/$REPO_OWNER/$REPO_NAME/pulls/$PR_NUMBER/requested_reviewers" \
+               -f 'reviewers[]=copilot-pull-request-reviewer[bot]' \
+               > /tmp/copilot-request.json 2> /tmp/copilot-request.err; then
+            post_ok=true
+          fi
+          # Two-phase evidence: a 2xx from the request API is NOT proof the request exists.
+          # Observed live on PR #417 (2026-08-15): the POST succeeds and GitHub records no
+          # review request at all when Copilot code review is unavailable to the requesting
+          # identity (quota, plan, or rollout). Only a recorded review request counts.
+          sleep 10
+          landed=$(gh api graphql \
+            -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewRequests(first:20){nodes{requestedReviewer{__typename ... on Bot{login}}}}}}}' \
+            -f o="$REPO_OWNER" -f r="$REPO_NAME" -F n="$PR_NUMBER" \
+            --jq '[.data.repository.pullRequest.reviewRequests.nodes[].requestedReviewer // empty | select(.__typename=="Bot") | .login] | join(",")' 2>/dev/null || true)
+          if [ "$post_ok" = true ] && printf '%s' "$landed" | grep -qi copilot; then
+            echo "Copilot review requested for PR #$PR_NUMBER and confirmed pending." >> "$GITHUB_STEP_SUMMARY"
+            echo "Copilot review requested and confirmed."
+          else
+            echo "SKIPPED: Copilot did not take the review request (quota exhausted, code review not available on this account/plan, or rollout). The request API alone is not evidence; no pending Copilot request exists on the PR. Skipped is not passed." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Copilot review skipped: no recorded review request (post_ok=$post_ok, pending_bots='${landed:-none}')."
+            if [ -s /tmp/copilot-request.err ]; then cat /tmp/copilot-request.err; fi
+          fi
