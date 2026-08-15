@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +41,11 @@ import java.util.Map;
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
     note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design"
+)
+@AITestDriven(
+    coverageGoal = 90,
+    framework = AITestDriven.Framework.JUNIT_5,
+    mockPolicy = "Write the failing test first; drive real files in a temp dir, never a mocked filesystem (a false cache positive silently corrupts output)"
 )
 public final class WriteCache {
 

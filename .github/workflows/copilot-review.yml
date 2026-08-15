@@ -1,0 +1,55 @@
+# The always-available adversarial review lane: GitHub Copilot code review, requested
+# automatically on every PR. It complements the Inquisitor (inquisitor.yml): Copilot needs no
+# repository secret and spends the maintainer's Copilot Free quota; the Inquisitor enforces
+# this repo's committed law but needs ANTHROPIC_API_KEY. Together they mean every PR gets at
+# least one machine reviewer whenever either lane has credit.
+#
+# When Copilot cannot review (monthly quota exhausted, Copilot not enabled for the account,
+# or the bot not requestable), the request fails and this job SKIPS LOUDLY and stays green:
+# a missing advisory reviewer must not block a merge, but the summary must say it was
+# skipped, because skipped is not passed.
+#
+# Trigger types deliberately exclude `synchronize`: re-requesting on every push would drain
+# the free quota on work-in-progress pushes. Re-request manually from the PR page when a
+# revised diff deserves fresh eyes.
+
+name: Copilot Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    name: Request Copilot Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden the runner (Block all egress except GitHub)
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+
+      - name: Request a Copilot review, or skip loudly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api --method POST \
+               "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/requested_reviewers" \
+               -f 'reviewers[]=copilot-pull-request-reviewer[bot]' \
+               > /tmp/copilot-request.json 2> /tmp/copilot-request.err; then
+            echo "Copilot review requested for PR #${{ github.event.pull_request.number }}." >> "$GITHUB_STEP_SUMMARY"
+            echo "Copilot review requested."
+          else
+            echo "SKIPPED: Copilot review could not be requested (no quota, Copilot not enabled, or the reviewer bot is not requestable here). Skipped is not passed." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Copilot review skipped. API said:"
+            cat /tmp/copilot-request.err || true
+          fi

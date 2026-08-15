@@ -169,3 +169,70 @@ buckets are populated in and therefore the insertion order of every `LinkedHashS
 appending is safe, reordering changes generated files. It is deliberately **not** the order
 `BuildFingerprint` hashes in; that one is pinned separately, in that class, because changing it
 invalidates every consumer's cached fingerprint.
+
+## The invariants, stated in full
+
+`CLAUDE.md` carries these as a one-line-per-invariant Tier-1 list, each line naming its
+enforcing test. This section is the full statement each of those lines compresses; when a line
+and this section seem to disagree, the enforcing test decides.
+
+- **File presence is the opt-in.** The processor regenerates only files that already exist, and
+  deleting one deactivates that platform permanently. Never "helpfully" create an output file.
+  One documented exception: activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
+  `.codex/rules/vibetags.rules`), creating `.codex/` if absent.
+- **`process()` returns `false`** so other processors still see the annotations; all writing happens
+  on `processingOver()`.
+- **Hand-authored content outside the markers must never be lost.** Generated content is written
+  strictly between `VIBETAGS-START` / `VIBETAGS-END` (HTML or hash form per file type); JSON and TOML
+  configs are whole-file overwrites.
+- **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
+  already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
+- **All 44 `@AI*` annotations are `RetentionPolicy.SOURCE`.** They must not leak into runtime.
+- **When a platform has both an aggregate and a granular directory opted in, the aggregate collapses
+  to a scoped-rules index:** only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`,
+  `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline. Gating is `GranularIndexSection.governingGranularKey`.
+- **The rendering layer must stay compiler-free.** `processor/internal/` talks to javac;
+  `processor/model/` is plain data (`GuardrailModel`, `TaggedElement`); `processor/internal/content/`
+  renders and must never import `javax.lang.model`, `javax.annotation.processing` or
+  `com.sun.source`. An `Element` is only valid while its round is live, and the parallel write phase
+  runs after the last one closes — `AnnotationCollector.model()` snapshots once, which is what makes
+  reading it afterwards safe. `ArchitectureRulesTest` enforces the direction.
+- **Adding a validation check** is a line in `ValidationRules.PAIRS` or an entry in `CoreRules` /
+  `ModernJavaRules` under `processor/internal/validation/` — never a new loop in
+  `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
+  `scans()`, and the registry runs one round query per annotation type however many rules share it.
+- **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
+  annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
+  `add-platform` / `add-annotation` skills rather than improvising.
+- **A renderer that emits a YAML document must declare `PlatformRenderer.mergeShape()`.** The
+  multi-module merge otherwise stacks whole renderings and repeats the document's top-level key once
+  per module — invalid to a strict parser, silently truncated to the last module by a lenient one.
+  `YamlMergeShapeContractTest` fails a missing or drifted declaration.
+- **A renderer whose marker-free file varies with the annotations must declare
+  `PlatformRenderer.wholeFileMerge()`.** A file with no markers is a whole-file overwrite, so
+  without one it publishes whichever module compiled last. `MultiModuleWholeFileMergeTest` derives
+  the rule — it renders each such service empty and populated, and fails any that differ without a
+  merge. Note the coupling that made this invisible: sidecar bodies are also what
+  `anyContributed` reads, so a service missing from the sidecar never refreshes at all.
+- **A dependency manifest must live under a valid Java package path, never `META-INF/`.** javac's
+  `CLASS_PATH` location skips archive directories whose names are not valid package identifiers, so
+  a resource under `META-INF/` is unreadable from an annotation processor — `Filer.getResource`
+  throws and javac's own file manager lists zero entries. `vibetags/manifests/<package>.json` works;
+  the conventional location does not. `TransitiveGuardrailLifecycleE2ETest` pins both directions.
+- **Anything that becomes generated content must reach `BuildFingerprint`.** Guardrails inherited
+  from dependencies are an input the annotation set cannot speak for: a dependency upgrade changes
+  the correct output while every local annotation is byte-identical. Left out of the fingerprint,
+  `generateFiles()` short-circuits and the files silently stop tracking reality.
+  `TransitiveFingerprintTest` asserts it directly — the end-to-end path passes either way, because
+  it also rewrites the sidecar whose mtime feeds the other half of the same check.
+- **A granular rule file can have more than one author, so its content goes in the sidecar too.**
+  A role in a reactor-root `.vibetags-roles` routes on the package, not the module, so one file is
+  written by every module it matches — and each write replaced the last (issue #365). Anything that
+  renders a granular file must record its share via `GranularRulesWriter.contributionsFor` and write
+  through `ModuleSidecar.mergeGranular`; the stem alone only answers "may this be deleted?".
+  `MultiModuleGranularRoleMergeTest` fails a path that writes without merging.
+- **Never write a version literal into a managed pom.** `vibetags-annotations`, `vibetags`,
+  `vibetags-bom` and `load-tests` inherit every version; a literal there is one the next release
+  will miss. The Gradle builds and the standalone example poms cannot inherit, so they hold
+  literals — `BuildVersionParityTest` fails the build when any of them disagrees with the parent.
+  To bump: `scripts/set-version.sh <version>`, then that test.

@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
@@ -61,6 +62,11 @@ import java.util.stream.Collectors;
 @AICore(
     sensitivity = "critical",
     note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
+)
+@AITestDriven(
+    coverageGoal = 90,
+    framework = AITestDriven.Framework.JUNIT_5,
+    mockPolicy = "Write the failing test first, against the real javac through ProcessorTestHarness; Mockito only where a ProcessingEnvironment cannot be real"
 )
 @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
 @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level",

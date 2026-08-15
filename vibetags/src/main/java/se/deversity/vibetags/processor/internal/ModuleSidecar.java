@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
@@ -54,6 +55,11 @@ import java.util.stream.Stream;
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.OTHER,
     note = "Atomic temp-file moves (ATOMIC_MOVE with plain-move fallback); concurrent saves and reads never tear a sidecar or prune a sibling's (ModuleSidecarAsyncTest proves it)"
+)
+@AITestDriven(
+    coverageGoal = 90,
+    framework = AITestDriven.Framework.JUNIT_5,
+    mockPolicy = "Write the failing test first; the sidecar format is cross-module law, so tests read and write real .vibetags-mod-* files, never mocks of them"
 )
 public final class ModuleSidecar {
 

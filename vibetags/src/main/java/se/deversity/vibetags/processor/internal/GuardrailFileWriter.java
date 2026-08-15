@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import org.slf4j.Logger;
 
@@ -40,6 +41,11 @@ import java.util.stream.Stream;
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.IMMUTABLE,
     note = "Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)"
+)
+@AITestDriven(
+    coverageGoal = 90,
+    framework = AITestDriven.Framework.JUNIT_5,
+    mockPolicy = "Write the failing test first; marker preservation is asserted on real files with hand content around the block, never on string fixtures alone"
 )
 public final class GuardrailFileWriter {
 

@@ -28,6 +28,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     orphaned when the test was introduced; all are now routed).
   - CI failure-log artifacts, a pull-request template (verification, provenance, prompt
     lineage), and the `consultation-loop` / `correctness-hunt` skills.
+- Second alignment pass, closing the scorecard to 66/66:
+  - `CLAUDE.md` context diet: 220 lines to about 120, with a 15-line Tier-1 invariant list
+    where every line names its enforcing test; the moved-out detail landed verbatim in
+    `docs/LOAD-BEARING.md`, `docs/LOGGING.md` (new), and `docs/ARCHITECTURE.md`.
+  - Executable BDD: `src/test/resources/features/core-guardrail-flows.feature` run by
+    `CoreFlowsBddTest` with a two-way scenario/binding match, dependency-free.
+  - Performance contract: `ProcessorAllocationBudgetTest` asserts a measured, documented
+    allocation budget on every e2e run; `nightly-perf.yml` compares the weekly allocation
+    sweep against the newest committed baseline.
+  - Copilot review lane (`copilot-review.yml`): every PR requests a GitHub Copilot review on
+    free quota, skipping loudly when Copilot has none; `.github/MODEL-ROSTER.md` records the
+    model routing and the eval-gated upgrade ceremony.
+  - `@AITestDriven` on the four core classes; the two Anthropic workflows now run with
+    blocked egress and endpoint allowlists; a SessionEnd hook stages prompt lineage into a
+    gitignored trail; `ENGINE=copilot` lets the instruction evals run on Copilot Free.
 
 ## [1.2.1] - 2026-08-14
 

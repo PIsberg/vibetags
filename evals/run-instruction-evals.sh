@@ -14,6 +14,12 @@
 # Environment knobs:
 #   TRIALS=3            trials per task (10 for decisions; 3 is a smoke run)
 #   EVAL_MODEL=...      model id; keep it the model that writes production code here
+#   ENGINE=claude       claude | copilot. The copilot engine drives the GitHub Copilot CLI
+#                       (free-tier quota, GitHub-authenticated, agentic) so the bank can run
+#                       with no Anthropic key. Missing CLI or exhausted quota exits 2 or
+#                       shows as HARNESS-ERROR trials - visible skips, never false passes.
+#                       Copilot trials use the user's Copilot config (not hermetic) and a
+#                       GitHub-managed model; see the same-model note in evals/README.md.
 #   VARIANT=full        full (repo as committed) | baseline (instruction files removed)
 #   TASKS="t1 t2"       space-separated task dir names; empty means all
 #   MAX_TURNS=25        per-trial turn cap
@@ -33,8 +39,21 @@ TASK_FILTER="${TASKS:-}"
 MAX_TURNS="${MAX_TURNS:-25}"
 RESULTS_DIR="${RESULTS_DIR:-$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)}"
 
-command -v claude >/dev/null 2>&1 || { echo "error: claude CLI is not on PATH" >&2; exit 2; }
-[ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "error: ANTHROPIC_API_KEY is not set (hermetic runs cannot use stored logins)" >&2; exit 2; }
+ENGINE="${ENGINE:-claude}"
+case "$ENGINE" in
+  claude)
+    command -v claude >/dev/null 2>&1 || { echo "error: claude CLI is not on PATH" >&2; exit 2; }
+    [ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "error: ANTHROPIC_API_KEY is not set (hermetic runs cannot use stored logins)" >&2; exit 2; }
+    ;;
+  copilot)
+    command -v copilot >/dev/null 2>&1 || { echo "error: ENGINE=copilot but the Copilot CLI is not on PATH (npm install -g @github/copilot). A missing engine is a skip, not a pass." >&2; exit 2; }
+    MODEL="github-copilot-cli"
+    ;;
+  *)
+    echo "error: unknown ENGINE '$ENGINE' (claude|copilot)" >&2
+    exit 2
+    ;;
+esac
 
 # Hermetic trials: an empty config dir keeps the user's global CLAUDE.md, skills and
 # agents out of the experiment; --strict-mcp-config keeps MCP servers out. The variable
@@ -43,7 +62,7 @@ CLAUDE_CONFIG_DIR="$(mktemp -d)"
 export CLAUDE_CONFIG_DIR
 
 mkdir -p "$RESULTS_DIR"
-echo "instruction evals: model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
+echo "instruction evals: engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
 
 below_floor=0
 ran_any=0
@@ -75,18 +94,28 @@ for taskdir in "$EVALS_DIR"/tasks/*/; do
     out="$RESULTS_DIR/$name-trial$trial.json"
     err="$RESULTS_DIR/$name-trial$trial.err"
     det="$RESULTS_DIR/$name-trial$trial.detect"
-    (
-      cd "$wt" && claude -p "$prompt" \
-        --model "$MODEL" \
-        --max-turns "$MAX_TURNS" \
-        --permission-mode acceptEdits \
-        --strict-mcp-config \
-        --output-format json
-    ) >"$out" 2>"$err"
-    claude_rc=$?
+    if [ "$ENGINE" = "claude" ]; then
+      (
+        cd "$wt" && claude -p "$prompt" \
+          --model "$MODEL" \
+          --max-turns "$MAX_TURNS" \
+          --permission-mode acceptEdits \
+          --strict-mcp-config \
+          --output-format json
+      ) >"$out" 2>"$err"
+      engine_rc=$?
+    else
+      # Copilot CLI programmatic mode. Model routing is GitHub's, so EVAL_MODEL and
+      # MAX_TURNS do not apply; quota exhaustion or auth failure exits nonzero and the
+      # trial is counted HARNESS-ERROR below - a visible skip, never a false pass.
+      (
+        cd "$wt" && copilot -p "$prompt" --allow-all-tools
+      ) >"$out" 2>"$err"
+      engine_rc=$?
+    fi
 
-    if [ "$claude_rc" -ne 0 ]; then
-      echo "   trial $trial: HARNESS-ERROR (claude exited $claude_rc; see $(basename "$err")) - counted as fail"
+    if [ "$engine_rc" -ne 0 ]; then
+      echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err")) - counted as fail"
     else
       ( cd "$wt" && bash "$taskdir/detect.sh" ) >"$det" 2>&1
       detect_rc=$?

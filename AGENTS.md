@@ -58,6 +58,14 @@ Internal logic may be modified, but never change method names, parameter types, 
 - **se.deversity.vibetags.processor.internal.GuardrailFileWriter.writeFileIfChanged(java.lang.String,java.lang.String,boolean)**: Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics
 - **se.deversity.vibetags.processor.internal.ModuleSidecar.mergeFor(java.lang.String,java.util.List<se.deversity.vibetags.processor.internal.ModuleSidecar>,boolean)**: Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile
 
+## 🧪 TEST-DRIVEN REQUIREMENTS
+Changes to the following elements MUST be accompanied by a matching test update in the same response.
+
+- **se.deversity.vibetags.processor.AIGuardrailProcessor**: Coverage goal: 90%. Framework: JUNIT_5. Mock policy: Write the failing test first, against the real javac through ProcessorTestHarness; Mockito only where a ProcessingEnvironment cannot be real.
+- **se.deversity.vibetags.processor.internal.GuardrailFileWriter**: Coverage goal: 90%. Framework: JUNIT_5. Mock policy: Write the failing test first; marker preservation is asserted on real files with hand content around the block, never on string fixtures alone.
+- **se.deversity.vibetags.processor.internal.ModuleSidecar**: Coverage goal: 90%. Framework: JUNIT_5. Mock policy: Write the failing test first; the sidecar format is cross-module law, so tests read and write real .vibetags-mod-* files, never mocks of them.
+- **se.deversity.vibetags.processor.internal.WriteCache**: Coverage goal: 90%. Framework: JUNIT_5. Mock policy: Write the failing test first; drive real files in a temp dir, never a mocked filesystem (a false cache positive silently corrupts output).
+
 ## 🧵 THREAD-SAFE BY DESIGN
 These elements are explicitly designed to be thread-safe. Preserve the synchronization invariant on every change.
 
