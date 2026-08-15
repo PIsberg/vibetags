@@ -10,8 +10,8 @@
   (automated, consistent, merge-blocking where applicable), with the evidence named. Scores are
   claims about mechanisms that exist and run, not about intentions.
 
-**Total: 57 of 66.** Book banding: 50-66, "complete stack - maintain, don't add process for its
-own sake." The nine points not taken are listed with reasons; several are deliberate deviations
+**Total: 56 of 66.** Book banding: 50-66, "complete stack - maintain, don't add process for its
+own sake." The ten points not taken are listed with reasons; several are deliberate deviations
 rather than debts, and are marked so.
 
 ## Part I: Foundation
@@ -35,7 +35,7 @@ rather than debts, and are marked so.
 | 10 | Spec directory | 2 | `docs/` is the constitution (the book allows `.specs/` or `docs/`); `SPEC.md`/`PLAN.md` are the archived historical specs, routed from ARCHITECTURE.md's Design History. |
 | 11 | BDD feature files | 1 | No Gherkin. Core flows are pinned by 158 JUnit classes including full end-to-end compiles. Deliberate deviation: a Cucumber layer adds a dependency and a dialect for behaviour the E2E suite already states executably. Revisit only if a non-developer stakeholder needs to read the scenarios. |
 | 12 | `@AITestDriven` on critical classes | 1 | Not annotated. The failing-test-first policy binds through CLAUDE.md standing rules and the PR template instead. Per the book's own selectivity rule (ch04: annotate the 2-3 categories matching actual failure modes), the annotation is held in reserve. |
-| 13 | Instruction evals | 2 | New `evals/` task bank (4 rules, deterministic detectors, floors) wired to PRs touching instruction files; skips loudly without the API key. v1 measures binding power only; persistence and interference are documented as unmeasured. |
+| 13 | Instruction evals | 1 | New `evals/` task bank (4 rules, deterministic detectors, floors) wired to PRs touching instruction files. Scored 1, not 2: the repository has no `ANTHROPIC_API_KEY` secret (verified on this PR's first run, where the workflow skipped loudly), so in CI the bank currently measures nothing. Becomes a 2 the day the secret exists. v1 measures binding power only. |
 
 ## Part III: The Practice
 
@@ -69,10 +69,13 @@ rather than debts, and are marked so.
 
 ## Closed by the same PR that adds this file
 
-Rows 9, 13, 21 (allowlist), 26, 28, 29 (from 0), 30, and the row-27 convention. The diagram
-drift gate and the orphan-docs test both went red on introduction against the real repository
-(4 stale SVGs; 12 orphaned docs), which is the difference between installing a gate and
-installing a decoration.
+Rows 9, 21 (allowlist), 26, 28, 30 from their prior state to 2; rows 13 and 29 from 0 to 1
+(their remaining point is the `ANTHROPIC_API_KEY` secret and, for 29, required-check
+promotion); plus the row-27 convention. The diagram drift gate and the orphan-docs test both
+went red on introduction against the real repository (4 stale SVGs; 12 orphaned docs), and the
+locked-files guard's first run flagged its own dogfooding PR, exposing an over-broad
+lock-stripping rule that was then scoped to source files. Three gates, three real findings on
+day one: the difference between installing a gate and installing a decoration.
 
 ## Deferred decisions (the maintainer's, not an agent's)
 
@@ -85,6 +88,10 @@ installing a decoration.
 3. **A `CLAUDE.md` diet**, driven by eval evidence (row 1) rather than the line count.
 4. **BDD scenarios** (row 11) if a non-developer audience for them ever exists.
 5. **SessionEnd lineage capture** (row 31) in the maintainer's own harness config.
+6. **The `ANTHROPIC_API_KEY` repository secret.** Without it the Inquisitor and the
+   instruction evals skip on every PR (loudly, but skipped is not passed). Adding it spends
+   real API money per PR: an eval run is 12 headless sessions, an Inquisitor run is one
+   review of the diff. Rows 13 and 29 each gain their remaining point when it exists.
 
 ## Book errata found while auditing (fixes belong in the book repository)
 

@@ -111,12 +111,16 @@ its recorded reason. The same guard consumers get, applied to the repository tha
 ### Job: `diagrams`
 
 Regenerates the code-karta architecture diagrams (`sh tools/generate-architecture-diagrams.sh`)
-and fails on `git diff` against the committed SVGs under `docs/diagrams/codekarta/`. A generated
-diagram that only regenerates when someone remembers is documentation, not telemetry; this job
-makes "the picture matches the code" a property of every commit. Regeneration is byte-idempotent
-(verified 2026-08-15, two consecutive runs with zero diff), which is what makes a byte-level
-drift check a stable gate. On failure the fresh SVGs upload as the `regenerated-diagrams`
-artifact so the committer can take them without reproducing the toolchain.
+and fails when their structure drifts from the committed SVGs under `docs/diagrams/codekarta/`.
+A generated diagram that only regenerates when someone remembers is documentation, not
+telemetry; this job makes "the picture matches the code" a property of every commit. The
+comparison is structural (`tools/diagram-structure.sh`: the sorted set of node titles per
+file), not byte-level, because code-karta 0.1.0 walks directories in filesystem order - the
+job's own first run proved the same node set renders at different positions on ext4 than on
+the NTFS machine that committed the files. Edges and member labels are outside the
+fingerprint; the script's header states that limitation. On failure the fresh SVGs upload as
+the `regenerated-diagrams` artifact so the committer can take them without reproducing the
+toolchain.
 
 ---
 
