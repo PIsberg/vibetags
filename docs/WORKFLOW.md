@@ -256,11 +256,16 @@ The always-available adversarial review lane: on every opened, reopened, or
 ready-for-review PR, the job requests a GitHub Copilot code review via the reviewer API.
 Copilot needs no repository secret and spends the maintainer's Copilot Free quota, so this
 lane works when the Inquisitor's does not; together they mean every PR gets at least one
-machine reviewer whenever either lane has credit. When the request fails (quota exhausted,
-Copilot not enabled, bot not requestable) the job skips loudly and stays green: an advisory
-reviewer must never block a merge, but the summary says SKIPPED, because skipped is not
-passed. `synchronize` is deliberately not a trigger, so work-in-progress pushes do not drain
-the quota; re-request from the PR page when a revised diff deserves fresh eyes. The lane's
+machine reviewer whenever either lane has credit. The job requests and then VERIFIES: the
+request API returns success even when GitHub silently drops the reviewer (observed live on
+this repo's PR #417 - a 2xx and then no review-request event at all, from the Actions token
+and from the maintainer's own token alike, with the equivalent ruleset parameter silently
+stripped too), so only a recorded pending request counts as requested. Anything else - quota
+exhausted, code review not available on the account or plan, rollout - skips loudly and stays
+green: an advisory reviewer must never block a merge, but the summary says SKIPPED, because
+skipped is not passed. `synchronize` is deliberately not a trigger, so work-in-progress
+pushes do not drain the quota; re-request from the PR page when a revised diff deserves
+fresh eyes. The lane's
 model is GitHub-managed and unpinnable, which `.github/MODEL-ROSTER.md` records as a known
 property, acceptable exactly because the lane is advisory.
 
