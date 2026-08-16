@@ -115,7 +115,11 @@ class ReleaseScriptCoverageTest {
         // manifest stamped "vibetags/1.2.0" because 1.2.0 is the release that shipped the feature;
         // rewriting it on every later release would make the document claim it proposed something
         // that already existed.
-        "docs/proposals/transitive-guardrails.md");
+        "docs/proposals/transitive-guardrails.md",
+        // Explanatory prose about pitest-junit5-plugin's own release history (its actual pin
+        // lives in ${pitest-junit5-plugin.version} in the parent pom). Coincidentally equals a
+        // VibeTags release number from time to time; it is not a VibeTags coordinate.
+        "vibetags/pom.xml");
 
     /** Build outputs and local scratch that are not part of the release. */
     private static final Set<String> IGNORED_SUFFIXES =

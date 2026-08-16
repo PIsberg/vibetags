@@ -23,7 +23,7 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <vibetags.bom.version>1.2.1</vibetags.bom.version>
+        <vibetags.bom.version>1.2.2</vibetags.bom.version>
     </properties>
 
     <dependencyManagement>
