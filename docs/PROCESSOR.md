@@ -219,6 +219,14 @@ mvn -B clean compile && mvn -B compile -Dvibetags.check=true
 CI does exactly this — the check step runs after the ordinary build, not instead of it. Single-module
 projects are unaffected: one module is the whole project, so the first compile already sees everything.
 
+The verdict names exactly the files a real round would write or delete, under the same rules. Two of
+those rules matter in a reactor: a module round never sweeps the shared root's granular directory
+for orphans (issue #383, so a cold-clone check no longer lists every sibling's committed rule file
+on top of the merged aggregates), and a module that has left the reactor has its rule files reported
+for removal, because the next real build of any survivor removes them
+(`CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`,
+`checkMode_reportsADepartedModulesRuleFileAsDrift`).
+
 ## Machine-readable lock report (`.vibetags-locks`)
 
 An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits

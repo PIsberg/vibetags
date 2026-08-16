@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ProjectLifecycleEndToEndTest.moduleRemovedFromTheReactor_doesNotCostTheSurvivorsTheirShortCircuit`,
   red before the fix; `GuardrailFileWriterLogContractTest` pins the new `delete.commit` /
   `delete.skip reason=dry-run` events.
+- **Check mode's orphan sweep follows the same jurisdiction rule as generation.** The #383 fix
+  taught `generateFiles()` that a reactor module round may not sweep the shared root's granular
+  directory, because on a cold clone every sibling's committed rule file is unclaimed. Check mode
+  kept the unconditional sweep, so the same cold-clone module round reported each sibling's rule
+  file as drift: a claim that a normal compile would delete files it leaves alone. `checkFiles()`
+  now sweeps only when the round compiles the root itself, and mirrors the departed-module
+  removal that generation does perform (through the dry-run writer, so the file is named, not
+  touched). The documented cold-clone limitation for merged aggregates is unchanged: build once,
+  then check. Verified by `CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`
+  (red before the fix) and `checkMode_reportsADepartedModulesRuleFileAsDrift` (the bound, kept
+  green through it).
 
 ### Added
 

@@ -1038,6 +1038,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         mySidecar.setGranularStems(myStems);
         mySidecar.setElementIds(collector.model().elementIds());
         buildSafetyDigests(activeServices, checkRootRoles).forEach(mySidecar::putIndexDigest);
+        // Same order as generateFiles: the departed stems are read before readAll, which prunes
+        // the stale sidecars that are the only record of them.
+        Set<String> departedStems = ModuleSidecar.staleGranularStems(root);
         List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.readAll(root));
         if (collector.anyAnnotationsFound()) {
             boolean replaced = false;
@@ -1085,7 +1088,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             checkGranular.writeAll(built.elementRules, serviceFiles, activeServices, checkRootRoles,
                 ModuleSidecar.mergeGranular(allSidecars)));
         writtenQNames.addAll(ModuleSidecar.granularStemsFrom(allSidecars, moduleId, null));
-        checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
+        // The two removals generateFiles performs, under the same rules, so the verdict names
+        // exactly the files a real round would delete. The orphan sweep is bound by the #383
+        // jurisdiction rule: a module round cannot tell an orphan from a sibling it has not been
+        // shown, and on a cold clone that is every sibling — an unconditional dry-run sweep here
+        // reported all of their committed rule files as drift and failed a healthy build. The
+        // departed-module removal is not bound by it, for the reason given there.
+        if (maySweepRoot(compilationRoot)) {
+            checkGranular.cleanupAll(serviceFiles, activeServices, writtenQNames);
+        }
+        Set<String> orphanedByDeparture = new java.util.LinkedHashSet<>(departedStems);
+        orphanedByDeparture.removeAll(writtenQNames);
+        checkGranular.removeStems(serviceFiles, activeServices, orphanedByDeparture);
 
         // Per-module (nested) output — dry-run so check mode verifies module-scoped files too.
         // Null messager: the summary note would be misleading in a verification pass.
@@ -1152,6 +1166,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return digests;
+    }
+
+    /**
+     * Whether this round may sweep the shared root's granular directories for orphans: only a
+     * round compiling the root itself, never a reactor module round (issue #383). {@code
+     * generateFiles()} carries the same predicate inline, because its body is locked; {@code
+     * CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration} is what keeps the two
+     * in step, and the reasoning is at the sweep in {@code generateFiles()}.
+     */
+    private boolean maySweepRoot(Path compilationRoot) {
+        return moduleIdentity == null || compilationRoot.equals(root);
     }
 
     /**
