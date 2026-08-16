@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A granular rule file's front matter now follows its inputs.** The `globs:` / `paths:` /
+  `applyTo:` list at the top of a rule file is rendered from `.vibetags-roles` (and, for
+  mirrors, `.vibetags-mirror`), but the writer treated the header already on disk as
+  hand-authored and kept it: adding a glob to a role, or a member to an FQN-only role, changed
+  the fingerprint, re-rendered the file, and left its scope exactly as first written. Check mode
+  passed on the stale file for the same reason. A header VibeTags renders is now refreshed like
+  the block; a hand-written header on a file whose renderer emits none is preserved as before.
+  Verified by `WriteFileFrontMatterTest` (hand content between header and block, and after it,
+  survives) and `RoleBasedGranularEndToEndTest.editingARolesGlobs_reachesTheExistingRuleFilesFrontmatter`,
+  both red before the fix.
+
 ### Added
 
 - Repository alignment with the practices taught in *Vibe Architecture* (audit recorded in

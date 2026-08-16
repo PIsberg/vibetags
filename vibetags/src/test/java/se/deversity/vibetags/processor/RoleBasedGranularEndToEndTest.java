@@ -185,4 +185,30 @@ class RoleBasedGranularEndToEndTest {
         assertTrue(Files.readString(module.resolve(".cursor/rules/api-endpoints.mdc"))
                 .contains("com.example.web.OrderController"));
     }
+
+    /**
+     * The globs a role file declares are what make the editor load it, and they are rendered from
+     * {@code .vibetags-roles}. Editing that config is therefore a change to the rule file, not just
+     * to the config: the fingerprint already notices it (the roles hash is folded in), and the
+     * writer must then let the new front matter through rather than keep the file's old one.
+     */
+    @Test
+    void editingARolesGlobs_reachesTheExistingRuleFilesFrontmatter(@TempDir Path dir) throws Exception {
+        ProcessorTestHarness h = harness(dir, "web = **/*Controller.java\n");
+        h.addSource("com.example.web.OrderController", ORDER_CONTROLLER);
+        h.compile();
+        assertTrue(h.readFile(".cursor/rules/web.mdc").contains("globs: [\"**/*Controller.java\"]"),
+            "precondition: the role file starts out with the role's first glob");
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        Files.writeString(dir.resolve(".vibetags-roles"),
+            "web = **/*Controller.java, **/*Endpoint.java\n", StandardCharsets.UTF_8);
+        h.compile();
+
+        String web = h.readFile(".cursor/rules/web.mdc");
+        assertTrue(web.contains("globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]"),
+            "a glob added to the role must reach the existing file's front matter, or the rule "
+                + "silently keeps applying to the old set of files:\n" + web);
+        assertTrue(web.contains("com.example.web.OrderController"), "the body must still be there:\n" + web);
+    }
 }
