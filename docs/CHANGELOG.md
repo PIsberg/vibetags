@@ -48,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unidentifiable-module warning that runs before generation reads the departed stems, now read
   through `ModuleSidecar.peekAll`, which leaves the file where it is. Verified by
   `CheckModeTest.checkMode_doesNotPruneADepartedModulesSidecar`, red before the fix.
+- **A glob that does not compile in `.vibetags-roles` no longer stops the whole build's output.**
+  `RoleConfig.load` compiled every glob eagerly and let the `PatternSyntaxException` (an unclosed
+  `{` group is the easy typo) escape into the top of the generate phase, where the processor's
+  outer guard downgraded it to a WARNING: no file, sidecar or mirror was written for that build,
+  and nothing said why. A matcher that cannot compile now matches nothing; the unclosed brace
+  still swallows the rest of its own line, and every other line routes as before. Verified by
+  `RoleConfigTest.malformedGlob_isSkipped_notThrown`, an error before the fix.
 
 ### Added
 

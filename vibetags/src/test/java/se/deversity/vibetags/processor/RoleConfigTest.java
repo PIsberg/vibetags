@@ -91,6 +91,28 @@ class RoleConfigTest {
         assertEquals("hooks", roles.roleFor(type("com.example.webhooks.Handler")).orElse(null));
     }
 
+    /**
+     * A glob that does not compile — an unclosed brace group is the easy one to type — used to
+     * throw a {@code PatternSyntaxException} out of {@code load}, which the processor calls at
+     * the top of its generate phase: one typo in {@code .vibetags-roles} silently stopped every
+     * output of that build (files, sidecar, mirrors), downgraded to a WARNING nobody reads. A
+     * matcher that cannot compile matches nothing. The unclosed brace swallows the rest of its
+     * own line (the tokenizer cannot know where the group was meant to end), which is the cost
+     * of the typo; the next line is untouched by it and still routes.
+     */
+    @Test
+    void malformedGlob_isSkipped_notThrown(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir,
+            "api = **/*{Controller,Service.java, **/*Endpoint.java",
+            "models = **/*Entity.java");
+        assertEquals("models", roles.roleFor(type("com.example.data.ProductEntity")).orElse(null),
+            "the line after the typo still routes");
+        assertTrue(roles.roleFor(type("com.example.web.OrderController")).isEmpty(),
+            "the malformed matcher matches nothing rather than something surprising");
+        assertTrue(roles.globsFor("api").isEmpty(),
+            "and it is not written into any rule file's frontmatter either");
+    }
+
     @Test
     void commentsAndBlankLines_ignored(@TempDir Path dir) throws IOException {
         RoleConfig roles = write(dir,
