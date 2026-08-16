@@ -84,8 +84,18 @@ public final class RoleConfig {
                     continue;
                 }
                 if (isGlob(t)) {
+                    Pattern pattern;
+                    try {
+                        pattern = globToRegex(t);
+                    } catch (java.util.regex.PatternSyntaxException malformed) {
+                        // A glob that does not compile (an unclosed brace group is the usual one)
+                        // matches nothing. Throwing here reached the top of the generate phase and
+                        // stopped every output of the build over one typo; the file's other
+                        // matchers are unaffected by it and keep routing.
+                        continue;
+                    }
                     globs.add(t);
-                    globPatterns.add(globToRegex(t));
+                    globPatterns.add(pattern);
                 } else {
                     fqns.add(t);
                 }

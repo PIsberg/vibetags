@@ -119,6 +119,33 @@ class GuardrailFileWriterLogContractTest {
     }
 
     /**
+     * A removal is a decision like any other. The rule files of a departed module are deleted by
+     * name, and that deletion is what invalidates their cache entries; without the event there is
+     * no way to tell from the log whether a missing file was removed by VibeTags or by hand.
+     */
+    @Test
+    @DisplayName("a deletion is logged as a commit, and a dry-run deletion as a skip with its reason")
+    void deletionsAreLoggedLikeWrites(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("com-example-Gone.md");
+        Files.writeString(file, HEADER + "\nrule\n");
+
+        GuardrailFileWriter dryRun = new GuardrailFileWriter(HEADER, null, logger, null, true);
+        assertTrue(dryRun.deleteIfExists(file), "dry-run reports the file it would have removed");
+        assertTrue(Files.exists(file), "and leaves it in place");
+        assertTrue(logged("delete.skip file=com-example-Gone.md reason=dry-run"),
+            "the dry-run must say why nothing was deleted: " + events());
+        assertEquals(List.of(file.toString()), dryRun.dryRunChanges(),
+            "check mode reads the removal off the same ledger as the writes");
+
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+        assertTrue(writer.deleteIfExists(file));
+        assertFalse(Files.exists(file));
+        assertTrue(logged("delete.commit file=com-example-Gone.md"),
+            "a real deletion is a commit event: " + events());
+        assertFalse(writer.deleteIfExists(file), "a second delete of a missing file is a quiet no-op");
+    }
+
+    /**
      * Placeholder integrity, asserted at runtime because nothing can assert it statically.
      *
      * <p>Every event this writer emits goes through {@code debug(String event, Object... args)},

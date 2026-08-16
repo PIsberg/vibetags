@@ -13,8 +13,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -164,6 +166,96 @@ class CheckModeTest {
     }
 
     // -----------------------------------------------------------------------
+    // End-to-end: check mode must reproduce generation's cleanup, no more and no less
+    // -----------------------------------------------------------------------
+
+    /**
+     * A reactor module round may not sweep the shared root's granular directory: on a cold clone
+     * the sidecars are gitignored, so every sibling's committed rule file is unclaimed and a sweep
+     * deletes them (issue #383). Generation learned that rule; check mode kept the unconditional
+     * sweep, so the very same cold-clone round reported every sibling's rule file as drift and
+     * failed a build in which nothing was wrong. A check verdict is only worth anything if it
+     * reproduces generation exactly.
+     */
+    @Test
+    void checkMode_onAColdCloneModuleRound_agreesWithGeneration(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        compileModule(root, "module-b", "com.example.b.BetaService", lockedIn("com.example.b", "BetaService"));
+        Path bRule = root.resolve(".claude/rules/com-example-b-BetaService.md");
+        assertTrue(Files.exists(bRule), "precondition: both modules' rule files exist");
+
+        // Cold clone: no sidecars, no cache — the state a CI runner sees.
+        deleteVibeTagsState(root);
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        assertTrue(Files.exists(bRule),
+            "precondition: generation on a cold clone leaves the sibling's rule file alone (#383)");
+
+        deleteVibeTagsState(root);
+        List<String> errors = errors(checkModule(root, "module-a", "com.example.a.AlphaService",
+            lockedIn("com.example.a", "AlphaService")));
+
+        assertTrue(errors.isEmpty(),
+            "check mode must agree with generation on a cold clone, but reported: " + errors);
+        assertTrue(Files.exists(bRule), "and must not have touched the sibling's file either");
+    }
+
+    /**
+     * The bound on the rule above, kept green through it. A sidecar whose module directory is gone
+     * names the rule files that module wrote, and generation removes those on the next build of any
+     * survivor. Check mode must report that removal as drift, or a departed module's stale rule
+     * files pass check forever.
+     */
+    @Test
+    void checkMode_reportsADepartedModulesRuleFileAsDrift(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        compileModule(root, "module-b", "com.example.b.BetaService", lockedIn("com.example.b", "BetaService"));
+        Path bRule = root.resolve(".claude/rules/com-example-b-BetaService.md");
+        assertTrue(Files.exists(bRule), "precondition: both modules' rule files exist");
+
+        deleteRecursively(root.resolve("module-b"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        List<String> errors = errors(checkModule(root, "module-a", "com.example.a.AlphaService",
+            lockedIn("com.example.a", "AlphaService")));
+
+        assertTrue(errors.stream().anyMatch(m -> m.contains(CHECK_FAILED)
+                && m.contains(".claude/rules/com-example-b-BetaService.md")),
+            "generation would remove the departed module's rule file, so check mode must name it: " + errors);
+        assertTrue(Files.exists(bRule), "reported, not removed: check mode writes nothing");
+    }
+
+    /**
+     * Check mode touches nothing VibeTags manages, and the sidecars are the record of the build:
+     * {@code readAll} prunes a sidecar whose module directory is gone, and check mode used to read
+     * through it. One check-mode run after a module left the reactor deleted that module's sidecar,
+     * and with it the only record of the rule files it wrote — so the next real build had nothing
+     * to act on and the departed module's rule files stayed in the repository for good.
+     */
+    @Test
+    void checkMode_doesNotPruneADepartedModulesSidecar(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        compileModule(root, "module-b", "com.example.b.BetaService", lockedIn("com.example.b", "BetaService"));
+        Path bRule = root.resolve(".claude/rules/com-example-b-BetaService.md");
+        Path bSidecar = root.resolve(".vibetags-mod-module-b");
+        assertTrue(Files.exists(bRule) && Files.exists(bSidecar), "precondition: module-b's file and sidecar exist");
+
+        deleteRecursively(root.resolve("module-b"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        checkModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+
+        assertTrue(Files.exists(bSidecar),
+            "check mode must not delete the departed module's sidecar: it writes nothing, and the "
+                + "sidecar is the only record of which rule files that module wrote");
+
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        assertFalse(Files.exists(bRule),
+            "the next real build must still be able to remove the departed module's rule file");
+        assertFalse(Files.exists(bSidecar), "and it is the real build that prunes the sidecar");
+    }
+
+    // -----------------------------------------------------------------------
     // Unit: dry-run GuardrailFileWriter
     // -----------------------------------------------------------------------
 
@@ -219,6 +311,56 @@ class CheckModeTest {
             .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
             .map(d -> d.getMessage(null))
             .collect(Collectors.toList());
+    }
+
+    private static String lockedIn(String pkg, String type) {
+        return "package " + pkg + ";\n"
+            + "import se.deversity.vibetags.annotations.AILocked;\n"
+            + "@AILocked(reason = \"" + type + " is load-bearing\")\n"
+            + "public class " + type + " {}\n";
+    }
+
+    /** One module's compile into the shared reactor root, as a reactor pass would do it. */
+    private static void compileModule(Path root, String module, String fqn, String source) throws IOException {
+        moduleHarness(root, module, fqn, source).compile();
+        VibeTagsLogger.shutdown();
+    }
+
+    /** The same round in check mode, returning its diagnostics. */
+    private static List<Diagnostic<? extends JavaFileObject>> checkModule(
+            Path root, String module, String fqn, String source) throws IOException {
+        List<Diagnostic<? extends JavaFileObject>> diags =
+            moduleHarness(root, module, fqn, source).compileReturningDiagnostics(CHECK_OPTION);
+        VibeTagsLogger.shutdown();
+        return diags;
+    }
+
+    private static ProcessorTestHarness moduleHarness(Path root, String module, String fqn, String source)
+            throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
+        return harness;
+    }
+
+    /** What a fresh clone lacks: the gitignored sidecars, cache and log. */
+    private static void deleteVibeTagsState(Path root) throws IOException {
+        try (Stream<Path> files = Files.list(root)) {
+            for (Path p : files.filter(f -> f.getFileName().toString().startsWith(".vibetags-")
+                    || f.getFileName().toString().equals("vibetags.log")).toList()) {
+                Files.deleteIfExists(p);
+            }
+        }
+    }
+
+    private static void deleteRecursively(Path dir) throws IOException {
+        try (Stream<Path> files = Files.walk(dir)) {
+            for (Path p : files.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(p);
+            }
+        }
     }
 
     /** Writes a minimal valid {@code .vibetags-mod-<id>} sidecar with one service body. */

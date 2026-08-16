@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A granular rule file's front matter now follows its inputs.** The `globs:` / `paths:` /
+  `applyTo:` list at the top of a rule file is rendered from `.vibetags-roles` (and, for
+  mirrors, `.vibetags-mirror`), but the writer treated the header already on disk as
+  hand-authored and kept it: adding a glob to a role, or a member to an FQN-only role, changed
+  the fingerprint, re-rendered the file, and left its scope exactly as first written. Check mode
+  passed on the stale file for the same reason. A header VibeTags renders is now refreshed like
+  the block; a hand-written header on a file whose renderer emits none is preserved as before.
+  Verified by `WriteFileFrontMatterTest` (hand content between header and block, and after it,
+  survives) and `RoleBasedGranularEndToEndTest.editingARolesGlobs_reachesTheExistingRuleFilesFrontmatter`,
+  both red before the fix.
+- **A departed module's rule files no longer cost the survivors their short-circuit.** 1.2.1
+  started deleting the rule files of a module that left the reactor, by name and straight through
+  `Files.deleteIfExists`, and the write cache went on tracking them. A cached entry whose file is
+  missing means "an output still to be rewritten", so every later build of every surviving module
+  ran the full content build and file compare, over a file no round would ever write again.
+  Deletions now go through `GuardrailFileWriter.deleteIfExists`, which invalidates the entry
+  (and, in dry-run, reports the removal instead of performing it). Verified by
+  `ProjectLifecycleEndToEndTest.moduleRemovedFromTheReactor_doesNotCostTheSurvivorsTheirShortCircuit`,
+  red before the fix; `GuardrailFileWriterLogContractTest` pins the new `delete.commit` /
+  `delete.skip reason=dry-run` events.
+- **Check mode's orphan sweep follows the same jurisdiction rule as generation.** The #383 fix
+  taught `generateFiles()` that a reactor module round may not sweep the shared root's granular
+  directory, because on a cold clone every sibling's committed rule file is unclaimed. Check mode
+  kept the unconditional sweep, so the same cold-clone module round reported each sibling's rule
+  file as drift: a claim that a normal compile would delete files it leaves alone. `checkFiles()`
+  now sweeps only when the round compiles the root itself, and mirrors the departed-module
+  removal that generation does perform (through the dry-run writer, so the file is named, not
+  touched). The documented cold-clone limitation for merged aggregates is unchanged: build once,
+  then check. Verified by `CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`
+  (red before the fix) and `checkMode_reportsADepartedModulesRuleFileAsDrift` (the bound, kept
+  green through it).
+- **Check mode no longer prunes a departed module's sidecar.** `ModuleSidecar.readAll` deletes a
+  sidecar whose module directory is gone, and check mode read through it. One check-mode run
+  after a module left the reactor (the first thing CI does) deleted that module's sidecar, the
+  only record of the rule files it wrote, so the next real build had nothing to act on and the
+  departed module's rule files stayed in the repository for good. Check mode, and the
+  unidentifiable-module warning that runs before generation reads the departed stems, now read
+  through `ModuleSidecar.peekAll`, which leaves the file where it is. Verified by
+  `CheckModeTest.checkMode_doesNotPruneADepartedModulesSidecar`, red before the fix.
+- **A glob that does not compile in `.vibetags-roles` no longer stops the whole build's output.**
+  `RoleConfig.load` compiled every glob eagerly and let the `PatternSyntaxException` (an unclosed
+  `{` group is the easy typo) escape into the top of the generate phase, where the processor's
+  outer guard downgraded it to a WARNING: no file, sidecar or mirror was written for that build,
+  and nothing said why. A matcher that cannot compile now matches nothing; the unclosed brace
+  still swallows the rest of its own line, and every other line routes as before. Verified by
+  `RoleConfigTest.malformedGlob_isSkipped_notThrown`, an error before the fix.
+
 ### Added
 
 - Repository alignment with the practices taught in *Vibe Architecture* (audit recorded in

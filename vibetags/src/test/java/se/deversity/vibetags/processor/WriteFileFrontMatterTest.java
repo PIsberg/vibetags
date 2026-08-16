@@ -122,4 +122,83 @@ class WriteFileFrontMatterTest {
         assertFalse(result.contains("<!-- VIBETAGS-START -->"),
             "Hash-marker file must not get HTML markers");
     }
+
+    /**
+     * The front matter VibeTags renders is generated content, not a hand-written header: it
+     * carries the {@code globs:} / {@code paths:} / {@code applyTo:} list that decides when the
+     * editor loads the file at all. When the rendered list changes (a role in
+     * {@code .vibetags-roles} gains a glob, an FQN-only role gains a member, a mirror adds a
+     * target glob) the file's own front matter has to follow, or the rule keeps applying to the
+     * old set of files while every other trace of the change says otherwise. Hand-authored lines
+     * around the block stay where they are: they are the content the markers exist to protect.
+     */
+    @Test
+    void mdcFile_update_refreshesRenderedFrontMatter_andKeepsHandContentAroundTheBlock(
+            @TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("web.mdc");
+        String existing =
+            "---\n" +
+            "description: \"AI rules for role web\"\n" +
+            "globs: [\"**/*Controller.java\"]\n" +
+            "alwaysApply: false\n" +
+            "---\n\n" +
+            "Hand note between the header and the block.\n\n" +
+            "<!-- VIBETAGS-START -->\nold rules\n<!-- VIBETAGS-END -->\n\n" +
+            "Hand note after the block.\n";
+        Files.writeString(file, existing, StandardCharsets.UTF_8);
+
+        String rendered =
+            "---\n" +
+            "description: \"AI rules for role web\"\n" +
+            "globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]\n" +
+            "alwaysApply: false\n" +
+            "---\n\n" +
+            "# Rules for web\n\n## Locked Status\n- **Reason**: refreshed\n";
+
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        assertTrue(p.writeFileIfChanged(file.toString(), rendered, true),
+            "a changed front matter is a change to the file");
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+
+        assertTrue(result.startsWith("---\ndescription: \"AI rules for role web\"\n"
+                + "globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]\nalwaysApply: false\n---\n"),
+            "the rendered front matter must replace the stale one, at the top of the file:\n" + result);
+        assertFalse(result.contains("globs: [\"**/*Controller.java\"]\n"),
+            "the stale glob list must be gone:\n" + result);
+        int frontMatterEnd = result.indexOf("---", 3);
+        int handBefore = result.indexOf("Hand note between the header and the block.");
+        int markerStart = result.indexOf("<!-- VIBETAGS-START -->");
+        int markerEnd = result.indexOf("<!-- VIBETAGS-END -->");
+        int handAfter = result.indexOf("Hand note after the block.");
+        assertTrue(frontMatterEnd < handBefore && handBefore < markerStart,
+            "hand content between the front matter and the block must stay there:\n" + result);
+        assertTrue(markerEnd < handAfter, "hand content after the block must survive:\n" + result);
+        assertTrue(result.contains("refreshed") && !result.contains("old rules"),
+            "the block itself must be refreshed as before:\n" + result);
+    }
+
+    /**
+     * The other half of the rule. A file whose renderer emits no front matter — CLAUDE.md, a
+     * Junie or Void rules file — may carry a hand-written YAML header, and that header is
+     * hand-authored content outside the markers: it must be preserved exactly as before.
+     */
+    @Test
+    void mdFile_update_keepsHandFrontMatter_whenRenderedContentHasNone(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("CLAUDE.md");
+        String existing =
+            "---\n" +
+            "title: My project notes\n" +
+            "---\n\n" +
+            "<!-- VIBETAGS-START -->\nold rules\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(file, existing, StandardCharsets.UTF_8);
+
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        assertTrue(p.writeFileIfChanged(file.toString(), "# Rules\n- refreshed\n", true));
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+
+        assertTrue(result.startsWith("---\ntitle: My project notes\n---\n"),
+            "a hand-written header the renderer knows nothing about must survive:\n" + result);
+        assertTrue(result.contains("refreshed") && !result.contains("old rules"));
+    }
 }

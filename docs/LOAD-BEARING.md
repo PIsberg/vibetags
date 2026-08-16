@@ -51,7 +51,7 @@ Generated content is written between markers so a file can hold hand-authored co
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
 - **No markers** (JSON/TOML config files): complete overwrite
 
-YAML front-matter in `.mdc`/`.md` files is preserved — markers go after the front-matter block. Files written by an older VibeTags (without markers) are migrated on the next compile.
+YAML front-matter in `.mdc`/`.md` files sits before the markers. A hand-written header on a file whose renderer emits none (`CLAUDE.md`, a Junie or Void rules file) is preserved untouched. A header VibeTags renders itself (the `globs:` / `paths:` / `applyTo:` list of a granular rule file, the Claude skill's `name`/`description`) is generated content and is refreshed on every update like the block, so a role that gains a glob or an FQN-only role that gains a member reaches the file's scope (`WriteFileFrontMatterTest`, `RoleBasedGranularEndToEndTest`). Files written by an older VibeTags (without markers) are migrated on the next compile.
 
 ### Output files
 

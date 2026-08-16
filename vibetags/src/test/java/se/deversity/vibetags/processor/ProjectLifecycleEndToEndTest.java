@@ -382,6 +382,46 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
+     * And the removal must not cost the survivors their short-circuit. A departed module's rule
+     * files are deleted by name, outside the marker-aware writer, and the write cache went on
+     * tracking them: a cached entry whose file is missing reads as "an output still to be
+     * rewritten", so every later build of the surviving module ran in full, over a file no round
+     * would ever write again. Two rebuilds, as in the steady-state test: the first after the
+     * departure does the removal, and the one after it has nothing left to do.
+     */
+    @Test
+    void moduleRemovedFromTheReactor_doesNotCostTheSurvivorsTheirShortCircuit(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+        Path cliRule = root.resolve(".claude/rules/com-example-cli-Cli.md");
+        assertTrue(Files.exists(cliRule), "the module's rule file must be generated first");
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        assertFalse(Files.exists(cliRule), "precondition: the departure build removes the rule file");
+
+        Path coreSidecar = root.resolve(".vibetags-mod-module-core");
+        long sidecarMtime = Files.getLastModifiedTime(coreSidecar).toMillis();
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+
+        assertEquals(sidecarMtime, Files.getLastModifiedTime(coreSidecar).toMillis(),
+            "a rebuild with nothing changed after the departure must short-circuit before the "
+                + "sidecar write. If it does not, the cache is still tracking the rule file the "
+                + "departure build deleted, and it will keep forcing a full round on every build");
+    }
+
+    /**
      * The bound on the rule above: only stems no surviving module claims are removed. A role file
      * written by several modules is shared, so a departure has to rewrite it rather than delete it,
      * or removing one module from a reactor takes its co-authors' guardrails with it.

@@ -260,7 +260,8 @@ public final class GuardrailFileWriter {
             if (end == -1) {
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
-                String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
+                String before = withRenderedFrontMatter(
+                    stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
                 String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
@@ -272,7 +273,8 @@ public final class GuardrailFileWriter {
                 return true;
             }
             end += markerEnd.length();
-            String before = stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing());
+            String before = withRenderedFrontMatter(
+                stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
             String after = existing.substring(end).stripLeading();
 
             StringBuilder sb = new StringBuilder();
@@ -320,7 +322,7 @@ public final class GuardrailFileWriter {
             // Section missing or non-VibeTags file: append at end
             String updated = existing.isEmpty()
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
-                : existing.stripTrailing() + "\n\n" + wrappedBody + "\n";
+                : withRenderedFrontMatter(existing.stripTrailing(), frontMatter) + "\n\n" + wrappedBody + "\n";
             if (contentMatches(existing, updated)) return false;
 
             if (!hasNewRules && !existing.isEmpty()) {
@@ -348,6 +350,39 @@ public final class GuardrailFileWriter {
         writeAndCache(filePath, content, content);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
+    }
+
+    /**
+     * Puts the front matter this round rendered where the file's current one is.
+     *
+     * <p>A YAML header VibeTags renders — the {@code globs:} / {@code paths:} / {@code applyTo:}
+     * list of a granular rule file, the {@code name}/{@code description} of the Claude skill — is
+     * generated content that the format forces to sit <em>outside</em> the markers, at the top of
+     * the file. It changes when its inputs change: a role in {@code .vibetags-roles} gains a glob,
+     * an FQN-only role gains a member, a mirror adds a target glob. Keeping the on-disk header
+     * across an update therefore froze the rule's scope at the first write while the fingerprint,
+     * the sidecar and check mode all believed the file had been refreshed. So when the rendered
+     * content carries a header and the file's leading block is one, the rendered header replaces
+     * it; anything else before the marker is hand-authored and stays.
+     *
+     * <p>When the renderer emits no header ({@code frontMatter} is empty), a header the file
+     * carries is a hand-written one — CLAUDE.md, a Junie or Void rules file — and is preserved
+     * untouched, as before.
+     *
+     * @param before      the file's content ahead of the start marker (or the whole file when
+     *                    there is none), legacy block already stripped
+     * @param frontMatter the rendered header, {@code ""} when the content has none
+     */
+    private static String withRenderedFrontMatter(String before, String frontMatter) {
+        if (frontMatter.isEmpty() || !before.startsWith("---")) {
+            return before;
+        }
+        int close = before.indexOf("---", 3);
+        if (close == -1) {
+            return before; // an unterminated header is not one we wrote; leave it alone
+        }
+        String rest = before.substring(close + 3).stripLeading();
+        return rest.isEmpty() ? frontMatter : frontMatter + "\n\n" + rest;
     }
 
     /**
@@ -603,6 +638,46 @@ public final class GuardrailFileWriter {
             writeCache.recordInput(file);
         } catch (RuntimeException ignored) {
             // Best-effort: an unwatchable input just means we may re-render unnecessarily.
+        }
+    }
+
+    /**
+     * Deletes {@code file} if it exists, keeping the write cache and the dry-run ledger in step.
+     *
+     * <p>Every removal of a file this writer may have recorded goes through here rather than
+     * through {@code Files.deleteIfExists} directly. The cache reads a recorded file that is
+     * missing as an output still to be rewritten and refuses the fingerprint short-circuit until
+     * it is — which, for a file no round will ever write again, is forever. A departed module's
+     * rule files were the case that showed it: deleted by name behind the cache's back, they cost
+     * every later build of the surviving modules a full round. In dry-run the file is left alone
+     * and reported as a change, which is what lets check mode see the deletions a real round
+     * would perform.
+     *
+     * @return {@code true} if the file existed — and, outside dry-run, was deleted
+     */
+    public boolean deleteIfExists(Path file) {
+        if (dryRun) {
+            if (!Files.exists(file)) {
+                return false;
+            }
+            debug("delete.skip file={} reason=dry-run", name(file));
+            dryRunChanges.add(file.toString());
+            return true;
+        }
+        try {
+            if (!Files.deleteIfExists(file)) {
+                return false;
+            }
+            debug("delete.commit file={}", name(file));
+            if (writeCache != null) {
+                writeCache.invalidate(file);
+            }
+            return true;
+        } catch (IOException e) {
+            // A file we cannot delete stays; the next build tries again. Failing a compile over
+            // housekeeping would be the larger bug.
+            debug("delete.skip file={} reason=io-error detail={}", name(file), e.toString());
+            return false;
         }
     }
 
