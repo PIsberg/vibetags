@@ -36,7 +36,7 @@
                     &lt;dependency&gt;
                         &lt;groupId&gt;se.deversity.vibetags&lt;/groupId&gt;
                         &lt;artifactId&gt;vibetags-bom&lt;/artifactId&gt;
-                        &lt;version&gt;1.2.1&lt;/version&gt;
+                        &lt;version&gt;1.2.2&lt;/version&gt;
                         &lt;type&gt;pom&lt;/type&gt;
                         &lt;scope&gt;import&lt;/scope&gt;
                     &lt;/dependency&gt;
@@ -44,8 +44,8 @@
             &lt;/dependencyManagement&gt;
 
         Gradle:
-            implementation platform('se.deversity.vibetags:vibetags-bom:1.2.1')
-            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.1')
+            implementation platform('se.deversity.vibetags:vibetags-bom:1.2.2')
+            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.2')
             compileOnly 'se.deversity.vibetags:vibetags-annotations'
             annotationProcessor 'se.deversity.vibetags:vibetags-processor'
     </description>

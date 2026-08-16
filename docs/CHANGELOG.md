@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-08-16
+
 ### Changed
 
 - **Every third-party pin moved to its latest stable release** (2026-08-16), the rest were
@@ -2719,7 +2721,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/PIsberg/vibetags/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/PIsberg/vibetags/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/PIsberg/vibetags/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/PIsberg/vibetags/compare/v1.1.0...v1.1.1
