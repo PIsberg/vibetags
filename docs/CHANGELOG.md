@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   then check. Verified by `CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`
   (red before the fix) and `checkMode_reportsADepartedModulesRuleFileAsDrift` (the bound, kept
   green through it).
+- **Check mode no longer prunes a departed module's sidecar.** `ModuleSidecar.readAll` deletes a
+  sidecar whose module directory is gone, and check mode read through it. One check-mode run
+  after a module left the reactor (the first thing CI does) deleted that module's sidecar, the
+  only record of the rule files it wrote, so the next real build had nothing to act on and the
+  departed module's rule files stayed in the repository for good. Check mode, and the
+  unidentifiable-module warning that runs before generation reads the departed stems, now read
+  through `ModuleSidecar.peekAll`, which leaves the file where it is. Verified by
+  `CheckModeTest.checkMode_doesNotPruneADepartedModulesSidecar`, red before the fix.
 
 ### Added
 

@@ -589,6 +589,21 @@ public final class ModuleSidecar {
      * output; the next incremental build picks it up because the sidecar stamp will have changed.
      */
     public static List<ModuleSidecar> readAll(Path root) {
+        return readAll(root, true);
+    }
+
+    /**
+     * {@link #readAll(Path)} without its side effect: a malformed or stale sidecar is left out of
+     * the result but stays on disk. For readers that must not write — check mode above all, whose
+     * promise is that it touches nothing VibeTags manages, and whose pruning of a departed
+     * module's sidecar threw away the only record of the rule files that module wrote, so the
+     * next real build could no longer remove them (see {@link #staleGranularStems}).
+     */
+    public static List<ModuleSidecar> peekAll(Path root) {
+        return readAll(root, false);
+    }
+
+    private static List<ModuleSidecar> readAll(Path root, boolean prune) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
         try (Stream<Path> stream = Files.list(root)) {
@@ -615,7 +630,7 @@ public final class ModuleSidecar {
                           return;
                       }
                       if (s == null) {
-                          tryDelete(p);
+                          if (prune) tryDelete(p);
                           return;
                       }
                       if (s == FUTURE_VERSION) {
@@ -628,7 +643,7 @@ public final class ModuleSidecar {
                       if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
                           Path moduleDir = root.resolve(s.modulePath);
                           if (!Files.isDirectory(moduleDir)) {
-                              tryDelete(p);
+                              if (prune) tryDelete(p);
                               return;
                           }
                       }

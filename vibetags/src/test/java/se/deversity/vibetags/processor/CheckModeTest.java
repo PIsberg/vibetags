@@ -225,6 +225,36 @@ class CheckModeTest {
         assertTrue(Files.exists(bRule), "reported, not removed: check mode writes nothing");
     }
 
+    /**
+     * Check mode touches nothing VibeTags manages, and the sidecars are the record of the build:
+     * {@code readAll} prunes a sidecar whose module directory is gone, and check mode used to read
+     * through it. One check-mode run after a module left the reactor deleted that module's sidecar,
+     * and with it the only record of the rule files it wrote — so the next real build had nothing
+     * to act on and the departed module's rule files stayed in the repository for good.
+     */
+    @Test
+    void checkMode_doesNotPruneADepartedModulesSidecar(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        compileModule(root, "module-b", "com.example.b.BetaService", lockedIn("com.example.b", "BetaService"));
+        Path bRule = root.resolve(".claude/rules/com-example-b-BetaService.md");
+        Path bSidecar = root.resolve(".vibetags-mod-module-b");
+        assertTrue(Files.exists(bRule) && Files.exists(bSidecar), "precondition: module-b's file and sidecar exist");
+
+        deleteRecursively(root.resolve("module-b"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        checkModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+
+        assertTrue(Files.exists(bSidecar),
+            "check mode must not delete the departed module's sidecar: it writes nothing, and the "
+                + "sidecar is the only record of which rule files that module wrote");
+
+        compileModule(root, "module-a", "com.example.a.AlphaService", lockedIn("com.example.a", "AlphaService"));
+        assertFalse(Files.exists(bRule),
+            "the next real build must still be able to remove the departed module's rule file");
+        assertFalse(Files.exists(bSidecar), "and it is the real build that prunes the sidecar");
+    }
+
     // -----------------------------------------------------------------------
     // Unit: dry-run GuardrailFileWriter
     // -----------------------------------------------------------------------
