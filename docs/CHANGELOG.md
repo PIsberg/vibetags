@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every third-party pin moved to its latest stable release** (2026-08-16), the rest were
+  already current: JUnit 6.1.2 to 6.1.3 (Jupiter and Platform), Logback 1.6.1 to 1.6.3,
+  async-test-lib 1.9.2 to 1.9.3, maven-enforcer-plugin 3.6.0 to 3.6.3, Gradle wrapper 9.6.1 to
+  9.7.0 in all six wrappers, Kotlin 2.3.21 to 2.4.10 in `example-kotlin` and the README
+  snippets, Groovy 5.0.8 to 5.1.0 in `example-groovy`, pre-commit hooks gitleaks v8.16.3 to
+  v8.30.0 and pre-commit-hooks v4.4.0 to v6.0.0 (`pre-commit-java` left at v0.2.4: its
+  checkstyle hook runs in Docker and could not be verified here). Pre-releases on Maven Central
+  (maven-compiler-plugin 4.0.0-beta-4, maven-surefire-plugin 3.6.0-M1, slf4j 2.1.0-alpha1,
+  maven-jar/source-plugin 4.0.0-beta-1) were deliberately not applied. Verified by the whole
+  suite (`mvn clean install -Pe2e`, 1936 tests), the bom, cli and load-tests builds, the Gradle
+  build of `vibetags`, and the Gradle builds of `example`, `example-kotlin` (kapt),
+  `example-groovy` and `example-scala`.
+- **`scripts/bump-dependencies.sh` and the `bump-dependencies` skill.** The script reports every
+  parent-pom property against Maven Central (stable releases only unless asked), plus the Gradle
+  wrapper, Kotlin, Groovy and Scala pins, and fails if the parent gains a version property it has
+  no path for. The skill is the procedure around it: what mirrors each pin, which gates verify a
+  bump, and what to hand over.
+
 ### Fixed
 
 - **A granular rule file's front matter now follows its inputs.** The `globs:` / `paths:` /

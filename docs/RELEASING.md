@@ -162,6 +162,12 @@ The `consumer-regression-suite` skill drives this and covers how to read the res
 particular, that a failure is not a regression until it has been shown to pass on the
 consumer's existing pinned version.
 
+While the tree is being prepared, `scripts/bump-dependencies.sh` reports which third-party
+pins in `vibetags-parent/pom.xml` (and the Gradle wrapper, Kotlin, Groovy and Scala pins in the
+examples) have a newer stable release. Applying them is its own PR, before the release branch,
+driven by the `bump-dependencies` skill; a release should not be the first build on a new
+plugin version.
+
 ### 1. Prepare the release
 
 Create a new branch from `main` (or your default branch):

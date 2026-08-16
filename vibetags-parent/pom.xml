@@ -80,15 +80,15 @@
         <!-- Third-party runtime/compile dependencies -->
         <jspecify.version>1.0.1</jspecify.version>
         <slf4j.version>2.0.18</slf4j.version>
-        <logback.version>1.6.1</logback.version>
+        <logback.version>1.6.3</logback.version>
 
         <!-- Test dependencies. Keep in step with vibetags/build.gradle and
              load-tests/pom.xml; BuildVersionParityTest enforces it. -->
-        <junit.version>6.1.2</junit.version>
-        <junit.platform.version>6.1.2</junit.platform.version>
+        <junit.version>6.1.3</junit.version>
+        <junit.platform.version>6.1.3</junit.platform.version>
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
-        <async-test-lib.version>1.9.2</async-test-lib.version>
+        <async-test-lib.version>1.9.3</async-test-lib.version>
         <snakeyaml.version>2.6</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
 
@@ -107,7 +107,7 @@
         <pmd.version>7.26.0</pmd.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
-        <maven-enforcer-plugin.version>3.6.0</maven-enforcer-plugin.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <findsecbugs-plugin.version>1.14.0</findsecbugs-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <pitest-maven.version>1.25.9</pitest-maven.version>
