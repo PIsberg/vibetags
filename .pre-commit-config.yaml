@@ -4,11 +4,11 @@ repos:
   hooks:
   - id: checkstyle
 - repo: https://github.com/gitleaks/gitleaks
-  rev: v8.16.3
+  rev: v8.30.0
   hooks:
   - id: gitleaks
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v6.0.0
   hooks:
   # The code-karta SVGs under docs/diagrams/codekarta/ are generator output, byte for byte,
   # and the benchmark logs under load-tests/results/ are frozen measurement records.

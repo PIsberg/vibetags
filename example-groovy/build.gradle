@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.apache.groovy:groovy:5.0.8'
+    implementation 'org.apache.groovy:groovy:5.1.0'
 
     // BOM is the single source of truth for vibetags-* versions.
     implementation platform('se.deversity.vibetags:vibetags-bom:1.2.1')

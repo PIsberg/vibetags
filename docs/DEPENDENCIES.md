@@ -97,7 +97,7 @@ so what consumers download is self-contained.
 - **GitHub Actions** are pinned to commit SHAs, not tags, with the human-readable version in a
   trailing comment. Dependabot proposes the bumps. Pinning is what the OSSF Scorecard
   Pinned-Dependencies check wants, and it is also the only form that cannot be moved under you.
-- **Gradle wrapper**, `gradle-9.6.1-bin.zip` in three subprojects. The checked-in
+- **Gradle wrapper**, `gradle-9.7.0-bin.zip` in three subprojects. The checked-in
   `gradle-wrapper.jar` files are validated against Gradle's published checksums by
   `.github/workflows/gradle-wrapper-validation.yml`, which must run on every push to main for
   Scorecard's Binary-Artifacts check to accept them.

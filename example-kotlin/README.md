@@ -19,8 +19,8 @@ directory (`CLAUDE.md`, `.cursorrules`) are regenerated on every build.
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.3.21"
-    kotlin("kapt") version "2.3.21"
+    kotlin("jvm") version "2.4.10"
+    kotlin("kapt") version "2.4.10"
 }
 
 dependencies {
