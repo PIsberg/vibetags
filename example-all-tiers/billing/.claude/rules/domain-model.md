@@ -1,5 +1,5 @@
 ---
-paths: ["**/*Entry.java"]
+paths: ["**/*Entry.java", "**/*Rules.java"]
 ---
 
 <!-- VIBETAGS-START -->
