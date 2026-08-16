@@ -308,14 +308,11 @@ public final class GranularRulesWriter {
                 continue;
             }
             for (String stem : stems) {
-                Path file = dir.resolve(stem + f.extension);
-                try {
-                    if (java.nio.file.Files.deleteIfExists(file)) {
-                        removed.add(stem);
-                    }
-                } catch (java.io.IOException ignored) {
-                    // A rule file we cannot delete stays; the next build tries again. Failing a
-                    // compile over housekeeping would be the larger bug.
+                // Through the writer, never Files.deleteIfExists: the writer invalidates the
+                // cache entry (a recorded file that is missing pins the short-circuit off) and,
+                // in dry-run, reports the removal instead of performing it.
+                if (fileWriter.deleteIfExists(dir.resolve(stem + f.extension))) {
+                    removed.add(stem);
                 }
             }
         }

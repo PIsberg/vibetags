@@ -641,6 +641,46 @@ public final class GuardrailFileWriter {
         }
     }
 
+    /**
+     * Deletes {@code file} if it exists, keeping the write cache and the dry-run ledger in step.
+     *
+     * <p>Every removal of a file this writer may have recorded goes through here rather than
+     * through {@code Files.deleteIfExists} directly. The cache reads a recorded file that is
+     * missing as an output still to be rewritten and refuses the fingerprint short-circuit until
+     * it is — which, for a file no round will ever write again, is forever. A departed module's
+     * rule files were the case that showed it: deleted by name behind the cache's back, they cost
+     * every later build of the surviving modules a full round. In dry-run the file is left alone
+     * and reported as a change, which is what lets check mode see the deletions a real round
+     * would perform.
+     *
+     * @return {@code true} if the file existed — and, outside dry-run, was deleted
+     */
+    public boolean deleteIfExists(Path file) {
+        if (dryRun) {
+            if (!Files.exists(file)) {
+                return false;
+            }
+            debug("delete.skip file={} reason=dry-run", name(file));
+            dryRunChanges.add(file.toString());
+            return true;
+        }
+        try {
+            if (!Files.deleteIfExists(file)) {
+                return false;
+            }
+            debug("delete.commit file={}", name(file));
+            if (writeCache != null) {
+                writeCache.invalidate(file);
+            }
+            return true;
+        } catch (IOException e) {
+            // A file we cannot delete stays; the next build tries again. Failing a compile over
+            // housekeeping would be the larger bug.
+            debug("delete.skip file={} reason=io-error detail={}", name(file), e.toString());
+            return false;
+        }
+    }
+
     private void scrubGranularFile(Path p) {
         try {
             String content = Files.readString(p, StandardCharsets.UTF_8);

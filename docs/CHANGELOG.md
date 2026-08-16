@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Verified by `WriteFileFrontMatterTest` (hand content between header and block, and after it,
   survives) and `RoleBasedGranularEndToEndTest.editingARolesGlobs_reachesTheExistingRuleFilesFrontmatter`,
   both red before the fix.
+- **A departed module's rule files no longer cost the survivors their short-circuit.** 1.2.1
+  started deleting the rule files of a module that left the reactor, by name and straight through
+  `Files.deleteIfExists`, and the write cache went on tracking them. A cached entry whose file is
+  missing means "an output still to be rewritten", so every later build of every surviving module
+  ran the full content build and file compare, over a file no round would ever write again.
+  Deletions now go through `GuardrailFileWriter.deleteIfExists`, which invalidates the entry
+  (and, in dry-run, reports the removal instead of performing it). Verified by
+  `ProjectLifecycleEndToEndTest.moduleRemovedFromTheReactor_doesNotCostTheSurvivorsTheirShortCircuit`,
+  red before the fix; `GuardrailFileWriterLogContractTest` pins the new `delete.commit` /
+  `delete.skip reason=dry-run` events.
 
 ### Added
 
