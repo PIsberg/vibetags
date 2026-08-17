@@ -621,7 +621,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // single-module builds where the compilation root IS the VibeTags root.
         Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
         Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
-            ? Set.of()
+            ? java.util.Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
 
         // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.

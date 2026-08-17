@@ -43,8 +43,9 @@
       category/java/codestyle.xml. The excluded rules are formatting opinions that contradict a
       convention already applied consistently across the module; adopting them would mean rewriting
       working code to a second style, not correcting a defect. Everything else in the category is
-      live: UselessParentheses (2), ConfusingTernary (5), UnnecessaryFullyQualifiedName (7) and
-      EmptyControlStatement (1) all fired and were fixed in the code.
+      live: UselessParentheses (2), ConfusingTernary (5) and UnnecessaryFullyQualifiedName (6 of 7,
+      the seventh sitting inside an @AILocked method) all fired and were fixed in the code, and
+      EmptyControlStatement (1) is satisfied by configuring the rule rather than switching it off.
     -->
     <rule ref="category/java/codestyle.xml">
         <!-- 2725 findings. The codebase does not mark locals or parameters final; the compiler
@@ -87,9 +88,10 @@
              first use is a symptom of that method's length, already covered by the size metrics
              above. The rule measures a gap that here is the loop itself. -->
         <exclude name="VariableDeclarationUsageDistance"/>
-        <!-- EmptyControlStatement is re-added below with allowCommentedBlocks, so it is excluded
-             here only to be replaced, not to be switched off. -->
+        <!-- EmptyControlStatement and UnnecessaryFullyQualifiedName are re-added below with
+             properties, so they are excluded here only to be replaced, not to be switched off. -->
         <exclude name="EmptyControlStatement"/>
+        <exclude name="UnnecessaryFullyQualifiedName"/>
     </rule>
 
     <!--
@@ -102,6 +104,25 @@
     <rule ref="category/java/codestyle.xml/EmptyControlStatement">
         <properties>
             <property name="allowCommentedBlocks" value="true"/>
+        </properties>
+    </rule>
+
+    <!--
+      UnnecessaryFullyQualifiedName, re-added with one suppression. Six of its seven findings were
+      fixed. The seventh is `java.util.Set.of()` inside AIGuardrailProcessor.generateFiles(), which
+      is @AILocked and guarded in CI by action/locked-files/check_locked_diff.py — that guard fails
+      on any diff touching the method, including a change this cosmetic, which is the guard working
+      as intended.
+
+      Suppressed by XPath rather than by excluding the rule, so it keeps gating every other file and
+      every other method in this one. If generateFiles() is ever unlocked, delete this block and fix
+      the line; the rule will point at it again.
+    -->
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName">
+        <properties>
+            <property name="violationSuppressXPath"
+                      value="./ancestor::MethodDeclaration[@Name='generateFiles']
+                             [ancestor::ClassDeclaration[@SimpleName='AIGuardrailProcessor']]"/>
         </properties>
     </rule>
 
