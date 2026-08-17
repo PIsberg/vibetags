@@ -169,6 +169,12 @@ past the last wave — currently `V5`) unless you're extending an in-flight wave
   Combinations" if it interacts with others, a row in "Diagnosing Issues" if Step 6 added a
   warning, and — if genuinely new rather than a format addition — the annotation belongs in every
   count/list this skill maintains for the other 38.
+- **`.claude/skills/vibetags-usage/SKILL.md`, "Element cheat sheet"** — a row in the "Every
+  element, in full" table listing every element (bold the ones with no default), plus the
+  positional-form table if it declares `value()` and the "will not compile bare" list if any
+  element has no default. The word-numbers introducing those two lists are counts and move too.
+  `SkillElementTableConsistencyTest` checks all of this against the annotation source, so you do
+  not have to remember it — but you do have to make the build green before pushing.
 
 ## Verify
 
