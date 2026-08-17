@@ -10,25 +10,110 @@ VibeTags is a **compile-time Java annotation processor** that generates AI platf
 
 ## Quick Setup
 
-### 1. Add the dependency
+### 1. Add the two artifacts
 
-**Maven** (`provided` scope — compile-only):
+VibeTags ships as **two** artifacts and you need both. Depending on only one of them is the most
+common "VibeTags is broken" report, and neither failure produces a useful error:
+
+| Artifact | Belongs on | Gives you | If you omit it |
+|---|---|---|---|
+| `vibetags-annotations` | the **compile** classpath | the 44 `@AI*` annotation types you write in source | `cannot find symbol` on every `@AI*` |
+| `vibetags-processor` | the **annotation-processor** path | the processor that reads them and writes the guardrail files | compiles green, generates nothing |
+
+**Maven**. Annotations as an ordinary dependency, processor on `annotationProcessorPaths`:
+
 ```xml
-<dependency>
-    <groupId>se.deversity.vibetags</groupId>
-    <artifactId>vibetags-processor</artifactId>
-    <version>1.2.2</version>
-    <scope>provided</scope>
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-annotations</artifactId>
+        <version>1.2.2</version>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <annotationProcessorPaths>
+                    <path>
+                        <groupId>se.deversity.vibetags</groupId>
+                        <artifactId>vibetags-processor</artifactId>
+                        <version>1.2.2</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 ```
+
+> **Do not** declare `vibetags-processor` as a plain `<scope>provided</scope>` dependency instead
+> of the block above. Since **JDK 23**, `javac` no longer discovers processors sitting on the class
+> path, so that shape compiles cleanly and writes no files: no error, no warning. If the processor
+> has to stay on the class path, add `<proc>full</proc>` to the compiler plugin's configuration.
+
+`vibetags-processor` does pull `vibetags-annotations` in transitively (kept from 0.5.x for
+backwards compatibility), so a single-artifact setup can work, but only until JDK 23, and it puts
+the whole processor and its SLF4J/Logback dependencies on your compile classpath. Declare both.
 
 **Gradle:**
+
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-processor:1.2.2'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.2'
+dependencies {
+    compileOnly         'se.deversity.vibetags:vibetags-annotations:1.2.2'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.2'
+}
 ```
 
-### 2. Opt in to AI platforms (file-presence model)
+Kotlin replaces `annotationProcessor` with `kapt` (KSP does not run JSR 269 processors, so it is
+not supported); Groovy needs the same two lines plus `groovyOptions.javaAnnotationProcessing = true`
+on the `GroovyCompile` task. Scala has no JSR 269 support at all, so annotate thin Java types beside
+the Scala code instead.
+
+### 2. Tell the processor where the project root is
+
+VibeTags writes at **the JVM's working directory** unless `-Avibetags.root` overrides it. For
+`mvn compile` run from the project root that is already correct and you can skip this step. When
+the compiler runs somewhere else, the processor happily writes a full set of guardrail files into
+a directory you never look at, and your project looks untouched:
+
+| How you build | Working directory | Set `-Avibetags.root`? |
+|---|---|---|
+| Maven, from the project root | the project root | No |
+| Maven reactor, `mvn` at the reactor root | the reactor root | No; that is the merge root already |
+| A single module on its own (`mvn -pl`, IDE "build module") | varies | Yes; point it at the reactor root |
+| Gradle, plain `JavaCompile` | usually the root project dir | Usually no |
+| Gradle worker, kapt, Groovy joint compilation | a worker scratch dir | **Yes** |
+| IDE-driven compilation (IntelliJ, Eclipse) | varies | Usually yes |
+
+```xml
+<!-- Maven: inside the same maven-compiler-plugin <configuration> as step 1 -->
+<compilerArgs><arg>-Avibetags.root=${maven.multiModuleProjectDirectory}</arg></compilerArgs>
+```
+
+```groovy
+// Gradle
+options.compilerArgs += "-Avibetags.root=${rootDir}".toString()
+```
+
+```kotlin
+// kapt. Its working directory is never the project directory.
+kapt { arguments { arg("vibetags.root", rootProject.projectDir.absolutePath) } }
+```
+
+You do not have to guess: the processor prints the path it resolved on every compile.
+
+```
+VibeTags: Root resolved: /home/me/myproject
+VibeTags: user.dir:      /home/me/myproject
+```
+
+If that first line is not your project root, that is the whole bug.
+
+### 3. Opt in to AI platforms (file-presence model)
 
 VibeTags **never creates files** — it only updates files that already exist. Create empty placeholder files for each platform you want to support:
 
@@ -78,35 +163,77 @@ touch .roomodes                            # Roo Code ("VibeTags Architect" cust
 
 To remove a platform: delete its file — VibeTags will never recreate it.
 
-> **`AGENTS.md` is special:** it is only generated when it is the **sole** AI config file in the
-> project. Since `AGENTS.md` is a near-universal agent file often kept as a pointer to another
-> tool's file (e.g. `CLAUDE.md`), VibeTags leaves it untouched whenever any other AI config file
-> is present (this also disables the `.codex/` sidecar). Opt in to *only* `AGENTS.md` to have it
-> managed.
+> **`AGENTS.md` is special, and if you see this on every single compile, this is why:**
 >
-> **Escape hatch (marker opt-in):** if you *want* a generated `AGENTS.md` alongside `CLAUDE.md`
-> — a Claude + Codex project, say — paste a marker pair into it:
->
-> ```markdown
-> <!-- VIBETAGS-START -->
-> <!-- VIBETAGS-END -->
+> ```
+> VibeTags: AGENTS.md left untouched because other AI config files are present;
+> it is treated as a pointer rather than a generated file.
 > ```
 >
-> A file carrying the markers was written by VibeTags in the first place, and only the region
-> between them is ever replaced, so refreshing it cannot clobber your prose. Marked files stay
-> managed no matter how many other AI config files are present.
+> `AGENTS.md` is a near-universal agent file that projects often keep as a thin pointer to another
+> tool's file (`CLAUDE.md`, say), so VibeTags refuses to touch it whenever any *other* AI config
+> file exists. That also disables the `.codex/` sidecar. It is a javac `NOTE`, not a warning, and
+> nothing is wrong with your build; it simply repeats until you pick one of three answers:
+>
+> - **Have VibeTags manage it**, the usual answer for a Claude + Codex project. Paste a marker
+>   pair into `AGENTS.md`:
+>
+>   ```markdown
+>   <!-- VIBETAGS-START -->
+>   <!-- VIBETAGS-END -->
+>   ```
+>
+>   A file carrying the markers was written by VibeTags in the first place, and only the region
+>   between them is ever replaced, so refreshing it cannot clobber your prose. Marked files stay
+>   managed no matter how many other AI config files are present.
+>
+> - **Keep it hand-written.** Change nothing and read the note as the confirmation it is.
+> - **Make it the sole AI config file.** Delete `CLAUDE.md`, `GEMINI.md` and the rest, and
+>   `AGENTS.md` becomes a managed file with no markers needed.
+>
+> There is no flag that silences the note while leaving `AGENTS.md` unmanaged: javac notes are not
+> suppressible per processor. Adding the marker pair is the way to stop seeing it.
 
-### 3. Annotate your Java code
+### 4. Annotate your Java code
 
 ```java
 import se.deversity.vibetags.annotations.*;
 ```
 
-### 4. Compile — guardrails are generated automatically
+Most `@AI*` annotations have **no `value()` element**, so the positional shorthand does not compile.
+`@AILocked("Legacy code")` is an error; `@AILocked(reason = "Legacy code")` is what you want. The
+[Element cheat sheet](#element-cheat-sheet--read-this-before-your-first-annotation) below lists the
+elements of all 44, including the seven that do take the positional form and the ten that will not
+compile without arguments.
+
+### 5. Compile — guardrails are generated automatically
 
 ```bash
 mvn clean compile   # or: gradle clean build
 ```
+
+`clean` matters more than it looks: VibeTags runs inside the compiler, so an incremental build with
+no changed sources never starts `javac` and a platform file you just created stays empty even
+though the build is green.
+
+### 6. Verify it actually ran
+
+Every way this setup fails is silent, so check rather than assume:
+
+```bash
+jbang se.deversity.vibetags:vibetags-cli:1.2.2 doctor
+```
+
+Or by hand, in the order things go wrong:
+
+1. **Was the processor on the path?** The compile log carries `VibeTags: Root resolved: …`. No such
+   line at all means only `vibetags-annotations` was wired up, or JDK 23+ skipped a class-path
+   processor (step 1).
+2. **Did it write where you are looking?** That same line is the output directory (step 2).
+3. **Did anything opt in?** `VibeTags: No AI config files found` means no platform file exists
+   (step 3).
+4. **Still empty?** Read `vibetags.log` at the resolved root. Every skipped write is a `write.skip`
+   event carrying a `reason=`, and `-Avibetags.log.level=DEBUG` records the full decision path.
 
 ---
 
@@ -194,6 +321,100 @@ per module. Both work; pick per platform.
 ---
 
 ## Annotations Reference
+
+### Element cheat sheet — read this before your first annotation
+
+Java's positional shorthand `@Foo(x)` only works when an annotation has an element literally named
+`value()`. **Thirty-seven of the forty-four do not**, so `@AILocked("Legacy code")` fails with a
+compiler error that does not name the element you should have used:
+
+```
+error: cannot find symbol
+@AILocked("Legacy code")
+          ^
+  symbol:   method value()
+```
+
+`@AILocked(reason = "Legacy code")` is the form that works. Nothing at the call site tells you
+which kind of annotation you are holding, hence this table.
+
+**The seven that take the positional form:**
+
+| Annotation | Positional form | Use on | `value()` type |
+|---|---|---|---|
+| `@AICallersOnly` | `@AICallersOnly({"com.acme.Api", "com.acme.Facade"})` | class, method | `String[]`, **required** |
+| `@AIExplain` | `@AIExplain(AIExplain.ComplexityLevel.HIGH)` | class, method | `ComplexityLevel`, default `HIGH` |
+| `@AIExtensible` | `@AIExtensible(AIExtensible.Strategy.VISITOR_PATTERN)` | class | `Strategy`, default `STRATEGY_PATTERN` |
+| `@AIInputSanitized` | `@AIInputSanitized(AIInputSanitized.SanitizerType.SQL_INJECTION)` | **parameter, field** | `SanitizerType[]`, **required** |
+| `@AIMemoryBudget` | `@AIMemoryBudget(AIMemoryBudget.AllocationPolicy.NO_AUTOBOXING)` | class, method | `AllocationPolicy`, default `ZERO_ALLOCATION` |
+| `@AISecureLogging` | `@AISecureLogging(AISecureLogging.MaskingPolicy.HASH)` | **field, parameter** | `MaskingPolicy`, default `OMIT` |
+| `@AIThreadAffinity` | `@AIThreadAffinity(AIThreadAffinity.Affinity.MAIN_ONLY)` | class, method | `Affinity`, **required** |
+
+Every row above was compiled to check it. `@AIInputSanitized` and `@AISecureLogging` are the two
+that do not go on a class. Putting one there fails with *annotation interface not applicable to
+this kind of declaration*, not with anything that names the target you wanted.
+
+**The ten that will not compile bare.** Each has at least one element with no default:
+
+`@AIBannedApi(forbidden)`, `@AICallersOnly(value)`, `@AIGenerated(from)`,
+`@AIInputSanitized(value)`, `@AIKeepInSync(mirrors)`, `@AILoadBearing(invariant)`,
+`@AIRegulation(standard)`, `@AISunset(jira)`, `@AITemporary(expiresOn, reason)`,
+`@AIThreadAffinity(value)`.
+
+The other thirty-four are usable bare: `@AILocked`, `@AIPrivacy`, `@AIPure` and so on all carry a
+sensible default reason. Naming a reason is still worth it, because it is what the agent reads.
+
+**Every element, in full.** Bold marks an element with no default (omit it and the build fails).
+
+| Annotation | Elements |
+|---|---|
+| `@AIArchitecture` | `belongsTo` String `""`, `cannotReference` String[] `{}` |
+| `@AIAudit` | `checkFor` String[] `{}` |
+| `@AIBannedApi` | **`forbidden`** String[], `useInstead` String `""`, `reason` String `""` |
+| `@AICallersOnly` | **`value`** String[] |
+| `@AIContext` | `focus` String `""`, `avoids` String `""` |
+| `@AIContract` | `reason` String (long default) |
+| `@AICore` | `sensitivity` String `"High"`, `note` String (default note) |
+| `@AIDeprecated` | `replacedBy` String `""`, `migrationGuide` String (default), `deadline` String `""` |
+| `@AIDomainModel` | `allow` String[] `{}` |
+| `@AIDraft` | `instructions` String (default) |
+| `@AIExplain` | `value` ComplexityLevel `HIGH`; one of `HIGH`, `MEDIUM`, `LOW` |
+| `@AIExtensible` | `value` Strategy `STRATEGY_PATTERN`; one of `STRATEGY_PATTERN`, `VISITOR_PATTERN`, `FACTORY` |
+| `@AIFeatureFlag` | `flag` String `""`, `defaultValue` boolean `false` |
+| `@AIGenerated` | **`from`** String, `regenerateWith` String `""`, `editInstead` String `""` |
+| `@AIIdempotent` | `reason` String `""` |
+| `@AIIgnore` | `reason` String (default) |
+| `@AIImmutable` | `note` String `""` |
+| `@AIInputSanitized` | **`value`** SanitizerType[]; any of `SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, `LDAP` |
+| `@AIInternationalized` | `reason` String `""` |
+| `@AIKeepInSync` | **`mirrors`** String[], `reason` String `""`, `enforcedBy` String `""` |
+| `@AILegacyBridge` | `reason` String `""` |
+| `@AILoadBearing` | **`invariant`** String, `breaksIf` String `""`, `suppressAudit` boolean `false` |
+| `@AILocked` | `reason` String (default) |
+| `@AIMemoryBudget` | `value` AllocationPolicy `ZERO_ALLOCATION`; one of `ZERO_ALLOCATION`, `NO_AUTOBOXING`, `NO_NEW_OBJECTS` |
+| `@AIObservability` | `metrics` String[] `{}`, `traces` String[] `{}`, `logs` String[] `{}`, `note` String `""` |
+| `@AIParallelTests` | `reason` String `""` |
+| `@AIPerformance` | `constraint` String (default) |
+| `@AIPrivacy` | `reason` String (default) |
+| `@AIPrototype` | `reason` String `""` |
+| `@AIPublicAPI` | `reason` String `""` |
+| `@AIPure` | `reason` String `""` |
+| `@AIRegulation` | **`standard`** String, `clause` String `""`, `description` String (default) |
+| `@AISandboxOnly` | `reason` String `""` |
+| `@AISchemaSafe` | `reason` String `""` |
+| `@AISecure` | `aspect` String `""` |
+| `@AISecureLogging` | `value` MaskingPolicy `OMIT`; one of `OMIT`, `HASH`, `MASK_CREDIT_CARD`, `MASK_EMAIL` |
+| `@AIStrictClasspath` | `reason` String `""` |
+| `@AIStrictExceptions` | `reason` String `""` |
+| `@AIStrictTypes` | `reason` String `""` |
+| `@AISunset` | **`jira`** String |
+| `@AITemporary` | **`expiresOn`** String (`YYYY-MM-DD`), **`reason`** String |
+| `@AITestDriven` | `testLocation` String `""`, `coverageGoal` int `100`, `framework` Framework[] `{JUNIT_5}`; any of `JUNIT_5`, `JUNIT_4`, `TESTNG`, `MOCKITO`, `ASSERTJ`, `SPOCK`, `NONE`; `mockPolicy` String `""` |
+| `@AIThreadAffinity` | **`value`** Affinity; one of `MAIN_ONLY`, `NEVER_MAIN`, `BACKGROUND_ONLY`, `NAMED`; `thread` String `""`, `marshalVia` String `""`, `symptomIfViolated` String `""` |
+| `@AIThreadSafe` | `strategy` Strategy `SYNCHRONIZED`; one of `SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`; `note` String `""` |
+
+Enum constants are nested types, so they are written `AIExplain.ComplexityLevel.HIGH` unless you
+static-import them.
 
 ### `@AILocked` — Protect critical code from modification
 
@@ -1331,6 +1552,13 @@ tasks.withType(JavaCompile) {
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| Green build, no `VibeTags:` line in the compile log at all | The processor never ran: only `vibetags-annotations` is wired up, or JDK 23+ ignored a class-path processor | Put `vibetags-processor` on `annotationProcessorPaths` / the `annotationProcessor` configuration (step 1) |
+| Green build, files generated, but not in your project | `VibeTags: Root resolved:` points somewhere else: a Gradle worker, kapt, or an IDE compile | Set `-Avibetags.root` (step 2) |
+| `cannot find symbol: class AILocked` | `vibetags-annotations` is missing from the compile classpath | Add it as an ordinary dependency (step 1) |
+| Nothing changed after creating a platform file | An incremental build with no changed sources never starts `javac` | `mvn clean compile`, or touch a source file |
+| `[NOTE] AGENTS.md left untouched because other AI config files are present` | Working as designed: `AGENTS.md` is managed only when it is the sole AI config file | Paste a `VIBETAGS-START`/`VIBETAGS-END` pair into it to have it managed; otherwise ignore (see step 3) |
+| `error: cannot find symbol` … `symbol: method value()` on an `@AI*` annotation | Positional shorthand used on an annotation that has no `value()` element | Use named elements: `@AILocked(reason = "…")`; see the [Element cheat sheet](#element-cheat-sheet--read-this-before-your-first-annotation) |
+| `[WARNING] VibeTags: unrecognized option 'vibetags.…'` | Typo in a `-A` option name | The message lists every supported option; fix the spelling |
 | No files updated after compile | Target files don't exist | `touch CLAUDE.md` (or whichever platform file) then recompile |
 | `[NOTE] No AI config files found` | No opt-in files present | Create one or more platform files (see step 2) |
 | A module's guardrails are missing from the reactor root | That module never reached the root | Give it `-Avibetags.root=<reactor>`; VibeTags warns with *"generated its guardrails as its own root"* when it can tell |

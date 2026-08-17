@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The `vibetags-usage` skill answers the four questions a first-time consumer actually got
+  stuck on.** Reported from a real setup, all four failing silently:
+  - **The two-artifact split was invisible.** The skill's install snippet declared only
+    `vibetags-processor` at `provided` scope, which is the exact shape that compiles green and
+    generates nothing on JDK 23+, where javac stopped discovering processors on the class path.
+    Step 1 is now a table of what each artifact is for and what its absence looks like, the Maven
+    snippet puts `vibetags-annotations` on the compile path and `vibetags-processor` on
+    `annotationProcessorPaths` (matching the README), and the `provided` shape is called out as a
+    thing not to do.
+  - **`-Avibetags.root` was documented only under "Advanced Configuration".** It is not advanced:
+    the processor writes at the JVM working directory, so a Gradle worker, kapt or an IDE compile
+    silently writes a full set of guardrails somewhere nobody looks. It is now step 2, with a
+    table of which builds need it and the `VibeTags: Root resolved:` line to check it against.
+  - **`@AIExplain`'s element name needed `javap` to find.** Thirty-seven of the 44 annotations
+    have no `value()`, so the positional shorthand does not compile, and the error names
+    `method value()` rather than the element you wanted. The new "Element cheat sheet" lists every
+    element of all 44, marks the ten that will not compile bare, and gives the seven that do take
+    the positional form with a compiled-and-checked example and the targets they are legal on.
+  - **The `AGENTS.md` note reads like a recurring warning.** It is a `NOTE`, it fires by design
+    whenever `AGENTS.md` is not the sole AI config file, and the marker-pair escape hatch was
+    buried. The note's own text now opens the explanation, with the three ways to resolve it.
+
+  Also new: a "Verify it actually ran" step that walks the silent failures in the order they
+  happen, and seven rows in "Diagnosing Issues" covering them.
+- **`SkillElementTableConsistencyTest` pins that cheat sheet to the annotation sources.** A
+  44-row hand-written table about compiled facts is the shape that rots silently, which is the
+  same failure the report was about. The test checks one row per annotation, every element listed
+  and bolded exactly when it has no default, every enum constant named, and both summary lists
+  (with the word-numbers introducing them). Verified by breaking the table five ways, one per
+  assertion, and confirming each goes red. The `add-annotation` skill now names the table too.
+
 ## [1.2.2] - 2026-08-16
 
 ### Changed
