@@ -77,7 +77,10 @@ import java.util.stream.Collectors;
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
-    public AIGuardrailProcessor() {}
+    public AIGuardrailProcessor() {
+        // Deliberately empty: javac instantiates the processor through the ServiceLoader before
+        // calling init(ProcessingEnvironment), so there is nothing to construct from here.
+    }
 
     /**
      * Reports the latest source version the running javac understands, instead of pinning a
@@ -126,7 +129,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
     /** SLF4J logger backed by a Logback FileAppender writing to {@code vibetags.log} in the project root. */
-    private @Nullable Logger log = null;
+    private @Nullable Logger log;
 
     /** Lazily constructed file writer; recreated on init() with the live messager + log. */
     private GuardrailFileWriter fileWriter = new GuardrailFileWriter(GENERATED_HEADER, null, null);
@@ -135,7 +138,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private GranularRulesWriter granularWriter = new GranularRulesWriter(fileWriter);
 
     /** Per-output-file content cache; created on init() pointing at {@code <root>/.vibetags-cache}. */
-    private @Nullable WriteCache writeCache = null;
+    private @Nullable WriteCache writeCache;
 
     private Path root;
     private String projectName;
@@ -618,7 +621,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // single-module builds where the compilation root IS the VibeTags root.
         Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
         Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
-            ? java.util.Set.of()
+            ? Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
 
         // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.
@@ -1013,7 +1016,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // write, because the simulated sidecar below has to carry them (as generateFiles does).
         Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
         Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
-            ? java.util.Set.of()
+            ? Set.of()
             : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
         RoleConfig checkModuleRoles = (moduleIdentity != null && !compilationRoot.equals(root))
             ? RoleConfig.load(compilationRoot) : null;
@@ -1530,15 +1533,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
             boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
             String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
-            if (!mergedBody.isBlank()) {
-                merged.put(service, mergedBody);
+            if (mergedBody.isBlank()) {
                 if (debugLog != null) {
-                    debugLog.debug("merge.markers service={} html={} bytes={}",
-                        service, htmlMarkers, mergedBody.length());
+                    debugLog.debug("merge.skip service={} reason=empty-merged-body html={}",
+                        service, htmlMarkers);
                 }
-            } else if (debugLog != null) {
-                debugLog.debug("merge.skip service={} reason=empty-merged-body html={}",
-                    service, htmlMarkers);
+                continue;
+            }
+            merged.put(service, mergedBody);
+            if (debugLog != null) {
+                debugLog.debug("merge.markers service={} html={} bytes={}",
+                    service, htmlMarkers, mergedBody.length());
             }
         }
         return merged;

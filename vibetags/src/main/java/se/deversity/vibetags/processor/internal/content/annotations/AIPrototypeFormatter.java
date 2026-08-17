@@ -34,7 +34,7 @@ public final class AIPrototypeFormatter implements AnnotationFormatter {
                 sb.append("#### EXPERIMENTAL PROTOTYPE: ").append(className).append("\n- **Policy**: Prototype stub (suspends strict QA constraints).\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (prototype): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (prototype): ").append(summary).append('\n');
                 break;
             default:
                 break;

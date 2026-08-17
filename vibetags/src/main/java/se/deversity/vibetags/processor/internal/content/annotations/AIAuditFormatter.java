@@ -26,7 +26,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
             case CODEX:
             case QWEN:
             case WINDSURF:
-                sb.append("* `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append("\n");
+                sb.append("* `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n");
@@ -36,7 +36,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("    </file>\n");
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append("\n");
+                sb.append("- `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
@@ -47,7 +47,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("\n\n");
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): check for ").append(checkForJoined).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): check for ").append(checkForJoined).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");
@@ -56,7 +56,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("#### SECURITY AUDIT: ").append(className).append("\n- **Required Checks**: ").append(checkForJoined).append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` — check for: ").append(checkForJoined).append("\n");
+                sb.append("- `").append(className).append("` — check for: ").append(checkForJoined).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"checks\": [").append(buildJsonStringArray(checkFor)).append("]},\n");
@@ -71,7 +71,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      checks: [").append(buildJsonStringArray(checkFor)).append("]\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append("\n");
+                sb.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append('\n');
                 break;
             default:
                 break;
@@ -82,7 +82,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
         StringBuilder sb = new StringBuilder();
         for (String v : values) {
             if (sb.length() > 0) sb.append(", ");
-            sb.append("\"").append(Escape.json(v)).append("\"");
+            sb.append('"').append(Escape.json(v)).append('"');
         }
         return sb.toString();
     }

@@ -30,7 +30,7 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CURSOR:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -41,40 +41,40 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n");
-                if (metrics.length > 0) sb.append("- **Metrics**: ").append(String.join(", ", metrics)).append("\n");
-                if (traces.length > 0)  sb.append("- **Traces**: ").append(String.join(", ", traces)).append("\n");
-                if (logs.length > 0)    sb.append("- **Logs**: ").append(String.join(", ", logs)).append("\n");
-                if (!note.isEmpty())    sb.append("- **Note**: ").append(note).append("\n");
-                sb.append("\n");
+                sb.append("### ").append(className).append('\n');
+                if (metrics.length > 0) sb.append("- **Metrics**: ").append(String.join(", ", metrics)).append('\n');
+                if (traces.length > 0)  sb.append("- **Traces**: ").append(String.join(", ", traces)).append('\n');
+                if (logs.length > 0)    sb.append("- **Logs**: ").append(String.join(", ", logs)).append('\n');
+                if (!note.isEmpty())    sb.append("- **Note**: ").append(note).append('\n');
+                sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n- **Details**: ").append(summary).append("\n\n");
                 break;
             case WINDSURF:
-                sb.append("* `").append(className).append("` (observability) - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` (observability) - ").append(summary).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` (observability): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (observability): ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (observability): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (observability): ").append(summary).append('\n');
                 break;
             default:
                 break;

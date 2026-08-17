@@ -96,9 +96,9 @@ final class GuardrailInstructionBlock {
         StringBuilder sb = new StringBuilder(block.length() + 32);
         for (String line : block.split("\n", -1)) {
             if (line.isEmpty()) {
-                sb.append("\n");
+                sb.append('\n');
             } else {
-                sb.append(pad).append(line).append("\n");
+                sb.append(pad).append(line).append('\n');
             }
         }
         return sb.toString();

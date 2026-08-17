@@ -23,26 +23,26 @@ public final class AICoreFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <sensitivity>").append(Escape.xml(sensitivity)).append("</sensitivity>\n      <note>").append(Escape.xml(note)).append("</note>\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
+                sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append("\n");
+                sb.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
@@ -51,7 +51,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("#### CORE FUNCTIONALITY: ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append("\n");
+                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"sensitivity\": \"").append(Escape.json(sensitivity)).append("\", \"note\": \"").append(Escape.json(note)).append("\"},\n");
@@ -60,7 +60,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("  - \"Core functionality (change with caution): ").append(Escape.json(className)).append(" [sensitivity: ").append(Escape.json(sensitivity)).append("]\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append("): ").append(note).append("\n");
+                sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append("): ").append(note).append('\n');
                 break;
             default:
                 break;

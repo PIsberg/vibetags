@@ -47,7 +47,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("`").append(suffix).append("\n");
+                sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
             case CLAUDE:
                 if (explained) {
@@ -58,21 +58,21 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 }
                 break;
             case CODEX:
-                sb.append("- `").append(className).append("`").append(suffix).append("\n");
+                sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`").append(suffix).append("\n");
+                sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("`").append(suffix).append("\n");
+                sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`").append(suffix).append("\n");
+                sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case LLMS:
                 sb.append("- [").append(element.displayName()).append("](").append(className)
-                  .append("): excluded from AI context").append(suffix).append("\n");
+                  .append("): excluded from AI context").append(suffix).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className)
@@ -85,14 +85,14 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                   .append(explained ? "\n- **Reason**: " + reason : "").append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`").append(suffix).append("\n");
+                sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\"},\n");
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent")
-                  .append(suffix).append("\n");
+                  .append(suffix).append('\n');
                 break;
             // Ignore/exclusion files get standard globs:
             case AI_EXCLUDE:

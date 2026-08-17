@@ -95,14 +95,20 @@ mvnd -o test -Dtest=WriteCacheProcessorIntegrationTest -Djacoco.skip=true
 
 ### The security gate
 
-SpotBugs runs with [Find Security Bugs](https://find-sec-bugs.github.io/) attached
-(`vibetags/pom.xml`), at `verify`. Run it on its own with:
+SpotBugs runs with [Find Security Bugs](https://find-sec-bugs.github.io/) attached, at `verify`, in
+every module that compiles Java — `vibetags`, `vibetags-annotations` and `vibetags-cli`. Run it on
+its own with:
 
 ```bash
 cd vibetags && mvn -o compile spotbugs:check
 ```
 
-Two files govern what it says:
+`BuildToolchainParityTest` fails if a module drops SpotBugs, PMD, Checkstyle or Error Prone, or if
+its `.mvn/jvm.config` drifts. That last one is the quiet failure: Error Prone needs those
+`--add-exports` flags to reach javac's internals, and without them it does not fail, it simply does
+not run.
+
+Two files govern what SpotBugs says in `vibetags`:
 
 - `vibetags/findsecbugs-taint-config.txt` declares the escapers (`Escape.xml`, `Escape.json`,
   `Escape.tomlMultiline`, `CommonFormatterHelper.claudeReason`) as sanitizers, so escaped

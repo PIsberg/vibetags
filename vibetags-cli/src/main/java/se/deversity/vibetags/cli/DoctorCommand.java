@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -40,8 +41,7 @@ final class DoctorCommand {
     int run() {
         out.println("vibetags doctor — " + dir);
 
-        String buildFile = detectBuildFile();
-        checkWiring(buildFile);
+        checkWiring(detectBuildFile());
         Set<String> active = checkActivePlatforms();
         checkMarkers(active);
 
@@ -55,23 +55,24 @@ final class DoctorCommand {
         return 1;
     }
 
-    /** The build file doctor will grep for wiring, or {@code null} when none is recognised. */
-    private String detectBuildFile() {
+    /** The build file doctor will grep for wiring, or empty when none is recognised. */
+    private Optional<String> detectBuildFile() {
         for (String candidate : new String[]{"pom.xml", "build.gradle", "build.gradle.kts"}) {
             if (Files.isRegularFile(dir.resolve(candidate))) {
                 out.println("build tool:      " + candidate);
-                return candidate;
+                return Optional.of(candidate);
             }
         }
         out.println("build tool:      none recognised (no pom.xml or build.gradle[.kts])");
         problems.add("no build file found — doctor can only check opt-in files here");
-        return null;
+        return Optional.empty();
     }
 
-    private void checkWiring(String buildFile) {
-        if (buildFile == null) {
+    private void checkWiring(Optional<String> detected) {
+        if (detected.isEmpty()) {
             return;
         }
+        String buildFile = detected.get();
         Optional<String> read = tryRead(dir.resolve(buildFile));
         if (read.isEmpty()) {
             out.println("processor wired: unknown — could not read " + buildFile);
@@ -128,7 +129,10 @@ final class DoctorCommand {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(dir);
         int broken = 0;
         for (String key : active) {
-            Path path = serviceFiles.get(key);
+            // active is resolveActiveServices(serviceFiles), so it can only name keys this map
+            // has. ServiceRegistryKeyParityTest pins the wider version of the same invariant.
+            Path path = Objects.requireNonNull(serviceFiles.get(key),
+                "active service " + key + " has no path in buildServiceFileMap");
             if (!Files.isRegularFile(path)) {
                 continue;
             }

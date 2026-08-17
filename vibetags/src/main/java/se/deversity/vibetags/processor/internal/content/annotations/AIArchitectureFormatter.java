@@ -25,7 +25,7 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <belongs_to>").append(Escape.xml(belongsTo)).append("</belongs_to>\n");
@@ -35,37 +35,37 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Belongs to Layer**: ").append(belongsTo).append("\n");
+                sb.append("### ").append(className).append("\n- **Belongs to Layer**: ").append(belongsTo).append('\n');
                 if (cannotRef.length > 0) {
-                    sb.append("- **Prohibited References**: ").append(cannotRefStr).append("\n");
+                    sb.append("- **Prohibited References**: ").append(cannotRefStr).append('\n');
                 }
-                sb.append("\n");
+                sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### ARCHITECTURE LAYER: ").append(className).append("\n- **Layer**: ").append(belongsTo).append("\n")
-                  .append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append("\n");
+                sb.append("#### ARCHITECTURE LAYER: ").append(className).append("\n- **Layer**: ").append(belongsTo).append('\n')
+                  .append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (architecture): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (architecture): ").append(summary).append('\n');
                 break;
             default:
                 break;

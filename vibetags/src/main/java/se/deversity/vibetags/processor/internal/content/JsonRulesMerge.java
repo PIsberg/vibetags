@@ -71,8 +71,8 @@ final class JsonRulesMerge implements WholeFileMerge {
             out.append("    \"").append(key).append("\": [\n");
             List<String> entries = new ArrayList<>(byKey.get(key));
             for (int e = 0; e < entries.size(); e++) {
-                out.append(entries.get(e));
-                out.append(e == entries.size() - 1 ? "\n" : ",\n");
+                out.append(entries.get(e))
+                    .append(e == entries.size() - 1 ? "\n" : ",\n");
             }
             out.append("    ]").append(i == keys.size() - 1 ? "\n" : ",\n");
         }

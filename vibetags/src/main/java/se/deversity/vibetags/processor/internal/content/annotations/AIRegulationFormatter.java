@@ -24,7 +24,7 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CURSOR:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <standard>").append(Escape.xml(standard)).append("</standard>\n");
@@ -34,41 +34,41 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
                 sb.append("      <description>").append(Escape.xml(description)).append("</description>\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Standard**: ").append(standard).append("\n");
+                sb.append("### ").append(className).append("\n- **Standard**: ").append(standard).append('\n');
                 if (!clause.isEmpty()) {
-                    sb.append("- **Clause**: ").append(clause).append("\n");
+                    sb.append("- **Clause**: ").append(clause).append('\n');
                 }
                 sb.append("- **Description**: ").append(description).append("\n\n");
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### REGULATORY: ").append(className).append("\n- **Standard**: ").append(standard).append("\n")
+                sb.append("#### REGULATORY: ").append(className).append("\n- **Standard**: ").append(standard).append('\n')
                   .append(clause.isEmpty() ? "" : "- **Clause**: " + clause + "\n")
                   .append("- **Description**: ").append(description).append("\n\n");
                 break;
             case WINDSURF:
-                sb.append("* `").append(className).append("` (regulation) - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` (regulation) - ").append(summary).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` (regulation): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (regulation): ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (regulation): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (regulation): ").append(summary).append('\n');
                 break;
             default:
                 break;

@@ -126,14 +126,14 @@ final class GranularIndexSection {
         if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
-        sb.append("  <scoped_rules>\n");
-        sb.append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>\n");
+        sb.append("  <scoped_rules>\n")
+            .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>\n");
         for (TaggedElement owner : owners) {
             sb.append("    <element path=\"").append(Escape.xml(owner.toString()))
               .append("\" rules=\"").append(Escape.xml(scopedPath(platform, owner, context))).append("\"/>\n");
         }
-        sb.append("  </scoped_rules>\n");
-        sb.append("\n<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>\n");
+        sb.append("  </scoped_rules>\n")
+            .append("\n<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>\n");
     }
 
     /**
@@ -146,8 +146,8 @@ final class GranularIndexSection {
         if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
-        sb.append("\n## Scoped Rules Index\n");
-        sb.append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:\n\n");
+        sb.append("\n## Scoped Rules Index\n")
+            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:\n\n");
         for (TaggedElement owner : owners) {
             sb.append("- `").append(owner.toString()).append("` → `").append(scopedPath(platform, owner, context)).append("`\n");
         }

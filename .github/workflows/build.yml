@@ -36,9 +36,15 @@ jobs:
           cache: maven
 
       - name: Install VibeTags Annotations (Maven)
+        # Same JDK-21-only split as the library step below, and for the same reason: PMD, CPD
+        # and SpotBugs read source and bytecode, so repeating them per matrix JDK buys nothing.
         run: |
           cd vibetags-annotations
-          mvn install -B
+          if [ "${{ matrix.java }}" = "21" ]; then
+            mvn install -B
+          else
+            mvn install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+          fi
 
       - name: Build VibeTags Library (Maven)
         # PMD, SpotBugs and CPD are JDK-independent source/bytecode analysis, so run them
@@ -61,9 +67,14 @@ jobs:
       # After the BOM: the CLI consumes vibetags-processor as a library, so it needs the
       # artifacts this run just installed, and its 15 tests are the gate on init/doctor.
       - name: Build VibeTags CLI (Maven)
+        # Same JDK-21-only split as the library step, for the same reason.
         run: |
           cd vibetags-cli
-          mvn clean install -B
+          if [ "${{ matrix.java }}" = "21" ]; then
+            mvn clean install -B
+          else
+            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+          fi
 
       # The repo dogfoods its own guardrails but never verified them, so the committed
       # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the

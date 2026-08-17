@@ -32,11 +32,11 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
-                sb.append("      <affinity>").append(Escape.xml(where)).append("</affinity>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append("      <affinity>").append(Escape.xml(where)).append("</affinity>\n");
                 if (!marshalVia.isEmpty()) {
                     sb.append("      <marshal-via>").append(Escape.xml(marshalVia)).append("</marshal-via>\n");
                 }
@@ -46,49 +46,49 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Thread affinity**: ").append(where).append("\n");
-                sb.append("- This is the inverse of thread-safety: safe on one thread, unsafe on every other.\n");
-                sb.append("- Do NOT add synchronization to \"fix\" this — move the call, do not lock it.\n");
+                sb.append("### ").append(className).append("\n- **Thread affinity**: ").append(where).append('\n')
+                    .append("- This is the inverse of thread-safety: safe on one thread, unsafe on every other.\n")
+                    .append("- Do NOT add synchronization to \"fix\" this — move the call, do not lock it.\n");
                 if (!marshalVia.isEmpty()) {
-                    sb.append("- **Marshal via**: ").append(marshalVia).append("\n");
+                    sb.append("- **Marshal via**: ").append(marshalVia).append('\n');
                 }
                 if (!symptom.isEmpty()) {
-                    sb.append("- **Symptom if violated**: ").append(symptom).append("\n");
+                    sb.append("- **Symptom if violated**: ").append(symptom).append('\n');
                 }
-                sb.append("\n");
+                sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### THREAD AFFINITY: ").append(className).append("\n")
-                  .append("- **Pinned to**: ").append(where).append("\n")
+                sb.append("#### THREAD AFFINITY: ").append(className).append('\n')
+                  .append("- **Pinned to**: ").append(where).append('\n')
                   .append(marshalVia.isEmpty() ? "" : "- **Marshal via**: " + marshalVia + "\n")
                   .append(symptom.isEmpty() ? "" : "- **Symptom if violated**: " + symptom + "\n")
                   .append("- **Rule**: Not thread-safe. Do not add locks; call it from the correct thread.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Thread affinity: ").append(Escape.json(className)).append(" runs only on ")
                   .append(Escape.json(where)).append(". Do not add locks.\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (thread affinity): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (thread affinity): ").append(summary).append('\n');
                 break;
             default:
                 break;

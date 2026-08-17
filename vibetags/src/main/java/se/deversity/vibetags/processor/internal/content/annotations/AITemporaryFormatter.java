@@ -34,7 +34,7 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
                 sb.append("#### TEMPORARY WORKAROUND: ").append(className).append("\n- **Expires On**: ").append(expiresOn).append("\n- **Reason**: ").append(reason).append("\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (temporary): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (temporary): ").append(summary).append('\n');
                 break;
             default:
                 break;

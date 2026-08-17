@@ -23,26 +23,26 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <schema>safe</schema>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.\n\n");
@@ -51,10 +51,10 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
                 sb.append("#### SCHEMA SAFE: ").append(className).append("\n- **Rule**: Schema safety required. Do not change serialization formats, database columns, or API models without a migration plan.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (schema-safe): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (schema-safe): ").append(summary).append('\n');
                 break;
             default:
                 break;

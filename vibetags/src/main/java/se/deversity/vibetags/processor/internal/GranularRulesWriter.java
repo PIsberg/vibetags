@@ -275,10 +275,6 @@ public final class GranularRulesWriter {
     }
 
     /**
-     * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
-     * (the per-class qNames and role stems just written this round).
-     */
-    /**
      * Removes the rule files for {@code stems} from every active granular directory, whatever the
      * round's jurisdiction over that directory otherwise is.
      *
@@ -319,6 +315,10 @@ public final class GranularRulesWriter {
         return removed;
     }
 
+    /**
+     * Removes orphaned granular files for the active platforms, skipping {@code excludeQNames}
+     * (the per-class qNames and role stems just written this round).
+     */
     public Set<String> cleanupAll(Map<String, Path> serviceFiles, Set<String> activeServices, Set<String> excludeQNames) {
         Set<String> removed = new LinkedHashSet<>();
         for (GranularFormat f : FORMATS) {

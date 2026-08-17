@@ -103,9 +103,8 @@ final class ClaudeTestDrivenSection {
         if (!sig.mockPolicy().isEmpty()) {
             sb.append(" mock_policy=\"").append(Escape.xml(sig.mockPolicy())).append('"');
         }
-        sb.append(">\n");
-
-        sb.append("      <applies-to>\n");
+        sb.append(">\n")
+          .append("      <applies-to>\n");
         for (int i = 0; i < members.size(); i++) {
             sb.append("        ").append(Escape.xml(members.get(i).path()));
             if (i < members.size() - 1) {
@@ -113,8 +112,8 @@ final class ClaudeTestDrivenSection {
             }
             sb.append('\n');
         }
-        sb.append("      </applies-to>\n");
-        sb.append("    </test_driven_default>\n");
+        sb.append("      </applies-to>\n")
+            .append("    </test_driven_default>\n");
     }
 
     private static Signature signature(TaggedElement e, AITestDriven td) {

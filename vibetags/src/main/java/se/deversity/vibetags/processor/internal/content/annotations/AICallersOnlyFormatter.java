@@ -34,7 +34,7 @@ public final class AICallersOnlyFormatter implements AnnotationFormatter {
                 sb.append("#### CALLERS LIMIT: ").append(className).append("\n- **Allowed Callers**: ").append(callers).append("\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (callers limited): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (callers limited): ").append(summary).append('\n');
                 break;
             default:
                 break;

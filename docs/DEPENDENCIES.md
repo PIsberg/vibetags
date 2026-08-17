@@ -65,18 +65,27 @@ Nothing in this section ships. It runs.
 `maven-shade-plugin` builds the benchmark fat jar, and `exec-maven-plugin` gives it an `exec:java`
 entry point into `org.openjdk.jmh.Main`.
 
-**Static analysis.** Four tools, each catching something the others do not:
+**Static analysis.** Four tools, each catching something the others do not. All four run in all
+three modules that compile Java — `vibetags`, `vibetags-annotations` and `vibetags-cli` —
+and `BuildToolchainParityTest` fails if one of them drops a tool, because a check that was never
+configured cannot fail and so reports nothing when it is missing.
 
 - `maven-pmd-plugin` with `pmd-core` and `pmd-java` (`pmd.version`) for source-level rules and
-  copy-paste detection. A red PMD gate is worth checking against the JDK before believing it: PMD
-  run on a newer JDK than the build targets reports confident nonsense.
+  copy-paste detection. All eight java rule categories are imported by `pmd-ruleset.xml`; each
+  exclusion in that file names the rule, its finding count and the reason. A red PMD gate is worth
+  checking against the JDK before believing it: PMD run on a newer JDK than the build targets
+  reports confident nonsense.
 - `maven-checkstyle-plugin` for style, also wired into `pre-commit` so it fails before the commit
   rather than in CI.
 - `spotbugs-maven-plugin` with `findsecbugs-plugin` (`findsecbugs-plugin.version`) for bytecode
-  analysis, the security rules included.
+  analysis, the security rules included. `vibetags` and `vibetags-cli` carry a
+  `spotbugs-exclude.xml`; `vibetags-annotations` deliberately has none, so the absence of that file
+  stays evidence that nothing there has been excused.
 - Error Prone (`error-prone.version`) with NullAway (`nullaway.version`), on
   `annotationProcessorPaths` of the compiler plugin, main sources only. NullAway is what makes the
-  JSpecify annotations load-bearing instead of decorative.
+  JSpecify annotations load-bearing instead of decorative. It needs the `--add-exports` flags in
+  each module's `.mvn/jvm.config` to reach javac's internals: without them Error Prone does not
+  fail, it silently does not run, which is why those three files are pinned byte-identical.
 
 **Coverage and mutation.** `jacoco-maven-plugin` measures line coverage; `pitest-maven` with
 `pitest-junit5-plugin` measures whether the tests would notice if the code were wrong. Mutation

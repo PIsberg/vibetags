@@ -38,7 +38,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
                 sb.append("#### SUNSET API: ").append(className).append("\n- **Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (sunset): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (sunset): ").append(summary).append('\n');
                 break;
             default:
                 break;

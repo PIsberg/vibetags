@@ -67,7 +67,8 @@ public final class GranularSections {
             String title = section.getKey();
             List<GranularBody.Entry> group = section.getValue();
             Shared shared = group.size() >= MIN_GROUP_SIZE ? shared(group) : Shared.NONE;
-            if (!shared.lines().isEmpty()) {
+            boolean hasSharedLines = !shared.lines().isEmpty();
+            if (hasSharedLines) {
                 appendCollapsed(out, title, group, shared, qualified);
             } else if (qualified) {
                 appendQualified(out, title, group);
@@ -92,8 +93,8 @@ public final class GranularSections {
         }
         out.append("## ").append(title).append('\n');
         for (GranularBody.Entry e : group) {
-            out.append('\n').append("### ").append(e.element().path()).append('\n');
-            out.append(String.join("\n", e.lines())).append('\n');
+            out.append('\n').append("### ").append(e.element().path()).append('\n')
+                .append(String.join("\n", e.lines())).append('\n');
         }
     }
 
@@ -139,8 +140,8 @@ public final class GranularSections {
         if (out.length() > 0) {
             out.append('\n');
         }
-        out.append(heading).append('\n');
-        out.append(String.join("\n", lines)).append('\n');
+        out.append(heading).append('\n')
+            .append(String.join("\n", lines)).append('\n');
     }
 
     /** The lines of {@code e} that the section heading did not already state. */

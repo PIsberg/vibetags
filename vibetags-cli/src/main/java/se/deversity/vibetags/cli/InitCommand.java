@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -69,7 +70,12 @@ final class InitCommand {
         int refused = 0;
         for (String rawKey : requested) {
             String key = rawKey.trim();
-            Path path = serviceFiles.get(key);
+            // Every key reaching here passed the optInKeys() filter above, and every opt-in key has
+            // an entry in this map — pinned by ServiceRegistryKeyParityTest, because the two lists
+            // are maintained by hand and a drift between them would surface here as a bare NPE on
+            // an otherwise valid command line.
+            Path path = Objects.requireNonNull(serviceFiles.get(key),
+                "opt-in key " + key + " has no path in buildServiceFileMap");
             if (Files.exists(path)) {
                 alreadyActive.add(key + " (" + dir.relativize(path) + ")");
                 continue;
@@ -86,8 +92,11 @@ final class InitCommand {
                 if (key.endsWith("_granular")) {
                     Files.createDirectories(path);
                 } else {
-                    if (path.getParent() != null) {
-                        Files.createDirectories(path.getParent());
+                    // One getParent() call, not two: the guard has to test the same reference the
+                    // createDirectories call dereferences, or it is not a guard.
+                    Path parent = path.getParent();
+                    if (parent != null) {
+                        Files.createDirectories(parent);
                     }
                     try {
                         Files.createFile(path);

@@ -33,7 +33,7 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -45,55 +45,55 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                 }
                 sb.append("      <enforced-by>")
                   .append(Escape.xml(enforcedBy.isEmpty() ? "nothing — unenforced" : enforcedBy))
-                  .append("</enforced-by>\n");
-                sb.append("    </element>\n");
+                  .append("</enforced-by>\n")
+                  .append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Must stay in sync with**:\n");
                 for (String mirror : keepInSync.mirrors()) {
-                    sb.append("  - ").append(mirror).append("\n");
+                    sb.append("  - ").append(mirror).append('\n');
                 }
                 if (!reason.isEmpty()) {
-                    sb.append("- **Reason**: ").append(reason).append("\n");
+                    sb.append("- **Reason**: ").append(reason).append('\n');
                 }
                 sb.append("- **Enforced by**: ")
                   .append(enforcedBy.isEmpty() ? "nothing — a partial edit desyncs silently" : enforcedBy)
-                  .append("\n");
-                sb.append("- The element itself is free to change; changing only one side is the bug.\n\n");
+                  .append('\n')
+                  .append("- The element itself is free to change; changing only one side is the bug.\n\n");
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### KEEP IN SYNC: ").append(className).append("\n")
-                  .append("- **Mirrors**: ").append(mirrors).append("\n")
+                sb.append("#### KEEP IN SYNC: ").append(className).append('\n')
+                  .append("- **Mirrors**: ").append(mirrors).append('\n')
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n")
                   .append("- **Enforced by**: ")
-                  .append(enforcedBy.isEmpty() ? "nothing — verify by hand" : enforcedBy).append("\n")
+                  .append(enforcedBy.isEmpty() ? "nothing — verify by hand" : enforcedBy).append('\n')
                   .append("- **Rule**: Change all sites in the same commit, or none.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Keep in sync: editing ").append(Escape.json(className))
                   .append(" requires the same edit at ").append(Escape.json(mirrors)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (mirrored): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (mirrored): ").append(summary).append('\n');
                 break;
             default:
                 break;

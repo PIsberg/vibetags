@@ -101,10 +101,7 @@ public final class MirrorConfig {
         if (candidate.equals(targetDir)) {
             return false;
         }
-        if (sources.isEmpty()) {
-            return true;
-        }
-        return sources.contains(candidate);
+        return sources.isEmpty() || sources.contains(candidate);
     }
 
     /**

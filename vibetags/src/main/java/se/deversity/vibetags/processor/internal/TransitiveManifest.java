@@ -183,29 +183,29 @@ public final class TransitiveManifest {
         java.util.Collections.sort(sorted);
 
         StringBuilder sb = new StringBuilder(512);
-        sb.append("{\n");
-        sb.append("  \"manifestVersion\": ").append(FORMAT_VERSION).append(",\n");
-        sb.append("  \"origin\": ").append(Json.quote(origin)).append(",\n");
-        sb.append("  \"package\": ").append(Json.quote(packageName)).append(",\n");
-        sb.append("  \"producedBy\": ").append(Json.quote("vibetags/" + producedByVersion)).append(",\n");
-        sb.append("  \"rules\": [");
+        sb.append("{\n")
+            .append("  \"manifestVersion\": ").append(FORMAT_VERSION).append(",\n")
+            .append("  \"origin\": ").append(Json.quote(origin)).append(",\n")
+            .append("  \"package\": ").append(Json.quote(packageName)).append(",\n")
+            .append("  \"producedBy\": ").append(Json.quote("vibetags/" + producedByVersion)).append(",\n")
+            .append("  \"rules\": [");
         for (int i = 0; i < sorted.size(); i++) {
             TransitiveRule rule = sorted.get(i);
-            sb.append(i == 0 ? "\n" : ",\n");
-            sb.append("    {\n");
-            sb.append("      \"annotation\": ").append(Json.quote(rule.annotation())).append(",\n");
-            sb.append("      \"tier\": ").append(Json.quote(rule.tier().name())).append(",\n");
-            sb.append("      \"members\": {");
+            sb.append(i == 0 ? "\n" : ",\n")
+                .append("    {\n")
+                .append("      \"annotation\": ").append(Json.quote(rule.annotation())).append(",\n")
+                .append("      \"tier\": ").append(Json.quote(rule.tier().name())).append(",\n")
+                .append("      \"members\": {");
             int j = 0;
             for (Map.Entry<String, String> e : rule.members().entrySet()) {
-                sb.append(j++ == 0 ? "\n" : ",\n");
-                sb.append("        ").append(Json.quote(e.getKey())).append(": ").append(Json.quote(e.getValue()));
+                sb.append(j++ == 0 ? "\n" : ",\n")
+                    .append("        ").append(Json.quote(e.getKey())).append(": ").append(Json.quote(e.getValue()));
             }
-            sb.append(j == 0 ? "}\n" : "\n      }\n");
-            sb.append("    }");
+            sb.append(j == 0 ? "}\n" : "\n      }\n")
+                .append("    }");
         }
-        sb.append(sorted.isEmpty() ? "]\n" : "\n  ]\n");
-        sb.append("}\n");
+        sb.append(sorted.isEmpty() ? "]\n" : "\n  ]\n")
+            .append("}\n");
         return sb.toString();
     }
 
