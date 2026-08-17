@@ -29,8 +29,8 @@ public final class CodeRabbitRenderer implements PlatformRenderer {
             sb.append("        No VibeTags guardrails are currently declared.\n");
         } else {
             sb.append("        Enforce the following VibeTags guardrails during review. ")
-              .append("Flag any change that violates them:\n");
-            sb.append(GuardrailInstructionBlock.indent(block.strip(), 8));
+              .append("Flag any change that violates them:\n")
+              .append(GuardrailInstructionBlock.indent(block.strip(), 8));
         }
         return sb.toString();
     }

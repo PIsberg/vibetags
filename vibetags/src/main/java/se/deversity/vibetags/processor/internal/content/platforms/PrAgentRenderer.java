@@ -28,11 +28,11 @@ public final class PrAgentRenderer implements PlatformRenderer {
           .append("# Qodo/Codium PR-Agent configuration. Do not edit manually.\n\n")
           .append("[pr_reviewer]\n")
           .append("extra_instructions = \"\"\"\n")
-          .append(body).append("\n")
+          .append(body).append('\n')
           .append("\"\"\"\n\n")
           .append("[pr_code_suggestions]\n")
           .append("extra_instructions = \"\"\"\n")
-          .append(body).append("\n")
+          .append(body).append('\n')
           .append("\"\"\"\n");
         return sb.toString();
     }

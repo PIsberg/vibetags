@@ -141,7 +141,7 @@ public final class GuardrailFileWriter {
             Path fileNamePath = filePath.getFileName();
             String fileName = fileNamePath != null ? fileNamePath.toString() : "";
             String[] markers = getMarkersFor(fileName);
-            boolean supportsMarkers = (markers != null);
+            boolean supportsMarkers = markers != null;
 
             // Pre-check size to allow non-marker overwrite branch to skip the full read
             long existingSize;
@@ -262,7 +262,7 @@ public final class GuardrailFileWriter {
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = withRenderedFrontMatter(
                     stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
-                String finalContent = (!before.isEmpty() ? before + "\n\n" : "") + wrappedBody + "\n";
+                String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
                     return false;
@@ -540,7 +540,7 @@ public final class GuardrailFileWriter {
 
         String humanContent;
         if (blockEnd > 0) {
-            int nlAfter = rest.indexOf("\n", blockEnd);
+            int nlAfter = rest.indexOf('\n', blockEnd);
             humanContent = nlAfter >= 0 ? rest.substring(nlAfter + 1).stripLeading() : "";
         } else {
             humanContent = hasHumanPrefix
@@ -584,7 +584,7 @@ public final class GuardrailFileWriter {
      */
     public List<String> cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
                                                  @Nullable String filePrefix) {
-        List<String> removed = new java.util.ArrayList<>();
+        List<String> removed = new ArrayList<>();
         if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return removed;
         try (Stream<Path> stream = Files.list(dir)) {
             stream.filter(Files::isRegularFile)
@@ -692,7 +692,7 @@ public final class GuardrailFileWriter {
                 if (end != -1) {
                     String before = content.substring(0, mdStart).stripTrailing();
                     String after = content.substring(end + MARKER_END_MD.length()).stripLeading();
-                    content = (!before.isEmpty() ? before + "\n\n" : "") + after;
+                    content = (before.isEmpty() ? "" : before + "\n\n") + after;
                     updated = true;
                 }
             } else {
@@ -702,7 +702,7 @@ public final class GuardrailFileWriter {
                     if (end != -1) {
                         String before = content.substring(0, hashStart).stripTrailing();
                         String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();
-                        content = (!before.isEmpty() ? before + "\n\n" : "") + after;
+                        content = (before.isEmpty() ? "" : before + "\n\n") + after;
                         updated = true;
                     }
                 }
@@ -794,10 +794,22 @@ public final class GuardrailFileWriter {
     /** Visible for testing — verifies the all-overloads no-op contract. */
     public static Messager noopMessager() {
         return new Messager() {
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a) {}
-            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v) {}
+            // Every overload discards. Swallowing the diagnostic is the contract: this Messager is
+            // handed to the second GuardrailFileWriter during a parallel write, where javac's real
+            // Messager is not thread-safe, and a duplicate NOTE per file would be the only thing
+            // the caller gained from forwarding.
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
+                // no-op
+            }
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {
+                // no-op
+            }
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a) {
+                // no-op
+            }
+            @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v) {
+                // no-op
+            }
         };
     }
 }

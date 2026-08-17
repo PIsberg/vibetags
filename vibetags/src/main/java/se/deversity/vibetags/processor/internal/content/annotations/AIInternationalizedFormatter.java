@@ -23,26 +23,26 @@ public final class AIInternationalizedFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <i18n>required</i18n>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Internationalization mandate. Prohibit hardcoding user-facing strings; all user-visible text must be localized.\n\n");
@@ -51,10 +51,10 @@ public final class AIInternationalizedFormatter implements AnnotationFormatter {
                 sb.append("#### INTERNATIONALIZED: ").append(className).append("\n- **Rule**: Internationalization required. Do not hardcode user-facing labels or strings.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (i18n): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (i18n): ").append(summary).append('\n');
                 break;
             default:
                 break;

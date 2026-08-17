@@ -23,7 +23,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append("\n");
+                sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <focus>").append(Escape.xml(focus)).append("</focus>\n      <avoids>").append(Escape.xml(avoids)).append("</avoids>\n    </file>\n");
@@ -32,17 +32,17 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`: Focus on ").append(focus).append(". Avoid ").append(avoids).append(".\n");
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`\n  - Focus: ").append(focus).append("\n  - Avoid: ").append(avoids).append("\n");
+                sb.append("- `").append(className).append("`\n  - Focus: ").append(focus).append("\n  - Avoid: ").append(avoids).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append("\n");
+                sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: Focus - ").append(focus).append(". Avoid - ").append(avoids).append("\n");
+                sb.append("- `").append(className).append("`: Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Focus - ").append(focus).append(". Avoid - ").append(avoids).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Focus**: ").append(focus).append("\n- **Avoid**: ").append(avoids).append("\n\n");
@@ -51,10 +51,10 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("#### CONTEXT: ").append(className).append("\n- **Focus**: ").append(focus).append("\n- **Avoid**: ").append(avoids).append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: Focus - ").append(focus).append(". Avoid - ").append(avoids).append("\n");
+                sb.append("- `").append(className).append("`: Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (context): Focus - ").append(focus).append(". Avoid - ").append(avoids).append("\n");
+                sb.append("- `").append(className).append("` (context): Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');
                 break;
             default:
                 break;

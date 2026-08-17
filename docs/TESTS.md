@@ -151,6 +151,8 @@ stop excluding the same one.
 | `NewAnnotationsV6ValidationTest` | The 11 new validation warnings, plus clean fixtures asserting each stays silent when its condition is not met |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow. Self-contained via `ProcessorTestHarness`. Tagged `@Tag("e2e")` (13.63s), so it needs `mvn test -Pe2e` — the older `-Drun.integration.tests=true` gate was dropped in 2026-04 and is not what tags it now |
 | `TestTagVocabularyTest` | The fast/e2e split itself: every `@Tag` value is one the build files filter on, and `pom.xml` and `build.gradle` still exclude the same tag |
+| `BuildToolchainParityTest` | That all three compiling modules (`vibetags`, `vibetags-annotations`, `vibetags-cli`) run the same static-analysis stack: identical Error Prone/NullAway settings, SpotBugs with Find Security Bugs, PMD and CPD against the shared `pmd-ruleset.xml`, Checkstyle against the shared config, and byte-identical `.mvn/jvm.config` — without which Error Prone silently does not run rather than failing |
+| `ServiceRegistryKeyParityTest` | That every `ServiceRegistry.optInKeys()` entry has a path in `buildServiceFileMap`. The two lists are hand-maintained; a key in one and not the other turns `vibetags init --platforms <key>` into an NPE on valid user input |
 | `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
 | `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |
 | `ClaudeGranularEndToEndTest` | `.claude/rules/*.md` granular rule generation for Claude Code, including `paths:` frontmatter |

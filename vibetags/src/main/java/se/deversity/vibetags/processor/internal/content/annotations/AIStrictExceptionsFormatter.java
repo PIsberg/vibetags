@@ -23,26 +23,26 @@ public final class AIStrictExceptionsFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <exceptions>strict</exceptions>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Enforce precise exception handling. Prohibit catching or throwing generic Exceptions/Throwables. Use specific or custom exceptions.\n\n");
@@ -51,10 +51,10 @@ public final class AIStrictExceptionsFormatter implements AnnotationFormatter {
                 sb.append("#### STRICT EXCEPTIONS: ").append(className).append("\n- **Rule**: Prohibit catching or throwing generic Exception/Throwable. Use custom, domain-specific exceptions.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (strict-exceptions): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (strict-exceptions): ").append(summary).append('\n');
                 break;
             default:
                 break;

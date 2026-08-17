@@ -77,20 +77,20 @@ public final class WriteCache {
     private final Path cachePath;
     private final Path rootDir;
     private final Map<String, Entry> entries = new LinkedHashMap<>();
-    private boolean loaded = false;
-    private boolean dirty = false;
+    private boolean loaded;
+    private boolean dirty;
 
     /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
-    private @Nullable String buildFingerprint = null;
+    private @Nullable String buildFingerprint;
 
     /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
-    private @Nullable String sidecarStamp = null;
+    private @Nullable String sidecarStamp;
 
     /** Run context bound by the current compilation ({@link #bindContext}). {@code null} when unbound. */
-    private @Nullable String currentContext = null;
+    private @Nullable String currentContext;
 
     /** Run context persisted by the previous run's flush. {@code null} when none is on file. */
-    private @Nullable String storedContext = null;
+    private @Nullable String storedContext;
 
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
@@ -260,8 +260,8 @@ public final class WriteCache {
             // Single stat for both size and mtime — half the syscalls of two getXxx() calls.
             BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
             if (attrs.size() != e.size) return false;
-            if (attrs.lastModifiedTime().toMillis() != e.mtime) return false;
-            return e.hash.equals(fingerprint(body));
+            // && short-circuits, so the hash is still only computed once size and mtime both match.
+            return attrs.lastModifiedTime().toMillis() == e.mtime && e.hash.equals(fingerprint(body));
         } catch (IOException ioe) {
             return false; // file gone or unreadable — let the writer regenerate
         }
@@ -298,8 +298,8 @@ public final class WriteCache {
     public synchronized void flush() {
         if (!dirty) return;
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
-        sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n");
-        sb.append("# format: ").append(FORMAT_VERSION).append('\n');
+        sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
+            .append("# format: ").append(FORMAT_VERSION).append('\n');
         if (buildFingerprint != null) {
             sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
         }

@@ -22,26 +22,26 @@ public final class AIDraftFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+                sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <task path=\"").append(Escape.xml(className)).append("\">\n      <instructions>").append(Escape.xml(instructions)).append("</instructions>\n    </task>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(instructions).append("\n");
+                sb.append("- **").append(className).append("**: ").append(instructions).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`: ").append(instructions).append("\n");
+                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - Task: ").append(instructions).append("\n");
+                sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(instructions).append("\n");
+                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(instructions).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(instructions).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Instructions**: ").append(instructions).append("\n\n");
@@ -50,7 +50,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("#### DRAFT/TODO: ").append(className).append("\n- **Instruction**: ").append(instructions).append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(instructions).append("\n");
+                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"instructions\": \"").append(Escape.json(instructions)).append("\"},\n");
@@ -59,7 +59,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("  - \"Implementation task for ").append(Escape.json(className)).append(": ").append(Escape.json(instructions)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (draft): ").append(instructions).append("\n");
+                sb.append("- `").append(className).append("` (draft): ").append(instructions).append('\n');
                 break;
             default:
                 break;

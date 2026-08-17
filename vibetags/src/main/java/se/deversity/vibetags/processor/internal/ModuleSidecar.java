@@ -170,7 +170,7 @@ public final class ModuleSidecar {
     // index via a .vibetags-root-index file. ---
 
     /** True when the reactor root opted into the lean indexed aggregate (see {@code root_index}). */
-    private boolean rootIndexMode = false;
+    private boolean rootIndexMode;
 
     /**
      * For a non-root module in index mode: aggregate service key → the pointer text that should
@@ -278,10 +278,10 @@ public final class ModuleSidecar {
         Path tmp = root.resolve(SIDECAR_PREFIX + moduleId + ".tmp");
 
         StringBuilder sb = new StringBuilder();
-        sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n');
-        sb.append(KEY_MODULE_ID).append('=').append(moduleId).append('\n');
-        sb.append(KEY_MODULE_PATH).append('=').append(modulePath).append('\n');
-        sb.append(KEY_REGION_ID).append('=').append(regionId).append('\n');
+        sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n')
+            .append(KEY_MODULE_ID).append('=').append(moduleId).append('\n')
+            .append(KEY_MODULE_PATH).append('=').append(modulePath).append('\n')
+            .append(KEY_REGION_ID).append('=').append(regionId).append('\n');
         for (Map.Entry<String, String> entry : bodies.entrySet()) {
             appendEncoded(sb, entry.getKey(), entry.getValue());
         }
@@ -684,7 +684,7 @@ public final class ModuleSidecar {
             if (s.modulePath.isEmpty() || "_root_".equals(s.moduleId)) continue;
             Path moduleDir = root.resolve(s.modulePath);
             if (!Files.isDirectory(moduleDir)) continue;
-            java.util.Set<String> moduleActive =
+            Set<String> moduleActive =
                 ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(moduleDir));
             for (String agg : INDEXABLE_AGGREGATES) {
                 if (!s.bodies.containsKey(agg)) continue; // module contributes nothing for this service
@@ -744,7 +744,7 @@ public final class ModuleSidecar {
      * opt-in set — the pointer names only the files the module actually generates.
      */
     private static @Nullable String buildIndexPointer(String service, String modulePath,
-                                                      java.util.Set<String> moduleActive) {
+                                                      Set<String> moduleActive) {
         String scopedDir = aggregateScopedDir(service);
         if (scopedDir == null) return null;
         boolean hasGranular = moduleActive.contains(aggregateGranularKey(service));
@@ -1159,10 +1159,6 @@ public final class ModuleSidecar {
     }
 
     /**
-     * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
-     * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
-     */
-    /**
      * The granular stems recorded by sidecars whose module directory no longer exists.
      *
      * <p>Must be called <em>before</em> {@link #readAll(Path)}, which deletes those sidecars: they
@@ -1228,7 +1224,7 @@ public final class ModuleSidecar {
                 // Cannot date it, so cannot claim it is behind. Silence beats a wrong warning.
             }
         }
-        java.util.Collections.sort(behind);
+        Collections.sort(behind);
         return behind;
     }
 
@@ -1286,6 +1282,10 @@ public final class ModuleSidecar {
         return null;
     }
 
+    /**
+     * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
+     * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
+     */
     public static long computeSidecarStamp(Path root) {
         long stamp = 0L;
         for (Path p : listPaths(root)) {

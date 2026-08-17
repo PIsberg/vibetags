@@ -24,7 +24,7 @@ public final class AISecureFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -34,41 +34,41 @@ public final class AISecureFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Security-critical code");
                 if (!aspect.isEmpty()) {
-                    sb.append(" (aspect: ").append(aspect).append(")");
+                    sb.append(" (aspect: ").append(aspect).append(')');
                 }
                 sb.append(".\n- Never weaken security properties. Every change requires explicit security review.\n\n");
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### SECURITY-CRITICAL: ").append(className).append("\n")
+                sb.append("#### SECURITY-CRITICAL: ").append(className).append('\n')
                   .append(aspect.isEmpty() ? "" : "- **Aspect**: " + aspect + "\n")
                   .append("- **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Security-critical: ").append(Escape.json(className)).append(" [").append(Escape.json(aspect.isEmpty() ? "general" : aspect)).append("]. Do not weaken security.\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (security-critical): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (security-critical): ").append(summary).append('\n');
                 break;
             default:
                 break;

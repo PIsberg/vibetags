@@ -72,7 +72,7 @@ public final class GeminiRenderer implements PlatformRenderer {
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
             return sb.toString();
         }
-        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append("\n");
+        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append('\n');
 
         if (!model.locked().isEmpty()) {
             StringBuilder sec = new StringBuilder();

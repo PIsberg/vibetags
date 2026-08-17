@@ -34,8 +34,8 @@ public final class RooModesRenderer implements PlatformRenderer {
         if (block.isBlank()) {
             sb.append("      No VibeTags guardrails are currently declared.\n");
         } else {
-            sb.append("      Enforce the following VibeTags guardrails at all times:\n");
-            sb.append(GuardrailInstructionBlock.indent(block.strip(), 6));
+            sb.append("      Enforce the following VibeTags guardrails at all times:\n")
+                .append(GuardrailInstructionBlock.indent(block.strip(), 6));
         }
         return sb.toString();
     }

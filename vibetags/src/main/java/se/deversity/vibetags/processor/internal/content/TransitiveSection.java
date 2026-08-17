@@ -96,18 +96,18 @@ public final class TransitiveSection {
         StringBuilder sb = new StringBuilder(256 + model.transitiveRules().size() * 96);
         sb.append('\n');
         if (!safety.isEmpty()) {
-            sb.append(SAFETY_HEADING).append('\n');
-            sb.append("\nThese come from packages this project depends on. They constrain how the"
-                + " dependency may be used; they are not editable from here.\n\n");
+            sb.append(SAFETY_HEADING).append('\n')
+                .append("\nThese come from packages this project depends on. They constrain how the"
+                    + " dependency may be used; they are not editable from here.\n\n");
             appendRules(sb, safety);
         }
         if (!advisory.isEmpty()) {
             if (!safety.isEmpty()) {
                 sb.append('\n');
             }
-            sb.append(ADVISORY_HEADING).append('\n');
-            sb.append("\nConventions the dependency's authors documented. Follow them unless this"
-                + " project's own rules above say otherwise.\n\n");
+            sb.append(ADVISORY_HEADING).append('\n')
+                .append("\nConventions the dependency's authors documented. Follow them unless this"
+                    + " project's own rules above say otherwise.\n\n");
             appendRules(sb, advisory);
         }
         return sb.toString();

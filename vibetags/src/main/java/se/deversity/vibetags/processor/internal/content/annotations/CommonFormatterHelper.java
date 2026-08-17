@@ -16,7 +16,7 @@ final class CommonFormatterHelper {
      * "why" carried by a marker annotation survives into the generated guardrail output (and thus
      * across AI sessions). Returns {@code summary} unchanged when {@code reason} is blank.
      */
-    public static String withReason(String summary, String reason) {
+    static String withReason(String summary, String reason) {
         return (reason == null || reason.isBlank()) ? summary : summary + " Reason: " + reason;
     }
 
@@ -25,7 +25,7 @@ final class CommonFormatterHelper {
      * {@code reason} is present (to be inserted before the element's closing tag), or an empty
      * string otherwise.
      */
-    public static String claudeReason(String reason) {
+    static String claudeReason(String reason) {
         return (reason == null || reason.isBlank()) ? "" : "\n      <reason>" + Escape.xml(reason) + "</reason>";
     }
 
@@ -33,31 +33,31 @@ final class CommonFormatterHelper {
      * Attempts to format standard markdown/plain-text platforms.
      * Returns true if the platform was formatted and handled, false otherwise.
      */
-    public static boolean formatStandardPlatform(TaggedElement element, StringBuilder sb, Platform platform, String summary) {
+    static boolean formatStandardPlatform(TaggedElement element, StringBuilder sb, Platform platform, String summary) {
         String className = element.path();
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 return true;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append("\n");
+                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 return true;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
                 return true;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append("\n");
+                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 return true;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 return true;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 return true;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append("\n");
+                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
                 return true;
             default:
                 return false;

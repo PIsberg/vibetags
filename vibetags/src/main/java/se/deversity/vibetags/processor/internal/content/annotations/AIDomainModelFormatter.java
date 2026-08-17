@@ -35,16 +35,16 @@ public final class AIDomainModelFormatter implements AnnotationFormatter {
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Domain Boundary**: Framework-agnostic Domain Entity.\n");
                 if (allow.length > 0) {
-                    sb.append("- **Allowed Packages**: ").append(allowedStr).append("\n");
+                    sb.append("- **Allowed Packages**: ").append(allowedStr).append('\n');
                 }
-                sb.append("\n");
+                sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### DOMAIN MODEL: ").append(className).append("\n- **Policy**: Pure Domain model, framework-free.\n")
-                  .append(allow.length > 0 ? "- **Allowed**: " + allowedStr + "\n" : "").append("\n");
+                  .append(allow.length > 0 ? "- **Allowed**: " + allowedStr + "\n" : "").append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (domain model): ").append(summary).append("\n");
+                sb.append("- `").append(className).append("` (domain model): ").append(summary).append('\n');
                 break;
             default:
                 break;

@@ -24,6 +24,7 @@ Each line names its enforcing check; run it, do not just read this list.
 13. Granular rule files are written through `ModuleSidecar.mergeGranular`, never directly. `MultiModuleGranularRoleMergeTest`
 14. Version literals live in `vibetags-parent/pom.xml` and nowhere else; bump via `scripts/set-version.sh`. `BuildVersionParityTest`
 15. Logging is law: `domain.event key=value`, `reason=` on every `.skip`, tested events are contracts. [docs/LOGGING.md](docs/LOGGING.md), `GuardrailFileWriterLogContractTest`
+16. Every module that compiles Java runs the same static-analysis stack, and each module keeps its own `.mvn/jvm.config` because Error Prone silently does not run without it. `BuildToolchainParityTest`
 
 ## Build and test
 

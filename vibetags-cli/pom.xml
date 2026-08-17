@@ -57,9 +57,49 @@
                 <configuration>
                     <!-- The processor is on the compile classpath as a library; running it
                          over the CLI's own sources would need an opted-in file layout this
-                         module does not have. -->
-                    <compilerArgument>-proc:none</compilerArgument>
+                         module does not have. Error Prone still runs: it is a javac plugin
+                         loaded off the processor path, which -proc:none does not disable. -->
+                    <compilerArgs>
+                        <arg>-proc:none</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>${error-prone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
+                <executions>
+                    <!-- Error Prone runs only on main sources; test sources skip it -->
+                    <execution>
+                        <id>default-compile</id>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>-proc:none</arg>
+                                <arg>-XDcompilePolicy=simple</arg>
+                                <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+                                <!-- Mirrors vibetags/pom.xml. The CLI prints to stdout by design,
+                                     so StringConcatToTextBlock and StatementSwitchToExpressionSwitch
+                                     are off here for the same reason they are off there: the string
+                                     literals are output the user reads, where an explicit \n beats a
+                                     text block whose indentation is a rendering bug waiting to
+                                     happen.
+
+                                     UnsafeFinalization references com.sun.tools.javac.code.Flags$Flag,
+                                     removed in JDK 26; disable until Error Prone fixes it. Kept in
+                                     sync with vibetags/pom.xml by BuildToolchainParityTest. -->
+                                <arg>-Xplugin:ErrorProne -Xep:UnsafeFinalization:OFF -Xep:StatementSwitchToExpressionSwitch:OFF -Xep:StringConcatToTextBlock:OFF -Xep:NullAway:ERROR -XepOpt:NullAway:AnnotatedPackages=se.deversity.vibetags -XepOpt:NullAway:JSpecifyMode=true</arg>
+                                <arg>-XDshould-stop.ifError=FLOW</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -140,6 +180,78 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Low</threshold>
+                    <includeTests>false</includeTests>
+                    <failOnError>true</failOnError>
+                    <!-- Find Security Bugs: adds ~140 security detectors (injection, crypto,
+                         path traversal, XXE, deserialization) on top of the SpotBugs core set.
+                         It matters more here than anywhere else in the repo: this is the only
+                         module that takes argv from a user and turns it into filesystem writes. -->
+                    <plugins>
+                        <plugin>
+                            <groupId>com.h3xstream.findsecbugs</groupId>
+                            <artifactId>findsecbugs-plugin</artifactId>
+                            <version>${findsecbugs-plugin.version}</version>
+                        </plugin>
+                    </plugins>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- SBOM: generates CycloneDX BOM at package phase, attached as classifier "cyclonedx" -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeAggregateBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <projectType>application</projectType>
+                    <schemaVersion>1.6</schemaVersion>
+                    <includeBomSerialNumber>true</includeBomSerialNumber>
+                    <includeCompileScope>true</includeCompileScope>
+                    <includeProvidedScope>false</includeProvidedScope>
+                    <includeRuntimeScope>true</includeRuntimeScope>
+                    <includeSystemScope>false</includeSystemScope>
+                    <includeTestScope>false</includeTestScope>
+                    <includeLicenseText>false</includeLicenseText>
+                    <outputFormat>all</outputFormat>
+                    <outputName>bom</outputName>
+                </configuration>
             </plugin>
             <!-- Shipping-dependency allowlist; rule and rationale live in vibetags-parent. -->
             <plugin>

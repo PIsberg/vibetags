@@ -22,26 +22,26 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(constraint).append("\n");
+                sb.append("* `").append(className).append("` - ").append(constraint).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <constraint>").append(Escape.xml(constraint)).append("</constraint>\n    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(constraint).append("\n");
+                sb.append("- **").append(className).append("**: ").append(constraint).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`: ").append(constraint).append("\n");
+                sb.append("- `").append(className).append("`: ").append(constraint).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(constraint).append("\n");
+                sb.append("* `").append(className).append("` - ").append(constraint).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(constraint).append("\n");
+                sb.append("- `").append(className).append("`: ").append(constraint).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(constraint).append("\n");
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(constraint).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Constraint**: ").append(constraint).append("\n\n");
@@ -50,7 +50,7 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: ").append(constraint).append("\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(constraint).append("\n");
+                sb.append("- `").append(className).append("`: ").append(constraint).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"constraint\": \"").append(Escape.json(constraint)).append("\"},\n");
@@ -59,7 +59,7 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("  - \"Performance constraint for ").append(Escape.json(className)).append(": ").append(Escape.json(constraint)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (performance): ").append(constraint).append("\n");
+                sb.append("- `").append(className).append("` (performance): ").append(constraint).append('\n');
                 break;
             default:
                 break;

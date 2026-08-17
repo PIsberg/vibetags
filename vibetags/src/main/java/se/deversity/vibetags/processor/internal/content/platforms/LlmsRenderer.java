@@ -14,7 +14,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 public final class LlmsRenderer implements PlatformRenderer {
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
-        boolean full = (platform == Platform.LLMS_FULL);
+        boolean full = platform == Platform.LLMS_FULL;
         // llms-full ("the book") renders more per element than this hint assumes; under-sizing
         // only costs a couple of growths, far fewer than starting from a small fixed buffer.
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());

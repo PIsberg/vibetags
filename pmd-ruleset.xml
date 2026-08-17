@@ -6,6 +6,11 @@
 
     <description>
         Custom PMD ruleset for VibeTags.
+
+        All eight java categories are imported. A rule is excluded only after it fired and was
+        judged not worth following here, and every exclusion below carries the reason. Nothing is
+        excluded pre-emptively: a rule that has never fired stays live, so the first violation of
+        it fails the build rather than arriving inside an exclusion nobody re-reads.
     </description>
 
     <!-- Import category/java/errorprone.xml, excluding rules that are deliberately not followed or suppressed -->
@@ -33,4 +38,220 @@
         <exclude name="UnusedFormalParameter"/>
         <exclude name="ExhaustiveSwitchHasDefault"/>
     </rule>
+
+    <!--
+      category/java/codestyle.xml. The excluded rules are formatting opinions that contradict a
+      convention already applied consistently across the module; adopting them would mean rewriting
+      working code to a second style, not correcting a defect. Everything else in the category is
+      live: UselessParentheses (2), ConfusingTernary (5) and UnnecessaryFullyQualifiedName (6 of 7,
+      the seventh sitting inside an @AILocked method) all fired and were fixed in the code, and
+      EmptyControlStatement (1) is satisfied by configuring the rule rather than switching it off.
+    -->
+    <rule ref="category/java/codestyle.xml">
+        <!-- 2725 findings. The codebase does not mark locals or parameters final; the compiler
+             already rejects reassignment of anything that matters, and effectively-final capture
+             works without the keyword. -->
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <!-- 350 findings, all guard clauses. Single-exit would mean nesting the body of every
+             method that validates its input, which is the readability trade this codebase already
+             decided against. -->
+        <exclude name="OnlyOneReturn"/>
+        <!-- 316 findings, every one a single-line guard on the same line as its condition
+             (`if (log != null) log.error(...)`). Uniform across the module, and a large share sits
+             inside AIGuardrailProcessor.generateFiles(), which is @AILocked. -->
+        <exclude name="ControlStatementBraces"/>
+        <!-- 296 findings: loop indices, `sb` for the StringBuilder every renderer builds into, `e`
+             for a caught exception. Renaming them lengthens code without naming anything better. -->
+        <exclude name="ShortVariable"/>
+        <exclude name="LongVariable"/>
+        <exclude name="ShortMethodName"/>
+        <exclude name="ShortClassName"/>
+        <!-- Requires a /* default */ marker comment on every package-private member. Package-private
+             is the default visibility throughout processor.internal on purpose, so this would add
+             110 comments restating what the absent modifier already says. -->
+        <exclude name="CommentDefaultAccessModifier"/>
+        <!-- Requires an explicit constructor on every class. 78 findings, and writing each one out
+             produces an empty constructor that UncommentedEmptyConstructor then asks to document. -->
+        <exclude name="AtLeastOneConstructor"/>
+        <!-- 67 findings, and they are accurate: fields do follow methods in several classes. Not
+             fixed because the fields sit next to the javadoc explaining them, and hoisting them
+             into one block at the top separates each field from its reason. -->
+        <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
+        <exclude name="CallSuperInConstructor"/>
+        <!-- Bans `var`. The module uses it where the initialiser already names the type. -->
+        <exclude name="UseExplicitTypes"/>
+        <!-- 5 findings. Four are the scalars ModuleSidecar.load declares before the loop that
+             parses the sidecar line by line (moduleId, modulePath, regionId, sawCurrentVersion);
+             moving a declaration into that loop would reset it on every iteration, which is the
+             opposite of what it is for. The fifth is a local in checkFiles whose distance from
+             first use is a symptom of that method's length, already covered by the size metrics
+             above. The rule measures a gap that here is the loop itself. -->
+        <exclude name="VariableDeclarationUsageDistance"/>
+        <!-- EmptyControlStatement and UnnecessaryFullyQualifiedName are re-added below with
+             properties, so they are excluded here only to be replaced, not to be switched off. -->
+        <exclude name="EmptyControlStatement"/>
+        <exclude name="UnnecessaryFullyQualifiedName"/>
+    </rule>
+
+    <!--
+      EmptyControlStatement, re-added with allowCommentedBlocks. The one finding is the
+      RESERVED_PREFIX branch in ModuleSidecar.parse: a key from a newer processor is matched
+      precisely so it does NOT fall through to the `else` that would store it and render it into
+      somebody's guardrail file. Doing nothing there is the behaviour, and the branch carries three
+      lines of comment saying so. An empty block with no explanation still fails.
+    -->
+    <rule ref="category/java/codestyle.xml/EmptyControlStatement">
+        <properties>
+            <property name="allowCommentedBlocks" value="true"/>
+        </properties>
+    </rule>
+
+    <!--
+      UnnecessaryFullyQualifiedName, re-added with one suppression. Six of its seven findings were
+      fixed. The seventh is `java.util.Set.of()` inside AIGuardrailProcessor.generateFiles(), which
+      is @AILocked and guarded in CI by action/locked-files/check_locked_diff.py — that guard fails
+      on any diff touching the method, including a change this cosmetic, which is the guard working
+      as intended.
+
+      Suppressed by XPath rather than by excluding the rule, so it keeps gating every other file and
+      every other method in this one. If generateFiles() is ever unlocked, delete this block and fix
+      the line; the rule will point at it again.
+    -->
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName">
+        <properties>
+            <property name="violationSuppressXPath"
+                      value="./ancestor::MethodDeclaration[@Name='generateFiles']
+                             [ancestor::ClassDeclaration[@SimpleName='AIGuardrailProcessor']]"/>
+        </properties>
+    </rule>
+
+    <!--
+      category/java/design.xml. The excluded rules are size and coupling metrics. They are measuring
+      something real, and the answer to all of them is the same: satisfying them means splitting the
+      processor core, whose largest method (generateFiles) is @AILocked precisely because its step
+      order is load-bearing. A threshold that can only be met by a refactor nobody is going to make
+      is a permanently red gate, which trains people to ignore the category that also contains
+      SimplifyBooleanReturns (2) and PublicMemberInNonPublicType (3). Those two stay live and their
+      findings were fixed.
+    -->
+    <rule ref="category/java/design.xml">
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="CognitiveComplexity"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="NcssCount"/>
+        <exclude name="AvoidDeeplyNestedIfStmts"/>
+        <exclude name="TooManyMethods"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="ExcessiveImports"/>
+        <exclude name="ExcessivePublicCount"/>
+        <exclude name="ExcessiveParameterList"/>
+        <exclude name="GodClass"/>
+        <!-- Flags every a.b().c(). 48 findings, largely chains that walk javac's Element and
+             AnnotationMirror API, whose shape this module does not get to change, and chains that
+             read the immutable records in processor.model, which exist to be read. Satisfying it
+             would mean a delegating method per hop. -->
+        <exclude name="LawOfDemeter"/>
+        <!-- Names the model records that exist to carry data between the collector and the
+             renderers. Being a data class is the point of processor.model. -->
+        <exclude name="DataClass"/>
+        <!-- Both findings are AIGuardrailProcessor fields (granularWriter, elementRules) that
+             carry state set up in init(ProcessingEnvironment) into the generate phase, so they are
+             not locals that happen to have been hoisted. Demoting either one would mean rewriting
+             generateFiles(), which is @AILocked because its step order is load-bearing. -->
+        <exclude name="SingularField"/>
+    </rule>
+
+    <!--
+      category/java/documentation.xml. UncommentedEmptyMethodBody, UncommentedEmptyConstructor and
+      DanglingJavadoc stay live and their findings were fixed.
+    -->
+    <rule ref="category/java/documentation.xml">
+        <!-- 2379 findings, the single largest rule in the run. It caps a comment at 6 lines and 80
+             columns. The long comments it names are the ones carrying the reason a piece of code is
+             shaped the way it is, which is the house standard for this repo and the thing reviews
+             ask for. Enforcing this rule would delete exactly the comments worth keeping. -->
+        <exclude name="CommentSize"/>
+        <!-- Demands javadoc on every field, constructor and method including private ones. The
+             published surface is already gated harder than this: maven-javadoc-plugin runs with
+             doclint=all and failOnWarnings=true, so an undocumented public API member fails the
+             build. This rule only adds boilerplate on internals. -->
+        <exclude name="CommentRequired"/>
+    </rule>
+
+    <!--
+      category/java/multithreading.xml. The processor is concurrent by necessity: javac may run
+      modules in parallel and the sidecar merge is the coordination point. The excluded rules ban
+      the primitives that coordination is built from rather than any misuse of them; the misuse
+      detectors (DoubleCheckedLocking, NonThreadSafeSingleton, UnsynchronizedStaticFormatter and
+      the rest of the category) stay live.
+    -->
+    <rule ref="category/java/multithreading.xml">
+        <!-- 62 findings, every one a HashMap or LinkedHashMap. Two reasons, and the first is the
+             stronger: LinkedHashMap's insertion order is load-bearing, because generated guardrail
+             files have to be byte-identical between builds or every consumer gets a spurious diff,
+             and ConcurrentHashMap does not preserve order. Second, these maps are filled during the
+             single-threaded collect and build phases and only read during the parallel write, where
+             the one genuinely shared mutable structure is already a ConcurrentLinkedQueue and
+             WriteCache is synchronized on every method. Concurrency here is handled by the phase
+             split and by the types that actually cross threads, not by the map implementation. -->
+        <exclude name="UseConcurrentHashMap"/>
+        <!-- Style preference for synchronized(this){} over a synchronized method. -->
+        <exclude name="AvoidSynchronizedAtMethodLevel"/>
+        <exclude name="AvoidSynchronizedStatement"/>
+        <!-- Bans volatile outright. The one finding is GranularBody.rendered, a memoized render
+             read on a different thread from the one that computed it because the processor swaps
+             writers around the parallel write phase. Recomputing is idempotent, so a lost update
+             costs a re-render; an unsafe publication would hand out a partly-built String. Volatile
+             is the fix there, not the smell. -->
+        <exclude name="AvoidUsingVolatile"/>
+        <!-- Bans creating threads, on the assumption of a managed container. This is an annotation
+             processor inside javac, and the parallel write path deliberately constructs its own
+             ForkJoinPool rather than borrowing commonPool from the consumer's build. -->
+        <exclude name="DoNotUseThreads"/>
+    </rule>
+
+    <!--
+      category/java/performance.xml. AppendCharacterWithChar (359), ConsecutiveAppendsShouldReuse
+      (87), RedundantFieldInitializer (9) and UseIndexOfChar (1) stay live and their findings were
+      fixed in the code.
+    -->
+    <rule ref="category/java/performance.xml">
+        <!-- Wants an explicit capacity on every StringBuilder. PMD derives the expected size from
+             the literal appends it can see, but these builders are filled with rendered guardrail
+             content whose length is not known until runtime, so any capacity written to satisfy the
+             rule would be a number invented to silence it. -->
+        <exclude name="InsufficientStringBufferDeclaration"/>
+        <!-- Flags any allocation inside a loop, including the per-iteration objects the loop exists
+             to produce: a Path per service, a record per tagged element, a StringBuilder per
+             rendered section. Hoisting one of those out of its loop is a defect, not an
+             optimisation, so the rule cannot be followed selectively by hand here. -->
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+        <!-- 58 findings, and the fix makes the code worse everywhere it applies. These are the
+             renderers that emit JSON and markdown one field per source line, so the literal that
+             ends a line and the literal that starts the next are "consecutive" with a dynamic
+             append on either side of them. TransitiveManifest.toJson goes from six readable lines
+             to a single 270-column one:
+
+               sb.append("{\n")
+                   .append("  \"origin\": ").append(Json.quote(origin)).append(",\n")
+                   .append("  \"package\": ").append(Json.quote(name)).append(",\n")
+
+             collapses to .append("{\n  \"origin\": ")...append(",\n  \"package\": ")..., where the
+             JSON structure stops being visible in the source that produces it. The saving is one
+             virtual call per literal pair on a path that runs once per compiled module.
+             ConsecutiveAppendsShouldReuse, the rule that actually reduces the call count, stays
+             live and all 87 of its findings were fixed. -->
+        <exclude name="ConsecutiveLiteralAppends"/>
+        <!-- The single finding is GranularBody.length(), which returns toString().length(). The
+             rule assumes the receiver is a StringBuilder, where .toString().length() is a wasted
+             copy. GranularBody is a CharSequence whose toString() renders and caches, so applying
+             the suggested fix (drop toString()) calls length() on itself and never terminates. -->
+        <exclude name="UseStringBufferLength"/>
+    </rule>
+
+    <!-- category/java/security.xml. Zero findings; imported whole so it stays that way.
+         Deeper security analysis is SpotBugs' job via the findsecbugs plugin. -->
+    <rule ref="category/java/security.xml"/>
 </ruleset>

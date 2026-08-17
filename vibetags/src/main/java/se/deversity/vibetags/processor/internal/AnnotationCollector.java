@@ -107,7 +107,7 @@ public final class AnnotationCollector {
      * manifest reached through several import prefixes contributes once; final order is settled in
      * {@link GuardrailModel}, which sorts.
      */
-    private final Set<TransitiveRule> transitiveRules = new java.util.LinkedHashSet<>();
+    private final Set<TransitiveRule> transitiveRules = new LinkedHashSet<>();
 
     private boolean anyAnnotationsFound;
 

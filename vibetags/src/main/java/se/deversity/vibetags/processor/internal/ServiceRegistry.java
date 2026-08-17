@@ -196,7 +196,7 @@ public final class ServiceRegistry {
                 "Create one or more of the following files in your project root to opt in:\n");
             allServiceFiles.entrySet().stream()
                 .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey()))
-                .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append("\n"));
+                .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append('\n'));
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
 
