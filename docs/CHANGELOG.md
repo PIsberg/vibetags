@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
   does the pruning.
 
+- **A module dropped from a mirror target's source list now stops mirroring into it.** The mirror
+  writer skipped a target that does not accept the compiling module, and skipped its cleanup with
+  it, so the rule files the module had mirrored there while the config did name it stayed forever —
+  the target kept loading a sibling's guardrails that its own config says do not belong to it, and
+  neither the target's build nor the source module's own could clear them. The module now sweeps its
+  own mirror prefix in that target on its next compile.
+
+  Scoped deliberately to self-cleanup. The target's config is an allowlist, so a sibling could in
+  principle retire the files too, but that means one module deleting inside another's namespace on
+  the strength of a filename-to-path mapping — the reach that deleted 256 committed rule files on a
+  cold reactor. Between the config change and the dropped module's next compile the stale mirror
+  therefore survives, which is pinned as the cheaper failure rather than fixed.
+
 - **Two whole-file withdrawal paths are pinned.** An element that stops being `@AILocked` now has
   a test proving it leaves `.vibetags-locks` — the report the locked-files Action diffs a pull
   request against, where a lock outliving its annotation fails PRs over code nobody guards any
