@@ -38,6 +38,12 @@ class SupersededAncestorRegionTest {
         sidecar.save(root);
     }
 
+    /** Stamps a sidecar's mtime so the freshness comparison is deterministic, not scheduler-dependent. */
+    private static void writtenAt(Path root, String moduleId, long millis) throws IOException {
+        Files.setLastModifiedTime(root.resolve(".vibetags-mod-" + moduleId),
+            java.nio.file.attribute.FileTime.fromMillis(millis));
+    }
+
     private static List<String> regionIds(List<ModuleSidecar> sidecars) {
         return sidecars.stream().map(ModuleSidecar::getRegionId).sorted().toList();
     }
@@ -138,5 +144,60 @@ class SupersededAncestorRegionTest {
         assertEquals(List.of("app"), regionIds(ModuleSidecar.peekAll(root)));
         assertTrue(Files.exists(root.resolve(".vibetags-mod-_root_")),
             "check mode promises to touch nothing VibeTags manages");
+    }
+
+    // ------------------------------------------------------- freshness decides, not depth
+
+    @Test
+    void aStaleSubprojectIsRetiredByTheFresherRoot(@TempDir Path root) throws IOException {
+        // The sources moved up out of `app`, which survives the move as a directory, so the
+        // module-path staleness check cannot retire its sidecar. The root is the live identity.
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "app", "app", "com.example.A");
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writtenAt(root, "app", 1_000_000L);
+        writtenAt(root, "_root_", 2_000_000L);
+
+        assertEquals(List.of("_root_"), regionIds(ModuleSidecar.readAll(root)),
+            "the fresher region describes the tree as it is now");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-app")));
+    }
+
+    @Test
+    void aStaleRootIsRetiredByTheFresherSubproject(@TempDir Path root) throws IOException {
+        // The reported direction: sources moved down into `app`, the root sidecar is the leftover.
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A");
+        writtenAt(root, "_root_", 1_000_000L);
+        writtenAt(root, "app", 2_000_000L);
+
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.readAll(root)));
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
+    }
+
+    @Test
+    void onEqualTimestampsTheMoreSpecificModuleWins(@TempDir Path root) throws IOException {
+        // Two sidecars written inside one filesystem tick must still resolve deterministically.
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A");
+        writtenAt(root, "_root_", 1_500_000L);
+        writtenAt(root, "app", 1_500_000L);
+
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.readAll(root)),
+            "a tie retires the ancestor, never the reverse");
+    }
+
+    @Test
+    void anOlderAncestorNeverRetiresAFresherSubproject(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A", "com.example.B");
+        writeSidecar(root, "app", "app", "com.example.A");
+        writtenAt(root, "_root_", 1_000_000L);
+        writtenAt(root, "app", 2_000_000L);
+
+        assertTrue(regionIds(ModuleSidecar.readAll(root)).contains("app"),
+            "the subproject is the fresher identity for the element it claims");
     }
 }

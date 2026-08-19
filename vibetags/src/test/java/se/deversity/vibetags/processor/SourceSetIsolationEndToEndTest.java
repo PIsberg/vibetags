@@ -68,6 +68,16 @@ class SourceSetIsolationEndToEndTest {
         }
         """;
 
+    private static final String OTHER_TEST_SOURCE = """
+        package com.example.core;
+
+        import se.deversity.vibetags.annotations.AIParallelTests;
+
+        @AIParallelTests(reason = "no shared fixtures")
+        public class ParserTest {
+        }
+        """;
+
     @TempDir
     Path reactorRoot;
 
@@ -215,6 +225,72 @@ class SourceSetIsolationEndToEndTest {
         assertTrue(rules.contains("com-example-core-IrNode.md"),
             "module-cli's compile must not delete module-core's shared scoped rules: " + rules);
         assertTrue(rules.contains("com-example-core-Parser.md"), rules.toString());
+    }
+
+
+    // ----------------------------------------------------------------- withdrawal
+
+    /**
+     * The withdrawal direction of the source-set split: a test class is deleted and the test round
+     * still runs, over a different test class. The round that owns the source set is the one that
+     * can see the loss, and it must replace its own contribution rather than add to it.
+     */
+    @Test
+    void aTestRoundThatRunsReplacesItsOwnContribution() throws IOException {
+        setUpReactor("module-core");
+        compileSourceSet("module-core", "main", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+        compileSourceSet("module-core", "test", List.<String[]>of(new String[]{"com.example.core.IrNodeTest", TEST_SOURCE}));
+        assertTrue(Files.readString(reactorRoot.resolve("CLAUDE.md")).contains(TEST_REASON),
+            "precondition: the test source set contributed first");
+
+        // IrNodeTest is gone; ParserTest takes its place, so test-compile has sources and runs.
+        Files.delete(reactorRoot.resolve("module-core/src/test/java/com/example/core/IrNodeTest.java"));
+        compileSourceSet("module-core", "test",
+            List.<String[]>of(new String[]{"com.example.core.ParserTest", OTHER_TEST_SOURCE}));
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains("no shared fixtures"), "the new test class must be there");
+        assertFalse(claude.contains(TEST_REASON),
+            "the deleted test class's guardrail describes code that is gone:\n" + claude);
+        assertTrue(claude.contains(MAIN_REASON),
+            "and the other source set must be untouched by any of it:\n" + claude);
+    }
+
+    /**
+     * The boundary of that, pinned rather than fixed. When a source set is emptied of every
+     * annotated class, the build stops compiling it at all — Maven's {@code test-compile} over zero
+     * sources runs no annotation processor — so no round is in a position to notice. A main round
+     * cannot tell "the test sources were deleted" from "test-compile has not run yet", and guessing
+     * would delete a sibling source set's guardrails on every {@code mvn compile} (issue #383: a
+     * round never argues from an absence it cannot see).
+     *
+     * <p>The recorded escape is the same as for a module emptied entirely: delete the source set's
+     * sidecar, {@code .vibetags-mod-<module>__test}. This test exists so that the day the behaviour
+     * changes, it changes deliberately.
+     */
+    @Test
+    void anEmptiedSourceSetKeepsItsLastContributionUntilItsSidecarIsDeleted() throws IOException {
+        setUpReactor("module-core");
+        compileSourceSet("module-core", "main", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+        compileSourceSet("module-core", "test", List.<String[]>of(new String[]{"com.example.core.IrNodeTest", TEST_SOURCE}));
+
+        // Every annotated test class is deleted, so a real build compiles no test sources at all.
+        Files.delete(reactorRoot.resolve("module-core/src/test/java/com/example/core/IrNodeTest.java"));
+        compileSourceSet("module-core", "main", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+
+        Path testSidecar = reactorRoot.resolve(".vibetags-mod-module-core__test");
+        assertTrue(Files.exists(testSidecar), "the emptied source set's sidecar is what keeps it alive");
+        assertTrue(Files.readString(reactorRoot.resolve("CLAUDE.md")).contains(TEST_REASON),
+            "pinned limitation: nothing compiled the test source set, so nothing could retire it");
+
+        // The escape hatch, and the proof that it is the sidecar doing it.
+        Files.delete(testSidecar);
+        compileSourceSet("module-core", "main", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertFalse(claude.contains(TEST_REASON),
+            "deleting the sidecar must clear the emptied source set:\n" + claude);
+        assertTrue(claude.contains(MAIN_REASON), "and must cost the main source set nothing:\n" + claude);
     }
 
     private static List<String> ruleFileNames(Path dir) throws IOException {
