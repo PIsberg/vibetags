@@ -47,6 +47,12 @@ import java.util.stream.Stream;
  * under {@code root} is automatically deleted by {@link #readAll(Path)} and excluded from the
  * merged output. Users can also manually delete {@code .vibetags-mod-*} files to force a clean
  * rebuild.
+ *
+ * <p>That check cannot see one kind of stale sidecar: one whose module path is the root itself,
+ * because the root directory always exists. {@link #readAll(Path)} therefore also retires a region
+ * whose annotated elements are all claimed by regions of modules nested inside it — the same
+ * sources read twice under a less specific identity, which otherwise appears as two byte-identical
+ * {@code VIBETAGS-MODULE} regions in every generated file.
  */
 @AICore(
     sensitivity = "high",
@@ -606,6 +612,8 @@ public final class ModuleSidecar {
     private static List<ModuleSidecar> readAll(Path root, boolean prune) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
+        // Kept index-aligned with result so a sidecar dropped below can also be deleted.
+        List<Path> resultFiles = new ArrayList<>();
         try (Stream<Path> stream = Files.list(root)) {
             stream.filter(p -> {
                       // Path.getFileName() returns null only for root paths — guard for correctness.
@@ -648,6 +656,7 @@ public final class ModuleSidecar {
                           }
                       }
                       result.add(s);
+                      resultFiles.add(p);
                   });
         } catch (IOException ignored) {
 
@@ -658,8 +667,85 @@ public final class ModuleSidecar {
             // directory the build does not need.
 
         }
+        dropSupersededAncestorRegions(result, resultFiles, prune);
         applyRootIndexModeTo(root, result);
         return result;
+    }
+
+    /**
+     * Drops every region whose annotated elements are all accounted for by regions of modules
+     * nested inside it, and deletes their sidecars when {@code prune} is set.
+     *
+     * <p>An annotated element belongs to exactly one module: its source file lives in exactly one
+     * module directory. Two regions claiming the same element are therefore the same sources read
+     * twice under two identities, and the more specific module is the one that is right.
+     *
+     * <p>The case that brought this in is a Gradle repository with a single included subproject
+     * whose directory sits below the VibeTags root ({@code -Avibetags.root} pointing at the git
+     * root, {@code include 'app'}, all sources under {@code app/}). A build whose module-root walk
+     * stopped at the git root wrote {@code .vibetags-mod-_root_} with {@code modulePath=}; a later
+     * build resolved the subproject and wrote {@code .vibetags-mod-app}. The ordinary stale check
+     * above cannot retire the first one — its module path is the root directory, which always
+     * exists — so every subsequent build emitted both regions, with byte-identical content, into
+     * every generated file.
+     *
+     * <p>Deliberately conservative: a region is dropped only when the nested regions cover
+     * <em>all</em> of its elements. A reactor root that compiles sources of its own keeps at least
+     * one element no submodule has, so it keeps its region and its sub-markers. A sidecar written
+     * before element ids were recorded carries none, and is likewise left alone.
+     */
+    private static void dropSupersededAncestorRegions(List<ModuleSidecar> sidecars,
+                                                      List<Path> files, boolean prune) {
+        if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
+        Map<String, String> pathByRegion = new LinkedHashMap<>();
+        Map<String, Set<String>> elementsByRegion = new LinkedHashMap<>();
+        for (ModuleSidecar s : sidecars) {
+            pathByRegion.putIfAbsent(s.regionId, normalizeModulePath(s.modulePath));
+            elementsByRegion.computeIfAbsent(s.regionId, k -> new LinkedHashSet<>())
+                            .addAll(s.elementIds);
+        }
+
+        Set<String> superseded = new LinkedHashSet<>();
+        elementsByRegion.forEach((region, elements) -> {
+            if (elements.isEmpty()) return; // nothing to compare against — keep it
+            String ancestorPath = pathByRegion.getOrDefault(region, "");
+            Set<String> covered = new LinkedHashSet<>();
+            elementsByRegion.forEach((other, otherElements) -> {
+                String otherPath = pathByRegion.getOrDefault(other, "");
+                if (!other.equals(region) && isNestedUnder(otherPath, ancestorPath)) {
+                    covered.addAll(otherElements);
+                }
+            });
+            if (!covered.isEmpty() && covered.containsAll(elements)) {
+                superseded.add(region);
+            }
+        });
+        if (superseded.isEmpty()) return;
+
+        for (int i = sidecars.size() - 1; i >= 0; i--) {
+            if (!superseded.contains(sidecars.get(i).regionId)) continue;
+            if (prune) tryDelete(files.get(i));
+            sidecars.remove(i);
+            files.remove(i);
+        }
+    }
+
+    /**
+     * A module path in comparable form: forward slashes, no trailing separator, and the historical
+     * {@code "_root_"} spelling of "this is the root" folded onto the empty string.
+     */
+    private static String normalizeModulePath(String modulePath) {
+        String p = modulePath.replace('\\', '/');
+        while (p.endsWith("/")) {
+            p = p.substring(0, p.length() - 1);
+        }
+        return "_root_".equals(p) ? "" : p;
+    }
+
+    /** True when {@code candidate} names a directory strictly below {@code ancestor}. */
+    private static boolean isNestedUnder(String candidate, String ancestor) {
+        if (candidate.isEmpty() || candidate.equals(ancestor)) return false;
+        return ancestor.isEmpty() || candidate.startsWith(ancestor + "/");
     }
 
     // -----------------------------------------------------------------------
