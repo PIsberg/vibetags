@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
   does the pruning.
 
+- **Two whole-file withdrawal paths are pinned.** An element that stops being `@AILocked` now has
+  a test proving it leaves `.vibetags-locks` — the report the locked-files Action diffs a pull
+  request against, where a lock outliving its annotation fails PRs over code nobody guards any
+  more. And an `AGENTS.md` written while it was the sole AI config file keeps updating once a
+  second platform is opted in, which is how a project actually reaches the marker escape hatch of
+  invariant 4: over time, not by hand-authoring the markers. Both behaved correctly already;
+  neither had anything holding it in place.
+
 - **Three more lifecycle transitions are pinned, none of which needed a code change.** Role
   grouping switched *on* after per-class rule files already exist retires the files the role
   replaces, the mirror of the already-covered switch-off. Opting a granular directory back out

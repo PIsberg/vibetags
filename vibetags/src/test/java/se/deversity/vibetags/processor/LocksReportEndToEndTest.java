@@ -178,6 +178,46 @@ class LocksReportEndToEndTest {
             "no @AILocked elements means only the format record (plus header comments)");
     }
 
+
+    /**
+     * The withdrawal direction, which the rest of this class does not reach: an element is
+     * unlocked and the report has to forget it. The report is a whole-file format with no marker
+     * region per element, so it is rewritten wholesale each round — but it is also what the
+     * locked-files Action diffs a pull request against, and a lock that outlives its annotation
+     * fails PRs over code nobody is guarding any more.
+     */
+    @Test
+    void locksReport_forgetsAnElementThatIsNoLongerLocked(@TempDir Path tmp) throws Exception {
+        ProcessorTestHarness first = new ProcessorTestHarness(tmp, false);
+        first.touchOptIn(".vibetags-locks");
+        first.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"Reconciliation is load-bearing\")\n"
+                + "public class Ledger {}\n");
+        first.compile();
+        VibeTagsLogger.shutdown();
+        assertTrue(first.readFile(".vibetags-locks").contains("com.example.Ledger"),
+            "precondition: the lock is reported while the annotation is there");
+
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+        ProcessorTestHarness second = new ProcessorTestHarness(tmp, false);
+        second.touchOptIn(".vibetags-locks");
+        second.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AIContext;\n"
+                + "@AIContext(focus = \"ledger\", avoids = \"nothing\")\n"
+                + "public class Ledger {}\n");
+        second.compile();
+
+        String report = second.readFile(".vibetags-locks");
+        assertFalse(report.contains("Reconciliation is load-bearing"),
+            "the report must forget an element nothing locks any more: " + report);
+        assertEquals(List.of("{\"type\":\"format\",\"version\":1}"),
+            jsonLines(report),
+            "and must be left with only the format record: " + report);
+    }
+
     @Test
     void locksReport_startsWithFormatVersionRecord(@TempDir Path tmp) throws Exception {
         ProcessorTestHarness h = withVaultSource(tmp);
