@@ -69,7 +69,7 @@
         <!-- The VibeTags release version. Bump THIS and nothing else: every module takes its
              own version, its sibling dependencies and its BOM entries from it. Resolved into
              the deployed POMs by flatten-maven-plugin, so consumers never see the property. -->
-        <revision>1.2.2</revision>
+        <revision>1.2.3</revision>
 
         <!-- release, not source/target: on a JDK newer than 21 (CI builds 21, 25 and 26)
              source/target compiles against the *running* JDK's API and javac warns that the

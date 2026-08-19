@@ -52,7 +52,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.2.2</version>
+            <version>1.2.3</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -76,7 +76,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.2.2</version>
+                        <version>1.2.3</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -94,7 +94,7 @@ touch CLAUDE.md .cursorrules AGENTS.md   # Claude, Cursor, Codex CLI — add whi
 Or let the companion CLI do it (and `vibetags doctor` checks your setup afterwards):
 
 ```bash
-jbang se.deversity.vibetags:vibetags-cli:1.2.2 init --platforms claude,cursor
+jbang se.deversity.vibetags:vibetags-cli:1.2.3 init --platforms claude,cursor
 ```
 
 **3. Annotate your first class:**
@@ -123,8 +123,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.2')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.2')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -170,8 +170,8 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.2.2"))
-    kapt(platform("se.deversity.vibetags:vibetags-bom:1.2.2"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.2.3"))
+    kapt(platform("se.deversity.vibetags:vibetags-bom:1.2.3"))
 
     compileOnly("se.deversity.vibetags:vibetags-annotations")
     kapt("se.deversity.vibetags:vibetags-processor")
@@ -513,7 +513,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.2.2</version>
+            <version>1.2.3</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -538,7 +538,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.2.2</version>
+                        <version>1.2.3</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -554,8 +554,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.2')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.2')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -569,15 +569,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:1.2.2'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.2'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:1.2.3'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.3'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.
@@ -898,8 +898,8 @@ presence the processor honours (the processor itself never creates them), and
 `VIBETAGS-START`/`END` marker integrity. Run it without installing anything:
 
 ```bash
-jbang se.deversity.vibetags:vibetags-cli:1.2.2 init --list
-jbang se.deversity.vibetags:vibetags-cli:1.2.2 doctor
+jbang se.deversity.vibetags:vibetags-cli:1.2.3 init --list
+jbang se.deversity.vibetags:vibetags-cli:1.2.3 doctor
 ```
 
 The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
