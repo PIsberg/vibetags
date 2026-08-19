@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
   does the pruning.
 
+- **Three more lifecycle transitions are pinned, none of which needed a code change.** Role
+  grouping switched *on* after per-class rule files already exist retires the files the role
+  replaces, the mirror of the already-covered switch-off. Opting a granular directory back out
+  returns the aggregate to inline guardrails instead of leaving a scoped-rules index pointing at a
+  path nobody generates. And the new region prune converges: repeating a build leaves the generated
+  files byte-identical, and check mode agrees with what generation just wrote.
+
 - **The withdrawal half of the source-set split is now pinned.** A test round that actually runs
   replaces its own contribution, so a deleted test class takes its guardrail with it. The boundary
   is recorded rather than fixed: a source set emptied of every annotation is never compiled at all,

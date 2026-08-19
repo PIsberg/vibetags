@@ -192,6 +192,37 @@ class AnnotationTransitionEndToEndTest {
                 + "described twice — once per class and once by a role that no longer exists");
     }
 
+    /**
+     * The direction the two tests above do not cover: role grouping is switched <em>on</em> after
+     * per-class rule files already exist. The per-class file the role now replaces is an orphan for
+     * the same reason the role file is one when grouping is switched off, and left behind it
+     * describes the class a second time under a name nothing points at.
+     */
+    @Test
+    void introducingARolesConfig_retiresThePerClassFilesItReplaces(@TempDir Path dir) throws Exception {
+        ProcessorTestHarness first = new ProcessorTestHarness(dir, false);
+        first.touchOptIn(".cursor/rules/.vibetags");
+        first.addSource("com.example.web.OrderController", controller());
+        first.compile();
+        assertTrue(first.fileExists(".cursor/rules/com-example-web-OrderController.mdc"),
+            "precondition: no roles config, so the class gets its per-class file");
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        VibeTagsLogger.shutdown();
+
+        ProcessorTestHarness second = granular(dir, "api-endpoints = **/*Controller.java\n");
+        second.addSource("com.example.web.OrderController", controller());
+        second.compile();
+
+        assertTrue(second.fileExists(".cursor/rules/api-endpoints.mdc"),
+            "the new role must produce its rule file");
+        assertTrue(second.readFile(".cursor/rules/api-endpoints.mdc").contains("com.example.web.OrderController"),
+            "and must carry the class that routes to it");
+        assertFalse(second.fileExists(".cursor/rules/com-example-web-OrderController.mdc"),
+            "turning role grouping on must retire the per-class file the role replaced, or the "
+                + "class is described twice and the agent loads both");
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------

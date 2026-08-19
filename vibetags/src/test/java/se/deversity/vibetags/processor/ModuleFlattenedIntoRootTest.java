@@ -152,6 +152,54 @@ class ModuleFlattenedIntoRootTest {
         VibeTagsLogger.shutdown();
     }
 
+    /**
+     * The prune runs on every read, so it must converge. Two rounds that each claim the same
+     * element - a build misconfigured so two source roots see one class - would flip the surviving
+     * region back and forth if freshness alone decided it round by round, and every build would
+     * rewrite the generated files. Repeating the same pair of rounds must leave the file alone.
+     */
+    @Test
+    void repeatingTheSameBuildPairLeavesTheFileByteIdentical() throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileFromSubproject("Core IR node");
+        compileFromRoot("Core IR node");
+        String afterFirstPair = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        compileFromSubproject("Core IR node");
+        compileFromRoot("Core IR node");
+
+        assertEquals(afterFirstPair,
+            Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8),
+            "the same build twice must not churn the generated file");
+    }
+
+    /**
+     * Check mode reads the same sidecars through {@code peekAll}, which excludes a superseded
+     * region without deleting it. If the two disagreed, a build that just wrote its files would
+     * fail its own verification.
+     */
+    @Test
+    void checkModeAgreesWithWhatGenerationJustWrote() throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileFromSubproject("Core IR node");
+        deleteRecursively(root.resolve("app/src"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        compileFromRoot("Core IR node");
+
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        harness.writeSourceFile("src/main/java/com/example/core/IrNode.java", locked("Core IR node"));
+        java.util.List<String> errors = harness.compileReturningDiagnostics("-Avibetags.check=true")
+            .stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+
+        assertTrue(errors.isEmpty(),
+            "check mode must not report drift against files generation just wrote: " + errors);
+    }
+
     private static int countOf(String haystack, String needle) {
         int count = 0;
         for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {

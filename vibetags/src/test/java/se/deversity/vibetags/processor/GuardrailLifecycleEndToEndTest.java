@@ -132,6 +132,52 @@ class GuardrailLifecycleEndToEndTest {
                 + "not a one-way door");
     }
 
+    /**
+     * Opting the granular directory back out. While {@code .claude/rules/} exists the aggregate
+     * collapses to a scoped-rules index and stops carrying the guardrails itself (invariant 6);
+     * once the directory is gone that index points at files nobody generates any more, so the
+     * aggregate has to go back to stating them inline. An index left behind is worse than a stale
+     * rule file: it is the only thing CLAUDE.md says about the class, and it names a path that
+     * does not exist.
+     */
+    @Test
+    void optingTheGranularDirectoryBackOut_returnsTheAggregateToInlineGuardrails(@TempDir Path dir)
+            throws Exception {
+        ProcessorTestHarness first = optedIn(dir, "CLAUDE.md");
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        first.addSource("com.example.Ledger", ledger("Reconciliation is load-bearing"));
+        first.compile();
+        assertTrue(first.readFile("CLAUDE.md").contains(".claude/rules/"),
+            "precondition: the aggregate collapsed to a scoped-rules index");
+
+        deleteRecursively(dir.resolve(".claude/rules"));
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        VibeTagsLogger.shutdown();
+
+        ProcessorTestHarness second = optedIn(dir, "CLAUDE.md");
+        second.addSource("com.example.Ledger", ledger("Reconciliation is load-bearing"));
+        second.compile();
+
+        String claude = second.readFile("CLAUDE.md");
+        assertTrue(claude.contains("Reconciliation is load-bearing"),
+            "the aggregate must carry the guardrail itself once nothing else does:\n" + claude);
+        assertFalse(claude.contains(".claude/rules/"),
+            "and must stop pointing at a directory that no longer exists:\n" + claude);
+    }
+
+    private static void deleteRecursively(Path dir) throws IOException {
+        if (!Files.exists(dir)) return;
+        try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                    // best effort inside a temp dir
+                }
+            });
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Through a reactor, including the whole-file formats
     // -----------------------------------------------------------------------
