@@ -64,6 +64,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One module no longer appears twice when a Gradle subproject sits below the VibeTags root.**
+  Reported from a repository whose `settings.gradle` declares `include 'app'` at the git root,
+  keeps every Java source under `app/`, and passes `-Avibetags.root` pointing at the git root.
+  Two sidecars existed for what is one module: `.vibetags-mod-_root_` with an empty `modulePath`
+  and `.vibetags-mod-app` with `modulePath=app`, carrying byte-identical bodies for every
+  annotated element. The stale check that retires a sidecar when its module directory is gone
+  cannot retire the first one, because its module path is the root directory and that always
+  exists, so every build emitted both regions into every generated file — 24 rule files, 212
+  duplicated lines, each guardrail stated twice under two `VIBETAGS-MODULE` markers.
+
+  `ModuleSidecar.readAll` now also retires a region whose annotated elements are all claimed by
+  regions of modules nested inside it. An annotated element belongs to exactly one module, so two
+  regions claiming it are the same sources read twice under a less specific identity, and the more
+  specific module wins. Coverage runs downward only and demands full containment: a subproject is
+  never retired by its ancestor, a reactor root that compiles sources of its own keeps at least one
+  element no submodule has and so keeps its region, siblings are never nested under one another,
+  and a sidecar that records no element ids is left alone. Check mode excludes the superseded
+  region without deleting anything. Existing builds heal on the first compile after the upgrade:
+  the processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
+  does the pruning.
+
 - **A granular rule file's front matter now follows its inputs.** The `globs:` / `paths:` /
   `applyTo:` list at the top of a rule file is rendered from `.vibetags-roles` (and, for
   mirrors, `.vibetags-mirror`), but the writer treated the header already on disk as

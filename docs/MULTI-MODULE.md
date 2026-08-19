@@ -93,6 +93,30 @@ When identity still cannot be derived, `-Avibetags.module=<name>` sets it explic
 that falls back to a content hash while named sidecars already exist emits a `[WARNING]` naming
 both.
 
+### One module, two identities
+
+A sidecar is retired when its `modulePath` no longer names a directory under the root. That check is
+blind to a sidecar whose module path *is* the root, because the root directory always exists.
+
+A Gradle repository with one included subproject reaches exactly that state. `settings.gradle` at
+the git root declares `include 'app'`, every source lives under `app/`, and `compileJava` passes
+`-Avibetags.root` pointing at the git root. A build whose module-root walk stopped at the git root
+writes `.vibetags-mod-_root_` with an empty `modulePath`; a build that resolves the subproject
+writes `.vibetags-mod-app`. Nothing retired the first, so every later build emitted both regions,
+with byte-identical content, into every generated file: 24 rule files, 212 duplicated lines.
+
+`readAll` therefore also retires a region whose annotated elements are *all* claimed by regions of
+modules nested inside it. An annotated element belongs to exactly one module — its source file lives
+in exactly one module directory — so two regions claiming it are the same sources read twice, and
+the more specific module is the one that is right.
+
+The rule is deliberately one-directional and conservative. Coverage runs downward only, so a
+subproject is never retired by its ancestor. A reactor root that compiles sources of its own keeps
+at least one element no submodule has, so it keeps its region and its sub-markers. Sibling modules
+are never nested under one another. A sidecar that records no element ids at all is left alone.
+`SupersededAncestorRegionTest` pins those boundaries; `AncestorModuleDuplicateRegionTest` pins the
+reported build end to end.
+
 ### Source sets
 
 A module is compiled once per **source set**: Maven's `compile` and `test-compile` are two javac
