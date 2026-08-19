@@ -98,6 +98,12 @@ class ReleaseScriptCoverageTest {
         "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6DefinitionTest.java",
         "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6EndToEndTest.java",
         "vibetags/src/test/java/se/deversity/vibetags/processor/NewAnnotationsV6ValidationTest.java",
+        // Malformed-JSON fixtures. Json's javadoc and JsonTest both use "1.2.3" as an example of
+        // a string a lenient number parser would wrongly accept, and the test asserts it is
+        // rejected. It is a JSON literal, not a coordinate; rewriting it on the release that
+        // happens to be numbered 1.2.3 would break the assertion it exists to make.
+        "vibetags/src/main/java/se/deversity/vibetags/processor/internal/Json.java",
+        "vibetags/src/test/java/se/deversity/vibetags/processor/internal/JsonTest.java",
         // The benchmark plotters. Two default --version to the last release that actually has
         // measurements under load-tests/results/; bumping that on release would aim them at a
         // directory nobody has generated yet. The other two name versions inside a comment
