@@ -1,8 +1,8 @@
 # Normalise line endings to LF in the repository AND in the working tree.
 #
 # eol=lf on everything (not just normalisation to LF in the index) because the
-# VibeTags processor itself writes generated files (example/CLAUDE.md,
-# example/.cursorrules, ...) with LF line endings: under core.autocrlf=true on
+# VibeTags processor itself writes generated files (examples/basic/CLAUDE.md,
+# examples/basic/.cursorrules, ...) with LF line endings: under core.autocrlf=true on
 # Windows those files checked out as CRLF, so every local example build left
 # dozens of files "modified" in git status with an empty diff. With eol=lf the
 # checkout matches what the processor writes and regeneration stays invisible.

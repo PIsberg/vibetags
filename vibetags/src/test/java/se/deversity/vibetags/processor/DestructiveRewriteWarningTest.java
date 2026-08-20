@@ -191,7 +191,7 @@ class DestructiveRewriteWarningTest {
      * whose sources it was never shown.
      *
      * <p>This is not hypothetical arithmetic. On a cold clone of this repository,
-     * {@code cd example-multimodule && mvn -B -pl core clean compile} deleted 256 committed rule
+     * {@code cd examples/multimodule && mvn -B -pl core clean compile} deleted 256 committed rule
      * files and exited 0. The full reactor hid it, because a later module rewrote them all before
      * the build ended.
      *

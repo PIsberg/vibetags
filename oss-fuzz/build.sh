@@ -5,7 +5,7 @@
 # The two `cd vibetags` commands are intentional, not a typo:
 #   - First cd: enter the repo root that the Dockerfile copied to $SRC/vibetags.
 #   - Second cd: enter the vibetags/ subproject (the processor jar lives here;
-#     vibetags-annotations/, vibetags-bom/, example/, load-tests/ are siblings).
+#     vibetags-annotations/, vibetags-bom/, examples/basic/, load-tests/ are siblings).
 set -eu
 
 # 1. Enter $SRC/vibetags (the repo root).

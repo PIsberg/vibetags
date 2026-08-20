@@ -90,57 +90,57 @@ jobs:
 
       - name: Reset AI Config Files (Maven)
         run: |
-          cd example
+          cd examples/basic
           bash reset-ai-files.sh
 
       - name: Build Example Project (Maven)
         run: |
-          cd example
+          cd examples/basic
           mvn clean compile -B -Dvibetags.log.path=../vibetags.log
 
       - name: Verify The Example's Committed Guardrails Match Its Annotations
         run: |
-          # The three reactors run check mode. example/ cannot: the step above empties its config
+          # The three reactors run check mode. examples/basic/ cannot: the step above empties its config
           # files and regenerates them, so check mode would compare the fresh tree against itself.
           # Comparing against git is the equivalent gate, and a slightly stronger one — it proves a
           # from-empty regeneration reproduces exactly what is committed. It fails when someone
           # edits an annotation here and forgets to commit the regenerated files, which until now
           # went unnoticed.
-          if [ -n "$(git status --porcelain -- example/)" ]; then
-            echo "::error::example/ guardrail files are out of date with its annotations."
-            echo "Run: cd example && mvn clean compile   then commit the regenerated files."
-            git status --porcelain -- example/
-            git --no-pager diff -- example/
+          if [ -n "$(git status --porcelain -- examples/basic/)" ]; then
+            echo "::error::examples/basic/ guardrail files are out of date with its annotations."
+            echo "Run: cd examples/basic && mvn clean compile   then commit the regenerated files."
+            git status --porcelain -- examples/basic/
+            git --no-pager diff -- examples/basic/
             exit 1
           fi
-          echo "example/ regenerates byte-for-byte to the committed files."
+          echo "examples/basic/ regenerates byte-for-byte to the committed files."
 
       - name: Build Multi-Module Example (Maven reactor)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           mvn clean verify -B
 
       - name: Verify The Multi-Module Example's Committed Guardrails Match Its Annotations
         run: |
-          # The gate example/ has had for a while, now that this reactor can pass it. It could not
+          # The gate examples/basic/ has had for a while, now that this reactor can pass it. It could not
           # before: .vibetags-locks recorded absolute source paths, so the file differed on every
           # runner and this check would have failed on every clean run.
           #
           # Issue #383 stayed invisible for exactly as long as nothing compared this reactor against
           # git. A module round was deleting 256 committed rule files mid-build and a later module
           # was putting them back, so the only trace was one warning in a 5000-line log.
-          if [ -n "$(git status --porcelain -- example-multimodule/)" ]; then
-            echo "::error::example-multimodule/ guardrail files are out of date with its annotations."
-            echo "Run: cd example-multimodule && mvn clean verify   then commit the regenerated files."
-            git status --porcelain -- example-multimodule/
-            git --no-pager diff -- example-multimodule/
+          if [ -n "$(git status --porcelain -- examples/multimodule/)" ]; then
+            echo "::error::examples/multimodule/ guardrail files are out of date with its annotations."
+            echo "Run: cd examples/multimodule && mvn clean verify   then commit the regenerated files."
+            git status --porcelain -- examples/multimodule/
+            git --no-pager diff -- examples/multimodule/
             exit 1
           fi
-          echo "example-multimodule/ regenerates byte-for-byte to the committed files."
+          echo "examples/multimodule/ regenerates byte-for-byte to the committed files."
 
       - name: Verify Transitive Guardrails Propagate Through The Reactor
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # The manifest has to land in the module's own class output at a package-named path, or
           # nothing downstream can read it. javac's CLASS_PATH location skips archive directories
           # that are not valid package names, so META-INF/ is unreadable from an annotation
@@ -168,7 +168,7 @@ jobs:
 
       - name: Verify Multi-Module Aggregation (issue #278)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
                        "VIBETAGS-MODULE: showcase" \
                        "com.example.multimodule.core.IrNode" \
@@ -181,10 +181,10 @@ jobs:
 
       - name: Verify Every Annotation Survives the Reactor Merge
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # showcase/ carries all 44 @AI* annotations, so the merged root must show all 44 of the
           # renderer's element buckets. A renderer that silently drops a family in the multi-module
-          # path — as opposed to the single-module path example/ covers — fails here.
+          # path — as opposed to the single-module path examples/basic/ covers — fails here.
           declared=$(ls ../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/*.java | wc -l)
           sections=$(grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u | wc -l)
           if [ "$sections" -ne "$declared" ]; then
@@ -196,11 +196,11 @@ jobs:
 
       - name: Verify Every AI Service Is Generated in a Reactor
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # The reactor root opts into every non-granular service, so every renderer runs through
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
-          # collapses the aggregates, which is what example-multimodule-indexed/ covers.)
+          # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
           expected=50
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
@@ -226,7 +226,7 @@ jobs:
 
       - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # Check mode is what a consumer runs in CI: instead of regenerating, the processor fails
           # the build when a generated file no longer matches the annotations. Running it here does
           # two jobs. It exercises the feature end-to-end through a real reactor — the only test of
@@ -240,7 +240,7 @@ jobs:
 
       - name: Verify Reactor YAML Is Readable By The Tools That Consume It
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # "The file exists and says VIBETAGS" is what the check above proves, and it is not
           # enough: the merge once stacked each module's whole document, so these files carried
           # their top-level key once per module. Strict parsers rejected them and lenient ones kept
@@ -294,7 +294,7 @@ jobs:
 
       - name: Verify Per-Module (nested) Output
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # cli/ opts into its own CLAUDE.md, so it must carry ONLY cli's guardrails...
           grep -qF "com.example.multimodule.cli.MultiModuleCli" cli/CLAUDE.md \
             || { echo "MISSING in cli/CLAUDE.md: cli guardrail"; exit 1; }
@@ -310,7 +310,7 @@ jobs:
 
       - name: Verify Cross-Module Mirroring (issue #312)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # tests/ has no @AI* annotations of its own; it opted in via .vibetags-mirror, so each
           # source module's scoped rules must be mirrored there under its own namespace.
           for f in mirrored-core-com-example-multimodule-core-IrNode.md \
@@ -349,7 +349,7 @@ jobs:
 
       - name: Verify Granular Role Files Merge Across Modules (issue #365)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           # .vibetags-roles routes core/, engine/ and cli/ into ONE root rule file, so all three
           # modules write the same path. Each compile used to replace it with its own classes
           # alone, and only the module that happened to compile last kept its guardrails.
@@ -381,7 +381,7 @@ jobs:
 
       - name: Build All-Tiers Example And Verify The Tier Split
         run: |
-          cd example-all-tiers
+          cd examples/all-tiers
           mvn clean compile -B
           # Tier 1 must carry the six safety buckets inline and nothing verbose: a guardrail that
           # only loads once the agent opens the file it protects has become a comment, and a
@@ -422,24 +422,24 @@ jobs:
 
       - name: Verify The All-Tiers Example's Committed Guardrails (check mode)
         run: |
-          cd example-all-tiers
+          cd examples/all-tiers
           mvn clean compile -B -Dvibetags.check=true
 
       - name: Build Indexed Multi-Module Example (issue #295)
         run: |
-          cd example-multimodule-indexed
+          cd examples/multimodule-indexed
           mvn clean compile -B
 
       - name: Verify The Indexed Example's Committed Guardrails (check mode)
         run: |
-          cd example-multimodule-indexed
+          cd examples/multimodule-indexed
           # Runs after the build above, so the tree is already regenerated: a failure here means
           # the committed files disagree with the committed annotations.
           mvn clean compile -B -Dvibetags.check=true
 
       - name: Verify Indexed Root (issues #295, #319, #332)
         run: |
-          cd example-multimodule-indexed
+          cd examples/multimodule-indexed
           # Root CLAUDE.md is a lean INDEX: one pointer per module...
           for m in core app; do
             grep -qF "VIBETAGS-MODULE: $m" CLAUDE.md \
@@ -495,7 +495,7 @@ jobs:
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:
-          working-directory: example
+          working-directory: examples/basic
 
       - name: Verify the Central deploy script reports failures
         if: matrix.java == '21'
@@ -521,7 +521,7 @@ jobs:
           path: |
             vibetags.log
             vibetags/vibetags.log
-            example/vibetags.log
+            examples/basic/vibetags.log
             vibetags/target/surefire-reports/
             vibetags-cli/target/surefire-reports/
           if-no-files-found: ignore
@@ -575,17 +575,17 @@ jobs:
 
       - name: Reset AI Config Files (Maven)
         run: |
-          cd example
+          cd examples/basic
           bash reset-ai-files.sh
 
       - name: Build Example Project (Maven)
         run: |
-          cd example
+          cd examples/basic
           mvn -B clean compile
 
       - name: Build Multi-Module Example (Maven reactor)
         run: |
-          cd example-multimodule
+          cd examples/multimodule
           mvn clean verify -B
           grep -qF "VIBETAGS-MODULE: core" CLAUDE.md
           grep -qF "VIBETAGS-MODULE: engine" CLAUDE.md
@@ -602,7 +602,7 @@ jobs:
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:
-          working-directory: example
+          working-directory: examples/basic
 
       # Same rationale as the Maven job's upload: a Windows- or macOS-only failure with no
       # log is the expensive kind. The OS-specific file-handling paths are exactly why this
@@ -615,7 +615,7 @@ jobs:
           path: |
             vibetags.log
             vibetags/vibetags.log
-            example/vibetags.log
+            examples/basic/vibetags.log
             vibetags/target/surefire-reports/
           if-no-files-found: ignore
 
@@ -721,12 +721,12 @@ jobs:
 
       - name: Reset AI Config Files (Gradle)
         run: |
-          cd example
+          cd examples/basic
           bash reset-ai-files.sh
 
       - name: Build Example Project (Gradle)
         run: |
-          cd example
+          cd examples/basic
           ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
 
       # JDK 21 only: the Kotlin Gradle plugin trails new JDK releases, and the example pins a
@@ -735,7 +735,7 @@ jobs:
       - name: Build Kotlin Example Project (Gradle + kapt)
         if: matrix.java == '21'
         run: |
-          cd example-kotlin
+          cd examples/kotlin
           ./gradlew clean build --no-daemon
           # Proof kapt actually ran the processor over the Kotlin sources: the regenerated
           # files must name the annotated Kotlin elements, stub signatures included.
@@ -748,7 +748,7 @@ jobs:
       - name: Build Groovy Example Project (Gradle, joint-compilation stubs)
         if: matrix.java == '21'
         run: |
-          cd example-groovy
+          cd examples/groovy
           ./gradlew clean build --no-daemon
           grep -qF "com.example.groovy.InventoryService.reserve(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.groovy.InventoryService" .cursorrules
@@ -760,7 +760,7 @@ jobs:
       - name: Build Scala Example Project (Gradle, Java sources only)
         if: matrix.java == '21'
         run: |
-          cd example-scala
+          cd examples/scala
           ./gradlew clean build --no-daemon
           grep -qF "com.example.scala.AuditLog" CLAUDE.md
           ! grep -q "ReportEngine" CLAUDE.md
@@ -776,7 +776,7 @@ jobs:
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:
-          working-directory: example
+          working-directory: examples/basic
 
       - name: Upload coverage to Codecov
         if: matrix.java == '21'

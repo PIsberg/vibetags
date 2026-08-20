@@ -6,9 +6,9 @@ rules in the file it ended up in.
 
 | Example | Tier 1 | Tier 2 | Tier 3 |
 |---|---|---|---|
-| [`../example`](../example) | root `CLAUDE.md` | — | root `.claude/rules/` |
-| [`../example-multimodule`](../example-multimodule) | merged root | per-module `CLAUDE.md` | — |
-| [`../example-multimodule-indexed`](../example-multimodule-indexed) | **indexed** root | — | per-module `.claude/rules/` |
+| [`../example`](../basic) | root `CLAUDE.md` | — | root `.claude/rules/` |
+| [`../examples/multimodule`](../multimodule) | merged root | per-module `CLAUDE.md` | — |
+| [`../examples/multimodule-indexed`](../multimodule-indexed) | **indexed** root | — | per-module `.claude/rules/` |
 | **this one** | **indexed** root | per-module `CLAUDE.md` | per-module `.claude/rules/`, grouped by role |
 
 ## What is opted in, and what each opt-in buys

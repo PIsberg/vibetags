@@ -4,8 +4,8 @@ How VibeTags behaves when more than one Maven/Gradle module compiles into the sa
 the four opt-ins that shape that output. Split out of `CLAUDE.md` — read this when working on
 sidecars, per-module output, roles, or cross-module mirroring.
 
-`example-multimodule/` is a three-module reactor demonstrating the sidecar merge end-to-end (built
-and asserted in CI); `example-multimodule-indexed/` demonstrates the lean root index.
+`examples/multimodule/` is a three-module reactor demonstrating the sidecar merge end-to-end (built
+and asserted in CI); `examples/multimodule-indexed/` demonstrates the lean root index.
 
 ## Sidecar aggregation (the default)
 
@@ -29,7 +29,7 @@ generated YAML documents (`sweep.yaml`, `.plandex.yaml`, `.coderabbit.yaml`, `el
 `.roomodes`, `.interpreter/profiles/vibetags.yaml`): a YAML document has one `rules:`, one
 `reviews:`, one `customModes:`, and stacking N modules repeated the key N times. A strict parser
 rejects that; a lenient one keeps the last occurrence, so every module but one lost its guardrails
-silently. Measured on `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
+silently. Measured on `examples/multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
 exposed 1 module of 4, `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
 
 Those platforms therefore declare a `PlatformRenderer.mergeShape()` — the line their shared scaffold
@@ -52,7 +52,7 @@ They never refreshed. The write phase decides whether a shared file may be rewri
 bodies were stored only for marker-based services. For a JSON or TOML output the answer was
 permanently "no module contributed", so the writer's `no-new-rules` guard skipped every update to an
 existing file. Whatever the first successful write produced was frozen there: on the four-module
-`example-multimodule`, `.mentatconfig.json` held **1 entry from 1 module**, and every later build
+`examples/multimodule`, `.mentatconfig.json` held **1 entry from 1 module**, and every later build
 logged `no changes`.
 
 Fixing only that would have turned a frozen file into a last-writer-wins file, because a whole-file

@@ -5,7 +5,7 @@ A practical demonstration of **VibeTags** — Java annotations that act as AI gu
 ## 🎯 What This Example Demonstrates
 
 This is a sample e-commerce application that exercises **every one of the
-[44 annotations](../README.md#project-facts)** — not a representative subset. If an annotation
+[44 annotations](../../README.md#project-facts)** — not a representative subset. If an annotation
 exists, something here uses it, which makes this project the fastest way to see what a given
 annotation actually produces: annotate, compile, read the generated file.
 
@@ -62,12 +62,12 @@ build rather than quietly going undocumented. (This section previously claimed t
 | **@AIThreadSafe** | `com/example/concurrent/SessionCache.java` |
 
 Grouped by intent, with a sentence on what each one is for, they are documented once in the
-[main README](../README.md#key-features) — that is the single source of truth for what an
+[main README](../../README.md#key-features) — that is the single source of truth for what an
 annotation *means*; this table is the source of truth for where to *see* one.
 
-When compiled, the VibeTags annotation processor automatically generates AI configuration files for every supported platform (see the [project facts](../README.md#project-facts) in the main README).
+When compiled, the VibeTags annotation processor automatically generates AI configuration files for every supported platform (see the [project facts](../../README.md#project-facts) in the main README).
 
-> **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../README.md).
+> **Note:** For an overview of the VibeTags project, installation instructions, and a quick start guide, see the [main README](../../README.md).
 
 ## 📁 Project Structure
 
@@ -222,7 +222,7 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
 | *(and more)* | |
 
-See the [main README](../README.md#supported-ai-platforms) for the complete list of supported platforms.
+See the [main README](../../README.md#supported-ai-platforms) for the complete list of supported platforms.
 
 ---
 
@@ -1035,13 +1035,13 @@ The processor uses `Paths.get("")` which resolves to the JVM working directory. 
 
 ## 📚 Resources
 
-- **Main README:** [`../README.md`](../README.md) — installation, the full platform list, architecture overview
-- **Architecture:** [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) — deep-dive into processor internals
+- **Main README:** [`../README.md`](../../README.md) — installation, the full platform list, architecture overview
+- **Architecture:** [`../docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) — deep-dive into processor internals
 - **Issue Tracker:** [GitHub Issues](https://github.com/PIsberg/vibetags/issues)
 
 ## 📝 License
 
-This example project is licensed under the [MIT License](../LICENSE).
+This example project is licensed under the [MIT License](../../LICENSE).
 
 
 ## VibeTags tiers (single-module)
@@ -1054,5 +1054,5 @@ human-named topic files.
 
 In a **multi-module reactor** a root `.claude/rules/` can't aggregate across modules — put Tier-3
 rules per module and use an indexed root instead. See
-[`../example-multimodule-indexed`](../example-multimodule-indexed) and the repository README's
+[`../examples/multimodule-indexed`](../multimodule-indexed) and the repository README's
 *Organizing Context Files* section ([#295](https://github.com/PIsberg/vibetags/issues/295)).

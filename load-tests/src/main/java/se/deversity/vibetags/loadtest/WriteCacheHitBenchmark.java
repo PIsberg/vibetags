@@ -70,7 +70,7 @@ public class WriteCacheHitBenchmark {
     private Path smallNonMarkerFile;
     private String smallBody;
 
-    // Medium workload (12 KB body — matches example/ generated CLAUDE.md, .cursorrules, llms-full.txt).
+    // Medium workload (12 KB body — matches examples/basic/ generated CLAUDE.md, .cursorrules, llms-full.txt).
     private Path mediumMarkerFile;
     private Path mediumNonMarkerFile;
     private String mediumBody;

@@ -210,12 +210,12 @@ One caveat: kapt processes generated Java stubs, which carry no method bodies �
 annotations on declarations *inside* a function body are invisible, and `.vibetags-locks`
 line ranges would describe the stub rather than the `.kt` file. Class-level and
 function-level annotations — the normal usage — work fully. A complete working consumer
-is in [`example-kotlin/`](example-kotlin/README.md).
+is in [`examples/kotlin/`](examples/kotlin/README.md).
 
 **Other JVM languages:** Groovy is fully supported via joint-compilation stubs
-(`javaAnnotationProcessing = true` — see [`example-groovy/`](example-groovy/README.md));
+(`javaAnnotationProcessing = true` — see [`examples/groovy/`](examples/groovy/README.md));
 Scala and Clojure toolchains never run JSR 269 processors, so guardrails there live on
-annotated Java neighbours ([`example-scala/`](example-scala/README.md)). The full support
+annotated Java neighbours ([`examples/scala/`](examples/scala/README.md)). The full support
 matrix is in [USAGE.md](USAGE.md#other-jvm-languages-groovy-scala-clojure).
 
 </details>
@@ -267,10 +267,10 @@ carries: **what it can annotate**, and **which tier its guardrail lands in**.
 - **Tier** is where the rule shows up once a platform's scoped-rules directory is opted in.
   **safety** guardrails stay inline in the always-loaded aggregate, because a rule that only loads
   after the agent opens the file it protects has already failed. Everything else moves to the
-  scoped file and is replaced by a one-line pointer. See [`example-all-tiers/`](example-all-tiers/README.md), which demonstrates all three.
+  scoped file and is replaced by a one-line pointer. See [`examples/all-tiers/`](examples/all-tiers/README.md), which demonstrates all three.
 - **Required attributes** have no default; leave one out and the code does not compile.
 
-Every annotation below is used in [`example/`](example/README.md) — that README maps each one to the
+Every annotation below is used in [`examples/basic/`](examples/basic/README.md) — that README maps each one to the
 file demonstrating it — and all four example projects exercise the full set.
 
 | Annotation | Can annotate | Required attributes | Tier |
@@ -455,7 +455,7 @@ vibetags/
 │   ├── pom.xml           # Maven build configuration
 │   ├── build.gradle      # Gradle build configuration
 │   └── src/              # Library source code
-├── example/              # Example e-commerce application
+├── examples/basic/              # Example e-commerce application
 │   ├── pom.xml           # Maven build configuration
 │   ├── build.gradle      # Gradle build configuration
 │   ├── README.md         # Detailed usage guide and best practices
@@ -467,9 +467,9 @@ vibetags/
 ├── vibetags-cli/         # Companion CLI: `init` (create opt-in files) and `doctor` (project health)
 │   ├── pom.xml
 │   └── src/              # Reads platform keys and marker rules from the processor — no second list
-├── example-kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
-├── example-groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
-├── example-scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
+├── examples/kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
+├── examples/groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
+├── examples/scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -547,7 +547,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 </build>
 ```
 
-> **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `example/pom.xml`.
+> **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `examples/basic/pom.xml`.
 
 > **Note (JDK 23+):** `javac` only runs annotation processors that are explicitly configured; `<annotationProcessorPaths>` and Gradle's `annotationProcessor` qualify. A pom that instead lists `vibetags-processor` as an ordinary dependency silently generates nothing on JDK 23+ unless `<proc>full</proc>` is added to `maven-compiler-plugin`. More silent-failure cases: [Troubleshooting: Nothing Was Generated](USAGE.md#troubleshooting-nothing-was-generated).
 
@@ -717,7 +717,7 @@ The next compile writes `payments-tests/.claude/rules/mirrored-payments-core-*.m
 module's rule verbatim, with your test globs added. The target needs no `@AI*` annotations of its
 own, mirrored files are namespaced per source module (so modules compiling independently never
 clobber each other), and they are cleaned up like any other generated file when the annotations go
-away. Worked example: [`example-multimodule/tests/`](example-multimodule/tests/).
+away. Worked example: [`examples/multimodule/tests/`](examples/multimodule/tests/).
 
 ### Recommended layout for a multi-module project
 
@@ -751,12 +751,12 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 | **Reactor, lean** | `CLAUDE.md` + `.vibetags-root-index` (indexed) | per-module `.claude/rules/` |
 | **Reactor, always-on** | `CLAUDE.md` (merged) | per-module `CLAUDE.md` (Tier 2) |
 
-**Worked examples:** [`example/`](example/) (single-module, root granular — Tier 3 at the root),
-[`example-multimodule/`](example-multimodule/) (reactor, merged root + per-module Tier 2),
-[`example-multimodule-indexed/`](example-multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
-[`example-all-tiers/`](example-all-tiers/) (**all three tiers at once**, with a class annotated at
+**Worked examples:** [`examples/basic/`](examples/basic/) (single-module, root granular — Tier 3 at the root),
+[`examples/multimodule/`](examples/multimodule/) (reactor, merged root + per-module Tier 2),
+[`examples/multimodule-indexed/`](examples/multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
+[`examples/all-tiers/`](examples/all-tiers/) (**all three tiers at once**, with a class annotated at
 every level — type, instance field, method, and method parameter — so you can see which tier each
-one lands in), and [`example-kotlin/`](example-kotlin/) (Kotlin sources under kapt — same
+one lands in), and [`examples/kotlin/`](examples/kotlin/) (Kotlin sources under kapt — same
 annotations, same generated files).
 
 ## 📚 Documentation
@@ -764,7 +764,7 @@ annotations, same generated files).
 | Resource | What it covers |
 |---|---|
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
-| **[Example Project](example/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
+| **[Example Project](examples/basic/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
@@ -887,7 +887,7 @@ The core annotation processor library. Contains the annotation processor that ge
 configuration files at compile time; the annotations themselves live in `vibetags-annotations/`
 (see [project facts](#project-facts) for the count).
 
-### [example/](example/README.md)
+### [examples/basic/](examples/basic/README.md)
 A practical e-commerce application demonstrating every VibeTags annotation
 (see [project facts](#project-facts) for the count), held to that by `ExampleCoverageTest`. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
 

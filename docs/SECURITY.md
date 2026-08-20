@@ -74,4 +74,4 @@ Two considerations are specific to this kind of tool and worth understanding:
 
 ## Scope
 
-This policy covers the `vibetags-processor` library and its annotation processor. The `example/` and `load-tests/` subprojects are for demonstration and benchmarking purposes only and are not intended for production use.
+This policy covers the `vibetags-processor` library and its annotation processor. The `examples/basic/` and `load-tests/` subprojects are for demonstration and benchmarking purposes only and are not intended for production use.

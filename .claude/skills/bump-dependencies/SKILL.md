@@ -30,7 +30,7 @@ to its `PINS` table in the same change, so the report can never silently go stal
   change how the build runs (compiler, surefire, enforcer, spotbugs, pmd, error-prone,
   nullaway) can turn a green build red for reasons unrelated to the code; that is not a
   reason to skip them, it is a reason to run the full gates below.
-- Kotlin: `example-kotlin` uses kapt; a Kotlin bump is verified by that example's Gradle
+- Kotlin: `examples/kotlin` uses kapt; a Kotlin bump is verified by that example's Gradle
   build, nothing less.
 
 ## Step 3 - Apply, including the mirrors
@@ -41,10 +41,10 @@ Edit the property in `vibetags-parent/pom.xml`. Then the places that cannot inhe
 |-----|---------------|
 | `junit.version`, `junit.platform.version`, `mockito.version`, `archunit.version`, `async-test-lib.version`, `snakeyaml.version`, `logback.version`, `slf4j.version`, `jspecify.version` | `vibetags/build.gradle` (coordinates; `BuildVersionParityTest` enforces) |
 | `pmd.version` | `toolVersion` in `vibetags/build.gradle` and `vibetags-annotations/build.gradle` (enforced) |
-| `maven-compiler-plugin.version` | literals in `example/pom.xml`, `example-multimodule/pom.xml`, `example-multimodule-indexed/pom.xml`, `example-all-tiers/pom.xml`, `tools/demo/pom.xml` (consumer poms; keep them in step) |
-| Gradle wrapper | `gradle/wrapper/gradle-wrapper.properties` in `vibetags`, `vibetags-annotations`, `example`, `example-kotlin`, `example-groovy`, `example-scala`; the version named in `docs/DEPENDENCIES.md` |
-| Kotlin | `example-kotlin/build.gradle.kts` (`jvm` and `kapt`), the snippets in `README.md` and `example-kotlin/README.md` |
-| Groovy, Scala | `example-groovy/build.gradle`, `example-scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
+| `maven-compiler-plugin.version` | literals in `examples/basic/pom.xml`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `examples/all-tiers/pom.xml`, `tools/demo/pom.xml` (consumer poms; keep them in step) |
+| Gradle wrapper | `gradle/wrapper/gradle-wrapper.properties` in `vibetags`, `vibetags-annotations`, `example`, `examples/kotlin`, `examples/groovy`, `examples/scala`; the version named in `docs/DEPENDENCIES.md` |
+| Kotlin | `examples/kotlin/build.gradle.kts` (`jvm` and `kapt`), the snippets in `README.md` and `examples/kotlin/README.md` |
+| Groovy, Scala | `examples/groovy/build.gradle`, `examples/scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
 | pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |
 
 Never touch `<revision>`: that is the VibeTags release version, owned by `scripts/set-version.sh`
@@ -60,10 +60,10 @@ From the repo root, in this order (each depends on the previous install):
 (cd vibetags-bom && mvn -B install) && (cd vibetags-cli && mvn -B install)
 (cd load-tests && mvn -B test-compile)
 (cd vibetags && ./gradlew clean compileTestJava --no-daemon)   # the Gradle side resolves the new pins
-(cd example-kotlin && ./gradlew clean build --no-daemon)       # kapt against the new Kotlin
-(cd example-groovy && ./gradlew clean build --no-daemon)
-(cd example-scala && ./gradlew clean build --no-daemon)
-(cd example && ./gradlew clean build --no-daemon)
+(cd examples/kotlin && ./gradlew clean build --no-daemon)       # kapt against the new Kotlin
+(cd examples/groovy && ./gradlew clean build --no-daemon)
+(cd examples/scala && ./gradlew clean build --no-daemon)
+(cd examples/basic && ./gradlew clean build --no-daemon)
 git add -A && SKIP=checkstyle python -m pre_commit run --all-files
 ```
 

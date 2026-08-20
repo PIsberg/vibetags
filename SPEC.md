@@ -201,4 +201,4 @@ Similar structures will be implemented across Windsurf `.windsurfrules`, Zed `.r
 5. **Parallel Execution Verification**: Enable Surefire parallel execution and run the entire suite using `mvn test`. Ensure all tests complete successfully in parallel.
 
 ### 4.2 Manual Verification
-* **Example Project Compilation**: Run the annotation processor against the `example/` project to verify compilation stability and output format correctness.
+* **Example Project Compilation**: Run the annotation processor against the `examples/basic/` project to verify compilation stability and output format correctness.

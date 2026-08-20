@@ -373,7 +373,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // every consuming module inherit nothing, compare that against committed files
                     // that correctly carry the inherited rules, and report drift on a build where
                     // nothing is wrong. Verified the hard way: moving this below the branch turned
-                    // example-multimodule's check-mode gate red on every Maven leg.
+                    // examples/multimodule's check-mode gate red on every Maven leg.
                     //
                     // This does not weaken what check mode promises. CLASS_OUTPUT is the
                     // compiler's own output directory, which javac is filling with class files

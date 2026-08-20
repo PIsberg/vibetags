@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * is meant to copy, and the install snippets in the documentation. That set grows every time an
  * example or a doc is added, and the script's list is a hand-maintained copy of it.
  *
- * <p>It had already drifted. {@code example-all-tiers/pom.xml} was checked by
+ * <p>It had already drifted. {@code examples/all-tiers/pom.xml} was checked by
  * {@link BuildVersionParityTest} but never written by the script, so the documented release
  * procedure failed partway through. {@code README.md} and the usage skill were checked by nothing
  * at all — a GA cut with that gap would have shipped eleven install snippets telling every new
@@ -70,24 +70,24 @@ class ReleaseScriptCoverageTest {
         // (groupId se.deversity.vibetags.example) at version 1.0.0, which is the sample
         // project's own version, not a VibeTags coordinate. The roots do carry one (the BOM
         // property), and set-version.sh rewrites the roots.
-        "example-all-tiers/billing/pom.xml",
-        "example-all-tiers/shipping/pom.xml",
-        "example-multimodule-indexed/app/pom.xml",
-        "example-multimodule-indexed/core/pom.xml",
-        "example-multimodule/cli/pom.xml",
-        "example-multimodule/core/pom.xml",
-        "example-multimodule/engine/pom.xml",
-        "example-multimodule/showcase/pom.xml",
-        "example-multimodule/tests/pom.xml",
+        "examples/all-tiers/billing/pom.xml",
+        "examples/all-tiers/shipping/pom.xml",
+        "examples/multimodule-indexed/app/pom.xml",
+        "examples/multimodule-indexed/core/pom.xml",
+        "examples/multimodule/cli/pom.xml",
+        "examples/multimodule/core/pom.xml",
+        "examples/multimodule/engine/pom.xml",
+        "examples/multimodule/showcase/pom.xml",
+        "examples/multimodule/tests/pom.xml",
         // Feature-wave references in code. The showcase demos say which release their five
         // annotations shipped in and carry a CATALOG_VERSION fixture that happens to be
         // 1.0.0; AIKeepInSync's javadoc quotes an illustrative VERSION constant; the
         // NewAnnotations test javadocs name the wave they cover; GranularRenderer groups a
         // formatter block by it; the fingerprint tests pass "1.0.0" as an arbitrary fixture
-        // version; BuildVersionParityTest documents example/build.gradle's own version.
+        // version; BuildVersionParityTest documents examples/basic/build.gradle's own version.
         // None of these are release coordinates.
-        "example/src/main/java/com/example/service/EvidenceBasedShowcase.java",
-        "example-multimodule/showcase/src/main/java/com/example/service/EvidenceBasedShowcase.java",
+        "examples/basic/src/main/java/com/example/service/EvidenceBasedShowcase.java",
+        "examples/multimodule/showcase/src/main/java/com/example/service/EvidenceBasedShowcase.java",
         "vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/AIKeepInSync.java",
         "vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/platforms/GranularRenderer.java",
         "vibetags/src/test/java/se/deversity/vibetags/processor/BuildFingerprintUnitTest.java",

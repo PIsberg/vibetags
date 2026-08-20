@@ -19,15 +19,15 @@
 #   vibetags-annotations/pom.xml       Prose only: the <description> shows consumers a
 #   vibetags-bom/pom.xml               copy-pasteable snippet with a literal version in it.
 #   vibetags-cli/pom.xml               Same: the jbang one-liner in its <description>.
-#   example/pom.xml                    Standalone on purpose, so a user can lift them into
-#   example/build.gradle               their own project. Their vibetags.bom.version is a
-#   example-multimodule/pom.xml        literal, and CI builds them against the artifacts
-#   example-multimodule-indexed/pom.xml  this repo just installed, so they track the
-#   example-all-tiers/pom.xml          current version rather than the last released one.
+#   examples/basic/pom.xml                    Standalone on purpose, so a user can lift them into
+#   examples/basic/build.gradle               their own project. Their vibetags.bom.version is a
+#   examples/multimodule/pom.xml        literal, and CI builds them against the artifacts
+#   examples/multimodule-indexed/pom.xml  this repo just installed, so they track the
+#   examples/all-tiers/pom.xml          current version rather than the last released one.
 #   tools/demo/pom.xml
-#   example-kotlin/build.gradle.kts    Same standalone-consumer shape: their BOM
-#   example-groovy/build.gradle        coordinates are literals kept in step here
-#   example-scala/build.gradle         (Kotlin DSL for the first, Groovy DSL for the rest).
+#   examples/kotlin/build.gradle.kts    Same standalone-consumer shape: their BOM
+#   examples/groovy/build.gradle        coordinates are literals kept in step here
+#   examples/scala/build.gradle         (Kotlin DSL for the first, Groovy DSL for the rest).
 #
 #   README.md                          Install snippets. A consumer copies these verbatim, so a
 #   .claude/skills/vibetags-usage/     GA that still says RC9 hands every new user the wrong
@@ -132,9 +132,9 @@ replace_xml_property "$PARENT_POM" "revision"
 for rel in \
     vibetags-annotations/build.gradle \
     vibetags/build.gradle \
-    example-kotlin/build.gradle.kts \
-    example-groovy/build.gradle \
-    example-scala/build.gradle \
+    examples/kotlin/build.gradle.kts \
+    examples/groovy/build.gradle \
+    examples/scala/build.gradle \
 ; do
     replace_gradle_vibetags_refs "$ROOT_DIR/$rel"
 done
@@ -143,11 +143,11 @@ for rel in \
     vibetags-annotations/pom.xml \
     vibetags-bom/pom.xml \
     vibetags-cli/pom.xml \
-    example/pom.xml \
-    example/build.gradle \
-    example-multimodule/pom.xml \
-    example-multimodule-indexed/pom.xml \
-    example-all-tiers/pom.xml \
+    examples/basic/pom.xml \
+    examples/basic/build.gradle \
+    examples/multimodule/pom.xml \
+    examples/multimodule-indexed/pom.xml \
+    examples/all-tiers/pom.xml \
     tools/demo/pom.xml \
     README.md \
     .claude/skills/vibetags-usage/SKILL.md \

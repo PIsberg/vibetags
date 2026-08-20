@@ -17,7 +17,7 @@ import java.util.Map;
  * stored for marker-based services, so {@code anyContributed} was permanently false for a JSON or
  * TOML output and the writer's {@code no-new-rules} guard skipped every update to an existing file:
  * whatever the first successful write produced was frozen there. On the four-module
- * {@code example-multimodule}, {@code .mentatconfig.json} held only {@code core}'s guardrails, and
+ * {@code examples/multimodule}, {@code .mentatconfig.json} held only {@code core}'s guardrails, and
  * every subsequent build reported "no changes".
  *
  * <p>Implementations re-assemble the document from every module's rendering. They are format-aware

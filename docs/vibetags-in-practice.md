@@ -20,7 +20,7 @@ Five codebases use VibeTags. All are authored by the same developer, so this is 
 
 Two areas inside the VibeTags repo are **not** real usage and are excluded from all counts below:
 
-- **`example/`** — at least one use of every annotation type. This is a coverage matrix, not a risk model: one annotation per formatter code path, wired into the `verify-generated-files` CI action that greps generated output for expected strings. Its heavy `@AIDraft` use (15 real sites) exists because demonstrating "AI, implement this" requires stub bodies.
+- **`examples/basic/`** — at least one use of every annotation type. This is a coverage matrix, not a risk model: one annotation per formatter code path, wired into the `verify-generated-files` CI action that greps generated output for expected strings. Its heavy `@AIDraft` use (15 real sites) exists because demonstrating "AI, implement this" requires stub bodies.
 - **`load-tests/`** — `SyntheticClassGenerator` emits annotations *as strings at runtime* on a modulo schedule (every class `@AIContext`, every 2nd `@AILocked`, every 5th `@AIPrivacy`…), sweeping N from 10 to 10,000 classes. Annotations as synthetic load, not guardrails.
 
 ### The headline finding
@@ -86,7 +86,7 @@ Nobody has opted into Cursor, Copilot, Windsurf, Codex, or any of the other ~40 
 
 ## 3. Per-annotation analysis
 
-Ordered by real-world usage. Counts exclude `example/` and `load-tests/`.
+Ordered by real-world usage. Counts exclude `examples/basic/` and `load-tests/`.
 
 ### `@AITestDriven` — 108 uses (async-test-lib 103, blindbean 4, codekarta 1)
 
@@ -408,7 +408,7 @@ public static void install(AsyncTestContext ctx) { CURRENT.set(ctx); }
 
 ### Never used in real code — 7 annotations
 
-**`@AIDraft`, `@AIPrototype`, `@AITemporary`, `@AISunset`, `@AIDeprecated`, `@AIRegulation`, `@AISandboxOnly`** appear only in `example/` fixtures. Zero real sites across five projects.
+**`@AIDraft`, `@AIPrototype`, `@AITemporary`, `@AISunset`, `@AIDeprecated`, `@AIRegulation`, `@AISandboxOnly`** appear only in `examples/basic/` fixtures. Zero real sites across five projects.
 
 The first five are **lifecycle/maturity markers for code in flux**. All five projects are libraries or tools with a published-artifact discipline (`async-test-lib` uses apiguardian `@API(status=STABLE)`); `blindbean` is greenfield 0.1.0 with no legacy to bridge and nothing yet deprecated. Nothing is provisional, so nothing is marked provisional.
 

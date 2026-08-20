@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * that looks fine — a smaller {@code CLAUDE.md} with an index pointing at a directory that is no
  * longer there.
  *
- * <p>The fixture is {@code example-all-tiers/billing}'s own sources rather than a hand-written
+ * <p>The fixture is {@code examples/all-tiers/billing}'s own sources rather than a hand-written
  * class, so this also fails if that example stops exercising all three tiers. Sources are copied
  * into a temp root; the example on disk is never written to.
  */
@@ -45,7 +45,7 @@ class ScopedRulesOptInOptOutEndToEndTest {
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
     private static final Path EXAMPLE =
-        REPO_ROOT.resolve("example-all-tiers/billing");
+        REPO_ROOT.resolve("examples/all-tiers/billing");
 
     private static final String SCOPED_RULES = "<scoped_rules>";
     private static final String RULES_DIR = ".claude/rules";
@@ -187,7 +187,7 @@ class ScopedRulesOptInOptOutEndToEndTest {
      */
     private static Path stageExample(Path dir) throws IOException {
         assumeTrue(Files.isDirectory(EXAMPLE),
-            "example-all-tiers/billing not reachable from " + REPO_ROOT + "; skipping");
+            "examples/all-tiers/billing not reachable from " + REPO_ROOT + "; skipping");
 
         Path root = dir.resolve("staged");
         Path srcRoot = root.resolve("src/main/java");

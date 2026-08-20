@@ -32,7 +32,7 @@ class TransitiveExampleCoverageTest {
 
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
-    private static final Path REACTOR = REPO_ROOT.resolve("example-multimodule");
+    private static final Path REACTOR = REPO_ROOT.resolve("examples/multimodule");
 
     /** The package whose {@code package-info.java} publishes the demo's inherited rules. */
     private static final String PUBLISHED_PACKAGE = "com.example.multimodule.core";
@@ -42,7 +42,7 @@ class TransitiveExampleCoverageTest {
 
     @Test
     void theReactorOptsIntoBothHalvesOfTheFeature() {
-        assumeTrue(Files.isDirectory(REACTOR), "example-multimodule not reachable; skipping");
+        assumeTrue(Files.isDirectory(REACTOR), "examples/multimodule not reachable; skipping");
         assertTrue(TransitiveManifestWriter.optedIn(REACTOR),
             "the demo publishes its package guardrails, so " + TransitiveManifestWriter.MARKER_FILE
                 + " must be present at " + REACTOR);

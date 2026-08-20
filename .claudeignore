@@ -2,9 +2,9 @@
 # supported platform, so they contain hundreds of generated guardrail files that look exactly
 # like real ones. Keeping them out of the agent's view stops fixture output being mistaken for
 # this repo's own configuration.
-example/
-example-multimodule/
-example-multimodule-indexed/
+examples/basic/
+examples/multimodule/
+examples/multimodule-indexed/
 load-tests/results/
 oss-fuzz/
 node_modules/

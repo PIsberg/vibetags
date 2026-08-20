@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * last module — so every module but one silently lost its guardrails, with nothing in the build log
  * to say so.
  *
- * <p>Measured on {@code example-multimodule} (four modules) before the fix: {@code .roomodes} and
+ * <p>Measured on {@code examples/multimodule} (four modules) before the fix: {@code .roomodes} and
  * {@code .coderabbit.yaml} exposed 1 of 4 modules, {@code ellipsis.yaml} 90 of 100 rules,
  * {@code sweep.yaml} 54 of 59.
  *

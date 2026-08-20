@@ -14,7 +14,7 @@
     per-module scoped rules). The root .vibetags-root-index marker turns the root CLAUDE.md
     into one pointer per module instead of embedding every module's guardrails; each module's
     verbose detail lives in its own .claude/rules/ and loads on demand. GEMINI.md (no scoped-rules
-    feature) still carries the full merged block. Companion to ../example-multimodule (the merged
+    feature) still carries the full merged block. Companion to ../examples/multimodule (the merged
     layout) — see https://github.com/PIsberg/vibetags/issues/295.
   </description>
 

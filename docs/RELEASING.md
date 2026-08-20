@@ -198,7 +198,7 @@ The script also rewrites the places that *cannot* inherit a Maven property:
 |---|---|
 | `vibetags-annotations/build.gradle`, `vibetags/build.gradle` | Gradle cannot inherit from a Maven POM, and both publish under this version |
 | `vibetags-annotations/pom.xml`, `vibetags-bom/pom.xml` | Prose only — the `<description>` shows consumers a copy-pasteable snippet containing a literal version |
-| `example/pom.xml`, `example/build.gradle`, `example-kotlin/build.gradle.kts`, `example-multimodule/pom.xml`, `example-multimodule-indexed/pom.xml`, `tools/demo/pom.xml` | Standalone on purpose so a user can lift them into their own project; CI builds them against the artifacts this repo just installed, so they track the current version |
+| `examples/basic/pom.xml`, `examples/basic/build.gradle`, `examples/kotlin/build.gradle.kts`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `tools/demo/pom.xml` | Standalone on purpose so a user can lift them into their own project; CI builds them against the artifacts this repo just installed, so they track the current version |
 
 Still by hand, because they are prose rather than build files:
 
