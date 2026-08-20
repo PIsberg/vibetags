@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Reset all AI config files to empty (preserves files so processor opt-in stays active).
 # Use this before a clean compile to verify the processor regenerates all content.
 set -eu
