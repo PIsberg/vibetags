@@ -1,0 +1,12 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vibetags-example-gradle-shared-buildfile'
+
+// Subprojects are declared here but carry no build.gradle of their own; all of their
+// configuration lives in the root build file. This is a common Gradle style, and it changes
+// what VibeTags sees: module roots are found by walking up to the nearest build file, and
+// settings.gradle is deliberately not one of those markers.
+include 'core'
+include 'app'

@@ -767,6 +767,29 @@ jobs:
             exit 1
           fi
 
+      # Subprojects configured from the root build file, so none of them has a build file
+      # of its own and the module-root walk lands on the root for all of them. Without
+      # -Avibetags.module they share one identity and overwrite each other, losing every
+      # module's guardrails but the last to compile. This asserts the remedy holds.
+      - name: Build Gradle Shared-Build-File Example (identity from -Avibetags.module)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-shared-buildfile
+          ./gradlew clean build --no-daemon
+          grep -qF "VIBETAGS-MODULE: core" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: app" CLAUDE.md
+          # The regression this pins: app's guardrail is what disappears on a collapse.
+          grep -qF "com.example.gsb.app.Runner" CLAUDE.md
+          grep -qF "com.example.gsb.core.Ledger" CLAUDE.md
+          test -f .vibetags-mod-core
+          test -f .vibetags-mod-app
+          test ! -f .vibetags-mod-_root_
+          if [ -n "$(git status --porcelain -- CLAUDE.md)" ]; then
+            echo "::error::examples/gradle-shared-buildfile/CLAUDE.md is out of date."
+            git --no-pager diff -- CLAUDE.md
+            exit 1
+          fi
+
       # Same JDK 21 gating and same shape as the Kotlin step. Groovy's joint compilation
       # generates Java stubs and (with javaAnnotationProcessing=true) runs JSR 269
       # processors over them — the Groovy analogue of kapt.
