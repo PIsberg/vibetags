@@ -21,16 +21,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exists, so every build emitted both regions into every generated file — 24 rule files, 212
   duplicated lines, each guardrail stated twice under two `VIBETAGS-MODULE` markers.
 
-  `ModuleSidecar.readAll` now also retires a region whose annotated elements are all claimed by
-  regions of modules nested inside it. An annotated element belongs to exactly one module, so two
-  regions claiming it are the same sources read twice under a less specific identity, and the more
-  specific module wins. Coverage runs downward only and demands full containment: a subproject is
-  never retired by its ancestor, a reactor root that compiles sources of its own keeps at least one
-  element no submodule has and so keeps its region, siblings are never nested under one another,
-  and a sidecar that records no element ids is left alone. Check mode excludes the superseded
-  region without deleting anything. Existing builds heal on the first compile after the upgrade:
-  the processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
+  `ModuleSidecar.readAll` now also retires a region whose annotated elements are all claimed by a
+  fresher region above or below it in the module tree. An annotated element belongs to exactly one
+  module, so two regions claiming it are the same sources read twice and one of them is a leftover;
+  which one is settled by the sidecar timestamps, not by depth, because the move happens in both
+  directions. Sources can move *down* into a subproject, leaving the root sidecar behind, and they
+  can move *up* out of one — `app/` survives as a directory, so the module-path staleness check
+  cannot retire its sidecar either, and there the nested region is the leftover. Depth alone gets
+  that second case backwards, which is worse than the duplication it fixes: the aggregate is built
+  from sidecars, so retiring the live region freezes the generated files on the departed module's
+  last text and every later edit is lost with no diagnostic.
+
+  Ties go to the more specific module, so two sidecars written inside one filesystem tick resolve
+  the same way on every build. Otherwise the rule is conservative: it demands full containment, so
+  a reactor root that compiles sources of its own keeps at least one element no submodule has and
+  keeps its region; siblings are never in a path relation; and a sidecar that records no element
+  ids, or whose timestamp cannot be read, is left alone. Check mode excludes the superseded region
+  without deleting anything. Existing builds heal on the first compile after the upgrade: the
+  processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
   does the pruning.
+
+- **A module dropped from a mirror target's source list now stops mirroring into it.** The mirror
+  writer skipped a target that does not accept the compiling module, and skipped its cleanup with
+  it, so the rule files the module had mirrored there while the config did name it stayed forever —
+  the target kept loading a sibling's guardrails that its own config says do not belong to it, and
+  neither the target's build nor the source module's own could clear them. The module now sweeps its
+  own mirror prefix in that target on its next compile.
+
+  Scoped deliberately to self-cleanup. The target's config is an allowlist, so a sibling could in
+  principle retire the files too, but that means one module deleting inside another's namespace on
+  the strength of a filename-to-path mapping — the reach that deleted 256 committed rule files on a
+  cold reactor. Between the config change and the dropped module's next compile the stale mirror
+  therefore survives, which is pinned as the cheaper failure rather than fixed.
+
+- **Two whole-file withdrawal paths are pinned.** An element that stops being `@AILocked` now has
+  a test proving it leaves `.vibetags-locks` — the report the locked-files Action diffs a pull
+  request against, where a lock outliving its annotation fails PRs over code nobody guards any
+  more. And an `AGENTS.md` written while it was the sole AI config file keeps updating once a
+  second platform is opted in, which is how a project actually reaches the marker escape hatch of
+  invariant 4: over time, not by hand-authoring the markers. Both behaved correctly already;
+  neither had anything holding it in place.
+
+- **Three more lifecycle transitions are pinned, none of which needed a code change.** Role
+  grouping switched *on* after per-class rule files already exist retires the files the role
+  replaces, the mirror of the already-covered switch-off. Opting a granular directory back out
+  returns the aggregate to inline guardrails instead of leaving a scoped-rules index pointing at a
+  path nobody generates. And the new region prune converges: repeating a build leaves the generated
+  files byte-identical, and check mode agrees with what generation just wrote.
+
+- **The withdrawal half of the source-set split is now pinned.** A test round that actually runs
+  replaces its own contribution, so a deleted test class takes its guardrail with it. The boundary
+  is recorded rather than fixed: a source set emptied of every annotation is never compiled at all,
+  so no round is in a position to notice, and a main round cannot tell that from `test-compile` not
+  having run yet. Deleting `.vibetags-mod-<module>__test` is the escape, and the test proves it is
+  the sidecar doing it.
 
 ### Changed
 

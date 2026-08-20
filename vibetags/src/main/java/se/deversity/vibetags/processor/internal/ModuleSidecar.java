@@ -116,6 +116,9 @@ public final class ModuleSidecar {
     /** As above, for the module's own (nested) granular output; merged across source sets only. */
     private static final String KEY_MODULE_GRANULAR_UNIT_PREFIX = "~modgran~";
 
+    /** Windows path separator, folded to '/' before any module path is compared. */
+    private static final char BACKSLASH = (char) 92;
+
     /** Separator between a module id and its non-primary source set. */
     static final String SOURCE_SET_SEPARATOR = "__";
 
@@ -667,52 +670,77 @@ public final class ModuleSidecar {
             // directory the build does not need.
 
         }
-        dropSupersededAncestorRegions(result, resultFiles, prune);
+        dropSupersededRegions(result, resultFiles, prune);
         applyRootIndexModeTo(root, result);
         return result;
     }
 
     /**
-     * Drops every region whose annotated elements are all accounted for by regions of modules
-     * nested inside it, and deletes their sidecars when {@code prune} is set.
+     * Drops every region whose annotated elements are all accounted for by a fresher region above
+     * or below it in the module tree, and deletes their sidecars when {@code prune} is set.
      *
      * <p>An annotated element belongs to exactly one module: its source file lives in exactly one
      * module directory. Two regions claiming the same element are therefore the same sources read
-     * twice under two identities, and the more specific module is the one that is right.
+     * twice under two identities, and one of the two is a leftover. Which one is settled by
+     * <em>freshness</em>, not by depth: the sidecar a build wrote more recently is the one that
+     * describes the tree as it is now.
      *
-     * <p>The case that brought this in is a Gradle repository with a single included subproject
-     * whose directory sits below the VibeTags root ({@code -Avibetags.root} pointing at the git
-     * root, {@code include 'app'}, all sources under {@code app/}). A build whose module-root walk
-     * stopped at the git root wrote {@code .vibetags-mod-_root_} with {@code modulePath=}; a later
-     * build resolved the subproject and wrote {@code .vibetags-mod-app}. The ordinary stale check
-     * above cannot retire the first one — its module path is the root directory, which always
-     * exists — so every subsequent build emitted both regions, with byte-identical content, into
-     * every generated file.
+     * <p>Both directions happen, and the difference is not cosmetic:
      *
-     * <p>Deliberately conservative: a region is dropped only when the nested regions cover
-     * <em>all</em> of its elements. A reactor root that compiles sources of its own keeps at least
-     * one element no submodule has, so it keeps its region and its sub-markers. A sidecar written
-     * before element ids were recorded carries none, and is likewise left alone.
+     * <ul>
+     *   <li><strong>Sources move down into a subproject.</strong> A Gradle repository with one
+     *       included subproject below the VibeTags root leaves {@code .vibetags-mod-_root_}
+     *       ({@code modulePath=}) beside {@code .vibetags-mod-app}. The ordinary stale check cannot
+     *       retire the first — its module path is the root directory, which always exists — so
+     *       every build emitted both regions, byte-identical, into every generated file.</li>
+     *   <li><strong>Sources move up out of one.</strong> {@code app/} survives the move as a
+     *       directory (resources, an emptied build file), so the stale check cannot retire
+     *       {@code .vibetags-mod-app} either, and now it is the <em>nested</em> sidecar that is the
+     *       leftover. Retiring the root region here would be worse than the duplication: the
+     *       aggregate is assembled from sidecars, so every later edit would render into a region
+     *       that is then dropped and the file would freeze on the departed module's last text.</li>
+     * </ul>
+     *
+     * <p>Ties go to the more specific module, which is the first case's shape and the historical
+     * default: on equal timestamps a descendant still retires its ancestor, never the reverse.
+     *
+     * <p>Conservative in every other respect. A region is dropped only when the fresher regions
+     * cover <em>all</em> of its elements, so a reactor root that compiles sources of its own keeps
+     * at least one element no submodule has and keeps its region. Sibling modules are never in a
+     * path relation. A sidecar recording no element ids says nothing and is left alone, as is one
+     * whose timestamp cannot be read.
      */
-    private static void dropSupersededAncestorRegions(List<ModuleSidecar> sidecars,
-                                                      List<Path> files, boolean prune) {
+    private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
+                                              List<Path> files, boolean prune) {
         if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
         Map<String, String> pathByRegion = new LinkedHashMap<>();
         Map<String, Set<String>> elementsByRegion = new LinkedHashMap<>();
-        for (ModuleSidecar s : sidecars) {
+        Map<String, Long> writtenAtByRegion = new LinkedHashMap<>();
+        for (int i = 0; i < sidecars.size(); i++) {
+            ModuleSidecar s = sidecars.get(i);
             pathByRegion.putIfAbsent(s.regionId, normalizeModulePath(s.modulePath));
             elementsByRegion.computeIfAbsent(s.regionId, k -> new LinkedHashSet<>())
                             .addAll(s.elementIds);
+            // A region spans one sidecar per source set; the region is as fresh as its freshest.
+            long written = lastModified(files.get(i));
+            writtenAtByRegion.merge(s.regionId, written, Math::max);
         }
 
         Set<String> superseded = new LinkedHashSet<>();
         elementsByRegion.forEach((region, elements) -> {
             if (elements.isEmpty()) return; // nothing to compare against — keep it
-            String ancestorPath = pathByRegion.getOrDefault(region, "");
+            long writtenAt = writtenAtByRegion.getOrDefault(region, Long.MAX_VALUE);
+            if (writtenAt == Long.MAX_VALUE) return; // unreadable timestamp — never retire on a guess
+            String path = pathByRegion.getOrDefault(region, "");
             Set<String> covered = new LinkedHashSet<>();
             elementsByRegion.forEach((other, otherElements) -> {
+                if (other.equals(region)) return;
                 String otherPath = pathByRegion.getOrDefault(other, "");
-                if (!other.equals(region) && isNestedUnder(otherPath, ancestorPath)) {
+                long otherWrittenAt = writtenAtByRegion.getOrDefault(other, Long.MIN_VALUE);
+                if (isNestedUnder(otherPath, path)) {
+                    // A descendant retires its ancestor on equal timestamps too (see javadoc).
+                    if (otherWrittenAt >= writtenAt) covered.addAll(otherElements);
+                } else if (isNestedUnder(path, otherPath) && otherWrittenAt > writtenAt) {
                     covered.addAll(otherElements);
                 }
             });
@@ -730,12 +758,21 @@ public final class ModuleSidecar {
         }
     }
 
+    /** Sidecar mtime in millis, or {@link Long#MAX_VALUE} when it cannot be read. */
+    private static long lastModified(Path sidecar) {
+        try {
+            return Files.getLastModifiedTime(sidecar).toMillis();
+        } catch (IOException | RuntimeException unreadable) {
+            return Long.MAX_VALUE;
+        }
+    }
+
     /**
      * A module path in comparable form: forward slashes, no trailing separator, and the historical
      * {@code "_root_"} spelling of "this is the root" folded onto the empty string.
      */
     private static String normalizeModulePath(String modulePath) {
-        String p = modulePath.replace('\\', '/');
+        String p = modulePath.replace(BACKSLASH, '/');
         while (p.endsWith("/")) {
             p = p.substring(0, p.length() - 1);
         }

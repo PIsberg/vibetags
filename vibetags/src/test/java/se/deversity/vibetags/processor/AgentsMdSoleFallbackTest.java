@@ -54,6 +54,12 @@ class AgentsMdSoleFallbackTest {
     // Sole file → AGENTS.md IS written
     // -----------------------------------------------------------------------
 
+    private static final String SECOND_LOCKED_SOURCE =
+        "package com.example.ledger;\n"
+            + "import se.deversity.vibetags.annotations.AILocked;\n"
+            + "@AILocked(reason = \"Ledger totals are reconciled nightly\")\n"
+            + "public class Ledger {}\n";
+
     @Test
     void agentsMdAloneIsWritten(@TempDir Path tempDir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
@@ -140,6 +146,42 @@ class AgentsMdSoleFallbackTest {
         assertTrue(agents.contains(HAND_WRITTEN),
             "Hand-authored content outside the markers must survive regeneration");
         assertFalse(h.readFile("CLAUDE.md").isBlank(), "CLAUDE.md must still be generated");
+    }
+
+    /**
+     * The escape hatch reached the way a project actually reaches it, over time rather than by
+     * hand. AGENTS.md is written while it is the sole AI config file, which leaves it carrying a
+     * marker pair; a second platform is opted in later, so it is no longer sole. The marker pair
+     * is what decides from then on, and it is already there.
+     *
+     * <p>Without this the rule reads as "sole file" and a project that adds a second platform
+     * would find AGENTS.md silently frozen on whatever it said that day — still generated-looking,
+     * markers and all, and no longer true.
+     */
+    @Test
+    void agentsMdWrittenWhileSole_keepsUpdatingOnceASecondPlatformArrives(@TempDir Path tempDir)
+            throws IOException {
+        ProcessorTestHarness first = new ProcessorTestHarness(tempDir, false);
+        first.touchOptIn("AGENTS.md");
+        first.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        first.compile();
+        assertTrue(first.readFile("AGENTS.md").contains("PaymentProcessor"),
+            "precondition: sole config file, so it is written and now carries markers");
+        VibeTagsLogger.shutdown();
+
+        ProcessorTestHarness second = new ProcessorTestHarness(tempDir, false);
+        second.touchOptIn("AGENTS.md");
+        second.touchOptIn("CLAUDE.md");
+        second.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        second.addSource("com.example.ledger.Ledger", SECOND_LOCKED_SOURCE);
+        second.compile();
+
+        String agents = second.readFile("AGENTS.md");
+        assertTrue(agents.contains("Ledger"),
+            "an AGENTS.md that already carries a marker pair must keep updating once it stops "
+                + "being the sole config file, not freeze on what it said that day: " + agents);
+        assertTrue(second.readFile("CLAUDE.md").contains("Ledger"),
+            "and the newly opted-in platform must be written too");
     }
 
     // -----------------------------------------------------------------------

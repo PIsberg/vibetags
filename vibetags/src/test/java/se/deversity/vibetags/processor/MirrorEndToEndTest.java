@@ -203,6 +203,65 @@ class MirrorEndToEndTest {
         harness.compile();
     }
 
+    /**
+     * The config narrows rather than the annotations going away: a module is dropped from the
+     * explicit source list while it is still annotated and still compiling.
+     * {@code mirroredFileDisappears_...} covers the annotation withdrawing and
+     * {@code editingTheConfig_...} covers an edit that keeps every source; neither reaches a source
+     * that is simply no longer named. Left behind, the target's rules directory keeps loading a
+     * module's guardrails that its own config says do not belong to it.
+     *
+     * <p>The module cleans up its own: the mirror prefix scopes the sweep to the files it wrote.
+     */
+    @Test
+    void droppingAModuleFromTheSourceList_retiresItsMirroredFileOnItsNextCompile()
+            throws IOException {
+        mirrorTarget("app-tests", "../app-fhe\n../app-runtime\n");
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+        compileModule("app-runtime", "com.example.runtime.KeyContext", RUNTIME_SOURCE);
+        Path runtimeRule = mirrored("app-tests", "app-runtime", "com-example-runtime-KeyContext");
+        assertTrue(Files.exists(runtimeRule), "precondition: both named modules are mirrored");
+
+        mirrorTarget("app-tests", "../app-fhe\n");
+        compileModule("app-runtime", "com.example.runtime.KeyContext", RUNTIME_SOURCE);
+
+        assertFalse(Files.exists(runtimeRule),
+            "a module the config no longer names must stop mirroring into the target, or it keeps "
+                + "loading guardrails its own config says do not belong to it");
+
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+        assertTrue(Files.exists(mirrored("app-tests", "app-fhe", "com-example-fhe-NativeBridge")),
+            "and the module still named must keep its mirror");
+    }
+
+    /**
+     * The boundary of that, pinned rather than fixed. Between the config change and the dropped
+     * module's next compile, its mirrored files are still there, and a sibling's compile does not
+     * remove them.
+     *
+     * <p>It could: the target's config is an allowlist, so a mirrored file whose source the config
+     * does not name cannot be legitimate. But acting on it means one module deleting files inside
+     * another module's namespace, decided by mapping a filename back to a module path — and
+     * {@code siblingMirrors_doNotCleanUpEachOther} exists because that is exactly the reach that
+     * deleted 256 committed rule files on a cold reactor (issue #383). A stale mirror that survives
+     * until its owner next compiles is the cheaper failure.
+     */
+    @Test
+    void betweenTheConfigChangeAndTheOwnersNextCompile_aSiblingLeavesTheMirrorAlone()
+            throws IOException {
+        mirrorTarget("app-tests", "../app-fhe\n../app-runtime\n");
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+        compileModule("app-runtime", "com.example.runtime.KeyContext", RUNTIME_SOURCE);
+        Path runtimeRule = mirrored("app-tests", "app-runtime", "com-example-runtime-KeyContext");
+
+        mirrorTarget("app-tests", "../app-fhe\n");
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+
+        assertTrue(Files.exists(runtimeRule),
+            "pinned limitation: only the owning module retires its own mirrors, so a sibling's "
+                + "compile leaves this one until app-runtime next builds");
+    }
+
     @Test
     void noMirrorConfig_writesNothingExtra() throws IOException {
         Files.createDirectories(reactorRoot.resolve("app-tests/.claude/rules"));

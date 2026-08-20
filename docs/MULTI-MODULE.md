@@ -105,17 +105,32 @@ writes `.vibetags-mod-_root_` with an empty `modulePath`; a build that resolves 
 writes `.vibetags-mod-app`. Nothing retired the first, so every later build emitted both regions,
 with byte-identical content, into every generated file: 24 rule files, 212 duplicated lines.
 
-`readAll` therefore also retires a region whose annotated elements are *all* claimed by regions of
-modules nested inside it. An annotated element belongs to exactly one module — its source file lives
-in exactly one module directory — so two regions claiming it are the same sources read twice, and
-the more specific module is the one that is right.
+`readAll` therefore also retires a region whose annotated elements are *all* claimed by a **fresher**
+region above or below it in the module tree. An annotated element belongs to exactly one module — its
+source file lives in exactly one module directory — so two regions claiming it are the same sources
+read twice, and one is a leftover. Which one is settled by the sidecar timestamps, not by depth,
+because the move happens in both directions:
 
-The rule is deliberately one-directional and conservative. Coverage runs downward only, so a
-subproject is never retired by its ancestor. A reactor root that compiles sources of its own keeps
-at least one element no submodule has, so it keeps its region and its sub-markers. Sibling modules
-are never nested under one another. A sidecar that records no element ids at all is left alone.
-`SupersededAncestorRegionTest` pins those boundaries; `AncestorModuleDuplicateRegionTest` pins the
-reported build end to end.
+| Move | Leftover | Live |
+|---|---|---|
+| Sources move **down** into a subproject | `_root_` (`modulePath=`) | `app` |
+| Sources move **up** out of one, `app/` stays as a directory | `app` | `_root_` |
+
+Depth alone gets the second case backwards, and getting it backwards is worse than the duplication it
+fixes: the aggregate is assembled from sidecars, so retiring the live region means every later edit
+renders into a region that is then dropped, and the generated files freeze on the departed module's
+last text with no diagnostic. `ModuleFlattenedIntoRootTest` is that case end to end.
+
+Ties go to the more specific module: on equal timestamps a descendant still retires its ancestor,
+never the reverse. Two sidecars written inside one filesystem tick therefore resolve the same way on
+every build.
+
+The rule is conservative in every other respect. A region is dropped only when the fresher regions
+cover *all* of its elements, so a reactor root that compiles sources of its own keeps at least one
+element no submodule has and keeps its region and its sub-markers. Sibling modules are never in a
+path relation. A sidecar that records no element ids says nothing and is left alone, as is one whose
+timestamp cannot be read. `SupersededAncestorRegionTest` pins those boundaries;
+`AncestorModuleDuplicateRegionTest` pins the reported build end to end.
 
 ### Source sets
 

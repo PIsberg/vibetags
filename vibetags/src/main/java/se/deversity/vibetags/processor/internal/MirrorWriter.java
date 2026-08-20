@@ -80,19 +80,29 @@ public final class MirrorWriter {
             // Watch every discovered config, not just the accepting ones: a config edited to *start*
             // accepting this module must invalidate the short-circuit too.
             writer.watchInput(target.configFile());
-            if (!target.accepts(moduleRoot)) {
-                continue;
-            }
             Map<String, Path> targetFiles = ServiceRegistry.buildServiceFileMap(target.targetDir());
             Set<String> targetActive = granularOnly(ServiceRegistry.resolveActiveServices(targetFiles));
             if (targetActive.isEmpty()) {
                 continue; // target opted into mirroring but has no granular rule directory yet
             }
 
+            String prefix = MIRROR_PREFIX + moduleId + "-";
+            if (!target.accepts(moduleRoot)) {
+                // Not (or no longer) a source for this target. Anything under this module's own
+                // mirror prefix here was written while the config did name it, and is an orphan the
+                // moment it stops: the target's config is an allowlist, so a mirrored file whose
+                // source module the config does not name cannot be legitimate, whatever else has or
+                // has not compiled. Cleaning it is still self-cleanup — the prefix scopes it to this
+                // module's own files — so it never reaches a sibling's, which is what stops a cold
+                // reactor deleting work it merely has not seen yet (issue #383).
+                new GranularRulesWriter(writer)
+                    .cleanupMirrored(targetFiles, targetActive, prefix, Set.of());
+                continue;
+            }
+
             GuardrailContentBuilder.Result built =
                 new GuardrailContentBuilder(collector, targetActive, projectName, generatedHeader, roles).build();
 
-            String prefix = MIRROR_PREFIX + moduleId + "-";
             GranularRulesWriter granular = new GranularRulesWriter(writer);
             Set<String> stems = granular.writeMirrored(
                 built.elementRules, targetFiles, targetActive, roles, prefix, target.globs());
