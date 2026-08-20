@@ -1254,6 +1254,99 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
+     * Warns when Gradle subprojects are declared in {@code settings.gradle} but carry no build
+     * file of their own, so they all resolve to the same module identity.
+     *
+     * <p>A module root is the nearest ancestor holding a {@code pom.xml} or {@code build.gradle
+     * (.kts)}; {@code settings.gradle} is deliberately not one of those markers, because it names
+     * the root of a build rather than a module inside it. When every subproject is configured from
+     * the root build file the walk passes straight through them, so each writes the same sidecar
+     * and overwrites the one before it. The surviving aggregate carries the last subproject to
+     * compile and nothing else, with no duplicate and no stale text to give it away: issue #278's
+     * last-writer-wins, in the one layout where the tree cannot supply an identity.
+     *
+     * <p>Nothing in a javac round says which Gradle subproject it belongs to, so this cannot be
+     * repaired here. Naming the option that fixes it is the whole remedy.
+     *
+     * <p>Narrow on purpose. It fires only when the compiling module resolved to the VibeTags root
+     * itself, only for included directories that exist, carry sources, and have no build file of
+     * their own, and never when {@code -Avibetags.module} has already been passed.
+     */
+    private void warnIfSubprojectsShareTheRootIdentity(Path compilationRoot) {
+        if (moduleIdOverride != null || !compilationRoot.equals(root)) {
+            return;
+        }
+        List<String> collapsing = new java.util.ArrayList<>();
+        for (String settingsName : List.of("settings.gradle", "settings.gradle.kts")) {
+            Path settings = root.resolve(settingsName);
+            if (!Files.isRegularFile(settings)) {
+                continue;
+            }
+            for (String included : gradleIncludes(settings)) {
+                Path dir = root.resolve(included);
+                if (!Files.isDirectory(dir) || !Files.isDirectory(dir.resolve("src"))) {
+                    continue; // Nothing there to compile, so nothing to collapse.
+                }
+                if (hasOwnBuildFile(dir) || collapsing.contains(included)) {
+                    continue; // Its own build file is what gives it its own identity.
+                }
+                collapsing.add(included);
+            }
+        }
+        if (collapsing.isEmpty()) {
+            return;
+        }
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: " + String.join(", ", collapsing)
+                + (collapsing.size() == 1 ? " is declared as a Gradle subproject but has"
+                                          : " are declared as Gradle subprojects but have")
+                + " no build file of its own, so it resolves to this root and shares one module"
+                + " identity with every other such subproject. They overwrite one another's"
+                + " guardrails and only the last to compile survives. Pass"
+                + " -Avibetags.module=${project.name} in the shared build file to give each one"
+                + " its own identity.");
+        if (log != null) {
+            log.warn("module.collapsed subprojects={} root={} reason=no-build-file-of-their-own",
+                collapsing, root);
+        }
+    }
+
+    /** Directory names a Gradle settings file includes, with the leading colon path flattened. */
+    private static List<String> gradleIncludes(Path settings) {
+        List<String> names = new java.util.ArrayList<>();
+        try {
+            for (String line : Files.readAllLines(settings, java.nio.charset.StandardCharsets.UTF_8)) {
+                String trimmed = line.trim();
+                if (!trimmed.startsWith("include")) {
+                    continue;
+                }
+                java.util.regex.Matcher m =
+                    java.util.regex.Pattern.compile("['\"]([^'\"]+)['\"]").matcher(trimmed);
+                while (m.find()) {
+                    String name = m.group(1);
+                    while (name.startsWith(":")) {
+                        name = name.substring(1);
+                    }
+                    name = name.replace(':', '/');
+                    if (!name.isBlank()) {
+                        names.add(name);
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException unreadable) {
+            return List.of(); // A diagnostic must never be the thing that fails a build.
+        }
+        return names;
+    }
+
+    /** Whether {@code dir} carries a build file, which is what makes it its own module root. */
+    private static boolean hasOwnBuildFile(Path dir) {
+        return Files.isRegularFile(dir.resolve("build.gradle"))
+            || Files.isRegularFile(dir.resolve("build.gradle.kts"))
+            || Files.isRegularFile(dir.resolve("pom.xml"));
+    }
+
+    /**
      * Warns when the module could only be identified by a content hash while the project already
      * has named regions. An unrecognised id in a file that already carries named ones is far more
      * likely to be a mis-identified module than a genuinely new one, and the symptom — a duplicate
@@ -1261,6 +1354,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * sidecar — does not point at its cause (issue #331).
      */
     private void warnIfModuleUnidentifiable(Path compilationRoot, String moduleId) {
+        warnIfSubprojectsShareTheRootIdentity(compilationRoot);
         // -Avibetags.module is the documented remedy; having taken it, the user does not need the
         // lecture.
         if (moduleIdOverride != null) return;

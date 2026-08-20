@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Every build layout VibeTags supports now has a worked example, and Gradle reactors are
+  covered by CI at all.** Until now every multi-module fixture was Maven and all four Gradle
+  examples were single-module, so no job ever ran the processor across a real Gradle reactor,
+  while both recent multi-module defects came from Gradle repositories. Four examples fill that
+  in: an ordinary reactor, subprojects configured from the root build file, a flat layout with a
+  module beside the root, and a composite build. Each asserts the regression that would matter
+  for it, not merely that the build exits zero.
+
+### Fixed
+
+- **A Gradle layout that silently lost a module's guardrails now says so.** When
+  `settings.gradle` declares subprojects but all of their configuration lives in the root build
+  file, none of them has a build file of its own. Module roots are found by walking up to the
+  nearest build file and `settings.gradle` is deliberately not one of those markers, so the walk
+  passes through the subproject and lands on the root: every subproject resolves to one identity,
+  writes one sidecar, and overwrites the one before it.
+
+  Measured before the fix: one `.vibetags-mod-_root_` for two modules, and an aggregate carrying
+  one module's guardrails with the other's absent. Not stale and not duplicated. Whichever
+  subproject compiled last was the only one that survived, and nothing said so. It is issue
+  #278's last-writer-wins in the one layout where the tree cannot supply an identity.
+
+  Nothing in a javac round says which Gradle subproject it belongs to, so the build cannot repair
+  this itself; the remedy is `-Avibetags.module=${project.name}` in the shared build file. The
+  warning names the subprojects and the option. It is narrow: it fires only when the compiling
+  module resolved to the VibeTags root itself, only for included directories that exist, carry
+  sources and have no build file of their own, and never once `-Avibetags.module` has been passed.
+
+### Changed
+
+- **The example projects moved under `examples/`.** Seven directories at the repository root were
+  most of what a newcomer saw first; they are now `examples/basic`, `all-tiers`, `groovy`,
+  `kotlin`, `multimodule`, `multimodule-indexed` and `scala`. Older CHANGELOG entries keep the
+  paths they were written with, because they record what was true then.
+
 ### Fixed
 
 - **Two module regions naming the same directory no longer both survive.** Reported against 1.2.3
