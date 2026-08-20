@@ -293,6 +293,47 @@ class SourceSetIsolationEndToEndTest {
         assertTrue(claude.contains(MAIN_REASON), "and must cost the main source set nothing:\n" + claude);
     }
 
+    /**
+     * The element does not go away, it changes source set: a class moves from {@code src/main} to
+     * {@code src/test} of the same module. Both rounds run, and both sidecars carry the same region
+     * id, so the merge has to see one contribution rather than the main round's memory of it beside
+     * the test round's fresh copy.
+     *
+     * <p>The module analogue of this is {@code AnnotationTransitionEndToEndTest}'s move between
+     * modules, where the failure is a duplicate rather than an absence. Same failure here.
+     */
+    @Test
+    void aClassThatChangesSourceSetIsNotCountedTwice() throws IOException {
+        setUpReactor("module-core");
+        compileSourceSet("module-core", "main", List.<String[]>of(
+            new String[]{"com.example.core.IrNode", MAIN_SOURCE},
+            new String[]{"com.example.core.Parser", OTHER_MAIN_SOURCE}));
+        assertTrue(Files.readString(reactorRoot.resolve("CLAUDE.md")).contains(MAIN_REASON),
+            "precondition: the class is a main-source contribution first");
+
+        // IrNode moves to the test source set. Parser keeps the main round non-empty, which is what
+        // keeps the processor running at all - javac only invokes it for a round with annotations.
+        Files.delete(reactorRoot.resolve("module-core/src/main/java/com/example/core/IrNode.java"));
+        compileSourceSet("module-core", "main", List.<String[]>of(
+            new String[]{"com.example.core.Parser", OTHER_MAIN_SOURCE}));
+        compileSourceSet("module-core", "test", List.<String[]>of(
+            new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertEquals(1, countOccurrences(claude, MAIN_REASON),
+            "the class changed source set, it was not duplicated: " + claude);
+        assertTrue(claude.contains("parser core"),
+            "and the class that stayed in main must be untouched: " + claude);
+    }
+
+    private static int countOccurrences(String haystack, String needle) {
+        int count = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {
+            count++;
+        }
+        return count;
+    }
+
     private static List<String> ruleFileNames(Path dir) throws IOException {
         if (!Files.isDirectory(dir)) return List.of();
         try (Stream<Path> files = Files.list(dir)) {

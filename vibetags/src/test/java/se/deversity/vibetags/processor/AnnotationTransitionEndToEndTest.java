@@ -50,6 +50,25 @@ class AnnotationTransitionEndToEndTest {
     // The element keeps its name and changes its bucket
     // -----------------------------------------------------------------------
 
+    private static final String ANNOTATED_PACKAGE_INFO = """
+        @se.deversity.vibetags.annotations.AISecure(aspect = "authentication")
+        package com.example.secure;
+        """;
+
+    private static final String PLAIN_PACKAGE_INFO = """
+        package com.example.secure;
+        """;
+
+    private static final String PACKAGE_KEEPER = """
+        package com.example.secure;
+
+        import se.deversity.vibetags.annotations.AICore;
+
+        @AICore(sensitivity = "high", note = "keeps the package non-empty")
+        public class Keeper {
+        }
+        """;
+
     @Test
     void swappingTheAnnotationType_retiresTheOldBucket(@TempDir Path dir) throws Exception {
         ProcessorTestHarness first = new ProcessorTestHarness(dir, false);
@@ -221,6 +240,41 @@ class AnnotationTransitionEndToEndTest {
         assertFalse(second.fileExists(".cursor/rules/com-example-web-OrderController.mdc"),
             "turning role grouping on must retire the per-class file the role replaced, or the "
                 + "class is described twice and the agent loads both");
+    }
+
+    /**
+     * A package-level annotation is withdrawn while the package itself stays. {@code package-info}
+     * is its own element kind and its own compilation unit, so nothing about the class-level
+     * withdrawal above reaches it — and a package guardrail covers every class under it, which is
+     * the widest thing in the file to leave stale.
+     */
+    @Test
+    void withdrawingAPackageLevelAnnotation_dropsItFromTheGeneratedFile(@TempDir Path dir)
+            throws Exception {
+        ProcessorTestHarness first = new ProcessorTestHarness(dir, false);
+        first.touchOptIn("CLAUDE.md");
+        first.addSource("com.example.secure.package-info", ANNOTATED_PACKAGE_INFO);
+        first.addSource("com.example.secure.Keeper", PACKAGE_KEEPER);
+        first.compile();
+        assertTrue(first.readFile("CLAUDE.md").contains("authentication"),
+            "precondition: the package-level guardrail is generated");
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        VibeTagsLogger.shutdown();
+
+        // The annotation goes; the package and a class in it stay, so the round still has work.
+        ProcessorTestHarness second = new ProcessorTestHarness(dir, false);
+        second.touchOptIn("CLAUDE.md");
+        second.addSource("com.example.secure.package-info", PLAIN_PACKAGE_INFO);
+        second.addSource("com.example.secure.Keeper", PACKAGE_KEEPER);
+        second.compile();
+
+        String claude = second.readFile("CLAUDE.md");
+        assertFalse(claude.contains("authentication"),
+            "a package that no longer declares the guardrail must not keep it — it covers every "
+                + "class underneath, so a stale one misdescribes the most code: " + claude);
+        assertTrue(claude.contains("keeps the package non-empty"),
+            "and the class that did not change must survive: " + claude);
     }
 
     // -----------------------------------------------------------------------
