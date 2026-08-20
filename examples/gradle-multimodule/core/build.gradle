@@ -1,0 +1,3 @@
+// Deliberately minimal: its existence is what makes VibeTags treat this directory as a
+// module root rather than folding it into the root project. See ../shared-buildfile for the
+// variant where this file is absent.

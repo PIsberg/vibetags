@@ -135,6 +135,7 @@ for rel in \
     examples/kotlin/build.gradle.kts \
     examples/groovy/build.gradle \
     examples/scala/build.gradle \
+    examples/gradle-multimodule/build.gradle \
 ; do
     replace_gradle_vibetags_refs "$ROOT_DIR/$rel"
 done

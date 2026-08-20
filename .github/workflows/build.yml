@@ -742,6 +742,31 @@ jobs:
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
 
+      # The only CI job that runs VibeTags across a real Gradle reactor. Every other
+      # multi-module fixture is Maven, and the other Gradle examples are single-module, so
+      # without this the Gradle multi-module path was covered only by in-process JUnit
+      # fixtures that write a settings.gradle rather than by Gradle itself.
+      - name: Build Gradle Multi-Module Example (Gradle reactor, two subprojects)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          ./gradlew clean build --no-daemon
+          # Both modules must aggregate into the root file, each in its own region.
+          grep -qF "VIBETAGS-MODULE: core" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: app" CLAUDE.md
+          grep -qF "com.example.gmm.core.IrNode" CLAUDE.md
+          grep -qF "com.example.gmm.app.App" CLAUDE.md
+          # One sidecar per module, not one collapsed onto the root.
+          test -f .vibetags-mod-core
+          test -f .vibetags-mod-app
+          test ! -f .vibetags-mod-_root_
+          # And the committed file must match what the build just produced.
+          if [ -n "$(git status --porcelain -- CLAUDE.md)" ]; then
+            echo "::error::examples/gradle-multimodule/CLAUDE.md is out of date."
+            git --no-pager diff -- CLAUDE.md
+            exit 1
+          fi
+
       # Same JDK 21 gating and same shape as the Kotlin step. Groovy's joint compilation
       # generates Java stubs and (with javaAnnotationProcessing=true) runs JSR 269
       # processors over them — the Groovy analogue of kapt.
