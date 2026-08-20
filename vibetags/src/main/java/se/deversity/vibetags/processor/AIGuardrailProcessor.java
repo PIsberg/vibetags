@@ -128,6 +128,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Ensures we generate files exactly once per compilation run. */
     private final AtomicBoolean processed = new AtomicBoolean(false);
 
+    /** Cap on how many duplicated elements one warning names before summarising. */
+    private static final int MAX_DUPLICATES_SHOWN = 5;
+
     /** SLF4J logger backed by a Logback FileAppender writing to {@code vibetags.log} in the project root. */
     private @Nullable Logger log;
 
@@ -971,7 +974,82 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         warnAboutGranularOptedOutSinceAModuleLastCompiled(activeServices, allSidecars);
         warnAboutSiblingRuleFilesThatAreMissing(activeServices, serviceFiles, allSidecars);
+        warnAboutElementsClaimedByTwoRegions(allSidecars);
     }
+
+    /**
+     * Warns when two surviving regions claim the same annotated element.
+     *
+     * <p>An element belongs to exactly one module, so two regions naming it are the same sources
+     * read twice under two identities, and every generated file states that guardrail twice. The
+     * region prune retires the loser when one region's elements are entirely covered by a fresher
+     * one, but it demands full containment on purpose: a reactor root that compiles sources of its
+     * own keeps at least one element no submodule has, and retiring it would drop real guardrails.
+     *
+     * <p>A leftover sidecar whose element set is a superset only because it is <em>stale</em> falls
+     * in the gap: it fails containment by one element, so both regions survive and everything they
+     * share is duplicated. That is also why the reported case would not reproduce reliably. When
+     * the leftover's elements happen to match the live module's exactly, containment holds and the
+     * prune cleans it up; one stale extra and it does not (issue #438).
+     *
+     * <p>This cannot be repaired here. A sidecar records element ids, not whether their sources
+     * still exist, so a stale extra element is indistinguishable from a genuinely root-owned one;
+     * and a region carries rendered text rather than a list, so it cannot have one element
+     * subtracted from it without the sources that produced it. Naming the duplicate and the
+     * sidecar to delete is the remedy, and deleting a sidecar is already the documented escape for
+     * a module whose last contribution outlived it.
+     */
+    private void warnAboutElementsClaimedByTwoRegions(List<ModuleSidecar> allSidecars) {
+        if (allSidecars.size() < 2) {
+            return;
+        }
+        Map<String, Set<String>> regionsByElement = new java.util.LinkedHashMap<>();
+        for (ModuleSidecar sidecar : allSidecars) {
+            for (String element : sidecar.getElementIds()) {
+                regionsByElement
+                    .computeIfAbsent(element, k -> new java.util.LinkedHashSet<>())
+                    .add(sidecar.getRegionId());
+            }
+        }
+        List<String> duplicated = new java.util.ArrayList<>();
+        Set<String> regionsInvolved = new java.util.LinkedHashSet<>();
+        regionsByElement.forEach((element, regions) -> {
+            if (regions.size() > 1) {
+                duplicated.add(element + " (" + String.join(" and ", regions) + ")");
+                regionsInvolved.addAll(regions);
+            }
+        });
+        if (duplicated.isEmpty()) {
+            return;
+        }
+        // Report at most a few, or a wholesale collision would print one line per element.
+        List<String> shown = duplicated.size() > MAX_DUPLICATES_SHOWN
+            ? duplicated.subList(0, MAX_DUPLICATES_SHOWN) : duplicated;
+        String more = duplicated.size() > shown.size()
+            ? " and " + (duplicated.size() - shown.size()) + " more" : "";
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: " + String.join(", ", shown) + more + " claim the same annotated element"
+                + (duplicated.size() == 1 ? "" : "s")
+                + " under more than one module, so every generated file states"
+                + (duplicated.size() == 1 ? " that guardrail" : " those guardrails")
+                + " twice. An element belongs to exactly one module, so one of these regions is a"
+                + " leftover from an earlier layout. Delete the sidecar that no longer describes a"
+                + " module you build: " + String.join(", ", sidecarNames(regionsInvolved)) + ".");
+        if (log != null) {
+            log.warn("region.duplicate elements={} regions={} reason=element-claimed-twice",
+                duplicated.size(), regionsInvolved);
+        }
+    }
+
+    /** The on-disk sidecar filenames for the given regions, for a message a reader can act on. */
+    private static List<String> sidecarNames(Set<String> regionIds) {
+        List<String> names = new java.util.ArrayList<>();
+        for (String regionId : regionIds) {
+            names.add(".vibetags-mod-" + regionId);
+        }
+        return names;
+    }
+
 
     /**
      * Warns when the aggregate will keep naming a granular rule file that is not on disk and that
