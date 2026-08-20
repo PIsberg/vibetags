@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two module regions naming the same directory no longer both survive.** Reported against 1.2.3
+  from a Gradle repository whose `settings.gradle` carries `rootProject.name='x'` beside
+  `include 'x'`: `CLAUDE.md` stated every guardrail twice, under two byte-identical
+  `<!-- VIBETAGS-MODULE -->` blocks.
+
+  The region prune added in 1.2.3 settles an overlap by asking which region is nested under the
+  other, and `isNestedUnder` is false in *both* directions when the two paths are equal. Two
+  regions on one directory therefore fell through it untouched, however completely one covered
+  the other. Equal paths are not a corner case: `computeModulePath` returns `""` for the root
+  project and also for every compilation root it cannot relativize under the VibeTags root, so an
+  out-of-tree root, a `..`-escaping relative path or an `IllegalArgumentException` all land two
+  regions on `""`. That is also why the duplication was intermittent rather than a function of the
+  name collision alone, since it depends on how each round resolved its compilation root.
+
+  Such a pair is now settled the same way as a nested one, by sidecar freshness, with a tie going
+  to the named module over the root identity. The relation is asymmetric for any two distinct
+  regions, so exactly one is retired and every build retires the same one. Retirement still
+  requires full containment, which is what keeps the rule from eating a real module: two genuinely
+  different modules that both land on `""` claim different elements and both keep their region. An
+  unreadable sidecar mtime reads as maximally fresh, so it is now explicitly barred from being the
+  reason a region is retired; duplication is recoverable and a dropped live region is not.
+
+  Per-module output and the `VIBETAGS-MODULE` markers date to 0.9.0, not 1.2.3, and the merge is
+  service-agnostic, so nothing about this was specific to `CLAUDE.md`.
+
 ## [1.2.3] - 2026-08-20
 
 ### Fixed
