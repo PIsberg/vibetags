@@ -39,6 +39,7 @@ import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
+import se.deversity.vibetags.processor.model.SourceLocation;
 import se.deversity.vibetags.processor.model.TransitiveRule;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -290,6 +291,26 @@ public final class BuildFingerprint {
               .append(rule.origin()).append(':')
               .append(rule.tier().name()).append(':')
               .append(rule.memberSummary()).append(';');
+        }
+        sb.append('}')
+            // Source positions of locked elements. They are content of .vibetags-locks, which
+            // records each lock's line range, so moving a locked element with every annotation
+            // unchanged changes what should be written. Left out, this fingerprint matched, the
+            // generate phase was skipped, and the committed report kept describing the old lines
+            // — while check mode failed on the same tree and told the developer to run the
+            // regeneration that had just been short-circuited into doing nothing (issue #440).
+            //
+            // Costs nothing to a project without the report: positions are resolved only when
+            // .vibetags-locks is opted in, so this map is empty and the section is two characters.
+            .append("P{");
+        for (TaggedElement element : model.locked()) {
+            SourceLocation at = model.lockedPosition(element);
+            if (at != null) {
+                sb.append(element.qualifiedName()).append(':')
+                  .append(at.file()).append(':')
+                  .append(at.startLine()).append('-')
+                  .append(at.endLine()).append(';');
+            }
         }
         sb.append('}');
 

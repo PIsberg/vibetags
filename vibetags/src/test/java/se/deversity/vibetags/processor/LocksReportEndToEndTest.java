@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -229,6 +230,59 @@ class LocksReportEndToEndTest {
                 + "can reject reports written in a future, incompatible schema");
         assertTrue(entries.stream().skip(1).allMatch(l -> l.contains("\"type\":\"locked\"")),
             "all records after the format record must be lock entries");
+    }
+
+    /**
+     * Moving a locked element's lines, with every annotation unchanged, must still rewrite the
+     * report.
+     *
+     * <p>The report records each locked element's line range, so a blank line above a locked class
+     * changes its content. The fingerprint short-circuit skips the whole generate phase when the
+     * annotation set and active services are unchanged, and positions were not part of it, so the
+     * second build here rewrote nothing and left the committed report describing the old lines.
+     *
+     * <p>Measured on the repository itself before the fix: inserting a constant near the top of
+     * {@code AIGuardrailProcessor} moved {@code generateFiles()} from 598-922 to 601-925,
+     * {@code mvn compile -Pself-annotate} reported BUILD SUCCESS and rewrote nothing, and CI's
+     * self-check then failed on that tree — with an error telling the developer to run the command
+     * that had just done nothing. Deleting {@code .vibetags-cache} was the only way through.
+     * Invariant 12: anything that becomes generated content reaches the fingerprint (issue #440).
+     *
+     * <p>Positions are resolved only when {@code .vibetags-locks} is opted in, so folding them in
+     * costs projects without the report nothing.
+     */
+    @Test
+    void locksReport_isRewrittenWhenALockedElementMovesWithNoAnnotationChange(@TempDir Path tmp)
+            throws Exception {
+        ProcessorTestHarness h = new ProcessorTestHarness(tmp);
+        h.addSource("com.example.lockdemo.Vault", vault(0));
+        h.compile();
+
+        String first = Files.readString(tmp.resolve(".vibetags-locks"), StandardCharsets.UTF_8);
+        assertTrue(first.contains("\"startLine\":3"),
+            "precondition: the lock is recorded at its original line. Report was:\n" + first);
+
+        // Same annotations, same services, same everything except where the class sits.
+        VibeTagsLogger.shutdown();
+        ProcessorTestHarness moved = new ProcessorTestHarness(tmp);
+        moved.addSource("com.example.lockdemo.Vault", vault(2));
+        moved.compile();
+
+        String second = Files.readString(tmp.resolve(".vibetags-locks"), StandardCharsets.UTF_8);
+        assertTrue(second.contains("\"startLine\":5"),
+            "the report must follow the element it describes. A stale line range makes the "
+                + "locked-files PR guard diff against positions that no longer exist, and the "
+                + "documented regeneration command cannot fix it because the short-circuit skips "
+                + "the write. Report was:\n" + second);
+    }
+
+    /** The same class, shifted down by {@code padding} blank lines. */
+    private static String vault(int padding) {
+        return "package com.example.lockdemo;\n"
+            + "import se.deversity.vibetags.annotations.AILocked;\n"
+            + "\n".repeat(padding)
+            + "@AILocked(reason = \"audited\")\n"
+            + "public class Vault {}\n";
     }
 
     private static ProcessorTestHarness withVaultSource(Path tmp) throws Exception {
