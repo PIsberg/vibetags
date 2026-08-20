@@ -114,7 +114,7 @@ rather than the Kotlin sources:
   point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
   the locks report.
 
-A complete working consumer is in [`example-kotlin/`](example-kotlin/README.md), built in CI
+A complete working consumer is in [`examples/kotlin/`](examples/kotlin/README.md), built in CI
 on the JDK 21 Gradle leg.
 
 ### Other JVM Languages: Groovy, Scala, Clojure
@@ -151,12 +151,12 @@ tasks.withType(GroovyCompile).configureEach {
 
 The stub caveats are the same as kapt's: no method bodies (body-scoped annotations are
 invisible) and stub-relative source positions. Working consumer:
-[`example-groovy/`](example-groovy/README.md).
+[`examples/groovy/`](examples/groovy/README.md).
 
 **Scala**: put guardrails on thin annotated Java types next to the Scala code they protect —
 javac compiles `src/main/java` normally in a mixed module. An `@AI*` annotation directly on
 a Scala class compiles without warning and silently does nothing, which is why CI asserts
-the negative: [`example-scala/`](example-scala/README.md) contains an annotated Scala class
+the negative: [`examples/scala/`](examples/scala/README.md) contains an annotated Scala class
 and the build fails if it ever *appears* in the generated files. In a Scala codebase the
 hand-authored region outside the `VIBETAGS-START`/`END` markers is the right home for
 Scala-specific rules.
@@ -341,7 +341,7 @@ Worth knowing before you turn it on:
 - **The markers live at whatever `-Avibetags.root` resolves to.** If your build pins that at a
   module directory, `.vibetags-transitive` belongs there too, not only at the reactor root.
 
-A working demonstration lives in [`example-multimodule/`](example-multimodule), where `core`
+A working demonstration lives in [`examples/multimodule/`](examples/multimodule), where `core`
 publishes and `engine`, `cli` and `tests` inherit. Full details in
 [docs/PROCESSOR.md](docs/PROCESSOR.md#transitive-guardrails-dependency-tree-propagation).
 

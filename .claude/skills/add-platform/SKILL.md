@@ -128,9 +128,9 @@ will re-locate every dispatch point this skill lists.
     — that a real parser accepts the output (the v0.9.9 PR-reviewer wave caught real bugs this
     way: escaped-quote and trailing-comma failures a string-contains assertion would have missed).
 
-11. **`example/` opt-in fixture** — create the empty placeholder (`touch example/<path>`, or an
+11. **`examples/basic/` opt-in fixture** — create the empty placeholder (`touch examples/basic/<path>`, or an
     empty directory for granular) so the example build actually exercises the platform, and add
-    it to the `AI_FILES` array in `example/reset-ai-files.sh` (plus the granular cleanup `for dir
+    it to the `AI_FILES` array in `examples/basic/reset-ai-files.sh` (plus the granular cleanup `for dir
     in ...` loop near the bottom of that script if it's directory-based).
 
 12. **Docs — four places, none auto-propagate:**
@@ -151,8 +151,8 @@ cd vibetags-annotations && mvn install && cd ..
 cd vibetags && mvn clean install && cd ..
 cd vibetags-bom && mvn install && cd ..
 cd vibetags && mvn test -Dtest=NewPlatformsV<N>EndToEndTest,AIGuardrailProcessorProcessTest,AIGuardrailProcessorUnitTest && cd ..
-cd example && mvn clean compile && cd ..   # real end-to-end: consumes the freshly installed processor
+cd examples/basic && mvn clean compile && cd ..   # real end-to-end: consumes the freshly installed processor
 ```
 
-Confirm the new file (or directory of granular files) actually appeared under `example/` with
+Confirm the new file (or directory of granular files) actually appeared under `examples/basic/` with
 real generated content, then run `pre-commit run --all-files` before committing.

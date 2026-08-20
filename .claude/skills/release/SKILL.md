@@ -82,9 +82,9 @@ That test fails if any Gradle file, example pom or managed pom disagrees with
 `load-tests/`, and `load-tests/` consequently sat two releases behind while CI
 believed it was benchmarking the branch.
 
-It also updates the consumers, which track a *released* BOM version: `example/pom.xml`,
-`example/build.gradle`, `example-multimodule/pom.xml`, `example-multimodule-indexed/pom.xml`,
-`example-all-tiers/pom.xml`, `tools/demo/pom.xml`, the Kotlin/Groovy/Scala example builds,
+It also updates the consumers, which track a *released* BOM version: `examples/basic/pom.xml`,
+`examples/basic/build.gradle`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`,
+`examples/all-tiers/pom.xml`, `tools/demo/pom.xml`, the Kotlin/Groovy/Scala example builds,
 `vibetags-cli/pom.xml`, `README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
 every file it touched, so read that list rather than assuming this one is current.
 
@@ -139,9 +139,9 @@ cd vibetags-annotations && mvn -q install && cd ..
 cd vibetags && mvn -q clean install && cd ..
 cd vibetags-bom && mvn -q install && cd ..
 cd vibetags-cli && mvn -q clean install && cd ..
-cd example && mvn -q clean compile && cd ..
-cd example-multimodule && mvn -q clean compile && cd ..
-cd example-multimodule-indexed && mvn -q clean compile && cd ..
+cd examples/basic && mvn -q clean compile && cd ..
+cd examples/multimodule && mvn -q clean compile && cd ..
+cd examples/multimodule-indexed && mvn -q clean compile && cd ..
 ```
 
 `vibetags-cli` is in that list because it is published too, and it depends on the processor

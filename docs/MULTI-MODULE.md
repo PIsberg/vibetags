@@ -4,8 +4,8 @@ How VibeTags behaves when more than one Maven/Gradle module compiles into the sa
 the four opt-ins that shape that output. Split out of `CLAUDE.md` — read this when working on
 sidecars, per-module output, roles, or cross-module mirroring.
 
-`example-multimodule/` is a three-module reactor demonstrating the sidecar merge end-to-end (built
-and asserted in CI); `example-multimodule-indexed/` demonstrates the lean root index.
+`examples/multimodule/` is a three-module reactor demonstrating the sidecar merge end-to-end (built
+and asserted in CI); `examples/multimodule-indexed/` demonstrates the lean root index.
 
 ## Sidecar aggregation (the default)
 
@@ -29,7 +29,7 @@ generated YAML documents (`sweep.yaml`, `.plandex.yaml`, `.coderabbit.yaml`, `el
 `.roomodes`, `.interpreter/profiles/vibetags.yaml`): a YAML document has one `rules:`, one
 `reviews:`, one `customModes:`, and stacking N modules repeated the key N times. A strict parser
 rejects that; a lenient one keeps the last occurrence, so every module but one lost its guardrails
-silently. Measured on `example-multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
+silently. Measured on `examples/multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
 exposed 1 module of 4, `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
 
 Those platforms therefore declare a `PlatformRenderer.mergeShape()` — the line their shared scaffold
@@ -52,7 +52,7 @@ They never refreshed. The write phase decides whether a shared file may be rewri
 bodies were stored only for marker-based services. For a JSON or TOML output the answer was
 permanently "no module contributed", so the writer's `no-new-rules` guard skipped every update to an
 existing file. Whatever the first successful write produced was frozen there: on the four-module
-`example-multimodule`, `.mentatconfig.json` held **1 entry from 1 module**, and every later build
+`examples/multimodule`, `.mentatconfig.json` held **1 entry from 1 module**, and every later build
 logged `no changes`.
 
 Fixing only that would have turned a frozen file into a last-writer-wins file, because a whole-file
@@ -266,6 +266,60 @@ without them the second source set to compile replaced the first's file.
 A sidecar written before this carries no contributions at all; the compiling module then publishes
 its own rendering, which is the pre-merge behaviour, rather than failing. Same for a contribution
 that will not parse.
+
+## Build layouts: what resolves, and what needs telling
+
+A module root is the nearest ancestor directory holding a `pom.xml`, `build.gradle` or
+`build.gradle.kts`. `settings.gradle` is deliberately **not** one of those markers: it names the
+root of a Gradle build, not a module inside it. Everything below follows from that one rule, and
+each row has a worked example under [`examples/`](../examples/).
+
+| Layout | Resolves by itself | What it needs |
+|---|---|---|
+| Maven aggregator, modules in subdirectories | Yes | Nothing |
+| Nested modules (`a/b`) | Yes, innermost build file wins | Nothing |
+| Gradle subprojects each with their own `build.gradle` | Yes | `-Avibetags.root` at the reactor root, because each subproject compiles in its own worker directory ([gradle-multimodule](../examples/gradle-multimodule/)) |
+| Gradle subprojects configured from the **root** build file | **No** | `-Avibetags.module=${project.name}` ([gradle-shared-buildfile](../examples/gradle-shared-buildfile/)) |
+| Flat layout: module beside the root, not below it (`includeFlat`, `projectDir` override) | Partially | `-Avibetags.root` at the directory containing both ([gradle-flat](../examples/gradle-flat/)) |
+| Composite build (`includeBuild`) | **No** | `-Avibetags.root` at the containing directory, in every participating build ([gradle-composite](../examples/gradle-composite/)) |
+
+### Subprojects with no build file of their own
+
+This is the one layout that loses data rather than merely looking odd, so it is worth stating
+plainly. When `settings.gradle` declares subprojects but all of their configuration lives in the
+root build file, the upward walk from a source file passes straight through the subproject
+directory and lands on the root. Every subproject then resolves to the same module identity,
+writes the same sidecar, and overwrites the one before it.
+
+Measured on `examples/gradle-shared-buildfile` before its remedy was applied: one
+`.vibetags-mod-_root_` for two modules, and an aggregate carrying `com.example.gsb.core.Ledger`
+with `com.example.gsb.app.Runner` absent. Not stale and not duplicated — gone. Whichever
+subproject compiled last is the only one whose guardrails survive.
+
+Since 1.2.4 the build says so, naming the subprojects and the option:
+
+```
+warning: VibeTags: core, app are declared as Gradle subprojects but have no build file of
+their own, so they resolve to this root and share one module identity ... Pass
+-Avibetags.module=${project.name} in the shared build file to give each one its own identity.
+```
+
+The remedy is one line in the shared build file:
+
+```groovy
+options.compilerArgs << "-Avibetags.module=${project.name}"
+```
+
+### Out-of-tree modules
+
+A module that is not under the VibeTags root has no meaningful relative path, so
+`computeModulePath` returns `""` and `computeModuleId` falls back to a hash of the compilation
+root's **absolute** path. That costs three things: the region marker becomes an opaque hex id
+rather than a name; the id changes with the checkout location, so committed output does not
+reproduce across machines and check mode reports drift on CI; and the empty module path makes the
+staleness check skip its directory test, so the sidecar is never pruned when the module goes away.
+
+Pointing `-Avibetags.root` at a directory that contains every module avoids all three.
 
 ## Cross-module mirroring (`.vibetags-mirror`)
 

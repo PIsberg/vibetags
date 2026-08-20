@@ -659,7 +659,7 @@ vibetags/
 ├── vibetags-bom/                      # Published as se.deversity.vibetags:vibetags-bom (pom-only)
 │   └── pom.xml                        # <dependencyManagement> for vibetags-annotations + vibetags-processor
 │
-├── example/                           # Demo e-commerce application
+├── examples/basic/                           # Demo e-commerce application
 │   ├── src/main/java/com/example/
 │   │   ├── database/
 │   │   │   └── DatabaseConnector.java         # @AIAudit example
@@ -1166,9 +1166,9 @@ one-line map stay there):
 - `vibetags-cli/` — companion CLI (`init` creates opt-in files, `doctor` reports project
   health). Depends on `vibetags` as a library for `ServiceRegistry.optInKeys()` and the marker
   constants — it must never carry its own platform list. Build after `vibetags`.
-- `example/`, `example-multimodule/`, `example-multimodule-indexed/` — demo consumers (the last
+- `examples/basic/`, `examples/multimodule/`, `examples/multimodule-indexed/` — demo consumers (the last
   two are reactors, asserted in CI).
-- `example-kotlin/`, `example-groovy/`, `example-scala/` — JVM-language consumers, all built on
+- `examples/kotlin/`, `examples/groovy/`, `examples/scala/` — JVM-language consumers, all built on
   the JDK 21 Gradle CI leg. Kotlin (kapt) and Groovy (joint-compilation stubs +
   `javaAnnotationProcessing`) get full support with the same stub caveats (no body-scoped
   annotations, stub positions); Scala is Java-sources-only (scalac has no JSR 269) and its CI

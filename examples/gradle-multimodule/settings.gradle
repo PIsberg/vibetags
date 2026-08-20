@@ -1,0 +1,11 @@
+plugins {
+    // Provisions the JDK 21 toolchain automatically when the host JDK is newer.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vibetags-example-gradle-multimodule'
+
+// The ordinary Gradle reactor shape: each subproject is a directory below the root and
+// carries its own build.gradle, so VibeTags resolves it to its own module root.
+include 'core'
+include 'app'

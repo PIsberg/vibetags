@@ -23,15 +23,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * annotation does what they need opens the example before the reference. An annotation with no
  * example is one that has to be understood from its Javadoc alone.
  *
- * <p>Nothing enforced that. {@code example/README.md} claimed to show "all fifteen VibeTags
+ * <p>Nothing enforced that. {@code examples/basic/README.md} claimed to show "all fifteen VibeTags
  * annotations" while the project had grown to 44 and the example itself used every one of them —
  * the prose had been wrong through twenty-nine additions, because prose does not fail a build.
  *
  * <p>So three things are checked here:
  *
  * <ul>
- *   <li>every annotation is used in {@code example/} and in both multi-module demos;</li>
- *   <li>every annotation appears in {@code example/README.md}'s coverage table;</li>
+ *   <li>every annotation is used in {@code examples/basic/} and in both multi-module demos;</li>
+ *   <li>every annotation appears in {@code examples/basic/README.md}'s coverage table;</li>
  *   <li>the file each table row names actually uses that annotation — the row is a promise about
  *       where to look, and a stale path sends the reader somewhere it is not.</li>
  * </ul>
@@ -49,7 +49,7 @@ class ExampleCoverageTest {
 
     /** Example projects that must demonstrate the whole annotation set. */
     private static final List<String> EXHAUSTIVE_EXAMPLES = List.of(
-        "example/src", "example-multimodule", "example-multimodule-indexed", "example-all-tiers");
+        "examples/basic/src", "examples/multimodule", "examples/multimodule-indexed", "examples/all-tiers");
 
     @Test
     void everyAnnotationIsDemonstratedInEveryExhaustiveExample() throws IOException {
@@ -76,7 +76,7 @@ class ExampleCoverageTest {
     @Test
     void exampleReadmeCoverageTableListsEveryAnnotation() throws IOException {
         Set<String> annotations = annotationNames();
-        Path readme = REPO_ROOT.resolve("example/README.md");
+        Path readme = REPO_ROOT.resolve("examples/basic/README.md");
         assumeTrue(!annotations.isEmpty() && Files.isRegularFile(readme),
             "repo layout not reachable; skipping");
 
@@ -86,14 +86,14 @@ class ExampleCoverageTest {
             .sorted()
             .toList();
         assertTrue(missing.isEmpty(),
-            "example/README.md's coverage table does not list: " + missing
+            "examples/basic/README.md's coverage table does not list: " + missing
                 + ". Regenerate the table when adding an annotation.");
     }
 
     @Test
     void everyCoverageTableRowPointsAtAFileThatUsesThatAnnotation() throws IOException {
-        Path readme = REPO_ROOT.resolve("example/README.md");
-        Path src = REPO_ROOT.resolve("example/src/main/java");
+        Path readme = REPO_ROOT.resolve("examples/basic/README.md");
+        Path src = REPO_ROOT.resolve("examples/basic/src/main/java");
         assumeTrue(Files.isRegularFile(readme) && Files.isDirectory(src),
             "repo layout not reachable; skipping");
 
@@ -120,7 +120,7 @@ class ExampleCoverageTest {
             "parsed only " + checked + " coverage-table rows — the table format changed and this "
                 + "test is no longer reading it");
         assertTrue(problems.isEmpty(),
-            "example/README.md points readers at files that do not demonstrate the annotation:\n  "
+            "examples/basic/README.md points readers at files that do not demonstrate the annotation:\n  "
                 + String.join("\n  ", problems));
     }
 

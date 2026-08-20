@@ -119,7 +119,7 @@ so what consumers download is self-contained.
 build itself enforces:
 
 - The Gradle files cannot inherit from a Maven parent, so `vibetags/build.gradle`,
-  `vibetags-annotations/build.gradle` and `example/build.gradle` repeat the coordinates as literals.
+  `vibetags-annotations/build.gradle` and `examples/basic/build.gradle` repeat the coordinates as literals.
 - The example poms are standalone on purpose, so a reader can lift one into their own project.
 
 `BuildVersionParityTest` fails the build when either copy drifts from the parent, when a managed pom

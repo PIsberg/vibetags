@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * The indexed reactor root with Copilot's aggregate and granular directory at the <em>root</em>
  * (<a href="https://github.com/PIsberg/vibetags/issues/319">issue #319</a>).
  *
- * <p>The combination was untested: {@code example-multimodule-indexed/} had no
+ * <p>The combination was untested: {@code examples/multimodule-indexed/} had no
  * {@code .github/copilot-instructions.md}, so nothing in CI exercised the path where a module keeps
  * its own {@code .claude/rules/} — and so gets a pointer in {@code CLAUDE.md} — while its Copilot
  * rules live in the reactor root's shared {@code .github/instructions/}. Two defects hid there: the

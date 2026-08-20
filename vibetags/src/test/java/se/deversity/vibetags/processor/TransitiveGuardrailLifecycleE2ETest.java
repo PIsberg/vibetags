@@ -503,7 +503,7 @@ class TransitiveGuardrailLifecycleE2ETest {
         // run that skipped publishing would leave every consuming module inheriting nothing and
         // reporting drift against committed files that are perfectly correct. That is not
         // hypothetical — moving the publish below the check/generate branch turned
-        // example-multimodule's check-mode gate red on all three Maven legs.
+        // examples/multimodule's check-mode gate red on all three Maven legs.
         //
         // CLASS_OUTPUT is the compiler's own directory, which javac is filling with class files
         // regardless. The project tree is what must stay untouched.

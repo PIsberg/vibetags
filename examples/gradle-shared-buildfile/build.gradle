@@ -1,0 +1,33 @@
+// Every subproject is configured from here. Note there is no core/build.gradle and no
+// app/build.gradle: that absence is the whole point of this example.
+subprojects {
+    apply plugin: 'java'
+
+    group = 'se.deversity.vibetags.example'
+    version = '1.0.0'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+        annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+        compileOnly 'se.deversity.vibetags:vibetags-annotations'
+        annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << "-Avibetags.root=${rootProject.projectDir.absolutePath}"
+        // Load-bearing for this layout: see README. Without it every subproject resolves
+        // to the same module root and they overwrite one another.
+        options.compilerArgs << "-Avibetags.module=${project.name}"
+    }
+}

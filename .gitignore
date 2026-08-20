@@ -8,13 +8,13 @@ coverage/
 !.env.example
 /.qwen/
 # Build output, wherever it appears. The per-project entries below predate this and are kept
-# for clarity, but a bare `target/` is what actually covers a new module: example-all-tiers/
+# for clarity, but a bare `target/` is what actually covers a new module: examples/all-tiers/
 # has two of them, and listing paths one by one is how the next new module gets committed.
 target/
 
 vibetags/target
 vibetags-annotations/target/
-example/target
+examples/basic/target
 .idea/
 **/.gradle/
 docs/diagrams/plantuml.jar

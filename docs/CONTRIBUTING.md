@@ -174,7 +174,7 @@ vibetags/                          # Root
 │   ├── src/main/java/processor/   # AIGuardrailProcessor, VibeTagsLogger
 │   └── src/test/java/             # Unit, integration, and end-to-end tests (depends on vibetags-annotations)
 ├── vibetags-bom/                  # Published as se.deversity.vibetags:vibetags-bom (pom-only)
-├── example/                       # Example e-commerce application
+├── examples/basic/                       # Example e-commerce application
 │   └── src/main/java/             # Demonstrates real-world annotation usage; consumes via the BOM
 ├── load-tests/                    # Stress test and benchmark harness
 │   └── src/
@@ -193,7 +193,7 @@ vibetags/                          # Root
 4. Write unit tests in a new `*Test.java` file.
 5. Add an integration test verifying generated file content.
 6. Update this README with usage examples.
-7. Update `example/src/` with a demo class using the annotation.
+7. Update `examples/basic/src/` with a demo class using the annotation.
 
 ## Code Style
 

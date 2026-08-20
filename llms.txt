@@ -24,7 +24,7 @@ Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vib
 - [vibetags-annotations/](vibetags-annotations/): the 39 `@interface` classes (zero dependencies, consumer compile classpath)
 - [vibetags/](vibetags/): the annotation processor — `AIGuardrailProcessor` plus `internal/` (writer, cache, fingerprint, sidecar, content renderers)
 - [vibetags-bom/](vibetags-bom/): Maven BOM managing annotation + processor versions
-- [example/](example/README.md): demo consumer app showing every generated output file in situ
+- [examples/basic/](examples/basic/README.md): demo consumer app showing every generated output file in situ
 - [action/locked-files/](action/locked-files/): GitHub Action that fails PRs touching `@AILocked` line ranges
 
 ## Optional

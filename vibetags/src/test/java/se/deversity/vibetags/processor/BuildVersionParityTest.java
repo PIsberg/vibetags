@@ -52,13 +52,13 @@ class BuildVersionParityTest {
 
     /** Gradle builds whose literal coordinates must agree with the parent. */
     private static final List<String> GRADLE_FILES = List.of(
-        "vibetags/build.gradle", "vibetags-annotations/build.gradle", "example/build.gradle",
-        "example-kotlin/build.gradle.kts", "example-groovy/build.gradle",
-        "example-scala/build.gradle");
+        "vibetags/build.gradle", "vibetags-annotations/build.gradle", "examples/basic/build.gradle",
+        "examples/kotlin/build.gradle.kts", "examples/groovy/build.gradle",
+        "examples/scala/build.gradle");
 
     /**
      * The Gradle builds that publish a VibeTags artifact, and so must carry the release version.
-     * {@code example/build.gradle} is excluded on purpose: its {@code version = '1.0.0'} is the
+     * {@code examples/basic/build.gradle} is excluded on purpose: its {@code version = '1.0.0'} is the
      * example project's own version, the way a consumer's would be, and has nothing to do with
      * which VibeTags it depends on.
      */
@@ -77,8 +77,8 @@ class BuildVersionParityTest {
      * examples — it is what the demo GIF shows a consumer's build looking like.
      */
     private static final List<String> EXAMPLE_POMS = List.of(
-        "example/pom.xml", "example-multimodule/pom.xml", "example-multimodule-indexed/pom.xml",
-        "example-all-tiers/pom.xml", "tools/demo/pom.xml");
+        "examples/basic/pom.xml", "examples/multimodule/pom.xml", "examples/multimodule-indexed/pom.xml",
+        "examples/all-tiers/pom.xml", "tools/demo/pom.xml");
 
     /**
      * Versions a managed pom may still state as a literal, with the reason. Anything else is drift

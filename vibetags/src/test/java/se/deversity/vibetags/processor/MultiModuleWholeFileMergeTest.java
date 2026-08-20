@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * that service — and sidecar bodies were only ever stored for marker-based services. For a JSON or
  * TOML output the answer was permanently "no", so the writer's {@code no-new-rules} guard skipped
  * every update to an existing file. Whatever the first successful write produced stayed there for
- * good: on the four-module {@code example-multimodule}, {@code .mentatconfig.json} and
+ * good: on the four-module {@code examples/multimodule}, {@code .mentatconfig.json} and
  * {@code .pr_agent.toml} carried only {@code core}'s guardrails, and every later build logged
  * "no changes".
  *

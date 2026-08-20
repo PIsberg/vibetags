@@ -108,4 +108,83 @@ class DetachedModuleWarningTest {
         assertFalse(warnsAboutDetachment(compileDetached(tmp.resolve("solo"))),
             "an ordinary standalone project must never see this warning");
     }
+
+    // ---------------------------------------------------------------- shared-build-file collapse
+
+    /**
+     * The Gradle style where subprojects are declared in {@code settings.gradle} but configured
+     * entirely from the root build file, so none has a build file of its own.
+     *
+     * <p>Module roots are found by walking up to the nearest build file, and settings.gradle is
+     * deliberately not one of those markers, so the walk passes through the subproject and lands
+     * on the root. Every subproject then shares one identity, writes one sidecar and overwrites
+     * the one before it. Measured on {@code examples/gradle-shared-buildfile} before its remedy
+     * was applied: a single {@code .vibetags-mod-_root_}, and an aggregate carrying one module's
+     * guardrails with the other's simply absent. Not stale and not duplicated. Whichever
+     * subproject compiled last is the only one that survives.
+     *
+     * <p>Nothing in a javac round says which Gradle subproject it belongs to, so the build cannot
+     * repair this itself. The honest remedy is to say so and name the option that fixes it.
+     * Silence is the whole defect: the output is well-formed and looks complete.
+     */
+    @Test
+    void warnsWhenSubprojectsShareTheRootBuildFileAndSoShareAnIdentity() throws IOException {
+        Path reactor = tmp.resolve("shared");
+        Files.createDirectories(reactor);
+        Files.writeString(reactor.resolve("build.gradle"), "", StandardCharsets.UTF_8);
+        Files.writeString(reactor.resolve("settings.gradle"),
+            "include 'core'\ninclude 'app'\n", StandardCharsets.UTF_8);
+
+        List<String> warnings = compileAtRootCapturingWarnings(reactor);
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("core")
+                && w.contains("-Avibetags.module")),
+            "the collapse has to be named, with the option that fixes it. Warnings were:\n  "
+                + String.join("\n  ", warnings));
+    }
+
+    /** The guard: a subproject with its own build file resolves itself and needs no lecture. */
+    @Test
+    void staysSilentWhenEachSubprojectHasItsOwnBuildFile() throws IOException {
+        Path reactor = tmp.resolve("proper");
+        Files.createDirectories(reactor.resolve("core"));
+        Files.writeString(reactor.resolve("build.gradle"), "", StandardCharsets.UTF_8);
+        Files.writeString(reactor.resolve("settings.gradle"), "include 'core'\n", StandardCharsets.UTF_8);
+        Files.writeString(reactor.resolve("core/build.gradle"), "", StandardCharsets.UTF_8);
+
+        assertTrue(compileAtRootCapturingWarnings(reactor).stream()
+                .noneMatch(w -> w.contains("-Avibetags.module")),
+            "a subproject carrying its own build file supplies its own identity");
+    }
+
+    /** The other guard: no settings.gradle at all means no subprojects to collapse. */
+    @Test
+    void staysSilentWithoutASettingsFile() throws IOException {
+        Path plain = tmp.resolve("plain");
+        Files.createDirectories(plain);
+        Files.writeString(plain.resolve("build.gradle"), "", StandardCharsets.UTF_8);
+
+        assertTrue(compileAtRootCapturingWarnings(plain).stream()
+                .noneMatch(w -> w.contains("-Avibetags.module")),
+            "an ordinary single-module Gradle project must never see this");
+    }
+
+    /**
+     * Compiles a source that lives under {@code core/} with the VibeTags root at {@code reactor},
+     * which is the shape a subproject without its own build file produces.
+     */
+    private List<String> compileAtRootCapturingWarnings(Path reactor) throws IOException {
+        Files.createDirectories(reactor);
+        Files.createFile(reactor.resolve("CLAUDE.md"));
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactor, false);
+        harness.writeSourceFile("core/src/main/java/com/example/core/IrNode.java", SOURCE);
+        List<String> warnings = harness.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.WARNING
+                || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
+    }
+
 }
