@@ -183,7 +183,7 @@ cd vibetags-annotations && mvn install && cd ..
 cd vibetags && mvn clean install && cd ..
 cd vibetags && mvn test -Dtest=NewAnnotationsV<N>DefinitionTest,NewAnnotationsV<N>EndToEndTest,NewAnnotationsV<N>ValidationTest,BuildFingerprintUnitTest,BuildFingerprintIntegrationTest,ProjectFactsConsistencyTest && cd ..
 cd vibetags-bom && mvn install && cd ..
-cd example && mvn clean compile && cd ..
+cd examples/basic && mvn clean compile && cd ../..
 ```
 
 `@SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")` on `AIGuardrailProcessor`

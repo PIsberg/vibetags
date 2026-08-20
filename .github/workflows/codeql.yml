@@ -74,7 +74,7 @@ jobs:
         run: cd vibetags-bom && mvn install -B -q
 
       - name: Build example project
-        run: cd example && mvn clean compile -B -q
+        run: cd examples/basic && mvn clean compile -B -q
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7

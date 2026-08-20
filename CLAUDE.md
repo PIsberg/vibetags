@@ -43,7 +43,7 @@ mvn test -Pe2e                      # the whole suite; what CI runs
 mvn test -Dtest=SomeTest            # -Dtest overrides the tag filter
 mvn compile -Pself-annotate         # regenerate this repo's own guardrail files
 
-cd example && mvn clean compile     # consumer fixture; library must be installed first
+cd examples/basic && mvn clean compile     # consumer fixture; library must be installed first
 ```
 
 ## Scoping and hygiene
