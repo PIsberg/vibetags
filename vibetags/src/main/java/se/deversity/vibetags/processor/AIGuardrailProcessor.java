@@ -970,7 +970,106 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         warnAboutGranularOptedOutSinceAModuleLastCompiled(activeServices, allSidecars);
+        warnAboutSiblingRuleFilesThatAreMissing(activeServices, serviceFiles, allSidecars);
     }
+
+    /**
+     * Warns when the aggregate will keep naming a granular rule file that is not on disk and that
+     * this build will not write.
+     *
+     * <p>Each module writes only its own granular files: the write plan comes from the compiling
+     * module's elements, and a sibling's stems are added to the cleanup-exclusion set so they are
+     * protected from deletion rather than rewritten. That is deliberate, because writing into
+     * another module's rule files is the reach that deleted 256 committed files in issue #383,
+     * inverted. The consequence is that a file lost to {@code git clean}, a bad merge or a granular
+     * opt-out round trip stays lost until its own module recompiles, while the aggregate still
+     * points at it as the authoritative source. The guardrail is then stated nowhere: not inline,
+     * because the region is collapsed to an index, and not in a rule file, because it is gone.
+     *
+     * <p>Restoring it here would need the sidecar format to change — a {@code GranularContribution}
+     * carries globs and body but neither the description nor the display name the renderer needs —
+     * so this reports instead of repairing (issue #435).
+     *
+     * <p>The compiling module's own stems are excluded, because this build is about to write them:
+     * without that, every first build would warn about the files it is in the middle of creating.
+     */
+    private void warnAboutSiblingRuleFilesThatAreMissing(Set<String> activeServices,
+                                                         Map<String, Path> serviceFiles,
+                                                         List<ModuleSidecar> allSidecars) {
+        if (allSidecars.size() < 2) {
+            return; // Nobody else to have lost a file.
+        }
+        Set<String> granularServices = new java.util.LinkedHashSet<>();
+        for (String service : activeServices) {
+            if (service.endsWith("_granular") && serviceFiles.get(service) != null) {
+                granularServices.add(service);
+            }
+        }
+        if (granularServices.isEmpty()) {
+            return;
+        }
+        Set<String> mine = GranularRulesWriter
+            .contributionsFor(elementRules, RoleConfig.load(root)).keySet();
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (String service : granularServices) {
+            Path dir = serviceFiles.get(service);
+            if (dir == null) {
+                continue; // Re-checked for the null analysis: the map lookup is @Nullable.
+            }
+            Set<String> present = filenamesIn(dir);
+            for (ModuleSidecar sidecar : allSidecars) {
+                for (String stem : sidecar.getGranularStems()) {
+                    if (mine.contains(stem) || hasFileFor(present, stem)) {
+                        continue;
+                    }
+                    String entry = sidecar.getRegionId() + "'s " + stem;
+                    if (!missing.contains(entry)) {
+                        missing.add(entry);
+                    }
+                }
+            }
+        }
+        if (missing.isEmpty()) {
+            return;
+        }
+        java.util.Collections.sort(missing);
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: the generated files name " + String.join(", ", missing)
+                + " as the authoritative rule file(s) for those elements, but they are not on disk"
+                + " and this build does not write another module's files. Their guardrails are"
+                + " stated nowhere until that module recompiles. Run a full build to restore them.");
+        if (log != null) {
+            log.warn("granular.missing entries={} reason=sibling-file-absent", missing);
+        }
+    }
+
+    /** Filenames directly inside {@code dir}, or empty when it cannot be listed. */
+    private static Set<String> filenamesIn(Path dir) {
+        if (!Files.isDirectory(dir)) {
+            return Set.of();
+        }
+        try (java.util.stream.Stream<Path> entries = Files.list(dir)) {
+            return entries.map(Path::getFileName)
+                .filter(java.util.Objects::nonNull)
+                .map(Path::toString)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        } catch (IOException | RuntimeException unreadable) {
+            return Set.of(); // A diagnostic must never be the thing that fails a build.
+        }
+    }
+
+    /** Whether any of {@code present} is a rendering of {@code stem}, whatever the extension. */
+    private static boolean hasFileFor(Set<String> present, String stem) {
+        String prefix = stem + ".";
+        for (String name : present) {
+            if (name.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /**
      * The opt-out mirror of the loop above, and the reason this pair is about partial merges
