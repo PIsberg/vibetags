@@ -191,14 +191,21 @@ class MultiModuleProcessorTest {
         // single-module test, where the root is a @TempDir far from the project dir), relativize
         // produces a long "../../.."-laden path. Used verbatim as a filename, that can exceed the
         // OS limit — on macOS save() then failed with ENAMETOOLONG and wrote no sidecar. The id
-        // must instead be a short, stable hash with no path segments.
+        // must instead be short, with no path segments.
+        //
+        // The id was a bare hex hash of the ABSOLUTE path until issue #436, which made the same
+        // layout produce different ids on different machines and so broke reproducibility of
+        // committed output. It is now the directory name plus a hash of the path relative to the
+        // root. This test asserts the properties that made the original form necessary — bounded,
+        // no separators, no "..", stable — rather than the form itself, which is what changed.
         Path vibetagsRoot = tmp.resolve("project");
         Path compilationRoot = tmp.resolve("somewhere").resolve("else").resolve("deep");
 
         String id = ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot);
 
-        assertTrue(id.matches("[0-9a-f]+"),
-            "an out-of-tree compilation root must yield a short hex hash id, got: " + id);
+        assertTrue(id.length() <= 64, "module id must stay short enough to be a filename, got: " + id);
+        assertTrue(id.matches("[0-9a-zA-Z_-]+"),
+            "module id must contain no path separators or other filename-hostile characters, got: " + id);
         assertTrue(!id.contains(".."),
             "module id must never embed '..' path segments (filename-length risk), got: " + id);
         assertTrue(id.equals(ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot)),

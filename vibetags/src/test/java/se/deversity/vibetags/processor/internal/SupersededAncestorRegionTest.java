@@ -6,11 +6,13 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -273,4 +275,93 @@ class SupersededAncestorRegionTest {
         assertEquals(List.of("webapp"), regionIds(ModuleSidecar.readAll(root)),
             "a tie goes to the named module, matching the ancestor rule's preference");
     }
+
+    // ------------------------------------------------ out-of-tree ids must not move with the tree
+
+    /**
+     * A module outside the VibeTags root is filed under an id derived from where it sits relative
+     * to that root, not from where the checkout happens to live.
+     *
+     * <p>The id reaches committed output: it is the sidecar filename and the name in every
+     * {@code VIBETAGS-MODULE} marker. Deriving it from the absolute path meant the same repository
+     * produced different generated files on two machines, so committed output stopped reproducing
+     * and check mode reported drift on a tree where nothing was wrong. Reachable through ordinary
+     * layouts: Gradle {@code includeFlat} or a {@code projectDir} override, and Maven
+     * {@code <module>../sibling</module>}. See issue #436.
+     */
+    @Test
+    void outOfTreeModuleIdIsTheSameFromAnyCheckoutLocation() {
+        String here = ModuleSidecar.computeModuleId(
+            Paths.get("/home/alice/work/repo/lib"), Paths.get("/home/alice/work/repo/app"));
+        String there = ModuleSidecar.computeModuleId(
+            Paths.get("/ci/runner/build/repo/lib"), Paths.get("/ci/runner/build/repo/app"));
+
+        assertEquals(here, there,
+            "the same layout under a different checkout root must produce the same module id, or "
+                + "committed generated files stop reproducing across machines");
+    }
+
+    /** Two different out-of-tree modules must still be told apart, or they share a sidecar. */
+    @Test
+    void differentOutOfTreeModulesStillGetDifferentIds() {
+        String lib = ModuleSidecar.computeModuleId(
+            Paths.get("/home/alice/repo/lib"), Paths.get("/home/alice/repo/app"));
+        String tools = ModuleSidecar.computeModuleId(
+            Paths.get("/home/alice/repo/tools"), Paths.get("/home/alice/repo/app"));
+
+        assertNotEquals(lib, tools, "two modules sharing an id would share a sidecar");
+    }
+
+    /** Same directory name, different place: the id must still separate them. */
+    @Test
+    void outOfTreeModulesWithTheSameDirectoryNameAreStillDistinct() {
+        String near = ModuleSidecar.computeModuleId(
+            Paths.get("/home/alice/repo/lib"), Paths.get("/home/alice/repo/app"));
+        String far = ModuleSidecar.computeModuleId(
+            Paths.get("/home/alice/other/lib"), Paths.get("/home/alice/repo/app"));
+
+        assertNotEquals(near, far,
+            "a bare directory name would collide here and the two modules would overwrite one "
+                + "another, which is worse than an opaque id");
+    }
+
+    /** The id is a filename, so it must stay short whatever the path length. */
+    @Test
+    void outOfTreeModuleIdStaysShortEnoughToBeAFilename() {
+        StringBuilder deep = new StringBuilder("/home/alice");
+        for (int i = 0; i < 40; i++) {
+            deep.append("/averyverylongintermediatedirectoryname").append(i);
+        }
+        String id = ModuleSidecar.computeModuleId(
+            Paths.get(deep + "/lib"), Paths.get("/home/alice/repo/app"));
+
+        assertTrue(id.length() <= 64,
+            "the id becomes '.vibetags-mod-<id>'; an unbounded one fails with ENAMETOOLONG and no "
+                + "sidecar is written at all. Got " + id.length() + " chars: " + id);
+    }
+
+    /**
+     * Upgrading past issue #436 renames an out-of-tree module's sidecar, because its id is no
+     * longer derived from the absolute path. The old one is not stale by the ordinary test — its
+     * module path is empty, so the directory-existence check is skipped and never retires it — so
+     * without something else it would sit beside the new one and every generated file would carry
+     * the module twice.
+     *
+     * <p>The equal-path rule handles it: both regions report the same (empty) module path and the
+     * same elements, so the fresher wins and the leftover is deleted on the first build after the
+     * upgrade. This pins that the upgrade heals itself rather than needing a manual cleanup.
+     */
+    @Test
+    void aSidecarLeftUnderTheOldOutOfTreeIdIsRetiredByTheNewOne(@TempDir Path root) throws IOException {
+        writeSidecar(root, "3f2a9c11", "", "com.example.A", "com.example.B");   // pre-#436 id
+        writeSidecar(root, "lib_560aee97", "", "com.example.A", "com.example.B"); // post-#436 id
+        writtenAt(root, "3f2a9c11", 1_000_000L);
+        writtenAt(root, "lib_560aee97", 2_000_000L);
+
+        assertEquals(List.of("lib_560aee97"), regionIds(ModuleSidecar.readAll(root)),
+            "the upgrade must not leave the module represented twice");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-3f2a9c11")),
+            "and the leftover sidecar must be deleted, not merely skipped");
+    }
+
 }

@@ -124,6 +124,9 @@ public final class ModuleSidecar {
 
     private static final int MULTI_MODULE_THRESHOLD = 2;
 
+    /** Cap on the readable half of an out-of-tree module id; the rest is a hash. */
+    private static final int MAX_READABLE_ID = 24;
+
     /** Module sub-marker embedded inside the outer VIBETAGS-START/END block. */
     public static final String SUB_MARKER_MD_FORMAT = "<!-- VIBETAGS-MODULE: %s -->";
     public static final String SUB_MARKER_MD_END_FORMAT = "<!-- VIBETAGS-MODULE-END: %s -->";
@@ -1252,17 +1255,39 @@ public final class ModuleSidecar {
             Path rel = vibetagsRoot.relativize(compilationRoot);
             String relStr = rel.toString();
             if (relStr.isEmpty() || ".".equals(relStr)) return "_root_";
-            // If the compilation root is not *under* the VibeTags root, the relative path escapes
-            // upward (starts with ".."). Such an id is meaningless and, worse, unbounded in length:
-            // an output dir or @TempDir far from the project can produce a filename that exceeds the
-            // OS limit (seen on macOS, where save() then fails with ENAMETOOLONG and no sidecar is
-            // written). Fall back to a short stable hash, as the different-root case below does.
+            // The compilation root is not *under* the VibeTags root, so the relative path escapes
+            // upward. Two things are needed at once. The id has to be bounded, because it becomes
+            // the sidecar filename and an unbounded one fails with ENAMETOOLONG and writes no
+            // sidecar at all (seen on macOS, from an output dir or @TempDir far from the project).
+            // And it has to be a property of the *layout* rather than of where the repository is
+            // checked out, because it also appears in every VIBETAGS-MODULE marker in committed
+            // output: an id derived from the absolute path made the same repository generate
+            // different files on two machines, so check mode reported drift on a correct tree
+            // (issue #436).
+            //
+            // The relative path satisfies both. It is short, it is the same from any checkout
+            // location, and String.hashCode() is specified by the language rather than left to the
+            // implementation the way Path.hashCode() is, so it agrees across JVMs. Separators are
+            // normalised so Windows and Linux agree on the same layout. The directory name is kept
+            // in front to leave the id legible.
             if (rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString())) {
-                return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
+                String normalised = relStr.replace(BACKSLASH, '/');
+                String hash = Integer.toHexString(normalised.hashCode() & 0x7fffffff);
+                Path name = compilationRoot.getFileName();
+                if (name == null) {
+                    return hash;
+                }
+                String readable = sanitizeId(name.toString());
+                if (readable.length() > MAX_READABLE_ID) {
+                    readable = readable.substring(0, MAX_READABLE_ID);
+                }
+                return readable.isEmpty() ? hash : readable + "_" + hash;
             }
             return sanitizeId(relStr.replace(java.io.File.separatorChar, '_'));
         } catch (IllegalArgumentException e) {
-            // Different filesystem roots (e.g., Windows different drives)
+            // Different filesystem roots (e.g. Windows drives), where there is no relative path to
+            // derive anything from. This id still moves with the checkout, but the layout offers
+            // nothing stable to replace it with.
             return Integer.toHexString(compilationRoot.hashCode() & 0x7fffffff);
         }
     }
