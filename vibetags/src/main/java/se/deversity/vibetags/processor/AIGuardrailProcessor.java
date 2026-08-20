@@ -969,6 +969,60 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     service, behind);
             }
         }
+        warnAboutGranularOptedOutSinceAModuleLastCompiled(activeServices, allSidecars);
+    }
+
+    /**
+     * The opt-out mirror of the loop above, and the reason this pair is about partial merges
+     * generally rather than only about opt-ins. The entry point above kept its narrower name
+     * because renaming it would edit {@code generateFiles()}, which is locked.
+     *
+     * <p>While a granular directory is opted in, each module renders its region as a scoped-rules
+     * index: a list of elements plus the rule file that is authoritative for each. Opting the
+     * directory back out deletes those files. The module that recompiles re-renders its region
+     * inline, but a module that does not keeps the index it rendered earlier, so the aggregate
+     * names rule files that are gone and the guardrail behind them is stated nowhere at all. That
+     * is worse than the opt-in window, where a module is merely absent: here the reader is sent
+     * somewhere empty and the aggregate still calls it authoritative.
+     *
+     * <p>The signal is structural rather than a search of rendered text: a sidecar records the
+     * granular stems it contributed, so a module still holding stems when nothing is opted in is
+     * exactly a module whose region indexes deleted files. Dropping the granular service changes
+     * the fingerprint, so each module repairs its own region on its next compile and a full pass
+     * closes the window.
+     *
+     * <p>Deliberately narrow: silent while <em>any</em> granular service is still opted in, because
+     * stems are recorded per module rather than per service, so a partial opt-out cannot be told
+     * from a live one without a sidecar format change.
+     */
+    private void warnAboutGranularOptedOutSinceAModuleLastCompiled(
+            Set<String> activeServices, List<ModuleSidecar> allSidecars) {
+        if (allSidecars.size() < 2) {
+            return; // Single module: its own round is by definition current.
+        }
+        for (String service : activeServices) {
+            if (service.endsWith("_granular")) {
+                return; // Still opted in somewhere; the collapsed shape is correct.
+            }
+        }
+        List<String> behind = allSidecars.stream()
+            .filter(sidecar -> !sidecar.getGranularStems().isEmpty())
+            .map(ModuleSidecar::getRegionId)
+            .distinct()
+            .sorted()
+            .toList();
+        if (behind.isEmpty()) {
+            return;
+        }
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: the granular rules directory was opted out after "
+                + String.join(", ", behind) + " last compiled, so "
+                + (behind.size() == 1 ? "its region still points" : "their regions still point")
+                + " at rule files that no longer exist. Run a full build to complete the file.");
+        if (log != null) {
+            log.warn("merge.partial modulesBehind={} reason=granular-opted-out-after-last-compile",
+                behind);
+        }
     }
 
     /**
