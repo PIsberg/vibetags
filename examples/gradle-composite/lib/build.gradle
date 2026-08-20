@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group = 'se.deversity.vibetags.example'
+version = '1.0.0'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "-Avibetags.root=${rootProject.projectDir.parentFile.absolutePath}"
+    options.compilerArgs << "-Avibetags.module=lib"
+}

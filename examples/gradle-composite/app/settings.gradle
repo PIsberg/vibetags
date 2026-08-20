@@ -1,0 +1,10 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vibetags-example-gradle-composite-app'
+
+// A composite build: lib is a SEPARATE Gradle build, substituted in rather than included
+// as a subproject. Each build has its own settings.gradle and its own root, so there is no
+// single Gradle root that contains both. VibeTags is told where the shared root is instead.
+includeBuild '../lib'

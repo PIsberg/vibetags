@@ -1,0 +1,34 @@
+// The VibeTags root is the directory ABOVE the Gradle root, because that is the only
+// directory that contains both modules. Pointing it at rootProject.projectDir (app/) would
+// leave lib/ outside the root: see ../README.md for what that costs.
+def vibetagsRoot = rootProject.projectDir.parentFile.absolutePath
+
+allprojects {
+    apply plugin: 'java'
+
+    group = 'se.deversity.vibetags.example'
+    version = '1.0.0'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+        annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+        compileOnly 'se.deversity.vibetags:vibetags-annotations'
+        annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << "-Avibetags.root=${vibetagsRoot}"
+        options.compilerArgs << "-Avibetags.module=${project.name}"
+    }
+}

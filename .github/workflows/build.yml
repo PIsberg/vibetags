@@ -790,6 +790,50 @@ jobs:
             exit 1
           fi
 
+      # Flat layout: lib/ sits beside the Gradle root rather than under it. Pins that
+      # pointing vibetags.root at the directory containing both keeps real module names,
+      # instead of the absolute-path hash an out-of-tree module would otherwise get.
+      - name: Build Gradle Flat-Layout Example (module beside the root)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-flat/app
+          ./gradlew clean build --no-daemon
+          cd ..
+          grep -qF "VIBETAGS-MODULE: lib" CLAUDE.md
+          grep -qF "com.example.gflat.lib.Store" CLAUDE.md
+          grep -qF "com.example.gflat.app.Console" CLAUDE.md
+          test -f .vibetags-mod-lib
+          # A hash-named sidecar means the module resolved out of tree: the failure this pins.
+          if ls .vibetags-mod-* | grep -qE "\.vibetags-mod-[0-9a-f]{6,}$"; then
+            echo "::error::a module resolved out of tree and was filed under a path hash."
+            ls -a | grep vibetags-mod
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain -- CLAUDE.md)" ]; then
+            echo "::error::examples/gradle-flat/CLAUDE.md is out of date."
+            git --no-pager diff -- CLAUDE.md
+            exit 1
+          fi
+
+      # Composite build: two separate Gradle builds joined with includeBuild. Neither is the
+      # other's root, so both are pointed at the directory containing them; without that they
+      # write two separate sets of generated files.
+      - name: Build Gradle Composite Example (includeBuild)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-composite/app
+          ./gradlew clean build --no-daemon
+          cd ..
+          grep -qF "VIBETAGS-MODULE: app" CLAUDE.md
+          grep -qF "VIBETAGS-MODULE: lib" CLAUDE.md
+          grep -qF "com.example.gcomp.lib.Codec" CLAUDE.md
+          test -f .vibetags-mod-app && test -f .vibetags-mod-lib
+          if [ -n "$(git status --porcelain -- CLAUDE.md)" ]; then
+            echo "::error::examples/gradle-composite/CLAUDE.md is out of date."
+            git --no-pager diff -- CLAUDE.md
+            exit 1
+          fi
+
       # Same JDK 21 gating and same shape as the Kotlin step. Groovy's joint compilation
       # generates Java stubs and (with javaAnnotationProcessing=true) runs JSR 269
       # processors over them — the Groovy analogue of kapt.

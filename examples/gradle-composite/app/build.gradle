@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+}
+
+group = 'se.deversity.vibetags.example'
+version = '1.0.0'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'se.deversity.vibetags.example:vibetags-example-gradle-composite-lib'
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    compileOnly 'se.deversity.vibetags:vibetags-annotations'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Each participating build resolves its own root, so both are pointed at the directory
+    // that contains them. Without this they write two separate sets of generated files.
+    options.compilerArgs << "-Avibetags.root=${rootProject.projectDir.parentFile.absolutePath}"
+    options.compilerArgs << "-Avibetags.module=app"
+}

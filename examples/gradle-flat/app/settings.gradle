@@ -1,0 +1,12 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vibetags-example-gradle-flat'
+
+// The flat layout: the Gradle root is app/, and the other module lives beside it rather
+// than below it. Gradle allows this via a projectDir override (includeFlat does the same
+// thing). It matters to VibeTags because module paths are computed relative to the
+// VibeTags root, and a module that is not under that root has no meaningful path.
+include 'lib'
+project(':lib').projectDir = file('../lib')
