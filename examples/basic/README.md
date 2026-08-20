@@ -1054,5 +1054,5 @@ human-named topic files.
 
 In a **multi-module reactor** a root `.claude/rules/` can't aggregate across modules — put Tier-3
 rules per module and use an indexed root instead. See
-[`../examples/multimodule-indexed`](../multimodule-indexed) and the repository README's
+[`../multimodule-indexed`](../multimodule-indexed) and the repository README's
 *Organizing Context Files* section ([#295](https://github.com/PIsberg/vibetags/issues/295)).

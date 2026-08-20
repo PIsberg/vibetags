@@ -2,7 +2,7 @@
 
 A two-module reactor (`core` → `app`) demonstrating the **lean indexed root** layout: the recommended
 way to keep a multi-module project's always-loaded context small. It is the companion to
-[`../examples/multimodule`](../multimodule) (the **merged** root) — same reactor mechanics,
+[`../multimodule`](../multimodule) (the **merged** root) — same reactor mechanics,
 opposite Tier-1 strategy. Background: [issue #295](https://github.com/PIsberg/vibetags/issues/295).
 
 ## The tiers, as wired here
@@ -17,7 +17,7 @@ full **merged** block — showing that the index is applied per-platform, only w
 auto-load the scoped rules.
 
 > The `.vibetags-root-index` marker is what turns the root aggregate into an index. Delete it and the
-> next build re-embeds the full merge (the `../examples/multimodule` layout).
+> next build re-embeds the full merge (the `../multimodule` layout).
 
 ## Annotation coverage
 
@@ -58,7 +58,7 @@ mvn clean compile
 
 Use the indexed root in a **multi-module reactor** where each module owns its own `.claude/rules/`.
 It keeps the always-loaded root lean while the detail loads on demand. Prefer the **merged** root
-(`../examples/multimodule`) when your tooling can't auto-load scoped rules, or you want every guardrail
+(`../multimodule`) when your tooling can't auto-load scoped rules, or you want every guardrail
 visible at launch. A **root** `.claude/rules/` is *not* the tool for a reactor — see the tiers section
 in the repository README.
 

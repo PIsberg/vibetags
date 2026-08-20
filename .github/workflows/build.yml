@@ -96,7 +96,7 @@ jobs:
       - name: Build Example Project (Maven)
         run: |
           cd examples/basic
-          mvn clean compile -B -Dvibetags.log.path=../vibetags.log
+          mvn clean compile -B -Dvibetags.log.path=../../vibetags.log
 
       - name: Verify The Example's Committed Guardrails Match Its Annotations
         run: |
@@ -185,7 +185,7 @@ jobs:
           # showcase/ carries all 44 @AI* annotations, so the merged root must show all 44 of the
           # renderer's element buckets. A renderer that silently drops a family in the multi-module
           # path — as opposed to the single-module path examples/basic/ covers — fails here.
-          declared=$(ls ../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/*.java | wc -l)
+          declared=$(ls ../../vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/*.java | wc -l)
           sections=$(grep -o '^  <[a-z_]*>' CLAUDE.md | sort -u | wc -l)
           if [ "$sections" -ne "$declared" ]; then
             echo "merged CLAUDE.md has $sections element sections for $declared annotations"
@@ -727,7 +727,7 @@ jobs:
       - name: Build Example Project (Gradle)
         run: |
           cd examples/basic
-          ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../vibetags.log" --no-daemon
+          ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../../vibetags.log" --no-daemon
 
       # JDK 21 only: the Kotlin Gradle plugin trails new JDK releases, and the example pins a
       # 21 toolchain anyway — the 25/26 legs would only re-test whether Kotlin tolerates a host

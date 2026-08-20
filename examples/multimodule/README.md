@@ -71,7 +71,7 @@ This reactor uses the **merged** Tier-1 root plus **Tier-2** per-module files:
 
 For the **lean indexed** Tier-1 root (one pointer per module instead of the full merge) paired with
 **Tier-3** per-module scoped rules, see the sibling
-[`../examples/multimodule-indexed`](../multimodule-indexed). The repository README's
+[`../multimodule-indexed`](../multimodule-indexed). The repository README's
 *Organizing Context Files* section explains all three tiers and when to use each (and why a **root**
 `.claude/rules/` belongs to single-module projects, not reactors —
 [#295](https://github.com/PIsberg/vibetags/issues/295)).
