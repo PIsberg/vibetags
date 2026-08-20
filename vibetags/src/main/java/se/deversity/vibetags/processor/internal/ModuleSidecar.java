@@ -701,8 +701,16 @@ public final class ModuleSidecar {
      *       that is then dropped and the file would freeze on the departed module's last text.</li>
      * </ul>
      *
+     * <p>A third shape has no nesting at all: two regions naming the <em>same</em> directory,
+     * which is what a Gradle {@code settings.gradle} carrying {@code rootProject.name='x'} beside
+     * {@code include 'x'} produces, and what any two compilations produce when both resolve a
+     * root-like module path. {@code isNestedUnder} is false in both directions for equal paths,
+     * so before this was handled both regions survived and every generated file stated the same
+     * guardrails twice. {@link #yieldsOnSamePath} settles that pair, again by freshness.
+     *
      * <p>Ties go to the more specific module, which is the first case's shape and the historical
-     * default: on equal timestamps a descendant still retires its ancestor, never the reverse.
+     * default: on equal timestamps a descendant still retires its ancestor, never the reverse,
+     * and on one path the named module outlives the root identity.
      *
      * <p>Conservative in every other respect. A region is dropped only when the fresher regions
      * cover <em>all</em> of its elements, so a reactor root that compiles sources of its own keeps
@@ -742,6 +750,9 @@ public final class ModuleSidecar {
                     if (otherWrittenAt >= writtenAt) covered.addAll(otherElements);
                 } else if (isNestedUnder(path, otherPath) && otherWrittenAt > writtenAt) {
                     covered.addAll(otherElements);
+                } else if (path.equals(otherPath)
+                        && yieldsOnSamePath(region, other, writtenAt, otherWrittenAt)) {
+                    covered.addAll(otherElements);
                 }
             });
             if (!covered.isEmpty() && covered.containsAll(elements)) {
@@ -777,6 +788,37 @@ public final class ModuleSidecar {
             p = p.substring(0, p.length() - 1);
         }
         return "_root_".equals(p) ? "" : p;
+    }
+
+    /**
+     * Whether {@code region} gives way to {@code other} when both name the <em>same</em>
+     * directory. Neither is nested under the other, so the ancestor rule cannot separate them,
+     * and without this they both survive and every generated file states the same guardrails
+     * twice under two {@code VIBETAGS-MODULE} markers.
+     *
+     * <p>Freshness decides first, as everywhere else here. A tie goes to the named module over
+     * the root identity, matching the ancestor rule's preference for the more specific of two
+     * identities, and otherwise to the lower region id. The relation is asymmetric for any two
+     * distinct regions, so exactly one of the pair is retired and every build retires the same
+     * one. Containment is still required by the caller, which is what keeps this from eating a
+     * real module: {@code ""} is also the catch-all path for a compilation root that cannot be
+     * relativized, and two genuinely different modules that land on it claim different elements.
+     */
+    private static boolean yieldsOnSamePath(String region, String other,
+                                            long writtenAt, long otherWrittenAt) {
+        // An unreadable mtime reads as Long.MAX_VALUE, i.e. maximally fresh. It must never be
+        // the reason a region is retired: duplication is recoverable, a dropped live region is
+        // not. The caller already refuses to retire a region whose own mtime is unreadable.
+        if (otherWrittenAt == Long.MAX_VALUE) return false;
+        if (otherWrittenAt != writtenAt) return otherWrittenAt > writtenAt;
+        boolean regionIsRoot = isRootRegionId(region);
+        if (regionIsRoot != isRootRegionId(other)) return regionIsRoot;
+        return region.compareTo(other) > 0;
+    }
+
+    /** True for the identity a compilation gets when it resolves to the VibeTags root itself. */
+    private static boolean isRootRegionId(String regionId) {
+        return regionId.isEmpty() || "_root_".equals(regionId);
     }
 
     /** True when {@code candidate} names a directory strictly below {@code ancestor}. */

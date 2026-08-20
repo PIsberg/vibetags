@@ -18,19 +18,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Regression tests for a Gradle repository with exactly one included subproject whose directory is
  * a strict subdirectory of the VibeTags root.
  *
- * <p>Reported layout: {@code settings.gradle} at the git root declares {@code include 'mcp-b2bapi'},
- * all Java sources live under {@code mcp-b2bapi/}, and the subproject's {@code compileJava} passes
+ * <p>Reported layout: {@code settings.gradle} at the git root declares {@code include 'webapp'},
+ * all Java sources live under {@code webapp/}, and the subproject's {@code compileJava} passes
  * {@code -Avibetags.root} pointing at the git root, one level above the sources. Two sidecars were
  * on disk for what is really one module:
  *
  * <pre>
  *   .vibetags-mod-_root_       moduleId=_root_      modulePath=
- *   .vibetags-mod-mcp-b2bapi   moduleId=mcp-b2bapi  modulePath=mcp-b2bapi
+ *   .vibetags-mod-webapp   moduleId=webapp  modulePath=webapp
  * </pre>
  *
  * <p>Both carried byte-identical bodies for every annotated element, because both were rendered
  * from the same source tree: the {@code _root_} one from a build whose module identity resolved to
- * the ancestor directory, the {@code mcp-b2bapi} one from a build that resolved the subproject.
+ * the ancestor directory, the {@code webapp} one from a build that resolved the subproject.
  * The stale check in {@code ModuleSidecar.readAll} exempts an empty {@code modulePath} - the root
  * directory always exists - so the ancestor sidecar was immortal, and every subsequent build
  * emitted its region beside the real module's. The result was two {@code VIBETAGS-MODULE} regions
@@ -88,7 +88,7 @@ class AncestorModuleDuplicateRegionTest {
     /** The git root: settings.gradle declaring one subproject, plus a root build file. */
     private void setUpRepo() throws IOException {
         Files.writeString(repoRoot.resolve("settings.gradle"),
-            "rootProject.name = 'mcp-b2bapi'\ninclude 'mcp-b2bapi'\n", StandardCharsets.UTF_8);
+            "rootProject.name = 'webapp'\ninclude 'webapp'\n", StandardCharsets.UTF_8);
         Files.writeString(repoRoot.resolve("build.gradle"),
             "plugins { id 'java' }\n", StandardCharsets.UTF_8);
         Files.createDirectories(repoRoot.resolve(".gemini/rules"));
@@ -96,17 +96,17 @@ class AncestorModuleDuplicateRegionTest {
 
     /** Gives the subproject its own build file, so the module-root walk stops there. */
     private void giveSubprojectItsOwnBuildFile() throws IOException {
-        Files.createDirectories(repoRoot.resolve("mcp-b2bapi"));
-        Files.writeString(repoRoot.resolve("mcp-b2bapi/build.gradle"),
+        Files.createDirectories(repoRoot.resolve("webapp"));
+        Files.writeString(repoRoot.resolve("webapp/build.gradle"),
             "plugins { id 'java' }\n", StandardCharsets.UTF_8);
     }
 
-    /** One {@code :mcp-b2bapi:compileJava} pass, with {@code vibetags.root} at the git root. */
+    /** One {@code :webapp:compileJava} pass, with {@code vibetags.root} at the git root. */
     private void compileSubproject() throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(repoRoot, false);
-        harness.writeSourceFile("mcp-b2bapi/src/main/java/com/example/auth/AuthUtil.java",
+        harness.writeSourceFile("webapp/src/main/java/com/example/auth/AuthUtil.java",
             AUTH_UTIL_SOURCE);
-        harness.writeSourceFile("mcp-b2bapi/src/main/java/com/example/report/ReportBuilder.java",
+        harness.writeSourceFile("webapp/src/main/java/com/example/report/ReportBuilder.java",
             SIBLING_SOURCE);
         harness.compile();
     }
@@ -130,7 +130,7 @@ class AncestorModuleDuplicateRegionTest {
         setUpRepo();
         compileSubproject();                 // resolves to the git root  -> _root_
         giveSubprojectItsOwnBuildFile();
-        compileSubproject();                 // resolves to the subproject -> mcp-b2bapi
+        compileSubproject();                 // resolves to the subproject -> webapp
 
         String authUtil = ruleFile("com-example-auth-AuthUtil");
         assertEquals(1, countOf(authUtil, "## Security-Critical Code"),
@@ -153,7 +153,7 @@ class AncestorModuleDuplicateRegionTest {
         giveSubprojectItsOwnBuildFile();
         compileSubproject();
 
-        assertTrue(Files.exists(repoRoot.resolve(".vibetags-mod-mcp-b2bapi")),
+        assertTrue(Files.exists(repoRoot.resolve(".vibetags-mod-webapp")),
             "the real module's sidecar must stay");
         assertFalse(Files.exists(repoRoot.resolve(".vibetags-mod-_root_")),
             "the ancestor sidecar covers no element the subproject does not, so it must be pruned");

@@ -200,4 +200,77 @@ class SupersededAncestorRegionTest {
         assertTrue(regionIds(ModuleSidecar.readAll(root)).contains("app"),
             "the subproject is the fresher identity for the element it claims");
     }
+    // ------------------------------------------- one directory claimed under two identities
+
+    @Test
+    void twoRootLikeRegionsForOneDirectoryResolveToOne(@TempDir Path root) throws IOException {
+        // Reported from a Gradle repo whose settings.gradle carries rootProject.name='x' and
+        // include 'x'. Both compilations resolved a root-like module path: computeModulePath
+        // returns "" for the root project, and also for any compilation root it cannot
+        // relativize under the VibeTags root (an out-of-tree root, a ".."-escaping relative,
+        // or an IllegalArgumentException). Two regions then describe one directory, and
+        // neither is nested under the other, so both were written out verbatim and every
+        // generated file stated the same guardrails twice under two VIBETAGS-MODULE markers.
+        writeSidecar(root, "_root_", "", "com.example.A", "com.example.B");
+        writeSidecar(root, "webapp", "", "com.example.A", "com.example.B");
+        writtenAt(root, "_root_", 1_000_000L);
+        writtenAt(root, "webapp", 2_000_000L);
+
+        assertEquals(List.of("webapp"), regionIds(ModuleSidecar.readAll(root)),
+            "one directory cannot hold two regions; the fresher identity describes it");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
+    }
+
+    @Test
+    void theStalerOfTwoIdenticallyPathedRegionsIsRetiredEitherWay(@TempDir Path root) throws IOException {
+        // The mirror direction, so the rule cannot be satisfied by always preferring "_root_".
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "webapp", "", "com.example.A");
+        writtenAt(root, "_root_", 2_000_000L);
+        writtenAt(root, "webapp", 1_000_000L);
+
+        assertEquals(List.of("_root_"), regionIds(ModuleSidecar.readAll(root)));
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-webapp")));
+    }
+
+    @Test
+    void twoRegionsOnOneNonRootPathAlsoResolveToOne(@TempDir Path root) throws IOException {
+        // Same shape one level down: a module compiled once under its derived id and once under
+        // an -Avibetags.module override leaves two regions on one directory.
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "app", "app", "com.example.A");
+        writeSidecar(root, "custom-name", "app", "com.example.A");
+        writtenAt(root, "app", 1_000_000L);
+        writtenAt(root, "custom-name", 2_000_000L);
+
+        assertEquals(List.of("custom-name"), regionIds(ModuleSidecar.readAll(root)));
+    }
+
+    @Test
+    void identicallyPathedRegionsWithDifferentElementsBothSurvive(@TempDir Path root) throws IOException {
+        // The safety net that keeps the new rule from eating a real module. "" is also the
+        // catch-all for a compilation root that cannot be relativized, so two genuinely
+        // different modules can land on it. They claim different elements, so neither covers
+        // the other and both keep their region: containment is what makes retirement safe.
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "other", "", "com.example.B");
+        writtenAt(root, "_root_", 1_000_000L);
+        writtenAt(root, "other", 2_000_000L);
+
+        assertEquals(List.of("_root_", "other"), regionIds(ModuleSidecar.readAll(root)));
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-_root_")));
+    }
+
+    @Test
+    void identicallyPathedRegionsOnEqualTimestampsStillResolveToOne(@TempDir Path root) throws IOException {
+        // Two sidecars written inside one filesystem tick. A tie must not mean "keep both",
+        // which is the duplication, and must land the same way on every build.
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "webapp", "", "com.example.A");
+        writtenAt(root, "_root_", 1_500_000L);
+        writtenAt(root, "webapp", 1_500_000L);
+
+        assertEquals(List.of("webapp"), regionIds(ModuleSidecar.readAll(root)),
+            "a tie goes to the named module, matching the ancestor rule's preference");
+    }
 }
