@@ -556,6 +556,69 @@ class ProjectLifecycleEndToEndTest {
         return found;
     }
 
+    /**
+     * The mirror of {@link #optingAPlatformInLater_carriesOnlyTheModulesThatHaveRecompiledSince},
+     * one level in: the granular directory is opted back <em>out</em> in a reactor.
+     *
+     * <p>{@code GuardrailLifecycleEndToEndTest} pins the single-module shape, where the aggregate
+     * returns to inline guardrails rather than keeping an index pointing at a path nobody
+     * generates. In a reactor only the module that recompiles gets that treatment. A module that
+     * did not recompile keeps the body it rendered while granular was active, which is a
+     * scoped-rules index naming rule files the opt-out just deleted — so its guardrail is stated
+     * nowhere at all, and the aggregate tells the agent that a file which no longer exists is the
+     * authoritative source for it. That is strictly worse than the late-opt-in case, where the
+     * module is merely absent: here the reader is actively sent somewhere empty.
+     *
+     * <p>The window is real but self-healing, exactly like the opt-in twin: dropping the granular
+     * service changes the fingerprint, so each module fixes its own region on its next compile.
+     * The build that opens the window therefore has to say so and name who is behind.
+     */
+    @Test
+    void optingTheGranularDirectoryOut_warnsAboutModulesStillPointingAtDeletedRuleFiles(
+            @TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.Alpha", context("com.example.a", "Alpha", "alpha-routing"));
+        compileModule(root, "module-b", "com.example.b.Beta", context("com.example.b", "Beta", "beta-routing"));
+        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("<scoped_rules>"),
+            "precondition: the aggregate is collapsed to an index while granular is opted in");
+
+        deleteRecursively(root.resolve(".claude"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-a",
+            "com.example.a.Alpha", context("com.example.a", "Alpha", "alpha-routing"));
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("module-b")
+                && w.contains("Run a full build")),
+            "the build that opens the window has to name the module whose region still points at "
+                + "deleted rule files. Silence is the whole defect: the aggregate is well-formed "
+                + "and looks complete, and the missing guardrail is invisible. Warnings were:\n  "
+                + String.join("\n  ", warnings));
+
+        String partial = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(partial.contains("alpha-routing"),
+            "the module that recompiled must state its guardrails inline again");
+        assertTrue(partial.contains(".claude/rules/com-example-b-Beta.md"),
+            "measured limitation: the module that did not recompile keeps its collapsed body, so "
+                + "the aggregate still names a rule file the opt-out deleted. If this now fails, "
+                + "the dangling-pointer window has been closed - assert the guardrail is inline "
+                + "instead");
+        assertFalse(Files.exists(root.resolve(".claude/rules/com-example-b-Beta.md")),
+            "and that named file is genuinely gone, which is what makes the pointer dangling");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileModule(root, "module-b", "com.example.b.Beta", context("com.example.b", "Beta", "beta-routing"));
+
+        String healed = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(healed.contains("alpha-routing") && healed.contains("beta-routing"),
+            "a full reactor pass must return every module to inline guardrails");
+        assertFalse(healed.contains("<scoped_rules>"),
+            "and leave no index behind pointing at a directory nobody generates");
+    }
+
     private static void deleteRecursively(Path dir) throws IOException {
         if (!Files.exists(dir)) return;
         try (Stream<Path> files = Files.walk(dir)) {
@@ -569,6 +632,13 @@ class ProjectLifecycleEndToEndTest {
         return "package " + pkg + ";\n"
             + "import se.deversity.vibetags.annotations.AILocked;\n"
             + "@AILocked(reason = \"" + reason + "\")\n"
+            + "public class " + type + " {}\n";
+    }
+
+    private static String context(String pkg, String type, String focus) {
+        return "package " + pkg + ";\n"
+            + "import se.deversity.vibetags.annotations.AIContext;\n"
+            + "@AIContext(focus = \"" + focus + "\")\n"
             + "public class " + type + " {}\n";
     }
 
