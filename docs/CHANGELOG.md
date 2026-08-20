@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-08-20
+
 ### Added
 
 - **Every build layout VibeTags supports now has a worked example, and Gradle reactors are
@@ -16,6 +18,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in: an ordinary reactor, subprojects configured from the root build file, a flat layout with a
   module beside the root, and a composite build. Each asserts the regression that would matter
   for it, not merely that the build exits zero.
+
+### Changed
+
+- **The example projects moved under `examples/`.** Seven directories at the repository root were
+  most of what a newcomer saw first; they are now `examples/basic`, `all-tiers`, `groovy`,
+  `kotlin`, `multimodule`, `multimodule-indexed` and `scala`. Older CHANGELOG entries keep the
+  paths they were written with, because they record what was true then.
+
+- **An out-of-tree module is no longer identified by where the repository is checked out.** A
+  module that is not under the VibeTags root was filed under a hash of its compilation root's
+  absolute path. That id is not internal: it is the sidecar filename and the name in every
+  `VIBETAGS-MODULE` marker, so it reaches committed output. The same repository generated
+  different files on two machines, and check mode reported drift on a tree where nothing was
+  wrong. Reachable through ordinary layouts: Gradle `includeFlat` or a `projectDir` override, and
+  Maven `<module>../sibling</module>`.
+
+  The id now comes from the path relative to the root, which is a property of the layout rather
+  than of the checkout, with the directory name kept in front so it stays legible.
+  `String.hashCode()` is specified by the language, unlike `Path.hashCode()`, so it agrees across
+  JVMs; separators are normalised so Windows and Linux agree; and the readable half is capped,
+  because an unbounded id fails with `ENAMETOOLONG` and writes no sidecar at all.
+
+  Upgrading renames such a module's sidecar. The old one is retired automatically on the first
+  build by the equal-path rule above, so no manual cleanup is needed. The
+  different-filesystem-root case keeps its absolute hash: there is no relative path to derive
+  anything from.
 
 ### Fixed
 
@@ -36,15 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warning names the subprojects and the option. It is narrow: it fires only when the compiling
   module resolved to the VibeTags root itself, only for included directories that exist, carry
   sources and have no build file of their own, and never once `-Avibetags.module` has been passed.
-
-### Changed
-
-- **The example projects moved under `examples/`.** Seven directories at the repository root were
-  most of what a newcomer saw first; they are now `examples/basic`, `all-tiers`, `groovy`,
-  `kotlin`, `multimodule`, `multimodule-indexed` and `scala`. Older CHANGELOG entries keep the
-  paths they were written with, because they record what was true then.
-
-### Fixed
 
 - **Two module regions naming the same directory no longer both survive.** Reported against 1.2.3
   from a Gradle repository whose `settings.gradle` carries `rootProject.name='x'` beside
@@ -70,6 +89,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Per-module output and the `VIBETAGS-MODULE` markers date to 0.9.0, not 1.2.3, and the merge is
   service-agnostic, so nothing about this was specific to `CLAUDE.md`.
+
+- **Opting a granular rules directory back out no longer leaves a module pointing at deleted
+  files.** In a reactor only the module that recompiles re-renders its region inline. A module
+  that does not keeps the scoped-rules index it rendered while the directory existed, so the
+  aggregate names rule files the opt-out just deleted and that guardrail is stated nowhere: not
+  inline, because the region is collapsed, and not in a rule file, because it is gone. Worse than
+  the platform-opted-in-late window, where a module is merely absent. The build now names the
+  modules that are behind, and each repairs its own region on its next compile.
+
+- **A granular rule file the aggregate still names is reported when nothing will write it.** Each
+  module writes only its own granular files; a sibling's stems are protected from deletion but
+  never rewritten, deliberately, because writing into another module's rule files is the reach
+  that deleted 256 committed files in #383. So a file lost to `git clean`, a bad merge or an
+  opt-out round trip stays lost until its own module recompiles, while the aggregate keeps calling
+  it authoritative. Restoring it would need the sidecar format to change, since a contribution
+  carries globs and body but neither the description nor the display name the renderer needs, so
+  the build reports it instead.
+
+- **An element claimed by two regions is reported, with the sidecar to delete.** The region prune
+  retires a region only when a fresher one covers *all* of its elements, so that a reactor root
+  compiling sources of its own keeps what no submodule has. A leftover `_root_` sidecar whose
+  element set is a superset only because it is stale fails that by one element, so both regions
+  survive and everything they share is stated twice. This is what made the originally reported
+  duplication intermittent: when the leftover's elements happened to match the live module's
+  exactly the prune cleaned up, and one stale extra was enough to stop it.
+
+- **Moving a locked element now regenerates the locks report.** `.vibetags-locks` records each
+  lock's line range, so moving a locked element changes what should be written even when no
+  annotation does. Positions were not part of the build fingerprint, so the short-circuit matched
+  and the whole generate phase was skipped: `-Pself-annotate` reported success and rewrote
+  nothing, while check mode failed on the same tree and advised running the command that had just
+  done nothing. Costs projects without the report nothing, because positions are resolved only
+  when `.vibetags-locks` is opted in.
+
+- **`examples/basic/reset-ai-files.sh` no longer fails its own shebang.** A UTF-8 byte order mark
+  sat in front of `#!`, so every CI run logged `line 1: #!/usr/bin/env: No such file or directory`
+  while still reporting success. `ShellScriptEncodingTest` now guards every tracked shell script.
 
 ## [1.2.3] - 2026-08-20
 
@@ -2897,7 +2953,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/PIsberg/vibetags/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/PIsberg/vibetags/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/PIsberg/vibetags/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/PIsberg/vibetags/compare/v1.2.0...v1.2.1

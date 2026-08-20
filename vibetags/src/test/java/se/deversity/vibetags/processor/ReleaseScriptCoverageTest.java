@@ -66,6 +66,11 @@ class ReleaseScriptCoverageTest {
         "docs/proposed-annotations.md",
         "docs/RELEASING.md",
         "docs/CONCEPT_PLUGIN.md",
+        // The build-layout matrix names the release a behaviour arrived in ("Since
+        // 1.2.4 the build says so ..."), which is what tells a reader hitting that Gradle
+        // layout whether their version warns them. Rewriting it each release would claim
+        // the warning has always existed.
+        "docs/MULTI-MODULE.md",
         // The multi-module examples' own lineage. Each child pom names its example root
         // (groupId se.deversity.vibetags.example) at version 1.0.0, which is the sample
         // project's own version, not a VibeTags coordinate. The roots do carry one (the BOM

@@ -16,8 +16,8 @@ repositories {
 
 dependencies {
     implementation 'se.deversity.vibetags.example:vibetags-example-gradle-composite-lib'
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.3')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.3')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.4')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.4')
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
 }
