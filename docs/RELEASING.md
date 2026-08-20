@@ -276,7 +276,11 @@ Before uploading the release notes, rewrite the relative paths to absolute raw-c
 
 ```bash
 TAG=v0.7.1
-awk "/^## \[${TAG#v}\]/,/^## \[/{if (\$0 ~ /^## \[/ && \$0 !~ /\[${TAG#v}\]/) exit; print}" docs/CHANGELOG.md \
+awk -v v="[${TAG#v}]" '
+  index($0, "## " v) == 1 { f=1; print; next }
+  f && /^## \[/ { exit }
+  f { print }
+' docs/CHANGELOG.md \
   | sed "s|](changelog-assets/${TAG#v}/|](https://github.com/PIsberg/vibetags/raw/${TAG}/docs/changelog-assets/${TAG#v}/|g" \
   > /tmp/release-notes-${TAG}.md
 
@@ -286,6 +290,12 @@ gh release create $TAG \
   --notes-file /tmp/release-notes-${TAG}.md \
   --latest
 ```
+
+> **Do not use an `awk` range here.** `awk '/^## \[1.2.3\]/,/^## \[/'` returns the header
+> line and nothing else: when a range's start and end patterns both match the same record, awk
+> closes the range on that record, so the `exit` guard inside it never runs. That form shipped in
+> this document and produced a one-line release note for 1.2.3. The flag-driven version above
+> starts on the header and stops at the *next* `## [`.
 
 If you forget the `sed`, the release will publish with broken image links. Fix afterward via:
 

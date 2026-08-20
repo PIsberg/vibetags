@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.3] - 2026-08-19
+## [1.2.3] - 2026-08-20
 
 ### Fixed
 
@@ -40,6 +40,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without deleting anything. Existing builds heal on the first compile after the upgrade: the
   processor version is part of the fingerprint, so the short-circuit cannot skip the merge that
   does the pruning.
+
+- **Five more lifecycle transitions are pinned, none of which needed a code change.** The lean
+  indexed root had only steady-state coverage, so all three of its transitions are now tested: opted
+  into after the modules already compiled, opted back out again (the root must re-embed rather than
+  remain a file whose whole content is a redirection), and a module that stops generating the rules
+  its pointer names, where the pointer must fall back to embedding rather than name a directory that
+  is not there. Alongside them: a class that changes source set is moved rather than counted twice,
+  and a package-level annotation withdrawn while its package stays leaves the generated file — its
+  own element kind and its own compilation unit, covering every class underneath, so a stale one
+  misdescribes the most code.
 
 - **A module dropped from a mirror target's source list now stops mirroring into it.** The mirror
   writer skipped a target that does not accept the compiling module, and skipped its cleanup with
