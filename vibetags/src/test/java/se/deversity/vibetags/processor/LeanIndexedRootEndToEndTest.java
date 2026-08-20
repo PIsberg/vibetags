@@ -92,6 +92,113 @@ class LeanIndexedRootEndToEndTest {
         Files.createFile(reactorRoot.resolve(".vibetags-root-index")); // opt in
     }
 
+    /** As {@link #setUpIndexedReactor()} but without the index opt-in, so the root embeds. */
+    private void setUpPlainReactor() throws IOException {
+        for (String module : new String[]{"module-core", "module-cli"}) {
+            Files.createDirectories(reactorRoot.resolve(module).resolve(".claude/rules"));
+            Files.createDirectories(reactorRoot.resolve(module).resolve(".cursor/rules"));
+        }
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        Files.createFile(reactorRoot.resolve(".cursorrules"));
+        Files.createFile(reactorRoot.resolve("GEMINI.md"));
+    }
+
+    private void compileBothModules() throws IOException {
+        compileModule("module-core", "com.example.core.IrNode", CORE_SOURCE);
+        VibeTagsLogger.shutdown();
+        compileModule("module-cli", "com.example.cli.KartaCli", CLI_SOURCE);
+        VibeTagsLogger.shutdown();
+    }
+
+    private String rootClaude() throws IOException {
+        return Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+    }
+
+    // ----------------------------------------------------------------- lifecycle
+
+    /**
+     * The opt-in arrives after the modules have already compiled, which is how a reactor that grew
+     * past a readable root actually reaches it. Nothing about the modules changes; the root's own
+     * signal file is the whole input.
+     */
+    @Test
+    void indexOptedInLater_collapsesARootThatWasEmbedding() throws IOException, InterruptedException {
+        setUpPlainReactor();
+        compileBothModules();
+        assertTrue(rootClaude().contains("graph traversal order"),
+            "precondition: without the index the root embeds the verbose tier");
+
+        Files.createFile(reactorRoot.resolve(".vibetags-root-index"));
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileBothModules();
+
+        String claude = rootClaude();
+        assertTrue(claude.contains("module-core/.claude/rules/"),
+            "the root must collapse to pointers once the index is opted into: " + claude);
+        assertFalse(claude.contains("graph traversal order"),
+            "and the verbose tier must move out of the always-loaded file: " + claude);
+    }
+
+    /**
+     * And back out again. A pointer is only worth having while something is on the other end of it:
+     * once the opt-in is gone the root has to carry the guardrails itself, or it is left as a file
+     * whose entire content is a redirection nobody asked for any more.
+     */
+    @Test
+    void indexOptedBackOut_returnsTheRootToEmbedding() throws IOException, InterruptedException {
+        setUpIndexedReactor();
+        compileBothModules();
+        assertTrue(rootClaude().contains("module-core/.claude/rules/"),
+            "precondition: the root collapsed to pointers");
+
+        Files.delete(reactorRoot.resolve(".vibetags-root-index"));
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileBothModules();
+
+        String claude = rootClaude();
+        assertTrue(claude.contains("graph traversal order"),
+            "the verbose tier must come back inline: " + claude);
+        assertFalse(claude.contains("are maintained in that module's own files"),
+            "and no pointer may survive the opt-out: " + claude);
+    }
+
+    /**
+     * The dangling-pointer case: the index is still on, but the module stops generating the files
+     * the pointer names. The pointer is built from the module's own opt-in set, so it must fall
+     * back to embedding rather than name a directory that is not there — a root whose only
+     * statement about a class is a path that does not resolve is worse than a verbose root.
+     */
+    @Test
+    void aModuleThatStopsGeneratingItsOwnRules_isEmbeddedRatherThanPointedAt() throws IOException, InterruptedException {
+        setUpIndexedReactor();
+        compileBothModules();
+        assertTrue(rootClaude().contains("module-core/.claude/rules/"), "precondition: pointer present");
+
+        deleteRecursively(reactorRoot.resolve("module-core/.claude"));
+        deleteRecursively(reactorRoot.resolve("module-core/.cursor"));
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileBothModules();
+
+        String claude = rootClaude();
+        assertFalse(claude.contains("module-core/.claude/rules/"),
+            "the root must stop naming a rules directory the module no longer has: " + claude);
+        assertTrue(claude.contains("graph traversal order"),
+            "and with nowhere else to live the guardrail must come back inline: " + claude);
+    }
+
+    private static void deleteRecursively(Path dir) throws IOException {
+        if (!Files.exists(dir)) return;
+        try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                    // best effort inside a temp dir
+                }
+            });
+        }
+    }
+
     @Test
     void indexedRoot_linksModuleRulesInsteadOfEmbedding() throws IOException {
         setUpIndexedReactor();
