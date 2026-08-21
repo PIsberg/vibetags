@@ -760,12 +760,77 @@ jobs:
           test -f .vibetags-mod-core
           test -f .vibetags-mod-app
           test ! -f .vibetags-mod-_root_
-          # And the committed file must match what the build just produced.
-          if [ -n "$(git status --porcelain -- CLAUDE.md)" ]; then
-            echo "::error::examples/gradle-multimodule/CLAUDE.md is out of date."
-            git --no-pager diff -- CLAUDE.md
+          # Dual opt-in (CLAUDE.md + .claude/rules/) collapses each module region to a
+          # scoped-rules index while the safety buckets stay inline. Every Maven fixture covers
+          # this; before it was added here no Gradle build exercised the granular path at all,
+          # so invariants 6 and 13 were Maven-only.
+          grep -qF '<scoped_rules>' CLAUDE.md
+          grep -qF '.claude/rules/com-example-gmm-core-IrNode.md' CLAUDE.md
+          # The safety bucket must NOT move into a scoped file: an agent has to see @AILocked
+          # without opening anything.
+          grep -qF '<locked_files>' CLAUDE.md
+          grep -qF 'Core IR node shape is depended on by every downstream module' CLAUDE.md
+          # Root granular dir carries both modules' rules; core's own dir carries only its own.
+          test -f .claude/rules/com-example-gmm-core-IrNode.md
+          test -f .claude/rules/com-example-gmm-app-App.md
+          test -f core/.claude/rules/com-example-gmm-core-IrNode.md
+          # app/ did not opt in, so it gets no directory of its own. File presence is the only
+          # opt-in (invariant 1), and this is where a regression would show first.
+          test ! -d app/.claude
+          # And every committed file must match what the build just produced.
+          if [ -n "$(git status --porcelain -- CLAUDE.md .claude core/.claude)" ]; then
+            echo "::error::examples/gradle-multimodule/ guardrail files are out of date."
+            git status --porcelain -- CLAUDE.md .claude core/.claude
+            git --no-pager diff -- CLAUDE.md .claude core/.claude
             exit 1
           fi
+
+      # The only check-mode gate on the Gradle side; every other one is Maven. It runs twice on
+      # purpose. The second run is the point: check mode lives inside the annotation processor,
+      # so it runs only if javac runs, and Gradle skips an UP-TO-DATE compileJava. Measured with
+      # the example's `outputs.upToDateWhen { false }` removed and the committed CLAUDE.md
+      # deliberately drifted, this step reported `compileJava UP-TO-DATE` and exited 0. A gate
+      # that green-lights a drifted tree is worse than no gate.
+      - name: Gradle Check Mode (in sync passes, and is not skipped on a warm build)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          ./gradlew build -PvibetagsCheck --no-daemon
+          # Redirect rather than pipe to tee: a pipe reports tee's exit status, which would turn
+          # a failed check into a green step.
+          ./gradlew build -PvibetagsCheck --no-daemon > check.log 2>&1
+          cat check.log
+          if grep -qE ':(core|app):compileJava UP-TO-DATE' check.log; then
+            echo "::error::compileJava was skipped, so check mode verified nothing."
+            exit 1
+          fi
+          grep -q "check passed" check.log
+          rm -f check.log
+
+      # The other half: a gate that cannot fail is not a gate. Drift the committed output and
+      # the same command must exit non-zero, and must not repair the file behind our back.
+      - name: Gradle Check Mode (drifted output must fail the build)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          cp CLAUDE.md CLAUDE.md.orig
+          sed -i 's/Core IR node shape is depended on by every downstream module/DRIFT/' CLAUDE.md
+          set +e
+          ./gradlew build -PvibetagsCheck --no-daemon > drift.log 2>&1
+          status=$?
+          set -e
+          cat drift.log
+          if [ "$status" -eq 0 ]; then
+            echo "::error::check mode passed on a drifted CLAUDE.md."
+            mv CLAUDE.md.orig CLAUDE.md; rm -f drift.log
+            exit 1
+          fi
+          grep -q "check failed" drift.log
+          # Check mode must never write. If it repaired the drift, the file would be back in sync.
+          grep -q "DRIFT" CLAUDE.md
+          mv CLAUDE.md.orig CLAUDE.md
+          rm -f drift.log
+          git diff --quiet -- CLAUDE.md
 
       # Subprojects configured from the root build file, so none of them has a build file
       # of its own and the module-root walk lands on the root for all of them. Without
