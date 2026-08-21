@@ -977,6 +977,14 @@ jobs:
           cd ../vibetags
           mvn install -B -q -DskipTests
 
+      # The guard shipped for two releases with no tests of its own, and carried two
+      # false-positive sources that one fixture would have caught: locks from one reactor
+      # matching another reactor's identically-named paths, and a PR that adds an @AILocked
+      # element failing on its own additions. Both are pinned now. Stdlib unittest, so this
+      # adds no dependency.
+      - name: Test the locked-files guard
+        run: python3 -m unittest discover -s action/locked-files -v
+
       - name: Guard @AILocked elements against this PR's diff
         uses: ./action/locked-files
         with:

@@ -60,10 +60,33 @@ def find_reports(root):
     return reports
 
 
+def resolve_lock_path(recorded, report_dir, repo_root):
+    """A lock's repo-relative path, resolved against the report that declared it.
+
+    A ``.vibetags-locks`` records paths relative to its own VibeTags root, not to the
+    repository. Normalizing against the repository root alone therefore leaves two reactors
+    that both have a module at, say, ``showcase/src/main/java/...`` recording the identical
+    string, and nothing downstream can tell them apart. Measured before this was fixed: a
+    Gradle example's new files drew nine violations from the *Maven* example's report.
+
+    Absolute paths are made repo-relative directly; anything outside the repository is left
+    as it is, so it simply matches nothing.
+    """
+    path = recorded.replace("\\", "/")
+    if os.path.isabs(path):
+        rel = os.path.relpath(path, repo_root).replace("\\", "/")
+        return path if rel.startswith("..") else rel
+    report_rel = os.path.relpath(report_dir, repo_root).replace("\\", "/")
+    if report_rel in ("", "."):
+        return os.path.normpath(path).replace("\\", "/")
+    return os.path.normpath(report_rel + "/" + path).replace("\\", "/")
+
+
 def load_locks(report_paths, repo_root):
-    """Returns a list of lock dicts with a normalized, repo-relative-ish 'file' path."""
+    """Returns a list of lock dicts with a repo-relative 'file' path."""
     locks = []
     for report in report_paths:
+        report_dir = os.path.dirname(os.path.abspath(report))
         with open(report, encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
@@ -77,30 +100,36 @@ def load_locks(report_paths, repo_root):
                     continue
                 path = entry.get("file")
                 if path:
-                    path = path.replace("\\", "/")
-                    rel = os.path.relpath(path, repo_root).replace("\\", "/")
-                    if not rel.startswith(".."):
-                        path = rel
-                    entry["file"] = path
+                    entry["file"] = resolve_lock_path(path, report_dir, repo_root)
                 locks.append(entry)
     return locks
 
 
+def added_paths(name_status_text):
+    """Paths the diff CREATES, from ``git diff --name-status``.
+
+    A file that did not exist at the base cannot have had its locked code touched: the author
+    of the diff is the one declaring the lock. Renames are status R and stay in scope, so
+    moving a locked file is still checked.
+    """
+    added = set()
+    for line in name_status_text.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 2 and parts[0].strip() == "A":
+            added.add(parts[1].strip().replace("\\", "/"))
+    return added
+
+
 def locks_for(locks, diff_path):
-    """Locks whose file matches a diff path; tolerates absolute vs relative prefixes."""
+    """Locks whose file is this diff path.
+
+    Compared exactly. This used to fall back to matching either path as a suffix of the other,
+    to paper over absolute-vs-relative prefixes; ``resolve_lock_path`` now makes both sides
+    repo-relative, and the suffix fallback actively did harm: any two modules sharing a
+    relative path aliased each other's locks.
+    """
     diff_path = diff_path.replace("\\", "/")
-    matched = []
-    for lock in locks:
-        lock_path = lock.get("file")
-        if not lock_path:
-            continue
-        if (
-            lock_path == diff_path
-            or lock_path.endswith("/" + diff_path)
-            or diff_path.endswith("/" + lock_path)
-        ):
-            matched.append(lock)
-    return matched
+    return [lock for lock in locks if lock.get("file") == diff_path]
 
 
 def parse_diff(diff_text):
@@ -159,6 +188,9 @@ def main():
 
     # Trailing "--" terminates options/refs so no value can be reinterpreted as a pathspec/flag.
     diff_text = run_git("diff", "--unified=0", "--no-color", merge_base, "HEAD", "--")
+    created = added_paths(
+        run_git("diff", "--name-status", "--no-color", merge_base, "HEAD", "--")
+    )
     kind = "warning" if warn_only else "error"
     violations = 0
 
@@ -187,7 +219,13 @@ def main():
             print(f"::{kind} file={display}::A line containing @AILocked was removed -- "
                   "removing a lock requires explicit human review")
 
-        # 1. Changed lines intersect a locked range at HEAD.
+        # 1. Changed lines intersect a locked range at HEAD. Files this diff CREATES are
+        # exempt: the lock did not exist at the base, so nobody can have violated it, and
+        # flagging it means a PR may never introduce an @AILocked element. That blocked adding
+        # guardrails to the very codebase that ships them. A later PR editing the now-locked
+        # file is a rename or a modification, not an addition, and is still checked.
+        if display in created:
+            continue
         for lock in locks_for(locks, display):
             start, end = lock.get("startLine"), lock.get("endLine")
             element = lock.get("element", "?")

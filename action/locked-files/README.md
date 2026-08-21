@@ -63,6 +63,25 @@ recognise and may reject reports with a `version` they do not support:
 
 - Line ranges come from the javac Compiler Tree API. Under non-javac compilers (e.g. ECJ)
   the report has no line info and the guard falls back to file-level matching.
+
+## How a lock's file is matched
+
+A `.vibetags-locks` records paths relative to **its own VibeTags root**, not to the repository.
+The guard resolves each recorded path against the directory of the report that declared it, then
+compares repo-relative paths exactly.
+
+That matters in a repository with more than one project in it. The guard used to accept either
+path as a suffix of the other, so two reactors with a module at the same relative path aliased
+each other: one example's locks flagged another example's diff, measured at nine false violations.
+
+## Files the diff creates are exempt
+
+A file that did not exist at the base cannot have had its locked code touched, and the author of
+the diff is the one declaring the lock. Flagging it meant a PR could never introduce an
+`@AILocked` element, which discouraged adding guardrails to the codebase that ships them.
+
+Renames stay in scope (git reports them as `R`, not `A`), so moving a locked file is still
+checked, as is any later PR that edits it.
 - Maven multi-module builds aggregate every module's locks into one report automatically
   (the report rides VibeTags' module-sidecar merge).
 - The script is plain Python 3 + git and can run locally:
