@@ -106,7 +106,23 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
   collapses each module region to a scoped-rules index while the safety buckets stay inline. `core/`
   has its own granular directory, `app/` opts into nothing and must therefore have no `.claude`
   directory at all. Before this, no Gradle build in the repository exercised the granular path, so
-  invariants 6 and 13 were verified on one of the two supported build tools.
+  invariants 6 and 13 were verified on one of the two supported build tools. The same step now also
+  asserts the reactor emits **no warnings at all** on a clean build of an in-sync tree, which is
+  what caught a spurious "guardrails stated nowhere" report on builds that had written every file
+  correctly.
+- **Gradle reactor depth**, seven steps, JDK 21 leg (issue #443). The Maven reactor had eleven
+  verification steps to Gradle's one while the three most recent multi-module defects all came from
+  Gradle repositories, so these port the Maven assertions across: transitive manifests published to
+  Gradle's `build/classes/java/main/` and actually read by the consuming module, with the origin
+  coordinate asserted rather than just the key; all 50 services active, with Codex correctly
+  dropped because `AGENTS.md` is not the sole config; the six generated YAML documents parsed with
+  duplicate top-level keys forbidden and a per-module witness required to survive the parse;
+  per-module nested output in both shapes (indexed and plain) with no sibling leakage; cross-module
+  rule mirroring into a module with no annotations of its own, which must create no region in the
+  root; role-based granular grouping across modules, including the issue #365 repro that building
+  one subproject must leave the shared role file byte-identical; and every declared annotation
+  having an element section in `annotations-showcase/CLAUDE.md`, which is the one full inline aggregate in a
+  reactor whose root is indexed by design.
 - **Gradle check mode**, two steps, JDK 21 leg. The first runs `./gradlew build -PvibetagsCheck`
   twice and fails if the second run reports `compileJava UP-TO-DATE`: check mode lives inside the
   annotation processor, so a skipped compile means the gate verified nothing. Measured with the

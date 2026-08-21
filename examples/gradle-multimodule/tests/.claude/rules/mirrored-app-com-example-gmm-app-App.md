@@ -1,5 +1,5 @@
 ---
-paths: ["**/App.java"]
+paths: ["**/App.java", "**/tests/src/test/java/**/*.java"]
 ---
 
 <!-- VIBETAGS-START -->
@@ -8,4 +8,8 @@ paths: ["**/App.java"]
 ## Context & Focus
 - **Focus**: Wiring only: parsing and rendering live in their own modules
 - **Avoid**: Business logic
+
+## Security Audit Requirements
+When modifying this element, audit for:
+- Path Traversal
 <!-- VIBETAGS-END -->

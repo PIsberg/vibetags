@@ -1,0 +1,13 @@
+// Every one of the 44 annotations, on realistic code, so the reactor merge is exercised against
+// the whole annotation surface rather than the handful the other modules happen to need.
+//
+// The sources are a byte-for-byte copy of ../../multimodule/showcase/src/main/java. That is
+// deliberate and it is enforced: ShowcaseParityTest fails if the two drift, so keeping them in
+// step is a copy rather than a judgement call. Both reactors gate on "all 44 families present",
+// so an annotation added to one and not the other turns a build red either way; the parity test
+// just says which file to fix.
+//
+// The directory is deliberately NOT called "showcase". The locked-files PR guard matches a lock's
+// recorded path against the diff by suffix, so two reactors with a module at the same relative
+// path alias each other: the Maven reactor's locks flag edits to this module, and this module's
+// would flag edits to the Maven one. Measured at 9 false violations before the rename.

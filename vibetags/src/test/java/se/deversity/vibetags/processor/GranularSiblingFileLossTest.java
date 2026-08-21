@@ -92,6 +92,56 @@ class GranularSiblingFileLossTest {
                 + String.join(NL + "  ", warnings));
     }
 
+    /**
+     * A module that opts into a granular directory of its own, in a reactor whose root has a
+     * {@code .vibetags-roles} config, was reported as having lost rule files it never lost.
+     *
+     * <p>Two different stem namespaces meet in one sidecar field. The root contributions are
+     * role-routed, so at the root this module writes {@code reactor-spine.md}. Its module-scoped
+     * contributions are resolved against the module's own role config, which does not exist, so
+     * they keep per-class names and are written into {@code <module>/.claude/rules/}.
+     * {@code setGranularStems} stores the union of both, and the check below then looked for the
+     * module-scoped names in the ROOT granular directory, where they are not supposed to be and
+     * never were.
+     *
+     * <p>The result was a warning telling the reader their guardrails are "stated nowhere" on a
+     * full, correct build that had just written every file in the right place. Found by giving
+     * examples/gradle-multimodule the nested-output and role coverage of the Maven reactor
+     * (issue #443); the Maven fixture never hit it because its modules have a nested aggregate
+     * but no nested granular directory.
+     */
+    @Test
+    void aModulesOwnGranularDirectoryIsNotMistakenForAMissingRootRuleFile(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        // Routes every module's classes into one shared role file at the root.
+        Files.writeString(root.resolve(".vibetags-roles"), "reactor-spine = **/example/**" + NL,
+            StandardCharsets.UTF_8);
+        // module-a additionally opts into output of its own: aggregate AND granular directory.
+        Files.createDirectories(root.resolve("module-a/.claude/rules"));
+        Files.createFile(root.resolve("module-a/CLAUDE.md"));
+
+        compileModule(root, "module-a", "com.example.a.Alpha", ctx("com.example.a", "Alpha", "alpha-routing"));
+        compileModule(root, "module-b", "com.example.b.Beta", ctx("com.example.b", "Beta", "beta-routing"));
+
+        assertTrue(Files.exists(root.resolve(".claude/rules/reactor-spine.md")),
+            "precondition: the root contributions are role-routed into one shared file");
+        assertTrue(Files.exists(root.resolve("module-a/.claude/rules/com-example-a-Alpha.md")),
+            "precondition: module-a's own granular directory carries its per-class file");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-a",
+            "com.example.a.Alpha", ctx("com.example.a", "Alpha", "alpha-routing"));
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("com-example-a-Alpha")),
+            "module-a's per-class rule file lives in its own granular directory, where this build "
+                + "just wrote it. Reporting it as missing from the ROOT directory tells the reader "
+                + "to go looking for a file that is not supposed to be there, and calls a correct "
+                + "build broken. Warnings were:" + NL + "  " + String.join(NL + "  ", warnings));
+    }
+
     private static String ctx(String pkg, String type, String focus) {
         return "package " + pkg + ";" + NL
             + "import se.deversity.vibetags.annotations.AIContext;" + NL

@@ -1,0 +1,2 @@
+// No dependencies on siblings: this module exists to stay OUT of the reactor-spine role, so the
+// per-class granular path is covered next to the role-merged one.

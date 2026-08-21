@@ -28,11 +28,12 @@ options.compilerArgs << "-Avibetags.root=${vibetagsRoot}"
 ```
 
 Both modules are then under the root, get real relative paths and real names, and aggregate
-normally. Measured output: `.vibetags-mod-lib` and `.vibetags-mod-vibetags-example-gradle-flat`,
-each with its own region.
+normally. Measured output: `.vibetags-mod-app` and `.vibetags-mod-lib`, each with its own region.
 
-`-Avibetags.module` is also passed, so the root project is named rather than inheriting whatever
-its directory happens to be called.
+`-Avibetags.module` is also passed, and the root project's name is given explicitly as `app`
+rather than inherited from `settings.gradle`. Inherited, it would read
+`vibetags-example-gradle-flat` in the shared file next to a plain `lib`. `../gradle-composite`
+names its modules explicitly for the same reason; the two used to disagree (issue #449).
 
 ## Build
 

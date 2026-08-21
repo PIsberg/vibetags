@@ -1,0 +1,14 @@
+# Cross-module rule mirroring - https://github.com/PIsberg/vibetags/issues/312
+#
+# This module exercises code from every sibling but declares no @AI* annotations of its own, so the
+# rules that protect that code live out of reach of a tool discovering rule directories by walking
+# up from the edited file. Listing the source modules here mirrors their scoped rules into this
+# module's own .claude/rules/.
+#
+# Source modules, relative to this file's directory. Omit them all to mirror every module.
+../core
+../app
+../platform
+
+# Globs appended to each mirrored file's frontmatter so the rules match this module's sources.
+glob = **/tests/src/test/java/**/*.java

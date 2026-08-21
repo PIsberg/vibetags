@@ -27,8 +27,15 @@ allprojects {
         annotationProcessor 'se.deversity.vibetags:vibetags-processor'
     }
 
+    // Name the module explicitly rather than letting the root project inherit its
+    // settings.gradle name, which would put "vibetags-example-gradle-flat" in the shared file
+    // next to a plain "lib". ../gradle-composite makes the same choice for the same reason, and
+    // two adjacent examples demonstrating one option with opposite conventions is a trap for
+    // whoever reads them side by side (issue #449).
+    def vibetagsModule = project == rootProject ? "app" : project.name
+
     tasks.withType(JavaCompile).configureEach {
         options.compilerArgs << "-Avibetags.root=${vibetagsRoot}"
-        options.compilerArgs << "-Avibetags.module=${project.name}"
+        options.compilerArgs << "-Avibetags.module=${vibetagsModule}"
     }
 }

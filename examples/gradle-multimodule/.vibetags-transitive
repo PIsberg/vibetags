@@ -1,0 +1,13 @@
+# Opts this reactor into reading guardrails published by its dependencies.
+#
+# Presence of this file is the opt-in; it needs no content. VibeTags derives lookup keys from the
+# packages this project's sources actually import, and reads any vibetags/manifests/ entry it finds
+# for them on the compile classpath.
+#
+# Here that means app/ inherits the package guardrails declared in
+# core/src/main/java/com/example/gmm/core/package-info.java, because it imports that package.
+# A package nobody imports is never looked up, so the inherited text is bounded by actual use.
+#
+# Plain Gradle needs no extra options: its incremental-processing wrapper still exposes the
+# compile classpath, so discovery works. Builds where it cannot (kapt, ECJ, JPMS) supply the keys
+# with -Avibetags.manifest.packages=a.b,c.d or point at a directory with -Avibetags.manifest.dir.
