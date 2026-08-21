@@ -785,7 +785,7 @@ jobs:
           # opt-in (invariant 1), and this is where a regression would show first.
           test ! -d app/.claude
           # And every committed file must match what the build just produced. Scoped to the whole
-          # example directory, not a file list: this reactor now opts into 50 services, and a list
+          # example directory, not a file list: this reactor now opts into 51 services, and a list
           # is the thing that goes stale.
           if [ -n "$(git status --porcelain -- .)" ]; then
             echo "::error::examples/gradle-multimodule/ guardrail files are out of date."
@@ -862,7 +862,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=50
+          expected=51
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"
@@ -872,7 +872,7 @@ jobs:
           # Spot-check marker-based files from renderers nothing else asserts.
           for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
                    .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
-                   .qwen/commands/refactor.md llms-full.txt .aiexclude \
+                   .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
                    .pr_agent.toml .coderabbit.yaml CLAUDE.local.md; do
             test -s "$f" || { echo "::error::reactor produced no content for: $f"; exit 1; }
             grep -qF "VIBETAGS" "$f" || { echo "::error::no VibeTags block in: $f"; exit 1; }
