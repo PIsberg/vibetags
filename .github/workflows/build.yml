@@ -746,7 +746,7 @@ jobs:
       # multi-module fixture is Maven, and the other Gradle examples are single-module, so
       # without this the Gradle multi-module path was covered only by in-process JUnit
       # fixtures that write a settings.gradle rather than by Gradle itself.
-      - name: Build Gradle Multi-Module Example (Gradle reactor, two subprojects)
+      - name: Build Gradle Multi-Module Example (Gradle reactor, four subprojects)
         if: matrix.java == '21'
         run: |
           cd examples/gradle-multimodule
@@ -765,14 +765,21 @@ jobs:
           # this; before it was added here no Gradle build exercised the granular path at all,
           # so invariants 6 and 13 were Maven-only.
           grep -qF '<scoped_rules>' CLAUDE.md
-          grep -qF '.claude/rules/com-example-gmm-core-IrNode.md' CLAUDE.md
+          # core and app are role-routed, so the ROOT index names the shared role file, not a
+          # per-class one. platform sits outside the glob and keeps its per-class name. Asserting
+          # both is what stops a change to the role config from quietly emptying one path.
+          grep -qF '.claude/rules/reactor-spine.md' CLAUDE.md
+          grep -qF '.claude/rules/com-example-gmm-platform-Telemetry.md' CLAUDE.md
           # The safety bucket must NOT move into a scoped file: an agent has to see @AILocked
           # without opening anything.
           grep -qF '<locked_files>' CLAUDE.md
           grep -qF 'Core IR node shape is depended on by every downstream module' CLAUDE.md
-          # Root granular dir carries both modules' rules; core's own dir carries only its own.
-          test -f .claude/rules/com-example-gmm-core-IrNode.md
-          test -f .claude/rules/com-example-gmm-app-App.md
+          # The root granular dir carries the role file plus the unrouted per-class ones. core's
+          # OWN dir resolves against core's role config, which does not exist, so it keeps the
+          # per-class name: two stem namespaces, and asserting both is the regression test for the
+          # spurious "stated nowhere" warning fixed alongside this fixture.
+          test -f .claude/rules/reactor-spine.md
+          test -f .claude/rules/com-example-gmm-platform-Telemetry.md
           test -f core/.claude/rules/com-example-gmm-core-IrNode.md
           # app/ did not opt in, so it gets no directory of its own. File presence is the only
           # opt-in (invariant 1), and this is where a regression would show first.

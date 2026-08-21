@@ -52,10 +52,14 @@ Never weaken security properties of these elements:
 # Do not edit manually.
 
 ## Locked Files (Do Not Modify)
-- `com.example.gmm.platform.Telemetry`: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
 
 ## Context Guidelines
 - `com.example.gmm.platform.Telemetry` (observability): Metrics: reactor.render.count, reactor.render.duration. Note: Metric names are a published contract; renaming one breaks every dashboard reading it
+
+## Security Audits
+Before suggesting changes to the following files, audit for the listed vulnerabilities:
+
+- `com.example.gmm.platform.Telemetry` — check for: PII in metric labels
 
 ## Feature Flags
 These elements are behind feature flags — never assume always active:

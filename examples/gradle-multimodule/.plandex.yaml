@@ -9,13 +9,13 @@ guardrails:
     - path: "com.example.gmm.app.App"
       checks: ["Path Traversal"]
     # VIBETAGS-MODULE-END: app
+    # VIBETAGS-MODULE: platform
+    - path: "com.example.gmm.platform.Telemetry"
+      checks: ["PII in metric labels"]
+    # VIBETAGS-MODULE-END: platform
   locked:
     # VIBETAGS-MODULE: core
     - path: "com.example.gmm.core.IrNode"
       reason: "Core IR node shape is depended on by every downstream module"
     # VIBETAGS-MODULE-END: core
-    # VIBETAGS-MODULE: platform
-    - path: "com.example.gmm.platform.Telemetry"
-      reason: "Metric names are a published contract; renaming one breaks every dashboard and alert reading them"
-    # VIBETAGS-MODULE-END: platform
 # VIBETAGS-END

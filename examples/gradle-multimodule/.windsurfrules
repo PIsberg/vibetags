@@ -57,10 +57,15 @@ Never weaken security properties of these elements. Every change requires securi
 # Do not edit manually.
 
 ## LOCKED FILES (DO NOT EDIT)
-* `com.example.gmm.platform.Telemetry` - Reason: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
 
 ## CONTEXTUAL RULES
 * `com.example.gmm.platform.Telemetry` (observability) - Metrics: reactor.render.count, reactor.render.duration. Note: Metric names are a published contract; renaming one breaks every dashboard reading it
+
+## 🛡️ MANDATORY SECURITY AUDITS
+When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code.
+
+* `com.example.gmm.platform.Telemetry`
+  - Required Checks: PII in metric labels
 
 ## 🚩 FEATURE FLAG GATED CODE
 Never assume these feature flags are always active — preserve all flag checks:

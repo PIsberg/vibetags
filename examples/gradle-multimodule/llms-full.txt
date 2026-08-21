@@ -84,12 +84,16 @@ This document contains the full set of AI guardrail rules for this project. AI t
 ## Locked Files (Do Not Edit)
 The following files are locked. AI tools MUST NOT propose modifications to them.
 
-### com.example.gmm.platform.Telemetry
-- **Reason**: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
-
 
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
+
+
+## Mandatory Security Audit Requirements
+When writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.
+
+### com.example.gmm.platform.Telemetry
+- **Required Checks**: PII in metric labels
 
 
 ## 📡 Observability Instrumentation

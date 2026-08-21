@@ -2,11 +2,11 @@
   "_generated_by": "VibeTags",
   "rules": {
     "audit": [
-    {"path": "com.example.gmm.app.App", "checks": ["Path Traversal"]}
+    {"path": "com.example.gmm.app.App", "checks": ["Path Traversal"]},
+    {"path": "com.example.gmm.platform.Telemetry", "checks": ["PII in metric labels"]}
     ],
     "locked_files": [
-    {"path": "com.example.gmm.core.IrNode", "reason": "Core IR node shape is depended on by every downstream module"},
-    {"path": "com.example.gmm.platform.Telemetry", "reason": "Metric names are a published contract; renaming one breaks every dashboard and alert reading them"}
+    {"path": "com.example.gmm.core.IrNode", "reason": "Core IR node shape is depended on by every downstream module"}
     ]
   }
 }

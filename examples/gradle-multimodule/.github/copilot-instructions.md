@@ -67,9 +67,14 @@ The following elements are security-critical — do not weaken their security pr
 ## Locked Files — DO NOT MODIFY
 Do not suggest changes to the following files:
 
-- `com.example.gmm.platform.Telemetry` - Metric names are a published contract; renaming one breaks every dashboard and alert reading them
 
 ## Contextual Guidelines
+
+## Security Audit Requirements
+Before suggesting changes to the following files, audit for the listed vulnerabilities:
+
+- `com.example.gmm.platform.Telemetry`
+  - Required Checks: PII in metric labels
 
 ## Observability Instrumentation
 The following elements have metrics/traces/logs watched by dashboards. Do not delete or rename them silently:

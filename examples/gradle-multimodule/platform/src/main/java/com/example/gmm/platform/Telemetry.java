@@ -1,6 +1,6 @@
 package com.example.gmm.platform;
 
-import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AIObservability;
 
 /**
@@ -10,12 +10,17 @@ import se.deversity.vibetags.annotations.AIObservability;
  * not match, so this class keeps a per-class granular rule file while core/ and app/ merge into a
  * shared one.
  *
- * <p>Locked as well as instrumented, and the two say the same thing from different angles: the
- * metric names are a published contract. It also gives this module a safety-tier guardrail, so it
- * appears in the renderers that emit safety families only.
+ * <p>Audited as well as instrumented: metric labels are a classic route for user identifiers to
+ * reach a dashboard nobody classified as holding PII. It also gives this module a safety-tier
+ * guardrail, so it appears in the renderers that emit safety families only.
+ *
+ * <p>Deliberately {@code @AIAudit} rather than {@code @AILocked}. This reactor opts into
+ * {@code .vibetags-locks}, and that report feeds the repository's own locked-files PR guard, so a
+ * newly locked example class makes the very commit that introduces it fail the guard. Locking an
+ * example class also freezes it against future edits for no benefit to what this fixture
+ * demonstrates.
  */
-@AILocked(reason = "Metric names are a published contract; renaming one breaks every dashboard "
-    + "and alert reading them")
+@AIAudit(checkFor = {"PII in metric labels"})
 @AIObservability(metrics = {"reactor.render.count", "reactor.render.duration"},
     note = "Metric names are a published contract; renaming one breaks every dashboard reading it")
 public class Telemetry {

@@ -61,9 +61,14 @@ The following elements are security-critical. AI must not weaken security proper
 # Do not edit manually.
 
 ## LOCKED FILES (DO NOT EDIT)
-* `com.example.gmm.platform.Telemetry` - Reason: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
 
 ## CONTEXTUAL RULES
+
+## 🛡️ MANDATORY SECURITY AUDITS
+When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
+
+* `com.example.gmm.platform.Telemetry`
+  - Required Checks: PII in metric labels
 
 ## 📡 OBSERVABILITY INSTRUMENTATION
 The following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on. Never remove or rename instrumentation without flagging the affected dashboard.

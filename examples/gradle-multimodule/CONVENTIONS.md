@@ -59,9 +59,8 @@ This file contains project-specific coding conventions and AI guardrails extract
 
 This file contains project-specific coding conventions and AI guardrails extracted from source annotations.
 
-#### LOCKED: com.example.gmm.platform.Telemetry
-- **Status**: Locked (Do Not Edit)
-- **Reason**: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
+#### SECURITY AUDIT: com.example.gmm.platform.Telemetry
+- **Required Checks**: PII in metric labels
 
 #### OBSERVABILITY: com.example.gmm.platform.Telemetry
 - **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.
