@@ -9,3 +9,7 @@ rootProject.name = 'vibetags-example-gradle-multimodule'
 // carries its own build.gradle, so VibeTags resolves it to its own module root.
 include 'core'
 include 'app'
+// platform/ stays outside the reactor-spine role glob; tests/ carries no annotations and
+// mirrors its siblings' rules instead.
+include 'platform'
+include 'tests'

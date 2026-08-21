@@ -1,0 +1,19 @@
+# Publishes this reactor's package-level guardrails for downstream consumers.
+#
+# Presence of this file is the opt-in. Each module writes one manifest per annotated package into
+# its own class output. Under Gradle that is build/classes/java/main/vibetags/manifests/<pkg>.json,
+# which the jar task packages with no further configuration; the Maven fixture's path is
+# target/classes/. The two differ, which is why the Gradle side asserts on it rather than assuming
+# the Maven fixture covers the publish step.
+#
+# The first non-blank, non-comment line is the artifact coordinate stamped into every manifest as
+# "origin". Consumers render it next to each inherited rule so a reader can see which dependency is
+# talking. Gradle projects can pass it as -Avibetags.manifest.origin instead, built from the
+# project's own group/name/version; it is spelled out here so the example needs no build config to
+# read.
+#
+# The version is deliberately two-segment and NOT the VibeTags release version. The origin string
+# is rendered into every generated file of every consuming module, so a coordinate tracking the
+# release would put the release version into committed demo files and oblige
+# scripts/set-version.sh to rewrite generated output, which ReleaseScriptCoverageTest refuses.
+se.deversity.vibetags.example:gradle-multimodule-core:1.0

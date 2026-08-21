@@ -1,0 +1,15 @@
+// The reactor's centralised test module. It has no @AI* annotations of its own; the guardrails
+// protecting the code it exercises live in sibling modules, which is what .vibetags-mirror is for.
+dependencies {
+    implementation project(':core')
+    implementation project(':app')
+    implementation project(':platform')
+}
+
+tasks.named('test') {
+    // This module exists to demonstrate rule mirroring, not to run tests, so it carries a stand-in
+    // class rather than a real suite. Gradle 9 fails a test task that discovers nothing, which
+    // would make the fixture unbuildable for a reason unrelated to what it demonstrates. A real
+    // project's test module would have tests and would not need this.
+    failOnNoDiscoveredTests = false
+}

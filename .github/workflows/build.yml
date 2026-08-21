@@ -777,13 +777,223 @@ jobs:
           # app/ did not opt in, so it gets no directory of its own. File presence is the only
           # opt-in (invariant 1), and this is where a regression would show first.
           test ! -d app/.claude
-          # And every committed file must match what the build just produced.
-          if [ -n "$(git status --porcelain -- CLAUDE.md .claude core/.claude)" ]; then
+          # And every committed file must match what the build just produced. Scoped to the whole
+          # example directory, not a file list: this reactor now opts into 51 services, and a list
+          # is the thing that goes stale.
+          if [ -n "$(git status --porcelain -- .)" ]; then
             echo "::error::examples/gradle-multimodule/ guardrail files are out of date."
-            git status --porcelain -- CLAUDE.md .claude core/.claude
-            git --no-pager diff -- CLAUDE.md .claude core/.claude
+            git status --porcelain -- .
+            git --no-pager diff -- .
             exit 1
           fi
+          # A correct full build says nothing. A spurious "stated nowhere" warning on a reactor
+          # that has just written every file in the right place is what the fixture work for
+          # issue #443 uncovered, so the absence of warnings is asserted rather than assumed.
+          # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
+          ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
+          if grep -q "warning: VibeTags" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::a clean build of an in-sync reactor emitted VibeTags warnings."
+            grep "warning: VibeTags" "$RUNNER_TEMP/gmm-build.log" | sort -u
+            exit 1
+          fi
+
+      # Ported from the Maven reactor, which had eleven verification steps to Gradle's one
+      # (issue #443). The three most recent multi-module defects all came from Gradle
+      # repositories, so the thinner coverage sat on the tool producing the bugs.
+      - name: Verify Transitive Guardrails Propagate Through The Gradle Reactor
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # Gradle's class output is build/classes/java/main/, not Maven's target/classes/. That
+          # difference is why this is asserted here as well: a manifest written to the wrong
+          # directory is unreadable downstream and nothing else would notice.
+          manifest=core/build/classes/java/main/vibetags/manifests/com.example.gmm.core.json
+          if [ ! -f "$manifest" ]; then
+            echo "::error::core published no transitive manifest at $manifest"
+            find core/build -name '*.json' -print || true
+            exit 1
+          fi
+          # An empty origin is the default, so grepping for the key alone would pass on a manifest
+          # that attributes nothing. Assert the coordinate the marker file declares.
+          grep -qF 'se.deversity.vibetags.example:gradle-multimodule-core:1.0' "$manifest" \
+            || { echo "::error::manifest carries no origin coordinate"; cat "$manifest"; exit 1; }
+          # A manifest nobody reads still builds and demonstrates nothing, so assert the consumer.
+          region=$(awk '/VIBETAGS-MODULE: app /{f=1} f; /VIBETAGS-MODULE-END: app /{f=0}' CLAUDE.md)
+          echo "$region" | grep -q 'Inherited Guardrails (dependencies)' \
+            || { echo "::error::app imports the core package but inherited nothing"; echo "$region"; exit 1; }
+          echo "$region" | grep -qF 'se.deversity.vibetags.example:gradle-multimodule-core:1.0' \
+            || { echo "::error::inherited rules render without attribution"; echo "$region"; exit 1; }
+          echo "app inherits the core package guardrails, attributed."
+
+      - name: Verify Every AI Service Is Generated in a Gradle Reactor
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # The reactor root opts into every service, so every renderer runs through the sidecar
+          # merge rather than only the handful the hand-written modules happened to need.
+          expected=51
+          actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::expected $expected active services in the Gradle reactor, got $actual"
+            grep 'Active services' vibetags.log | tail -1
+            exit 1
+          fi
+          # Spot-check marker-based files from renderers nothing else asserts.
+          for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
+                   .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
+                   .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
+                   .pr_agent.toml .coderabbit.yaml CLAUDE.local.md; do
+            test -s "$f" || { echo "::error::reactor produced no content for: $f"; exit 1; }
+            grep -qF "VIBETAGS" "$f" || { echo "::error::no VibeTags block in: $f"; exit 1; }
+          done
+          # Codex is the one service dropped unless AGENTS.md is the sole AI config file, which it
+          # is not here. Opted in and still empty is the correct outcome, and asserting it keeps
+          # the sole documented exception to "file presence is the opt-in" honest.
+          test ! -s .codex/config.toml \
+            || { echo "::error::.codex/config.toml has content but AGENTS.md is not the sole config"; exit 1; }
+          echo "All $expected services active; Codex correctly dropped."
+
+      - name: Verify Reactor YAML Is Readable By The Tools That Consume It (Gradle)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # "The file exists and says VIBETAGS" is not enough: the merge once stacked each module's
+          # whole document, so these carried their top-level key once per module. Strict parsers
+          # rejected them, lenient ones silently kept only the last module. Parse with duplicate
+          # keys forbidden, and assert an element only one module declares survives the parse.
+          python3 - <<'PY'
+          import sys, yaml
+
+          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
+                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          WITNESSES = {
+              "core": "com.example.gmm.core.IrNode",
+              "app": "com.example.gmm.app.App",
+              "platform": "com.example.gmm.platform.Telemetry",
+          }
+
+          class Strict(yaml.SafeLoader):
+              pass
+
+          def no_duplicates(loader, node, deep=False):
+              seen = set()
+              for key_node, _ in node.value:
+                  key = loader.construct_object(key_node, deep=deep)
+                  if key in seen:
+                      raise yaml.constructor.ConstructorError(
+                          None, None, f"duplicate top-level key {key!r}", key_node.start_mark)
+                  seen.add(key)
+              return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+          Strict.construct_mapping = no_duplicates
+
+          failed = False
+          for path in FILES:
+              text = open(path, encoding="utf-8").read()
+              try:
+                  parsed = str(yaml.load(text, Loader=Strict))
+              except Exception as e:
+                  print(f"::error file={path}::not a valid YAML document: {e}")
+                  failed = True
+                  continue
+              missing = [m for m, w in WITNESSES.items() if w not in parsed]
+              if missing:
+                  print(f"::error file={path}::merged away the guardrails of module(s): {missing}")
+                  failed = True
+              else:
+                  print(f"{path}: parses strictly, all {len(WITNESSES)} modules survive")
+          sys.exit(1 if failed else 0)
+          PY
+
+      - name: Verify Per-Module (nested) Output In A Gradle Reactor
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # core/ opts into an aggregate AND a granular dir, so it gets an INDEXED module file.
+          # platform/ opts into the aggregate only, so it gets a plain one. Two nested shapes in
+          # one reactor.
+          grep -qF "com.example.gmm.core.IrNode" core/CLAUDE.md \
+            || { echo "::error::MISSING in core/CLAUDE.md: the module's own guardrail"; exit 1; }
+          grep -qF "<scoped_rules>" core/CLAUDE.md \
+            || { echo "::error::core opted into a granular dir, so its module file must be indexed"; exit 1; }
+          grep -qF "com.example.gmm.platform.Telemetry" platform/CLAUDE.md \
+            || { echo "::error::MISSING in platform/CLAUDE.md: the module's own guardrail"; exit 1; }
+          # Module-scoped means module-scoped: no sibling may leak in.
+          for foreign in "com.example.gmm.app.App" "com.example.gmm.platform.Telemetry"; do
+            if grep -qF "$foreign" core/CLAUDE.md; then
+              echo "::error::LEAKED into core/CLAUDE.md: $foreign"; exit 1
+            fi
+          done
+          if grep -qF "com.example.gmm.core.IrNode" platform/CLAUDE.md; then
+            echo "::error::LEAKED into platform/CLAUDE.md: the core guardrail"; exit 1
+          fi
+          # A module's own granular dir resolves against its OWN role config, which it does not
+          # have, so it keeps per-class names while the root role-routes the same elements. Those
+          # two namespaces meeting in one sidecar field produced a spurious "stated nowhere"
+          # warning until the fix that ships with this change.
+          test -f core/.claude/rules/com-example-gmm-core-IrNode.md \
+            || { echo "::error::the module's own granular dir lost its per-class file"; exit 1; }
+          # ...and the reactor root still merges every module.
+          grep -qF "com.example.gmm.core.IrNode" CLAUDE.md \
+            || { echo "::error::root CLAUDE.md must still merge all modules"; exit 1; }
+          echo "Per-module output is module-scoped; reactor root still merges all modules."
+
+      - name: Verify Cross-Module Mirroring In A Gradle Reactor (issue #312)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # tests/ has no @AI* annotations of its own and opted in via .vibetags-mirror, so each
+          # source module's scoped rules must be mirrored there under its own namespace.
+          for f in mirrored-core-com-example-gmm-core-IrNode.md \
+                   mirrored-app-com-example-gmm-app-App.md \
+                   mirrored-platform-com-example-gmm-platform-Telemetry.md; do
+            test -f "tests/.claude/rules/$f" || { echo "::error::MISSING mirrored rule: $f"; exit 1; }
+          done
+          # A mirrored file carries the source rule verbatim, with the target's globs appended.
+          grep -qF "Core IR node shape" tests/.claude/rules/mirrored-core-com-example-gmm-core-IrNode.md \
+            || { echo "::error::mirrored rule lost the source module's guardrail"; exit 1; }
+          grep -qF 'tests/src/test/java' tests/.claude/rules/mirrored-core-com-example-gmm-core-IrNode.md \
+            || { echo "::error::mirrored rule is not scoped to the target module's sources"; exit 1; }
+          # Mirroring must create no region in the reactor root. tests/ carries no annotations and
+          # its sources are test sources, so it contributes nothing to the merge; a mirrored rule
+          # reaching the aggregate would show up as a region here.
+          if grep -qF "VIBETAGS-MODULE: tests" CLAUDE.md; then
+            echo "::error::mirroring must not put a module into the reactor root aggregate"
+            awk '/VIBETAGS-MODULE: tests /{f=1} f; /VIBETAGS-MODULE-END: tests /{f=0}' CLAUDE.md
+            exit 1
+          fi
+          echo "Sibling module rules mirrored into the centralised test module."
+
+      - name: Verify Granular Role Files Merge Across Gradle Modules (issue #365)
+        if: matrix.java == '21'
+        run: |
+          cd examples/gradle-multimodule
+          # .vibetags-roles routes core/ and app/ into ONE root rule file, so both modules write
+          # the same path. Each compile used to replace it with its own classes alone, and only the
+          # module that happened to compile last kept its guardrails.
+          for dir in .ai/rules .amazonq/rules .claude/rules .continue/rules .kiro/steering \
+                     .pearai/rules .roo/rules .tabnine/guidelines .trae/rules; do
+            f="$dir/reactor-spine.md"
+            test -f "$f" || { echo "::error::MISSING role rule file: $f"; exit 1; }
+            for token in "com.example.gmm.core.IrNode" "com.example.gmm.app.App"; do
+              grep -qF "$token" "$f" || { echo "::error::MISSING in $f: $token"; exit 1; }
+            done
+          done
+          # A class matching no role keeps its own per-class file: the merge must not eat that path.
+          test -f .kiro/steering/com-example-gmm-platform-Telemetry.md \
+            || { echo "::error::unrouted classes lost their per-class rule file"; exit 1; }
+          # The second repro from the report, in Gradle terms: building ONE subproject must leave
+          # the shared file byte-identical, or an unrelated one-module edit produces a spurious
+          # diff in a generated file.
+          before=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          ./gradlew :core:build --no-daemon
+          after=$(md5sum .kiro/steering/reactor-spine.md | cut -d' ' -f1)
+          if [ "$before" != "$after" ]; then
+            echo "::error::a one-module Gradle build rewrote the shared role file:"
+            git --no-pager diff -- .kiro/steering/reactor-spine.md
+            exit 1
+          fi
+          echo "Role files merge across modules and survive a one-subproject rebuild."
 
       # The only check-mode gate on the Gradle side; every other one is Maven. It runs twice on
       # purpose. The second run is the point: check mode lives inside the annotation processor,

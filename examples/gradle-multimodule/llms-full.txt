@@ -1,0 +1,110 @@
+<!-- VIBETAGS-START -->
+<!-- VIBETAGS-MODULE: app -->
+# This Project — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+
+## Contextual Rules
+These files have specific context and focus areas for AI assistance.
+
+### com.example.gmm.app.App
+- **Focus**: Wiring only: parsing and rendering live in their own modules
+- **Avoid**: Business logic
+
+
+## Mandatory Security Audit Requirements
+When writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.
+
+### com.example.gmm.app.App
+- **Required Checks**: Path Traversal
+
+
+## Inherited Guardrails (dependencies)
+
+These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.
+
+- `com.example.gmm.core` (from se.deversity.vibetags.example:gradle-multimodule-core:1.0)
+  - @AISecure: aspect=Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw name in a URL or log line.
+
+## Inherited Context (dependencies)
+
+Conventions the dependency's authors documented. Follow them unless this project's own rules above say otherwise.
+
+- `com.example.gmm.core` (from se.deversity.vibetags.example:gradle-multimodule-core:1.0)
+  - @AIContext: avoids=Adding mutable state, framework annotations, or a dependency on any sibling module.; focus=Immutable IR data model shared across every module of the reactor.
+  - @AIThreadSafe: note=Every type in this package is safe to publish across threads without synchronization.; strategy=IMMUTABLE
+<!-- VIBETAGS-MODULE-END: app -->
+<!-- VIBETAGS-MODULE: core -->
+# This Project — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+### com.example.gmm.core.IrNode
+- **Reason**: Core IR node shape is depended on by every downstream module
+
+
+## Contextual Rules
+These files have specific context and focus areas for AI assistance.
+
+### com.example.gmm.core
+- **Focus**: Immutable IR data model shared across every module of the reactor.
+- **Avoid**: Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+
+## 🧵 Thread-Safe by Design
+These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
+
+### com.example.gmm.core
+- **Strategy**: IMMUTABLE
+- **Note**: Every type in this package is safe to publish across threads without synchronization.
+
+
+## 🔐 Security-Critical Code
+These elements are security-critical. Do not weaken security properties. Every change requires security review.
+
+### com.example.gmm.core
+- Security-critical code (aspect: Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw name in a URL or log line.).
+- Never weaken security properties. Every change requires explicit security review.
+<!-- VIBETAGS-MODULE-END: core -->
+<!-- VIBETAGS-MODULE: platform -->
+# This Project — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+### com.example.gmm.platform.Telemetry
+- **Reason**: Metric names are a published contract; renaming one breaks every dashboard and alert reading them
+
+
+## Contextual Rules
+These files have specific context and focus areas for AI assistance.
+
+
+## 📡 Observability Instrumentation
+The following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on.
+
+### com.example.gmm.platform.Telemetry
+- **Metrics**: reactor.render.count, reactor.render.duration
+- **Note**: Metric names are a published contract; renaming one breaks every dashboard reading it
+
+
+## 🚩 Feature Flag Gated Code
+These elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.
+
+### com.example.gmm.platform.FeatureGate
+- Feature flag: 'reactor.parallel-render' (default: false)
+- Preserve the flag check. Never assume the flag is always active. Test both enabled and disabled code paths.
+<!-- VIBETAGS-MODULE-END: platform -->
+<!-- VIBETAGS-END -->

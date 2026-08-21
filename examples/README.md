@@ -32,7 +32,7 @@ matrix is maintained.
 
 | Example | Layout | The decision |
 |---|---|---|
-| [`gradle-multimodule/`](gradle-multimodule/) | Subprojects below the root, each with its own `build.gradle` | `-Avibetags.root` at the reactor root. Also the Gradle side's granular-rules and check-mode fixture. |
+| [`gradle-multimodule/`](gradle-multimodule/) | Subprojects below the root, each with its own `build.gradle` | `-Avibetags.root` at the reactor root. Also the Gradle side's depth fixture: four modules, transitive manifests, mirroring, roles, nested output, check mode and all 51 services. |
 | [`gradle-shared-buildfile/`](gradle-shared-buildfile/) | Subprojects configured from the root build file | `-Avibetags.module`, without which every module shares one identity and overwrites the others |
 | [`gradle-flat/`](gradle-flat/) | Module beside the root, not below it | `-Avibetags.root` at the directory containing both, or module ids become path hashes that differ per checkout |
 | [`gradle-composite/`](gradle-composite/) | Two separate builds joined by `includeBuild` | `-Avibetags.root` in both, or each build writes its own set of files |

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A full, correct build no longer claims your guardrails are stated nowhere.** A module that
+  opts into a granular directory of its own, inside a reactor whose root has a `.vibetags-roles`
+  config, was reported as having lost rule files it never had. Two stem namespaces meet in one
+  sidecar field: the module's root contributions are routed through the root's role config into a
+  shared role file, while its module-scoped contributions resolve against the module's own
+  (usually absent) config and keep per-class names. The check for missing sibling files then
+  looked for those per-class names in the *root* granular directory, where they are not supposed
+  to be and never were, and told the reader to go looking for them.
+
+  Nothing was lost and nothing was written wrongly; the warning was the whole defect, and it fired
+  on every round of every build in that shape. Found by giving `examples/gradle-multimodule` the
+  nested-output and role coverage the Maven reactor already had (issue #443). The Maven fixture
+  never hit it because its modules have a nested aggregate but no nested granular directory.
+
+### Added
+
+- **Gradle reactors are verified to the same depth as Maven ones.** The Maven reactor had eleven
+  CI verification steps to the Gradle reactor's one, while the three most recent multi-module
+  defects all came from Gradle repositories: the thinner coverage sat on the tool producing the
+  bugs. `examples/gradle-multimodule` grows from two modules to four and now carries transitive
+  manifests, cross-module rule mirroring, role-based granular grouping, per-module nested output
+  in two shapes, and every one of the 51 services. Six assertions ported from the Maven reactor
+  gate it, including the `#365` repro that a one-subproject build must leave a shared role file
+  byte-identical, and a new one: a clean build of an in-sync reactor must emit no warnings at all.
+
 ## [1.2.4] - 2026-08-20
 
 ### Added

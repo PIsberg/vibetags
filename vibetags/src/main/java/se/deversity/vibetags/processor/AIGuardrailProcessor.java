@@ -1097,8 +1097,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
             Set<String> present = filenamesIn(dir);
             for (ModuleSidecar sidecar : allSidecars) {
+                // getGranularStems() is the union of two different namespaces: the stems this
+                // module writes at the ROOT, and the stems it writes into its OWN granular
+                // directory. Only the first kind can be looked for here, because `dir` is a root
+                // directory. The two coincide unless a role config renames one of them, which is
+                // exactly when they diverge: the root contributions are routed through the root's
+                // .vibetags-roles into a shared role file, while the module-scoped ones resolve
+                // against the module's own (usually absent) config and keep per-class names.
+                // Comparing those per-class names against the root directory reported files as
+                // missing that were never meant to be there. See issue #443.
+                Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
                 for (String stem : sidecar.getGranularStems()) {
-                    if (mine.contains(stem) || hasFileFor(present, stem)) {
+                    if (mine.contains(stem) || moduleScoped.contains(stem) || hasFileFor(present, stem)) {
                         continue;
                     }
                     String entry = sidecar.getRegionId() + "'s " + stem;

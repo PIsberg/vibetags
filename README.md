@@ -470,7 +470,7 @@ vibetags/
 ├── examples/kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
 ├── examples/groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
 ├── examples/scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
-├── examples/gradle-multimodule/     # Gradle reactor; also the Gradle granular + check-mode fixture
+├── examples/gradle-multimodule/     # Gradle reactor, verified to the same depth as the Maven one
 ├── examples/gradle-shared-buildfile/ # Subprojects configured from the root build file
 ├── examples/gradle-flat/            # Module beside the root, not below it
 ├── examples/gradle-composite/       # Two builds joined by includeBuild

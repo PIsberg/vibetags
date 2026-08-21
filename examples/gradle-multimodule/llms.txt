@@ -1,0 +1,54 @@
+<!-- VIBETAGS-START -->
+<!-- VIBETAGS-MODULE: app -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+- [App](com.example.gmm.app.App): Focus - Wiring only: parsing and rendering live in their own modules. Avoid - Business logic
+
+## Security Audit Requirements
+- [App](com.example.gmm.app.App): check for Path Traversal
+<!-- VIBETAGS-MODULE-END: app -->
+<!-- VIBETAGS-MODULE: core -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [IrNode](com.example.gmm.core.IrNode): Core IR node shape is depended on by every downstream module
+
+## Contextual Rules
+- [core](com.example.gmm.core): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+## 🧵 Thread-Safe by Design
+- [core](com.example.gmm.core): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
+
+## 🔐 Security-Critical Code
+- [core](com.example.gmm.core): Security-critical code [Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw name in a URL or log line.]. Do not weaken security properties. Flag any change for security review.
+<!-- VIBETAGS-MODULE-END: core -->
+<!-- VIBETAGS-MODULE: platform -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [Telemetry](com.example.gmm.platform.Telemetry): Metric names are a published contract; renaming one breaks every dashboard and alert reading them
+
+## Contextual Rules
+
+## 📡 Observability Instrumentation
+- [Telemetry](com.example.gmm.platform.Telemetry): Metrics: reactor.render.count, reactor.render.duration. Note: Metric names are a published contract; renaming one breaks every dashboard reading it
+
+## 🚩 Feature Flag Gated Code
+- [FeatureGate](com.example.gmm.platform.FeatureGate): Gated by feature flag: 'reactor.parallel-render' (default: false). Preserve the flag check — never assume it is always on.
+<!-- VIBETAGS-MODULE-END: platform -->
+<!-- VIBETAGS-END -->
