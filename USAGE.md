@@ -201,13 +201,24 @@ Javac `-A` options can't be passed as a Maven user property, so opt in through a
 **Gradle:**
 
 ```groovy
-// Opt in via a project property: gradle compileJava -PvibetagsCheck
-tasks.withType(JavaCompile) {
+// Opt in via a project property: ./gradlew build -PvibetagsCheck
+tasks.withType(JavaCompile).configureEach {
     if (project.hasProperty('vibetagsCheck')) {
         options.compilerArgs += ['-Avibetags.check=true']
+        // Load-bearing. Check mode runs inside the annotation processor, so it runs only if
+        // javac runs, and Gradle skips an UP-TO-DATE compileJava. Without this line the check
+        // passes on an unchanged tree having verified nothing. Measured on
+        // examples/gradle-multimodule: with the committed CLAUDE.md deliberately drifted, the
+        // snippet minus this line reported `compileJava UP-TO-DATE` and exited 0; with it, the
+        // same tree failed the build. Maven has no equivalent hazard: its check profile binds
+        // to a lifecycle phase that always recompiles.
+        outputs.upToDateWhen { false }
     }
 }
 ```
+
+Worked example: [`examples/gradle-multimodule/build.gradle`](examples/gradle-multimodule/build.gradle),
+gated in CI both ways (in sync must pass, drifted must fail).
 
 **GitHub Actions:**
 

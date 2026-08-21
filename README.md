@@ -470,6 +470,11 @@ vibetags/
 ├── examples/kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
 ├── examples/groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
 ├── examples/scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
+├── examples/gradle-multimodule/     # Gradle reactor; also the Gradle granular + check-mode fixture
+├── examples/gradle-shared-buildfile/ # Subprojects configured from the root build file
+├── examples/gradle-flat/            # Module beside the root, not below it
+├── examples/gradle-composite/       # Two builds joined by includeBuild
+│                                    # (all four: see examples/README.md)
 ├── vibetags-bom/         # Bill of Materials (versions only, no source)
 │   └── pom.xml           # Imported by consumers to manage vibetags-* versions in one place
 ├── load-tests/           # Performance & safety test harness (standalone)
@@ -756,7 +761,9 @@ Reserve a root `.claude/rules/` in a reactor for genuine *root-level* sources.
 [`examples/multimodule-indexed/`](examples/multimodule-indexed/) (reactor, indexed root + per-module Tier 3),
 [`examples/all-tiers/`](examples/all-tiers/) (**all three tiers at once**, with a class annotated at
 every level — type, instance field, method, and method parameter — so you can see which tier each
-one lands in), and [`examples/kotlin/`](examples/kotlin/) (Kotlin sources under kapt — same
+one lands in), [`examples/gradle-multimodule/`](examples/gradle-multimodule/) (the same
+dual opt-in on a **Gradle** reactor: root index plus a per-module granular dir, with the safety
+bucket still inline), and [`examples/kotlin/`](examples/kotlin/) (Kotlin sources under kapt — same
 annotations, same generated files).
 
 ## 📚 Documentation
@@ -764,6 +771,7 @@ annotations, same generated files).
 | Resource | What it covers |
 |---|---|
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
+| **[All examples](examples/README.md)** | An index of the eleven runnable consumer projects: which build tool each uses, which layout or language it covers, and what its CI gate actually asserts. Start here if you are looking for the example closest to your own project. |
 | **[Example Project](examples/basic/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |

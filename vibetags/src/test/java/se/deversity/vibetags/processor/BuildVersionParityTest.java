@@ -7,12 +7,14 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,11 +52,19 @@ class BuildVersionParityTest {
     private static final Pattern POM_VERSION_LITERAL =
         Pattern.compile("^\\s*<version>([^<$][^<]*)</version>\\s*$", Pattern.MULTILINE);
 
-    /** Gradle builds whose literal coordinates must agree with the parent. */
-    private static final List<String> GRADLE_FILES = List.of(
+    /**
+     * Gradle build files this test knows must exist. Discovery below finds every one in the
+     * repository; these are named so that a walk which silently stops finding anything fails
+     * loudly instead of passing vacuously.
+     */
+    private static final List<String> GRADLE_ANCHORS = List.of(
         "vibetags/build.gradle", "vibetags-annotations/build.gradle", "examples/basic/build.gradle",
         "examples/kotlin/build.gradle.kts", "examples/groovy/build.gradle",
         "examples/scala/build.gradle");
+
+    /** Directory names whose contents are build output or tool cache, never sources. */
+    private static final Set<String> NON_SOURCE_DIRS =
+        Set.of(".git", ".gradle", "build", "target", "node_modules");
 
     /**
      * The Gradle builds that publish a VibeTags artifact, and so must carry the release version.
@@ -95,7 +105,7 @@ class BuildVersionParityTest {
         String revision = properties().get("revision");
         List<String> problems = new ArrayList<>();
 
-        for (String file : GRADLE_FILES) {
+        for (String file : gradleFiles()) {
             String text = read(repoRoot().resolve(file));
             Matcher m = GRADLE_COORD.matcher(text);
             while (m.find()) {
@@ -155,7 +165,7 @@ class BuildVersionParityTest {
             Pattern.MULTILINE);
         List<String> problems = new ArrayList<>();
 
-        for (String file : GRADLE_FILES) {
+        for (String file : gradleFiles()) {
             Matcher m = toolVersion.matcher(read(repoRoot().resolve(file)));
             while (m.find()) {
                 if (!expected.equals(m.group(1))) {
@@ -233,6 +243,44 @@ class BuildVersionParityTest {
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /**
+     * Every Gradle build file in the repository, discovered rather than listed.
+     *
+     * <p>The list this replaced was hand-kept, and had already fallen behind: the five build files
+     * under {@code examples/gradle-*} were added after it and never appended, so each pinned a
+     * literal {@code vibetags-bom} version that nothing compared against the parent. A bump that
+     * missed one left the example on the previous release, and it still built green: the example's
+     * {@code repositories} block falls through {@code mavenLocal()} to Maven Central, where the
+     * previous release resolves, and the generated {@code CLAUDE.md} carries no version string for
+     * the drift gate to catch. Verified by pinning {@code examples/gradle-multimodule/build.gradle}
+     * to the previous release: this test and {@link ReleaseScriptCoverageTest} both passed.
+     *
+     * <p>Discovery also means the next example is covered the day it is committed, which is the
+     * only version of this check that stays true.
+     */
+    private static List<String> gradleFiles() {
+        Path root = repoRoot();
+        List<String> found = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.filter(Files::isRegularFile)
+                .filter(path -> {
+                    String name = path.getFileName().toString();
+                    return name.endsWith(".gradle") || name.endsWith(".gradle.kts");
+                })
+                .map(path -> root.relativize(path).toString().replace('\\', '/'))
+                .filter(rel -> Arrays.stream(rel.split("/")).noneMatch(NON_SOURCE_DIRS::contains))
+                .sorted()
+                .forEach(found::add);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        List<String> missing = GRADLE_ANCHORS.stream().filter(a -> !found.contains(a)).toList();
+        assertTrue(missing.isEmpty(),
+            "The walk over " + root + " did not find Gradle build files known to exist, so every "
+                + "assertion reading it is checking less than it claims: " + missing);
+        return found;
+    }
 
     private static Path repoRoot() {
         Path candidate = Path.of(System.getProperty("user.dir")).toAbsolutePath();

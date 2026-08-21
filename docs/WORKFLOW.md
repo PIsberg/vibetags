@@ -94,6 +94,26 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
 - Kotlin example build (JDK 21 leg only): `cd examples/kotlin && ./gradlew clean build --no-daemon`, then greps the regenerated `CLAUDE.md` / `.cursorrules` for the annotated Kotlin elements — the proof that kapt actually ran the processor. Gated to 21 because the Kotlin Gradle plugin trails new JDK releases and the example pins a 21 toolchain anyway.
 - Groovy example build (JDK 21 leg only, same shape): joint-compilation stubs with `javaAnnotationProcessing = true`; greps prove the processor saw the Groovy class.
 - Scala example build (JDK 21 leg only): asserts the feature *and* the limitation — the annotated Java class must appear in the generated files, and the annotated Scala class must **not** (`! grep`), because scalac has no JSR 269 support. If the negative assertion ever fails, the docs' support matrix is wrong, not the build.
+- **Gradle layout examples** (JDK 21 leg only), one step each, undocumented here until now although
+  they have been running for several releases. Each builds a layout that Maven cannot express and
+  asserts the specific failure it prevents: `gradle-multimodule` (reactor, one sidecar per module,
+  never one collapsed onto the root), `gradle-shared-buildfile` (subprojects with no build file of
+  their own; without `-Avibetags.module` they share one identity and the last to compile wins),
+  `gradle-flat` (module beside the root; a hash-named sidecar means the module resolved out of tree,
+  which the step greps for explicitly), `gradle-composite` (`includeBuild`, two builds writing into
+  one root). All four compare the committed `CLAUDE.md` against what the build just produced.
+- **Gradle granular assertions** (JDK 21 leg, inside the `gradle-multimodule` step). Dual opt-in
+  collapses each module region to a scoped-rules index while the safety buckets stay inline. `core/`
+  has its own granular directory, `app/` opts into nothing and must therefore have no `.claude`
+  directory at all. Before this, no Gradle build in the repository exercised the granular path, so
+  invariants 6 and 13 were verified on one of the two supported build tools.
+- **Gradle check mode**, two steps, JDK 21 leg. The first runs `./gradlew build -PvibetagsCheck`
+  twice and fails if the second run reports `compileJava UP-TO-DATE`: check mode lives inside the
+  annotation processor, so a skipped compile means the gate verified nothing. Measured with the
+  example's `outputs.upToDateWhen { false }` removed and the committed `CLAUDE.md` drifted, the
+  check reported `UP-TO-DATE` and exited 0. The second step drifts `CLAUDE.md` deliberately and
+  requires a non-zero exit, then asserts the drift is still there, since check mode must never
+  write. Every other check-mode gate in the pipeline is Maven.
 - Tests use `cd vibetags && ./gradlew test --no-daemon`.
 - Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml`, uploads under flag `unittests-gradle`, and passes `fail_ci_if_error: false`.
 

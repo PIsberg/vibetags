@@ -30,5 +30,21 @@ subprojects {
         // makes the modules aggregate into one set of generated files instead of each writing
         // its own. rootProject, not projectDir: projectDir would give each module its own root.
         options.compilerArgs << "-Avibetags.root=${rootProject.projectDir.absolutePath}"
+
+        // Check mode: fail the build when the committed guardrail files no longer match the
+        // annotations, instead of rewriting them. Opt in per invocation:
+        //
+        //     ./gradlew build -PvibetagsCheck
+        //
+        // upToDateWhen { false } is the load-bearing half. Check mode runs inside the annotation
+        // processor, so it only runs if javac runs, and Gradle skips an UP-TO-DATE compileJava.
+        // Without this line a second invocation on an unchanged tree skips compilation entirely
+        // and the check "passes" having verified nothing, which is the failure a verification gate
+        // can least afford. Maven has no equivalent hazard: its check-mode profile binds to a
+        // lifecycle phase that always recompiles.
+        if (project.hasProperty('vibetagsCheck')) {
+            options.compilerArgs << "-Avibetags.check=true"
+            outputs.upToDateWhen { false }
+        }
     }
 }
