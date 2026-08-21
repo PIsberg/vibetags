@@ -1,0 +1,241 @@
+<!-- VIBETAGS-START -->
+<!-- VIBETAGS-MODULE: annotations-showcase -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [PaymentProcessor](com.example.payment.PaymentProcessor): Tied to legacy database schema v2.3. Changes will break production payment processing. Contact the payments team before modifying.
+- [SecurityConfig](com.example.security.SecurityConfig): CRITICAL: Security configuration managed by DevOps team. Any changes require security review and approval ticket SEC-XXXX
+- [SecurityConfig.getEncryptionAlgorithm()](com.example.security.SecurityConfig.getEncryptionAlgorithm()): Encryption algorithm tied to compliance requirements (PCI-DSS)
+- [SecurityConfig.getKeyRotationHours()](com.example.security.SecurityConfig.getKeyRotationHours()): Key rotation period mandated by company policy
+- [SecurityConfig.getMaxLoginAttempts()](com.example.security.SecurityConfig.getMaxLoginAttempts()): Max login attempts set by security team to prevent brute force
+- [SecurityConfig.validateToken(java.lang.String)](com.example.security.SecurityConfig.validateToken(java.lang.String)): Token validation must match auth server exactly. Changes will break all client authentication
+- [OrderService.calculateTax(java.lang.String,double)](com.example.service.OrderService.calculateTax(java.lang.String,double)): Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
+- [OrderService.processPayment(java.lang.String,double)](com.example.service.OrderService.processPayment(java.lang.String,double)): Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
+- [OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)](com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)): Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
+
+## Contextual Rules
+- [SecurityConfig](com.example.security.SecurityConfig): Focus - This class is READ-ONLY for AI assistants. Do not suggest modifications.. Avoid - Any changes to encryption algorithms, key sizes, or validation logic
+- [InventoryService](com.example.service.InventoryService): Focus - Maintain inventory consistency across concurrent requests. All stock updates must be atomic.. Avoid - Non-atomic read-modify-write sequences, unsynchronized shared state
+- [NotificationService](com.example.service.NotificationService): Focus - Implement notification delivery with retry logic and error handling. Avoid - Hard-coded credentials, synchronous blocking calls
+- [OrderService](com.example.service.OrderService): Focus - Maintain transactional integrity. All database operations must use proper transaction management.. Avoid - Raw SQL queries, direct database connections without connection pooling
+- [PricingService](com.example.service.PricingService): Focus - Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.. Avoid - Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
+- [PaymentStrategy](com.example.strategy.PaymentStrategy): Focus - Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid - Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
+- [StringParser](com.example.utils.StringParser): Focus - Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid - java.util.regex, String.split(), StringBuilder in loops
+
+## Security Audit Requirements
+- [DatabaseConnector](com.example.database.DatabaseConnector): check for SQL Injection, Thread Safety issues
+
+## Ignored Elements
+- [GeneratedMetadata](com.example.internal.GeneratedMetadata): excluded from AI context - Auto-generated at build time. Manual edits are overwritten on every build.
+
+## Implementation Tasks
+- [NotificationService](com.example.NotificationService): Implement email sending via SMTP and push notifications via FCM. Ensure retry logic and rate limiting are applied.
+- [PaymentProcessor](com.example.payment.PaymentProcessor): Implement support for new crypto payments without breaking legacy flow.
+- [NotificationService.getDeliveryStatus(java.lang.String)](com.example.service.NotificationService.getDeliveryStatus(java.lang.String)): Implement delivery status tracking. Return status: PENDING, SENT, DELIVERED, FAILED. Include timestamp and error message if failed.
+- [NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)](com.example.service.NotificationService.queueNotification(java.lang.String,java.lang.String,java.lang.String,int)): Implement a notification queue using a BlockingQueue or similar structure. Support batch processing and priority levels (LOW, MEDIUM, HIGH, CRITICAL).
+- [NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)](com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)): Implement email sending using JavaMail API or similar. Include HTML template support and attachment handling. Add retry logic for transient failures (max 3 retries with exponential backoff).
+- [NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)](com.example.service.NotificationService.sendPushNotification(java.lang.String,java.lang.String,java.lang.String)): Implement push notification using Firebase Cloud Messaging. Support both Android and iOS. Include notification payload customization.
+- [NotificationService.sendSMS(java.lang.String,java.lang.String)](com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)): Implement SMS sending via Twilio or AWS SNS. Include phone number validation. Handle rate limiting (max 10 SMS per minute per user).
+- [OrderService.calculateDiscount(java.lang.String,java.lang.String)](com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)): Implement discount calculation supporting: percentage discounts, fixed amount discounts, buy-one-get-one-free, and tiered discounts based on cart value. Apply maximum one discount per order unless overridden by admin.
+- [OrderService.generateOrderConfirmation(java.lang.String)](com.example.service.OrderService.generateOrderConfirmation(java.lang.String)): Generate order confirmation email content including: order summary, itemized list, shipping address, estimated delivery date, and customer support contact information. Support HTML and plain text formats.
+- [OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)](com.example.service.OrderService.searchOrders(java.util.Map<java.lang.String,java.lang.String>,int,int)): Implement order search with filters: date range, status, customer ID, minimum/maximum amount. Support pagination (default 20 items per page). Return results sorted by creation date descending.
+- [OrderService.updateOrderStatus(java.lang.String,java.lang.String)](com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)): Implement order status workflow: CREATED -> PAYMENT_PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED. Support status history tracking with timestamps. Allow cancellation only before SHIPPED status.
+- [PaymentStrategy.executePayment(double)](com.example.strategy.PaymentStrategy.executePayment(double)): Implement payment execution specific to the payment method (credit card, PayPal, cryptocurrency, etc.). Return transaction ID on success.
+- [PaymentStrategy.validatePaymentMethod()](com.example.strategy.PaymentStrategy.validatePaymentMethod()): Validate payment method specific data (card numbers, email addresses, wallet addresses, etc.). Return true if valid, false otherwise.
+- [CreditCardStrategy.executePayment(double)](com.example.strategy.impl.CreditCardStrategy.executePayment(double)): Implement credit card payment processing via Stripe or similar payment gateway. Include: card tokenization, 3D Secure authentication, and proper error handling for declined cards. Return transaction ID on success.
+- [CreditCardStrategy.validatePaymentMethod()](com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()): Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
+
+## PII / Privacy Guardrails
+- [DatabaseConnector.password](com.example.database.DatabaseConnector.password): Database credential - never log or include in error messages
+- [DatabaseConnector.username](com.example.database.DatabaseConnector.username): Database credential - never log or include in error messages
+- [InventoryService.customerId](com.example.service.InventoryService.customerId): Customer identifiers linked to purchase history — PII under GDPR
+- [NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)](com.example.service.NotificationService.sendEmail(java.lang.String,java.lang.String,java.lang.String)): Email address is PII under GDPR - never log the recipient address
+- [NotificationService.sendSMS(java.lang.String,java.lang.String)](com.example.service.NotificationService.sendSMS(java.lang.String,java.lang.String)): Phone number is PII - never log the destination number
+- [OrderService.generateOrderConfirmation(java.lang.String)](com.example.service.OrderService.generateOrderConfirmation(java.lang.String)): Output contains customer shipping address and contact details (PII)
+- [CreditCardStrategy.cardNumber](com.example.strategy.impl.CreditCardStrategy.cardNumber): PCI-DSS cardholder data - never log or expose in suggestions
+- [CreditCardStrategy.cvv](com.example.strategy.impl.CreditCardStrategy.cvv): PCI-DSS security code - never log or expose in suggestions
+- [CreditCardStrategy.expiryDate](com.example.strategy.impl.CreditCardStrategy.expiryDate): PCI-DSS cardholder data - never log or expose in suggestions
+
+## 🧠 Core Functionality
+- [SecurityConfig](com.example.security.SecurityConfig): Sensitivity: Critical. Note: This is a security manager. Any single-line change can compromise the entire project.
+- [InventoryService.releaseReservation(java.lang.String)](com.example.service.InventoryService.releaseReservation(java.lang.String)): Sensitivity: High. Note: Must be called as the exact inverse of reserveStock. Pair changes to both methods together.
+- [InventoryService.reserveStock(java.lang.String,int,java.lang.String)](com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)): Sensitivity: Critical. Note: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
+
+## ⚡ Performance Constraints
+- [PaymentProcessor](com.example.payment.PaymentProcessor): HFT-level requirements: O(1) processing time expected. No database lookups in processing loop.
+- [InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)](com.example.service.InventoryService.bulkRestock(java.util.List<java.util.Map<java.lang.String,java.lang.Object>>)): Must process 10 000 SKU updates/second. O(n) acceptable; O(n log n) only if unavoidable; O(n²) is forbidden.
+- [InventoryService.getAvailableStock(java.lang.String)](com.example.service.InventoryService.getAvailableStock(java.lang.String)): O(1) lookup required. Must complete in <2ms p99. No database calls permitted; reads from in-memory cache only.
+- [PricingService.calculatePrice(java.lang.String,int,java.lang.String)](com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)): Must complete in <5ms p99. Called on every cart update.
+
+## 🔐 Contract-Frozen Signatures
+- [PricingService.applyPromoCode(java.lang.String,double,java.lang.String)](com.example.service.PricingService.applyPromoCode(java.lang.String,double,java.lang.String)): Promotions-service depends on this exact method signature for its async price-adjustment events. Changing parameter types would break the event deserialization.
+- [PricingService.calculatePrice(java.lang.String,int,java.lang.String)](com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)): Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.
+- [PricingService.getBulkPricing(java.util.List<java.lang.String>,int)](com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)): B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
+
+## 🧪 Test-Driven Requirements
+- [OrderService.calculateDiscount(java.lang.String,java.lang.String)](com.example.service.OrderService.calculateDiscount(java.lang.String,java.lang.String)): Coverage goal: 100%. Framework: JUNIT_5, ASSERTJ. Mock policy: Use fixed prices — no external pricing calls in unit tests.
+- [OrderService.updateOrderStatus(java.lang.String,java.lang.String)](com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)): Coverage goal: 95%. Framework: JUNIT_5, MOCKITO. Test file: src/test/java/com/example/service/OrderServiceTest.java. Mock policy: Mock OrderRepository and EventPublisher; use real state machine logic.
+
+## 🧵 Thread-Safe by Design
+- [SessionCache](com.example.concurrent.SessionCache): Strategy: LOCK_FREE. Note: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
+
+## ❄️ Immutable Types
+- [AsyncTestConfig](com.example.config.AsyncTestConfig): immutable type — Used by every test runner; safe to share across threads without copies.
+
+## ⚠️ Deprecated Elements
+- [OldPaymentApi](com.example.legacy.OldPaymentApi): Replaced by: `com.example.payment.PaymentProcessor`. Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double. (Removal deadline: v2.0 (2026-Q4))
+
+## 📡 Observability Instrumentation
+- [OrderMetrics.recordOrderPlaced(java.lang.String,boolean)](com.example.metrics.OrderMetrics.recordOrderPlaced(java.lang.String,boolean)): Metrics: orders.placed.total, orders.placed.failed. Traces: order.place. Logs: OrderPlaced, OrderPlacementFailed. Note: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
+
+## 📜 Regulatory Compliance
+- [GdprService](com.example.compliance.GdprService): GDPR Art. 17 — Right to erasure — when invoked, deletes ALL PII for the given user across every connected store.
+- [GdprService.exportUserData(java.lang.String)](com.example.compliance.GdprService.exportUserData(java.lang.String)): GDPR Art. 20 — Right to data portability — exports the user's data in a machine-readable format.
+
+## Strict Test Isolation
+- [ParallelTestSettings](com.example.config.ParallelTestSettings): Strict test isolation required. No shared mutable state or external resource conflicts. Reason: Tests here bind to fixed port 8080; a shared static counter caused flaky CI in build #4471 — keep cases isolated
+
+## Legacy Compatibility Bridge
+- [LegacyBridgeService](com.example.legacy.LegacyBridgeService): Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested. Reason: Mirrors a quirk in the upstream mainframe wire format (KEY=…;VAL=… with no escaping); 'modernizing' it broke the EBCDIC gateway in 2023
+
+## Architectural Boundary Constraints
+- [LayeredDomainService](com.example.service.LayeredDomainService): Belongs to layer: `domain`. Prohibited from referencing: [infrastructure, ui]
+
+## Public API Surface Protection
+- [PublicPaymentController](com.example.service.PublicPaymentController): Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability. Reason: Consumed by three external partner integrations pinned to v1; signature or return-shape changes are a breaking release and need a /v2 endpoint instead
+
+## Strict Exception Handling
+- [TransactionalPaymentService](com.example.service.TransactionalPaymentService): Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited. Reason: A bare catch(Exception) here once swallowed a TransactionRolledbackException and double-charged customers; only catch the specific types you handle
+
+## Strict Type Safety
+- [PaymentDetails](com.example.payment.PaymentDetails): Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety. Reason: Currency math broke in INC-4412 when a double leaked into amount; keep money as BigDecimal and never widen these fields to Object/Map
+
+## Internationalization Mandate
+- [I18nMessageHelper](com.example.utils.I18nMessageHelper): Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources. Reason: Ships in 11 locales; a hardcoded English string here shipped to the German build last quarter and failed the l10n audit — always resolve via the bundle
+
+## Strict Classpath Integrity
+- [StrictUtility](com.example.utils.StrictUtility): Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited. Reason: Runs inside the locked-down payment sandbox where the SecurityManager forbids reflection and custom classloaders; dynamic loading throws at runtime
+
+## Schema & Serialization Safety
+- [UserEntity](com.example.database.UserEntity): Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan. Reason: Maps to the users table replicated to the billing read-model; renaming a column or changing a type needs a backward-compatible Flyway migration first
+
+## ♻️ Idempotency Guarantees
+- [GdprService.deleteAllUserData(java.lang.String)](com.example.compliance.GdprService.deleteAllUserData(java.lang.String)): Idempotency guaranteed. Multiple invocations must produce the same result as one. Reason: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
+
+## 🚩 Feature Flag Gated Code
+- [InventoryService.sendLowStockAlert(java.lang.String,int)](com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)): Gated by feature flag: 'inventory.push-alerts.enabled' (default: false). Preserve the flag check — never assume it is always on.
+
+## 🔐 Security-Critical Code
+- [SecurityConfig](com.example.security.SecurityConfig): Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
+
+## Access Limitations
+- [NewAnnotationsShowcase.executeSecureDatabaseWipe()](com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()): Only callable by: [com.example.service.PricingService, com.example.payment.PaymentProcessor]
+
+## Sandbox & Test Exclusion
+- [SandboxTestHelper](com.example.service.NewAnnotationsShowcase.SandboxTestHelper): Strictly sandbox or test environment only. Production code must never import or invoke. Reason: Spins up an in-memory mock DB and seeds fake credentials; a prod call path once imported this in a hotfix and leaked test data into staging
+
+## Memory Allocation Budgets
+- [NewAnnotationsShowcase.calculateFastFibonacci(int)](com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)): Strict memory budget policy: ZERO_ALLOCATION. Minimize or prevent runtime allocations.
+
+## Deterministic Pure Functions
+- [NewAnnotationsShowcase.calculateFastFibonacci(int)](com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)): Must remain a pure function. Forbid assignments to enclosing state, fields, or static members. Reason: Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers
+
+## Framework-Free Domain Entities
+- [ImmutableProductPrice](com.example.service.NewAnnotationsShowcase.ImmutableProductPrice): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. Allowed imports: [java.math.BigDecimal]
+
+## open-closed Extension Patterns
+- [TaxCalculatorStrategy](com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy): Designed for extension via strategy/polymorphism. Do not expand conditionals/switch chains. Required Pattern: STRATEGY_PATTERN
+
+## Mandatory Input Sanitization
+- [NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput](com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput): Input parameter/field must be strictly sanitized against injection attacks: [SQL_INJECTION]
+
+## Secure Logging Masking
+- [NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber](com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#creditCardNumber): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: MASK_CREDIT_CARD
+- [NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw](com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw): Sensitive variable. Forbid direct logging/printing. Enforce masking policy: HASH
+
+## Required Chain-of-Thought Explanations
+- [NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])](com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])): Requires step-by-step mathematical or logical explanation (Chain-of-Thought) of all changes. Complexity: HIGH
+
+## Experimental Prototype Stubs
+- [DraftKafkaIntegrationSpike](com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike): Experimental prototype class. Strict constraints (test coverage, i18n) are suspended. Stable production code must never depend on it. Reason: Throwaway spike for the Q3 Kafka evaluation — no error handling or back-pressure on purpose; do not let production services depend on it
+
+## Sunset Deprecated APIs
+- [NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)](com.example.service.NewAnnotationsShowcase.deprecatedLegacyCalculatePrice(double,double)): Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DEBT-742. Replacement: `com.example.service.PricingService`
+
+## Temporary Code Workarounds
+- [NewAnnotationsShowcase.temporaryUpstreamBypass()](com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()): Temporary logic/workaround. Expires on: 2028-12-31. Reason: Hotfix workaround until upstream payment provider updates their API.
+
+## Generated Code — Edit The Source
+- [EvidenceBasedShowcase](com.example.service.EvidenceBasedShowcase): Generated from `src/main/resources/openapi/checkout.yaml`. Hand edits are overwritten — edit `src/main/resources/openapi/checkout.yaml` instead, then run `mvn generate-sources`.
+
+## Load-Bearing Oddities
+- [EvidenceBasedShowcase.settledOrderIds](com.example.service.EvidenceBasedShowcase.settledOrderIds): Looks removable but is deliberate. Invariant: Settled orders stay in the list until the reconciliation job drains it Breaks if changed: Clearing eagerly drops in-flight settlements and silently under-reports revenue Not a defect — do not flag.
+
+## Banned APIs
+- [EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)](com.example.service.EvidenceBasedShowcase.totalWithTax(java.math.BigDecimal,java.math.BigDecimal)): Must not use: java.lang.System.out, java.util.Date, java.lang.Double. Use the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal instead. (Console output bypasses structured logging; Date and Double are unsafe for money and time)
+
+## Thread Affinity (Not Thread-Safe)
+- [EvidenceBasedShowcase.refreshCartBadge()](com.example.service.EvidenceBasedShowcase.refreshCartBadge()): Pinned to the checkout-ui thread only. NOT thread-safe — adding a lock is the wrong fix. Marshal via CheckoutDispatcher.runOnUiThread. If violated: Cart totals render stale under load; no exception is thrown
+
+## Mirrored Elements
+- [EvidenceBasedShowcase.CATALOG_VERSION](com.example.service.EvidenceBasedShowcase.CATALOG_VERSION): Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
+<!-- VIBETAGS-MODULE-END: annotations-showcase -->
+<!-- VIBETAGS-MODULE: app -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+- [App](com.example.gmm.app.App): Focus - Wiring only: parsing and rendering live in their own modules. Avoid - Business logic
+
+## Security Audit Requirements
+- [App](com.example.gmm.app.App): check for Path Traversal
+<!-- VIBETAGS-MODULE-END: app -->
+<!-- VIBETAGS-MODULE: core -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [IrNode](com.example.gmm.core.IrNode): Core IR node shape is depended on by every downstream module
+
+## Contextual Rules
+- [core](com.example.gmm.core): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+## 🧵 Thread-Safe by Design
+- [core](com.example.gmm.core): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
+
+## 🔐 Security-Critical Code
+- [core](com.example.gmm.core): Security-critical code [Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw name in a URL or log line.]. Do not weaken security properties. Flag any change for security review.
+<!-- VIBETAGS-MODULE-END: core -->
+<!-- VIBETAGS-MODULE: platform -->
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+
+## Contextual Rules
+
+## Security Audit Requirements
+- [Telemetry](com.example.gmm.platform.Telemetry): check for PII in metric labels
+
+## 📡 Observability Instrumentation
+- [Telemetry](com.example.gmm.platform.Telemetry): Metrics: reactor.render.count, reactor.render.duration. Note: Metric names are a published contract; renaming one breaks every dashboard reading it
+
+## 🚩 Feature Flag Gated Code
+- [FeatureGate](com.example.gmm.platform.FeatureGate): Gated by feature flag: 'reactor.parallel-render' (default: false). Preserve the flag check — never assume it is always on.
+<!-- VIBETAGS-MODULE-END: platform -->
+<!-- VIBETAGS-END -->

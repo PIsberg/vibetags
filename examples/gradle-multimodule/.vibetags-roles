@@ -1,0 +1,10 @@
+# Role/topic routing for the granular rule files at the reactor root.
+#
+# One role, matched by classes in TWO different modules (core and app). Both resolve the same
+# output path - .claude/rules/reactor-spine.md and the same name under every other granular
+# directory - which is the layout of issue #365, where each module's compile replaced the shared
+# file with only its own classes and the sibling's guardrails vanished. CI asserts both survive.
+#
+# platform/ is deliberately outside the glob, so its classes keep per-class rule files and both
+# paths stay covered by the same fixture.
+reactor-spine = **/gmm/core/**, **/gmm/app/**

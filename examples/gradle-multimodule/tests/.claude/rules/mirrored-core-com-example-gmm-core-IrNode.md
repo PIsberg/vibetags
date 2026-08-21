@@ -1,5 +1,5 @@
 ---
-paths: ["**/IrNode.java"]
+paths: ["**/IrNode.java", "**/tests/src/test/java/**/*.java"]
 ---
 
 <!-- VIBETAGS-START -->
