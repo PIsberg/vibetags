@@ -114,7 +114,7 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
   verification steps to Gradle's one while the three most recent multi-module defects all came from
   Gradle repositories, so these port the Maven assertions across: transitive manifests published to
   Gradle's `build/classes/java/main/` and actually read by the consuming module, with the origin
-  coordinate asserted rather than just the key; all 50 services active, with Codex correctly
+  coordinate asserted rather than just the key; all 51 services active, with Codex correctly
   dropped because `AGENTS.md` is not the sole config; the six generated YAML documents parsed with
   duplicate top-level keys forbidden and a per-module witness required to survive the parse;
   per-module nested output in both shapes (indexed and plain) with no sibling leakage; cross-module

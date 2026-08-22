@@ -119,7 +119,7 @@ produces `compileJava UP-TO-DATE` and exit 0, a gate that green-lights the thing
 
 ## Expected output
 
-50 active services, one `VIBETAGS-MODULE` region per annotated subproject in every aggregate, one
+51 active services, one `VIBETAGS-MODULE` region per annotated subproject in every aggregate, one
 sidecar per module, `reactor-spine.md` in nine granular directories, 44 element sections in
 `annotations-showcase/CLAUDE.md`, and mirrored rules under `tests/.claude/rules/`. `tests` gets no region of its own: mirroring must never put a module into
 the reactor root. `.codex/` stays empty because Codex is dropped unless `AGENTS.md` is the sole AI
