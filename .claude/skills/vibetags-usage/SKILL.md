@@ -1,7 +1,7 @@
 ---
 name: vibetags-usage
 description: This skill should be used when the user asks how to "use VibeTags", "add VibeTags annotations", "set up AI guardrails", "protect code from AI", "configure AI platforms", asks about @AILocked, @AIContext, @AIDraft, @AIAudit, @AIIgnore, @AIPrivacy, @AICore, @AIPerformance, @AIContract, @AITestDriven, @AIThreadSafe, @AIImmutable, @AIDeprecated, @AIObservability, @AIRegulation, @AIArchitecture, @AILegacyBridge, @AIStrictClasspath, @AIInternationalized, @AIPublicAPI, @AISchemaSafe, @AIStrictExceptions, @AIStrictTypes, @AIParallelTests, @AIIdempotent, @AIFeatureFlag, @AISecure, @AICallersOnly, @AISandboxOnly, @AIMemoryBudget, @AIPure, @AIDomainModel, @AIExtensible, @AIInputSanitized, @AISecureLogging, @AIExplain, @AIPrototype, @AISunset, @AITemporary, @AIGenerated, @AILoadBearing, @AIBannedApi, @AIThreadAffinity, @AIKeepInSync annotations, or wants to control how AI tools interact with Java code.
-version: 1.2.4
+version: 1.2.5
 ---
 
 # VibeTags Usage Guide
@@ -27,7 +27,7 @@ common "VibeTags is broken" report, and neither failure produces a useful error:
     <dependency>
         <groupId>se.deversity.vibetags</groupId>
         <artifactId>vibetags-annotations</artifactId>
-        <version>1.2.4</version>
+        <version>1.2.5</version>
     </dependency>
 </dependencies>
 
@@ -41,7 +41,7 @@ common "VibeTags is broken" report, and neither failure produces a useful error:
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.2.4</version>
+                        <version>1.2.5</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -63,8 +63,8 @@ the whole processor and its SLF4J/Logback dependencies on your compile classpath
 
 ```groovy
 dependencies {
-    compileOnly         'se.deversity.vibetags:vibetags-annotations:1.2.4'
-    annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.4'
+    compileOnly         'se.deversity.vibetags:vibetags-annotations:1.2.5'
+    annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.2.5'
 }
 ```
 
@@ -221,7 +221,7 @@ though the build is green.
 Every way this setup fails is silent, so check rather than assume:
 
 ```bash
-jbang se.deversity.vibetags:vibetags-cli:1.2.4 doctor
+jbang se.deversity.vibetags:vibetags-cli:1.2.5 doctor
 ```
 
 Or by hand, in the order things go wrong:
@@ -1287,7 +1287,7 @@ Use on: **class, method, field**
 @AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
               reason = "The release version is asserted in three places and drifts silently",
               enforcedBy = "ProjectFactsConsistencyTest")
-public static final String VERSION = "1.2.4";
+public static final String VERSION = "1.2.5";
 ```
 
 The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
