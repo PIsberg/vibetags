@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-08-22
+
 ### Fixed
+
+- **The locked-files guard no longer blames the wrong file, or the wrong pull request.** The
+  action this repository ships to consumers carried two false-positive sources and no tests of
+  its own. Between them they produced 27 violations against code that was doing nothing wrong.
+
+  A `.vibetags-locks` records paths relative to *its own* VibeTags root, not to the repository,
+  and the guard normalised against the repository root only, then accepted either path as a
+  suffix of the other. Two projects with a module at the same relative path therefore aliased
+  each other: measured, one example's report produced nine violations against a sibling
+  example's files, with its own report removed entirely. Each recorded path is now resolved
+  against the directory of the report that declared it, and compared exactly.
+
+  Separately, a pull request that *adds* an `@AILocked` element failed on its own additions,
+  because a created file has every line in the diff. Declaring a lock is not violating one, and
+  the effect was to discourage adding guardrails to the codebase that ships them. Files the diff
+  creates are now exempt; renames stay in scope, so moving a locked file is still checked.
+
+  Twelve unit tests now cover both, run in CI, and were shown to fail against the old behaviour
+  before being trusted. `examples/gradle-multimodule` had dropped its `.vibetags-locks` opt-in to
+  work around the second defect, asserting 50 active services instead of 51; that opt-in is back.
 
 - **A full, correct build no longer claims your guardrails are stated nowhere.** A module that
   opts into a granular directory of its own, inside a reactor whose root has a `.vibetags-roles`
@@ -28,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gradle reactors are verified to the same depth as Maven ones.** The Maven reactor had eleven
   CI verification steps to the Gradle reactor's one, while the three most recent multi-module
   defects all came from Gradle repositories: the thinner coverage sat on the tool producing the
-  bugs. `examples/gradle-multimodule` grows from two modules to four and now carries transitive
+  bugs. `examples/gradle-multimodule` grows from two modules to five and now carries transitive
   manifests, cross-module rule mirroring, role-based granular grouping, per-module nested output
   in two shapes, all 44 annotations, and every service the reactor opts into. Seven assertions ported from
   the Maven reactor gate it, including the `#365` repro that a one-subproject build must leave a
@@ -2993,7 +3015,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.4...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.5...HEAD
+[1.2.5]: https://github.com/PIsberg/vibetags/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/PIsberg/vibetags/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/PIsberg/vibetags/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/PIsberg/vibetags/compare/v1.2.1...v1.2.2
