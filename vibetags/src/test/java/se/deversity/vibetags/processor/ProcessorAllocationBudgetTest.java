@@ -29,16 +29,32 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *
  * <p>Measured 2026-08-15 on JDK 26 (Oracle, Windows): 264,955,400 bytes for this exact
  * fixture, observed by deliberately setting the budget to 1 byte and reading the failure.
- * Budget: 768 MB, 3.04x that measurement. If this fails, either the processor allocated an
- * order more than it used to (find out why before touching this number), or a JDK changed
- * javac's allocation profile by 3x (verify with {@code load-tests/}, then re-baseline the
- * ceiling in the same commit as the evidence).
+ * Re-measured 2026-08-22 on JDK 21 (Oracle, Windows), same method, five consecutive runs:
+ * 241,992,008 / 241,830,432 / 242,019,360 / 242,055,696 / 242,500,936 bytes, a 0.3% spread.
+ * So the figure is stable across both JDK versions and across runs on one machine.
+ *
+ * <p>It is not stable across CI runners, and the original 768 MB ceiling was too tight for
+ * that. Commit 76efd1b7 produced 1,025,613,584 bytes on {@code Maven Build (JDK 21)} in its
+ * pull_request run and passed the same job in its push run: same code, same JDK, same day.
+ * Nothing about the processor changed between them. The likeliest cause is JIT state rather
+ * than anything this test is measuring -- a cold, contended two-core runner has not yet
+ * C2-compiled javac's hot paths, so escape analysis is not eliminating allocation that a warm
+ * JVM never performs. That is a hypothesis and is not proven here; what is measured is the
+ * 4.2x spread between a warm local run and a cold CI one.
+ *
+ * <p>Budget: 2 GB. About 2x the worst observation and 8x the warm measurement. That is looser
+ * than anyone would like, and it still does the job this test exists for: the failure it
+ * catches is an accidentally quadratic collector or a per-element re-render, and at
+ * {@code CLASS_COUNT} = 100 either of those is a hundredfold, not a fourfold. If this fails,
+ * either the processor allocated an order more than it used to (find out why before touching
+ * this number), or a JDK changed javac's allocation profile again (verify with
+ * {@code load-tests/}, then re-baseline the ceiling in the same commit as the evidence).
  */
 @Tag("e2e")
 class ProcessorAllocationBudgetTest {
 
     private static final int CLASS_COUNT = 100;
-    private static final long BUDGET_BYTES = 768L * 1024 * 1024;
+    private static final long BUDGET_BYTES = 2048L * 1024 * 1024;
 
     @TempDir
     static Path tempDir;
