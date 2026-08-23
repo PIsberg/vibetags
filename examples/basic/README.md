@@ -72,7 +72,7 @@ When compiled, the VibeTags annotation processor automatically generates AI conf
 ## 📁 Project Structure
 
 ```
-example/
+examples/basic/
 ├── pom.xml                                    # Maven build configuration
 ├── build.gradle                               # Gradle build configuration
 ├── reset-ai-files.sh                          # Clears generated files for a clean rebuild
@@ -124,8 +124,8 @@ example/
 Before using this example project, you need to build and install the VibeTags library:
 
 ```bash
-# Annotations first (vibetags depends on this)
-cd ../vibetags-annotations
+# From the repository root. Annotations first (vibetags depends on this)
+cd vibetags-annotations
 mvn install                                # Maven
 # OR
 gradle clean build publishToMavenLocal    # Gradle
@@ -146,7 +146,8 @@ mvn install
 VibeTags uses a **file-existence opt-in** model — it only generates content for platforms whose config files already exist. Create empty placeholders for the platforms you use:
 
 ```bash
-cd example
+# From the repository root.
+cd examples/basic
 
 # Core platforms
 touch CLAUDE.md .cursorrules AGENTS.md QWEN.md gemini_instructions.md
@@ -185,13 +186,15 @@ bash reset-ai-files.sh
 
 **Using Maven:**
 ```bash
-cd example
+# From the repository root.
+cd examples/basic
 mvn clean compile
 ```
 
 **Using Gradle:**
 ```bash
-cd example
+# From the repository root.
+cd examples/basic
 gradle clean build
 ```
 
