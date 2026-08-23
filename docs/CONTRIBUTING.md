@@ -17,12 +17,17 @@ This project follows a code of conduct. By participating, you are expected to up
 ### Building the Project
 
 ```bash
-# Build the core library (Maven)
-cd vibetags
+# Build the core library (Maven), from the repository root.
+# Order matters: see the build order in CLAUDE.md.
+cd vibetags-annotations
+mvn install
+cd ../vibetags
 mvn clean install
+cd ../vibetags-bom
+mvn install
 
 # Build the example project
-cd ../example
+cd ../examples/basic
 mvn clean compile
 
 # Run all tests

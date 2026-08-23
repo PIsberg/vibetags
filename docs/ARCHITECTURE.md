@@ -43,7 +43,7 @@ As of 0.6.0, VibeTags ships as three coordinates on Maven Central:
 
 | Artifact | Purpose | Goes on | Depends on |
 |---|---|---|---|
-| `se.deversity.vibetags:vibetags-annotations` | The 39 `@interface` classes (see [project facts](../README.md#project-facts)) | Consumer's compile classpath | nothing |
+| `se.deversity.vibetags:vibetags-annotations` | The `@interface` classes (see [project facts](../README.md#project-facts) for the count) | Consumer's compile classpath | nothing |
 | `se.deversity.vibetags:vibetags-processor` | `AIGuardrailProcessor` + `VibeTagsLogger` (slf4j/logback) | Annotation-processor path only | `vibetags-annotations` |
 | `se.deversity.vibetags:vibetags-bom` (pom-only) | Manages versions of the two jars above | `<dependencyManagement>` import / Gradle `platform(...)` | — |
 
@@ -921,7 +921,7 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 | `GuardrailFileWriterCoverageTest` | 4 | (0.7.1) Streaming-cache hit records cache entry; size match + byte mismatch + `!hasNewRules` skips; same with `hasNewRules=true` writes; all four `noopMessager` overloads return silently |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
 | `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
-| `AnnotationProcessorEndToEndTest` | 76 | End-to-end snapshot net: compiles annotated fixture sources in-memory via `ProcessorTestHarness`, verifies all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) |
+| `AnnotationProcessorEndToEndTest` | 76 | End-to-end snapshot net: compiles annotated fixture sources in-memory via `ProcessorTestHarness`, verifies all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) <!-- not-a-total --> |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
 | `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
