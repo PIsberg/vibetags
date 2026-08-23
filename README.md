@@ -235,8 +235,8 @@ matrix is in [USAGE.md](USAGE.md#other-jvm-languages-groovy-scala-clojure).
 - [When to Use VibeTags](#-when-to-use-vibetags)
 - [Advanced Features & Annotation Reference](#-advanced-features--annotation-reference) → full guide in **[USAGE.md](USAGE.md)**
 - [Contributing](#-contributing)
-- [Project Components](#-project-components)
 - [Mentioned in Publications](#-mentioned-in-publications)
+- [Support VibeTags](#-support-vibetags)
 - [License](#-license)
 
 ## 🎯 What is VibeTags?
@@ -250,10 +250,6 @@ VibeTags provides Java annotations that serve as instructions for AI code genera
 
 *[VibeTags AI Guardrails for Java](https://youtu.be/QF0YloxDjnY) — what the annotations do, what
 they generate, and how the generated files reach each AI tool.*
-
-
-
-### Key Features
 
 <a name="annotation-reference"></a>
 ### Annotation reference — where each one goes, and where its rule ends up
@@ -495,6 +491,21 @@ vibetags/
 └── README.md             # This file
 ```
 
+### Companion CLI (`vibetags-cli`)
+
+`vibetags init --platforms claude,cursor` creates the opt-in files whose presence the processor
+honours (the processor itself never creates them), and `vibetags doctor` reports project health:
+build-tool wiring, active platforms, and `VIBETAGS-START`/`END` marker integrity. Run it without
+installing anything:
+
+```bash
+jbang se.deversity.vibetags:vibetags-cli:1.2.5 init --list
+jbang se.deversity.vibetags:vibetags-cli:1.2.5 doctor
+```
+
+The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
+cannot drift from what the processor actually does.
+
 ## 🚀 Installation
 
 ### Prerequisites
@@ -504,7 +515,7 @@ vibetags/
 
 VibeTags ships as **two artifacts**:
 
-- **`vibetags-annotations`** — 24 `@interface` classes (zero dependencies). Goes on the consumer's compile classpath.
+- **`vibetags-annotations`** — the [`@interface` classes](#project-facts) (zero dependencies). Goes on the consumer's compile classpath.
 - **`vibetags-processor`** — the `javac` annotation processor (depends on slf4j/logback for `vibetags.log`). Goes on the annotation-processor path only — keeping it off `compileClasspath` is what stops slf4j/logback from leaking into consumer code.
 
 The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in one place; pinning each version explicitly is also supported.
@@ -773,7 +784,7 @@ annotations, same generated files).
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
 | **[All examples](examples/README.md)** | An index of the eleven runnable consumer projects: which build tool each uses, which layout or language it covers, and what its CI gate actually asserts. Start here if you are looking for the example closest to your own project. |
 | **[Example Project](examples/basic/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
-| **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and all 22+ output file formats. Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
+| **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and every [output file format](#project-facts). Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
 | **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
 
@@ -787,8 +798,11 @@ annotations, same generated files).
 cd vibetags-annotations && mvn install
 cd ../vibetags && mvn clean install
 
+# examples/basic imports vibetags-bom, so the BOM has to be installed before it resolves
+cd ../vibetags-bom && mvn install
+
 # Build example
-cd ../example && mvn clean compile
+cd ../examples/basic && mvn clean compile
 ```
 
 ### Build Everything with Gradle
@@ -798,7 +812,7 @@ cd ../example && mvn clean compile
 cd vibetags && gradle clean build publishToMavenLocal
 
 # Build example
-cd ../example && gradle clean build
+cd ../examples/basic && gradle clean build
 ```
 
 ## ⚡ Performance & Load Tests
@@ -876,6 +890,11 @@ VibeTags ships far more than the basics shown above:
 
 ## 🤝 Contributing
 
+[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) covers the workflow and the gates a change must pass.
+Security reports go through [docs/SECURITY.md](docs/SECURITY.md), the community standard is
+[docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md), and what each release changed, and why, is in
+[docs/CHANGELOG.md](docs/CHANGELOG.md).
+
 VibeTags is designed to evolve based on community needs. The two annotations this section
 used to propose have both shipped — `@AIExtensible` takes a design pattern to extend through, and
 `@AITestDriven` enforces Red-Green-Refactor — so the open ground is elsewhere:
@@ -887,37 +906,6 @@ used to propose have both shipped — `@AIExtensible` takes a design pattern to 
 Every annotation must be demonstrated in all four example projects and appear in the
 [annotation reference](#annotation-reference); `ExampleCoverageTest` and `AnnotationReferenceTest`
 fail the build otherwise.
-
-## 📊 Project Components
-
-### vibetags/
-The core annotation processor library. Contains the annotation processor that generates AI
-configuration files at compile time; the annotations themselves live in `vibetags-annotations/`
-(see [project facts](#project-facts) for the count).
-
-### [examples/basic/](examples/basic/README.md)
-A practical e-commerce application demonstrating every VibeTags annotation
-(see [project facts](#project-facts) for the count), held to that by `ExampleCoverageTest`. Shows how to protect legacy payment processors, guide AI on security configurations, request AI implementations for notification services, enforce continuous security auditing for database infrastructure, mark PII fields, identify core business logic, and enforce hot-path performance constraints.
-
-### vibetags-cli/
-The companion CLI. `vibetags init --platforms claude,cursor` creates the opt-in files whose
-presence the processor honours (the processor itself never creates them), and
-`vibetags doctor` reports project health: build-tool wiring, active platforms, and
-`VIBETAGS-START`/`END` marker integrity. Run it without installing anything:
-
-```bash
-jbang se.deversity.vibetags:vibetags-cli:1.2.5 init --list
-jbang se.deversity.vibetags:vibetags-cli:1.2.5 doctor
-```
-
-The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
-cannot drift from what the processor actually does.
-
-### [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-Technical reference for the annotation processor internals. Read this before contributing or if you need to understand why a particular file is (or is not) being generated.
-
-### [.claude/skills/vibetags-usage/SKILL.md](.claude/skills/vibetags-usage/SKILL.md)
-A Claude Code skill that gives your AI assistant a full working knowledge of VibeTags — annotation semantics, valid combinations, processor configuration, and troubleshooting. Activate it in Claude Code with `/vibetags-usage`.
 
 ## 📕 Mentioned in Publications
 
@@ -935,13 +923,6 @@ VibeTags is built and maintained by a single developer in his spare time. If it 
 
 - **[Donate via PayPal](https://paypal.me/isbergpeter)** — every contribution, however small, is appreciated.
 - Don't have PayPal yet? **[Sign up with this invite link](https://www.paypal.com/webapps/mch/cmd/?v=3.0&t=1784460151&fdata=OBcGAzRHBBYcHAQeSFRMKk90PRgwNE9jVWhoGjAsS0gtRmZpYAd8bEJTbQlgWnlVaFVQX3cFTEdaUUwTRBFMSy50aF1xaV11Q357XWt5UlFdUX5sbQtpdFdGdFcnAS9HcCRJR3QDVVVORltJHUVcU19nfFtzZF9jV2poTjYhDkhMJ2Z5bwZwZkNRYwFhWHpfYFZdV3UCXEdYU0xRTlRMKk90BiQWGDoHV2hqTng4BAgAAmZ5GBNpOBUOOwImCScKNBAfAyENHhMUHQwCVE9XBw88J1B.a09jVWhoHzUhDkhMJ2Z5aQV4ZURWdBlySWoFOQVJRwMWTCk3IyQkaFRMSU90Kgs1cE8CV2h5TnhrS0gICSM8LBNpFVVGZABiWHheYVdcVmIWTkdYEwwZSVRMKk90fl59Yll0QHFwV2F4XlBfVXNhbBNpdlVGIUg9AS9HcCRJR3UCXl5NRFVAHkVeWVthfFNyaFljV2poTi9pSylMRnR2aBNpdlVGIUtwSQtHcFVfXncDW1ZIRVxRDFZMSwc7PRwgDgcmV2gJTnh-Ul9VV3JgaQZ-ZEVTZw1kUX9WcEVLR2JeAxIPFTITQhEIS08VaEsLNBY2VgssHC1oKwoZDig2eRNrdFUKJl8OAzsPcEUoR2J-IDYrNT4jZDojOU90aktkMA02HyYnMDAsS0gtRmZvaQN8YUFQZgxmX3lfZFBbV3METEdaUUwRTgEEBQAKKgUhNE9jNmhoPTwuDxsfBisHMVw-PAACClkODjkPNAoMR2IUTEcQHhkVXyoeDx8KOw82NBpjVwloTj8pBhoIRmZ7eRMhOwAGNkwiDTpHcCRJR3MZXUdYU0xRThoYBBonMEtkEU9jJQxoTnppSxweAiMHPUo8MAYJNFQ9EWpHEUVJACJbHgNYUU5RDDw-NS0ZACkOBSYQI2hoL3hpDAgBFCJ5eRFpdAQVMEs0BioSOAsGOTdOHQNYUS1RDENYWVZhfV98YF5xT3h9Wm17Xl5MRmR5eUYvJx0DdBkRSWpRZVxbUXYAWVJJR11JGUNfU11laEtmcE8vHT0uHTw5Aw1MRgd5eVZ7NBFQZwBlWnJSY1BdBXZWXlZBFV4UFRYIDgxmeFohcE9hV2gkBC0vGAwLDiN5eXJpdBBUNF1mWnNSY11cVHcCDlMYQ11ISEYJUg0wLQh2YF4mV2hqTng-GR0EA2Z5GBNpMUcGMA9jUH9UaFBaUnZUWAdKQFUVHhFVCQsxK1l0YQpjV2poTispBAJMRgd5eQN8dFVEdBkiHSk5MgwGR2J3TEc2Pj45eTBMS010aA8zNAA2KScoAjxpSylMRjc9KkEnOxULPEIwHCIJPzsHCDBeGQNYUU5RDAAeDxwKLh8sNU9jNmhoXDx6W1BYXn9pYVR-YUMCZQplDH9eMAFeACYGVQVOFFxRDFZMSxsmLBgaIgsxBSAmAQYvHwAJRmYYeRN.NEUEZllmWnpfN1NbUHoAXVVIEgxASRYLDAgzLwwjNE9jVWhoGSo8Aw1MRgd5eQUpZBdUNA9jWXIAZldeX3QHXlcbEV0UThMLDAgzLwwgcE9hV2g.HC06Aw1MRgd5eQEtZ0VeYAFpWXIAZ1BfA3MFWQJNSAwVGxMIW1Y2fg50cE9hV2g7Cj8hDkhMJ2Z5bwZwZkNRYwFhWHpfYFZdV3UCXEdYU0xRSA0dAxwsFh42cE8CV2h4WGF8Xl9cV3JpeRNrdFUCIRlwKGpHEighJQgWTEVYURkXWVRMKk90IR4xIR1nRQhsXR9tWC8aEDB2KFMxJRULe1s-BW5UFwcPFmYFKwseHUhCawcIDAsnOw83dF0EHyc9Cjc8T1opCiwsPxd6YwAUJ1s0TXgiaQYJCi8&cks=ZjgxYjY4YjRlNDZjYWM1NWM4NTU1YWViMmI3YThmYjI&e=1.0)** — free for you, and PayPal gives the project a referral bonus.
-
-## 🤝 Contributing
-
-Contributions are welcome: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) covers the workflow and
-the gates a change must pass. Security reports go through [docs/SECURITY.md](docs/SECURITY.md),
-and the community standard is [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md). What each
-release changed, and why, is in [docs/CHANGELOG.md](docs/CHANGELOG.md).
 
 ## 📝 License
 

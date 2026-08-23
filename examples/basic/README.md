@@ -62,7 +62,7 @@ build rather than quietly going undocumented. (This section previously claimed t
 | **@AIThreadSafe** | `com/example/concurrent/SessionCache.java` |
 
 Grouped by intent, with a sentence on what each one is for, they are documented once in the
-[main README](../../README.md#key-features) — that is the single source of truth for what an
+[main README](../../README.md#annotation-reference) — that is the single source of truth for what an
 annotation *means*; this table is the source of truth for where to *see* one.
 
 When compiled, the VibeTags annotation processor automatically generates AI configuration files for every supported platform (see the [project facts](../../README.md#project-facts) in the main README).
