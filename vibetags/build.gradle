@@ -5,6 +5,35 @@ plugins {
     id 'pmd'
 }
 
+// Shared dependency versions live in vibetags-parent/pom.xml and are read from it rather than
+// repeated here. Gradle cannot inherit from a POM, so the numbers used to be copied by hand and
+// BuildVersionParityTest was the only thing that noticed when a copy went stale. It noticed often:
+// .github/dependabot.yml has no gradle ecosystem, so every Maven bump of a coordinate that also
+// appears below arrived as a red Gradle job until somebody edited this file too. Reading the same
+// file removes the second copy instead of guarding it.
+def parentPomText = file('../vibetags-parent/pom.xml').getText('UTF-8')
+def parentPomProperties = { ->
+    int start = parentPomText.indexOf('<properties>')
+    int end = parentPomText.indexOf('</properties>', start)
+    if (start < 0 || end <= start) {
+        throw new GradleException('vibetags-parent/pom.xml has no <properties> block, so there is '
+            + 'nothing to read versions from.')
+    }
+    def found = [:]
+    def matcher = (parentPomText.substring(start, end) =~ /<([A-Za-z0-9._-]+)>([^<>]*)<\/\1>/)
+    matcher.each { match -> found[match[1]] = match[2].trim() }
+    found
+}()
+def pomVersion = { String property ->
+    def value = parentPomProperties[property]
+    if (!value) {
+        throw new GradleException("vibetags-parent/pom.xml <properties> does not define <"
+            + property + ">. Maven is the single source for shared versions: add the property "
+            + 'there rather than hard-coding a number in build.gradle.')
+    }
+    value
+}
+
 group = 'se.deversity.vibetags'
 version = '1.2.5'
 
@@ -81,24 +110,24 @@ dependencies {
     api 'se.deversity.vibetags:vibetags-annotations:1.2.5'
 
     // JSpecify null annotations (@NullMarked, @Nullable, @NonNull)
-    implementation 'org.jspecify:jspecify:1.0.1'
+    implementation "org.jspecify:jspecify:${pomVersion('jspecify.version')}"
 
     // Logging: SLF4J API + Logback file appender for vibetags.log
-    implementation 'org.slf4j:slf4j-api:2.0.18'
-    implementation 'ch.qos.logback:logback-classic:1.6.3'
+    implementation "org.slf4j:slf4j-api:${pomVersion('slf4j.version')}"
+    implementation "ch.qos.logback:logback-classic:${pomVersion('logback.version')}"
 
-    testImplementation 'com.tngtech.archunit:archunit-junit5:1.5.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+    testImplementation "com.tngtech.archunit:archunit-junit5:${pomVersion('archunit.version')}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${pomVersion('junit.version')}"
     // Concurrency-test harness, matching pom.xml. Resolves from Maven Central like any other dep.
-    testImplementation 'se.deversity.async-test-lib:async-test-lib:1.9.4'
-    testImplementation 'org.mockito:mockito-core:5.23.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
+    testImplementation "se.deversity.async-test-lib:async-test-lib:${pomVersion('async-test-lib.version')}"
+    testImplementation "org.mockito:mockito-core:${pomVersion('mockito.version')}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${pomVersion('mockito.version')}"
     // Test-only, matching pom.xml. The processor writes six YAML documents but must not gain a
     // YAML dependency: it runs on the consumer's annotation-processor path, where every extra jar
     // is one more thing to collide with. The tests need a real parser because "the file looks
     // right" is not the property that matters - "the tool reading it sees every module's
     // guardrails" is, and only a parser shows that.
-    testImplementation 'org.yaml:snakeyaml:2.6'
+    testImplementation "org.yaml:snakeyaml:${pomVersion('snakeyaml.version')}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.3'
 }
 
