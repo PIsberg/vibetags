@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * legacy, or upstream systems, and its structure must be preserved.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AILegacyBridge {
 
     /**

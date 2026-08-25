@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A constructor can carry a guardrail.** No annotation declared `ElementType.CONSTRUCTOR`, so a
+  constructor could not be guarded at all. That was odd rather than obviously wrong: `ElementNaming`
+  has always rendered constructors, because javac hands them to the collector as enclosed elements
+  of an annotated type. They were visible to the renderer and unaddressable by an author, and the
+  way anybody found out was a compiler error.
+
+  A constructor is where invariants are established, which makes it exactly where somebody wants to
+  say "this signature is frozen" or "do not reorder this initialisation". 34 of the 44 annotations
+  accept one now: every annotation that already accepted a method, minus `@AIPure`, which forbids
+  assignment to enclosing state and so cannot mean anything on a constructor, and `@AIIdempotent`,
+  which says repeated invocations produce the result of one while constructing twice produces two
+  objects by design. Both exclusions are named in `ConstructorLevelGuardrailTest` with the
+  reasoning, so a later sweep that "completes" the set has to argue with it. Found by the
+  third-party corpus, whose showcase failed to compile. (#488)
+
 ### Fixed
+
+- **A project with no annotations no longer gets a zero-byte `vibetags.log`.** Logback's
+  `FileAppender` opens its file when the logger is configured, so a build that had nothing to say
+  still left an untracked empty file in the working tree, needing a `.gitignore` entry and
+  containing nothing. Tier-1 invariant 1 does not name the log, but the reasoning behind it carries:
+  a processor asked to look at somebody's codebase and finding nothing to guard should leave no
+  trace of having looked. The file is created on the first record now. Found by the third-party
+  corpus, which had to exclude `vibetags.log` by name from "nothing is written into a project that
+  never opted in"; that exclusion is gone. (#487)
 
 - **An annotation written bare no longer renders labels with nothing after them.** `@AILocked`
   with no `reason`, which is the form people actually write, left 99 empty labels across five
@@ -151,9 +177,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   nothing. The third one was a defect in the harness, and it is the reason there is now an
   assertion that a corpus member must compile before anything is concluded from it.
 
-  A fourth thing it settled is not a defect but a fact worth writing down: **no annotation
-  declares `ElementType.CONSTRUCTOR`**, so a constructor cannot carry a guardrail. That was found
-  by trying to annotate one. (#480)
+  A fourth thing it settled was not a defect but a gap: no annotation declared
+  `ElementType.CONSTRUCTOR`, found by trying to annotate one. That is fixed above (#488). (#480)
+
+  The corpus now also opts in **every** platform the registry knows about, on one repository, and
+  reads the result back with a real parser: 48 of 62 files written, and all ten of the YAML, TOML
+  and JSON files parsed. That is the question the fixture tests cannot ask. They assert what a
+  renderer *contains*; none asserts that a parser accepts it, and a renderer emitting an unquoted
+  `@` or a trailing comma satisfies every `contains` assertion while being unloadable by the tool
+  it targets. Verified by corrupting two files and watching the check name them. (#489)
 
 - **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
   `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a
@@ -180,6 +212,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reach. (#472)
 
 ### Changed
+
+- **The release process gates on the consumer sweep.** `scripts/consumer-sweep.sh` builds every
+  downstream consumer against a chosen version and reports which pass. It ran in no workflow and
+  at no step, so it ran when somebody remembered.
+
+  That matters because VibeTags writes files consumers commit, and nothing in this repository's own
+  CI can see them move: the fixtures and the third-party corpus are both projects with no committed
+  VibeTags output of their own. The element-identity change above is the worked example. It moves
+  committed files for any project using jspecify or the Checker Framework, and two independent
+  things stopped anyone noticing: this repository uses jspecify in 47 files but never on a parameter
+  of an annotated method, which is the only place a parameter type reaches an element path; and the
+  consumers are pinned to the previous release, so they had never run it.
+
+  The sweep is now a required step in the release skill, before the release PR is opened, so its
+  result can reach the CHANGELOG and the release notes. What it looks for is drift in already
+  committed generated files rather than whether the build passes, and the skill says what to do with
+  each outcome, including that a consumer which could not be swept is reported as not run rather
+  than as passing. `ReleaseConsumerSweepGateTest` fails if the step is dropped, if it moves after the
+  PR is opened, or if the honest-reporting clause goes: a checklist step is prose, and prose gets
+  tidied. (#490)
 
 - **The coverage gate is a ratchet rather than a floor.** `codecov.yml` moves from
   `target: 90%, threshold: 2%` to `target: auto, threshold: 1%`, so the question it asks is "did

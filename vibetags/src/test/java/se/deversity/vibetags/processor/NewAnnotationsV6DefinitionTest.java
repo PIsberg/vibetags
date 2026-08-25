@@ -43,7 +43,7 @@ class NewAnnotationsV6DefinitionTest {
     @Test
     void aiGenerated_retentionAndTargets() {
         assertSourceRetention(AIGenerated.class);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             AIGenerated.class.getAnnotation(Target.class).value());
     }
 
@@ -63,7 +63,7 @@ class NewAnnotationsV6DefinitionTest {
     void aiLoadBearing_retentionAndTargets() {
         assertSourceRetention(AILoadBearing.class);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PARAMETER},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PARAMETER},
             AILoadBearing.class.getAnnotation(Target.class).value());
     }
 
@@ -82,7 +82,7 @@ class NewAnnotationsV6DefinitionTest {
     @Test
     void aiBannedApi_retentionAndTargets() {
         assertSourceRetention(AIBannedApi.class);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE},
             AIBannedApi.class.getAnnotation(Target.class).value());
     }
 
@@ -100,7 +100,7 @@ class NewAnnotationsV6DefinitionTest {
     @Test
     void aiThreadAffinity_retentionAndTargets() {
         assertSourceRetention(AIThreadAffinity.class);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR},
             AIThreadAffinity.class.getAnnotation(Target.class).value());
     }
 
@@ -131,7 +131,7 @@ class NewAnnotationsV6DefinitionTest {
     @Test
     void aiKeepInSync_retentionAndTargets() {
         assertSourceRetention(AIKeepInSync.class);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             AIKeepInSync.class.getAnnotation(Target.class).value());
     }
 

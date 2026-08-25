@@ -42,11 +42,12 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 CACHE="${VIBETAGS_CORPUS_DIR:-$ROOT/target/corpus}"
 MANIFEST="$ROOT/corpus/repos.tsv"
 # Floor for assertion 6f: how many of the showcase's guardrails must reach a generated
-# file. 15 is measured, not aspirational - it is every marker the showcase declares,
-# across package, type, nested type, field, method and parameter levels, and it was
-# read off a green run before being written down. Raise it when the showcase grows.
+# file. 17 is measured, not aspirational - it is every marker the showcase declares,
+# across package, type, nested type, field, constructor, method and parameter levels,
+# and it was read off a green run before being written down. It went 15 -> 17 when
+# constructors became annotatable (#488), which is what raising it looks like.
 # Lowering it to make a run green is how this check stops meaning anything.
-SHOWCASE_FLOOR="${VIBETAGS_CORPUS_SHOWCASE_FLOOR:-15}"
+SHOWCASE_FLOOR="${VIBETAGS_CORPUS_SHOWCASE_FLOOR:-17}"
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ; winpath() { cygpath -w "$1"; } ;;
@@ -171,9 +172,11 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
   ctrl_diag=$(diagnostics "$dir/.corpus-ctrl.log")
   vt_diag=$(diagnostics "$dir/.corpus-vt.log")
 
-  # Assertion 3. vibetags.log is documented and expected; anything else is a file created in a
-  # project that never opted in.
-  wrote=$(find "$vt_root" -type f ! -name "vibetags.log" | wc -l | tr -d ' ')
+  # Assertion 3. Nothing at all, not even a log: since #487 the log file is created on the
+  # first record rather than when the logger is configured, so a project with no annotations
+  # gets an untouched tree. This used to exclude vibetags.log by name, which is the kind of
+  # exclusion worth removing rather than settling into.
+  wrote=$(find "$vt_root" -type f | wc -l | tr -d ' ')
 
   visited=$(sed -n 's/^VISITED\t//p' "$dir/.corpus-report" 2>/dev/null | head -1)
   mismatches=$(sed -n 's/^MISMATCHES\t//p' "$dir/.corpus-report" 2>/dev/null | head -1)
@@ -188,6 +191,12 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
 
   repos_run=$((repos_run + 1))
   total_visited=$((total_visited + visited))
+  # Phase three needs one repo, not six: renderer output does not vary by repository.
+  if [ -z "${sweep_repo:-}" ]; then
+    sweep_repo="$name"
+    sweep_src="$src"
+    sweep_dep_cp="$dep_cp"
+  fi
 
   # Assertion 0, and the one that matters most for keeping the rest honest: the control has to
   # compile. Comparing the treatment against the control is what stops a broken repo being
@@ -455,6 +464,106 @@ EOF
     "  └ opt-in" "" "exit=$optin_exit" "CLAUDE=$claude_bytes" "locks=$locks_members" \
     "rules=$claude_rules/$gemini_rules" "$(printf '%s' "$targets" | wc -l | tr -d ' ') annotated"
 done < "$MANIFEST"
+
+# ---------------------------------------------------------------------------------------------
+# Phase three: every platform, once.
+#
+# The opt-in phase covers Claude, Gemini and Codex, which leaves 40-odd renderers with no
+# third-party coverage. Renderer output does not depend on which repository it ran in, so this
+# runs on one repo rather than six: the cost is one extra compile, and what it buys is the
+# question the fixture tests cannot ask.
+#
+# Those tests assert what a renderer *contains*. None of them asserts that a real parser accepts
+# it, and a YAML renderer emitting an unquoted value that starts with '@', or a JSON one leaving
+# a trailing comma, satisfies every `contains` assertion ever written while being unloadable by
+# the tool it was written for. The renderers nobody looks at are the cheapest to break.
+# ---------------------------------------------------------------------------------------------
+if [ "$status" -eq 0 ] && [ -n "${sweep_repo:-}" ]; then
+  dir="$CACHE/$sweep_repo"
+  sweep="$dir/.corpus-sweep-root"
+  rm -rf "$sweep" "$dir/.corpus-sweep-classes"
+  mkdir -p "$sweep" "$dir/.corpus-sweep-classes"
+
+  registry="$ROOT/vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java"
+  # The list comes out of the registry itself. A hand-kept copy here would be a second source of
+  # truth whose failure is the quiet kind: a platform is added, this does not know, and the sweep
+  # reports success over a set that no longer matches the code.
+  # tr -d: Python on Windows prints CRLF, and a carriage return kept in the path creates
+  # an opt-in file literally named ".aiderignore" that the processor never matches.
+  # Same trap as annotate.py; the fix belongs at every boundary, not just the first.
+  platform_files=$(python "$ROOT/corpus/check-platforms.py" list "$registry" | tr -d '')
+  platform_count=$(printf '%s\n' "$platform_files" | grep -c . || true)
+  if [ "$platform_count" -lt 40 ]; then
+    echo "FAIL: only $platform_count platform files found in the registry; expected 40 or more." >&2
+    echo "      The extraction has stopped matching ServiceRegistry, so this sweep would pass" >&2
+    echo "      over whatever subset it still recognises." >&2
+    status=1
+  else
+    # File presence is the opt-in, for a directory as much as a file, and which one it is comes
+    # from the registry key rather than from the filename. Guessing by name does not work:
+    # ".cursorrules" and ".claude/rules" both end in "rules" and only the second is a directory.
+    # A name-based heuristic created most opt-ins as directories, the processor reported two
+    # active services instead of sixty, and the sweep dutifully measured almost nothing.
+    printf '%s\n' "$platform_files" | while IFS="$(printf '\t')" read -r kind rel; do
+      [ -z "${rel:-}" ] && continue
+      if [ "$kind" = "dir" ]; then
+        mkdir -p "$sweep/$rel"
+      else
+        mkdir -p "$(dirname "$sweep/$rel")"
+        : > "$sweep/$rel"
+      fi
+    done
+    # AGENTS.md needs its marker pair, for the same reason as the opt-in phase: invariant 4.
+    printf '%s\n%s\n' '<!-- VIBETAGS-START -->' '<!-- VIBETAGS-END -->' > "$sweep/AGENTS.md"
+
+    showcase_dir="$dir/$sweep_src/vibetagscorpus"
+    mkdir -p "$showcase_dir"
+    sed "s/__PACKAGE__/vibetagscorpus/g" "$ROOT/corpus/showcase/CorpusShowcase.java.tmpl" \
+      > "$showcase_dir/CorpusShowcase.java"
+    sed "s/__PACKAGE__/vibetagscorpus/g" "$ROOT/corpus/showcase/package-info.java.tmpl" \
+      > "$showcase_dir/package-info.java"
+
+    sweep_cp="$(winpath "$ann_jar")"
+    [ -n "${sweep_dep_cp:-}" ] && sweep_cp="$sweep_cp$SEP$sweep_dep_cp"
+
+    ( cd "$dir" && find "$sweep_src" -name "*.java" ! -name "module-info.java" > .corpus-sweep-sources \
+      && javac -nowarn -encoding UTF-8 -cp "$sweep_cp" \
+        -processorpath "$FULL_CP" \
+        -processor se.deversity.vibetags.processor.AIGuardrailProcessor \
+        "-Avibetags.root=$(winpath "$sweep")" \
+        -d "$(winpath "$dir/.corpus-sweep-classes")" @.corpus-sweep-sources ) \
+        > "$dir/.corpus-sweep.log" 2>&1
+    sweep_exit=$?
+    rm -rf "$showcase_dir"
+    ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
+
+    if [ "$sweep_exit" -ne 0 ]; then
+      echo "FAIL: $sweep_repo did not compile with every platform opted in." >&2
+      grep -E ": (error|warning):" "$dir/.corpus-sweep.log" | head -10 >&2
+      status=1
+    else
+      sweep_out=$(python "$ROOT/corpus/check-platforms.py" verify "$sweep" "$registry" 2>&1)
+      sweep_rc=$?
+      written=$(printf '%s\n' "$sweep_out" | sed -n 's/^PLATFORM-FILES\t//p' | head -1)
+      parsed=$(printf '%s\n' "$sweep_out" | sed -n 's/^PARSED\t//p' | head -1)
+      echo
+      printf "%-16s %s\n" "all-platforms" \
+        "$sweep_repo: ${written:-0} of $platform_count files written, ${parsed:-0} parsed"
+      if [ "$sweep_rc" -ne 0 ]; then
+        echo "FAIL: a generated platform file is empty or does not parse:" >&2
+        printf '%s\n' "$sweep_out" | grep '^FAIL' | head -15 >&2
+        status=1
+      fi
+      # A sweep that wrote almost nothing passes every check above while proving nothing.
+      if [ "${written:-0}" -lt 20 ]; then
+        echo "FAIL: only ${written:-0} platform files were written from $platform_count opted in." >&2
+        echo "      Opting a file in and getting nothing back is indistinguishable from a" >&2
+        echo "      project with no guardrails, which is the failure this sweep exists to catch." >&2
+        status=1
+      fi
+    fi
+  fi
+fi
 
 echo
 if [ "$repos_run" -eq 0 ]; then

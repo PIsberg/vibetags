@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Enforces step-by-step mathematical/architectural Chain-of-Thought (CoT) explanations of any modifications.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIExplain {
     /** How much reasoning an agent must show before changing the annotated element. */
     enum ComplexityLevel {

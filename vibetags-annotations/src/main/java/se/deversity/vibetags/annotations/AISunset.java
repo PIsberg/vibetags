@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * AI models are strictly prohibited from adding any new references/calls to elements annotated with {@code @AISunset}.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface AISunset {
     /**
      * Fully qualified class replacement for the sunset API element.

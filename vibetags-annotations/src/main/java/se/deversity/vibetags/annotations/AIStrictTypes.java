@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * where well-defined, type-safe domain models or strongly-typed transfer objects should be used.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface AIStrictTypes {
 
     /**

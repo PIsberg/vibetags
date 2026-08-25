@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * or conflict on external resources (ports, DB rows).
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIParallelTests {
 
     /**

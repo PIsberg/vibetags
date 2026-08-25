@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Javadoc, and behavior of this element without breaking backwards or source compatibility.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE})
 public @interface AIPublicAPI {
 
     /**

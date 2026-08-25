@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Prevents the AI from importing or referencing sandbox utilities in production pathways.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AISandboxOnly {
 
     /**

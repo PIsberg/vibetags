@@ -53,14 +53,23 @@ public class CorpusShowcase {
     @AIPerformance(constraint = "corpus showcase FIELD-PERFORMANCE: read on every request")
     private long tenantId;
 
-    // ---- constructor level: there isn't one ---------------------------------------------
+    // ---- constructor level -------------------------------------------------------------
     //
-    // No annotation declares ElementType.CONSTRUCTOR, so a constructor cannot carry a guardrail.
-    // Measured, not assumed: nothing under vibetags-annotations mentions CONSTRUCTOR at all.
-    // ElementNaming still renders constructors, because javac hands them to the collector as
-    // enclosed elements of an annotated type, which is why ElementNamingFormatParityTest covers
-    // the shape. The levels a guardrail can actually attach to are package, type, field, method
-    // and parameter.
+    // This row did not exist when the corpus was written: no annotation declared
+    // ElementType.CONSTRUCTOR, which the showcase discovered by failing to compile (#488).
+    // A constructor is where invariants are established, so it is exactly where an author wants
+    // to say "this signature is frozen". Two overloads are annotated on purpose - they must be
+    // addressed by their own parameter lists, or a guardrail points at whichever one an agent
+    // happens to open.
+
+    @AILocked(reason = "corpus showcase CONSTRUCTOR-LOCKED: initialisation order is load-bearing")
+    public CorpusShowcase() {
+    }
+
+    @AIContract(reason = "corpus showcase CONSTRUCTOR-CONTRACT: callers depend on this shape")
+    public CorpusShowcase(String seed) {
+        this.billingEmail = seed;
+    }
 
     // ---- method level, safety tier -----------------------------------------------------
 

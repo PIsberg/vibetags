@@ -78,12 +78,17 @@ The showcase carries a guardrail at **every level one can attach to**, in both t
 | nested type | `@AICore`, `@AIImmutable` | Tier 1 (safety) and Tier 3 |
 | field | `@AIPrivacy`, `@AISecureLogging`, `@AIPerformance` | Tier 1 (safety) and Tier 3 |
 | method | `@AILocked`, `@AIAudit`, `@AISecure`, `@AIIgnore`, `@AIContract`, `@AIPerformance`, `@AITestDriven`, `@AIThreadSafe`, `@AILoadBearing`, `@AIKeepInSync`, `@AIBannedApi`, `@AIGenerated` | both tiers |
+| constructor | `@AILocked`, `@AIContract` on two overloads | Tier 1 (safety) and Tier 3 |
 | parameter | `@AIInputSanitized`, `@AILoadBearing` | Tier 3 |
 
-There is no constructor row, and that is a measured fact rather than an omission: **no annotation
-declares `ElementType.CONSTRUCTOR`**, so a constructor cannot carry a guardrail at all.
-`ElementNaming` still renders constructors, because javac hands them to the collector as enclosed
+The constructor row exists because the showcase failed to compile without it. No annotation
+declared `ElementType.CONSTRUCTOR`, so a constructor could not be guarded at all, even though
+`ElementNaming` had always rendered constructors: javac hands them to the collector as enclosed
 elements of an annotated type, which is why `ElementNamingFormatParityTest` covers the shape.
+Constructors were visible to the renderer and unaddressable by an author, and the way anyone
+found out was a compiler error. 34 annotations accept one now (#488); two do not, and
+`ConstructorLevelGuardrailTest` names them with the reason. Two overloads are annotated on
+purpose: they must be addressed by their own parameter lists.
 
 ### What phase two asserts
 
@@ -96,12 +101,13 @@ elements of an annotated type, which is why `ElementNamingFormatParityTest` cove
 | 6c | **The tier split**: `@AIPrivacy` inline, `@AIContract` *not* inline but present in the rules directory | Invariant 6, checked on somebody else's code. Wrong in one direction, safety guardrails become comments; wrong in the other, the aggregate bloats |
 | 6d | The parameter level survived | The finest addressing VibeTags produces, and the only level a hand-written rules file cannot express |
 | 6e | The package level survived | The only level with no owning member to hang off |
-| 6f | **The richness floor**: at least 15 distinct showcase guardrails reached a generated file | Every other assertion names one guardrail, so a change that stopped rendering half the surface would still pass them all |
+| 6f | **The richness floor**: at least 17 distinct showcase guardrails reached a generated file | Every other assertion names one guardrail, so a change that stopped rendering half the surface would still pass them all |
 | 7 | Every annotated element reaches the file | Keyed on a unique reason string, not a predicted path: predicting the path means reimplementing the thing under test |
 | 8 | No type-use annotation in any generated identity | In `path=` attributes, lock entries and filenames alike |
 
-Assertion 6f is the one that keeps the rest from rotting. 15 is measured, not aspirational: it is
-every marker the showcase declares, read off a green run. Raise it when the showcase grows.
+Assertion 6f is the one that keeps the rest from rotting. 17 is measured, not aspirational: it is
+every marker the showcase declares, read off a green run. It went 15 to 17 when constructors
+became annotatable, which is what raising it looks like.
 **Lowering it to make a run green is how this check stops meaning anything.**
 
 The annotations and the showcase are applied to the clone under `target/corpus` and reverted with
@@ -187,6 +193,40 @@ checkouts, which are pinned to SHAs and therefore always safe to reuse.
 | Corpus silently running on an unresolved classpath | assertion 0, first CI run | No: assertions 1 and 2 passed, identically failing |
 
 Three defects, three different assertions, none of which could have found the others.
+
+## Phase three: every platform, once
+
+The opt-in phase covers three platforms, which leaves 40-odd renderers with no third-party
+coverage at all. Renderer output does not depend on which repository it ran in, so this phase
+runs on one repo rather than six: the cost is one extra compile.
+
+Every service file the registry knows about is created, the showcase is compiled, and the result
+is read back. Two assertions:
+
+| # | Assertion | What it protects |
+|---|---|---|
+| 9 | Every opted-in platform file was written non-empty | Opting a file in and getting nothing back looks exactly like a project with no guardrails |
+| 10 | Every YAML, TOML and JSON file **parses** | The question no fixture test asks |
+
+Assertion 10 is the point of the phase. The fixture tests assert what a renderer *contains*; none
+asserts that a real parser accepts it. A YAML renderer emitting an unquoted value that starts with
+`@`, or a JSON one leaving a trailing comma, satisfies every `contains` assertion ever written and
+cannot be loaded by the tool it was written for. Ten files carry a structured format
+(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
+`.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
+`sweep.yaml`) and all ten parse.
+
+Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
+switches. `.vibetags-root-index` is excluded from the emptiness rule by name, because its presence
+*is* the message: touching it turns the root aggregate into a lean index and nothing is ever
+written to it. `ServiceRegistry` says the same in code by excluding `root_index` from the keys it
+treats as output files.
+
+The list of platform files is extracted from `ServiceRegistry` rather than kept here. A copy would
+be a second source of truth whose failure is the quiet kind: a platform is added, the list does not
+know, and the sweep reports success over a set that no longer matches the code. The extraction
+asserts it found at least 40 entries, so a change to the registry's shape fails loudly instead of
+silently narrowing what is checked.
 
 ## The repos, and why each is here
 

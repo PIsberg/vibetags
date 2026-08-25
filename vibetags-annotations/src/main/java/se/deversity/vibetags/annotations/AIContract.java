@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * parameter types, parameter order, return type, or checked exceptions.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIContract {
     /**
      * Explanation for why this signature is contractually frozen.

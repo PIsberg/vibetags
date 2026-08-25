@@ -39,50 +39,50 @@ rather than to VibeTags:
 
 | Annotation | Targets | Key Attributes |
 |---|---|---|
-| `@AILocked` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIContext` | TYPE, METHOD, PACKAGE | `focus: String`, `avoids: String` |
-| `@AIDraft` | TYPE, METHOD | `instructions: String` |
-| `@AIAudit` | TYPE, METHOD, PACKAGE | `checkFor: String[]` |
-| `@AIIgnore` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIPrivacy` | TYPE, METHOD, FIELD, PACKAGE | `reason: String` |
-| `@AICore` | TYPE, METHOD, FIELD, PACKAGE | `sensitivity: String`, `note: String` |
-| `@AIPerformance` | TYPE, METHOD | `constraint: String` |
-| `@AIContract` | TYPE, METHOD | `reason: String` |
-| `@AITestDriven` | TYPE, METHOD | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
-| `@AIThreadSafe` | TYPE, METHOD, PACKAGE | `strategy: Strategy`, `note: String` |
+| `@AILocked` | TYPE, METHOD, CONSTRUCTOR, FIELD | `reason: String` |
+| `@AIContext` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `focus: String`, `avoids: String` |
+| `@AIDraft` | TYPE, METHOD, CONSTRUCTOR | `instructions: String` |
+| `@AIAudit` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `checkFor: String[]` |
+| `@AIIgnore` | TYPE, METHOD, CONSTRUCTOR, FIELD | `reason: String` |
+| `@AIPrivacy` | TYPE, METHOD, CONSTRUCTOR, FIELD, PACKAGE | `reason: String` |
+| `@AICore` | TYPE, METHOD, CONSTRUCTOR, FIELD, PACKAGE | `sensitivity: String`, `note: String` |
+| `@AIPerformance` | TYPE, METHOD, CONSTRUCTOR | `constraint: String` |
+| `@AIContract` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
+| `@AITestDriven` | TYPE, METHOD, CONSTRUCTOR | `testLocation: String`, `coverageGoal: int`, `framework: Framework[]`, `mockPolicy: String` |
+| `@AIThreadSafe` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `strategy: Strategy`, `note: String` |
 | `@AIImmutable` | TYPE, PACKAGE | `note: String` |
-| `@AIDeprecated` | TYPE, METHOD, FIELD, PACKAGE | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
-| `@AIObservability` | TYPE, METHOD | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
-| `@AIRegulation` | TYPE, METHOD, FIELD, PACKAGE | `standard: String`, `clause: String`, `description: String` |
+| `@AIDeprecated` | TYPE, METHOD, CONSTRUCTOR, FIELD, PACKAGE | `replacedBy: String`, `migrationGuide: String`, `deadline: String` |
+| `@AIObservability` | TYPE, METHOD, CONSTRUCTOR | `metrics: String[]`, `traces: String[]`, `logs: String[]`, `note: String` |
+| `@AIRegulation` | TYPE, METHOD, CONSTRUCTOR, FIELD, PACKAGE | `standard: String`, `clause: String`, `description: String` |
 | `@AIArchitecture` | TYPE, PACKAGE | `belongsTo: String`, `cannotReference: String[]` |
-| `@AILegacyBridge` | TYPE, METHOD | `reason: String` |
-| `@AIStrictClasspath` | TYPE, METHOD, PACKAGE | `reason: String` |
-| `@AIInternationalized` | TYPE, METHOD | `reason: String` |
-| `@AIPublicAPI` | TYPE, METHOD, PACKAGE | `reason: String` |
+| `@AILegacyBridge` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
+| `@AIStrictClasspath` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `reason: String` |
+| `@AIInternationalized` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
+| `@AIPublicAPI` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `reason: String` |
 | `@AISchemaSafe` | TYPE, FIELD | `reason: String` |
-| `@AIStrictExceptions` | TYPE, METHOD | `reason: String` |
-| `@AIStrictTypes` | TYPE, METHOD, FIELD | `reason: String` |
-| `@AIParallelTests` | TYPE, METHOD | `reason: String` |
+| `@AIStrictExceptions` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
+| `@AIStrictTypes` | TYPE, METHOD, CONSTRUCTOR, FIELD | `reason: String` |
+| `@AIParallelTests` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
 | `@AIIdempotent` | TYPE, METHOD | `reason: String` |
-| `@AIFeatureFlag` | TYPE, METHOD, FIELD | `flag: String`, `defaultValue: boolean` |
-| `@AISecure` | TYPE, METHOD, PACKAGE | `aspect: String` |
-| `@AICallersOnly` | TYPE, METHOD | `value: String[]` |
-| `@AISandboxOnly` | TYPE, METHOD | `reason: String` |
-| `@AIMemoryBudget` | TYPE, METHOD | `value: AllocationPolicy` |
+| `@AIFeatureFlag` | TYPE, METHOD, CONSTRUCTOR, FIELD | `flag: String`, `defaultValue: boolean` |
+| `@AISecure` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `aspect: String` |
+| `@AICallersOnly` | TYPE, METHOD, CONSTRUCTOR | `value: String[]` |
+| `@AISandboxOnly` | TYPE, METHOD, CONSTRUCTOR | `reason: String` |
+| `@AIMemoryBudget` | TYPE, METHOD, CONSTRUCTOR | `value: AllocationPolicy` |
 | `@AIPure` | METHOD | `reason: String` |
 | `@AIDomainModel` | TYPE | `allow: String[]` |
 | `@AIExtensible` | TYPE | `value: Strategy` |
 | `@AIInputSanitized` | PARAMETER, FIELD | `value: SanitizerType[]` |
 | `@AISecureLogging` | FIELD, PARAMETER | `value: MaskingPolicy` |
-| `@AIExplain` | TYPE, METHOD | `value: ComplexityLevel` |
+| `@AIExplain` | TYPE, METHOD, CONSTRUCTOR | `value: ComplexityLevel` |
 | `@AIPrototype` | TYPE | `reason: String` |
-| `@AISunset` | TYPE, METHOD, FIELD | `jira: String`, `replacement: Class<?>` |
-| `@AITemporary` | TYPE, METHOD | `expiresOn: String`, `reason: String` |
-| `@AIGenerated` | TYPE, METHOD, FIELD | `from: String`, `regenerateWith: String`, `editInstead: String` |
-| `@AILoadBearing` | TYPE, METHOD, FIELD, PARAMETER | `invariant: String`, `breaksIf: String`, `suppressAudit: boolean` |
-| `@AIBannedApi` | TYPE, METHOD, PACKAGE | `forbidden: String[]`, `useInstead: String`, `reason: String` |
-| `@AIThreadAffinity` | TYPE, METHOD | `value: Affinity`, `thread: String`, `marshalVia: String`, `symptomIfViolated: String` |
-| `@AIKeepInSync` | TYPE, METHOD, FIELD | `mirrors: String[]`, `reason: String`, `enforcedBy: String` |
+| `@AISunset` | TYPE, METHOD, CONSTRUCTOR, FIELD | `jira: String`, `replacement: Class<?>` |
+| `@AITemporary` | TYPE, METHOD, CONSTRUCTOR | `expiresOn: String`, `reason: String` |
+| `@AIGenerated` | TYPE, METHOD, CONSTRUCTOR, FIELD | `from: String`, `regenerateWith: String`, `editInstead: String` |
+| `@AILoadBearing` | TYPE, METHOD, CONSTRUCTOR, FIELD, PARAMETER | `invariant: String`, `breaksIf: String`, `suppressAudit: boolean` |
+| `@AIBannedApi` | TYPE, METHOD, CONSTRUCTOR, PACKAGE | `forbidden: String[]`, `useInstead: String`, `reason: String` |
+| `@AIThreadAffinity` | TYPE, METHOD, CONSTRUCTOR | `value: Affinity`, `thread: String`, `marshalVia: String`, `symptomIfViolated: String` |
+| `@AIKeepInSync` | TYPE, METHOD, CONSTRUCTOR, FIELD | `mirrors: String[]`, `reason: String`, `enforcedBy: String` |
 
 **Annotation semantics:**
 

@@ -2,11 +2,11 @@ package se.deversity.vibetags.processor;
 
 import se.deversity.vibetags.annotations.AIThreadSafe;
 
+import se.deversity.vibetags.processor.internal.LazyFileAppender;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.FileAppender;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -206,7 +206,11 @@ public final class VibeTagsLogger {
             encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %replace(%msg){'[\\r\\n]+', ' '}%n");
             encoder.start();
 
-            FileAppender<ILoggingEvent> appender = new FileAppender<>();
+            // Lazy on purpose: Logback's FileAppender opens its file in start(), so a build with
+            // no annotations in a project that opted nothing in still got a zero-byte
+            // vibetags.log in its working tree (#487). LazyFileAppender defers that to the first
+            // event, so a run with nothing to say leaves nothing behind.
+            LazyFileAppender appender = new LazyFileAppender();
             appender.setContext(context);
             appender.setFile(logFile.toString());
             appender.setAppend(true);

@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Restricts heap allocations, autoboxing, or object instantiation inside high-performance critical sections.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIMemoryBudget {
     /** How strictly allocation is forbidden inside the annotated element. */
     enum AllocationPolicy {

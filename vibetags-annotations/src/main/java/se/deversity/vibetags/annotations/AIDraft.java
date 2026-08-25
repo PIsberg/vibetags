@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Surfaces instructions to the AI assistant in a dedicated "IMPLEMENTATION TASKS" section.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIDraft {
     /**
      * Detailed instructions for the AI on how to implement the annotated element.

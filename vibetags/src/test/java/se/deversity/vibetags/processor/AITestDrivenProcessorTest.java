@@ -65,10 +65,11 @@ class AITestDrivenProcessorTest {
         assertArrayEquals(
             new java.lang.annotation.ElementType[]{
                 java.lang.annotation.ElementType.TYPE,
-                java.lang.annotation.ElementType.METHOD
+                java.lang.annotation.ElementType.METHOD,
+                java.lang.annotation.ElementType.CONSTRUCTOR
             },
             target.value(),
-            "@AITestDriven must target TYPE and METHOD only"
+            "@AITestDriven must target TYPE, METHOD and CONSTRUCTOR only"
         );
     }
 

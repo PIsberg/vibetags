@@ -272,49 +272,49 @@ file demonstrating it — and all four example projects exercise the full set.
 | Annotation | Can annotate | Required attributes | Tier |
 |---|---|---|---|
 | `@AIArchitecture` | type, package | — | scoped |
-| `@AIAudit` | type, method, package | — | **safety** |
-| `@AIBannedApi` | type, method, package | `forbidden` | scoped |
-| `@AICallersOnly` | type, method | `value` | scoped |
-| `@AIContext` | type, method, package | — | scoped |
-| `@AIContract` | type, method | — | scoped |
-| `@AICore` | type, method, field, package | — | **safety** |
-| `@AIDeprecated` | type, method, field, package | — | scoped |
+| `@AIAudit` | type, method, constructor, package | — | **safety** |
+| `@AIBannedApi` | type, method, constructor, package | `forbidden` | scoped |
+| `@AICallersOnly` | type, method, constructor | `value` | scoped |
+| `@AIContext` | type, method, constructor, package | — | scoped |
+| `@AIContract` | type, method, constructor | — | scoped |
+| `@AICore` | type, method, constructor, field, package | — | **safety** |
+| `@AIDeprecated` | type, method, constructor, field, package | — | scoped |
 | `@AIDomainModel` | type | — | scoped |
-| `@AIDraft` | type, method | — | scoped |
-| `@AIExplain` | type, method | — | scoped |
+| `@AIDraft` | type, method, constructor | — | scoped |
+| `@AIExplain` | type, method, constructor | — | scoped |
 | `@AIExtensible` | type | — | scoped |
-| `@AIFeatureFlag` | type, method, field | — | scoped |
-| `@AIGenerated` | type, method, field | `from` | scoped |
+| `@AIFeatureFlag` | type, method, constructor, field | — | scoped |
+| `@AIGenerated` | type, method, constructor, field | `from` | scoped |
 | `@AIIdempotent` | type, method | — | scoped |
-| `@AIIgnore` | type, method, field | — | **safety** |
+| `@AIIgnore` | type, method, constructor, field | — | **safety** |
 | `@AIImmutable` | type, package | — | scoped |
 | `@AIInputSanitized` | parameter, field | `value` | scoped |
-| `@AIInternationalized` | type, method | — | scoped |
-| `@AIKeepInSync` | type, method, field | `mirrors` | scoped |
-| `@AILegacyBridge` | type, method | — | scoped |
-| `@AILoadBearing` | type, method, field, parameter | `invariant` | scoped |
-| `@AILocked` | type, method, field | — | **safety** |
-| `@AIMemoryBudget` | type, method | — | scoped |
-| `@AIObservability` | type, method | — | scoped |
-| `@AIParallelTests` | type, method | — | scoped |
-| `@AIPerformance` | type, method, field | — | scoped |
-| `@AIPrivacy` | type, method, field, package | — | **safety** |
+| `@AIInternationalized` | type, method, constructor | — | scoped |
+| `@AIKeepInSync` | type, method, constructor, field | `mirrors` | scoped |
+| `@AILegacyBridge` | type, method, constructor | — | scoped |
+| `@AILoadBearing` | type, method, constructor, field, parameter | `invariant` | scoped |
+| `@AILocked` | type, method, constructor, field | — | **safety** |
+| `@AIMemoryBudget` | type, method, constructor | — | scoped |
+| `@AIObservability` | type, method, constructor | — | scoped |
+| `@AIParallelTests` | type, method, constructor | — | scoped |
+| `@AIPerformance` | type, method, constructor, field | — | scoped |
+| `@AIPrivacy` | type, method, constructor, field, package | — | **safety** |
 | `@AIPrototype` | type | — | scoped |
-| `@AIPublicAPI` | type, method, package | — | scoped |
+| `@AIPublicAPI` | type, method, constructor, package | — | scoped |
 | `@AIPure` | method | — | scoped |
-| `@AIRegulation` | type, method, field, package | `standard` | scoped |
-| `@AISandboxOnly` | type, method | — | scoped |
+| `@AIRegulation` | type, method, constructor, field, package | `standard` | scoped |
+| `@AISandboxOnly` | type, method, constructor | — | scoped |
 | `@AISchemaSafe` | type, field | — | scoped |
-| `@AISecure` | type, method, package | — | **safety** |
+| `@AISecure` | type, method, constructor, package | — | **safety** |
 | `@AISecureLogging` | field, parameter | — | scoped |
-| `@AIStrictClasspath` | type, method, package | — | scoped |
-| `@AIStrictExceptions` | type, method | — | scoped |
-| `@AIStrictTypes` | type, method, field | — | scoped |
-| `@AISunset` | type, method, field | `jira` | scoped |
-| `@AITemporary` | type, method | `expiresOn`, `reason` | scoped |
-| `@AITestDriven` | type, method | — | scoped |
-| `@AIThreadAffinity` | type, method | `value` | scoped |
-| `@AIThreadSafe` | type, method, package | — | scoped |
+| `@AIStrictClasspath` | type, method, constructor, package | — | scoped |
+| `@AIStrictExceptions` | type, method, constructor | — | scoped |
+| `@AIStrictTypes` | type, method, constructor, field | — | scoped |
+| `@AISunset` | type, method, constructor, field | `jira` | scoped |
+| `@AITemporary` | type, method, constructor | `expiresOn`, `reason` | scoped |
+| `@AITestDriven` | type, method, constructor | — | scoped |
+| `@AIThreadAffinity` | type, method, constructor | `value` | scoped |
+| `@AIThreadSafe` | type, method, constructor, package | — | scoped |
 
 `AnnotationReferenceTest` regenerates this table from the annotation sources and the renderer and
 fails if it drifts, so the targets and tiers here are the ones the compiler and processor actually

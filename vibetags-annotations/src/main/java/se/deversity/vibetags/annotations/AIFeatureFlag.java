@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * <p>Typical targets: feature-toggled endpoints, A/B-tested code paths, gradual-rollout logic.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface AIFeatureFlag {
 
     /**

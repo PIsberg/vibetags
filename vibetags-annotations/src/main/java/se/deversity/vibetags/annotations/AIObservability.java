@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * element without flagging the corresponding dashboard/alert update.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIObservability {
 
     /**

@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * with descriptive, actionable error messages and proper stack trace preservation.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIStrictExceptions {
 
     /**

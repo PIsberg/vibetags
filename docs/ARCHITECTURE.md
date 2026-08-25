@@ -157,6 +157,7 @@ machines: the generated SVG is sixty-odd boxes with zero transition edges. The t
 **Processor** — package `se.deversity.vibetags.processor`, jar `vibetags-processor`:
 - `AIGuardrailProcessor` — extends `AbstractProcessor` (JSR 269); orchestrator that wires the helpers below into the JSR 269 lifecycle and does none of the work itself
 - `VibeTagsLogger` — SLF4J/Logback file logger, configurable via `-Avibetags.log.*`
+- `LazyFileAppender` — the appender behind that logger; it opens `vibetags.log` on the first event that survives level filtering, so a build that logs nothing leaves no file behind
 - `@SupportedAnnotationTypes("*")` — processes all annotations
 - Overrides `getSupportedSourceVersion()` to return `SourceVersion.latestSupported()` instead of a fixed `@SupportedSourceVersion` — the library builds/tests against Java 21, but pinning e.g. `RELEASE_17` would make javac emit a "supported source version" warning on every newer JDK a consumer compiles with
 - Compile-scope dependency on `vibetags-annotations` so the processor code can reference annotation classes (e.g. `roundEnv.getElementsAnnotatedWith(AILocked.class)`) and so legacy single-coordinate consumers still get the annotations transitively.
