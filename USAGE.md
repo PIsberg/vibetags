@@ -124,11 +124,16 @@ language's toolchain ever hand javac something carrying the annotations? Nothing
 itself is language-specific — each language below is a standalone example consumer plus this
 matrix, and adding one never touches the processor.
 
+> **Before adopting VibeTags in a Kotlin, Groovy or Scala project, read
+> [docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md).** It states the maturity of each route, what
+> each one silently drops, and how every claim is measured against third-party code on each pull
+> request. The summary below is the quick version; that page is where the limitations live.
+
 | Language | Support | Mechanism |
 |---|---|---|
 | Java | Full | javac runs the processor directly |
 | Kotlin | Full (kapt) | kapt generates Java stubs and runs JSR 269 processors over them |
-| Groovy | Full (joint compilation) | groovyc generates Java stubs; `javaAnnotationProcessing = true` runs processors over them |
+| Groovy | Types and methods only (joint compilation) | groovyc generates Java stubs; `javaAnnotationProcessing = true` runs processors over them. The stubs carry no fields, so **field-level annotations are dropped** — see below |
 | Scala | Java sources only | scalac has no JSR 269 support; annotated Scala classes compile but are never seen |
 | Clojure | Not possible | no javac in the pipeline, and Clojure metadata annotations emit only CLASS/RUNTIME retention into bytecode — `SOURCE` annotations cannot be expressed at all |
 
@@ -149,9 +154,36 @@ tasks.withType(GroovyCompile).configureEach {
 }
 ```
 
-The stub caveats are the same as kapt's: no method bodies (body-scoped annotations are
-invisible) and stub-relative source positions. Working consumer:
-[`examples/groovy/`](examples/groovy/README.md).
+The stub caveats are the same as kapt's — no method bodies, so body-scoped annotations are
+invisible, and stub-relative source positions — plus two that are Groovy's alone. Both were
+found by running VibeTags over third-party Groovy rather than over this repository's own
+example ([corpus/README.md](corpus/README.md)).
+
+- **Field-level annotations are dropped.** groovyc's stub carries the class, its constructors,
+  its methods and their parameters, and no fields at all. Not renamed, not moved onto a
+  generated accessor: absent. So `@AIPrivacy`, `@AISecureLogging`, `@AIPerformance` on a field,
+  and anything else targeting `ElementType.FIELD`, never reach the processor and generate
+  nothing. There is no warning, because nothing in the compilation ever sees the annotation.
+
+  `@AIPrivacy` is the one that stings: it is a safety-tier guardrail, it is the natural way to
+  mark a PII field, and in Groovy it silently does nothing. Declaring the field `private` does
+  not help — that only stops Groovy turning it into a property, and the stub omits it either
+  way. Put the guardrail on the accessor or the enclosing type instead, or keep the rule in the
+  hand-authored region outside the markers.
+
+  `corpus/run-corpus-jvm.sh` pins this: the Groovy showcase annotates fields on purpose, the
+  harness expects those two markers to be missing, and it fails if they ever start appearing —
+  so the day groovyc emits fields, this section gets rewritten instead of quietly aging.
+
+- **The compiling JDK must be 21 or newer, and a Gradle toolchain overrides the JDK you
+  launched with.** `java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }` runs
+  javac from a JDK 17, which cannot load the processor: `class file version 65.0, this version
+  of the Java Runtime only recognizes class file versions up to 61.0`. The error names no
+  VibeTags file and does not mention the toolchain, so it reads like a corrupt jar. Two of the
+  Groovy projects the corpus surveyed fail this way. It applies to every language, but Groovy
+  and Kotlin Gradle plugins pin an older toolchain far more often than Java projects do.
+
+Working consumer: [`examples/groovy/`](examples/groovy/README.md).
 
 **Scala**: put guardrails on thin annotated Java types next to the Scala code they protect —
 javac compiles `src/main/java` normally in a mixed module. An `@AI*` annotation directly on

@@ -1,0 +1,68 @@
+package __PACKAGE__
+
+import se.deversity.vibetags.annotations.AIAudit
+import se.deversity.vibetags.annotations.AIContext
+import se.deversity.vibetags.annotations.AIContract
+import se.deversity.vibetags.annotations.AICore
+import se.deversity.vibetags.annotations.AILocked
+import se.deversity.vibetags.annotations.AIPrivacy
+import se.deversity.vibetags.annotations.AIPublicAPI
+import se.deversity.vibetags.annotations.AISecure
+
+/**
+ * The Scala half of the Scala corpus member, and the only showcase in the corpus that is
+ * asserted to produce **nothing**.
+ *
+ * scalac has no JSR 269 support. Java annotations are legal in Scala and compile without
+ * complaint, so a Scala author can write every annotation below, see a green build, and get no
+ * guardrails whatsoever. USAGE.md states that ("Scala | Java sources only | scalac has no JSR
+ * 269 support; annotated Scala classes compile but are never seen"), and until this file existed
+ * that sentence was prose nobody had run.
+ *
+ * The harness asserts the negative directly: none of the SCALA-INVISIBLE markers below may
+ * appear in any generated file, while the markers in the Java half of the same build must all
+ * appear. Both directions matter. If the negative assertion ever goes red, either scalac has
+ * gained annotation processing or VibeTags has found another way in - and either way the line
+ * in USAGE.md needs rewriting rather than the test relaxing.
+ *
+ * Injected by corpus/run-corpus-jvm.sh and reverted with `git checkout -- .` afterwards.
+ */
+@AIContext(focus = "corpus scala showcase SCALA-INVISIBLE-CONTEXT: must never be generated")
+@AIPublicAPI
+class CorpusShowcase {
+
+  @AIPrivacy(reason = "corpus scala showcase SCALA-INVISIBLE-PRIVACY: PII, and still not seen")
+  private var billingEmail: String = _
+
+  @AILocked(reason = "corpus scala showcase SCALA-INVISIBLE-LOCKED: do not edit")
+  def invoiceNumber(id: Long): Long = id
+
+  @AIAudit(checkFor = Array("SQL injection", "path traversal"))
+  def audited(query: String): Unit = ()
+
+  @AISecure(aspect = "corpus scala showcase SCALA-INVISIBLE-SECURE")
+  def secured(): Unit = ()
+
+  @AIContract(reason = "corpus scala showcase SCALA-INVISIBLE-CONTRACT: frozen shape")
+  def render(customerNote: String, other: String): String = customerNote + other
+}
+
+/**
+ * A Scala `object`, which has no Java counterpart at all. If anything ever did start reading
+ * Scala sources, this is the construct whose element path would have to be invented, so it is
+ * here to be found rather than discovered later.
+ */
+@AICore(sensitivity = "high", note = "corpus scala showcase SCALA-INVISIBLE-CORE")
+object CorpusShowcaseObject {
+  @AILocked(reason = "corpus scala showcase SCALA-INVISIBLE-OBJECT-LOCKED")
+  def helper(): Unit = ()
+}
+
+/** A case class and a trait, for the same reason. */
+@AIContext(focus = "corpus scala showcase SCALA-INVISIBLE-CASECLASS")
+case class CorpusShowcaseValue(id: Long, label: String)
+
+@AIContext(focus = "corpus scala showcase SCALA-INVISIBLE-TRAIT")
+trait CorpusShowcaseTrait {
+  def describe(): String
+}

@@ -53,6 +53,7 @@ nullaway.version                        com/uber/nullaway/nullaway
 cyclonedx-maven-plugin.version          org/cyclonedx/cyclonedx-maven-plugin
 central-publishing-maven-plugin.version org/sonatype/central/central-publishing-maven-plugin
 maven-gpg-plugin.version                org/apache/maven/plugins/maven-gpg-plugin
+ecj.version                             org/eclipse/jdt/ecj
 "
 
 prop() { sed -n "s:.*<$1>\(.*\)</$1>.*:\1:p" "$PARENT" | head -n1; }

@@ -1,8 +1,12 @@
 # The third-party corpus
 
-Six real Java libraries, pinned to commits, compiled twice on every CI run: once without
-VibeTags and once with it. Nothing is vendored. The sources are cloned at build time into
-`target/corpus` and never committed, so no third-party code enters this repository.
+Nine real libraries, pinned to commits, compiled twice on every CI run: once without VibeTags and
+once with it. Six are Java, compiled by javac, and are what the first half of this document is
+about. The other three are Kotlin, Groovy and Scala, built by their own Gradle wrappers, and have
+[a harness and a section of their own](#the-other-three-jvm-languages).
+
+Nothing is vendored. The sources are cloned at build time into `target/corpus` and
+`target/corpus-jvm` and never committed, so no third-party code enters this repository.
 
 ```bash
 corpus/run-corpus.sh               # all of it
@@ -243,7 +247,189 @@ Chosen for variety rather than volume. The construct counts were measured, not e
 
 Roughly 495 files and 15,683 members in total.
 
-## Adding a repo
+## The other three JVM languages
+
+Everything above is Java, compiled by javac, because that is the compiler JSR 269 belongs to.
+`corpus/run-corpus-jvm.sh` asks the same questions of Kotlin, Groovy and Scala, and it is a
+separate harness rather than three more rows in `repos.tsv` because none of them reaches the
+processor the way Java does.
+
+```bash
+corpus/run-corpus-jvm.sh                  # all of it
+corpus/run-corpus-jvm.sh kotlin-obd-api   # one repo
+```
+
+| Language | Route to the processor |
+|---|---|
+| Kotlin | kapt generates Java stubs and runs the processor over them. KSP does not run JSR 269 processors, so kapt is the only route |
+| Groovy | groovyc generates stubs the same way, but only when `javaAnnotationProcessing` is on, and it is off by default in Gradle |
+| Scala | scalac has no JSR 269 support at all. Only the Java half of a mixed build reaches the processor |
+
+USAGE.md has said all three for several releases. Until this harness existed, none of them had
+been run against code outside this repository.
+
+### How VibeTags gets into a build nobody wrote for it
+
+Each repository is built twice by its own Gradle wrapper, and the only difference between the two
+runs is `corpus/inject-vibetags.init.gradle`:
+
+```
+control    ./gradlew <task>
+treatment  ./gradlew <task> --init-script corpus/inject-vibetags.init.gradle
+```
+
+A Gradle init script is the supported way to add a plugin or a dependency to a build you do not
+own, so nothing here edits a `build.gradle` it did not write. It is switched on by the presence of
+`VIBETAGS_ROOT` in the environment, which is how the control runs the same command line without it.
+
+Two details in that file are load-bearing, and both are there because the first version got them
+wrong:
+
+- **It skips `buildSrc` and included builds.** They are not the build under test — they compile
+  the target project's own build logic, often in another language. splain's `buildSrc` is Kotlin,
+  so without the guard the Scala member would have run kapt over the build logic of a Scala
+  project.
+- **On Kotlin projects it configures kapt only, never javac.** That is how `examples/kotlin` and
+  USAGE.md configure it. Doing both put `-Avibetags.root` on kapt's javac command line as a raw
+  flag as well as into kapt's option map.
+
+`--rerun-tasks` is also not optional. Gradle's up-to-date checks would let the treatment skip
+compilation entirely, because the control had just compiled the same sources from the same inputs,
+and a treatment that never ran a compiler passes every assertion below while testing nothing.
+
+### What is asserted
+
+| # | Assertion | What it protects |
+|---|---|---|
+| J0 | The control build succeeds | Everything else is relative to it; a repository that cannot build passes exit parity trivially, both sides failing identically |
+| J1 | The treatment exits exactly as the control did | Adding VibeTags to somebody's build must not fail it |
+| J2 | No new compiler diagnostic, line by line, against a one-entry allow-list | A processor that turns a clean build noisy has broken the same promise, more quietly |
+| J3 | Nothing written into a project that never opted in | File presence is the only opt-in (tier-1 invariant 1) |
+| J4 | The annotated build still succeeds | Otherwise nothing was generated and J5 onward report on an empty directory |
+| J5 | Every opted-in platform file has content, checked per platform | One renderer can be dropped and the other two cover for it in any total |
+| J5b | `AGENTS.md` grew beyond the seeded marker pair | Codex being dropped from the active set looks identical to Codex working |
+| J6 | Every aggregate carries a `VIBETAGS-START` pair | The markers are the whole promise that hand-authored content survives |
+| J6b | Both granular directories were written | An opted-in directory that stays empty looks exactly like "this project has no rules" |
+| J6c | The tier split: a safety guardrail inline, `@AIContract` not inline but present in the rules directory | Invariant 6, checked through three compilers instead of one |
+| J6d | The parameter level survived | The level most exposed to a stub generator: a parameter name that does not survive into the stub cannot be addressed |
+| J6f | Every marker the showcase declares, minus the language's documented exclusions, reached a generated file | A change that stopped rendering half the surface would still pass every assertion that names one guardrail |
+| J6g | **No marker on the exclusion list appeared** | A limitation that quietly gets fixed leaves the documentation wrong in the generous direction, which nobody notices because the run is green |
+| J8 | No type-use annotation in any generated identity | These compilers reach `ElementNaming` by different routes; there is no reason to assume they agree |
+| J9 | Scala only: no marker from the annotated `.scala` file appears anywhere | USAGE.md's Scala row, turned into a test |
+| J9b | Scala only: the Scala showcase produced class files | Without it, "scalac generated nothing" and "scalac was never asked" are the same green run |
+
+J2 differs from the Java corpus's assertion 2 on purpose. There, javac runs either way and the
+only difference is a `-processor` flag, so "no new diagnostics" is a fair comparison. Here it is
+not: switching VibeTags on adds the kapt task graph to a Kotlin build and joint compilation to a
+Groovy one, and those emit diagnostics about the machinery rather than about VibeTags. Counting
+them fails for the wrong reason; raising a threshold to make them pass blinds the check. So every
+new line must either be absent or be named in the allow-list, which has exactly one entry.
+
+J6f and J6g are a pair, and the pair is the point. Anywhere a language genuinely cannot render a
+guardrail, that marker is named in `excluded_markers()` with the evidence, and both directions are
+then checked: it must not go missing from the expected set, and it must not appear from the
+excluded one.
+
+### The members
+
+| Repo | Lang | Licence | Why this one |
+|---|---|---|---|
+| [`eltonvs/kotlin-obd-api`](https://github.com/eltonvs/kotlin-obd-api) | Kotlin | Apache-2.0 | A plain `kotlin("jvm")` library — not Android, not multiplatform — so kapt applies exactly as USAGE.md documents |
+| [`bentsherman/nf-boost`](https://github.com/bentsherman/nf-boost) | Groovy | Apache-2.0 | A Groovy library whose classes groovyc can turn into valid Java stubs, which most of the candidates could not |
+| [`tek/splain`](https://github.com/tek/splain) | Scala | MIT | One of very few Gradle-built Scala projects on a JDK 21 wrapper; `:core:classes` runs `compileJava` and `compileScala`, which is what makes the two-sided Scala assertion possible |
+
+The Scala member carries two showcases in one build: a Java one that must generate everything, and
+a Scala one that must generate nothing. Both halves are needed. Without the positive half, "nothing
+came from Scala" and "nothing came at all" are the same result.
+
+### What it found
+
+**Groovy drops every field-level annotation, silently.**
+
+This is the finding that justifies the harness. `@AIPrivacy` on a Groovy field generates nothing —
+no file, no warning, no trace. It is one of the six safety annotations, it is the natural way to
+mark a PII field, and until this ran, USAGE.md called the Groovy route "Full (joint compilation)".
+
+The first guess was wrong, which is worth recording: a Groovy field with no access modifier
+becomes a property, so the obvious theory was that the annotation had moved onto a generated
+accessor. It had not. Keeping the stubs (`groovyOptions.keepStubs`) and reading one settles it —
+the stub has the class, both constructors, all twelve methods and both parameters of `render`,
+each with its annotations intact, and no fields whatsoever:
+
+```java
+@AIContext(...) @AIPublicAPI() public class CorpusShowcase
+@AILocked(reason="...CONSTRUCTOR-LOCKED...") public CorpusShowcase
+@AILocked(reason="...METHOD-LOCKED...") public long invoiceNumber(long id) { return (long)0;}
+@AIContract(...) public String render(@AIInputSanitized(...) String customerNote, ...)
+```
+
+`billingEmail`, `authToken` and `tenantId` appear nowhere in it. The annotations are not lost by
+VibeTags; they never reach any processor. Nothing in VibeTags can fix that, so it is documented
+instead — and pinned, because a limitation nothing exercises is a limitation nobody notices has
+been fixed. The Groovy showcase annotates those fields on purpose, `excluded_markers()` names the
+two markers, and J6g fails the day they start appearing.
+
+**Most real Groovy projects cannot switch annotation processing on at all.**
+
+Eight Groovy repositories were tried before one could be used, and the failures were not
+incidental:
+
+| Repository | Outcome once `javaAnnotationProcessing` is on |
+|---|---|
+| `jenkinsci/JenkinsPipelineUnit` | stub rejected: `'_' is a keyword, and may not be used as an identifier` |
+| `int128/gradle-ssh-plugin` | stub rejected: `illegal combination of modifiers: public and private` |
+| `longwa/build-test-data` | stub rejected: `method does not override or implement a method from a supertype` |
+| `jk1/Gradle-License-Report` | toolchain pinned to Java 17: `class file version 65.0` |
+| `allegro/axion-release-plugin` | toolchain pinned to Java 17: same |
+| `jwagenleitner/groovy-wslite` | wrapper too old: `Could not determine java version from '21.0.9'` |
+| `gpc/grails-postgresql-extensions` | **compiles** |
+| `bentsherman/nf-boost` | **compiles** — the member |
+
+Three of the eight compile perfectly well on their own and break the moment stubs are generated,
+each for a different reason. That is a property of groovyc's stub generator, not of VibeTags, and
+a Groovy user hitting it sees a compile error in a file they did not write, in a directory named
+`build/tmp/compileGroovy/groovy-java-stubs`. Worth knowing before recommending the switch.
+
+**A Gradle toolchain below 21 fails in a way that names nothing useful.**
+
+`java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }` runs javac from a JDK 17,
+which cannot load the processor. README has always said "Java 21 or higher"; what it did not say
+is that a toolchain pin overrides the JDK you launched Gradle with, so a developer on JDK 21 gets
+`class file version 65.0` and no mention of VibeTags or of toolchains. Now in USAGE.md.
+
+**kapt reports `vibetags.root` as unrecognised.**
+
+`warning: The following options were not recognized by any processor: '[vibetags.root,
+kapt.kotlin.generated]'` — for an option `AIGuardrailProcessor` declares in `@SupportedOptions`
+and demonstrably receives, since it prints the resolved root from the same task. `examples/kotlin`
+on Kotlin 2.4.10 does not produce it; this member on Kotlin 2.3.10 does. Removing the javac-side
+configuration so only the documented `kapt { arguments { … } }` route remained did not change it.
+
+That is as far as the evidence goes, so it is allow-listed as kapt bookkeeping with the evidence
+written next to it, and tracked as an open question rather than asserted to be harmless.
+
+**And one in the harness, which is the reason J2 can be trusted at all.**
+
+The diagnostic counter could not see the diagnostic it existed for. It required a colon before the
+word — `: warning:` — and javac emits its summary diagnostics with no file prefix at all. So the
+kapt warning above was raised by the treatment, absent from the control, and counted `0` against
+`0`. A parity check blind to an entire class of diagnostic is worse than no parity check, because
+it is reported as a pass.
+
+### Adding a member
+
+1. It must build on JDK 21 with its own wrapper, at the SHA you pin, **and** with annotation
+   processing switched on. Those are two different tests for Groovy, and the second is the one
+   that eliminates most candidates.
+2. Prefer a library over a build plugin. Plugins pin old toolchains for consumer compatibility,
+   which is what disqualified two Groovy candidates outright.
+3. Add a row to `repos-jvm.tsv` with the SHA, never a branch, and say in `why` what it covers that
+   the others do not.
+4. If it cannot render some level, name the markers in `excluded_markers()` **with the evidence**,
+   and write the limitation in USAGE.md in the same change. An exclusion without a reason is how a
+   real defect gets absorbed into the expected set.
+
+## Adding a Java repo
 
 1. Pick something small, permissively licensed, and *different* from what is already there. A
    seventh repo that looks like `commons-codec` adds runtime and no coverage.

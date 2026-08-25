@@ -88,9 +88,27 @@ jar {
     }
 }
 
+// The one shared version this module needs, read from the same place Maven reads it. Kept
+// deliberately smaller than vibetags/build.gradle's helper: this module has exactly one pin to
+// resolve, and a literal here is what turned every dependabot PMD bump into a red
+// BuildVersionParityTest.
+def pmdVersionFromParent = {
+    def pom = file("${projectDir}/../vibetags-parent/pom.xml")
+    if (!pom.exists()) {
+        throw new GradleException("vibetags-parent/pom.xml is missing, so there is nothing to read "
+            + 'pmd.version from. Shared versions live in the parent, never as a literal here.')
+    }
+    def m = (pom.text =~ /<pmd\.version>([^<]+)<\/pmd\.version>/)
+    if (!m) {
+        throw new GradleException('vibetags-parent/pom.xml <properties> does not define '
+            + '<pmd.version>. Add it there rather than hard-coding a number in build.gradle.')
+    }
+    m[0][1].trim()
+}()
+
 pmd {
     consoleOutput = true
-    toolVersion = "7.26.0"
+    toolVersion = pmdVersionFromParent
     ignoreFailures = false
     ruleSetFiles = files("${projectDir}/../pmd-ruleset.xml")
 }

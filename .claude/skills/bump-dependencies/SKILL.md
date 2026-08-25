@@ -39,10 +39,10 @@ Edit the property in `vibetags-parent/pom.xml`. Then the places that cannot inhe
 
 | Pin | Also lives in |
 |-----|---------------|
-| `junit.version`, `junit.platform.version`, `mockito.version`, `archunit.version`, `async-test-lib.version`, `snakeyaml.version`, `logback.version`, `slf4j.version`, `jspecify.version` | `vibetags/build.gradle` (coordinates; `BuildVersionParityTest` enforces) |
-| `pmd.version` | `toolVersion` in `vibetags/build.gradle` and `vibetags-annotations/build.gradle` (enforced) |
+| `junit.version`, `junit.platform.version`, `mockito.version`, `archunit.version`, `async-test-lib.version`, `snakeyaml.version`, `logback.version`, `slf4j.version`, `jspecify.version` | nothing to edit. `vibetags/build.gradle` reads each one from the parent via `pomVersion(...)`; `BuildVersionParityTest` enforces that it keeps doing so |
+| `pmd.version` | nothing. Both Gradle builds derive it from the parent, and `BuildVersionParityTest` fails any file that reintroduces a literal |
 | `maven-compiler-plugin.version` | literals in `examples/basic/pom.xml`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `examples/all-tiers/pom.xml`, `tools/demo/pom.xml` (consumer poms; keep them in step) |
-| Gradle wrapper | `gradle/wrapper/gradle-wrapper.properties` in `vibetags`, `vibetags-annotations`, `example`, `examples/kotlin`, `examples/groovy`, `examples/scala`; the version named in `docs/DEPENDENCIES.md` |
+| Gradle wrapper | every `gradle-wrapper.properties` in the repository - ten of them, not the six this row used to list; enumerate with `git ls-files '*gradle-wrapper.properties'` rather than trusting the list - plus the version named in `docs/DEPENDENCIES.md` |
 | Kotlin | `examples/kotlin/build.gradle.kts` (`jvm` and `kapt`), the snippets in `README.md` and `examples/kotlin/README.md` |
 | Groovy, Scala | `examples/groovy/build.gradle`, `examples/scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
 | pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |

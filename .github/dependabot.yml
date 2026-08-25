@@ -28,11 +28,30 @@ updates:
     schedule:
       interval: daily
 
-  - package-ecosystem: maven
-    directory: /example
-    schedule:
-      interval: daily
-
+  # /vibetags is the only Maven directory that needs to be listed, and it reaches further than
+  # it looks. Every third-party version in this build is a <name.version> property in
+  # vibetags-parent/pom.xml (tier-1 invariant 14), and dependabot resolves the parent from the
+  # child: #470 was opened "in /vibetags" and its diff edits vibetags-parent/pom.xml. So one
+  # entry covers all 33 pins.
+  #
+  # This used to sit alongside `directory: /example`, which has never existed - the examples live
+  # under examples/, each with its own pom. That entry produced nothing at all, silently, which is
+  # the same failure the npm entry above carries a comment about. It is gone rather than
+  # redirected, and deliberately:
+  #
+  #   - examples/*/pom.xml and tools/demo/pom.xml pin se.deversity.vibetags artifacts at the
+  #     released version. That number is owned by scripts/set-version.sh, and
+  #     BuildVersionParityTest fails if it disagrees with <revision>. A dependabot PR moving it
+  #     would be red on arrival and could never merge.
+  #   - Their maven-compiler-plugin literals are mirrors of the parent property. Bumping the copy
+  #     without the original is the drift the mirror table in the bump-dependencies skill exists
+  #     to prevent.
+  #
+  # Both are release-managed rather than dependency-managed, so they belong to that skill and to
+  # set-version.sh, not here.
+  #
+  # load-tests/pom.xml is absent for a third reason: its <processor.version> is pinned
+  # independently so benchmarks can compare across releases, and force-bumping it is a bug.
   - package-ecosystem: maven
     directory: /vibetags
     schedule:
