@@ -40,7 +40,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append("      <coverage_goal>").append(coverageGoal).append("</coverage_goal>\n")
-                    .append("      <frameworks>").append(Escape.xml(frameworksStr)).append("</frameworks>\n");
+                    .append(CommonFormatterHelper.element("frameworks", frameworksStr));
                 if (!testLocation.isEmpty()) {
                     sb.append("      <test_location>").append(Escape.xml(testLocation)).append("</test_location>\n");
                 }
@@ -66,7 +66,8 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append('\n');
+                sb.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n")
+                    .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr));
                 if (!testLocation.isEmpty()) {
                     sb.append("- **Test Location**: ").append(testLocation).append('\n');
                 }
@@ -76,7 +77,8 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n- **Frameworks**: ").append(frameworksStr).append('\n');
+                sb.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n")
+                    .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr));
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(summary).append('\n');

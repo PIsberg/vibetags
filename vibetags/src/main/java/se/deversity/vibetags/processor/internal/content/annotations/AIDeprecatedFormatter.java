@@ -39,14 +39,14 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 if (!replacedBy.isEmpty()) {
                     sb.append("      <replaced_by>").append(Escape.xml(replacedBy)).append("</replaced_by>\n");
                 }
-                sb.append("      <migration_guide>").append(Escape.xml(migrationGuide)).append("</migration_guide>\n");
+                sb.append(CommonFormatterHelper.element("migration_guide", migrationGuide));
                 if (!deadline.isEmpty()) {
                     sb.append("      <deadline>").append(Escape.xml(deadline)).append("</deadline>\n");
                 }
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, summary.toString()));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("` - ").append(summary).append('\n');
@@ -66,7 +66,7 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 if (!replacedBy.isEmpty()) {
                     sb.append("- **Replaced by**: ").append(replacedBy).append('\n');
                 }
-                sb.append("- **Migration**: ").append(migrationGuide).append('\n');
+                sb.append(CommonFormatterHelper.bullet("Migration", migrationGuide));
                 if (!deadline.isEmpty()) {
                     sb.append("- **Deadline**: ").append(deadline).append('\n');
                 }
@@ -75,7 +75,7 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### DEPRECATED: ").append(className).append("\n- **Status**: Scheduled for removal. Do not extend.\n")
                   .append(replacedBy.isEmpty() ? "" : "- **Replaced by**: " + replacedBy + "\n")
-                  .append("- **Migration**: ").append(migrationGuide).append('\n')
+                  .append(CommonFormatterHelper.bullet("Migration", migrationGuide))
                   .append(deadline.isEmpty() ? "" : "- **Deadline**: " + deadline + "\n").append('\n');
                 break;
             case WINDSURF:

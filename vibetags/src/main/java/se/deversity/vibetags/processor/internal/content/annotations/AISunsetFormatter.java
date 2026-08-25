@@ -29,13 +29,20 @@ public final class AISunsetFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <sunset_ticket>").append(Escape.xml(jira)).append("</sunset_ticket>\n      <replacement_target>").append(Escape.xml(replacementName)).append("</replacement_target>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("sunset_ticket", jira))
+                    .append(CommonFormatterHelper.element("replacement_target", replacementName))
+                    .append("    </file>\n");
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Sunset Status**: Active (Forbid new calls)\n- **JIRA Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");
+                sb.append("### ").append(className).append("\n- **Sunset Status**: Active (Forbid new calls)\n")
+                    .append(CommonFormatterHelper.bullet("JIRA Ticket", jira))
+                    .append(CommonFormatterHelper.bullet("Replacement", replacementName)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### SUNSET API: ").append(className).append("\n- **Ticket**: ").append(jira).append("\n- **Replacement**: ").append(replacementName).append("\n\n");
+                sb.append("#### SUNSET API: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Ticket", jira))
+                    .append(CommonFormatterHelper.bullet("Replacement", replacementName)).append('\n');
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (sunset): ").append(summary).append('\n');

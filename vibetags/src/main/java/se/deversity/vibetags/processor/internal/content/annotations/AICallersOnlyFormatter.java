@@ -25,13 +25,17 @@ public final class AICallersOnlyFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <allowed_callers>").append(Escape.xml(callers)).append("</allowed_callers>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("allowed_callers", callers))
+                    .append("    </file>\n");
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Allowed Callers**: ").append(callers).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Allowed Callers", callers)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### CALLERS LIMIT: ").append(className).append("\n- **Allowed Callers**: ").append(callers).append("\n\n");
+                sb.append("#### CALLERS LIMIT: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Allowed Callers", callers)).append('\n');
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (callers limited): ").append(summary).append('\n');

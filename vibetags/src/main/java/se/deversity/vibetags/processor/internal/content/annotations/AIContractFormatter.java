@@ -25,10 +25,12 @@ public final class AIContractFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(reason).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("reason", reason))
+                    .append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(reason).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, reason));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("` - ").append(reason).append('\n');
@@ -44,10 +46,12 @@ public final class AIContractFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### CONTRACT: ").append(className).append("\n- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("#### CONTRACT: ").append(className).append("\n- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.\n")
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(reason).append('\n');

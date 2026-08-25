@@ -25,7 +25,9 @@ public final class AIPrivacyFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(reason).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("reason", reason))
+                    .append("    </element>\n");
                 break;
             case CODEX:
                 sb.append("- `").append(className).append("`: ").append(reason).append('\n');
@@ -44,10 +46,12 @@ public final class AIPrivacyFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### PRIVACY/PII: ").append(className).append("\n- **Safety Rule**: Never log or expose runtime values of this element.\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("#### PRIVACY/PII: ").append(className).append("\n- **Safety Rule**: Never log or expose runtime values of this element.\n")
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(reason).append('\n');

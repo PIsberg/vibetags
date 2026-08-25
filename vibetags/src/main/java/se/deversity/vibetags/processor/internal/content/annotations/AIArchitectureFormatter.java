@@ -28,7 +28,8 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <belongs_to>").append(Escape.xml(belongsTo)).append("</belongs_to>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("belongs_to", belongsTo));
                 for (String r : cannotRef) {
                     sb.append("      <cannot_reference>").append(Escape.xml(r)).append("</cannot_reference>\n");
                 }
@@ -51,14 +52,16 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Belongs to Layer**: ").append(belongsTo).append('\n');
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Belongs to Layer", belongsTo));
                 if (cannotRef.length > 0) {
                     sb.append("- **Prohibited References**: ").append(cannotRefStr).append('\n');
                 }
                 sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### ARCHITECTURE LAYER: ").append(className).append("\n- **Layer**: ").append(belongsTo).append('\n')
+                sb.append("#### ARCHITECTURE LAYER: ").append(className).append('\n')
+                  .append(CommonFormatterHelper.bullet("Layer", belongsTo))
                   .append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append('\n');
                 break;
             case ZED:

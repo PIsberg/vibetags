@@ -25,13 +25,15 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Reason: ").append(reason).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <reason>").append(Escape.xml(reason)).append("</reason>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("reason", reason))
+                    .append("    </file>\n");
                 break;
             case AI_EXCLUDE:
                 sb.append("**/").append(element.simpleName()).append(".java\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(reason).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, reason));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("` - ").append(reason).append('\n');
@@ -47,10 +49,12 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### LOCKED: ").append(className).append("\n- **Status**: Locked (Do Not Edit)\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("#### LOCKED: ").append(className).append("\n- **Status**: Locked (Do Not Edit)\n")
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(reason).append('\n');

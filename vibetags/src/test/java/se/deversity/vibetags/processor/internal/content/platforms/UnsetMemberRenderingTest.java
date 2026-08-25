@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,8 +64,40 @@ class UnsetMemberRenderingTest {
     private static final Set<Class<? extends Annotation>> RENDERS_NOTHING_WHEN_BARE =
         Set.of(se.deversity.vibetags.annotations.AIAudit.class);
 
+    /**
+     * A markdown bullet whose bold label is followed by nothing: {@code - **Reason**:} and the line
+     * ends. The label is the whole cost — an agent reading the file pays for it and learns nothing.
+     */
+    private static final Pattern EMPTY_LABELLED_BULLET =
+        Pattern.compile("(?m)^\\s*-\\s+\\*\\*[^*\\n]+\\*\\*:[ \\t]*$");
+
+    /** An XML element with nothing but whitespace between its tags: {@code <reason></reason>}. */
+    private static final Pattern EMPTY_XML_ELEMENT =
+        Pattern.compile("<([a-zA-Z_][\\w-]*)>\\s*</\\1>");
+
     static Stream<Platform> aggregatePlatforms() {
         return Stream.of(Platform.values()).filter(p -> !p.name().endsWith("_GRANULAR"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("aggregatePlatforms")
+    @DisplayName("an unset optional member emits no label at all, rather than a label with nothing after it")
+    void unsetMembersLeaveNoEmptyLabels(Platform platform) {
+        String bare = PlatformRendererRegistry.getRenderer(platform)
+            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, CONTEXT);
+
+        List<String> empty = new ArrayList<>();
+        for (Matcher m = EMPTY_LABELLED_BULLET.matcher(bare); m.find(); ) {
+            empty.add(m.group().trim());
+        }
+        for (Matcher m = EMPTY_XML_ELEMENT.matcher(bare); m.find(); ) {
+            empty.add(m.group().replace("\n", "\\n"));
+        }
+
+        assertEquals(List.of(), empty,
+            platform + " emits a label with nothing after it when the member behind it is unset. "
+                + "Guard the member the way the same formatter already guards it on other "
+                + "platforms — CommonFormatterHelper.bullet and .element do it in one place");
     }
 
     @ParameterizedTest(name = "{0}")

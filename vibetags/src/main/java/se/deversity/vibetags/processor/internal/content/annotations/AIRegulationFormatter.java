@@ -27,11 +27,12 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <standard>").append(Escape.xml(standard)).append("</standard>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("standard", standard));
                 if (!clause.isEmpty()) {
                     sb.append("      <clause>").append(Escape.xml(clause)).append("</clause>\n");
                 }
-                sb.append("      <description>").append(Escape.xml(description)).append("</description>\n    </element>\n");
+                sb.append(CommonFormatterHelper.element("description", description)).append("    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
@@ -50,16 +51,18 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Standard**: ").append(standard).append('\n');
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Standard", standard));
                 if (!clause.isEmpty()) {
                     sb.append("- **Clause**: ").append(clause).append('\n');
                 }
-                sb.append("- **Description**: ").append(description).append("\n\n");
+                sb.append(CommonFormatterHelper.bullet("Description", description)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### REGULATORY: ").append(className).append("\n- **Standard**: ").append(standard).append('\n')
+                sb.append("#### REGULATORY: ").append(className).append('\n')
+                  .append(CommonFormatterHelper.bullet("Standard", standard))
                   .append(clause.isEmpty() ? "" : "- **Clause**: " + clause + "\n")
-                  .append("- **Description**: ").append(description).append("\n\n");
+                  .append(CommonFormatterHelper.bullet("Description", description)).append('\n');
                 break;
             case WINDSURF:
                 sb.append("* `").append(className).append("` (regulation) - ").append(summary).append('\n');

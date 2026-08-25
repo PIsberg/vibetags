@@ -30,6 +30,45 @@ final class CommonFormatterHelper {
     }
 
     /**
+     * Renders a markdown bullet with a bold label, or nothing at all when {@code value} is unset.
+     *
+     * <p>An annotation written bare — {@code @AILocked} with no {@code reason}, the form people
+     * actually write — must not leave {@code - **Reason**:} with nothing after it in the generated
+     * file. The label costs an agent's context window and carries no guardrail in return, so the
+     * whole bullet is dropped rather than emitted empty. Pinned by {@code UnsetMemberRenderingTest}.
+     */
+    static String bullet(String label, String value) {
+        return (value == null || value.isBlank()) ? "" : "- **" + label + "**: " + value + "\n";
+    }
+
+    /**
+     * Renders an XML element indented six spaces for the Claude formats, or nothing at all when
+     * {@code value} is unset, so a bare annotation does not produce {@code <reason></reason>}.
+     *
+     * <p>Emits the same bytes as the inline form it replaces whenever the member is populated.
+     */
+    static String element(String tag, String value) {
+        return (value == null || value.isBlank())
+            ? ""
+            : "      <" + tag + ">" + Escape.xml(value) + "</" + tag + ">\n";
+    }
+
+    /**
+     * Renders the Codex bullet — the element's path in bold, then its summary — dropping the colon
+     * along with the summary when there is none, so a bare annotation does not leave
+     * {@code - **com.example.Foo**:} with nothing after it.
+     *
+     * <p>The element keeps its line either way. Its presence under the section heading is itself
+     * the guardrail, and dropping the line would hide an annotation that is visibly there in the
+     * source — the worse of the two failures.
+     */
+    static String codexBullet(String path, String summary) {
+        return (summary == null || summary.isBlank())
+            ? "- **" + path + "**\n"
+            : "- **" + path + "**: " + summary + "\n";
+    }
+
+    /**
      * Attempts to format standard markdown/plain-text platforms.
      * Returns true if the platform was formatted and handled, false otherwise.
      */
@@ -41,7 +80,7 @@ final class CommonFormatterHelper {
                 sb.append("* `").append(className).append("` - ").append(summary).append('\n');
                 return true;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
+                sb.append(codexBullet(className, summary));
                 return true;
             case COPILOT:
                 sb.append("- `").append(className).append("` - ").append(summary).append('\n');
