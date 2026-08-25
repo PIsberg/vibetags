@@ -22,11 +22,10 @@
 #   3. Every javac entry carries a position and no ECJ entry does. The javac half is the
 #      control: without it the ECJ assertion passes just as well on a broken report that
 #      contains nothing at all.
-#   4. Every guardrail's prose, and every type-level element path, is identical between the
-#      two. This is the sentence "degrades" is standing on: what an agent is told does not
-#      depend on which compiler ran. It is not a byte-for-byte diff of the whole region,
-#      and the comment above that assertion says exactly why - member paths currently do
-#      differ, which this check is what discovered.
+#   4. The generated CLAUDE.md guardrail region is byte-identical between the two. This is
+#      the sentence "degrades" is standing on: only @AILocked positions differ, and those
+#      live in .vibetags-locks, not here. This assertion was narrower for one commit, while
+#      issue #480 - which this check found - was open; the comment above it has the story.
 #
 # Usage: scripts/ecj-degradation-check.sh
 # Requires: a JDK, mvn on PATH, and vibetags-annotations + vibetags installed
@@ -177,68 +176,42 @@ if [ "$ecj_positioned" -ne 0 ]; then
   status=1
 fi
 
-# Assertion 4: no guardrail text is lost, and no type-level element is renamed.
+# Assertion 4: the whole marker region is byte-identical. Positions are the ONLY thing that
+# may differ between the compilers, and positions do not appear in the aggregate files.
 #
-# Deliberately NOT a byte-for-byte diff of the marker region, which is what this check was
-# first written to do. That comparison fails today, and for a reason worth stating rather
-# than papering over: member element paths render differently under the two compilers,
-# because ElementNaming leans on Element.toString(), whose format the javax.lang.model
-# contract leaves to the implementation.
+# This started life narrower - guardrail prose and type-level paths only - because a full
+# diff failed: member element paths rendered differently under the two compilers, since
+# ElementNaming built them from Element.toString(), whose format javax.lang.model leaves to
+# the implementation.
 #
 #     javac : com.example.security.SecurityConfig.getKeyRotationHours()
 #     ECJ   : com.example.security.SecurityConfig.public int getKeyRotationHours()
 #
-# That is a real defect - .vibetags-locks is what the locked-files Action diffs a pull
-# request against, and granular rule filenames are derived from the same string - but it is
-# a change to core element identity, not to a CI leg, so it is filed separately rather than
-# smuggled in here. Until it is fixed, this asserts the two things that ARE true and that
-# the word "degrades" has to mean: every guardrail's text survives, and every type-level
-# path is identical.
+# That was issue #480, found by this check on its first run and since fixed: ElementNaming
+# now derives the signature structurally and targets javac's rendering, so ECJ converges on
+# it. The assertion is back to what it should always have been, which is also what keeps
+# #480 fixed - a regression there shows up here as a diff, in the one place that compiles
+# under both compilers.
 region() { sed -n "/VIBETAGS-START/,/VIBETAGS-END/p" "$1"; }
 region "$WORK/javac-run/CLAUDE.md" > "$WORK/javac.region"
 region "$WORK/ecj-run/CLAUDE.md" > "$WORK/ecj.region"
 
-# Every <reason>, <note>, <constraint> and friend, sorted - the guardrail prose itself.
-guardrail_text() {
-  grep -o "<reason>.*</reason>\|<note>.*</note>\|<constraint>.*</constraint>" "$1" \
-    | sort | uniq
-}
-# Every path= that names a type rather than a member. Members are excluded only because of
-# the toString() divergence above; when that is fixed, drop the filter.
-type_paths() {
-  grep -o 'path="[^"]*"' "$1" | grep -v "(" | sort | uniq
-}
-
 if [ ! -s "$WORK/javac.region" ]; then
   echo "FAIL: no VIBETAGS marker region in the javac CLAUDE.md - nothing to compare." >&2
   status=1
-else
-  guardrail_text "$WORK/javac.region" > "$WORK/javac.text"
-  guardrail_text "$WORK/ecj.region" > "$WORK/ecj.text"
-  if [ ! -s "$WORK/javac.text" ]; then
-    echo "FAIL: the javac region carries no guardrail prose, so this compares nothing." >&2
-    status=1
-  elif ! diff -u "$WORK/javac.text" "$WORK/ecj.text" > "$WORK/text.diff"; then
-    echo "FAIL: guardrail text differs between javac and ECJ." >&2
-    echo "      Positions may degrade; the instruction an agent reads may not." >&2
-    head -40 "$WORK/text.diff" >&2
-    status=1
-  fi
-
-  type_paths "$WORK/javac.region" > "$WORK/javac.types"
-  type_paths "$WORK/ecj.region" > "$WORK/ecj.types"
-  if ! diff -u "$WORK/javac.types" "$WORK/ecj.types" > "$WORK/types.diff"; then
-    echo "FAIL: type-level element paths differ between javac and ECJ." >&2
-    echo "      A guarded class must have the same identity under either compiler." >&2
-    head -40 "$WORK/types.diff" >&2
-    status=1
-  fi
+elif ! diff -u "$WORK/javac.region" "$WORK/ecj.region" > "$WORK/region.diff"; then
+  echo "FAIL: the generated guardrail region differs between javac and ECJ." >&2
+  echo "      Only @AILocked positions may degrade, and they do not appear in this file." >&2
+  echo "      A member path in the diff below means ElementNaming has gone back to" >&2
+  echo "      Element.toString() somewhere - that is issue #480 regressing." >&2
+  head -60 "$WORK/region.diff" >&2
+  status=1
 fi
 
 if [ "$status" -eq 0 ]; then
   echo "OK: the processor degrades under ECJ exactly as documented -"
   echo "    $ecj_total locked entries preserved, 0 positions,"
-  echo "    $(wc -l < "$WORK/javac.text") guardrail texts and"
-  echo "    $(wc -l < "$WORK/javac.types") type paths identical to the javac control."
+  echo "    and $(wc -l < "$WORK/javac.region") lines of guardrail region byte-identical"
+  echo "    to the javac control."
 fi
 exit "$status"
