@@ -161,6 +161,16 @@ that does not compile on its own is reported as such instead of being blamed on 
    `ElementNamingFormatParityTest` checks that against a 26-member fixture; this checks it
    against roughly 15,700 members nobody chose.
 
+Assertion 0 comes before all of them: the control has to compile. Otherwise a repo that cannot
+compile passes 1 and 2 trivially, both sides failing identically, while 3 and 4 run against a
+model of error types.
+
+A second phase then opts **Claude, Gemini and Codex** in, aggregate and granular, annotates two
+real elements plus a showcase covering every level a guardrail attaches to (package, type, nested
+type, field, method, parameter) in both tiers, and reads the output back. Ten more assertions,
+including the tier split (invariant 6 on somebody else's code) and a richness floor that fails if
+fewer than 15 distinct showcase guardrails reach a generated file.
+
 The checkouts are cached on `corpus/repos.tsv`'s hash, so most runs do no network at all, and
 pins are SHAs so an upstream push cannot turn this repository red. Nothing is vendored.
 

@@ -41,6 +41,12 @@ set -u
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 CACHE="${VIBETAGS_CORPUS_DIR:-$ROOT/target/corpus}"
 MANIFEST="$ROOT/corpus/repos.tsv"
+# Floor for assertion 6f: how many of the showcase's guardrails must reach a generated
+# file. 15 is measured, not aspirational - it is every marker the showcase declares,
+# across package, type, nested type, field, method and parameter levels, and it was
+# read off a green run before being written down. Raise it when the showcase grows.
+# Lowering it to make a run green is how this check stops meaning anything.
+SHOWCASE_FLOOR="${VIBETAGS_CORPUS_SHOWCASE_FLOOR:-15}"
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ; winpath() { cygpath -w "$1"; } ;;
@@ -118,8 +124,14 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
 
   # The repo's own dependencies, resolved by its own build, so its sources actually attribute.
   # Without this the model is full of error types and every assertion below weakens.
+  #
+  # mdep.regenerateFile is not optional. Without it dependency:build-classpath compares the
+  # classpath it computed against the output file and reports "No changes found" - exiting 0
+  # while writing nothing. On a warm machine the file is already there and everything looks
+  # fine; on a cold CI runner it is not, and the compile silently ran with no classpath at all.
   if [ ! -s "$dir/.corpus-cp" ]; then
     ( cd "$dir" && mvn -q -f "$pom" dependency:build-classpath \
+        -Dmdep.regenerateFile=true \
         "-Dmdep.outputFile=$dir/.corpus-cp" >"$dir/.corpus-mvn.log" 2>&1 ) || true
   fi
   dep_cp=$(cat "$dir/.corpus-cp" 2>/dev/null || printf '')
@@ -172,6 +184,25 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
   repos_run=$((repos_run + 1))
   total_visited=$((total_visited + visited))
 
+  # Assertion 0, and the one that matters most for keeping the rest honest: the control has to
+  # compile. Comparing the treatment against the control is what stops a broken repo being
+  # blamed on VibeTags, but it also means a repo that cannot compile *at all* passes assertions
+  # 1 and 2 trivially, both sides failing identically, while the model behind assertions 3 and 4
+  # is full of error types. That is not a corpus member, it is a vacuous pass.
+  #
+  # This is not hypothetical: dependency:build-classpath exited 0 without writing a classpath on
+  # a cold CI runner, jimfs compiled with no dependencies, and the run reported 100 diagnostics
+  # on each side and carried on.
+  if [ "$ctrl_exit" -ne 0 ]; then
+    echo "FAIL: $name does not compile on its own, so nothing below it means anything." >&2
+    echo "      Every assertion here is relative to this control. Fix the corpus member -" >&2
+    echo "      classpath resolution, source root, or the pinned SHA - rather than the code." >&2
+    echo "      resolved classpath: $(wc -c < "$dir/.corpus-cp" 2>/dev/null || echo 0) bytes" >&2
+    tail -5 "$dir/.corpus-mvn.log" 2>/dev/null >&2
+    grep -E ": error:" "$dir/.corpus-ctrl.log" | head -5 >&2
+    status=1
+    continue
+  fi
   if [ "$ctrl_exit" -ne "$vt_exit" ]; then
     echo "FAIL: $name exits $vt_exit with VibeTags and $ctrl_exit without it." >&2
     echo "      Adding VibeTags to a build must not change whether it succeeds." >&2
@@ -214,11 +245,19 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
   # ---------------------------------------------------------------------------------------
   optin="$dir/.corpus-optin-root"
   rm -rf "$optin" "$dir/.corpus-optin-classes"
-  mkdir -p "$optin/.claude/rules" "$dir/.corpus-optin-classes"
+  # Three platforms, aggregate and granular. Claude and Gemini both have a granular directory;
+  # Codex has none, so it gets its aggregate only.
+  mkdir -p "$optin/.claude/rules" "$optin/.gemini/rules" "$dir/.corpus-optin-classes"
   # File presence is the opt-in. Empty files, exactly as a consumer would create them.
   : > "$optin/CLAUDE.md"
   : > "$optin/GEMINI.md"
   : > "$optin/.vibetags-locks"
+  # AGENTS.md is the exception, and the exception is invariant 4: it is written only as the sole
+  # AI config file, or when it already carries a marker pair. Opting Codex in alongside Claude
+  # and Gemini therefore means seeding the pair, which is exactly what a consumer does. Created
+  # empty it would be dropped from the active set, silently, and the corpus would be asserting
+  # that Codex works while never generating a byte of it.
+  printf '%s\n%s\n' '<!-- VIBETAGS-START -->' '<!-- VIBETAGS-END -->' > "$optin/AGENTS.md"
 
   ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
   # tr -d: Python on Windows turns \n into \r\n on stdout, and a trailing CR in the element
@@ -232,7 +271,26 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
     continue
   fi
 
+  # The showcase: every level a guardrail attaches to, in a package of its own under the repo's
+  # source root, compiled with the repo's classpath and compiler settings. Annotating real
+  # third-party elements (above) proves VibeTags handles their signatures; this proves it renders
+  # the whole annotation surface, which no third-party repo would ever contain.
+  showcase_pkg="vibetagscorpus"
+  showcase_dir="$dir/$src/$showcase_pkg"
+  mkdir -p "$showcase_dir"
+  sed "s/__PACKAGE__/$showcase_pkg/g" "$ROOT/corpus/showcase/CorpusShowcase.java.tmpl" \
+    > "$showcase_dir/CorpusShowcase.java"
+  sed "s/__PACKAGE__/$showcase_pkg/g" "$ROOT/corpus/showcase/package-info.java.tmpl" \
+    > "$showcase_dir/package-info.java"
+
   ann_jar=$(ls "$HOME"/.m2/repository/se/deversity/vibetags/vibetags-annotations/"$VERSION"/vibetags-annotations-"$VERSION".jar 2>/dev/null | head -1)
+  if [ ! -f "$ann_jar" ]; then
+    echo "FAIL: vibetags-annotations $VERSION is not in the local repository." >&2
+    echo "      The showcase cannot compile without it; run 'mvn install' in vibetags-annotations/." >&2
+    status=1
+    rm -rf "$showcase_dir"
+    continue
+  fi
   optin_cp="$(winpath "$ann_jar")"
   [ -n "$dep_cp" ] && optin_cp="$optin_cp$SEP$dep_cp"
 
@@ -244,6 +302,7 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
       -d "$(winpath "$dir/.corpus-optin-classes")" @.corpus-sources-optin ) \
       > "$dir/.corpus-optin.log" 2>&1
   optin_exit=$?
+  rm -rf "$showcase_dir"
   ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
 
   if [ "$optin_exit" -ne 0 ]; then
@@ -255,18 +314,99 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
 
   claude_bytes=$(wc -c < "$optin/CLAUDE.md" | tr -d ' ')
   gemini_bytes=$(wc -c < "$optin/GEMINI.md" | tr -d ' ')
+  agents_bytes=$(wc -c < "$optin/AGENTS.md" | tr -d ' ')
   locks_members=$(grep -c '"type":"locked"' "$optin/.vibetags-locks" 2>/dev/null || true)
-  rule_files=$(find "$optin/.claude/rules" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+  claude_rules=$(find "$optin/.claude/rules" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+  gemini_rules=$(find "$optin/.gemini/rules" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
-  # Assertion 5: opting in actually produces content.
-  if [ "$claude_bytes" -lt 1 ] || [ "$gemini_bytes" -lt 1 ]; then
-    echo "FAIL: $name opted in and got CLAUDE.md=$claude_bytes bytes, GEMINI.md=$gemini_bytes." >&2
-    echo "      A platform file that exists is an opt-in and must be written." >&2
+  # Assertion 5: every opted-in platform produces content. Checked per platform rather than in
+  # aggregate: a renderer can be dropped from the registry and the other two will happily cover
+  # for it in any total.
+  for pf in CLAUDE.md GEMINI.md AGENTS.md; do
+    if [ ! -s "$optin/$pf" ]; then
+      echo "FAIL: $name opted into $pf and it came back empty." >&2
+      echo "      A platform file that exists on disk is the opt-in signal and must be written." >&2
+      status=1
+    fi
+  done
+  # Codex needs its own check: AGENTS.md was seeded with a marker pair, so "not empty" is true
+  # before VibeTags runs at all. What matters is that something landed between the markers.
+  if [ "$agents_bytes" -le 46 ]; then
+    echo "FAIL: $name produced an AGENTS.md of $agents_bytes bytes, which is the seeded marker" >&2
+    echo "      pair and nothing else. Codex was dropped from the active set rather than written." >&2
     status=1
   fi
-  # Assertion 6: the marker pair is there, which is what protects hand-authored content.
-  if ! grep -q "VIBETAGS-START" "$optin/CLAUDE.md" 2>/dev/null; then
-    echo "FAIL: $name produced a CLAUDE.md with no VIBETAGS-START marker." >&2
+
+  # Assertion 6: the marker pair is present in every aggregate. The markers are the whole of the
+  # promise that hand-authored content outside them survives.
+  for pf in CLAUDE.md GEMINI.md AGENTS.md; do
+    if ! grep -q "VIBETAGS-START" "$optin/$pf" 2>/dev/null; then
+      echo "FAIL: $name produced a $pf with no VIBETAGS-START marker." >&2
+      status=1
+    fi
+  done
+
+  # Assertion 6b: both granular directories were written. Opting a directory in and getting
+  # nothing back is the failure mode that looks exactly like "this project has no rules".
+  if [ "$claude_rules" -lt 1 ] || [ "$gemini_rules" -lt 1 ]; then
+    echo "FAIL: $name opted into granular rules and got $claude_rules Claude / $gemini_rules Gemini files." >&2
+    status=1
+  fi
+
+  # Assertion 6c: the tier split, which is invariant 6 checked on somebody else's code.
+  #
+  # With a granular directory opted in, the aggregate keeps the safety buckets inline and
+  # replaces everything else with a pointer. So @AIPrivacy's reason must still be in CLAUDE.md,
+  # and @AIContract's must not - it belongs in the rules directory now. Getting this backwards
+  # in either direction is a real defect: safety guardrails that only load when the agent opens
+  # the file have become comments, and verbose ones that stay inline are the context bloat the
+  # tier model exists to prevent.
+  if ! grep -q "FIELD-PRIVACY" "$optin/CLAUDE.md" 2>/dev/null; then
+    echo "FAIL: $name dropped a safety-tier guardrail (@AIPrivacy) from the aggregate." >&2
+    echo "      Safety buckets stay inline even when the granular directory is opted in." >&2
+    status=1
+  fi
+  if grep -q "METHOD-CONTRACT" "$optin/CLAUDE.md" 2>/dev/null; then
+    echo "FAIL: $name kept a non-safety guardrail (@AIContract) inline in the aggregate." >&2
+    echo "      With granular opted in the aggregate collapses to a scoped-rules index." >&2
+    status=1
+  fi
+  if ! grep -rq "METHOD-CONTRACT" "$optin/.claude/rules" 2>/dev/null; then
+    echo "FAIL: $name moved @AIContract out of the aggregate but not into the rules directory." >&2
+    echo "      That guardrail now reaches nobody at all, which is worse than leaving it inline." >&2
+    status=1
+  fi
+
+  # Assertion 6d: the parameter level survived. It is the finest addressing VibeTags produces
+  # and the only level a hand-written rules file cannot express, so it is also the one whose
+  # loss would be least likely to be noticed.
+  if ! grep -rq "PARAM-LOADBEARING" "$optin/.claude/rules" 2>/dev/null; then
+    echo "FAIL: $name lost the parameter-level guardrail (@AILoadBearing on a parameter)." >&2
+    status=1
+  fi
+  # Assertion 6e: the package level, which has no owning member to hang off.
+  if ! grep -rq "PACKAGE-SECURE" "$optin/CLAUDE.md" 2>/dev/null; then
+    echo "FAIL: $name lost the package-level guardrail (@AISecure on package-info.java)." >&2
+    status=1
+  fi
+
+  # Assertion 6f: the richness floor. Everything above names one guardrail each, so a change
+  # that quietly stopped rendering half the annotation surface would still pass them. This
+  # counts how many of the showcase's markers reached any generated file and refuses to let
+  # that number fall. Raise it when the showcase grows; never lower it to make a run green.
+  showcase_hits=$(grep -rhoE "(PACKAGE|FIELD|METHOD|PARAM|NESTED|CONSTRUCTOR)-[A-Z]+" \
+                    "$optin/CLAUDE.md" "$optin/GEMINI.md" "$optin/AGENTS.md" \
+                    "$optin/.claude/rules" "$optin/.gemini/rules" 2>/dev/null \
+                  | sort -u | wc -l | tr -d ' ')
+  if [ "$showcase_hits" -lt "$SHOWCASE_FLOOR" ]; then
+    echo "FAIL: $name rendered $showcase_hits of the showcase's guardrails, floor is $SHOWCASE_FLOOR." >&2
+    echo "      Something stopped reaching the generated files. Missing:" >&2
+    comm -23 <(grep -ohE "(PACKAGE|FIELD|METHOD|PARAM|NESTED|CONSTRUCTOR)-[A-Z]+" \
+                 "$ROOT/corpus/showcase/CorpusShowcase.java.tmpl" \
+                 "$ROOT/corpus/showcase/package-info.java.tmpl" | sort -u) \
+              <(grep -rhoE "(PACKAGE|FIELD|METHOD|PARAM|NESTED|CONSTRUCTOR)-[A-Z]+" \
+                 "$optin/CLAUDE.md" "$optin/GEMINI.md" "$optin/AGENTS.md" \
+                 "$optin/.claude/rules" "$optin/.gemini/rules" 2>/dev/null | sort -u) >&2
     status=1
   fi
   # Assertion 7: every annotated element reaches the file. Keyed on the unique reason string
@@ -308,7 +448,7 @@ EOF
 
   printf "%-16s %-7s %-18s %-9s %-8s %-9s %s\n" \
     "  └ opt-in" "" "exit=$optin_exit" "CLAUDE=$claude_bytes" "locks=$locks_members" \
-    "rules=$rule_files" "$(printf '%s' "$targets" | wc -l | tr -d ' ') annotated"
+    "rules=$claude_rules/$gemini_rules" "$(printf '%s' "$targets" | wc -l | tr -d ' ') annotated"
 done < "$MANIFEST"
 
 echo

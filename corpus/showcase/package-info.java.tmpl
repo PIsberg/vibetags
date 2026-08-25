@@ -1,0 +1,15 @@
+/**
+ * The package level, which is its own element kind and its own compilation unit.
+ *
+ * <p>Thirteen of the annotations accept {@code ElementType.PACKAGE}, and a package-level guardrail
+ * covers every class underneath it, so a stale one misdescribes more code than any other kind.
+ * It is also the only level that has no member to hang off, which makes it the one most easily
+ * dropped by a renderer that assumes every guardrail has an owning type.
+ */
+@AIArchitecture(belongsTo = "corpus showcase PACKAGE-ARCHITECTURE",
+                cannotReference = {"corpus showcase forbidden layer"})
+@AISecure(aspect = "corpus showcase PACKAGE-SECURE")
+package __PACKAGE__;
+
+import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.annotations.AISecure;
