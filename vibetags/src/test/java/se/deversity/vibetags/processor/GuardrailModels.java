@@ -61,6 +61,34 @@ public final class GuardrailModels {
         return builder.build();
     }
 
+    /**
+     * The same model with every <em>optional</em> member left at its unset value: strings empty,
+     * booleans false, numbers zero, arrays empty, and no resolved type members.
+     *
+     * <p>Almost every annotation has one required member and several optional ones, and almost
+     * every formatter reads an optional one through a ternary — {@code reason.isEmpty() ? "" : ...}
+     * — repeated once per platform. {@link #everyAnnotation} only ever takes the populated side of
+     * those, so the branch that runs when a user writes the bare {@code @AISecure} was the one
+     * nothing exercised, on every formatter at once. That is the common way the annotation is
+     * actually written.
+     *
+     * <p>Enums have no unset value, so this fixture answers with the <em>last</em> constant where
+     * {@link #everyAnnotation} answers with the first: the two together cover both ends of the
+     * switch a formatter writes over an enum member.
+     */
+    public static GuardrailModel everyAnnotationWithMembersUnset() {
+        GuardrailModel.Builder builder = GuardrailModel.builder();
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            builder.add(type, unsetElement(type));
+        }
+        return builder.build();
+    }
+
+    /** The fixture element for one annotation type with every optional member unset. */
+    public static TaggedElement elementWithMembersUnset(Class<? extends Annotation> type) {
+        return unsetElement(type);
+    }
+
     /** An instance of {@code type} answering every member with a value {@link #member} chose. */
     @SuppressWarnings("unchecked")
     private static <A extends Annotation> A instance(Class<A> type) {
@@ -74,6 +102,87 @@ public final class GuardrailModels {
                 case "toString" -> "@" + type.getName() + "(fixture)";
                 default -> member(method);
             });
+    }
+
+    /** An instance of {@code type} answering every member with its unset value. */
+    @SuppressWarnings("unchecked")
+    private static <A extends Annotation> A unsetInstance(Class<A> type) {
+        return (A) Proxy.newProxyInstance(
+            type.getClassLoader(),
+            new Class<?>[]{type},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "annotationType" -> type;
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == (args == null ? null : args[0]);
+                case "toString" -> "@" + type.getName() + "(unset)";
+                default -> unsetMember(method);
+            });
+    }
+
+    /** Binds the wildcard for {@link #everyAnnotationWithMembersUnset}. */
+    private static <A extends Annotation> TaggedElement unsetElementFor(Class<A> type) {
+        String qualified = marker(type);
+        String simple = qualified.substring(qualified.lastIndexOf('.') + 1);
+        // No .typeMember("replacement", ...): an unresolved Class member is what "unset" means for
+        // AISunset, and the formatter has to fall back rather than print an empty replacement.
+        return TaggedElement.builder(qualified)
+            .names(qualified, simple, qualified, qualified)
+            .kind(ElementTag.CLASS)
+            .signature(qualified)
+            .annotation(type, unsetInstance(type))
+            .build();
+    }
+
+    private static TaggedElement unsetElement(Class<? extends Annotation> type) {
+        return unsetElementFor(type);
+    }
+
+    /**
+     * The unset value for one annotation member: what the compiler hands a formatter when the user
+     * writes the annotation bare. Enums answer with the last constant, not the first — see
+     * {@link #everyAnnotationWithMembersUnset}.
+     */
+    private static Object unsetMember(Method method) {
+        Class<?> returnType = method.getReturnType();
+        if (returnType == String.class) {
+            return "";
+        }
+        if (returnType == boolean.class) {
+            return false;
+        }
+        if (returnType == int.class) {
+            return 0;
+        }
+        if (returnType == long.class) {
+            return 0L;
+        }
+        if (returnType == Class.class) {
+            Object declared = method.getDefaultValue();
+            return declared != null ? declared : Object.class;
+        }
+        if (returnType.isEnum()) {
+            return lastConstant(returnType);
+        }
+        if (returnType.isArray()) {
+            return Array.newInstance(returnType.getComponentType(), 0);
+        }
+        Object declared = method.getDefaultValue();
+        if (declared != null) {
+            return declared;
+        }
+        throw new IllegalStateException(
+            "No unset fixture value for " + method.getDeclaringClass().getSimpleName()
+                + "." + method.getName() + "() of type " + returnType
+                + " - add a case to GuardrailModels.unsetMember");
+    }
+
+    /** The enum's last constant, so the two fixtures between them reach both ends of a switch. */
+    private static Object lastConstant(Class<?> enumType) {
+        Object[] constants = enumType.getEnumConstants();
+        if (constants.length == 0) {
+            throw new IllegalStateException(enumType + " has no constants");
+        }
+        return constants[constants.length - 1];
     }
 
     /** Binds the wildcard, so {@code annotation(Class<A>, A)} sees one type variable and not two captures. */
