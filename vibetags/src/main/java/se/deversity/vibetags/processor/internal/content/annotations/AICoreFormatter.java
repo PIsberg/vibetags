@@ -26,7 +26,10 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <sensitivity>").append(Escape.xml(sensitivity)).append("</sensitivity>\n      <note>").append(Escape.xml(note)).append("</note>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("sensitivity", sensitivity))
+                    .append(CommonFormatterHelper.element("note", note))
+                    .append("    </element>\n");
                 break;
             case CODEX:
                 sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append('\n');
@@ -45,10 +48,14 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Sensitivity", sensitivity))
+                    .append(CommonFormatterHelper.bullet("Note", note)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### CORE FUNCTIONALITY: ").append(className).append("\n- **Sensitivity**: ").append(sensitivity).append("\n- **Note**: ").append(note).append("\n\n");
+                sb.append("#### CORE FUNCTIONALITY: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Sensitivity", sensitivity))
+                    .append(CommonFormatterHelper.bullet("Note", note)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');

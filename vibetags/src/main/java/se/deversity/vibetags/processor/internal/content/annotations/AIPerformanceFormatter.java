@@ -25,10 +25,12 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - ").append(constraint).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <constraint>").append(Escape.xml(constraint)).append("</constraint>\n    </element>\n");
+                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("constraint", constraint))
+                    .append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(constraint).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, constraint));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("`: ").append(constraint).append('\n');
@@ -44,10 +46,12 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(constraint).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Constraint**: ").append(constraint).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Constraint", constraint)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n- **Constraint**: ").append(constraint).append("\n\n");
+                sb.append("#### PERFORMANCE CONSTRAINTS: ").append(className).append("\n- **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.\n")
+                    .append(CommonFormatterHelper.bullet("Constraint", constraint)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(constraint).append('\n');

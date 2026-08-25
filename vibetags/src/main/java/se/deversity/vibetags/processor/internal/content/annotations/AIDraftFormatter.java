@@ -25,10 +25,12 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <task path=\"").append(Escape.xml(className)).append("\">\n      <instructions>").append(Escape.xml(instructions)).append("</instructions>\n    </task>\n");
+                sb.append("    <task path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("instructions", instructions))
+                    .append("    </task>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(instructions).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, instructions));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
@@ -44,10 +46,12 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(instructions).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Instructions**: ").append(instructions).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Instructions", instructions)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### DRAFT/TODO: ").append(className).append("\n- **Instruction**: ").append(instructions).append("\n\n");
+                sb.append("#### DRAFT/TODO: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Instruction", instructions)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: ").append(instructions).append('\n');

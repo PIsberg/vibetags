@@ -106,8 +106,17 @@
   <!-- ==================================================================================
        Find Security Bugs (findsecbugs-plugin). Escaped interpolation is NOT excluded here:
        Escape.xml / Escape.json / Escape.tomlMultiline and CommonFormatterHelper.claudeReason
-       are declared as sanitizers in findsecbugs-taint-config.txt, so POTENTIAL_XML_INJECTION
-       stays live and an unescaped append into the CLAUDE.md XML block still fails the build.
+       and .element are declared as sanitizers in findsecbugs-taint-config.txt, so
+       POTENTIAL_XML_INJECTION stays live and an unescaped append into the CLAUDE.md XML block
+       still fails the build.
+
+       On .element specifically: it returns "<tag>" + Escape.xml(value) + "</tag>", so its
+       value argument is sanitized on every path. Its tag argument is a string literal at
+       every call site and names the element, not its content — if that ever stops being
+       true, the sanitizer declaration stops being true with it and this note is the place
+       that says so. The detector flagged AITestDrivenFormatter the moment the escaping moved
+       from the call site into the helper, which is the gate working: it could no longer see
+       a sanitizer, so it assumed there was none.
        ================================================================================== -->
 
   <!-- CRLF_INJECTION_LOGS: mitigated centrally rather than per call site. The Logback

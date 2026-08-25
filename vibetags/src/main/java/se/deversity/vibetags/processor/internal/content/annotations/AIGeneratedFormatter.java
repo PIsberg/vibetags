@@ -36,7 +36,7 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append("      <from>").append(Escape.xml(from)).append("</from>\n");
+                    .append(CommonFormatterHelper.element("from", from));
                 if (!editInstead.isEmpty()) {
                     sb.append("      <edit-instead>").append(Escape.xml(editInstead)).append("</edit-instead>\n");
                 }
@@ -72,8 +72,8 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### GENERATED: ").append(className).append('\n')
-                  .append("- **Source**: ").append(from).append('\n')
-                  .append("- **Edit instead**: ").append(target).append('\n')
+                  .append(CommonFormatterHelper.bullet("Source", from))
+                  .append(CommonFormatterHelper.bullet("Edit instead", target))
                   .append(regenerateWith.isEmpty() ? "" : "- **Regenerate with**: " + regenerateWith + "\n")
                   .append("- **Rule**: Never hand-edit. Change the source and regenerate.\n\n");
                 break;

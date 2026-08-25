@@ -29,13 +29,17 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <sanitization_types>").append(Escape.xml(typeList)).append("</sanitization_types>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("sanitization_types", typeList))
+                    .append("    </file>\n");
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Sanitization Requirement**: ").append(typeList).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Sanitization Requirement", typeList)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### INPUT SANITIZATION: ").append(className).append("\n- **Required Filters**: ").append(typeList).append("\n\n");
+                sb.append("#### INPUT SANITIZATION: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Required Filters", typeList)).append('\n');
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (sanitized): ").append(summary).append('\n');

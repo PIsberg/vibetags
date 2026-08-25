@@ -41,7 +41,7 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
+                sb.append(CommonFormatterHelper.codexBullet(className, summary.toString()));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("` - ").append(summary).append('\n');
@@ -65,7 +65,8 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n- **Details**: ").append(summary).append("\n\n");
+                sb.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n")
+                    .append(CommonFormatterHelper.bullet("Details", summary.toString())).append('\n');
                 break;
             case WINDSURF:
                 sb.append("* `").append(className).append("` (observability) - ").append(summary).append('\n');

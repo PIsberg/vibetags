@@ -25,13 +25,20 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <temporary_expiration>").append(Escape.xml(expiresOn)).append("</temporary_expiration>\n      <temporary_reason>").append(Escape.xml(reason)).append("</temporary_reason>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("temporary_expiration", expiresOn))
+                    .append(CommonFormatterHelper.element("temporary_reason", reason))
+                    .append("    </file>\n");
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Temporal Expiration**: ").append(expiresOn).append("\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Temporal Expiration", expiresOn))
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### TEMPORARY WORKAROUND: ").append(className).append("\n- **Expires On**: ").append(expiresOn).append("\n- **Reason**: ").append(reason).append("\n\n");
+                sb.append("#### TEMPORARY WORKAROUND: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Expires On", expiresOn))
+                    .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (temporary): ").append(summary).append('\n');

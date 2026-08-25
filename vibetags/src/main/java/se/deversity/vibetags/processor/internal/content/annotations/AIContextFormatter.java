@@ -26,7 +26,10 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("`\n  * Focus: ").append(focus).append("\n  * Avoid: ").append(avoids).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <focus>").append(Escape.xml(focus)).append("</focus>\n      <avoids>").append(Escape.xml(avoids)).append("</avoids>\n    </file>\n");
+                sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n")
+                    .append(CommonFormatterHelper.element("focus", focus))
+                    .append(CommonFormatterHelper.element("avoids", avoids))
+                    .append("    </file>\n");
                 break;
             case CODEX:
                 sb.append("- `").append(className).append("`: Focus on ").append(focus).append(". Avoid ").append(avoids).append(".\n");
@@ -45,10 +48,14 @@ public final class AIContextFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Focus**: ").append(focus).append("\n- **Avoid**: ").append(avoids).append("\n\n");
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Focus", focus))
+                    .append(CommonFormatterHelper.bullet("Avoid", avoids)).append('\n');
                 break;
             case AIDER_CONVENTIONS:
-                sb.append("#### CONTEXT: ").append(className).append("\n- **Focus**: ").append(focus).append("\n- **Avoid**: ").append(avoids).append("\n\n");
+                sb.append("#### CONTEXT: ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Focus", focus))
+                    .append(CommonFormatterHelper.bullet("Avoid", avoids)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append("`: Focus - ").append(focus).append(". Avoid - ").append(avoids).append('\n');

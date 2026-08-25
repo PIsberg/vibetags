@@ -65,9 +65,12 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Must stay in sync with**:\n");
-                for (String mirror : keepInSync.mirrors()) {
-                    sb.append("  - ").append(mirror).append('\n');
+                sb.append("### ").append(className).append('\n');
+                if (keepInSync.mirrors().length > 0) {
+                    sb.append("- **Must stay in sync with**:\n");
+                    for (String mirror : keepInSync.mirrors()) {
+                        sb.append("  - ").append(mirror).append('\n');
+                    }
                 }
                 if (!reason.isEmpty()) {
                     sb.append("- **Reason**: ").append(reason).append('\n');
@@ -79,7 +82,7 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### KEEP IN SYNC: ").append(className).append('\n')
-                  .append("- **Mirrors**: ").append(mirrors).append('\n')
+                  .append(CommonFormatterHelper.bullet("Mirrors", mirrors))
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n")
                   .append("- **Enforced by**: ")
                   .append(enforcedBy.isEmpty() ? "nothing — verify by hand" : enforcedBy).append('\n')

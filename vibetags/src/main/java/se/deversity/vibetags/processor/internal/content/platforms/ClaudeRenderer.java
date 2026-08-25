@@ -422,11 +422,18 @@ public final class ClaudeRenderer implements PlatformRenderer {
         if (model.audit().isEmpty()) {
             return;
         }
-        StringBuilder sec = new StringBuilder("  <audit_requirements>\n");
+        StringBuilder body = new StringBuilder();
         for (TaggedElement e : model.audit()) {
-            FormatterRegistry.audit().format(e, sec, Platform.CLAUDE);
+            FormatterRegistry.audit().format(e, body, Platform.CLAUDE);
         }
-        sec.append("  </audit_requirements>\n");
+        // A bare @AIAudit carries no checkFor() list, so the formatter contributes nothing. Emitting
+        // the wrapper anyway leaves an empty <audit_requirements> and a <rule> pointing at it — the
+        // agent is told to consult a list that is not there.
+        if (body.isEmpty()) {
+            return;
+        }
+        StringBuilder sec = new StringBuilder("  <audit_requirements>\n");
+        sec.append(body).append("  </audit_requirements>\n");
         sb.append('\n').append(sec)
             .append("\n<rule>\n  If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.\n</rule>\n");
     }

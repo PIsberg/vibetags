@@ -34,7 +34,7 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append("      <forbidden>").append(Escape.xml(forbidden)).append("</forbidden>\n");
+                    .append(CommonFormatterHelper.element("forbidden", forbidden));
                 if (!useInstead.isEmpty()) {
                     sb.append("      <use-instead>").append(Escape.xml(useInstead)).append("</use-instead>\n");
                 }
@@ -60,7 +60,8 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Banned here**: ").append(forbidden).append('\n');
+                sb.append("### ").append(className).append('\n')
+                    .append(CommonFormatterHelper.bullet("Banned here", forbidden));
                 if (!useInstead.isEmpty()) {
                     sb.append("- **Sanctioned route**: ").append(useInstead).append('\n');
                 }
@@ -71,7 +72,7 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### BANNED APIs: ").append(className).append('\n')
-                  .append("- **Forbidden**: ").append(forbidden).append('\n')
+                  .append(CommonFormatterHelper.bullet("Forbidden", forbidden))
                   .append(useInstead.isEmpty() ? "" : "- **Use instead**: " + useInstead + "\n")
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n")
                   .append("- **Rule**: These compile but are prohibited at this element.\n\n");

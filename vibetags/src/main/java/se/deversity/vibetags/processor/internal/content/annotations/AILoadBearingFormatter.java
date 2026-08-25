@@ -34,7 +34,7 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append("      <invariant>").append(Escape.xml(invariant)).append("</invariant>\n");
+                    .append(CommonFormatterHelper.element("invariant", invariant));
                 if (!breaksIf.isEmpty()) {
                     sb.append("      <breaks-if>").append(Escape.xml(breaksIf)).append("</breaks-if>\n");
                 }
@@ -61,7 +61,7 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- This code is deliberate, not accidental.\n")
-                    .append("- **Invariant**: ").append(invariant).append('\n');
+                    .append(CommonFormatterHelper.bullet("Invariant", invariant));
                 if (!breaksIf.isEmpty()) {
                     sb.append("- **Breaks if changed**: ").append(breaksIf).append('\n');
                 }
@@ -72,7 +72,7 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### LOAD-BEARING: ").append(className).append('\n')
-                  .append("- **Invariant**: ").append(invariant).append('\n')
+                  .append(CommonFormatterHelper.bullet("Invariant", invariant))
                   .append(breaksIf.isEmpty() ? "" : "- **Breaks if changed**: " + breaksIf + "\n")
                   .append(suppressAudit ? "- **Audit**: Not a defect. Do not flag.\n" : "")
                   .append("- **Rule**: Refactor freely, but preserve the invariant.\n\n");
