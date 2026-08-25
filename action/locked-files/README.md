@@ -74,6 +74,20 @@ That matters in a repository with more than one project in it. The guard used to
 path as a suffix of the other, so two reactors with a module at the same relative path aliased
 each other: one example's locks flagged another example's diff, measured at nine false violations.
 
+## Locks the diff introduces are exempt
+
+The same reasoning, at element granularity. Adding `@AILocked` to code that already exists is
+itself a change to the lines the lock now covers, so the range check flagged the very commit that
+introduced the lock, and the file-level exemption above did not help because the file was already
+there. Measured: the PR that locked `GuardrailAnnotations.ALL` and
+`TransitiveManifest.RESOURCE_PACKAGE` drew one violation each, for doing exactly what this project
+tells its users to do.
+
+A lock is compared by `(file, element)` against the base revision's `.vibetags-locks`, read through
+`git show`. A lock already present there is enforced as before. Stripping a lock is unaffected:
+that is the removed-`@AILocked`-line check, which reads the base side precisely because a stripped
+lock is absent from the regenerated report.
+
 ## Files the diff creates are exempt
 
 A file that did not exist at the base cannot have had its locked code touched, and the author of
