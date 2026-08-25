@@ -29,6 +29,20 @@ public final class AIContextFormatter implements AnnotationFormatter {
         String inline = CommonFormatterHelper.clause("Focus - ", focus)
                       + (focus.isEmpty() || avoids.isEmpty() ? "" : ". ")
                       + CommonFormatterHelper.clause("Avoid - ", avoids);
+        // Codex reads prose rather than the dashed form, and keeps its own wording: this arm
+        // renders "Focus on X. Avoid Y." Guarding the members must not reword it — AGENTS.md is
+        // generated through here, and rewording rewrites a committed file for no reason.
+        StringBuilder prose = new StringBuilder();
+        if (!focus.isEmpty()) {
+            prose.append("Focus on ").append(focus).append('.');
+        }
+        if (!avoids.isEmpty()) {
+            if (prose.length() > 0) {
+                prose.append(' ');
+            }
+            prose.append("Avoid ").append(avoids).append('.');
+        }
+        String codexProse = prose.toString();
 
         switch (platform) {
             case CURSOR:
@@ -42,7 +56,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
                     .append("    </file>\n");
                 break;
             case CODEX:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", inline)).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", codexProse)).append('\n');
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append('`').append(dashedFocus).append('\n');
