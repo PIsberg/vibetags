@@ -31,6 +31,7 @@ The current bank measures four rules that CI cannot otherwise see an agent break
 
 ```bash
 export ANTHROPIC_API_KEY=...   # hermetic runs cannot use stored logins
+(cd evals && npm ci) && export PATH="$PWD/evals/node_modules/.bin:$PATH"   # pinned CLI
 bash evals/run-instruction-evals.sh                 # all tasks, 3 trials each
 TRIALS=10 bash evals/run-instruction-evals.sh       # decision-grade run
 TASKS="locked-element" bash evals/run-instruction-evals.sh
@@ -81,6 +82,13 @@ variable under measurement is the committed instruction stack of this repository
 `AGENTS.md`, `GEMINI.md`, or `.claude/**` - the merge gate for instruction edits - and on
 manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the workflow
 reports SKIPPED, which is not a pass. Results upload as an artifact.
+
+The CLI itself is pinned: `evals/package.json` names the version and
+`evals/package-lock.json` carries an integrity hash per tarball, so CI installs it with
+`npm ci` and a moved or republished tarball fails the install rather than running. Any
+`claude` on `PATH` still works for a local run - the pin binds CI. Dependabot raises the
+version daily, which is what keeps the pin from freezing the CLI's flag surface away from
+the live API.
 
 ## Adding a task
 

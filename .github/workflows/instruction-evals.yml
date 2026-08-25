@@ -7,9 +7,10 @@
 # triggers on the instruction-file paths and manual dispatch, never on every commit.
 #
 # Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not
-# a pass. The claude CLI is installed at whatever version npm currently serves - a known,
-# accepted deviation from this repo's pin-everything rule, because the CLI's flag surface
-# must track the live API; the harness fails loudly (exit 2) if the flags drift.
+# a pass. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
+# so a run resolves the same integrity-checked tarballs every time instead of whatever npm
+# serves that day. The CLI's flag surface still has to track the live API, so Dependabot
+# raises the pin on its own schedule and the harness fails loudly (exit 2) if flags drift.
 
 name: Instruction Evals
 
@@ -70,9 +71,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.HAVE_KEY == 'true'
 
-      - name: Install the claude CLI
+      # `npm ci` against the committed lockfile, not `npm install -g`: the lockfile carries
+      # an integrity hash per tarball, so a compromised or moved republish fails the install
+      # instead of silently running. The version check is not decoration - npm can defer a
+      # package's postinstall, and this package's postinstall is what swaps the 500-byte
+      # placeholder for the native binary. Without the check that stub surfaces as a dozen
+      # identical trial failures later; with it, the job stops here.
+      - name: Install the claude CLI (pinned by evals/package-lock.json)
         if: env.HAVE_KEY == 'true'
-        run: npm install -g @anthropic-ai/claude-code
+        working-directory: evals
+        run: |
+          npm ci
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+          "$PWD/node_modules/.bin/claude" --version
 
       - name: Run the task bank
         if: env.HAVE_KEY == 'true'
