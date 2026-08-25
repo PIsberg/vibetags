@@ -75,8 +75,62 @@ class UnsetMemberRenderingTest {
     private static final Pattern EMPTY_XML_ELEMENT =
         Pattern.compile("<([a-zA-Z_][\\w-]*)>\\s*</\\1>");
 
+    /**
+     * The same defect in the shapes the two patterns above do not match: a bullet that ends on a
+     * separator with nothing after it, {@code * `Foo` - Reason:} or just {@code * `Foo` -}.
+     *
+     * <p>Scoped to list items on purpose. A bare line ending in {@code :} is ordinary YAML, and a
+     * line of dashes is an ordinary markdown rule; neither is this bug.
+     */
+    private static final Pattern DANGLING_BULLET_SEPARATOR =
+        Pattern.compile("(?m)^\\s*[-*]\\s.*\\S[ \\t]*[:\\-][ \\t]*$");
+
+    /** An empty code span — {@code Belongs to layer: ``} — where a member should have been. */
+    private static final Pattern EMPTY_CODE_SPAN = Pattern.compile("``");
+
+    /** An empty list — {@code Only callable by: []} — where members should have been. */
+    private static final Pattern EMPTY_BRACKETS = Pattern.compile("\\[\\]");
+
+    /** A label whose value is missing and whose punctuation closed over the hole: {@code Must not use: .} */
+    private static final Pattern LABEL_THEN_PUNCTUATION = Pattern.compile(":[ \\t]*[.,)]");
+
     static Stream<Platform> aggregatePlatforms() {
         return Stream.of(Platform.values()).filter(p -> !p.name().endsWith("_GRANULAR"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("aggregatePlatforms")
+    @DisplayName("an unset optional member leaves no dangling separator, empty span or empty list")
+    void unsetMembersLeaveNoDanglingText(Platform platform) {
+        String bare = PlatformRendererRegistry.getRenderer(platform)
+            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, CONTEXT);
+
+        List<String> dangling = new ArrayList<>();
+        collect(DANGLING_BULLET_SEPARATOR, bare, dangling);
+        collectLinesContaining(EMPTY_CODE_SPAN, bare, dangling);
+        collectLinesContaining(EMPTY_BRACKETS, bare, dangling);
+        collectLinesContaining(LABEL_THEN_PUNCTUATION, bare, dangling);
+
+        assertEquals(List.of(), dangling,
+            platform + " renders a member that was never set as a separator with nothing after "
+                + "it, an empty `` span, an empty [] list, or a label swallowed by its own "
+                + "punctuation. An annotation written bare must read as though the member does "
+                + "not exist, not as though its value went missing");
+    }
+
+    private static void collect(Pattern pattern, String rendered, List<String> into) {
+        for (Matcher m = pattern.matcher(rendered); m.find(); ) {
+            into.add(m.group().trim());
+        }
+    }
+
+    /** Reports the whole line, so a mid-line {@code ``} or {@code []} is identifiable. */
+    private static void collectLinesContaining(Pattern pattern, String rendered, List<String> into) {
+        for (String line : rendered.split("\n", -1)) {
+            if (pattern.matcher(line).find()) {
+                into.add(line.trim());
+            }
+        }
     }
 
     @ParameterizedTest(name = "{0}")

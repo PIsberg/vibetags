@@ -33,7 +33,7 @@ public final class AIExplainFormatter implements AnnotationFormatter {
                 sb.append("#### EXPLAIN RATIONALE: ").append(className).append("\n- **Complexity**: ").append(level.name()).append("\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (explain): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (explain)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -24,7 +24,12 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
         String mirrors = String.join(", ", keepInSync.mirrors());
         String reason = keepInSync.reason();
         String enforcedBy = keepInSync.enforcedBy();
-        String summary = "Editing this requires the same edit at: " + mirrors + "."
+        // With no mirrors named there is no "at:" to complete, but the warning that nothing
+        // enforces the agreement is still the point of the annotation, so it stays.
+        String sites = mirrors.isEmpty()
+            ? "This element is mirrored elsewhere."
+            : "Editing this requires the same edit at: " + mirrors + ".";
+        String summary = sites
                        + (reason.isEmpty() ? "" : " " + reason + ".")
                        + (enforcedBy.isEmpty()
                             ? " Nothing checks this automatically — a partial change desyncs silently."
@@ -33,7 +38,7 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -52,17 +57,17 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n');
@@ -89,14 +94,14 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                   .append("- **Rule**: Change all sites in the same commit, or none.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Keep in sync: editing ").append(Escape.json(className))
                   .append(" requires the same edit at ").append(Escape.json(mirrors)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (mirrored): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (mirrored)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

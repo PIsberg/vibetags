@@ -17,7 +17,9 @@ public final class AICallersOnlyFormatter implements AnnotationFormatter {
         String className = element.path();
         String[] value = callersOnly.value();
         String callers = String.join(", ", value);
-        String summary = "Only callable by: [" + callers + "]";
+        // "Only callable by: []" says the element is callable by nobody, which is not what a bare
+        // @AICallersOnly means — it means the author named no callers.
+        String summary = callers.isEmpty() ? "" : "Only callable by: [" + callers + "]";
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -38,7 +40,7 @@ public final class AICallersOnlyFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Allowed Callers", callers)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (callers limited): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (callers limited)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -54,6 +54,29 @@ final class CommonFormatterHelper {
     }
 
     /**
+     * {@code text} preceded by {@code separator}, or nothing at all when {@code text} is unset.
+     *
+     * <p>The counterpart to {@link #bullet} for the platforms that render a member inline rather
+     * than under a bold label. {@code "* `Foo`" + clause(" - ", reason)} keeps the separator and
+     * the value together, so a bare {@code @AILocked} renders as {@code * `Foo`} rather than
+     * {@code * `Foo` - } — a line that reads as though the reason went missing rather than as
+     * though it was never written. Pinned by {@code UnsetMemberRenderingTest}.
+     */
+    static String clause(String separator, CharSequence text) {
+        String value = text == null ? null : text.toString();
+        return (value == null || value.isBlank()) ? "" : separator + value;
+    }
+
+    /**
+     * A {@code "Label: value"} sentence preceded by {@code lead}, or nothing when the value is
+     * unset — the same rule as {@link #clause}, for the values that sit inside a summary sentence
+     * rather than at the end of a line.
+     */
+    static String detail(String lead, String label, String value) {
+        return (value == null || value.isBlank()) ? "" : lead + label + value;
+    }
+
+    /**
      * Renders the Codex bullet — the element's path in bold, then its summary — dropping the colon
      * along with the summary when there is none, so a bare annotation does not leave
      * {@code - **com.example.Foo**:} with nothing after it.
@@ -74,29 +97,32 @@ final class CommonFormatterHelper {
      */
     static boolean formatStandardPlatform(TaggedElement element, StringBuilder sb, Platform platform, String summary) {
         String className = element.path();
+        // Every arm below runs the summary through clause(), so an annotation whose summary is
+        // entirely made of unset members renders as the element alone rather than as the element
+        // plus a separator with nothing after it.
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(clause(" - ", summary)).append('\n');
                 return true;
             case CODEX:
                 sb.append(codexBullet(className, summary));
                 return true;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(clause(" - ", summary)).append('\n');
                 return true;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(clause(" - ", summary)).append('\n');
                 return true;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(clause(": ", summary)).append('\n');
                 return true;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(clause(": ", summary)).append('\n');
                 return true;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(clause(": ", summary)).append('\n');
                 return true;
             default:
                 return false;

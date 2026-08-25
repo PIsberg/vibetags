@@ -25,14 +25,17 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
         String regenerateWith = generated.regenerateWith();
         String editInstead = generated.editInstead();
         String target = editInstead.isEmpty() ? from : editInstead;
-        String summary = "Generated from `" + from + "`. Hand edits are overwritten — edit `"
-                       + target + "` instead"
+        // With no source named there is nothing to point an agent at, but "do not hand-edit this"
+        // is the guardrail and survives on its own.
+        String summary = (from.isEmpty() ? "Machine-generated." : "Generated from `" + from + "`.")
+                       + " Hand edits are overwritten"
+                       + (target.isEmpty() ? "" : " — edit `" + target + "` instead")
                        + (regenerateWith.isEmpty() ? "" : ", then run `" + regenerateWith + "`") + ".";
 
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
@@ -49,22 +52,25 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- Machine-generated from `").append(from).append("`.\n")
+                sb.append("### ").append(className).append('\n')
+                    .append(from.isEmpty()
+                        ? "- Machine-generated.\n"
+                        : "- Machine-generated from `" + from + "`.\n")
                     .append("- Hand edits are silently overwritten on the next regeneration.\n")
-                    .append("- Edit `").append(target).append("` instead.\n");
+                    .append(target.isEmpty() ? "" : "- Edit `" + target + "` instead.\n");
                 if (!regenerateWith.isEmpty()) {
                     sb.append("- Regenerate with: `").append(regenerateWith).append("`\n");
                 }
@@ -78,7 +84,7 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                   .append("- **Rule**: Never hand-edit. Change the source and regenerate.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Generated code: ").append(Escape.json(className)).append(" comes from ")
@@ -86,7 +92,7 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                   .append(" instead of the generated file.\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (generated): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (generated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

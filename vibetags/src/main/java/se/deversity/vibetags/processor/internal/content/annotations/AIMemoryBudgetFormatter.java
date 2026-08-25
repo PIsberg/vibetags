@@ -33,7 +33,7 @@ public final class AIMemoryBudgetFormatter implements AnnotationFormatter {
                 sb.append("#### MEMORY BUDGET: ").append(className).append("\n- **Policy**: ").append(policy.name()).append("\n\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (memory-budget): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (memory-budget)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

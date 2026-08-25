@@ -33,17 +33,17 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append(CommonFormatterHelper.codexBullet(className, instructions));
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             case QWEN:
                 sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(instructions).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -54,7 +54,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Instruction", instructions)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(instructions).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"instructions\": \"").append(Escape.json(instructions)).append("\"},\n");
@@ -63,7 +63,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("  - \"Implementation task for ").append(Escape.json(className)).append(": ").append(Escape.json(instructions)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (draft): ").append(instructions).append('\n');
+                sb.append("- `").append(className).append("` (draft)").append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             default:
                 break;
