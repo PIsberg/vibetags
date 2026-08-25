@@ -189,7 +189,10 @@ jacocoTestReport {
 
 pmd {
     consoleOutput = true
-    toolVersion = "7.26.0"
+    // Derived, never a literal. A literal here is a mirror of pmd.version in the parent, and
+    // dependabot bumps the parent alone - so every PMD bump arrived as a red
+    // BuildVersionParityTest that a human had to hand-fix before the PR could merge.
+    toolVersion = pomVersion('pmd.version')
     ignoreFailures = false
     ruleSetFiles = files("${projectDir}/../pmd-ruleset.xml")
 }
