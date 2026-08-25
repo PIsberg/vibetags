@@ -1,0 +1,151 @@
+package __PACKAGE__
+
+import se.deversity.vibetags.annotations.AIAudit
+import se.deversity.vibetags.annotations.AIBannedApi
+import se.deversity.vibetags.annotations.AIContext
+import se.deversity.vibetags.annotations.AIContract
+import se.deversity.vibetags.annotations.AICore
+import se.deversity.vibetags.annotations.AIGenerated
+import se.deversity.vibetags.annotations.AIIgnore
+import se.deversity.vibetags.annotations.AIImmutable
+import se.deversity.vibetags.annotations.AIInputSanitized
+import se.deversity.vibetags.annotations.AIKeepInSync
+import se.deversity.vibetags.annotations.AILoadBearing
+import se.deversity.vibetags.annotations.AILocked
+import se.deversity.vibetags.annotations.AIPerformance
+import se.deversity.vibetags.annotations.AIPrivacy
+import se.deversity.vibetags.annotations.AIPublicAPI
+import se.deversity.vibetags.annotations.AISecure
+import se.deversity.vibetags.annotations.AISecureLogging
+import se.deversity.vibetags.annotations.AITestDriven
+import se.deversity.vibetags.annotations.AIThreadSafe
+
+/**
+ * The Kotlin twin of `CorpusShowcase.java`, compiled inside a third-party Kotlin build by that
+ * project's own Gradle, through kapt.
+ *
+ * Two things here are Kotlin's and not Java's, and both are the reason this file exists rather
+ * than being a translation exercise:
+ *
+ * **Use-site targets.** A Kotlin property is a getter, a setter and possibly a backing field, so
+ * an annotation written bare on a property does not necessarily land where a Java author would
+ * expect. Every `@AI*` annotation declares Java targets, and the ones that only accept `FIELD`
+ * are written `@field:` here on purpose. Getting this wrong does not fail the build - it moves
+ * the guardrail onto a different element, or drops it - which is exactly the failure a fixture
+ * written by somebody who knew the answer would never catch.
+ *
+ * **No package level.** Kotlin has no `package-info.kt`, so the package row of the Java showcase
+ * has no counterpart. That is a real limitation of the Kotlin route and is asserted as one:
+ * the harness does not look for a package guardrail here.
+ *
+ * Injected by corpus/run-corpus-jvm.sh and reverted with `git checkout -- .` afterwards.
+ */
+@AIContext(
+    focus = "corpus kotlin showcase: type level, non-safety, belongs in the granular tier",
+    avoids = "asserting anything about the third-party code around it",
+)
+@AIPublicAPI
+class CorpusShowcase {
+
+    // ---- field level -------------------------------------------------------------------
+    //
+    // @field: is load-bearing. @AIPrivacy targets FIELD only; written bare on a property Kotlin
+    // has no property target to fall back to for a Java annotation, and the result depends on
+    // the annotation's target set rather than on what the author meant.
+
+    /** Safety tier: privacy stays inline in the aggregate. */
+    @field:AIPrivacy(reason = "corpus kotlin showcase FIELD-PRIVACY: PII must never be logged")
+    private var billingEmail: String? = null
+
+    /** Granular tier: a second field annotation that moves down. */
+    @field:AISecureLogging
+    private var authToken: String? = null
+
+    /** Granular tier: a performance budget on a plain field. */
+    @field:AIPerformance(
+        constraint = "corpus kotlin showcase FIELD-PERFORMANCE: read on every request",
+    )
+    private var tenantId: Long = 0
+
+    // ---- constructor level -------------------------------------------------------------
+    //
+    // Annotating a Kotlin constructor requires the `constructor` keyword, which is why a
+    // secondary constructor is used for the second overload: two constructors that must be
+    // addressed by their own parameter lists, as in the Java showcase.
+
+    @AILocked(
+        reason = "corpus kotlin showcase CONSTRUCTOR-LOCKED: initialisation order is load-bearing",
+    )
+    constructor()
+
+    @AIContract(reason = "corpus kotlin showcase CONSTRUCTOR-CONTRACT: callers depend on this shape")
+    constructor(seed: String) {
+        this.billingEmail = seed
+    }
+
+    // ---- method level, safety tier -----------------------------------------------------
+
+    @AILocked(reason = "corpus kotlin showcase METHOD-LOCKED: do not edit")
+    fun invoiceNumber(id: Long): Long = id
+
+    @AIAudit(checkFor = ["SQL injection", "path traversal"])
+    fun audited(query: String) {
+        check(query.isNotEmpty() || true)
+    }
+
+    @AISecure(aspect = "corpus kotlin showcase METHOD-SECURE")
+    fun secured() = Unit
+
+    @AIIgnore(reason = "corpus kotlin showcase METHOD-IGNORE: excluded from context")
+    fun ignored() = Unit
+
+    // ---- method level, granular tier, and the parameter level --------------------------
+
+    /**
+     * The parameter level is the finest addressing VibeTags produces, and under kapt it is also
+     * the one most exposed to the stub generator: a parameter name that does not survive into
+     * the stub cannot be addressed at all.
+     */
+    @AIContract(reason = "corpus kotlin showcase METHOD-CONTRACT: callers depend on this shape")
+    @AIPerformance(constraint = "corpus kotlin showcase METHOD-PERFORMANCE: no allocation in the loop")
+    fun render(
+        @AIInputSanitized(
+            AIInputSanitized.SanitizerType.SQL_INJECTION,
+            AIInputSanitized.SanitizerType.XSS,
+        )
+        customerNote: String,
+        @AILoadBearing(invariant = "corpus kotlin showcase PARAM-LOADBEARING: order matters here")
+        other: String,
+    ): String = customerNote + other
+
+    @AITestDriven(coverageGoal = 95)
+    fun tested() = Unit
+
+    @AIThreadSafe(note = "corpus kotlin showcase METHOD-THREADSAFE")
+    fun threadSafe() = Unit
+
+    @AILoadBearing(invariant = "corpus kotlin showcase METHOD-LOADBEARING: looks removable, is not")
+    fun loadBearing() = Unit
+
+    @AIKeepInSync(mirrors = ["corpus/showcase/CorpusShowcase.kt.tmpl"])
+    fun mirrored() = Unit
+
+    @AIBannedApi(forbidden = ["java.util.Date"], useInstead = "java.time.Instant")
+    fun bannedApis() = Unit
+
+    @AIGenerated(from = "corpus/showcase/CorpusShowcase.kt.tmpl")
+    fun generated() = Unit
+
+    // ---- nested type level -------------------------------------------------------------
+
+    /**
+     * A Kotlin nested class is static unless declared `inner`, which matches the Java showcase's
+     * `static final class` and keeps the two element paths comparable.
+     */
+    @AIImmutable(note = "corpus kotlin showcase NESTED-IMMUTABLE")
+    @AICore(sensitivity = "high", note = "corpus kotlin showcase NESTED-CORE")
+    class Inner {
+        @AILocked(reason = "corpus kotlin showcase NESTED-METHOD-LOCKED")
+        fun innerMethod() = Unit
+    }
+}

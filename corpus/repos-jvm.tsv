@@ -1,0 +1,29 @@
+# The JVM-language corpus: real Kotlin, Groovy and Scala that nobody wrote to suit VibeTags.
+#
+# Separate from repos.tsv because these are not compiled by javac. Each repository is built by
+# its own Gradle wrapper, twice, and the only difference between the two runs is
+# corpus/inject-vibetags.init.gradle. An init script is the supported way to add a plugin or a
+# dependency to a build you do not own, so nothing here edits a build file it did not write.
+#
+# Tab-separated. Lines starting with '#' are comments. Columns:
+#   name      directory name under the corpus cache
+#   url       clone URL
+#   sha       pinned commit. Never a branch: an upstream push must not be able to turn this
+#             repository's CI red for a reason nobody here changed.
+#   lang      kotlin | groovy | scala. Picks the showcase template and the assertions.
+#   module    Gradle project directory holding the source set; "." for a single-module build
+#   src       source root, relative to module
+#   task      compile task to run. Not `build`: tests and linters are the project's business,
+#             and a repository whose checkstyle dislikes an injected showcase would be reporting
+#             its own opinion rather than anything about VibeTags.
+#   licence   SPDX id, checked before adding. Nothing is vendored.
+#   why       what this repository contributes that the others do not
+#
+# Each entry was control-compiled on JDK 21 at its pinned SHA before being added. A member whose
+# own build does not work makes every assertion below it vacuous, which is the lesson assertion 0
+# in the Java corpus was written from.
+#
+#name	url	sha	lang	module	src	task	licence	why
+kotlin-obd-api	https://github.com/eltonvs/kotlin-obd-api.git	30014eb6e8cd35334ba8f7ea627500f6b1942ff5	kotlin	.	src/main/kotlin	compileKotlin	Apache-2.0	Plain kotlin("jvm") library, no Android and no multiplatform, so kapt applies the way USAGE.md documents it
+groovy-nf-boost	https://github.com/bentsherman/nf-boost.git	92ba0a18ad9808649c54d56c7af33a50b0efc098	groovy	.	src/main/groovy	compileGroovy	Apache-2.0	A Groovy library whose classes groovyc can turn into valid Java stubs, which four of the seven Groovy projects tried could not; see corpus/README.md
+scala-splain	https://github.com/tek/splain.git	60c92b5e6422738087a1ed65c70e41a9ebefbc27	scala	core	src/main/scala	:core:classes	MIT	One of very few Gradle-built Scala projects on a JDK 21 wrapper; :core:classes runs compileJava and compileScala, which is what makes the two-sided Scala assertion possible
