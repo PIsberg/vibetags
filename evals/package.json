@@ -1,0 +1,10 @@
+{
+  "name": "vibetags-evals",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pins the claude CLI used by evals/run-instruction-evals.sh so CI installs it with 'npm ci' against a committed lockfile of integrity hashes.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.245"
+  }
+}

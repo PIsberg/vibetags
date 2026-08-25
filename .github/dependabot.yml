@@ -19,8 +19,12 @@ updates:
         patterns:
           - "github/codeql-action*"
 
+  # evals/ holds the only npm manifest in the repo: the pinned claude CLI the instruction
+  # evals run on. This entry pointed at `/`, where no package.json has ever existed, so it
+  # produced nothing at all. Keeping it pointed at a real manifest is what stops the pin
+  # below from freezing the CLI at whatever version it was pinned to.
   - package-ecosystem: npm
-    directory: /
+    directory: /evals
     schedule:
       interval: daily
 
