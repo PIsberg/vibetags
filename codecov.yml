@@ -10,8 +10,14 @@ coverage:
   status:
     project:
       default:
-        target: 90%
-        threshold: 2%
+        # `auto` compares against the base commit rather than a number written here, so the
+        # gate is "this pull request may not lose coverage" rather than "coverage may fall to
+        # the floor somebody typed in 2026". The fixed 90% it replaced had drifted into slack:
+        # measured coverage was well above it, so a change could shed several points and still
+        # pass. See docs/TESTS.md, "Coverage and the fault paths", for what the remaining
+        # uncovered lines are and why they are not reachable from a test (#482).
+        target: auto
+        threshold: 1%
     patch:
       default:
         # @SuppressWarnings annotations have RetentionPolicy.SOURCE — they are

@@ -195,6 +195,47 @@ stop excluding the same one.
 | `CoreFlowsBddTest` (`e2e`) | Executes the Gherkin scenarios in `src/test/resources/features/` against a real compile; scenario-level bindings, and the file and the bindings must match exactly in both directions, so a scenario without a binding (or a binding without a scenario) is a red build |
 | `ProcessorAllocationBudgetTest` (`e2e`) | The inner-loop performance contract: compiling 100 annotated classes must stay inside a 768 MB per-thread allocation budget (3.04x the measured 264,955,400 bytes; wall-clock is deliberately not asserted, allocation is the stable metric) |
 
+## Coverage and the fault paths
+
+Measured on the full suite (`mvn test -Pe2e`, JaCoCo): **97.07% of lines** (261 missed of 8,894)
+and **90.58% of branches** (486 missed of 5,161). Codecov reports a lower blended figure because
+it counts a branch-partial line against you rather than as covered.
+
+What is left is not spread thinly. Six classes hold 143 of the 261 missed lines and 268 of the 486
+missed branches:
+
+| Class | missed lines | missed branches | what the lines are |
+|---|---:|---:|---|
+| `AIGuardrailProcessor` | 53 | 96 | write failures, `InterruptedException` / `ExecutionException` from the parallel write, sidecar save `IOException`, check-mode failure after generation threw |
+| `ModuleSidecar` | 32 | 83 | `AtomicMoveNotSupportedException`, unreadable directories, unreadable mtimes, move-retry exhaustion |
+| `TransitiveManifestReader` | 19 | 15 | `Trees.instance` throwing under a non-javac compiler |
+| `GuardrailFileWriter` | 17 | 32 | delete `IOException`, atomic-move fallback, unreadable scoped directory |
+| `SourcePositionResolver` | 12 | 22 | the no-Tree-API path and the reflective unwrapping of a build tool's `ProcessingEnvironment` |
+| `ModuleRootResolver` | 10 | 8 | a compiler whose `Elements` / `Filer` throws |
+
+Each of these needs a fault a test cannot cause: a filesystem that fails one specific write, a
+compiler with no Tree API, an executor task interrupted mid-flight. **Reaching them from JUnit
+means adding seams to production code** — an injectable `FileSystem`, a `Supplier<Trees>`, a hook
+on the write executor — which is permanent production surface on classes `CLAUDE.md` marks
+high-sensitivity, existing only so a test can fail it.
+
+The decision (#482) is to accept that and say so here rather than let it look like an oversight:
+
+- **The compiler-shaped half is already covered behaviourally**, without a seam. The
+  `ecj-degradation` CI leg compiles a fixture under a real ECJ and checks that the documented
+  degradation happens — that is `SourcePositionResolver` and `TransitiveManifestReader` doing
+  their job, verified even though JaCoCo does not see it. It found a real defect (#480) on its
+  first run.
+- **The filesystem and executor half is reviewed, not tested.** These are the catch blocks that
+  make the difference between "VibeTags skipped generation and said so" and "the consumer's build
+  failed because of an annotation processor". Treat a change to one of them as needing the same
+  care as a change to the happy path.
+- **The gate is a ratchet, not a floor.** `codecov.yml` uses `target: auto` with a 1% threshold, so
+  a pull request may not lose coverage. The fixed 90% it replaced had become slack.
+
+`CoverageGateTest` keeps this section honest: it fails if the ratchet is swapped back for a fixed
+floor, and if a class named in the table above no longer exists.
+
 ## Other modules
 
 `vibetags-cli/src/test` has its own small suite, run by `cd vibetags-cli && mvn test` and by the
