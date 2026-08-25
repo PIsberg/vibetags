@@ -30,6 +30,8 @@ untouched.
 
 ## LOCKED FILES (DO NOT EDIT)
 - **se.deversity.vibetags.processor.AIGuardrailProcessor.generateFiles()**: Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output
+- **se.deversity.vibetags.processor.internal.TransitiveManifest.RESOURCE_PACKAGE**: Must stay a valid Java package name. javac's CLASS_PATH location skips archive directories that are not package identifiers, so moving these manifests under META-INF/ leaves Filer.getResource listing zero entries and transitive discovery fails silently while the conventional location looks correct. TransitiveManifestPathTest pins the working path.
+- **se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL**: Append only. This order fixes the insertion order of every LinkedHashSet downstream, so reordering or removing an entry rewrites generated files in every consuming build, with nothing failing to name the cause. BuildFingerprint hashes in its own separately pinned order; the two are not the same list and must not be aligned.
 
 ## CONTEXTUAL RULES
 - `se.deversity.vibetags.processor.internal.AnnotationCollector`: Focus on Accumulates annotated elements across multiple javac processing rounds, then snapshots them into a compiler-free GuardrailModel. Ordering is settled in GuardrailModel, which sorts every bucket by TaggedElement.path() — javac's getElementsAnnotatedWith has no specified iteration order, so anything that preserves it makes generated output depend on which machine compiled it. Avoid Restoring javac's iteration order as the output order, here or in GuardrailModel — it differs between Maven and Gradle and between machines, which churns committed guardrail files and misses the write cache. OutputOrderDeterminismTest pins it.
@@ -73,9 +75,21 @@ These elements are explicitly designed to be thread-safe. Preserve the synchroni
 - **se.deversity.vibetags.processor.internal.GuardrailFileWriter**: Strategy: IMMUTABLE. Note: Stateless aside from injected Messager/Logger references; every write is an atomic temp-file replace, so the parallel write phase never interleaves partial content (GuardrailFileWriterAsyncTest proves it)
 - **se.deversity.vibetags.processor.internal.ModuleSidecar**: Strategy: OTHER. Note: Atomic temp-file moves (ATOMIC_MOVE with plain-move fallback); concurrent saves and reads never tear a sidecar or prune a sibling's (ModuleSidecarAsyncTest proves it)
 - **se.deversity.vibetags.processor.internal.WriteCache**: Strategy: SYNCHRONIZED. Note: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design
+- **se.deversity.vibetags.processor.internal.validation.ValidationRule**: Strategy: IMMUTABLE. Note: Implementations must hold no state. ValidationRules keeps one instance per rule for the life of the JVM, and a Gradle daemon runs that instance against many unrelated compilations in sequence, so a field added here carries one project's elements into another project's diagnostics. Everything a check needs arrives as the ValidationContext and Element arguments.
 
 ## ❄️ IMMUTABLE TYPES
 The following types are immutable. Do not introduce non-final fields, setters, or mutating methods.
 
 - **se.deversity.vibetags.processor.internal.BuildFingerprint**: Purely stateless; private constructor prevents instantiation; all computation results are returned as values
+
+## 🏛️ ARCHITECTURAL BOUNDARY CONSTRAINTS
+Strict layering must be respected. No illegal boundary crossing references:
+
+- **se.deversity.vibetags.processor.internal.content**: Belongs to layer: `rendering`. Prohibited from referencing: [javax.lang.model, javax.annotation.processing, javax.tools, com.sun.source, se.deversity.vibetags.processor.internal]
+- **se.deversity.vibetags.processor.model**: Belongs to layer: `model`. Prohibited from referencing: [javax.lang.model, javax.annotation.processing, javax.tools, com.sun.source, se.deversity.vibetags.processor, se.deversity.vibetags.processor.internal]
+
+## 🧩 LOAD-BEARING ODDITIES
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+- **se.deversity.vibetags.processor.internal.content.PlatformRenderer**: Looks removable but is deliberate. Invariant: A renderer whose output is YAML declares mergeShape(); a renderer whose marker-free output varies per module declares wholeFileMerge(). The defaults return null, which means plain concatenation. Breaks if changed: Silent data loss across a reactor. Concatenated YAML repeats a top-level key, so the parse either fails or keeps only the last module; a marker-free file is a whole-file overwrite, so it ends up holding one module's view of the whole project. Neither shows up in a single-module build, which is where a new renderer gets tested.
 <!-- VIBETAGS-END -->

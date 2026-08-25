@@ -26,6 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.aiexclude` no longer excludes a file because a member shares its name.** The `@AILocked`
+  formatter emitted `**/<simpleName>.java` for every locked element regardless of kind, so a locked
+  method or field contributed a glob naming something that is not a file. Usually that was dead
+  weight: this repository's own `.aiexclude` carried `**/generateFiles.java`, and the two shipped
+  showcase examples carried seven such lines each (`**/validateToken.java`,
+  `**/getEncryptionAlgorithm.java`, and five more) out of ten.
+
+  The harmful case is the collision. A field named `ALL` emits `**/ALL.java`; a field named `Config`
+  emits `**/Config.java`, and Gemini Code Assist and Android Studio then drop the real `Config.java`
+  from AI context. Nothing reports it, because a blocklist that excludes too much looks exactly like
+  one that works: the assistant simply stops seeing a file, and the developer who locked one field
+  never asked for that. Only a type contributes a glob now. A locked member still reaches every
+  platform that can name a member, which is the `locked_files` block, `.vibetags-locks`, Codex and
+  Copilot; only the glob format drops it, because a glob cannot express "this field".
+  `AILockedExcludeGlobTest` pins both directions. Found by dogfooding, when two new field-level
+  locks in the processor's own source put `**/ALL.java` into its `.aiexclude`.
+
 - **A project with no annotations no longer gets a zero-byte `vibetags.log`.** Logback's
   `FileAppender` opens its file when the logger is configured, so a build that had nothing to say
   still left an untracked empty file in the working tree, needing a `.gitignore` entry and

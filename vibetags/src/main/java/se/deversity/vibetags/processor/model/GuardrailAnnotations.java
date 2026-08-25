@@ -68,6 +68,10 @@ public final class GuardrailAnnotations {
     private GuardrailAnnotations() {}
 
     /** Every collected annotation type, in population order. */
+    @AILocked(reason = "Append only. This order fixes the insertion order of every LinkedHashSet "
+        + "downstream, so reordering or removing an entry rewrites generated files in every consuming "
+        + "build, with nothing failing to name the cause. BuildFingerprint hashes in its own separately "
+        + "pinned order; the two are not the same list and must not be aligned.")
     public static final List<Class<? extends Annotation>> ALL = List.of(
         AILocked.class,
         AIContext.class,
