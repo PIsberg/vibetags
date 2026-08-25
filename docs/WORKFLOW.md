@@ -171,6 +171,13 @@ type, field, method, parameter) in both tiers, and reads the output back. Ten mo
 including the tier split (invariant 6 on somebody else's code) and a richness floor that fails if
 fewer than 15 distinct showcase guardrails reach a generated file.
 
+A third phase opts in **every** service file the registry knows about, on one repo, and reads the
+result back: each written non-empty, and every YAML, TOML and JSON file parsed with a real parser.
+That last check is the one the fixture tests cannot make. They assert what a renderer *contains*;
+none asserts that a parser accepts it, and a renderer emitting an unquoted `@` or a trailing comma
+satisfies every `contains` assertion while being unloadable by the tool it targets. 48 of 62 files
+written, 10 parsed.
+
 The checkouts are cached on `corpus/repos.tsv`'s hash, so most runs do no network at all, and
 pins are SHAs so an upstream push cannot turn this repository red. Nothing is vendored.
 

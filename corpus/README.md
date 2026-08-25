@@ -194,6 +194,40 @@ checkouts, which are pinned to SHAs and therefore always safe to reuse.
 
 Three defects, three different assertions, none of which could have found the others.
 
+## Phase three: every platform, once
+
+The opt-in phase covers three platforms, which leaves 40-odd renderers with no third-party
+coverage at all. Renderer output does not depend on which repository it ran in, so this phase
+runs on one repo rather than six: the cost is one extra compile.
+
+Every service file the registry knows about is created, the showcase is compiled, and the result
+is read back. Two assertions:
+
+| # | Assertion | What it protects |
+|---|---|---|
+| 9 | Every opted-in platform file was written non-empty | Opting a file in and getting nothing back looks exactly like a project with no guardrails |
+| 10 | Every YAML, TOML and JSON file **parses** | The question no fixture test asks |
+
+Assertion 10 is the point of the phase. The fixture tests assert what a renderer *contains*; none
+asserts that a real parser accepts it. A YAML renderer emitting an unquoted value that starts with
+`@`, or a JSON one leaving a trailing comma, satisfies every `contains` assertion ever written and
+cannot be loaded by the tool it was written for. Ten files carry a structured format
+(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
+`.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
+`sweep.yaml`) and all ten parse.
+
+Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
+switches. `.vibetags-root-index` is excluded from the emptiness rule by name, because its presence
+*is* the message: touching it turns the root aggregate into a lean index and nothing is ever
+written to it. `ServiceRegistry` says the same in code by excluding `root_index` from the keys it
+treats as output files.
+
+The list of platform files is extracted from `ServiceRegistry` rather than kept here. A copy would
+be a second source of truth whose failure is the quiet kind: a platform is added, the list does not
+know, and the sweep reports success over a set that no longer matches the code. The extraction
+asserts it found at least 40 entries, so a change to the registry's shape fails loudly instead of
+silently narrowing what is checked.
+
 ## The repos, and why each is here
 
 Chosen for variety rather than volume. The construct counts were measured, not estimated.
