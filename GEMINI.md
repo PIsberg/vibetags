@@ -13,6 +13,8 @@ lives in `.gemini/rules/`, indexed from the block below.
 
 ## LOCKED FILES (DO NOT EDIT)
 - `se.deversity.vibetags.processor.AIGuardrailProcessor.generateFiles()`: Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output
+- `se.deversity.vibetags.processor.internal.TransitiveManifest.RESOURCE_PACKAGE`: Must stay a valid Java package name. javac's CLASS_PATH location skips archive directories that are not package identifiers, so moving these manifests under META-INF/ leaves Filer.getResource listing zero entries and transitive discovery fails silently while the conventional location looks correct. TransitiveManifestPathTest pins the working path.
+- `se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL`: Append only. This order fixes the insertion order of every LinkedHashSet downstream, so reordering or removing an entry rewrites generated files in every consuming build, with nothing failing to name the cause. BuildFingerprint hashes in its own separately pinned order; the two are not the same list and must not be aligned.
 
 ## 🧠 CORE FUNCTIONALITY (CHANGE WITH EXTREME CAUTION)
 The following elements are well-tested core components. Make changes with extreme caution.
@@ -33,5 +35,11 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `se.deversity.vibetags.processor.internal.GuardrailFileWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md`
 - `se.deversity.vibetags.processor.internal.ModuleSidecar` → `.gemini/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md`
 - `se.deversity.vibetags.processor.internal.ServiceRegistry` → `.gemini/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md`
+- `se.deversity.vibetags.processor.internal.TransitiveManifest` → `.gemini/rules/se-deversity-vibetags-processor-internal-TransitiveManifest.md`
 - `se.deversity.vibetags.processor.internal.WriteCache` → `.gemini/rules/se-deversity-vibetags-processor-internal-WriteCache.md`
+- `se.deversity.vibetags.processor.internal.content` → `.gemini/rules/se-deversity-vibetags-processor-internal-content.md`
+- `se.deversity.vibetags.processor.internal.content.PlatformRenderer` → `.gemini/rules/se-deversity-vibetags-processor-internal-content-PlatformRenderer.md`
+- `se.deversity.vibetags.processor.internal.validation.ValidationRule` → `.gemini/rules/se-deversity-vibetags-processor-internal-validation-ValidationRule.md`
+- `se.deversity.vibetags.processor.model` → `.gemini/rules/se-deversity-vibetags-processor-model.md`
+- `se.deversity.vibetags.processor.model.GuardrailAnnotations` → `.gemini/rules/se-deversity-vibetags-processor-model-GuardrailAnnotations.md`
 <!-- VIBETAGS-END -->

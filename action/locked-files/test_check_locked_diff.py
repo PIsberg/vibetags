@@ -8,21 +8,34 @@ future reader knows what the assertion is defending rather than guessing from th
 Run: python3 -m unittest discover -s action/locked-files
 """
 
+import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import check_locked_diff  # noqa: E402
 from check_locked_diff import (  # noqa: E402
     added_paths,
     load_locks,
+    lock_key,
+    locks_at,
     locks_for,
+    parse_lock_entries,
     resolve_lock_path,
 )
 
 REPO = "/repo"
+
+UNLOCKED_SRC = "class Src {\n    int field = 1;\n}\n"
+LOCKED_SRC = 'class Src {\n    @AILocked(reason = "pinned")\n    int field = 1;\n}\n'
+EDITED_LOCKED_SRC = 'class Src {\n    @AILocked(reason = "pinned")\n    int field = 99;\n}\n'
+LOCK_ENTRY = {"type": "locked", "element": "Src.field", "kind": "FIELD", "file": "Src.java",
+              "startLine": 2, "endLine": 4, "reason": "pinned"}
 
 
 class ResolveLockPathTest(unittest.TestCase):
@@ -135,3 +148,91 @@ class LoadLocksTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IntroducingALockTest(unittest.TestCase):
+    """A PR may adopt @AILocked on code that already exists.
+
+    Adding the annotation is itself a change to the lines the lock now covers, so the range
+    check flags the very commit that introduces it. The file-level ``created`` exemption does
+    not help here: the file already existed. Measured on the PR that locked
+    ``GuardrailAnnotations.ALL`` and ``TransitiveManifest.RESOURCE_PACKAGE`` -- one violation
+    each, for doing exactly what this project tells its users to do.
+
+    A lock that was already there is still enforced, and stripping one is still check 2.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "user.email", "t@example.com")
+        self.git("config", "user.name", "T")
+        self.write("Src.java", UNLOCKED_SRC)
+        self.write_locks([])
+        self.git("add", "-A")
+        self.git("commit", "-qm", "base")
+        self.base = self.git("rev-parse", "HEAD").strip()
+
+    def git(self, *args):
+        out = subprocess.run(["git", "-C", self.dir, *args], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return out.stdout
+
+    def write(self, rel, text):
+        with open(os.path.join(self.dir, rel), "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+
+    def write_locks(self, entries):
+        lines = ["# VIBETAGS-START", '{"type":"format","version":1}']
+        lines += [json.dumps(entry) for entry in entries]
+        lines.append("# VIBETAGS-END")
+        self.write(".vibetags-locks", "\n".join(lines) + "\n")
+
+    def run_guard(self):
+        cwd, env = os.getcwd(), dict(os.environ)
+        os.chdir(self.dir)
+        os.environ["VIBETAGS_BASE_REF"] = self.base
+        os.environ["VIBETAGS_WARN_ONLY"] = "false"
+        try:
+            return check_locked_diff.main()
+        finally:
+            os.chdir(cwd)
+            os.environ.clear()
+            os.environ.update(env)
+
+    def test_adding_a_lock_to_existing_code_is_not_a_violation(self):
+        self.write("Src.java", LOCKED_SRC)
+        self.write_locks([LOCK_ENTRY])
+        self.git("add", "-A")
+        self.git("commit", "-qm", "adopt the lock")
+        self.assertEqual(self.run_guard(), 0,
+                         "introducing a lock must not fail the PR that introduces it")
+
+    def test_a_lock_that_existed_at_base_is_still_enforced(self):
+        self.write("Src.java", LOCKED_SRC)
+        self.write_locks([LOCK_ENTRY])
+        self.git("add", "-A")
+        self.git("commit", "-qm", "declare the lock")
+        self.base = self.git("rev-parse", "HEAD").strip()
+        self.write("Src.java", EDITED_LOCKED_SRC)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "edit locked code")
+        self.assertEqual(self.run_guard(), 1,
+                         "an established lock must still block a change to its range")
+
+
+class LocksAtTest(unittest.TestCase):
+    """``locks_at`` reads the base side, and tolerates a report that was not there."""
+
+    def test_missing_report_contributes_nothing(self):
+        missing = os.path.join(REPO, "nope", ".vibetags-locks")
+        self.assertEqual(locks_at("HEAD", [missing], REPO), set())
+
+    def test_entries_are_keyed_by_file_and_element(self):
+        text = ('# VIBETAGS-START\n'
+                '{"type":"format","version":1}\n'
+                '{"type":"locked","element":"a.B.c","file":"src/B.java"}\n'
+                '# VIBETAGS-END\n')
+        locks = parse_lock_entries(text, REPO, REPO)
+        self.assertEqual([lock_key(lock) for lock in locks], [("src/B.java", "a.B.c")])

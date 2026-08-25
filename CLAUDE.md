@@ -80,6 +80,12 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
     <file path="se.deversity.vibetags.processor.AIGuardrailProcessor.generateFiles()">
       <reason>Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output</reason>
     </file>
+    <file path="se.deversity.vibetags.processor.internal.TransitiveManifest.RESOURCE_PACKAGE">
+      <reason>Must stay a valid Java package name. javac&#39;s CLASS_PATH location skips archive directories that are not package identifiers, so moving these manifests under META-INF/ leaves Filer.getResource listing zero entries and transitive discovery fails silently while the conventional location looks correct. TransitiveManifestPathTest pins the working path.</reason>
+    </file>
+    <file path="se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL">
+      <reason>Append only. This order fixes the insertion order of every LinkedHashSet downstream, so reordering or removing an entry rewrites generated files in every consuming build, with nothing failing to name the cause. BuildFingerprint hashes in its own separately pinned order; the two are not the same list and must not be aligned.</reason>
+    </file>
   </locked_files>
   <core_elements>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor">
@@ -111,7 +117,13 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>
     <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
+    <element path="se.deversity.vibetags.processor.internal.TransitiveManifest" rules=".claude/rules/se-deversity-vibetags-processor-internal-TransitiveManifest.md"/>
     <element path="se.deversity.vibetags.processor.internal.WriteCache" rules=".claude/rules/se-deversity-vibetags-processor-internal-WriteCache.md"/>
+    <element path="se.deversity.vibetags.processor.internal.content" rules=".claude/rules/se-deversity-vibetags-processor-internal-content.md"/>
+    <element path="se.deversity.vibetags.processor.internal.content.PlatformRenderer" rules=".claude/rules/se-deversity-vibetags-processor-internal-content-PlatformRenderer.md"/>
+    <element path="se.deversity.vibetags.processor.internal.validation.ValidationRule" rules=".claude/rules/se-deversity-vibetags-processor-internal-validation-ValidationRule.md"/>
+    <element path="se.deversity.vibetags.processor.model" rules=".claude/rules/se-deversity-vibetags-processor-model.md"/>
+    <element path="se.deversity.vibetags.processor.model.GuardrailAnnotations" rules=".claude/rules/se-deversity-vibetags-processor-model-GuardrailAnnotations.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

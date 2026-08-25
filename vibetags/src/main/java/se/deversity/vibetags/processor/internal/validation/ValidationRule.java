@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.validation;
 
+import se.deversity.vibetags.annotations.AIThreadSafe;
+
 import javax.lang.model.element.Element;
 import java.lang.annotation.Annotation;
 
@@ -19,6 +21,12 @@ import java.lang.annotation.Annotation;
  * <p>Rules must be stateless. The registry holds one instance of each for the life of the JVM, and
  * a Gradle daemon runs them against many unrelated compilations.
  */
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.IMMUTABLE,
+    note = "Implementations must hold no state. ValidationRules keeps one instance per rule for the "
+        + "life of the JVM, and a Gradle daemon runs that instance against many unrelated compilations "
+        + "in sequence, so a field added here carries one project's elements into another project's "
+        + "diagnostics. Everything a check needs arrives as the ValidationContext and Element arguments.")
 public interface ValidationRule {
 
     /** The annotation whose annotated elements this rule is called for. */

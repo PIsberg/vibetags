@@ -1,11 +1,20 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AILoadBearing;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 
 /**
  * Defines the contract to render a single, specific platform configuration file.
  */
+@AILoadBearing(
+    invariant = "A renderer whose output is YAML declares mergeShape(); a renderer whose marker-free "
+        + "output varies per module declares wholeFileMerge(). The defaults return null, which means "
+        + "plain concatenation.",
+    breaksIf = "Silent data loss across a reactor. Concatenated YAML repeats a top-level key, so the "
+        + "parse either fails or keeps only the last module; a marker-free file is a whole-file "
+        + "overwrite, so it ends up holding one module's view of the whole project. Neither shows up in "
+        + "a single-module build, which is where a new renderer gets tested.")
 @FunctionalInterface
 public interface PlatformRenderer {
     /**

@@ -7,6 +7,16 @@
  * explicitly.
  */
 @NullMarked
+@AIArchitecture(
+    belongsTo = "rendering",
+    cannotReference = {
+        "javax.lang.model",
+        "javax.annotation.processing",
+        "javax.tools",
+        "com.sun.source",
+        "se.deversity.vibetags.processor.internal"
+    })
 package se.deversity.vibetags.processor.internal.content;
 
 import org.jspecify.annotations.NullMarked;
+import se.deversity.vibetags.annotations.AIArchitecture;

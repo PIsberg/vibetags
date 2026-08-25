@@ -17,6 +17,17 @@
  * exceptions are annotated with {@code @Nullable} explicitly.
  */
 @NullMarked
+@AIArchitecture(
+    belongsTo = "model",
+    cannotReference = {
+        "javax.lang.model",
+        "javax.annotation.processing",
+        "javax.tools",
+        "com.sun.source",
+        "se.deversity.vibetags.processor",
+        "se.deversity.vibetags.processor.internal"
+    })
 package se.deversity.vibetags.processor.model;
 
 import org.jspecify.annotations.NullMarked;
+import se.deversity.vibetags.annotations.AIArchitecture;

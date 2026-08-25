@@ -82,27 +82,61 @@ def resolve_lock_path(recorded, report_dir, repo_root):
     return os.path.normpath(report_rel + "/" + path).replace("\\", "/")
 
 
+def parse_lock_entries(text, report_dir, repo_root):
+    """The 'locked' entries in one report's text, each with a repo-relative 'file'."""
+    locks = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue  # markers, header comments, module sub-markers
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("type") != "locked":
+            continue
+        path = entry.get("file")
+        if path:
+            entry["file"] = resolve_lock_path(path, report_dir, repo_root)
+        locks.append(entry)
+    return locks
+
+
 def load_locks(report_paths, repo_root):
     """Returns a list of lock dicts with a repo-relative 'file' path."""
     locks = []
     for report in report_paths:
         report_dir = os.path.dirname(os.path.abspath(report))
         with open(report, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue  # markers, header comments, module sub-markers
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if entry.get("type") != "locked":
-                    continue
-                path = entry.get("file")
-                if path:
-                    entry["file"] = resolve_lock_path(path, report_dir, repo_root)
-                locks.append(entry)
+            locks.extend(parse_lock_entries(fh.read(), report_dir, repo_root))
     return locks
+
+
+def lock_key(lock):
+    """Identity of a lock across two revisions: which file, which element."""
+    return (lock.get("file"), lock.get("element"))
+
+
+def locks_at(ref, report_paths, repo_root):
+    """The lock keys already declared at ``ref``.
+
+    Read from the same reports through ``git show``, so a report that did not exist at the
+    base contributes nothing rather than raising. A lock absent here is one this diff
+    introduces, and the author of a lock is not violating it.
+    """
+    keys = set()
+    for report in report_paths:
+        abs_report = os.path.abspath(report)
+        rel = os.path.relpath(abs_report, repo_root).replace("\\", "/")
+        blob = subprocess.run(
+            ["git", "show", f"{ref}:{rel}"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if blob.returncode != 0:
+            continue  # no such report at the base revision
+        for lock in parse_lock_entries(blob.stdout, os.path.dirname(abs_report), repo_root):
+            keys.add(lock_key(lock))
+    return keys
 
 
 def added_paths(name_status_text):
@@ -191,6 +225,7 @@ def main():
     created = added_paths(
         run_git("diff", "--name-status", "--no-color", merge_base, "HEAD", "--")
     )
+    established = locks_at(merge_base, reports, repo_root)
     kind = "warning" if warn_only else "error"
     violations = 0
 
@@ -227,6 +262,15 @@ def main():
         if display in created:
             continue
         for lock in locks_for(locks, display):
+            # The same exemption as `created` above, at element granularity rather than file.
+            # Adding @AILocked to existing code is itself a change to the lines it now covers,
+            # so without this every PR that adopts a lock fails on the commit that introduces
+            # it -- and the file-level exemption does not help, because the file already
+            # existed. Measured: the PR that locked GuardrailAnnotations.ALL and
+            # TransitiveManifest.RESOURCE_PACKAGE drew one violation each for doing so.
+            # Stripping a lock stays a violation; that is check 2, which reads the base side.
+            if lock_key(lock) not in established:
+                continue
             start, end = lock.get("startLine"), lock.get("endLine")
             element = lock.get("element", "?")
             reason = lock.get("reason", "")

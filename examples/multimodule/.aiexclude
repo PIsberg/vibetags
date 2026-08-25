@@ -21,13 +21,6 @@
 # The following files are strictly excluded from AI context.
 **/PaymentProcessor.java
 **/SecurityConfig.java
-**/getEncryptionAlgorithm.java
-**/getKeyRotationHours.java
-**/getMaxLoginAttempts.java
-**/validateToken.java
-**/calculateTax.java
-**/processPayment.java
-**/validateOrder.java
 **/GeneratedMetadata.java
 # VIBETAGS-MODULE-END: showcase
 # VIBETAGS-MODULE: tests

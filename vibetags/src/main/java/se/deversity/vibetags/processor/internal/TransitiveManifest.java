@@ -45,6 +45,10 @@ public final class TransitiveManifest {
      * The package (and therefore the directory) manifests live in, inside the JAR. Must stay a
      * valid Java package name, one segment per level: {@code vibetags/manifests/}.
      */
+    @AILocked(reason = "Must stay a valid Java package name. javac's CLASS_PATH location skips archive "
+        + "directories that are not package identifiers, so moving these manifests under META-INF/ leaves "
+        + "Filer.getResource listing zero entries and transitive discovery fails silently while the "
+        + "conventional location looks correct. TransitiveManifestPathTest pins the working path.")
     public static final String RESOURCE_PACKAGE = "vibetags.manifests";
 
     /** Filename extension of a manifest, appended to the governed package name. */

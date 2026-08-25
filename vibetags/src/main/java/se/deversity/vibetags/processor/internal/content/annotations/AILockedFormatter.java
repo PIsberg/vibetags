@@ -30,7 +30,13 @@ public final class AILockedFormatter implements AnnotationFormatter {
                     .append("    </file>\n");
                 break;
             case AI_EXCLUDE:
-                sb.append("**/").append(element.simpleName()).append(".java\n");
+                // A glob names a file, so only a type may contribute one. A locked member
+                // emitted "**/<memberName>.java", which is either dead weight (no such file)
+                // or a silent over-exclusion: a field named ALL hid an unrelated ALL.java from
+                // the assistant. The lock still reaches every platform that can name a member.
+                if (element.kind().isClass() || element.kind().isInterface()) {
+                    sb.append("**/").append(element.simpleName()).append(".java\n");
+                }
                 break;
             case CODEX:
                 sb.append(CommonFormatterHelper.codexBullet(className, reason));
