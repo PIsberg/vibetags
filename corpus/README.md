@@ -170,6 +170,14 @@ assertion 0 refuses to evaluate a repo whose control did not compile. The second
 matters: the first only fixes the cause that was found, the second fails loudly on every cause
 that has not been.
 
+Assertion 0 then immediately earned its place, on the very next run. CI restored `target/corpus`
+from the cache written by the *failing* run, `.corpus-cp` among it, and the harness trusted it
+because it was non-empty. jimfs compiled without guava on a branch where the resolution bug was
+already fixed. So the resolved classpath is now rebuilt every run and never read from a cache: a
+cache written by a broken run is indistinguishable from a good one once it is on disk. The cache
+key covers `run-corpus.sh` as well as `repos.tsv`, and what the cache is actually for is the
+checkouts, which are pinned to SHAs and therefore always safe to reuse.
+
 ### What that adds up to
 
 | Defect | Found by | Would the others have caught it? |

@@ -1251,13 +1251,16 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Keyed on repos.tsv, so a pin bump fetches and any other change reuses the clones. The
-      # repos are pinned to commits, so a hit is always the right source.
+      # Keyed on repos.tsv and on the harness, so a pin bump or a change to how the corpus is
+      # built fetches afresh. The repos are pinned to commits, so a hit is always the right
+      # source for the checkouts. Nothing the harness derives is trusted from a hit: the
+      # resolved classpath is rebuilt every run, because a cache written by a failing run is
+      # indistinguishable from a good one once it is on disk.
       - name: Cache the corpus checkouts
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: target/corpus
-          key: corpus-${{ hashFiles('corpus/repos.tsv') }}
+          key: corpus-${{ hashFiles('corpus/repos.tsv', 'corpus/run-corpus.sh') }}
 
       - name: Install VibeTags Annotations and Processor (Maven)
         run: |

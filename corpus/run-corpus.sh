@@ -129,11 +129,16 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
   # classpath it computed against the output file and reports "No changes found" - exiting 0
   # while writing nothing. On a warm machine the file is already there and everything looks
   # fine; on a cold CI runner it is not, and the compile silently ran with no classpath at all.
-  if [ ! -s "$dir/.corpus-cp" ]; then
-    ( cd "$dir" && mvn -q -f "$pom" dependency:build-classpath \
-        -Dmdep.regenerateFile=true \
-        "-Dmdep.outputFile=$dir/.corpus-cp" >"$dir/.corpus-mvn.log" 2>&1 ) || true
-  fi
+  # Resolved every run, never reused from the cache. The checkouts are what the cache is for -
+  # they are the expensive part and are pinned to a SHA, so a hit is always the right source.
+  # A resolved classpath is not: the CI cache is keyed on repos.tsv, so a run that resolved
+  # badly leaves a .corpus-cp that a later run restores and, because it is non-empty, trusts.
+  # That is exactly what happened - a poisoned cache from a failing run made jimfs compile
+  # without guava on a branch where resolution itself was already fixed.
+  rm -f "$dir/.corpus-cp"
+  ( cd "$dir" && mvn -q -f "$pom" dependency:build-classpath \
+      -Dmdep.regenerateFile=true \
+      "-Dmdep.outputFile=$dir/.corpus-cp" >"$dir/.corpus-mvn.log" 2>&1 ) || true
   dep_cp=$(cat "$dir/.corpus-cp" 2>/dev/null || printf '')
 
   # module-info.java is excluded: it needs modules that are not on this path, and the corpus is
