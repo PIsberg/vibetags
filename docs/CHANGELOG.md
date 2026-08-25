@@ -74,7 +74,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wildcards, bounded and unbounded generic methods, an overload set, a constructor, a nested type
   and an enum. Found by the ECJ CI leg on its first run. (#480)
 
+  **One deliberate difference from javac, and it moves output for some consumers.** javac's
+  rendering includes JSR-308 type-use annotations, so an annotated parameter reads as
+  `java.lang.@org.jspecify.annotations.Nullable String`. The derivation drops them, which means a
+  project using jspecify or the Checker Framework will see element paths change in its generated
+  files and in `.vibetags-locks`. That is the intended behaviour rather than an oversight:
+  keeping the annotation would put it into a granular rule *filename*, so adding or removing a
+  `@Nullable` would rename a committed file and stop a lock matching, for a change that does not
+  alter the signature. The identity is the signature, not its annotations. No fixture in this
+  repository used a type-use annotation, so nothing here noticed; the third-party corpus below
+  did, on its first run.
+
+  A **type variable** kept its annotation even so, because it had no structural route and fell
+  through to `toString()`, so `jimfs` generated
+  `JimfsAsynchronousFileChannel.<A>lock(long,long,boolean,@org.jspecify.annotations.Nullable A,…)`
+  into `CLAUDE.md` and `.vibetags-locks`. The parity check could not see it: javac renders that
+  the same way, so the two agreed and nothing fired. Only generating output on annotated
+  third-party code and reading it back exposed it. Type variables now resolve through
+  `asElement()` like every other type, and anything left with no structural route has its
+  annotations stripped rather than trusted. (#480)
+
 ### Added
+
+- **A corpus of real third-party Java, compiled with and without VibeTags on every CI run.**
+  Every fixture in this repository was written by somebody who knew what VibeTags does, and that
+  is the wrong sample: the code VibeTags has to survive was written by people who had never heard
+  of it. `corpus/` pins six permissively licensed libraries to commit SHAs and compiles each one
+  twice with identical sources, classpath and flags, differing only in whether VibeTags is on the
+  processor path.
+
+  Four assertions, each against the control rather than against a hard-coded expectation, so a
+  repo that does not compile on its own is reported as such instead of blamed on VibeTags: the
+  treatment exits exactly as the control did, raises no diagnostic the control did not, writes
+  nothing into a project that never opted in, and renders every member the way javac does.
+
+  Then a second phase, because non-interference is only half the question. **Claude, Gemini and
+  Codex are all opted in, aggregate and granular**, and the output is read back. Two real elements
+  of the repo's own code are annotated, plus a showcase compiled into a package of its own that
+  carries a guardrail at every level one can attach to: package, type, nested type, field, method
+  and parameter, across both the safety tier and the granular tier.
+
+  Codex needs its marker pair seeded, because invariant 4 means an empty `AGENTS.md` alongside
+  other platforms is dropped from the active set rather than written. The corpus asserts
+  `AGENTS.md` grew beyond that pair, since "dropped" and "working" look identical otherwise.
+
+  Ten assertions cover the result, and the two worth naming are the ones that keep the rest from
+  rotting. **The tier split** is invariant 6 checked on somebody else's code: `@AIPrivacy` must
+  still be inline in the aggregate, `@AIContract` must not be, and must instead be in the rules
+  directory. Wrong in one direction and safety guardrails become comments that load only once the
+  agent already opened the file; wrong in the other and the aggregate bloats. **The richness
+  floor** requires at least 15 distinct showcase guardrails to reach a generated file, because
+  every other assertion names one guardrail and would still pass if half the annotation surface
+  quietly stopped rendering. 15 is measured from a green run, not chosen.
+
+  Full detail, including the three defects the corpus found and why none of its assertions could
+  have found the others, is in [corpus/README.md](../corpus/README.md).
+
+  Measured on the first green run: 6 repositories, roughly 495 files, **15,683 members audited**,
+  no exit code changed, no diagnostic added, no file written. The corpus contributes what the
+  fixtures cannot: 15 `package-info` files and 279 generic sources from commons-io, varargs
+  density from jimfs, records from record-builder, Java 17 from semver4j, and an annotation
+  library whose own processor runs alongside VibeTags.
+
+  Nothing is vendored: sources are cloned at build time into `target/corpus` and never committed,
+  so no third-party code enters this repository. Pins are commit SHAs rather than branches, so an
+  upstream push cannot turn this repository's CI red for a reason nobody here changed, and bumping
+  them stays a decision somebody makes.
+
+  What it has been worth so far, stated as findings rather than as a claim: **three defects, each
+  caught by a different assertion, none of which could have found the others.** Type-use
+  annotations reaching an element identity for declared types, caught on the first run by the
+  parity check. The same annotations surviving on a *type variable*, invisible to that check
+  because javac renders it identically, and caught only by generating output and reading it back.
+  And the corpus itself running against an unresolved classpath on a cold CI runner, where both
+  the control and the treatment failed identically so every comparison passed while checking
+  nothing. The third one was a defect in the harness, and it is the reason there is now an
+  assertion that a corpus member must compile before anything is concluded from it.
+
+  A fourth thing it settled is not a defect but a fact worth writing down: **no annotation
+  declares `ElementType.CONSTRUCTOR`**, so a constructor cannot carry a guardrail. That was found
+  by trying to annotate one. (#480)
 
 - **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
   `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a

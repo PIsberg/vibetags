@@ -1,0 +1,24 @@
+# The third-party corpus: real Java that nobody wrote to suit VibeTags.
+#
+# Tab-separated. Lines starting with '#' are comments. Columns:
+#   name          directory name under the corpus cache
+#   url           clone URL
+#   sha           pinned commit. Never a branch: a branch would let an upstream push turn this
+#                 repository's CI red for a reason nobody here changed. Bump deliberately.
+#   source_root   path to the main sources to compile, relative to the repo root
+#   pom           pom used to resolve that module's own compile classpath
+#   licence       SPDX id, checked before adding. Nothing is vendored: sources are cloned at
+#                 build time and never committed here, so no third-party code enters this repo.
+#   why           what this repo contributes that the others do not
+#
+# Chosen for variety rather than volume, and each entry was measured before it was added:
+# construct counts are in corpus/README.md. Adding a repo means proving it compiles cleanly at
+# its pinned SHA, because a corpus member that does not compile turns every assertion vacuous.
+#
+#name	url	sha	source_root	pom	licence	why
+commons-cli	https://github.com/apache/commons-cli.git	0a68ae0e826bb08eb59bda9bae7ec5d84008b62a	src/main/java	pom.xml	Apache-2.0	Smallest and dependency-free: the fast smoke test, and the one that still runs if dependency resolution is down
+commons-codec	https://github.com/apache/commons-codec.git	8dcd16b7d13ef1a78e325d458830ead890fe82ac	src/main/java	pom.xml	Apache-2.0	Static utility style, byte-array APIs, 7 package-info files and 26 nested types
+commons-io	https://github.com/apache/commons-io.git	d83aeb6f4774aee75d857b29fb6cd89132c9a91b	src/main/java	pom.xml	Apache-2.0	The largest at 277 files: 15 package-info files, 279 sources using generics, 86 nested types
+jimfs	https://github.com/google/jimfs.git	5319800d7f1edf7e131caedae34676ca107ec8d9	jimfs/src/main/java	jimfs/pom.xml	Apache-2.0	Generics- and varargs-dense (72 and 32 of 62 files), built on Guava, and an NIO SPI implementation
+record-builder	https://github.com/Randgalt/record-builder.git	d9c81ac67840e939a80266972c2f336bff696222	record-builder-core/src/main/java	record-builder-core/pom.xml	Apache-2.0	Records, and an annotation library whose own processor also runs at compile time
+semver4j	https://github.com/semver4j/semver4j.git	1fcfbf0ff707268f942aa825f0cc179ab839da0e	src/main/java	pom.xml	MIT	Targets Java 17 rather than 8, so the corpus is not entirely legacy language level

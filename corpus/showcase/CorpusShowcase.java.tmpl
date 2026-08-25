@@ -1,0 +1,134 @@
+package __PACKAGE__;
+
+import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.annotations.AIContract;
+import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIIgnore;
+import se.deversity.vibetags.annotations.AIImmutable;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILoadBearing;
+import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIPerformance;
+import se.deversity.vibetags.annotations.AIPrivacy;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadSafe;
+
+/**
+ * Compiled inside a third-party repository, with that repository's classpath and compiler
+ * settings, to exercise every level a guardrail can attach to and both tiers at once.
+ *
+ * <p>Injected by corpus/run-corpus.sh into a package of its own under the repo's source root,
+ * never committed anywhere and removed with `git checkout -- .` after the run. It is deliberately
+ * plain Java: the corpus spans repositories targeting Java 8 through 17, and a record here would
+ * limit where it can go.
+ *
+ * <p>The split it demonstrates is the one CLAUDE.md's invariant 6 describes. Six safety
+ * annotations stay inline in the Tier-1 aggregate because a guardrail that only loads once the
+ * agent opens the file it protects has become a comment. Everything else moves to Tier 3 and is
+ * replaced by a pointer.
+ */
+@AIContext(focus = "corpus showcase: type level, non-safety, belongs in the granular tier",
+           avoids = "asserting anything about the third-party code around it")
+@AIPublicAPI
+public class CorpusShowcase {
+
+    // ---- field level -------------------------------------------------------------------
+
+    /** Safety tier: privacy stays inline in the aggregate. */
+    @AIPrivacy(reason = "corpus showcase FIELD-PRIVACY: PII must never be logged")
+    private String billingEmail;
+
+    /** Granular tier: same field, a second annotation that moves down. */
+    @AISecureLogging
+    private String authToken;
+
+    /** Granular tier: a performance budget on a plain field. */
+    @AIPerformance(constraint = "corpus showcase FIELD-PERFORMANCE: read on every request")
+    private long tenantId;
+
+    // ---- constructor level: there isn't one ---------------------------------------------
+    //
+    // No annotation declares ElementType.CONSTRUCTOR, so a constructor cannot carry a guardrail.
+    // Measured, not assumed: nothing under vibetags-annotations mentions CONSTRUCTOR at all.
+    // ElementNaming still renders constructors, because javac hands them to the collector as
+    // enclosed elements of an annotated type, which is why ElementNamingFormatParityTest covers
+    // the shape. The levels a guardrail can actually attach to are package, type, field, method
+    // and parameter.
+
+    // ---- method level, safety tier -----------------------------------------------------
+
+    @AILocked(reason = "corpus showcase METHOD-LOCKED: do not edit")
+    public long invoiceNumber(long id) {
+        return id;
+    }
+
+    @AIAudit(checkFor = {"SQL injection", "path traversal"})
+    public void audited(String query) {
+    }
+
+    @AISecure(aspect = "corpus showcase METHOD-SECURE")
+    public void secured() {
+    }
+
+    @AIIgnore(reason = "corpus showcase METHOD-IGNORE: excluded from context")
+    public void ignored() {
+    }
+
+    // ---- method level, granular tier, and the parameter level --------------------------
+
+    /**
+     * The parameter annotation is the finest addressing VibeTags produces, and the only level a
+     * hand-written rules file cannot express at all.
+     */
+    @AIContract(reason = "corpus showcase METHOD-CONTRACT: callers depend on this shape")
+    @AIPerformance(constraint = "corpus showcase METHOD-PERFORMANCE: no allocation in the loop")
+    public String render(
+            @AIInputSanitized({AIInputSanitized.SanitizerType.SQL_INJECTION,
+                               AIInputSanitized.SanitizerType.XSS}) String customerNote,
+            @AILoadBearing(invariant = "corpus showcase PARAM-LOADBEARING: order matters here")
+            String other) {
+        return customerNote + other;
+    }
+
+    @AITestDriven(coverageGoal = 95)
+    public void tested() {
+    }
+
+    @AIThreadSafe(note = "corpus showcase METHOD-THREADSAFE")
+    public void threadSafe() {
+    }
+
+    @AILoadBearing(invariant = "corpus showcase METHOD-LOADBEARING: looks removable, is not")
+    public void loadBearing() {
+    }
+
+    @AIKeepInSync(mirrors = {"corpus/showcase/CorpusShowcase.java.tmpl"})
+    public void mirrored() {
+    }
+
+    @AIBannedApi(forbidden = {"java.util.Date"}, useInstead = "java.time.Instant")
+    public void bannedApis() {
+    }
+
+    @AIGenerated(from = "corpus/showcase/CorpusShowcase.java.tmpl")
+    public void generated() {
+    }
+
+    // ---- nested type level -------------------------------------------------------------
+
+    /** Safety tier at a nested type, which is where a flat "package.Type.member" model breaks. */
+    @AIImmutable(note = "corpus showcase NESTED-IMMUTABLE")
+    @AICore(sensitivity = "high", note = "corpus showcase NESTED-CORE")
+    public static final class Inner {
+        @AILocked(reason = "corpus showcase NESTED-METHOD-LOCKED")
+        public void innerMethod() {
+        }
+    }
+}
