@@ -124,6 +124,11 @@ language's toolchain ever hand javac something carrying the annotations? Nothing
 itself is language-specific — each language below is a standalone example consumer plus this
 matrix, and adding one never touches the processor.
 
+> **Before adopting VibeTags in a Kotlin, Groovy or Scala project, read
+> [docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md).** It states the maturity of each route, what
+> each one silently drops, and how every claim is measured against third-party code on each pull
+> request. The summary below is the quick version; that page is where the limitations live.
+
 | Language | Support | Mechanism |
 |---|---|---|
 | Java | Full | javac runs the processor directly |

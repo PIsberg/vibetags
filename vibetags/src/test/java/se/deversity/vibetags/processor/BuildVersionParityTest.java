@@ -62,6 +62,10 @@ class BuildVersionParityTest {
         "examples/kotlin/build.gradle.kts", "examples/groovy/build.gradle",
         "examples/scala/build.gradle");
 
+    private static final char EQUALS = '=';
+    private static final char SINGLE_QUOTE = '\'';
+    private static final char DOUBLE_QUOTE = '"';
+
     /** Directory names whose contents are build output or tool cache, never sources. */
     private static final Set<String> NON_SOURCE_DIRS =
         Set.of(".git", ".gradle", "build", "target", "node_modules");
@@ -158,27 +162,73 @@ class BuildVersionParityTest {
      * vibetags/build.gradle were on 7.26.0, which means the two modules were analysed by different
      * rule sets and a rule added between those releases ran on one module only.
      */
+    /**
+     * PMD's {@code toolVersion} must be <em>derived</em> from {@code pmd.version} in the parent,
+     * never copied.
+     *
+     * <p>This used to compare the literal against the parent, which is a weaker rule that reads
+     * the same. The difference shows up when dependabot bumps {@code pmd.version}: it edits the
+     * parent pom and nothing else, because that is where the property lives, and every Gradle
+     * file holding a copy of the old number then failed this test. Each PMD bump therefore
+     * arrived as a red PR that a human had to hand-fix before it could merge, which is not what
+     * an automated bump is for.
+     *
+     * <p>So the assertion is now about the mechanism rather than the value. A literal fails even
+     * if it happens to be correct today, and a file that never mentions {@code pmd.version} fails
+     * even if it has no literal - otherwise deleting the derivation would leave nothing to match
+     * and this test would pass on a file it no longer checks.
+     */
     @Test
-    void gradlePmdToolVersionsMatchTheParent() {
-        String expected = properties().get("pmd.version");
-        Pattern toolVersion = Pattern.compile("^\\s*toolVersion\\s*=\\s*['\"]([^'\"]+)['\"]",
-            Pattern.MULTILINE);
+    void gradlePmdToolVersionIsDerivedFromTheParentRatherThanCopied() {
         List<String> problems = new ArrayList<>();
+        int checked = 0;
 
         for (String file : gradleFiles()) {
-            Matcher m = toolVersion.matcher(read(repoRoot().resolve(file)));
-            while (m.find()) {
-                if (!expected.equals(m.group(1))) {
-                    problems.add(file + ": PMD toolVersion is " + m.group(1)
-                        + " but vibetags-parent declares pmd.version " + expected);
+            String text = read(repoRoot().resolve(file));
+            if (!text.contains("pmd {")) {
+                continue;
+            }
+            checked++;
+            for (String line : text.lines().toList()) {
+                String trimmed = line.trim();
+                int assignment = trimmed.indexOf(EQUALS);
+                if (!trimmed.startsWith("toolVersion") || assignment < 0) {
+                    continue;
+                }
+                if (isQuoted(trimmed.substring(assignment + 1).trim())) {
+                    problems.add(file + ": PMD toolVersion is a literal (" + trimmed
+                        + "). Read pmd.version from vibetags-parent instead, so that a bump"
+                        + " of the parent cannot leave this file behind.");
                 }
             }
+            if (!text.contains("pmd.version")) {
+                problems.add(file + ": applies the pmd plugin but never names pmd.version,"
+                    + " so nothing ties its analyser to the version the rest of the build"
+                    + " uses.");
+            }
         }
+
+        assertTrue(checked >= 2,
+            "Expected at least two Gradle modules applying PMD; found " + checked
+                + ". A walk that stops finding them passes this test while checking"
+                + " nothing.");
         assertTrue(problems.isEmpty(),
-            "A Gradle module analysed by a different PMD than the rest of the build:\n  "
-                + String.join("\n  ", problems));
+            "A Gradle module that a dependabot bump of pmd.version would leave behind: "
+                + String.join("; ", problems));
     }
 
+    /**
+     * Whether the right-hand side of a {@code toolVersion} assignment is a quoted number.
+     *
+     * <p>Only the start of the value is looked at, and that is the whole point: the first
+     * version of this asked whether the <em>line</em> contained a quote, which rejected
+     * {@code toolVersion = pomVersion('pmd.version')} - the very form it exists to require.
+     * A derived value may quote a property name; a copied one opens with the quote.
+     */
+    private static boolean isQuoted(String value) {
+        return !value.isEmpty()
+            && (value.charAt(0) == SINGLE_QUOTE || value.charAt(0) == DOUBLE_QUOTE);
+    }
     @Test
     void managedPomsDeclareNoVersionOfTheirOwn() {
         List<String> problems = new ArrayList<>();
