@@ -231,7 +231,8 @@ The decision (#482) is to accept that and say so here rather than let it look li
   failed because of an annotation processor". Treat a change to one of them as needing the same
   care as a change to the happy path.
 - **The gate is a ratchet, not a floor.** `codecov.yml` uses `target: auto` with a 1% threshold, so
-  a pull request may not lose coverage. The fixed 90% it replaced had become slack.
+  a pull request may not lose coverage. The fixed 90% it replaced had become slack: with its 2%
+  threshold it only failed below 88%, four points under where coverage has sat since #476.
 
 `CoverageGateTest` keeps this section honest: it fails if the ratchet is swapped back for a fixed
 floor, and if a class named in the table above no longer exists.
