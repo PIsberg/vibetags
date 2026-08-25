@@ -1,0 +1,156 @@
+package __PACKAGE__
+
+import se.deversity.vibetags.annotations.AIAudit
+import se.deversity.vibetags.annotations.AIBannedApi
+import se.deversity.vibetags.annotations.AIContext
+import se.deversity.vibetags.annotations.AIContract
+import se.deversity.vibetags.annotations.AICore
+import se.deversity.vibetags.annotations.AIGenerated
+import se.deversity.vibetags.annotations.AIIgnore
+import se.deversity.vibetags.annotations.AIImmutable
+import se.deversity.vibetags.annotations.AIInputSanitized
+import se.deversity.vibetags.annotations.AIKeepInSync
+import se.deversity.vibetags.annotations.AILoadBearing
+import se.deversity.vibetags.annotations.AILocked
+import se.deversity.vibetags.annotations.AIPerformance
+import se.deversity.vibetags.annotations.AIPrivacy
+import se.deversity.vibetags.annotations.AIPublicAPI
+import se.deversity.vibetags.annotations.AISecure
+import se.deversity.vibetags.annotations.AISecureLogging
+import se.deversity.vibetags.annotations.AITestDriven
+import se.deversity.vibetags.annotations.AIThreadSafe
+
+/**
+ * The Groovy twin of {@code CorpusShowcase.java}, compiled inside a third-party Groovy build by
+ * that project's own Gradle, through joint compilation.
+ *
+ * <p>Groovy reaches the processor by a different route from Kotlin and from Java. groovyc emits
+ * a Java stub per Groovy class and javac runs the processors over the stubs, which only happens
+ * when {@code groovyOptions.javaAnnotationProcessing} is switched on - and it is off by default
+ * in Gradle. A Groovy project that adds VibeTags and changes nothing else therefore generates
+ * nothing at all, silently. The init script switches it on, and the harness asserts output
+ * appeared, so the day that flag stops being honoured this goes red rather than quiet.
+ *
+ * <p><b>The fields below are here to fail.</b> groovyc's stub carries the class, its
+ * constructors, its methods and their parameters - and no fields whatsoever. Not renamed, not
+ * moved onto an accessor: absent. So every {@code FIELD}-targeted annotation is dropped before
+ * any processor is asked, {@code @AIPrivacy} among them, and that one is a safety-tier guardrail
+ * a Groovy author would reasonably expect to be the most reliable thing here.
+ *
+ * <p>Writing them {@code private} does not help, and that was the first guess: a Groovy field
+ * with no access modifier becomes a property, so the obvious theory was that the annotation had
+ * travelled onto a generated accessor. It has not. The stub was kept
+ * ({@code groovyOptions.keepStubs}) and read, and {@code billingEmail}, {@code authToken} and
+ * {@code tenantId} appear nowhere in it.
+ *
+ * <p>They stay in this file rather than being deleted, because a limitation nothing exercises is
+ * a limitation nobody notices has been fixed. {@code excluded_markers()} in
+ * corpus/run-corpus-jvm.sh names exactly these two, and the harness fails if they ever start
+ * being rendered - at which point the exclusion goes and USAGE.md's Groovy row gets rewritten.
+ *
+ * <p>Injected by corpus/run-corpus-jvm.sh and reverted with `git checkout -- .` afterwards.
+ */
+@AIContext(focus = "corpus groovy showcase: type level, non-safety, belongs in the granular tier",
+           avoids = "asserting anything about the third-party code around it")
+@AIPublicAPI
+class CorpusShowcase {
+
+    // ---- field level -------------------------------------------------------------------
+    //
+    // `private` is load-bearing: without it Groovy makes these properties, and a property is a
+    // getter and a setter around a synthetic field rather than the field an author annotated.
+
+    /** Safety tier: privacy stays inline in the aggregate. */
+    @AIPrivacy(reason = "corpus groovy showcase FIELD-PRIVACY: PII must never be logged")
+    private String billingEmail
+
+    /** Granular tier: a second field annotation that moves down. */
+    @AISecureLogging
+    private String authToken
+
+    /** Granular tier: a performance budget on a plain field. */
+    @AIPerformance(constraint = "corpus groovy showcase FIELD-PERFORMANCE: read on every request")
+    private long tenantId
+
+    // ---- constructor level -------------------------------------------------------------
+
+    @AILocked(reason = "corpus groovy showcase CONSTRUCTOR-LOCKED: initialisation order is load-bearing")
+    CorpusShowcase() {
+    }
+
+    @AIContract(reason = "corpus groovy showcase CONSTRUCTOR-CONTRACT: callers depend on this shape")
+    CorpusShowcase(String seed) {
+        this.billingEmail = seed
+    }
+
+    // ---- method level, safety tier -----------------------------------------------------
+
+    @AILocked(reason = "corpus groovy showcase METHOD-LOCKED: do not edit")
+    long invoiceNumber(long id) {
+        id
+    }
+
+    @AIAudit(checkFor = ["SQL injection", "path traversal"])
+    void audited(String query) {
+    }
+
+    @AISecure(aspect = "corpus groovy showcase METHOD-SECURE")
+    void secured() {
+    }
+
+    @AIIgnore(reason = "corpus groovy showcase METHOD-IGNORE: excluded from context")
+    void ignored() {
+    }
+
+    // ---- method level, granular tier, and the parameter level --------------------------
+
+    /**
+     * The parameter level is the finest addressing VibeTags produces. Under joint compilation it
+     * also depends on the stub keeping parameter names, which is the sort of thing that is true
+     * until a Groovy release makes it not.
+     */
+    @AIContract(reason = "corpus groovy showcase METHOD-CONTRACT: callers depend on this shape")
+    @AIPerformance(constraint = "corpus groovy showcase METHOD-PERFORMANCE: no allocation in the loop")
+    String render(
+            @AIInputSanitized([AIInputSanitized.SanitizerType.SQL_INJECTION,
+                               AIInputSanitized.SanitizerType.XSS]) String customerNote,
+            @AILoadBearing(invariant = "corpus groovy showcase PARAM-LOADBEARING: order matters here")
+            String other) {
+        customerNote + other
+    }
+
+    @AITestDriven(coverageGoal = 95)
+    void tested() {
+    }
+
+    @AIThreadSafe(note = "corpus groovy showcase METHOD-THREADSAFE")
+    void threadSafe() {
+    }
+
+    @AILoadBearing(invariant = "corpus groovy showcase METHOD-LOADBEARING: looks removable, is not")
+    void loadBearing() {
+    }
+
+    @AIKeepInSync(mirrors = ["corpus/showcase/CorpusShowcase.groovy.tmpl"])
+    void mirrored() {
+    }
+
+    @AIBannedApi(forbidden = ["java.util.Date"], useInstead = "java.time.Instant")
+    void bannedApis() {
+    }
+
+    @AIGenerated(from = "corpus/showcase/CorpusShowcase.groovy.tmpl")
+    void generated() {
+    }
+
+    // ---- nested type level -------------------------------------------------------------
+
+    /** A Groovy static nested class, so the element path matches the Java showcase's. */
+    @AIImmutable(note = "corpus groovy showcase NESTED-IMMUTABLE")
+    @AICore(sensitivity = "high", note = "corpus groovy showcase NESTED-CORE")
+    static final class Inner {
+        @AILocked(reason = "corpus groovy showcase NESTED-METHOD-LOCKED")
+        void innerMethod() {
+        }
+    }
+}

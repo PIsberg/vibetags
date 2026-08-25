@@ -1272,6 +1272,64 @@ jobs:
       - name: Run VibeTags over the corpus and compare against the control
         run: corpus/run-corpus.sh
 
+  # The same question in the three other JVM languages people ship, and none of them reaches the
+  # processor the way Java does: Kotlin only through kapt, Groovy only when joint compilation's
+  # javaAnnotationProcessing is switched on, and Scala not at all. USAGE.md has stated all three
+  # for several releases; this is the leg that runs them. Each repository is built twice by its
+  # own Gradle wrapper and the only difference is corpus/inject-vibetags.init.gradle. The Scala
+  # member asserts a negative on purpose: annotated Scala must generate nothing, while the Java
+  # half of the same build must generate everything. corpus/README.md has the rest.
+  corpus-jvm:
+    name: JVM-Language Corpus (Kotlin, Groovy, Scala)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # Keyed on the manifest, the harness and the init script, so a pin bump or a change to how
+      # the injection works fetches afresh. The repositories are pinned to commits, so a hit is
+      # always the right source. Nothing derived is trusted from a hit: the processor classpath
+      # is resolved every run, because a classpath written by a failing run is indistinguishable
+      # from a good one once it is on disk.
+      - name: Cache the JVM-language corpus checkouts
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/corpus-jvm
+          key: corpus-jvm-${{ hashFiles('corpus/repos-jvm.tsv', 'corpus/run-corpus-jvm.sh', 'corpus/inject-vibetags.init.gradle') }}
+
+      # Six Gradle builds run here, each with --rerun-tasks. Without a warm Gradle cache every
+      # one of them re-downloads a distribution and a dependency graph, which is most of this
+      # job's wall clock and none of what it is measuring.
+      - name: Cache the Gradle distributions and dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: corpus-jvm-gradle-${{ hashFiles('corpus/repos-jvm.tsv') }}
+          restore-keys: corpus-jvm-gradle-
+
+      - name: Install VibeTags Annotations and Processor (Maven)
+        run: |
+          cd vibetags-annotations
+          mvn install -B -q -DskipTests
+          cd ../vibetags
+          mvn install -B -q -DskipTests
+
+      - name: Run VibeTags over Kotlin, Groovy and Scala and compare against the control
+        run: corpus/run-corpus-jvm.sh
+
   # The one leg that does not run javac. docs/PROCESSOR.md and USAGE.md both promise that
   # VibeTags degrades - loses @AILocked positions, keeps every guardrail - under a compiler
   # with no Tree API, and nothing verified either sentence. The paths behind them are
