@@ -183,6 +183,49 @@ build above already ran it over the whole project. Report which hooks actually r
 skipped gate is not a passed gate, and "pre-commit passed" is the wrong thing to say when
 only three of four did.
 
+## Step 5b — Sweep the consumers, before the release exists
+
+Required. Do not skip it because the build is green: the build is green against this
+repository's fixtures and the third-party corpus, and neither of those is a project that
+already has committed VibeTags output.
+
+```bash
+scripts/consumer-sweep.sh <version>
+```
+
+**What you are looking for is not "did it build".** It is whether the version being cut
+changes the *content* of files those repositories have already committed. The sweep reports
+drift in generated guardrail files, and drift is the finding.
+
+Why this step exists. #480 changed the element identity written into `.vibetags-locks`, into
+every `path=` attribute and into granular rule *filenames*: type-use annotations are no longer
+part of it. For a project using jspecify or the Checker Framework that moves committed files.
+Nothing noticed before release, for two independent reasons, and both are the normal case
+rather than bad luck:
+
+- **This repository could not notice.** It uses jspecify in 47 files, but never on a parameter
+  of a method carrying an `@AI*` annotation, which is the only place a parameter type reaches
+  an element path. Self-annotate had nothing to show.
+- **The consumers could not notice.** They are pinned to the previous release, so they had
+  never run the change, and this sweep is the only thing that would have run it for them.
+
+So the release is the moment the consequence becomes real, which is why the check belongs
+here rather than in a nightly job nobody reads.
+
+Report the result honestly, per repository:
+
+- **No drift** — say so, and carry on.
+- **Drift** — do not silently proceed. Say which repositories are affected and what changed,
+  and put it in the CHANGELOG and the release notes in the consumer's language: "if you use
+  jspecify or the Checker Framework, your generated files will move on this upgrade." A
+  maintainer who finds a diff they did not cause, with no note explaining it, has to work out
+  from scratch whether their build is broken.
+- **Could not run** — a repository missing, a build failing for its own reasons — is neither
+  of the above. Report it as not run. A skipped consumer is not a passing consumer.
+
+The script leaves each repository on a sweep branch with the bump uncommitted, and commits,
+pushes and opens nothing. Leave it that way.
+
 ## Step 6 — Commit and open the PR
 
 ```bash
