@@ -9,8 +9,10 @@
 # Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not
 # a pass. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
 # so a run resolves the same integrity-checked tarballs every time instead of whatever npm
-# serves that day. The CLI's flag surface still has to track the live API, so Dependabot
-# raises the pin on its own schedule and the harness fails loudly (exit 2) if flags drift.
+# serves that day, and actions/setup-node pins the node/npm doing that install rather than
+# taking whatever the runner image ships. The CLI's flag surface still has to track the live
+# API, so Dependabot raises the pin on its own schedule and the harness fails loudly
+# (exit 2) if flags drift.
 
 name: Instruction Evals
 
@@ -61,6 +63,7 @@ jobs:
             objects.githubusercontent.com:443
             raw.githubusercontent.com:443
             registry.npmjs.org:443
+            nodejs.org:443
 
       - name: Note when the key is absent
         if: env.HAVE_KEY != 'true'
@@ -70,6 +73,23 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.HAVE_KEY == 'true'
+
+      # The lockfile pins the CLI; this pins the toolchain that installs it. Without this step
+      # the job ran on whatever `ubuntu-latest` shipped that week, and the npm version is
+      # behaviour, not plumbing: npm 11.17 added an allow-scripts gate that can defer a
+      # package's postinstall, and this package's postinstall is what swaps the 500-byte
+      # placeholder for the native binary. Node 22 LTS bundles npm 10.9.x, which predates that
+      # gate entirely, so the install step's behaviour stops depending on the runner image.
+      #
+      # The floor is the CLI's own `engines.node` (>=22.0.0 at 2.1.245). EvalsNodePinTest reads
+      # both this literal and that field out of evals/package-lock.json and fails when they stop
+      # agreeing, so a Dependabot bump that raises the floor turns CI red here instead of
+      # failing a $-costing eval run later. Dependabot bumps the action SHA on its own.
+      - name: Pin the Node toolchain that installs the CLI
+        if: env.HAVE_KEY == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.23.2'
 
       # `npm ci` against the committed lockfile, not `npm install -g`: the lockfile carries
       # an integrity hash per tarball, so a compromised or moved republish fails the install
