@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * declares an existing design invariant that must not be broken.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE})
 public @interface AIThreadSafe {
 
     /** The thread-safety strategy used to guarantee correctness under concurrent access. */

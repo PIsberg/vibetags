@@ -78,12 +78,17 @@ The showcase carries a guardrail at **every level one can attach to**, in both t
 | nested type | `@AICore`, `@AIImmutable` | Tier 1 (safety) and Tier 3 |
 | field | `@AIPrivacy`, `@AISecureLogging`, `@AIPerformance` | Tier 1 (safety) and Tier 3 |
 | method | `@AILocked`, `@AIAudit`, `@AISecure`, `@AIIgnore`, `@AIContract`, `@AIPerformance`, `@AITestDriven`, `@AIThreadSafe`, `@AILoadBearing`, `@AIKeepInSync`, `@AIBannedApi`, `@AIGenerated` | both tiers |
+| constructor | `@AILocked`, `@AIContract` on two overloads | Tier 1 (safety) and Tier 3 |
 | parameter | `@AIInputSanitized`, `@AILoadBearing` | Tier 3 |
 
-There is no constructor row, and that is a measured fact rather than an omission: **no annotation
-declares `ElementType.CONSTRUCTOR`**, so a constructor cannot carry a guardrail at all.
-`ElementNaming` still renders constructors, because javac hands them to the collector as enclosed
+The constructor row exists because the showcase failed to compile without it. No annotation
+declared `ElementType.CONSTRUCTOR`, so a constructor could not be guarded at all, even though
+`ElementNaming` had always rendered constructors: javac hands them to the collector as enclosed
 elements of an annotated type, which is why `ElementNamingFormatParityTest` covers the shape.
+Constructors were visible to the renderer and unaddressable by an author, and the way anyone
+found out was a compiler error. 34 annotations accept one now (#488); two do not, and
+`ConstructorLevelGuardrailTest` names them with the reason. Two overloads are annotated on
+purpose: they must be addressed by their own parameter lists.
 
 ### What phase two asserts
 
@@ -96,12 +101,13 @@ elements of an annotated type, which is why `ElementNamingFormatParityTest` cove
 | 6c | **The tier split**: `@AIPrivacy` inline, `@AIContract` *not* inline but present in the rules directory | Invariant 6, checked on somebody else's code. Wrong in one direction, safety guardrails become comments; wrong in the other, the aggregate bloats |
 | 6d | The parameter level survived | The finest addressing VibeTags produces, and the only level a hand-written rules file cannot express |
 | 6e | The package level survived | The only level with no owning member to hang off |
-| 6f | **The richness floor**: at least 15 distinct showcase guardrails reached a generated file | Every other assertion names one guardrail, so a change that stopped rendering half the surface would still pass them all |
+| 6f | **The richness floor**: at least 17 distinct showcase guardrails reached a generated file | Every other assertion names one guardrail, so a change that stopped rendering half the surface would still pass them all |
 | 7 | Every annotated element reaches the file | Keyed on a unique reason string, not a predicted path: predicting the path means reimplementing the thing under test |
 | 8 | No type-use annotation in any generated identity | In `path=` attributes, lock entries and filenames alike |
 
-Assertion 6f is the one that keeps the rest from rotting. 15 is measured, not aspirational: it is
-every marker the showcase declares, read off a green run. Raise it when the showcase grows.
+Assertion 6f is the one that keeps the rest from rotting. 17 is measured, not aspirational: it is
+every marker the showcase declares, read off a green run. It went 15 to 17 when constructors
+became annotatable, which is what raising it looks like.
 **Lowering it to make a run green is how this check stops meaning anything.**
 
 The annotations and the showcase are applied to the clone under `target/corpus` and reverted with

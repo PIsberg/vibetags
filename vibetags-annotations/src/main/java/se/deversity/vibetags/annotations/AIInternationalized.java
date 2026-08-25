@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * resolved via standard localization resources or message bundles.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AIInternationalized {
 
     /**

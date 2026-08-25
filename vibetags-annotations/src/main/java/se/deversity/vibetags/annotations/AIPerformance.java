@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * is unacceptable.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface AIPerformance {
     /**
      * The strict time or space complexity constraint required for this logic.

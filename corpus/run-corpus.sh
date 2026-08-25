@@ -42,11 +42,12 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 CACHE="${VIBETAGS_CORPUS_DIR:-$ROOT/target/corpus}"
 MANIFEST="$ROOT/corpus/repos.tsv"
 # Floor for assertion 6f: how many of the showcase's guardrails must reach a generated
-# file. 15 is measured, not aspirational - it is every marker the showcase declares,
-# across package, type, nested type, field, method and parameter levels, and it was
-# read off a green run before being written down. Raise it when the showcase grows.
+# file. 17 is measured, not aspirational - it is every marker the showcase declares,
+# across package, type, nested type, field, constructor, method and parameter levels,
+# and it was read off a green run before being written down. It went 15 -> 17 when
+# constructors became annotatable (#488), which is what raising it looks like.
 # Lowering it to make a run green is how this check stops meaning anything.
-SHOWCASE_FLOOR="${VIBETAGS_CORPUS_SHOWCASE_FLOOR:-15}"
+SHOWCASE_FLOOR="${VIBETAGS_CORPUS_SHOWCASE_FLOOR:-17}"
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) SEP=";" ; winpath() { cygpath -w "$1"; } ;;

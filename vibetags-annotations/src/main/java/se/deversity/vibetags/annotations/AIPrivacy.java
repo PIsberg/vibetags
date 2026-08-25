@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  * strict non-disclosure of its runtime values.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE})
 public @interface AIPrivacy {
     /**
      * Optional explanation of the PII category or regulatory scope.

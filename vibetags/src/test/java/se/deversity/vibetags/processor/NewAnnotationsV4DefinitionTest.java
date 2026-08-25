@@ -37,7 +37,7 @@ class NewAnnotationsV4DefinitionTest {
     void parallelTests_targetsTypeAndMethod() {
         Target t = AIParallelTests.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR}, t.value());
     }
 
     // ----------------- @AILegacyBridge -----------------
@@ -53,7 +53,7 @@ class NewAnnotationsV4DefinitionTest {
     void legacyBridge_targetsTypeAndMethod() {
         Target t = AILegacyBridge.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR}, t.value());
     }
 
     // ----------------- @AIArchitecture -----------------
@@ -97,7 +97,7 @@ class NewAnnotationsV4DefinitionTest {
     void publicApi_targetsTypeAndMethod() {
         Target t = AIPublicAPI.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE}, t.value());
     }
 
     // ----------------- @AIStrictExceptions -----------------
@@ -113,7 +113,7 @@ class NewAnnotationsV4DefinitionTest {
     void strictExceptions_targetsTypeAndMethod() {
         Target t = AIStrictExceptions.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR}, t.value());
     }
 
     // ----------------- @AIStrictTypes -----------------
@@ -130,7 +130,7 @@ class NewAnnotationsV4DefinitionTest {
         Target t = AIStrictTypes.class.getAnnotation(Target.class);
         assertNotNull(t);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             t.value());
     }
 
@@ -147,7 +147,7 @@ class NewAnnotationsV4DefinitionTest {
     void internationalized_targetsTypeAndMethod() {
         Target t = AIInternationalized.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR}, t.value());
     }
 
     // ----------------- @AIStrictClasspath -----------------
@@ -163,7 +163,7 @@ class NewAnnotationsV4DefinitionTest {
     void strictClasspath_targetsTypeAndMethod() {
         Target t = AIStrictClasspath.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE}, t.value());
     }
 
     // ----------------- @AISchemaSafe -----------------

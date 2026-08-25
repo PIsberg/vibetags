@@ -35,7 +35,7 @@ class AnnotationDefinitionsTest {
         Target target = AILocked.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             target.value()
         );
     }
@@ -62,7 +62,7 @@ class AnnotationDefinitionsTest {
         Target target = AIContext.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -88,7 +88,7 @@ class AnnotationDefinitionsTest {
         Target target = AIDraft.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR},
             target.value()
         );
     }
@@ -115,7 +115,7 @@ class AnnotationDefinitionsTest {
         Target target = AIAudit.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -173,7 +173,7 @@ class AnnotationDefinitionsTest {
         Target target = AIIgnore.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             target.value()
         );
     }
@@ -244,7 +244,7 @@ class AnnotationDefinitionsTest {
         Target target = AIPrivacy.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -282,7 +282,7 @@ class AnnotationDefinitionsTest {
         Target target = AICore.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD, ElementType.PACKAGE},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.PACKAGE},
             target.value()
         );
     }
@@ -321,7 +321,7 @@ class AnnotationDefinitionsTest {
         Target target = AIPerformance.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD},
             target.value()
         );
     }
@@ -374,7 +374,7 @@ class AnnotationDefinitionsTest {
         Target target = AIContract.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR},
             target.value()
         );
     }
@@ -421,7 +421,7 @@ class AnnotationDefinitionsTest {
         Target target = AITestDriven.class.getAnnotation(Target.class);
         assertNotNull(target);
         assertArrayEquals(
-            new ElementType[]{ElementType.TYPE, ElementType.METHOD},
+            new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR},
             target.value()
         );
     }

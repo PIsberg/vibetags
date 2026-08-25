@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Compilation will fail once system date exceeds the expiration date.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AITemporary {
     /**
      * Expiration date in ISO format YYYY-MM-DD (e.g. "2026-06-30").

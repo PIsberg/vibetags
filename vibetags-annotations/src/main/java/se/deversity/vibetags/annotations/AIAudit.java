@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * for the specified vulnerability types before outputting final code.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE})
 public @interface AIAudit {
     /**
      * List of specific vulnerability types to check for.

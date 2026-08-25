@@ -66,10 +66,11 @@ class AIIgnoreProcessorUnitTest {
             new java.lang.annotation.ElementType[]{
                 java.lang.annotation.ElementType.TYPE,
                 java.lang.annotation.ElementType.METHOD,
+                java.lang.annotation.ElementType.CONSTRUCTOR,
                 java.lang.annotation.ElementType.FIELD
             },
             targets,
-            "@AIIgnore must target TYPE, METHOD, and FIELD"
+            "@AIIgnore must target TYPE, METHOD, CONSTRUCTOR and FIELD"
         );
     }
 

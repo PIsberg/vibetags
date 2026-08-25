@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Useful for legacy code, critical security logic, or complex algorithms.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 public @interface AILocked {
     /**
      * Explanation for why the element is locked.

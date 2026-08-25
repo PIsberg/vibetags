@@ -53,7 +53,7 @@ class NewAnnotationsV5DefinitionTest {
     void featureFlag_targetsTypeMethodAndField() {
         Target t = AIFeatureFlag.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.FIELD}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD}, t.value());
     }
 
     @Test
@@ -81,7 +81,7 @@ class NewAnnotationsV5DefinitionTest {
     void secure_targetsTypeAndMethod() {
         Target t = AISecure.class.getAnnotation(Target.class);
         assertNotNull(t);
-        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.PACKAGE}, t.value());
+        assertArrayEquals(new ElementType[]{ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE}, t.value());
     }
 
     @Test

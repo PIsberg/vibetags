@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * Enforced by the compiler/processor to prevent AI from introducing illegal architectural bypasses.
  */
 @Retention(RetentionPolicy.SOURCE)
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR})
 public @interface AICallersOnly {
     /**
      * Fully qualified names or wildcard patterns of allowed callers (e.g. "com.example.service.*").
