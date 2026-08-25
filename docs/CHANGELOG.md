@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-08-25
+
 ### Added
 
 - **[docs/JVM-LANGUAGES.md](JVM-LANGUAGES.md): what Kotlin, Groovy and Scala actually get.** The
@@ -82,6 +84,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning, so a later sweep that "completes" the set has to argue with it. Found by the
   third-party corpus, whose showcase failed to compile. (#488)
 
+
+- **A corpus of real third-party Java, compiled with and without VibeTags on every CI run.**
+  Every fixture in this repository was written by somebody who knew what VibeTags does, and that
+  is the wrong sample: the code VibeTags has to survive was written by people who had never heard
+  of it. `corpus/` pins six permissively licensed libraries to commit SHAs and compiles each one
+  twice with identical sources, classpath and flags, differing only in whether VibeTags is on the
+  processor path.
+
+  Four assertions, each against the control rather than against a hard-coded expectation, so a
+  repo that does not compile on its own is reported as such instead of blamed on VibeTags: the
+  treatment exits exactly as the control did, raises no diagnostic the control did not, writes
+  nothing into a project that never opted in, and renders every member the way javac does.
+
+  Then a second phase, because non-interference is only half the question. **Claude, Gemini and
+  Codex are all opted in, aggregate and granular**, and the output is read back. Two real elements
+  of the repo's own code are annotated, plus a showcase compiled into a package of its own that
+  carries a guardrail at every level one can attach to: package, type, nested type, field, method
+  and parameter, across both the safety tier and the granular tier.
+
+  Codex needs its marker pair seeded, because invariant 4 means an empty `AGENTS.md` alongside
+  other platforms is dropped from the active set rather than written. The corpus asserts
+  `AGENTS.md` grew beyond that pair, since "dropped" and "working" look identical otherwise.
+
+  Ten assertions cover the result, and the two worth naming are the ones that keep the rest from
+  rotting. **The tier split** is invariant 6 checked on somebody else's code: `@AIPrivacy` must
+  still be inline in the aggregate, `@AIContract` must not be, and must instead be in the rules
+  directory. Wrong in one direction and safety guardrails become comments that load only once the
+  agent already opened the file; wrong in the other and the aggregate bloats. **The richness
+  floor** requires at least 15 distinct showcase guardrails to reach a generated file, because
+  every other assertion names one guardrail and would still pass if half the annotation surface
+  quietly stopped rendering. 15 is measured from a green run, not chosen.
+
+  Full detail, including the three defects the corpus found and why none of its assertions could
+  have found the others, is in [corpus/README.md](../corpus/README.md).
+
+  Measured on the first green run: 6 repositories, roughly 495 files, **15,683 members audited**,
+  no exit code changed, no diagnostic added, no file written. The corpus contributes what the
+  fixtures cannot: 15 `package-info` files and 279 generic sources from commons-io, varargs
+  density from jimfs, records from record-builder, Java 17 from semver4j, and an annotation
+  library whose own processor runs alongside VibeTags.
+
+  Nothing is vendored: sources are cloned at build time into `target/corpus` and never committed,
+  so no third-party code enters this repository. Pins are commit SHAs rather than branches, so an
+  upstream push cannot turn this repository's CI red for a reason nobody here changed, and bumping
+  them stays a decision somebody makes.
+
+  What it has been worth so far, stated as findings rather than as a claim: **three defects, each
+  caught by a different assertion, none of which could have found the others.** Type-use
+  annotations reaching an element identity for declared types, caught on the first run by the
+  parity check. The same annotations surviving on a *type variable*, invisible to that check
+  because javac renders it identically, and caught only by generating output and reading it back.
+  And the corpus itself running against an unresolved classpath on a cold CI runner, where both
+  the control and the treatment failed identically so every comparison passed while checking
+  nothing. The third one was a defect in the harness, and it is the reason there is now an
+  assertion that a corpus member must compile before anything is concluded from it.
+
+  A fourth thing it settled was not a defect but a gap: no annotation declared
+  `ElementType.CONSTRUCTOR`, found by trying to annotate one. That is fixed above (#488). (#480)
+
+  The corpus now also opts in **every** platform the registry knows about, on one repository, and
+  reads the result back with a real parser: 48 of 62 files written, and all ten of the YAML, TOML
+  and JSON files parsed. That is the question the fixture tests cannot ask. They assert what a
+  renderer *contains*; none asserts that a parser accepts it, and a renderer emitting an unquoted
+  `@` or a trailing comma satisfies every `contains` assertion while being unloadable by the tool
+  it targets. Verified by corrupting two files and watching the check name them. (#489)
+
+- **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
+  `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a
+  compiler with no Tree API, losing `@AILocked` line positions and nothing else. Nothing verified
+  either sentence, and the code behind it is unreachable from a JUnit test running under javac.
+  Reaching it from one would mean adding a seam to production code purely so a test could fail it.
+
+  `scripts/ecj-degradation-check.sh` compiles `examples/basic` twice, once with javac and once
+  with the Eclipse Compiler for Java, and asserts four things: ECJ exits 0, both compilers report
+  the same locked elements, every javac entry carries a position and no ECJ entry does, and the
+  generated guardrail region is byte-identical. Measured: 9 locked entries under each compiler, 9
+  positioned under javac and 0 under ECJ, 147 lines of region identical. The javac half is the
+  control, without which the ECJ assertion would pass equally well on an empty report. The ECJ
+  version is pinned in `vibetags-parent/pom.xml` with every other third-party version. (#475)
+
+- **The instruction evals pin the Node and npm that install the claude CLI.** The lockfile pinned
+  the CLI by integrity hash; nothing pinned the toolchain performing that install, so the job took
+  whatever `ubuntu-latest` shipped that week. npm's version is behaviour rather than plumbing:
+  npm 11.17 added an allow-scripts gate that can defer a package's postinstall, and this package's
+  postinstall is what replaces its 500-byte placeholder with the native binary. Node 22 LTS bundles
+  npm 10.9.x, which predates that gate. `EvalsNodePinTest` compares the pinned version against the
+  CLI's own `engines.node` in the lockfile and fails in the fast test tier, so a CLI bump that
+  raises the floor goes red in seconds rather than partway into an eval run that costs money to
+  reach. (#472)
+
 ### Changed
 
 - **A dependabot bump of `pmd.version` no longer turns the build red.** Every third-party version
@@ -116,6 +208,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The mirror tables in `docs/DEPENDENCIES.md` and the `bump-dependencies` skill were both wrong
   about the wrapper: they said three subprojects and six files respectively, against ten actual
   files. Both now say to enumerate rather than remember.
+
+
+- **The release process gates on the consumer sweep.** `scripts/consumer-sweep.sh` builds every
+  downstream consumer against a chosen version and reports which pass. It ran in no workflow and
+  at no step, so it ran when somebody remembered.
+
+  That matters because VibeTags writes files consumers commit, and nothing in this repository's own
+  CI can see them move: the fixtures and the third-party corpus are both projects with no committed
+  VibeTags output of their own. The element-identity change above is the worked example. It moves
+  committed files for any project using jspecify or the Checker Framework, and two independent
+  things stopped anyone noticing: this repository uses jspecify in 47 files but never on a parameter
+  of an annotated method, which is the only place a parameter type reaches an element path; and the
+  consumers are pinned to the previous release, so they had never run it.
+
+  The sweep is now a required step in the release skill, before the release PR is opened, so its
+  result can reach the CHANGELOG and the release notes. What it looks for is drift in already
+  committed generated files rather than whether the build passes, and the skill says what to do with
+  each outcome, including that a consumer which could not be swept is reported as not run rather
+  than as passing. `ReleaseConsumerSweepGateTest` fails if the step is dropped, if it moves after the
+  PR is opened, or if the honest-reporting clause goes: a checklist step is prose, and prose gets
+  tidied. (#490)
+
+- **The coverage gate is a ratchet rather than a floor.** `codecov.yml` moves from
+  `target: 90%, threshold: 2%` to `target: auto, threshold: 1%`, so the question it asks is "did
+  this pull request lose coverage" rather than "is coverage above a number somebody typed once".
+  The fixed floor had become slack. A 90% target with a 2% threshold only fails below 88%, and
+  measured coverage has been above 92% since #476, so a change could shed four points and still
+  pass green.
+
+  `docs/TESTS.md` gains a "Coverage and the fault paths" section recording what the gate does not
+  reach and why: 97.07% of lines and 90.58% of branches are covered, and the remainder concentrates
+  in six classes whose uncovered lines need a fault a test cannot cause, such as a filesystem that
+  fails one specific write or an executor task interrupted mid-flight. Reaching them means adding
+  seams to production code, which was considered and rejected. `CoverageGateTest` fails if the
+  ratchet is swapped back for a fixed floor, or if a class named in that table stops existing.
+  (#482)
 
 ### Fixed
 
@@ -243,134 +371,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   third-party code and reading it back exposed it. Type variables now resolve through
   `asElement()` like every other type, and anything left with no structural route has its
   annotations stripped rather than trusted. (#480)
-
-### Added
-
-- **A corpus of real third-party Java, compiled with and without VibeTags on every CI run.**
-  Every fixture in this repository was written by somebody who knew what VibeTags does, and that
-  is the wrong sample: the code VibeTags has to survive was written by people who had never heard
-  of it. `corpus/` pins six permissively licensed libraries to commit SHAs and compiles each one
-  twice with identical sources, classpath and flags, differing only in whether VibeTags is on the
-  processor path.
-
-  Four assertions, each against the control rather than against a hard-coded expectation, so a
-  repo that does not compile on its own is reported as such instead of blamed on VibeTags: the
-  treatment exits exactly as the control did, raises no diagnostic the control did not, writes
-  nothing into a project that never opted in, and renders every member the way javac does.
-
-  Then a second phase, because non-interference is only half the question. **Claude, Gemini and
-  Codex are all opted in, aggregate and granular**, and the output is read back. Two real elements
-  of the repo's own code are annotated, plus a showcase compiled into a package of its own that
-  carries a guardrail at every level one can attach to: package, type, nested type, field, method
-  and parameter, across both the safety tier and the granular tier.
-
-  Codex needs its marker pair seeded, because invariant 4 means an empty `AGENTS.md` alongside
-  other platforms is dropped from the active set rather than written. The corpus asserts
-  `AGENTS.md` grew beyond that pair, since "dropped" and "working" look identical otherwise.
-
-  Ten assertions cover the result, and the two worth naming are the ones that keep the rest from
-  rotting. **The tier split** is invariant 6 checked on somebody else's code: `@AIPrivacy` must
-  still be inline in the aggregate, `@AIContract` must not be, and must instead be in the rules
-  directory. Wrong in one direction and safety guardrails become comments that load only once the
-  agent already opened the file; wrong in the other and the aggregate bloats. **The richness
-  floor** requires at least 15 distinct showcase guardrails to reach a generated file, because
-  every other assertion names one guardrail and would still pass if half the annotation surface
-  quietly stopped rendering. 15 is measured from a green run, not chosen.
-
-  Full detail, including the three defects the corpus found and why none of its assertions could
-  have found the others, is in [corpus/README.md](../corpus/README.md).
-
-  Measured on the first green run: 6 repositories, roughly 495 files, **15,683 members audited**,
-  no exit code changed, no diagnostic added, no file written. The corpus contributes what the
-  fixtures cannot: 15 `package-info` files and 279 generic sources from commons-io, varargs
-  density from jimfs, records from record-builder, Java 17 from semver4j, and an annotation
-  library whose own processor runs alongside VibeTags.
-
-  Nothing is vendored: sources are cloned at build time into `target/corpus` and never committed,
-  so no third-party code enters this repository. Pins are commit SHAs rather than branches, so an
-  upstream push cannot turn this repository's CI red for a reason nobody here changed, and bumping
-  them stays a decision somebody makes.
-
-  What it has been worth so far, stated as findings rather than as a claim: **three defects, each
-  caught by a different assertion, none of which could have found the others.** Type-use
-  annotations reaching an element identity for declared types, caught on the first run by the
-  parity check. The same annotations surviving on a *type variable*, invisible to that check
-  because javac renders it identically, and caught only by generating output and reading it back.
-  And the corpus itself running against an unresolved classpath on a cold CI runner, where both
-  the control and the treatment failed identically so every comparison passed while checking
-  nothing. The third one was a defect in the harness, and it is the reason there is now an
-  assertion that a corpus member must compile before anything is concluded from it.
-
-  A fourth thing it settled was not a defect but a gap: no annotation declared
-  `ElementType.CONSTRUCTOR`, found by trying to annotate one. That is fixed above (#488). (#480)
-
-  The corpus now also opts in **every** platform the registry knows about, on one repository, and
-  reads the result back with a real parser: 48 of 62 files written, and all ten of the YAML, TOML
-  and JSON files parsed. That is the question the fixture tests cannot ask. They assert what a
-  renderer *contains*; none asserts that a parser accepts it, and a renderer emitting an unquoted
-  `@` or a trailing comma satisfies every `contains` assertion while being unloadable by the tool
-  it targets. Verified by corrupting two files and watching the check name them. (#489)
-
-- **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
-  `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a
-  compiler with no Tree API, losing `@AILocked` line positions and nothing else. Nothing verified
-  either sentence, and the code behind it is unreachable from a JUnit test running under javac.
-  Reaching it from one would mean adding a seam to production code purely so a test could fail it.
-
-  `scripts/ecj-degradation-check.sh` compiles `examples/basic` twice, once with javac and once
-  with the Eclipse Compiler for Java, and asserts four things: ECJ exits 0, both compilers report
-  the same locked elements, every javac entry carries a position and no ECJ entry does, and the
-  generated guardrail region is byte-identical. Measured: 9 locked entries under each compiler, 9
-  positioned under javac and 0 under ECJ, 147 lines of region identical. The javac half is the
-  control, without which the ECJ assertion would pass equally well on an empty report. The ECJ
-  version is pinned in `vibetags-parent/pom.xml` with every other third-party version. (#475)
-
-- **The instruction evals pin the Node and npm that install the claude CLI.** The lockfile pinned
-  the CLI by integrity hash; nothing pinned the toolchain performing that install, so the job took
-  whatever `ubuntu-latest` shipped that week. npm's version is behaviour rather than plumbing:
-  npm 11.17 added an allow-scripts gate that can defer a package's postinstall, and this package's
-  postinstall is what replaces its 500-byte placeholder with the native binary. Node 22 LTS bundles
-  npm 10.9.x, which predates that gate. `EvalsNodePinTest` compares the pinned version against the
-  CLI's own `engines.node` in the lockfile and fails in the fast test tier, so a CLI bump that
-  raises the floor goes red in seconds rather than partway into an eval run that costs money to
-  reach. (#472)
-
-### Changed
-
-- **The release process gates on the consumer sweep.** `scripts/consumer-sweep.sh` builds every
-  downstream consumer against a chosen version and reports which pass. It ran in no workflow and
-  at no step, so it ran when somebody remembered.
-
-  That matters because VibeTags writes files consumers commit, and nothing in this repository's own
-  CI can see them move: the fixtures and the third-party corpus are both projects with no committed
-  VibeTags output of their own. The element-identity change above is the worked example. It moves
-  committed files for any project using jspecify or the Checker Framework, and two independent
-  things stopped anyone noticing: this repository uses jspecify in 47 files but never on a parameter
-  of an annotated method, which is the only place a parameter type reaches an element path; and the
-  consumers are pinned to the previous release, so they had never run it.
-
-  The sweep is now a required step in the release skill, before the release PR is opened, so its
-  result can reach the CHANGELOG and the release notes. What it looks for is drift in already
-  committed generated files rather than whether the build passes, and the skill says what to do with
-  each outcome, including that a consumer which could not be swept is reported as not run rather
-  than as passing. `ReleaseConsumerSweepGateTest` fails if the step is dropped, if it moves after the
-  PR is opened, or if the honest-reporting clause goes: a checklist step is prose, and prose gets
-  tidied. (#490)
-
-- **The coverage gate is a ratchet rather than a floor.** `codecov.yml` moves from
-  `target: 90%, threshold: 2%` to `target: auto, threshold: 1%`, so the question it asks is "did
-  this pull request lose coverage" rather than "is coverage above a number somebody typed once".
-  The fixed floor had become slack. A 90% target with a 2% threshold only fails below 88%, and
-  measured coverage has been above 92% since #476, so a change could shed four points and still
-  pass green.
-
-  `docs/TESTS.md` gains a "Coverage and the fault paths" section recording what the gate does not
-  reach and why: 97.07% of lines and 90.58% of branches are covered, and the remainder concentrates
-  in six classes whose uncovered lines need a fault a test cannot cause, such as a filesystem that
-  fails one specific write or an executor task interrupted mid-flight. Reaching them means adding
-  seams to production code, which was considered and rejected. `CoverageGateTest` fails if the
-  ratchet is swapped back for a fixed floor, or if a class named in that table stops existing.
-  (#482)
 
 ### Tests
 
@@ -3393,7 +3393,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.6...HEAD
+[1.2.6]: https://github.com/PIsberg/vibetags/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/PIsberg/vibetags/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/PIsberg/vibetags/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/PIsberg/vibetags/compare/v1.2.2...v1.2.3
