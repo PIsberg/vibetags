@@ -241,7 +241,10 @@ to skip it). The format is JSON Lines wrapped in `# VIBETAGS` hash markers — d
 last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler Tree API, resolved in
 `process()` while rounds are live) as `model.SourceLocation`. Gradle's incremental-processing
 wrapper is reflectively unwrapped so positions survive Gradle-run javac (`treesFor`); under
-genuinely non-javac compilers (ECJ) entries omit position fields.
+genuinely non-javac compilers (ECJ) entries omit position fields. That last sentence is
+measured rather than asserted: the `ecj-degradation` CI leg
+(`scripts/ecj-degradation-check.sh`) compiles `examples/basic` under both compilers and
+compares — same locked elements, positions under javac only.
 
 The `kind` field is `ElementTag.name()`, which mirrors `javax.lang.model.element.ElementKind`
 name-for-name (`CLASS`, `METHOD`, `FIELD`, …), plus `UNKNOWN` when the compiler reports no kind.
