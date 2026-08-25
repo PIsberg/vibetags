@@ -163,6 +163,16 @@
     <Method name="resolveLogFile"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
+  <!-- Same decision as resolveLogFile above, one step later. The string this opens is not user
+       input arriving here: it is the path resolveLogFile already produced from -Avibetags.log.path,
+       which is documented as absolute-capable because redirecting the log is the feature. The
+       open moved out of VibeTagsLogger and into this appender so the file is created on the first
+       record rather than when the logger is configured (#487); the path it opens did not change. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.LazyFileAppender$DeferredFileStream"/>
+    <Method name="open"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
   <Match>
     <Class name="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
     <Method name="writeFileIfChanged"/>

@@ -34,6 +34,10 @@ class VibeTagsLoggerUnitTest {
         assertNotNull(logger);
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
         // Default log file should have been created
+                // Write one event first. The log file is created on the first record rather than
+        // when the logger is configured (#487), so what is asserted here is that the
+        // resolved path is where the log lands, which is the part a consumer relies on.
+        logger.info("corpus");
         assertTrue(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)));
     }
 
@@ -122,6 +126,10 @@ class VibeTagsLoggerUnitTest {
 
         assertNotNull(logger);
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
+                // Write one event first. The log file is created on the first record rather than
+        // when the logger is configured (#487), so what is asserted here is that the
+        // resolved path is where the log lands, which is the part a consumer relies on.
+        logger.info("corpus");
         assertTrue(Files.exists(logPath));
     }
 
@@ -135,6 +143,10 @@ class VibeTagsLoggerUnitTest {
 
         assertNotNull(logger);
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
+                // Write one event first. The log file is created on the first record rather than
+        // when the logger is configured (#487), so what is asserted here is that the
+        // resolved path is where the log lands, which is the part a consumer relies on.
+        logger.info("corpus");
         assertTrue(Files.exists(absoluteLog));
     }
 
@@ -152,6 +164,10 @@ class VibeTagsLoggerUnitTest {
         Logger logger = VibeTagsLogger.forRoot(tempDir, "   ", "INFO");
 
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
+                // Write one event first. The log file is created on the first record rather than
+        // when the logger is configured (#487), so what is asserted here is that the
+        // resolved path is where the log lands, which is the part a consumer relies on.
+        logger.info("corpus");
         assertTrue(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)));
     }
 
@@ -163,6 +179,10 @@ class VibeTagsLoggerUnitTest {
         Logger logger = VibeTagsLogger.forRoot(tempDir, null, "INVALID_LEVEL_NAME_123");
         assertNotNull(logger);
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
+                // Write one event first. The log file is created on the first record rather than
+        // when the logger is configured (#487), so what is asserted here is that the
+        // resolved path is where the log lands, which is the part a consumer relies on.
+        logger.info("corpus");
         assertTrue(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)));
     }
 

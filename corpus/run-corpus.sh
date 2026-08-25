@@ -171,9 +171,11 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
   ctrl_diag=$(diagnostics "$dir/.corpus-ctrl.log")
   vt_diag=$(diagnostics "$dir/.corpus-vt.log")
 
-  # Assertion 3. vibetags.log is documented and expected; anything else is a file created in a
-  # project that never opted in.
-  wrote=$(find "$vt_root" -type f ! -name "vibetags.log" | wc -l | tr -d ' ')
+  # Assertion 3. Nothing at all, not even a log: since #487 the log file is created on the
+  # first record rather than when the logger is configured, so a project with no annotations
+  # gets an untouched tree. This used to exclude vibetags.log by name, which is the kind of
+  # exclusion worth removing rather than settling into.
+  wrote=$(find "$vt_root" -type f | wc -l | tr -d ' ')
 
   visited=$(sed -n 's/^VISITED\t//p' "$dir/.corpus-report" 2>/dev/null | head -1)
   mismatches=$(sed -n 's/^MISMATCHES\t//p' "$dir/.corpus-report" 2>/dev/null | head -1)
