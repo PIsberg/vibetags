@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-08-25
+
 ### Added
 
 - **[docs/JVM-LANGUAGES.md](JVM-LANGUAGES.md): what Kotlin, Groovy and Scala actually get.** The
@@ -3393,7 +3395,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.6...HEAD
+[1.2.6]: https://github.com/PIsberg/vibetags/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/PIsberg/vibetags/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/PIsberg/vibetags/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/PIsberg/vibetags/compare/v1.2.2...v1.2.3

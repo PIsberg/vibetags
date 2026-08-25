@@ -15,8 +15,8 @@ repositories {
 }
 
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.5')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.5')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.2.6')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.2.6')
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
 }
