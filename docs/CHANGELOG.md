@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An annotation written bare no longer renders labels with nothing after them.** `@AILocked`
+  with no `reason`, which is the form people actually write, left 99 empty labels across five
+  generated files: 23 empty XML elements each in the Claude formats (`<reason></reason>`,
+  `<focus></focus>`, `<belongs_to></belongs_to>` and 20 more), 22 empty bullets in `llms-full.txt`,
+  25 in `CONVENTIONS.md`, and 6 Codex bullets whose bold element name was followed by a colon and
+  nothing at all. No guardrail was lost; the cost was tokens, in files whose whole purpose is to
+  stay small enough to fit an agent's context.
+
+  Separately, the Claude renderer emitted an empty `<audit_requirements>` block *and* a `<rule>`
+  instructing the agent to consult the list inside it, whenever every `@AIAudit` in the build was
+  written bare. The agent was pointed at a list that was not there.
+
+  The guard already existed: `AISecureFormatter` guards its `aspect` on every arm. It simply was
+  not applied uniformly. Three helpers in `CommonFormatterHelper` now hold it in one place, and
+  each emits the same bytes as the inline form it replaced whenever the member is populated, which
+  is why the whole suite passed without a single golden-file update. Verified failing-first: the
+  restored assertion was run against the unfixed formatters and reported all 99, grouped by
+  platform. (#474)
+
+- **The same defect in its other shape: a separator left with nothing after it.** The fix above
+  covered labelled bullets. Where a platform renders a member inline instead of under a bold
+  label, an unset member still left the separator behind: ``* `Foo` - Reason:``, ``* `Foo` -``,
+  `Expires on: . Reason:`, an empty pair of backticks where a generated file's source path should
+  have been, and `Only callable by: []`. 21 of the 48 aggregate
+  platforms carried at least one. Each reads as though a value went missing, which is worse than
+  silence, because it tells an agent something was meant to be there.
+
+  Two further helpers keep a separator with its value so the two disappear together, one for the
+  end of a line and one for a clause inside a summary sentence. The eight shared standard-platform
+  arms route through the first, which fixes those platforms for every annotation at once; 208
+  further arms across 41 formatters were rewritten the same way. Where a summary was a sentence
+  built around a member, the sentence was rewritten rather than deleted, because the annotation
+  still means something bare: a bare `@AIGenerated` says "machine-generated, do not hand edit"
+  without naming a source. `@AICallersOnly` is the exception that lost its clause outright, since
+  "Only callable by: []" states the element is callable by nobody, which is not what writing it
+  bare means. (#478)
+
+- **`@AISunset` no longer tells agents to migrate callers to `java.lang.Object`.** `replacement()`
+  defaults to `Object.class`, which is the annotation's way of saying "no replacement named". It
+  was rendered literally, so a sunset element with a ticket and no successor advertised `Object`
+  as its migration target. The default is now dropped rather than printed. This moves committed
+  output: `examples/multimodule-indexed/GEMINI.md` loses one such clause. (#478)
+
+- **An element's identity no longer depends on which compiler ran.** `ElementNaming` built member
+  paths by concatenating `Element.toString()`, whose format `javax.lang.model` leaves to the
+  implementation. javac renders `SecurityConfig.getKeyRotationHours()`; ECJ renders the same
+  element as `SecurityConfig.public int getKeyRotationHours() `, with modifiers, a return type, a
+  trailing space, and an unqualified raw type in parameter lists.
+
+  That string is the element's identity. `.vibetags-locks` records it and the shipped
+  `action/locked-files` matches a pull request's diff against it, `granularQName` turns it into a
+  granular rule *filename*, and every `path=` attribute in the aggregates carries it. A project
+  that switches compiler, or builds under both, got churn in committed files with no source change
+  behind it, and locks that no longer matched.
+
+  Signatures are now derived structurally from the `ExecutableElement`: name, type parameters, and
+  parameter types resolved through the `TypeMirror`. Type and package names come from
+  `QualifiedNameable`, which specifies its format. The derivation reproduces javac's rendering
+  deliberately, because javac produced every committed fixture here and every generated file in
+  every consumer, so **javac output does not move** and ECJ converges onto it.
+  `ElementNamingFormatParityTest` compiles a fixture with a real javac and asserts the two agree
+  member by member across primitives, qualified and nested generics, arrays, a varargs tail,
+  wildcards, bounded and unbounded generic methods, an overload set, a constructor, a nested type
+  and an enum. Found by the ECJ CI leg on its first run. (#480)
+
+### Added
+
+- **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
+  `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a
+  compiler with no Tree API, losing `@AILocked` line positions and nothing else. Nothing verified
+  either sentence, and the code behind it is unreachable from a JUnit test running under javac.
+  Reaching it from one would mean adding a seam to production code purely so a test could fail it.
+
+  `scripts/ecj-degradation-check.sh` compiles `examples/basic` twice, once with javac and once
+  with the Eclipse Compiler for Java, and asserts four things: ECJ exits 0, both compilers report
+  the same locked elements, every javac entry carries a position and no ECJ entry does, and the
+  generated guardrail region is byte-identical. Measured: 9 locked entries under each compiler, 9
+  positioned under javac and 0 under ECJ, 147 lines of region identical. The javac half is the
+  control, without which the ECJ assertion would pass equally well on an empty report. The ECJ
+  version is pinned in `vibetags-parent/pom.xml` with every other third-party version. (#475)
+
+- **The instruction evals pin the Node and npm that install the claude CLI.** The lockfile pinned
+  the CLI by integrity hash; nothing pinned the toolchain performing that install, so the job took
+  whatever `ubuntu-latest` shipped that week. npm's version is behaviour rather than plumbing:
+  npm 11.17 added an allow-scripts gate that can defer a package's postinstall, and this package's
+  postinstall is what replaces its 500-byte placeholder with the native binary. Node 22 LTS bundles
+  npm 10.9.x, which predates that gate. `EvalsNodePinTest` compares the pinned version against the
+  CLI's own `engines.node` in the lockfile and fails in the fast test tier, so a CLI bump that
+  raises the floor goes red in seconds rather than partway into an eval run that costs money to
+  reach. (#472)
+
+### Changed
+
+- **The coverage gate is a ratchet rather than a floor.** `codecov.yml` moves from
+  `target: 90%, threshold: 2%` to `target: auto, threshold: 1%`, so the question it asks is "did
+  this pull request lose coverage" rather than "is coverage above a number somebody typed once".
+  The fixed floor had become slack. A 90% target with a 2% threshold only fails below 88%, and
+  measured coverage has been above 92% since #476, so a change could shed four points and still
+  pass green.
+
+  `docs/TESTS.md` gains a "Coverage and the fault paths" section recording what the gate does not
+  reach and why: 97.07% of lines and 90.58% of branches are covered, and the remainder concentrates
+  in six classes whose uncovered lines need a fault a test cannot cause, such as a filesystem that
+  fails one specific write or an executor task interrupted mid-flight. Reaching them means adding
+  seams to production code, which was considered and rejected. `CoverageGateTest` fails if the
+  ratchet is swapped back for a fixed floor, or if a class named in that table stops existing.
+  (#482)
+
+### Tests
+
+- **The bare-annotation fixture now models a bare annotation.** `GuardrailModels.unsetMember`
+  fabricated a zero value per type, `0` for an int and the enum's last constant, instead of
+  reading the member's declared default. It therefore modelled an annotation whose members had
+  been zeroed rather than one nobody filled in. For `String` members the two coincide, because the
+  default is `""`, which is why the defects the fixture found were real. For the rest they did
+  not: `@AITestDriven.coverageGoal` defaults to 100 and rendered as `Coverage goal: 0%`, and
+  `@AIThreadSafe.strategy` defaults to `SYNCHRONIZED` and rendered as `Strategy: OTHER`. Both read
+  as renderer bugs and were fixture bugs, describing a state no user can produce. The fixture now
+  returns the declared default and falls back to an empty value only for members that have none,
+  which are the ones an author cannot omit anyway. (#478)
+
 ## [1.2.5] - 2026-08-22
 
 ### Fixed
