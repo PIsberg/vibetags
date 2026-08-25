@@ -220,7 +220,7 @@ Any change made to these elements requires a step-by-step mathematical/architect
 ## SUNSET DEPRECATED APIs
 Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden:
 
-- `com.example.indexed.core.DocumentRetention.expiryFromNow(int)`: Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DOC-4471. Replacement: `java.lang.Object`
+- `com.example.indexed.core.DocumentRetention.expiryFromNow(int)`: Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: DOC-4471.
 
 ## TEMPORARY CODE WORKAROUNDS
 Temporary stubs or hacks that must be refactored or removed before their expiration limit:

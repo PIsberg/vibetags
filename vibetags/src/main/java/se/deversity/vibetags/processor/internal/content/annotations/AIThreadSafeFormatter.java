@@ -23,7 +23,7 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CURSOR:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <strategy>").append(Escape.xml(strategy)).append("</strategy>\n");
@@ -36,17 +36,17 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Strategy**: ").append(strategy).append('\n');
@@ -59,13 +59,13 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
                 sb.append("#### THREAD-SAFE: ").append(className).append("\n- **Strategy**: ").append(strategy).append('\n').append(note.isEmpty() ? "" : "- **Note**: " + note + "\n").append('\n');
                 break;
             case WINDSURF:
-                sb.append("* `").append(className).append("` (thread-safe) - ").append(summary).append('\n');
+                sb.append("* `").append(className).append("` (thread-safe)").append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` (thread-safe): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (thread-safe)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (thread-safe): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (thread-safe)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

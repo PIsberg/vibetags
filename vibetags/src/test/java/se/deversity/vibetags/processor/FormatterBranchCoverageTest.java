@@ -1180,10 +1180,15 @@ class FormatterBranchCoverageTest {
         assertEquals(0, sbNull.length());
         when(el.getAnnotation(AISunset.class)).thenReturn(ann);
 
-        // CURSOR (with standard replacement)
+        // CURSOR with replacement() left at its Object.class default. That default is the
+        // annotation's way of saying "no replacement named", so it is not rendered — printing
+        // "Replacement: `java.lang.Object`" told an agent to migrate callers to Object (#478).
         StringBuilder sbCursor = new StringBuilder();
         fmt.format(TaggedElements.tagged(el), sbCursor, Platform.CURSOR);
-        assertTrue(sbCursor.toString().contains("Replacement: `java.lang.Object`"));
+        assertFalse(sbCursor.toString().contains("java.lang.Object"),
+            "the default replacement names nothing and must not be rendered as a migration target");
+        assertTrue(sbCursor.toString().contains("Strictly sunset/deprecated"),
+            "the guardrail itself still has to reach the file");
 
         // MirroredTypeException with non-null TypeMirror
         javax.lang.model.type.TypeMirror tm = mock(javax.lang.model.type.TypeMirror.class);
@@ -1200,9 +1205,12 @@ class FormatterBranchCoverageTest {
         doReturn(null).when(mteNull).getTypeMirror();
         doThrow(mteNull).when(ann).replacement();
 
+        // A MirroredTypeException carrying no TypeMirror falls back to the Object.class default,
+        // which now renders as no replacement clause at all — same reasoning as above.
         StringBuilder sbCursorMirrorNull = new StringBuilder();
         fmt.format(TaggedElements.tagged(el), sbCursorMirrorNull, Platform.CURSOR);
-        assertTrue(sbCursorMirrorNull.toString().contains("Replacement: `java.lang.Object`"));
+        assertFalse(sbCursorMirrorNull.toString().contains("java.lang.Object"),
+            "the fallback names nothing either, so it must not be rendered as a migration target");
 
         // Reset normal behavior
         doReturn(Object.class).when(ann).replacement();

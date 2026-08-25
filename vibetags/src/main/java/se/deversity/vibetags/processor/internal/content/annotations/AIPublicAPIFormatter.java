@@ -23,7 +23,7 @@ public final class AIPublicAPIFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <api>public</api>").append(CommonFormatterHelper.claudeReason(reason)).append("\n    </element>\n");
@@ -32,17 +32,17 @@ public final class AIPublicAPIFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Public API surface. Preserve signature, Javadoc, and behavior without breaking backwards compatibility.\n\n");
@@ -51,10 +51,10 @@ public final class AIPublicAPIFormatter implements AnnotationFormatter {
                 sb.append("#### PUBLIC API: ").append(className).append("\n- **Rule**: Exposes public API. Do not modify public signature or break backwards compatibility.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (public-api): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (public-api)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

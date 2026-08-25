@@ -21,7 +21,9 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
             typesStr[i] = types[i].name();
         }
         String typeList = String.join(", ", typesStr);
-        String summary = "Input parameter/field must be strictly sanitized against injection attacks: [" + typeList + "]";
+        // The requirement stands without a list; only the enumeration of attack types is dropped.
+        String summary = "Input parameter/field must be strictly sanitized against injection attacks"
+            + (typeList.isEmpty() ? "." : ": [" + typeList + "]");
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -42,7 +44,7 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Required Filters", typeList)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (sanitized): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (sanitized)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

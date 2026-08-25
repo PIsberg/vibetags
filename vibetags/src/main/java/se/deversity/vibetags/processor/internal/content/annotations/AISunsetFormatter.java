@@ -21,7 +21,13 @@ public final class AISunsetFormatter implements AnnotationFormatter {
         // resolved it to a type name while the compiler was still in scope.
         String replacementName = element.typeMember("AISunset.replacement", "java.lang.Object");
 
-        String summary = "Strictly sunset/deprecated. Forbid any *new* calls or references. JIRA: " + jira + ". Replacement: `" + replacementName + "`";
+        // replacement() defaults to Object.class, which is the annotation's way of saying "none
+        // named" rather than "replace this with Object" — so it is dropped rather than printed.
+        boolean namesReplacement = !replacementName.isEmpty()
+            && !"java.lang.Object".equals(replacementName);
+        String summary = "Strictly sunset/deprecated. Forbid any *new* calls or references."
+            + CommonFormatterHelper.detail(" ", "JIRA: ", jira.isEmpty() ? "" : jira + ".")
+            + (namesReplacement ? " Replacement: `" + replacementName + "`" : "");
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -45,7 +51,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Replacement", replacementName)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (sunset): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (sunset)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

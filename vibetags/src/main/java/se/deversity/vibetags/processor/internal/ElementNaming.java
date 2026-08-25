@@ -2,8 +2,21 @@ package se.deversity.vibetags.processor.internal;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ArrayType;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.StringJoiner;
 
 /**
  * Helpers for deriving display strings from {@link Element} instances.
@@ -37,7 +50,127 @@ public final class ElementNaming {
      * both in lock-step so a pointer can never drift from the file it references.
      */
     public static String granularQName(Element element) {
-        return element.toString().replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+        return qualifiedName(element).replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+    }
+
+    /**
+     * The fully-qualified name of a type or package, without going through
+     * {@link Object#toString()}.
+     *
+     * <p>{@code Element.toString()} is specified as "a string representation of this element" and
+     * the format is left to the implementation. javac and ECJ agree for types and packages, but
+     * relying on that agreement is relying on a coincidence, so the qualified name is read from
+     * the API that promises it. Falls back to {@code toString()} for the element kinds that are
+     * not {@link QualifiedNameable} — the same behaviour as before for those.
+     */
+    private static String qualifiedName(Element element) {
+        if (element instanceof QualifiedNameable nameable) {
+            Name qualified = nameable.getQualifiedName();
+            if (qualified != null) {
+                return qualified.toString();
+            }
+        }
+        return element.toString();
+    }
+
+    /**
+     * A member's signature: the field's name, or the method/constructor's name with its parameter
+     * types in parentheses.
+     *
+     * <p>This is the part that used to be {@code element.toString()} and could not stay that way.
+     * Under javac a method renders as {@code validateOrder(java.util.Map<java.lang.String,java.lang.Object>)};
+     * under ECJ the same element renders as
+     * {@code public boolean validateOrder(Map<java.lang.String,java.lang.Object>) } — modifiers,
+     * return type, a trailing space, and an unqualified raw type. The string is the element's
+     * identity: {@code .vibetags-locks} records it and the {@code action/locked-files} guard
+     * matches a pull request's diff against it, and {@link #granularQName} turns it into a rule
+     * filename. An identity that depends on which compiler ran is a lock that does not match.
+     *
+     * <p>The format reproduced here is javac's, deliberately: javac is what the committed fixtures
+     * and every consumer's generated files were produced by, so converging on it moves ECJ output
+     * onto javac's and leaves javac's own output byte-identical. {@code ElementNamingFormatParityTest}
+     * pins that by compiling a fixture and asserting this method agrees with {@code toString()} on
+     * every member, so the day javac changes its rendering the test says so rather than the
+     * generated files quietly moving.
+     */
+    private static String memberSignature(Element element) {
+        if (element.getKind() == ElementKind.FIELD) {
+            return simpleNameOf(element);
+        }
+        if (!(element instanceof ExecutableElement executable)) {
+            return element.toString();
+        }
+        // javac prints a constructor under its class's simple name, not under "<init>". A
+        // constructor always has an enclosing type, but getEnclosingElement() is @Nullable in
+        // general, so the absent case falls back to the element's own simple name rather than
+        // throwing inside somebody else's build.
+        Element owner = element.getEnclosingElement();
+        String name = element.getKind() == ElementKind.CONSTRUCTOR && owner != null
+            ? simpleNameOf(owner)
+            : simpleNameOf(element);
+
+        // A generic method carries its type parameters in front of the name — javac renders
+        // <T>typeVariable(T,java.util.List<T>), by their names only, bounds omitted.
+        StringBuilder signature = new StringBuilder();
+        List<? extends TypeParameterElement> typeParameters = executable.getTypeParameters();
+        if (!typeParameters.isEmpty()) {
+            StringJoiner declared = new StringJoiner(",", "<", ">");
+            for (TypeParameterElement parameter : typeParameters) {
+                declared.add(simpleNameOf(parameter));
+            }
+            signature.append(declared);
+        }
+        signature.append(name);
+
+        List<? extends VariableElement> parameters = executable.getParameters();
+        StringJoiner joined = new StringJoiner(",", "(", ")");
+        for (int i = 0; i < parameters.size(); i++) {
+            boolean varargs = executable.isVarArgs() && i == parameters.size() - 1;
+            joined.add(typeString(parameters.get(i).asType(), varargs));
+        }
+        return signature.append(joined).toString();
+    }
+
+    /**
+     * Renders a type the way javac's own {@code toString()} does: qualified names for declared
+     * types, type arguments kept and comma-separated with no spaces, and a trailing {@code ...}
+     * for the last parameter of a varargs method.
+     */
+    private static String typeString(TypeMirror type, boolean varargs) {
+        if (varargs && type instanceof ArrayType array) {
+            return typeString(array.getComponentType(), false) + "...";
+        }
+        if (type instanceof ArrayType array) {
+            return typeString(array.getComponentType(), false) + "[]";
+        }
+        if (type instanceof WildcardType wildcard) {
+            if (wildcard.getExtendsBound() != null) {
+                return "? extends " + typeString(wildcard.getExtendsBound(), false);
+            }
+            if (wildcard.getSuperBound() != null) {
+                return "? super " + typeString(wildcard.getSuperBound(), false);
+            }
+            return "?";
+        }
+        if (type instanceof DeclaredType declared) {
+            StringBuilder sb = new StringBuilder(qualifiedName(declared.asElement()));
+            List<? extends TypeMirror> arguments = declared.getTypeArguments();
+            if (!arguments.isEmpty()) {
+                StringJoiner joined = new StringJoiner(",", "<", ">");
+                for (TypeMirror argument : arguments) {
+                    joined.add(typeString(argument, false));
+                }
+                sb.append(joined);
+            }
+            return sb.toString();
+        }
+        if (type.getKind().isPrimitive() || type.getKind() == TypeKind.VOID) {
+            return type.getKind().name().toLowerCase(Locale.ROOT);
+        }
+        // Type variables, error types under an incomplete classpath, and anything a future
+        // language version adds. toString() is the only thing left, and for a type variable both
+        // compilers print the variable's name, which is what javac renders here anyway.
+        return type.toString();
     }
 
     /**
@@ -57,10 +190,10 @@ public final class ElementNaming {
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
-                return enclosing.toString() + "." + element.toString();
+                return qualifiedName(enclosing) + "." + memberSignature(element);
             }
         }
-        return element.toString();
+        return qualifiedName(element);
     }
 
     /**
@@ -79,7 +212,7 @@ public final class ElementNaming {
         if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
-                return simpleNameOf(enclosing) + "." + element.toString();
+                return simpleNameOf(enclosing) + "." + memberSignature(element);
             }
         }
         return simpleNameOf(element);

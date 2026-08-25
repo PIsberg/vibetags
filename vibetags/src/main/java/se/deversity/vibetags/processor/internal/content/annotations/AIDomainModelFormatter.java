@@ -44,7 +44,7 @@ public final class AIDomainModelFormatter implements AnnotationFormatter {
                   .append(allow.length > 0 ? "- **Allowed**: " + allowedStr + "\n" : "").append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (domain model): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (domain model)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -138,11 +138,28 @@ public final class GuardrailModels {
     }
 
     /**
-     * The unset value for one annotation member: what the compiler hands a formatter when the user
-     * writes the annotation bare. Enums answer with the last constant, not the first — see
-     * {@link #everyAnnotationWithMembersUnset}.
+     * The value the compiler hands a formatter for one member when the annotation is written bare.
+     *
+     * <p>That is the member's <em>declared default</em>, and nothing else. This used to fabricate a
+     * zero-value per type instead — {@code 0} for an int, the last constant for an enum — which
+     * made the fixture model an annotation whose members had been zeroed rather than one nobody
+     * filled in. For {@code String} members the two agree, because the default is {@code ""}, which
+     * is why the empty-label defects this fixture found were all real. For the rest they do not:
+     * {@code @AITestDriven}'s {@code coverageGoal} defaults to 100 and rendered as
+     * {@code Coverage goal: 0%}, and {@code @AIThreadSafe}'s {@code strategy} defaults to
+     * {@code SYNCHRONIZED} and rendered as {@code Strategy: OTHER}. Both read as bugs in the
+     * renderer and were bugs in the fixture — a state no user can put the processor into.
+     *
+     * <p>A member with no declared default cannot be omitted: the annotation does not compile
+     * without it. Those fall through to an empty value, because "bare" is not a state they have
+     * and the emptiest thing the formatter could see is the useful one to exercise.
      */
     private static Object unsetMember(Method method) {
+        Object declared = method.getDefaultValue();
+        if (declared != null) {
+            return declared;
+        }
+
         Class<?> returnType = method.getReturnType();
         if (returnType == String.class) {
             return "";
@@ -157,18 +174,13 @@ public final class GuardrailModels {
             return 0L;
         }
         if (returnType == Class.class) {
-            Object declared = method.getDefaultValue();
-            return declared != null ? declared : Object.class;
+            return Object.class;
         }
         if (returnType.isEnum()) {
             return lastConstant(returnType);
         }
         if (returnType.isArray()) {
             return Array.newInstance(returnType.getComponentType(), 0);
-        }
-        Object declared = method.getDefaultValue();
-        if (declared != null) {
-            return declared;
         }
         throw new IllegalStateException(
             "No unset fixture value for " + method.getDeclaringClass().getSimpleName()

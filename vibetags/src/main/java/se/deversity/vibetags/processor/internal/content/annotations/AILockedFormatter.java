@@ -36,17 +36,17 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append(CommonFormatterHelper.codexBullet(className, reason));
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(reason).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(reason).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(reason).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(reason).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -57,7 +57,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(reason).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"reason\": \"").append(Escape.json(reason)).append("\"},\n");
@@ -69,7 +69,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      reason: \"").append(Escape.json(reason)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (locked): ").append(reason).append('\n');
+                sb.append("- `").append(className).append("` (locked)").append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             default:
                 break;

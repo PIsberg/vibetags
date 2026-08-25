@@ -35,7 +35,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
@@ -53,17 +53,17 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Coverage Goal**: ").append(coverageGoal).append("%\n")
@@ -81,7 +81,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr));
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"coverageGoal\": ").append(coverageGoal).append(", \"frameworks\": \"").append(Escape.json(frameworksStr)).append("\"},\n");
@@ -90,7 +90,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append("  - \"Test-driven requirement for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (test-driven): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (test-driven)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -32,7 +32,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                     .append("    </element>\n");
                 break;
             case CODEX:
-                sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append("): ").append(note).append('\n');
+                sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append(')').append(CommonFormatterHelper.clause(": ", note)).append('\n');
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append('\n');
@@ -67,7 +67,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("  - \"Core functionality (change with caution): ").append(Escape.json(className)).append(" [sensitivity: ").append(Escape.json(sensitivity)).append("]\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append("): ").append(note).append('\n');
+                sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append(')').append(CommonFormatterHelper.clause(": ", note)).append('\n');
                 break;
             default:
                 break;

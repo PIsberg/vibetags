@@ -17,7 +17,11 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
         String className = element.path();
         String expiresOn = temp.expiresOn();
         String reason = temp.reason();
-        String summary = "Temporary logic/workaround. Expires on: " + expiresOn + ". Reason: " + reason;
+        // A bare @AITemporary names neither a date nor a reason. That it is temporary is still the
+        // guardrail, so the sentence stands and the two clauses that have no content are dropped.
+        String summary = "Temporary logic/workaround."
+            + CommonFormatterHelper.detail(" ", "Expires on: ", expiresOn.isEmpty() ? "" : expiresOn + ".")
+            + CommonFormatterHelper.detail(" ", "Reason: ", reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) {
             return;
@@ -41,7 +45,7 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (temporary): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (temporary)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -30,7 +30,7 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
 
         switch (platform) {
             case CURSOR:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -44,17 +44,17 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append(CommonFormatterHelper.codexBullet(className, summary.toString()));
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n');
@@ -69,13 +69,13 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Details", summary.toString())).append('\n');
                 break;
             case WINDSURF:
-                sb.append("* `").append(className).append("` (observability) - ").append(summary).append('\n');
+                sb.append("* `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` (observability): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (observability): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

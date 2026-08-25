@@ -32,7 +32,7 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
@@ -49,17 +49,17 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("**: ").append(summary).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - ").append(summary).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): ").append(summary).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- **Thread affinity**: ").append(where).append('\n')
@@ -81,14 +81,14 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
                   .append("- **Rule**: Not thread-safe. Do not add locks; call it from the correct thread.\n\n");
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: ").append(summary).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Thread affinity: ").append(Escape.json(className)).append(" runs only on ")
                   .append(Escape.json(where)).append(". Do not add locks.\"\n");
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (thread affinity): ").append(summary).append('\n');
+                sb.append("- `").append(className).append("` (thread affinity)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;

@@ -99,8 +99,18 @@ class ElementNamingUnitTest {
         Element enclosing = mock(Element.class);
         when(enclosing.toString()).thenReturn("com.example.Foo");
 
+        // A field's simple name is stubbed as well as its toString(). Both are "email" on a real
+        // element, and ElementNaming now reads the name rather than the string representation:
+        // toString()'s format belongs to the compiler, and ECJ spells members differently from
+        // javac. See ElementNamingFormatParityTest.
+        // Built before the when(...) below: Mockito rejects a mock created and stubbed inside the
+        // argument of another stubbing call (UnfinishedStubbing).
+        Name fieldName = mock(Name.class);
+        when(fieldName.toString()).thenReturn("email");
+
         Element field = mock(Element.class);
         when(field.getKind()).thenReturn(ElementKind.FIELD);
+        when(field.getSimpleName()).thenReturn(fieldName);
         when(field.toString()).thenReturn("email");
         when(field.getEnclosingElement()).thenReturn(enclosing);
 
@@ -225,8 +235,12 @@ class ElementNamingUnitTest {
         Element enclosing = mock(Element.class);
         when(enclosing.getSimpleName()).thenReturn(enclosingName);
 
+        Name fieldName = mock(Name.class);
+        when(fieldName.toString()).thenReturn("email");
+
         Element field = mock(Element.class);
         when(field.getKind()).thenReturn(ElementKind.FIELD);
+        when(field.getSimpleName()).thenReturn(fieldName);
         when(field.toString()).thenReturn("email");
         when(field.getEnclosingElement()).thenReturn(enclosing);
 
