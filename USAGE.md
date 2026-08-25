@@ -258,7 +258,7 @@ The compile writes `.vibetags-locks` — JSON Lines between `# VIBETAGS` hash ma
 # VIBETAGS-END
 ```
 
-Line positions come from the javac Compiler Tree API; under other compilers (ECJ) entries omit positions and tools fall back to file-level matching. In Maven multi-module builds the report aggregates every module's locks via module sub-markers.
+Line positions come from the javac Compiler Tree API; under other compilers (ECJ) entries omit positions and tools fall back to file-level matching. CI compiles a fixture under a real ECJ on every run and checks exactly that — the guardrails survive, the positions do not. In Maven multi-module builds the report aggregates every module's locks via module sub-markers.
 
 **2. Add the action to your PR workflow:**
 

@@ -137,6 +137,35 @@ The same `.github/actions/verify-generated-files` composite action runs after th
 
 Mutation testing used to be a job here. It now lives in its own manually triggered workflow — see section 7.
 
+### Job: `ecj-degradation`
+
+The one leg that does not run javac. `scripts/ecj-degradation-check.sh` compiles
+`examples/basic` twice over — once with javac, once with the Eclipse Compiler for Java pinned by
+`<ecj.version>` in `vibetags-parent/pom.xml` — and compares the results.
+
+It exists because [docs/PROCESSOR.md](PROCESSOR.md) and [USAGE.md](../USAGE.md) both promise
+that VibeTags *degrades* under a compiler with no Tree API, losing `@AILocked` line positions and
+nothing else, and nothing verified either sentence. The code behind that promise —
+`SourcePositionResolver`'s whole no-Tree-API branch and the `Trees.instance` guards around it — is
+unreachable from a JUnit test running under javac, and reaching it from one would mean adding a
+seam to production code purely so a test could fail it (issue #475). A real compiler needs no
+seam.
+
+Four assertions, in order of what they protect:
+
+1. **ECJ compiles the fixture and exits 0.** The promise the whole design rests on is that
+   VibeTags never fails somebody's build. A compiler it cannot fully serve must still compile.
+2. **Both compilers report the same `@AILocked` elements** (9 at the time of writing). Degrading
+   costs positions, not guardrails — a lock that vanishes under ECJ is a lock nobody enforces.
+3. **Every javac entry carries a position and no ECJ entry does.** The javac half is the control:
+   without it, assertion 3 passes just as well on a report that contains nothing at all.
+4. **Every guardrail's prose and every type-level element path is identical** between the two.
+
+Assertion 4 is deliberately not a byte-for-byte diff of the marker region, and the script says
+why at the assertion: member element paths *do* differ between the compilers, because
+`ElementNaming` leans on `Element.toString()`, whose format `javax.lang.model` leaves to the
+implementation. This job is what found that.
+
 ### Job: `locked-files`
 
 Pull requests only. Dogfood of the shipped `action/locked-files`: installs the annotations and
