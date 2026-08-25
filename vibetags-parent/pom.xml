@@ -96,7 +96,7 @@
              the documented claim that the processor degrades rather than fails under a compiler
              with no Tree API (docs/PROCESSOR.md, USAGE.md). scripts/ecj-degradation-check.sh
              reads this property so the version has one home, like every other pin here. -->
-        <ecj.version>3.44.0</ecj.version>
+        <ecj.version>3.46.0</ecj.version>
 
         <!-- Build plugins -->
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>

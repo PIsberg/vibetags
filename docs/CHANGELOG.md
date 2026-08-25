@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **[docs/JVM-LANGUAGES.md](JVM-LANGUAGES.md): what Kotlin, Groovy and Scala actually get.** The
+  support matrix in USAGE.md was three rows and a mechanism column, and one of the rows was wrong
+  for several releases. This page gives each language a stated maturity, the levels it silently
+  drops, the workaround, and the job that measures the claim on every pull request.
+
+  It also records the things a matrix row cannot: that Groovy loses every field-level annotation
+  including `@AIPrivacy`, with the stub evidence; that only two of eight surveyed Groovy projects
+  can switch stub processing on at all; that a Gradle toolchain pinned below 21 fails with an error
+  naming neither VibeTags nor the toolchain; and that Kotlin support rests entirely on kapt, which
+  JetBrains keeps current but has no plans to extend, while KSP defines its own processor interface
+  and cannot load a JSR 269 processor at all. A closing section states what is *not* known, so
+  silence is not mistaken for evidence.
+
 - **VibeTags is now tested against real Kotlin, Groovy and Scala, and the Groovy row of the
   support matrix turned out to be wrong.** The third-party corpus added in the previous release
   covers six Java libraries compiled by javac. That is the compiler JSR 269 belongs to, and it is
@@ -68,6 +81,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   objects by design. Both exclusions are named in `ConstructorLevelGuardrailTest` with the
   reasoning, so a later sweep that "completes" the set has to argue with it. Found by the
   third-party corpus, whose showcase failed to compile. (#488)
+
+### Changed
+
+- **A dependabot bump of `pmd.version` no longer turns the build red.** Every third-party version
+  is a property in `vibetags-parent/pom.xml`, and dependabot edits that file and nothing else,
+  because that is where the property lives. PMD's `toolVersion` was a hand-copied literal in
+  `vibetags/build.gradle` and `vibetags-annotations/build.gradle`, so `BuildVersionParityTest`
+  failed on every PMD bump and a human had to hand-fix the PR before it could merge, which is not
+  what an automated bump is for. Both files now derive the value from the parent.
+
+  `BuildVersionParityTest` was rewritten with it, and that half matters more than the fix: the old
+  check compared the literal against the parent, which finds nothing once there is no literal left,
+  so it would have started passing vacuously. It now asserts the *mechanism* - a quoted
+  `toolVersion` fails even when the number is correct, and a file applying PMD that never names
+  `pmd.version` fails too. Verified by simulating the exact dependabot edit: bumping `pmd.version`
+  in the parent alone passes with the fix and fails without it.
+
+- **Dependabot's `/example` Maven entry pointed at a directory that has never existed.** The
+  examples live under `examples/`, so that entry produced nothing, silently - the same failure the
+  npm entry in the same file already carries a comment about. Removed rather than redirected, with
+  the reason recorded: the example poms pin VibeTags artifacts at the released version, which
+  `scripts/set-version.sh` owns and `BuildVersionParityTest` enforces, so a dependabot PR moving
+  one would be red on arrival and could never merge. The remaining `/vibetags` entry reaches every
+  pin already, through the parent.
+
+- **`ecj.version` 3.44.0 to 3.46.0, and the Gradle wrapper 9.7.0 to 9.7.1** across all ten
+  `gradle-wrapper.properties` files. The ECJ pin had been invisible to `scripts/bump-dependencies.sh`
+  since it was introduced: the script's `PINS` table had no Maven Central path for it, so the report
+  exited 2 rather than reporting a stale version. Adding the path is what surfaced the update.
+  Verified by `scripts/ecj-degradation-check.sh` on 3.46.0: 9 locked entries under both compilers,
+  9 positions under javac and 0 under ECJ, and 147 lines of guardrail region byte-identical.
+
+  The mirror tables in `docs/DEPENDENCIES.md` and the `bump-dependencies` skill were both wrong
+  about the wrapper: they said three subprojects and six files respectively, against ten actual
+  files. Both now say to enumerate rather than remember.
 
 ### Fixed
 

@@ -106,7 +106,10 @@ so what consumers download is self-contained.
 - **GitHub Actions** are pinned to commit SHAs, not tags, with the human-readable version in a
   trailing comment. Dependabot proposes the bumps. Pinning is what the OSSF Scorecard
   Pinned-Dependencies check wants, and it is also the only form that cannot be moved under you.
-- **Gradle wrapper**, `gradle-9.7.0-bin.zip` in three subprojects. The checked-in
+- **Gradle wrapper**, `gradle-9.7.1-bin.zip` in ten `gradle-wrapper.properties` files: the two
+  published modules and the eight examples. This entry said "three subprojects" for several
+  releases while the count grew to ten, which is the kind of number worth counting rather than
+  remembering (`git ls-files '*gradle-wrapper.properties'`). The checked-in
   `gradle-wrapper.jar` files are validated against Gradle's published checksums by
   `.github/workflows/gradle-wrapper-validation.yml`, which must run on every push to main for
   Scorecard's Binary-Artifacts check to accept them.
@@ -119,13 +122,23 @@ so what consumers download is self-contained.
 build itself enforces:
 
 - The Gradle files cannot inherit from a Maven parent, so `vibetags/build.gradle`,
-  `vibetags-annotations/build.gradle` and `examples/basic/build.gradle` repeat the coordinates as literals.
+  `vibetags-annotations/build.gradle` and `examples/basic/build.gradle` **read** the parent's
+  properties rather than repeating them: `pomVersion('junit.version')` and the rest parse
+  `vibetags-parent/pom.xml` at configuration time.
 - The example poms are standalone on purpose, so a reader can lift one into their own project.
 
-`BuildVersionParityTest` fails the build when either copy drifts from the parent, when a managed pom
-grows a version literal, or when a Gradle module's PMD `toolVersion` disagrees. That last check
-exists because it had already happened: `vibetags-annotations` sat on PMD 7.24.0 while everything
-else was on 7.26.0, so the two modules were analysed by different rule sets.
+`BuildVersionParityTest` fails the build when a copy drifts from the parent, when a managed pom
+grows a version literal, and when a Gradle module applying PMD does not derive its `toolVersion`
+from `pmd.version`.
+
+That last check used to compare the literal against the parent instead, which reads the same and
+is weaker. It exists because the drift had already happened - `vibetags-annotations` sat on PMD
+7.24.0 while everything else was on 7.26.0, so two modules were analysed by different rule sets -
+but comparing the literal made every automated bump fail. Dependabot edits `vibetags-parent/pom.xml`
+and nothing else, because that is where the property lives, so each PMD bump arrived as a red PR
+needing a hand-fix before it could merge. Deriving the value removes the copy the check was
+policing; asserting the *mechanism* is what stops the check passing vacuously once there is no
+literal left to compare.
 
 To bump the VibeTags release version itself, use `scripts/set-version.sh <version>` and then run
 that test.

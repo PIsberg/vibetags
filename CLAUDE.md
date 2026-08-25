@@ -62,6 +62,8 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 - [docs/PROCESSOR.md](docs/PROCESSOR.md) — processor options, write cache + fingerprint short-circuit, check mode, `.vibetags-locks`, SPI/Gradle incremental.
 - [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md) — adding or changing an annotation: full table, semantics, validation warnings.
 - [docs/PLATFORMS.md](docs/PLATFORMS.md) — adding a platform, or a question about a specific output file.
+- [docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md) — Kotlin, Groovy, Scala and Clojure: what is
+  supported, what is silently lost, and how each rating is measured rather than claimed.
 - [docs/TESTS.md](docs/TESTS.md) — which test class covers what.
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) — every third-party artifact, why it is here, what ships to consumers and what only runs the build.
 - [docs/LOAD-BEARING.md](docs/LOAD-BEARING.md) — processing flow, marker rules, the scoped-rules index, the internal class map, and the invariants in full.
