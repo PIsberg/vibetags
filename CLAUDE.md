@@ -51,6 +51,9 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 - Per-element guardrails: the generated block below indexes `.claude/rules/`, loaded on demand
   by glob. Whether the rules in this file actually bind an agent is measured, not assumed:
   [evals/README.md](evals/README.md).
+- Third-party corpus: `corpus/run-corpus.sh` (Java, javac) and `corpus/run-corpus-jvm.sh`
+  (Kotlin, Groovy, Scala, each built by its own Gradle). Both run in CI on every PR;
+  [corpus/README.md](corpus/README.md) says what each asserts and what they have found.
 - Run `pre-commit run --all-files` after `git add`, before committing.
 
 ## Reference docs (read on demand)

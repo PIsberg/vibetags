@@ -186,6 +186,35 @@ annotations in its rendering and VibeTags deliberately does not, which moves out
 consumer using jspecify or the Checker Framework. [corpus/README.md](../corpus/README.md) has
 the reasoning and the full repo table.
 
+### Job: `corpus-jvm`
+
+The same question in Kotlin, Groovy and Scala. `corpus/run-corpus-jvm.sh` clones three
+permissively licensed repositories at pinned SHAs and builds each **twice with its own Gradle
+wrapper**, the only difference being `corpus/inject-vibetags.init.gradle` — an init script,
+because that is the supported way to add a plugin to a build you do not own, and it means nothing
+here edits a build file it did not write.
+
+It is a separate job from `corpus` because none of these languages reaches the processor the way
+Java does: Kotlin only through kapt, Groovy only when joint compilation's `javaAnnotationProcessing`
+is switched on, Scala not at all. `--rerun-tasks` is passed on every invocation, because otherwise
+Gradle's up-to-date checks let the treatment skip compilation entirely and the whole comparison
+becomes a green run that compiled nothing.
+
+The Scala member asserts a negative and its own anti-vacuity guard: annotated `.scala` must
+generate nothing, the Java half of the same build must generate everything, and the Scala showcase
+must have produced class files — otherwise "scalac generated nothing" and "scalac was never asked"
+are the same result.
+
+It found that **Groovy silently drops every field-level annotation**: groovyc's stubs carry types,
+constructors, methods and parameters and no fields, so `@AIPrivacy` on a Groovy field generates
+nothing at all. USAGE.md called that route "Full (joint compilation)" until this job ran.
+[corpus/README.md](../corpus/README.md#the-other-three-jvm-languages) has the stub evidence, the
+other findings, and the eight-repository survey behind the choice of Groovy member.
+
+Two caches: the checkouts on the manifest and harness hashes, and `~/.gradle` on the manifest,
+because six Gradle builds otherwise re-download a distribution each and that is most of the job's
+wall clock.
+
 ### Job: `ecj-degradation`
 
 The one leg that does not run javac. `scripts/ecj-degradation-check.sh` compiles

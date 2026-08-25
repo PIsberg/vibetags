@@ -9,6 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **VibeTags is now tested against real Kotlin, Groovy and Scala, and the Groovy row of the
+  support matrix turned out to be wrong.** The third-party corpus added in the previous release
+  covers six Java libraries compiled by javac. That is the compiler JSR 269 belongs to, and it is
+  also the only one the project had ever been measured on outside its own examples. Kotlin reaches
+  the processor through kapt, Groovy only when joint compilation's `javaAnnotationProcessing` is
+  switched on, and Scala not at all. USAGE.md had stated all three for several releases; none had
+  been run against anybody else's code.
+
+  Three more repositories are now built on every CI run — [`kotlin-obd-api`][k], [`nf-boost`][g]
+  and [`splain`][s] — each twice, by its own Gradle wrapper, the only difference between the runs
+  being a Gradle init script. An init script is the supported way to add a plugin to a build you do
+  not own, so nothing edits a build file it did not write. Sixteen assertions, including the tier
+  split and the granular directories, checked through three compilers instead of one.
+
+  **What it found, in Groovy: every field-level annotation is silently dropped.** groovyc's Java
+  stubs carry the class, its constructors, its methods and their parameters — and no fields at all.
+  So `@AIPrivacy` on a Groovy field generates nothing. No file, no warning, no trace. It is one of
+  the six safety annotations and the natural way to mark a PII field, and until this ran the
+  documentation called that route "Full (joint compilation)".
+
+  The obvious explanation was wrong and is worth recording: a Groovy field with no access modifier
+  becomes a property, so the first theory was that the annotation had moved onto a generated
+  accessor. Keeping the stubs (`groovyOptions.keepStubs`) and reading one settled it — `billingEmail`,
+  `authToken` and `tenantId` appear nowhere in the stub. Nothing in VibeTags can fix that, so it is
+  documented instead, and pinned: the Groovy showcase annotates those fields on purpose and the
+  harness fails if they ever *start* being rendered, because a limitation nothing exercises is a
+  limitation nobody notices has been fixed.
+
+  Scala is asserted as a negative for the same reason, in both directions: annotated `.scala` must
+  generate nothing, the Java half of the same build must generate everything, and the Scala
+  showcase must have produced class files — otherwise "scalac generated nothing" and "scalac was
+  never asked" are the same green run.
+
+  Three further findings came out of choosing the members. Three of the eight Groovy repositories
+  surveyed compile perfectly well and break the moment stubs are generated, each on a different
+  stub defect. Two more fail because a Gradle toolchain pinned below 21 cannot load the processor,
+  with an error naming neither VibeTags nor the toolchain. And the harness's own diagnostic counter
+  was blind to javac's summary diagnostics, reporting `0` against `0` on a run that had raised a
+  warning the control had not. All of it is in [corpus/README.md][c].
+
+  [k]: https://github.com/eltonvs/kotlin-obd-api
+  [g]: https://github.com/bentsherman/nf-boost
+  [s]: https://github.com/tek/splain
+  [c]: ../corpus/README.md#the-other-three-jvm-languages
+
 - **A constructor can carry a guardrail.** No annotation declared `ElementType.CONSTRUCTOR`, so a
   constructor could not be guarded at all. That was odd rather than obviously wrong: `ElementNaming`
   has always rendered constructors, because javac hands them to the collector as enclosed elements

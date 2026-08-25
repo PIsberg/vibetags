@@ -1,0 +1,113 @@
+// Injects VibeTags into a Gradle build that has never heard of it.
+//
+// Passed to a third-party clone as `--init-script corpus/inject-vibetags.init.gradle`. An init
+// script is the one supported way to add a plugin or a dependency to a build you do not own, so
+// the corpus never edits a `build.gradle` it did not write. The clone's own build file is the
+// control; this file is the entire difference between the control run and the treatment run.
+//
+// Configured entirely through the environment, because an init script cannot take arguments:
+//
+//   VIBETAGS_JARS   path-separated processor jar + its runtime classpath
+//   VIBETAGS_ANN    the annotations jar, added to compileOnly so an injected showcase resolves
+//   VIBETAGS_ROOT   where the processor writes; unset means "do not inject at all"
+//
+// Three languages, three different routes to the same JSR 269 processor, and the differences
+// are the whole reason the JVM-language corpus exists:
+//
+//   Java     javac runs the processor directly.
+//   Kotlin   kapt generates Java stubs and runs the processor over them. KSP does not run
+//            JSR 269 processors, so kapt is the only route (USAGE.md, "Kotlin (kapt)").
+//   Groovy   groovyc generates stubs the same way, but only when javaAnnotationProcessing is
+//            switched on, which is off by default in Gradle.
+//   Scala    scalac has no JSR 269 support at all. Nothing here reaches a .scala source, and
+//            the corpus asserts that rather than papering over it.
+
+def jars = System.getenv('VIBETAGS_JARS')
+def annJar = System.getenv('VIBETAGS_ANN')
+def vtRoot = System.getenv('VIBETAGS_ROOT')
+
+if (vtRoot == null || vtRoot.isEmpty() || jars == null || jars.isEmpty()) {
+    // The control run uses the same command line minus the environment, so a missing variable
+    // has to mean "do nothing" rather than "fail". A treatment run that silently did nothing
+    // would be indistinguishable from a passing one, which is why run-corpus-jvm.sh verifies
+    // the processor actually ran instead of trusting this file.
+    return
+}
+
+// buildSrc and any included build gets this init script too, and it is not the build under
+// test: it compiles the target project's own build logic, often in a different language and
+// against the Gradle API. Injecting an annotation processor there would change whether the
+// build script compiles, which is a failure of the harness rather than a finding about VibeTags.
+// splain's buildSrc is Kotlin, so without this guard the Scala member would run kapt over the
+// build logic of a Scala project.
+if (gradle.parent != null) {
+    return
+}
+
+def procFiles = jars.split(java.io.File.pathSeparator).findAll { !it.isEmpty() }
+def rootArg = "-Avibetags.root=${vtRoot}".toString()
+
+gradle.allprojects { project ->
+    project.plugins.withId('java-base') {
+        if (annJar != null && !annJar.isEmpty()) {
+            // The injected showcase imports se.deversity.vibetags.annotations.*. Every @AI*
+            // annotation is RetentionPolicy.SOURCE, so compileOnly is the correct scope and
+            // nothing reaches the class files or the published artifacts.
+            project.configurations.matching { it.name == 'compileOnly' }.configureEach { cfg ->
+                project.dependencies.add(cfg.name, project.files(annJar))
+            }
+        }
+    }
+
+    // Java, and the Java half of a Scala or mixed build.
+    //
+    // Skipped entirely for Kotlin projects, and that is not a shortcut. kapt owns annotation
+    // processing there, exactly as examples/kotlin and USAGE.md configure it: processor on the
+    // kapt path, root passed through `kapt { arguments { ... } }`, nothing on the javac path.
+    // Configuring both routes at once is what the first version of this file did, and it put
+    // `-Avibetags.root` on kapt's javac command line as a raw flag as well as into kapt's own
+    // option map. javac then reported it as unclaimed - "warning: The following options were not
+    // recognized by any processor: '[vibetags.root, kapt.kotlin.generated]'" - a warning the
+    // control build could not have, which failed diagnostic parity for a defect in the harness
+    // rather than in the product. examples/kotlin, built the documented way, never showed it.
+    project.tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach { t ->
+        if (project.pluginManager.hasPlugin('org.jetbrains.kotlin.jvm')) {
+            return
+        }
+        // Appended, never assigned. Several corpus members run annotation processors of their
+        // own; replacing the path would disable them, and a treatment run that quietly dropped
+        // the project's own processor is not a measurement of non-interference, it is a
+        // different build.
+        def existing = t.options.annotationProcessorPath
+        t.options.annotationProcessorPath =
+            existing == null ? project.files(procFiles) : existing.plus(project.files(procFiles))
+        t.options.compilerArgs.add(rootArg)
+    }
+
+    // Groovy. javaAnnotationProcessing is off by default in Gradle, which is why a Groovy
+    // project that adds VibeTags and changes nothing else sees no output at all.
+    project.plugins.withId('groovy') {
+        project.tasks.withType(org.gradle.api.tasks.compile.GroovyCompile).configureEach { t ->
+            t.groovyOptions.javaAnnotationProcessing = true
+            def existing = t.options.annotationProcessorPath
+            t.options.annotationProcessorPath =
+                existing == null ? project.files(procFiles) : existing.plus(project.files(procFiles))
+            t.options.compilerArgs.add(rootArg)
+        }
+    }
+
+    // Kotlin. The kapt plugin ships inside kotlin-gradle-plugin, which is already on the
+    // buildscript classpath of any project applying kotlin("jvm"), so it can be applied by id
+    // from here without adding anything to the init classpath and without having to guess the
+    // project's Kotlin version.
+    project.pluginManager.withPlugin('org.jetbrains.kotlin.jvm') {
+        project.pluginManager.apply('org.jetbrains.kotlin.kapt')
+        procFiles.each { jar -> project.dependencies.add('kapt', project.files(jar)) }
+        // kapt compiles generated stubs in a worker directory, so the JVM working directory is
+        // not the project directory and the root must be passed explicitly. This is the same
+        // instruction USAGE.md gives a real Kotlin consumer.
+        project.extensions.getByName('kapt').arguments {
+            arg('vibetags.root', vtRoot)
+        }
+    }
+}
