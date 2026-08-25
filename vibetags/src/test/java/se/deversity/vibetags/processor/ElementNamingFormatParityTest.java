@@ -120,25 +120,70 @@ class ElementNamingFormatParityTest {
                 + "PR diff against) and renames granular rule files.");
     }
 
+    /** A fixture whose parameters carry a JSR-308 type-use annotation. */
+    private static final String ANNOTATED_FIXTURE = """
+        package fixture;
+
+        import org.jspecify.annotations.Nullable;
+
+        public class Annotated {
+            public void takesNullable(@Nullable String a, int b) {}
+            public void returnsAndTakes(@Nullable Object o) {}
+        }
+        """;
+
+    @Test
+    @DisplayName("a type-use annotation is left out of the element's identity, on purpose")
+    void typeUseAnnotationsAreNotPartOfTheIdentity() throws IOException {
+        javacRendering.clear();
+        derivedRendering.clear();
+        compile(ANNOTATED_FIXTURE, "Annotated");
+
+        // javac renders the parameter as java.lang.@org.jspecify.annotations.Nullable String.
+        String annotatedByJavac = javacRendering.stream()
+            .filter(s -> s.contains("takesNullable"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError(
+                "the fixture no longer produces an annotated parameter, so this checks nothing: "
+                    + javacRendering));
+        assertTrue(annotatedByJavac.contains("@org.jspecify.annotations.Nullable"),
+            "javac stopped putting type-use annotations in its rendering, which is the whole "
+                + "premise of this test: " + annotatedByJavac);
+
+        String derived = derivedRendering.get(javacRendering.indexOf(annotatedByJavac));
+        assertEquals("fixture.Annotated.takesNullable(java.lang.String,int)", derived,
+            "ElementNaming must render the signature without the annotation. This string is the "
+                + "element's identity: action/locked-files matches a pull request's diff against "
+                + "it, and granularQName turns it into a rule filename. Including the annotation "
+                + "would rename a committed rule file, and break a lock match, every time a "
+                + "@Nullable was added or removed without the signature changing.");
+    }
+
     private void compileFixture() throws IOException {
+        compile(FIXTURE, "Shapes");
+    }
+
+    private void compile(String sourceText, String simpleName) throws IOException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertTrue(compiler != null,
             "no system java compiler — this test compares against javac and cannot run without it");
 
         try (StandardJavaFileManager files = compiler.getStandardFileManager(null, null, null)) {
             JavaFileObject source = new SimpleJavaFileObject(
-                URI.create("string:///fixture/Shapes.java"), JavaFileObject.Kind.SOURCE) {
+                URI.create("string:///fixture/" + simpleName + ".java"), JavaFileObject.Kind.SOURCE) {
                 @Override
                 public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-                    return FIXTURE;
+                    return sourceText;
                 }
             };
 
             JavaCompiler.CompilationTask task = compiler.getTask(
                 null, files, null,
                 // -proc:only: the fixture never needs to become bytecode, and skipping the rest of
-                // the pipeline keeps the test to the model it is actually asserting about.
-                List.of("-proc:only"), null, List.of(source));
+                // the pipeline keeps the test to the model it is actually asserting about. The
+                // classpath is this JVM's, so the annotated fixture can resolve jspecify.
+                List.of("-proc:only", "-cp", System.getProperty("java.class.path")),
+                null, List.of(source));
             task.setProcessors(List.of(new Collector()));
             assertTrue(task.call(), "the fixture failed to compile");
         }

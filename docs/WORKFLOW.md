@@ -137,6 +137,38 @@ The same `.github/actions/verify-generated-files` composite action runs after th
 
 Mutation testing used to be a job here. It now lives in its own manually triggered workflow — see section 7.
 
+### Job: `corpus`
+
+Real third-party Java, compiled twice. `corpus/run-corpus.sh` clones six permissively licensed
+libraries at pinned commit SHAs and compiles each one with and without VibeTags on the processor
+path, with identical sources, classpath and flags.
+
+It exists because every fixture in this repository was written by somebody who knew what VibeTags
+does, and that is the wrong sample. The code VibeTags actually has to survive was written by
+people who had never heard of it: deeper nesting, generic signatures nobody would invent for a
+test, `package-info` files, records, and a module whose own annotation processor is already
+running.
+
+Four assertions, each **against the control** rather than a hard-coded expectation, so a repo
+that does not compile on its own is reported as such instead of being blamed on VibeTags:
+
+1. **The treatment exits exactly as the control did.** Adding VibeTags to a build must not fail it.
+2. **No diagnostic the control did not raise.** A processor that turns a clean build noisy has
+   broken the same promise more quietly.
+3. **Nothing written to the VibeTags root.** File presence is the only opt-in and none of these
+   repos opted in. `vibetags.log` is the documented exception.
+4. **`ElementNaming` renders every member the way javac does.**
+   `ElementNamingFormatParityTest` checks that against a 26-member fixture; this checks it
+   against roughly 15,700 members nobody chose.
+
+The checkouts are cached on `corpus/repos.tsv`'s hash, so most runs do no network at all, and
+pins are SHAs so an upstream push cannot turn this repository red. Nothing is vendored.
+
+Assertion 4 found a real divergence the first time it ran: javac includes JSR-308 type-use
+annotations in its rendering and VibeTags deliberately does not, which moves output for any
+consumer using jspecify or the Checker Framework. [corpus/README.md](../corpus/README.md) has
+the reasoning and the full repo table.
+
 ### Job: `ecj-degradation`
 
 The one leg that does not run javac. `scripts/ecj-degradation-check.sh` compiles

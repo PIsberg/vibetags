@@ -135,6 +135,20 @@ public final class ElementNaming {
      * Renders a type the way javac's own {@code toString()} does: qualified names for declared
      * types, type arguments kept and comma-separated with no spaces, and a trailing {@code ...}
      * for the last parameter of a varargs method.
+     *
+     * <p><b>With one deliberate exception: type-use annotations are dropped.</b> javac renders an
+     * annotated parameter as {@code java.lang.@org.jspecify.annotations.Nullable String}, and
+     * reproducing that would put the annotation into the element's identity. That identity is
+     * matched against a pull request's diff by {@code action/locked-files} and turned into a rule
+     * filename by {@link #granularQName}, where it becomes
+     * {@code ...parse-java-lang--org-jspecify-annotations-Nullable-String-}. Adding or removing a
+     * {@code @Nullable} would then rename a committed rule file and stop a lock matching, for a
+     * change that does not alter the signature at all.
+     *
+     * <p>So the identity is the signature, not its annotations. This is checked rather than
+     * assumed: the third-party corpus (see {@code corpus/README.md}) compiles jspecify-annotated
+     * libraries and asserts that annotations are the <em>only</em> thing this renders differently
+     * from javac.
      */
     private static String typeString(TypeMirror type, boolean varargs) {
         if (varargs && type instanceof ArrayType array) {

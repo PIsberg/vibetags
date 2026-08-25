@@ -74,7 +74,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wildcards, bounded and unbounded generic methods, an overload set, a constructor, a nested type
   and an enum. Found by the ECJ CI leg on its first run. (#480)
 
+  **One deliberate difference from javac, and it moves output for some consumers.** javac's
+  rendering includes JSR-308 type-use annotations, so an annotated parameter reads as
+  `java.lang.@org.jspecify.annotations.Nullable String`. The derivation drops them, which means a
+  project using jspecify or the Checker Framework will see element paths change in its generated
+  files and in `.vibetags-locks`. That is the intended behaviour rather than an oversight:
+  keeping the annotation would put it into a granular rule *filename*, so adding or removing a
+  `@Nullable` would rename a committed file and stop a lock matching, for a change that does not
+  alter the signature. The identity is the signature, not its annotations. No fixture in this
+  repository used a type-use annotation, so nothing here noticed; the third-party corpus below
+  did, on its first run.
+
 ### Added
+
+- **A corpus of real third-party Java, compiled with and without VibeTags on every CI run.**
+  Every fixture in this repository was written by somebody who knew what VibeTags does, and that
+  is the wrong sample: the code VibeTags has to survive was written by people who had never heard
+  of it. `corpus/` pins six permissively licensed libraries to commit SHAs and compiles each one
+  twice with identical sources, classpath and flags, differing only in whether VibeTags is on the
+  processor path.
+
+  Four assertions, each against the control rather than against a hard-coded expectation, so a
+  repo that does not compile on its own is reported as such instead of blamed on VibeTags: the
+  treatment exits exactly as the control did, raises no diagnostic the control did not, writes
+  nothing into a project that never opted in, and renders every member the way javac does.
+
+  Measured on the first green run: 6 repositories, roughly 495 files, **15,683 members audited**,
+  no exit code changed, no diagnostic added, no file written. The corpus contributes what the
+  fixtures cannot: 15 `package-info` files and 279 generic sources from commons-io, varargs
+  density from jimfs, records from record-builder, Java 17 from semver4j, and an annotation
+  library whose own processor runs alongside VibeTags.
+
+  Nothing is vendored: sources are cloned at build time into `target/corpus` and never committed,
+  so no third-party code enters this repository. Pins are commit SHAs rather than branches, so an
+  upstream push cannot turn this repository's CI red for a reason nobody here changed, and bumping
+  them stays a decision somebody makes. The corpus found the type-use annotation divergence above
+  the first time it ran. (#480)
 
 - **CI compiles a fixture under a real ECJ and checks the degradation the docs promise.**
   `docs/PROCESSOR.md` and `USAGE.md` both state that VibeTags degrades rather than fails under a
