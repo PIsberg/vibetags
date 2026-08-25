@@ -12,6 +12,7 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 
 import java.util.List;
@@ -51,6 +52,51 @@ public final class ElementNaming {
      */
     public static String granularQName(Element element) {
         return qualifiedName(element).replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+    }
+
+    /**
+     * Takes type-use annotations back off a rendering that came from {@code toString()}: an
+     * {@code @}, the qualified annotation name, any parenthesised arguments, and the space javac
+     * writes after it.
+     *
+     * <p>Only reached for the types with no structural route: an error type under an incomplete
+     * classpath, an intersection, a language feature newer than this code. Those are exactly the
+     * cases where nobody is watching, which is why they are stripped rather than trusted, and the
+     * third-party corpus generates real output for jspecify-annotated libraries to check it.
+     *
+     * <p>Scanned by hand rather than with a regular expression. The obvious pattern here nests a
+     * quantifier inside an optional group, which SpotBugs' ReDOS detector rejects, and a linear
+     * scan over a type name is both faster and easier to read than the possessive-quantifier
+     * version that would satisfy it.
+     */
+    private static String stripAnnotations(String rendered) {
+        if (rendered.indexOf('@') < 0) {
+            return rendered;
+        }
+        StringBuilder out = new StringBuilder(rendered.length());
+        int i = 0;
+        while (i < rendered.length()) {
+            char c = rendered.charAt(i);
+            if (c != '@') {
+                out.append(c);
+                i++;
+                continue;
+            }
+            i++; // the '@'
+            while (i < rendered.length()
+                   && (Character.isLetterOrDigit(rendered.charAt(i))
+                       || rendered.charAt(i) == '_' || rendered.charAt(i) == '.')) {
+                i++;
+            }
+            if (i < rendered.length() && rendered.charAt(i) == '(') {
+                int close = rendered.indexOf(')', i);
+                i = close < 0 ? rendered.length() : close + 1;
+            }
+            while (i < rendered.length() && Character.isWhitespace(rendered.charAt(i))) {
+                i++;
+            }
+        }
+        return out.toString();
     }
 
     /**
@@ -178,13 +224,23 @@ public final class ElementNaming {
             }
             return sb.toString();
         }
+        if (type instanceof TypeVariable variable) {
+            // Read through to the declaring element rather than taking toString(). A type
+            // variable at an annotated use renders as "@org.jspecify.annotations.Nullable A",
+            // and that annotation would then be part of the element's identity - the one thing
+            // the whole derivation exists to avoid. The declared parameters get the same
+            // treatment above; this is the use site.
+            Element declared = variable.asElement();
+            String name = declared == null ? "" : simpleNameOf(declared);
+            return name.isEmpty() ? stripAnnotations(type.toString()) : name;
+        }
         if (type.getKind().isPrimitive() || type.getKind() == TypeKind.VOID) {
             return type.getKind().name().toLowerCase(Locale.ROOT);
         }
-        // Type variables, error types under an incomplete classpath, and anything a future
-        // language version adds. toString() is the only thing left, and for a type variable both
-        // compilers print the variable's name, which is what javac renders here anyway.
-        return type.toString();
+        // Error types under an incomplete classpath, intersections, and anything a future
+        // language version adds. toString() is all that is left, with any annotations taken back
+        // off so an exotic type cannot smuggle one into the identity either.
+        return stripAnnotations(type.toString());
     }
 
     /**

@@ -200,6 +200,115 @@ while IFS=$'\t' read -r name url sha src pom licence why; do
     grep "^MISMATCH" "$dir/.corpus-report" | head -10 >&2
     status=1
   fi
+
+  # ---------------------------------------------------------------------------------------
+  # Opt-in phase. Everything above proves VibeTags stays out of the way, which is only half
+  # the question: what does it actually produce on code nobody wrote for it? Two real elements
+  # per repo are annotated in the clone, three platform files are created to opt in, and the
+  # generated output is read back.
+  #
+  # The @Nullable-parameter target is the one that matters. Its element path is what #480
+  # changed, and granularQName turns that path into a rule filename - so if a type-use
+  # annotation ever leaks back into the identity, it shows up here as a filename containing
+  # "org-jspecify-annotations-Nullable", which assertion 8 rejects by name.
+  # ---------------------------------------------------------------------------------------
+  optin="$dir/.corpus-optin-root"
+  rm -rf "$optin" "$dir/.corpus-optin-classes"
+  mkdir -p "$optin/.claude/rules" "$dir/.corpus-optin-classes"
+  # File presence is the opt-in. Empty files, exactly as a consumer would create them.
+  : > "$optin/CLAUDE.md"
+  : > "$optin/GEMINI.md"
+  : > "$optin/.vibetags-locks"
+
+  ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
+  # tr -d: Python on Windows turns \n into \r\n on stdout, and a trailing CR in the element
+  # name makes every grep for it miss.
+  targets=$(python "$ROOT/corpus/annotate.py" "$dir/$src" 2>"$dir/.corpus-annotate.err" | tr -d '\r')
+  if [ -z "$targets" ]; then
+    echo "FAIL: could not annotate anything in $name, so the opt-in phase checks nothing." >&2
+    cat "$dir/.corpus-annotate.err" >&2
+    status=1
+    ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
+    continue
+  fi
+
+  ann_jar=$(ls "$HOME"/.m2/repository/se/deversity/vibetags/vibetags-annotations/"$VERSION"/vibetags-annotations-"$VERSION".jar 2>/dev/null | head -1)
+  optin_cp="$(winpath "$ann_jar")"
+  [ -n "$dep_cp" ] && optin_cp="$optin_cp$SEP$dep_cp"
+
+  ( cd "$dir" && find "$src" -name "*.java" ! -name "module-info.java" > .corpus-sources-optin \
+    && javac -nowarn -encoding UTF-8 -cp "$optin_cp" \
+      -processorpath "$FULL_CP" \
+      -processor se.deversity.vibetags.processor.AIGuardrailProcessor \
+      "-Avibetags.root=$(winpath "$optin")" \
+      -d "$(winpath "$dir/.corpus-optin-classes")" @.corpus-sources-optin ) \
+      > "$dir/.corpus-optin.log" 2>&1
+  optin_exit=$?
+  ( cd "$dir" && git checkout --quiet -- . 2>/dev/null )
+
+  if [ "$optin_exit" -ne 0 ]; then
+    echo "FAIL: $name did not compile once annotated, so nothing was generated to evaluate." >&2
+    grep -E ": (error|warning):" "$dir/.corpus-optin.log" | head -10 >&2
+    status=1
+    continue
+  fi
+
+  claude_bytes=$(wc -c < "$optin/CLAUDE.md" | tr -d ' ')
+  gemini_bytes=$(wc -c < "$optin/GEMINI.md" | tr -d ' ')
+  locks_members=$(grep -c '"type":"locked"' "$optin/.vibetags-locks" 2>/dev/null || true)
+  rule_files=$(find "$optin/.claude/rules" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+  # Assertion 5: opting in actually produces content.
+  if [ "$claude_bytes" -lt 1 ] || [ "$gemini_bytes" -lt 1 ]; then
+    echo "FAIL: $name opted in and got CLAUDE.md=$claude_bytes bytes, GEMINI.md=$gemini_bytes." >&2
+    echo "      A platform file that exists is an opt-in and must be written." >&2
+    status=1
+  fi
+  # Assertion 6: the marker pair is there, which is what protects hand-authored content.
+  if ! grep -q "VIBETAGS-START" "$optin/CLAUDE.md" 2>/dev/null; then
+    echo "FAIL: $name produced a CLAUDE.md with no VIBETAGS-START marker." >&2
+    status=1
+  fi
+  # Assertion 7: every annotated element reaches the file. Keyed on the unique reason string
+  # rather than a predicted element path: predicting the path means reimplementing the thing
+  # under test, and the first version of this got it wrong for a method on a nested class.
+  while read -r _ kind reason; do
+    [ -z "${reason:-}" ] && continue
+    if ! grep -q "$reason" "$optin/CLAUDE.md" 2>/dev/null; then
+      echo "FAIL: $name annotated a $kind ($reason) but it is absent from the generated CLAUDE.md." >&2
+      status=1
+    fi
+  done <<EOF
+$targets
+EOF
+
+  # Assertion 8: no type-use annotation anywhere in a generated element identity, in a path
+  # attribute or in a filename.
+  #
+  # This is the assertion the parity auditor structurally cannot make. The auditor compares
+  # VibeTags against javac, so when both render "@org.jspecify.annotations.Nullable A" they
+  # agree and nothing fires - which is exactly what happened: DeclaredType parameters were
+  # stripped through asElement(), but a *type variable* fell through to toString() and kept its
+  # annotation. Only generating output and reading it back showed that. Checked in the identity
+  # itself, not just in filenames, because .vibetags-locks is matched by the shipped action.
+  leaked_paths=$(grep -c 'path="[^"]*@' "$optin/CLAUDE.md" "$optin/GEMINI.md" 2>/dev/null \
+                 | awk -F: '{s+=$2} END {print s+0}')
+  leaked_locks=$(grep -c '"element":"[^"]*@' "$optin/.vibetags-locks" 2>/dev/null || true)
+  leaked_names=$(find "$optin" -name "*@*" -o -name "*Nullable*" 2>/dev/null | wc -l | tr -d ' ')
+  leaked=$((leaked_paths + leaked_locks + leaked_names))
+  if [ "$leaked" -ne 0 ]; then
+    echo "FAIL: $name put a type-use annotation into an element identity" >&2
+    echo "      ($leaked_paths path attributes, $leaked_locks lock entries, $leaked_names filenames)." >&2
+    grep -h 'path="[^"]*@' "$optin/CLAUDE.md" "$optin/GEMINI.md" 2>/dev/null | head -3 >&2
+    grep -h '"element":"[^"]*@' "$optin/.vibetags-locks" 2>/dev/null | head -2 >&2
+    echo "      Adding or removing that annotation would rename a committed rule file and stop" >&2
+    echo "      every lock and scoped-rules pointer matching, without the signature changing." >&2
+    status=1
+  fi
+
+  printf "%-16s %-7s %-18s %-9s %-8s %-9s %s\n" \
+    "  └ opt-in" "" "exit=$optin_exit" "CLAUDE=$claude_bytes" "locks=$locks_members" \
+    "rules=$rule_files" "$(printf '%s' "$targets" | wc -l | tr -d ' ') annotated"
 done < "$MANIFEST"
 
 echo

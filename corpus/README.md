@@ -34,6 +34,21 @@ against a hard-coded zero would silently pass on a repo that never compiled to b
 | 3 | Nothing is written to the VibeTags root | File presence is the only opt-in (tier-1 invariant 1) and none of these repos opted in |
 | 4 | `ElementNaming` renders every member as javac does | That string is the element's identity in `.vibetags-locks` and in granular rule filenames |
 
+Then a second phase, because non-interference is only half the question. Two real elements per
+repo are annotated in the clone, `CLAUDE.md`, `GEMINI.md` and `.vibetags-locks` are created empty
+to opt in, and the generated output is read back:
+
+| # | Assertion | What it protects |
+|---|---|---|
+| 5 | Opting in produces content in every platform file | A file that exists is an opt-in and must be written |
+| 6 | `CLAUDE.md` carries a `VIBETAGS-START` marker pair | The markers are what protect hand-authored content |
+| 7 | Every annotated element reaches the file | Keyed on a unique reason string, not a predicted path: predicting the path means reimplementing the thing under test |
+| 8 | No type-use annotation in any generated identity | In `path=` attributes, lock entries and filenames alike |
+
+The annotations are applied to the clone under `target/corpus` and reverted with
+`git checkout -- .` afterwards. Nothing is committed and no third-party source is modified in
+place.
+
 `vibetags.log` is the documented exception to assertion 3 (`vibetags.log.path`, disabled with
 `OFF`; see [USAGE.md](../USAGE.md)). It is created empty even in a project with no annotations.
 
@@ -63,6 +78,25 @@ alter the signature. The identity is the signature, not its annotations.
 The harness therefore classifies a difference rather than just counting it: annotation-only
 differences are reported as `TYPE-ANN` and pass; anything else fails. That distinction is what
 makes the assertion meaningful instead of merely tolerant.
+
+### And then a second one, which the parity check could not have found
+
+Assertion 4 compares VibeTags against javac. That is blind to the case where **both are wrong**,
+and that case was real. `DeclaredType` parameters had their annotations stripped through
+`asElement()`, but a **type variable** fell through to `toString()` and kept its annotation, so
+`jimfs` generated this into `CLAUDE.md` and into `.vibetags-locks`:
+
+```
+JimfsAsynchronousFileChannel.<A>lock(long,long,boolean,@org.jspecify.annotations.Nullable A, ...)
+```
+
+javac renders it the same way, so the auditor saw agreement and stayed silent. Only generating
+output and reading it back exposed it. `ElementNaming` now resolves a type variable through
+`asElement()` like everything else, and assertion 8 checks the generated identities directly
+rather than trusting the comparison.
+
+That is the argument for the opt-in phase in one example: a check that compares two
+implementations can only find disagreement, never a shared mistake.
 
 ## The repos, and why each is here
 

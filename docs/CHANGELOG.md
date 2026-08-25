@@ -85,6 +85,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository used a type-use annotation, so nothing here noticed; the third-party corpus below
   did, on its first run.
 
+  A **type variable** kept its annotation even so, because it had no structural route and fell
+  through to `toString()`, so `jimfs` generated
+  `JimfsAsynchronousFileChannel.<A>lock(long,long,boolean,@org.jspecify.annotations.Nullable A,…)`
+  into `CLAUDE.md` and `.vibetags-locks`. The parity check could not see it: javac renders that
+  the same way, so the two agreed and nothing fired. Only generating output on annotated
+  third-party code and reading it back exposed it. Type variables now resolve through
+  `asElement()` like every other type, and anything left with no structural route has its
+  annotations stripped rather than trusted. (#480)
+
 ### Added
 
 - **A corpus of real third-party Java, compiled with and without VibeTags on every CI run.**
@@ -98,6 +107,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repo that does not compile on its own is reported as such instead of blamed on VibeTags: the
   treatment exits exactly as the control did, raises no diagnostic the control did not, writes
   nothing into a project that never opted in, and renders every member the way javac does.
+
+  Then a second phase, because non-interference is only half the question. Two real elements per
+  repo are annotated in the clone, the platform files are created empty to opt in, and the output
+  is read back: opting in produces content, the marker pair is present, every annotated element
+  reaches the file, and no generated identity carries a type-use annotation. That last one is the
+  assertion the parity comparison structurally cannot make, since it can only find disagreement
+  between VibeTags and javac and not a mistake they share. It found one immediately.
 
   Measured on the first green run: 6 repositories, roughly 495 files, **15,683 members audited**,
   no exit code changed, no diagnostic added, no file written. The corpus contributes what the
