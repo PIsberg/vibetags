@@ -9,7 +9,7 @@ Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vib
 - [CLAUDE.md](CLAUDE.md): agent briefing — build commands, load-bearing architecture invariants, project guardrails (tool-neutral despite the name)
 - [README.md](README.md): project intro, quick start, supported platforms
 - [USAGE.md](USAGE.md): consumer guide — every annotation with usage examples
-- [SPEC.md](SPEC.md): behavior and output-format specification
+- [docs/README.md](docs/README.md): the documentation index — every document and the question it answers
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): technical deep dive — system diagram, data flow, design decisions
 - [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md): every annotation — attribute table, semantics, compile-time validation warnings
 - [docs/PLATFORMS.md](docs/PLATFORMS.md): generated file ↔ platform ↔ format table, granular-rules notes
@@ -30,9 +30,8 @@ Orientation facts: build order is `vibetags-annotations` → `vibetags` → `vib
 ## Optional
 
 - [docs/vibetags-in-practice.md](docs/vibetags-in-practice.md): worked real-world examples
-- [docs/proposed-annotations.md](docs/proposed-annotations.md): annotation ideas not yet implemented
-- [docs/CONCEPT_PLUGIN.md](docs/CONCEPT_PLUGIN.md): IDE/build-plugin concept notes
-- [docs/PLAN.md](docs/PLAN.md): historical roadmap, superseded — see docs/CHANGELOG.md for what shipped
+- [docs/proposals/proposed-annotations.md](docs/proposals/proposed-annotations.md): annotation ideas not yet implemented
+- [docs/archive/](docs/archive/README.md): frozen provenance — the pre-1.0 spec and plan, the transitive-guardrails proposal, and the unbuilt plugin concept, each routed to where its current answer lives
 - [load-tests/](load-tests/README.md): benchmark harness comparing processor versions
 
 <!-- VIBETAGS-START -->

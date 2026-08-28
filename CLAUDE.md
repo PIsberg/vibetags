@@ -58,6 +58,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 
 ## Reference docs (read on demand)
 
+- [docs/README.md](docs/README.md) — the documentation index: every document, the question it answers, and which tier it is in (maintained reference, unshipped proposal, frozen archive). Read it when the right file is not obvious from the list below.
 - [docs/MULTI-MODULE.md](docs/MULTI-MODULE.md) — reactors: sidecar merge, per-module output, `.vibetags-root-index`, `.vibetags-roles`, `.vibetags-mirror`, granular file layout.
 - [docs/PROCESSOR.md](docs/PROCESSOR.md) — processor options, write cache + fingerprint short-circuit, check mode, `.vibetags-locks`, SPI/Gradle incremental.
 - [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md) — adding or changing an annotation: full table, semantics, validation warnings.

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * Definition-level tests for the v1.0.0 evidence-based wave — {@code @AIGenerated},
  * {@code @AILoadBearing}, {@code @AIBannedApi}, {@code @AIThreadAffinity}, {@code @AIKeepInSync}
- * (see {@code docs/proposed-annotations.md}).
+ * (see {@code docs/proposals/proposed-annotations.md}).
  *
  * <p>Reflection only: retention, targets, and attribute defaults. SOURCE retention is a hard
  * invariant of the library — anything else would give VibeTags a runtime footprint.

@@ -95,7 +95,7 @@ number out of the failure, and the checkstyle gate caught the first draft of the
 - ch08b names `@AIArchLayer("persistence")`; the shipped annotation is `@AIArchitecture`
   (no annotation named `AIArchLayer` exists in the 44).
 - ch06c's worked fence example names `mvn -q vibetags:generate` as the producing command; no
-  such Maven goal exists (a plugin is sketched in `docs/CONCEPT_PLUGIN.md` but not shipped;
+  such Maven goal exists (a plugin is sketched in `docs/archive/CONCEPT_PLUGIN.md`, archived 2026-08-28, but not shipped;
   regeneration is compile-time via the annotation processor).
 - The book pins `1.0.0-RC8` in dependency snippets; current release is 1.2.1. Historical
   examples, but worth a footnote at the next book build.

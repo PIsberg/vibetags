@@ -1,4 +1,4 @@
-> **Historical roadmap — superseded.** This was the step-by-step execution plan for the "parallel tests + 9 new AI guardrails" initiative (see [SPEC.md](../SPEC.md)), written when the project was pre-1.0. All of it shipped. For what actually shipped release-by-release, see [docs/CHANGELOG.md](CHANGELOG.md); for current project status, see the root [README.md](../README.md).
+> **Historical roadmap — superseded.** This was the step-by-step execution plan for the "parallel tests + 9 new AI guardrails" initiative (see [SPEC.md](SPEC.md)), written when the project was pre-1.0. All of it shipped. For what actually shipped release-by-release, see [docs/CHANGELOG.md](../CHANGELOG.md); for current project status, see the root [README.md](../../README.md).
 
 # VibeTags Implementation Plan: Parallel Tests & New AI Guardrails
 

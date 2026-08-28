@@ -35,7 +35,7 @@ graph TD
 
 #### Implementation details
 
-This design shipped as specified. The as-built logger-name-suffixing code, the committed `junit-platform.properties`, and the verification test are documented in one place: [docs/ARCHITECTURE.md § Concurrency & Thread-Isolated Logging](docs/ARCHITECTURE.md#concurrency--thread-isolated-logging).
+This design shipped as specified. The as-built logger-name-suffixing code, the committed `junit-platform.properties`, and the verification test are documented in one place: [docs/ARCHITECTURE.md § Concurrency & Thread-Isolated Logging](../ARCHITECTURE.md#concurrency--thread-isolated-logging).
 
 ---
 

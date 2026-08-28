@@ -59,7 +59,8 @@ class ProjectFactsConsistencyTest {
      * and stays true; rewriting it would claim that release shipped something it did not.
      */
     private static final Set<String> HISTORICAL_DOCS = Set.of(
-        "docs/CHANGELOG.md", "docs/proposed-annotations.md", "docs/PLAN.md",
+        "docs/CHANGELOG.md", "docs/proposals/proposed-annotations.md",
+        "docs/archive/PLAN.md",
         "USAGE.md");                  // "v0.9.9 extends the set to 39" is a statement about v0.9.9
 
     /**

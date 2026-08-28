@@ -483,7 +483,10 @@ vibetags/
 ├── tools/
 │   └── plot-results.py   # Renders comparison PNGs from load-tests/results/
 ├── docs/                 # Architecture documentation and diagrams
+│   ├── README.md         # Documentation index — which document answers which question
 │   ├── ARCHITECTURE.md   # Technical deep-dive into the processor internals
+│   ├── proposals/        # Ideas that have not shipped
+│   ├── archive/          # Superseded specs and plans, kept for provenance
 │   └── diagrams/         # PlantUML source files and rendered PNGs
 ├── .claude/
 │   └── skills/
@@ -781,6 +784,7 @@ annotations, same generated files).
 
 | Resource | What it covers |
 |---|---|
+| **[Documentation index](docs/README.md)** | Every document in the repository and the question it answers, in three tiers: maintained reference docs, proposals for what has not shipped, and a frozen archive. Start here when you know the question but not the filename. |
 | **[Usage & Annotation Reference](USAGE.md)** | The full configuration guide: logging, the file-existence opt-in model, granular rules, the llms.txt standard, and a worked example for every annotation (`@AIAudit`, `@AIDraft`, `@AIContract`, `@AITestDriven`, and the v0.9.8 design-intent and platform-guardrail annotations). Read this after the quickstart to get the most out of VibeTags. |
 | **[All examples](examples/README.md)** | An index of the eleven runnable consumer projects: which build tool each uses, which layout or language it covers, and what its CI gate actually asserts. Start here if you are looking for the example closest to your own project. |
 | **[Example Project](examples/basic/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
