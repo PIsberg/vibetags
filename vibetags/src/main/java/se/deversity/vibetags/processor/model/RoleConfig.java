@@ -137,14 +137,24 @@ public final class RoleConfig {
         return Optional.empty();
     }
 
-    /** The glob patterns declared for {@code roleName} (used for the rule file's frontmatter). */
+    /**
+     * Every glob declared for {@code roleName}, in config order, de-duplicated.
+     *
+     * <p>All of them, not the first line's. A name may appear on more than one line, and routing
+     * has always treated that as one role: {@code roleFor} answers with the name, so every class
+     * either line matches lands in the one rule file. Answering here with the first line alone gave
+     * that file frontmatter naming only the first line's glob, so it never loaded when the agent
+     * opened a class the second line had routed into it. Nothing failed and the guardrails were in
+     * the file; the file was simply not read, which is the one thing it exists for.
+     */
     public List<String> globsFor(String roleName) {
+        Set<String> globs = new LinkedHashSet<>();
         for (Role role : roles) {
             if (role.name().equals(roleName)) {
-                return role.globs();
+                globs.addAll(role.globs());
             }
         }
-        return List.of();
+        return List.copyOf(globs);
     }
 
     /**

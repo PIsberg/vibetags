@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.processor.model.RoleConfig;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -143,5 +145,35 @@ class RoleConfigTest {
         RoleConfig roles = write(dir, "top = *.java");
         assertEquals("top", roles.roleFor(type("Foo")).orElse(null), "default-package class matches *.java");
         assertTrue(roles.roleFor(type("a.Foo")).isEmpty(), "single * does not cross a package boundary");
+    }
+
+    /**
+     * A role named on two lines is one role, and its rule file must declare every glob both lines
+     * gave it.
+     *
+     * <p>Routing already treats the two lines as one role: {@code roleFor} returns the same name
+     * for a class matched by either, so both classes land in one file. {@code globsFor} answered
+     * with the first matching line alone, so the file that contains both got frontmatter naming
+     * only the first line's glob. Nothing fails and the guardrails are in the file; the file simply
+     * never loads when the agent opens one of the second line's classes, which is the one thing a
+     * granular rule file exists to do.
+     *
+     * <p>Appending a line rather than extending one is how a config grows, so this is reachable by
+     * ordinary editing rather than by a typo.
+     */
+    @Test
+    @DisplayName("a role named on two lines keeps the globs from both")
+    void repeatedRoleName_keepsEveryGlobItWasGiven(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir,
+            "api-endpoints = **/*Controller.java",
+            "api-endpoints = **/*Resource.java");
+
+        assertEquals("api-endpoints", roles.roleFor(type("com.example.web.OrderController")).orElse(null));
+        assertEquals("api-endpoints", roles.roleFor(type("com.example.web.OrderResource")).orElse(null),
+            "both lines route into the one role, so both classes share a rule file");
+
+        assertEquals(List.of("**/*Controller.java", "**/*Resource.java"), roles.globsFor("api-endpoints"),
+            "the file holds both lines' classes, so its frontmatter must name both lines' globs; "
+                + "with only the first, the file never loads for the classes of the second");
     }
 }
