@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-08-29
+
 ### Fixed
 
 - **`reason` reached the aggregate files and was discarded on the way to the per-element rule
@@ -42,6 +44,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than hand-listed, so an annotation that gains a reason is covered on the day it lands:
   `GranularReasonRenderedTest`, `GranularReasonEndToEndTest`, and a new sweep in
   `BuildFingerprintMutationTest`.
+
+
+- **A short-form annotation left a bold label with nothing after it in every per-element rule
+  file** ([#507](https://github.com/PIsberg/vibetags/issues/507)). `GranularRenderer` builds its
+  stanzas by string concatenation, so a member the author never set still wrote its label and its
+  colon. A bare `@AIContext` put `- **Focus**:` and `- **Avoid**:` into the file with nothing after
+  them, `@AIObservability` did the same with `- **Details**:`, and `@AIArchitecture` with
+  `- **Layer**:`. Each line costs an agent a slice of its context window and returns no guardrail,
+  and it reads as though the value went missing rather than as though nobody wrote one.
+  `CommonFormatterHelper.bullet` had guarded the aggregate renderers against exactly that, on every
+  platform, since the bare-annotation sweep; the granular renderer never grew an equivalent.
+
+  The guard now sits at the one place every stanza line passes through, so it covers all 44
+  annotations and the one added next, including the seven labels reachable only by passing an empty
+  value explicitly. A stanza left with no lines is not recorded at all, so a class carrying only a
+  bare `@AIContext` or `@AIArchitecture` gets no rule file, and no scoped-rules index entry either.
+  That was already the stated outcome: `CoreRules` warns at compile time that a blank `@AIContext`
+  will be ignored, and `ArchitectureRule` warns about a blank `belongsTo`.
+
+- **A role named on two lines of `.vibetags-roles` lost half its globs**
+  ([#511](https://github.com/PIsberg/vibetags/pull/511)). Routing had always treated a repeated
+  name as one role, so every class either line matched landed in one rule file. `globsFor` answered
+  with the first line alone, so that file declared only the first line's glob in its frontmatter and
+  never loaded when an agent opened one of the second line's classes. The guardrails were in the
+  file; the file was simply not read, which is the one thing a granular rule file exists to do.
+  Appending a line rather than extending one is how a config grows, so this needed no typo to reach.
+
+- **Two role names that resolve to one filename silently dropped one of them**
+  ([#511](https://github.com/PIsberg/vibetags/pull/511)). `RoleConfig.sanitize` maps every character
+  a filename cannot carry to a dash, so `api endpoints` and `api-endpoints` are two roles with one
+  stem. The writer planned them one at a time into a map keyed by that stem, and the second replaced
+  the first: every class of the losing role lost its rule file, while the scoped-rules index went on
+  pointing those classes at the survivor, which does not mention them. They are now merged, with
+  members concatenated in config order, globs unioned, and the heading naming every contributing
+  role. That is the answer the multi-module case already gave: a file several producers write is
+  merged, never replaced.
+
+### Changed
+
+- **The build now warns when two rule filenames differ only in capitalisation**
+  ([#510](https://github.com/PIsberg/vibetags/issues/510)). A granular stem is the element's
+  fully-qualified name with its dots turned into dashes, so the package `com.example.payment` and
+  the class `com.example.Payment` produce `com-example-payment` and `com-example-Payment`. A
+  case-sensitive filesystem holds two files and both guardrails survive. Windows and macOS, which
+  are case-insensitive by default, hold one: measured on Windows, the rules directory held a single
+  `com-example-payment.md` and the class's `@AILocked` appeared nowhere in the output tree, while
+  the index still named both elements. The same sources therefore generated different output
+  depending on which machine compiled them.
+
+  No generated file changes. Merging the two, or renaming one, would rewrite output that is correct
+  today on every case-sensitive filesystem, which is a decision about the generated layout rather
+  than a defect to patch quietly; #510 carries it with the options and their costs. What the build
+  can do without that decision is stop being silent, so it now names the colliding filenames and
+  says what will happen.
+
+
+### Upgrade note
+
+- **Your committed rule files will move on this upgrade, and that is the fix landing.** The
+  `reason` repair above means every per-element rule file gains the sentences its annotations
+  always carried and never rendered, so regenerating after the bump produces a diff in
+  `.claude/rules/`, `.cursor/rules/`, `.gemini/rules/` and every other scoped-rules directory.
+  Two further shapes show up in it, both intended: a section that used to collapse several
+  elements under one `- **Applies to**:` list splits into per-element subsections once their
+  reasons differ, which is exactly the byte-identical-guidance defect being corrected; and a
+  reason whose text contains a line break loses a trailing space, because rule-file lines are now
+  right-trimmed so a `trailing-whitespace` hook cannot rewrite generated output on commit.
+
+  Measured rather than predicted: building `codekarta` against 1.2.7 moved 12 committed rule files,
+  22 insertions and 4 deletions, every one of them an added reason, a split section, or that
+  trailing space. Nothing was lost. Review the diff and commit it.
 
 ## [1.2.6] - 2026-08-25
 
@@ -3429,7 +3502,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.6...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.7...HEAD
+[1.2.7]: https://github.com/PIsberg/vibetags/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/PIsberg/vibetags/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/PIsberg/vibetags/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/PIsberg/vibetags/compare/v1.2.3...v1.2.4
