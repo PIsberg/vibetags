@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -150,7 +151,10 @@ public final class GranularRulesWriter {
             return writtenQNames;
         }
 
-        for (Map.Entry<String, Unit> planned : plan(elementRules, roles, filePrefix, extraGlobs).entrySet()) {
+        Map<String, Unit> units = plan(elementRules, roles, filePrefix, extraGlobs);
+        warnOnStemsDifferingOnlyInCase(units.keySet());
+
+        for (Map.Entry<String, Unit> planned : units.entrySet()) {
             String stem = planned.getKey();
             Unit unit = planned.getValue();
             writtenQNames.add(stem);
@@ -177,6 +181,38 @@ public final class GranularRulesWriter {
         }
 
         return writtenQNames;
+    }
+
+    /**
+     * Warns when two planned rule files differ only in capitalisation.
+     *
+     * <p>A stem comes from the element's fully-qualified name, so a package {@code com.example.pay}
+     * and a class {@code com.example.Pay} plan {@code com-example-pay} and {@code com-example-Pay}.
+     * On a case-sensitive filesystem those are two files and both guardrails survive. On a
+     * case-insensitive one, which is the default on Windows and on macOS, they are one file: the
+     * second write lands on the first and one element's guardrails are gone, while the scoped-rules
+     * index still names both. Nothing failed and the file that remains looks correct.
+     *
+     * <p>The warning is the whole fix here on purpose. Merging the two, or renaming one, would
+     * change output that is correct today on every case-sensitive filesystem, which is a decision
+     * about the generated layout rather than a defect to patch quietly. What the build can do
+     * without that decision is stop being silent about it.
+     */
+    private void warnOnStemsDifferingOnlyInCase(Set<String> stems) {
+        Map<String, List<String>> byFoldedCase = new LinkedHashMap<>();
+        for (String stem : stems) {
+            byFoldedCase.computeIfAbsent(stem.toLowerCase(Locale.ROOT), k -> new ArrayList<>()).add(stem);
+        }
+        byFoldedCase.forEach((folded, colliding) -> {
+            if (colliding.size() > 1) {
+                fileWriter.warn("VibeTags: granular rule files " + colliding + " differ only in "
+                    + "capitalisation. A case-insensitive filesystem (the default on Windows and "
+                    + "macOS) holds one file for all of them, so only one element's guardrails "
+                    + "survive there while a case-sensitive filesystem keeps every one - the same "
+                    + "sources then generate different output on different machines. Rename one of "
+                    + "the annotated elements, or route them into one role file.");
+            }
+        });
     }
 
     /**

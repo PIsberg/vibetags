@@ -791,6 +791,18 @@ public final class GuardrailFileWriter {
         debug("write.skip file={} reason=no-new-rules", fileName);
     }
 
+    /**
+     * Raises {@code message} as a build warning.
+     *
+     * <p>For a collaborator that holds this writer but not the {@link Messager} — the messager is
+     * private here and reaching the processor's own would mean touching its locked generate step.
+     * Warnings about what is <em>about</em> to be written belong on the same channel as the
+     * warnings about writing it.
+     */
+    public void warn(String message) {
+        messager.printMessage(Diagnostic.Kind.WARNING, message);
+    }
+
     /** Visible for testing — verifies the all-overloads no-op contract. */
     public static Messager noopMessager() {
         return new Messager() {
