@@ -31,6 +31,7 @@ paths: ["**/core/*.java"]
 
 ### com.example.indexed.core.DocumentRetention.cachedExpiryEpochDay
 This element is strictly excluded from AI context. Do not reference it.
+- **Reason**: Cached derived value with no meaning outside this instance
 
 ## PII / Privacy Guardrails
 
@@ -56,6 +57,7 @@ This element is strictly excluded from AI context. Do not reference it.
 
 ### com.example.indexed.core.DocumentRetention
 - **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources.
+- **Reason**: Retention notices are shown to users in their own locale; no concatenated sentences
 
 ## Secure Logging Masking
 
@@ -111,11 +113,13 @@ This element is strictly excluded from AI context. Do not reference it.
 
 ### com.example.indexed.core.DocumentIndexEntry
 - **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety.
+- **Reason**: Identifiers are typed to stop a title being passed where an id belongs
 
 ## Schema & Serialization Safety
 
 ### com.example.indexed.core.DocumentIndexEntry
 - **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.
+- **Reason**: Persisted to the document store; field order and names are the on-disk format
 
 ## Load-Bearing Oddity
 

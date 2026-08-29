@@ -5,12 +5,14 @@ import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Name;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +36,13 @@ import static org.mockito.Mockito.when;
  *   <li>attribute-bearing annotations: two elements differing only in one attribute must hash
  *       differently (kills the lambda-return mutant and the removed-bucket mutant together);</li>
  *   <li>marker annotations: presence vs absence must hash differently (kills the removed-bucket
- *       mutant — markers have no attribute, so the "" lambda is intentional/equivalent);</li>
+ *       mutant on a bucket whose lambda legitimately contributes nothing);</li>
+ *   <li>every annotation declaring a {@code reason()}: two elements differing only in that reason
+ *       must hash differently. Nine of them were hand-listed above as attribute-less markers, on
+ *       the reading that their lambda returning {@code ""} was equivalent rather than a mutant.
+ *       That stopped being true when {@code reason} was added to them: the reason renders, so it
+ *       is an input to the generated files and has to reach the hash (#506). Derived from
+ *       {@link GuardrailAnnotations#ALL} so the next such member cannot be missed the same way;</li>
  *   <li>element order must not matter (kills the {@code List::sort} removal in appendAnnotationSet).</li>
  * </ul>
  */
@@ -247,5 +255,47 @@ class BuildFingerprintMutationTest {
         c2.collect(re2);
 
         assertEquals(fp(c1), fp(c2), "element insertion order must not change the fingerprint");
+    }
+    /**
+     * Every annotation that declares a {@code reason()} must feed it into the fingerprint, because
+     * every annotation that declares one now renders it (issue #506).
+     *
+     * <p>Nine of them did not. The generated files carried the reason, the fingerprint did not, so
+     * editing only the reason left the hash unchanged, the {@code .vibetags-cache} short-circuit
+     * matched, and the generate phase never ran: the committed rule files kept quoting the previous
+     * sentence with nothing failing anywhere to say so. That is the same shape as the transitive
+     * and locked-position sections above, and it stays fixed only if the check is derived from the
+     * annotations rather than hand-listed, so annotation 45 is covered on the day it lands.
+     */
+    @Test
+    void everyDeclaredReasonFeedsTheFingerprint() {
+        List<String> ignored = new ArrayList<>();
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            if (!declaresReason(type)) {
+                continue;
+            }
+            if (fingerprintWithReason(type, "A").equals(fingerprintWithReason(type, "B"))) {
+                ignored.add(type.getSimpleName());
+            }
+        }
+
+        assertEquals(List.of(), ignored,
+            "these annotations render their reason into the generated files but do not contribute "
+                + "it to the fingerprint, so editing only the reason short-circuits regeneration "
+                + "and leaves the previous sentence in every committed rule file");
+    }
+
+    /** True when {@code type} declares a {@code String reason()} an author can write. */
+    private static boolean declaresReason(Class<? extends Annotation> type) {
+        try {
+            return type.getDeclaredMethod("reason").getReturnType() == String.class;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    /** The fingerprint of a model holding one element of {@code type} whose reason is {@code value}. */
+    private static <A extends Annotation> String fingerprintWithReason(Class<A> type, String value) {
+        return fp(collectorOf(type, "com.ex.Reasoned", GuardrailModels.withReason(type, value)));
     }
 }

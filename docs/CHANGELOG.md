@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`reason` reached the aggregate files and was discarded on the way to the per-element rule
+  files** ([#506](https://github.com/PIsberg/vibetags/issues/506)). Nineteen annotations declare a
+  `reason()`. Twelve of them had it dropped by `GranularRenderer`, so `.claude/rules/`,
+  `.cursor/rules/`, `.github/instructions/` and every other scoped-rules directory carried the
+  annotation's canned sentence and nothing else: `@AIPure`, `@AIPublicAPI`, `@AIStrictTypes`,
+  `@AIStrictExceptions`, `@AIStrictClasspath`, `@AISchemaSafe`, `@AIPrototype`,
+  `@AIParallelTests`, `@AIInternationalized`, `@AILegacyBridge`, `@AISandboxOnly` and `@AIIgnore`.
+
+  Two `@AIPure` methods in different modules, written for entirely different reasons, produced
+  byte-identical guidance. `reason` is optional on all but one of them, so nothing failed at
+  compile time and the file was still written at roughly the right size; the only missing part was
+  the one project-specific sentence the author wrote. The reporter measured 24 affected
+  `@AIPublicAPI` uses in a single downstream project.
+
+  The cause is dated: `reason` was added to the eleven marker annotations in 1.0.0-RC2 and wired into
+  the platform formatters, which `MarkerReasonEndToEndTest` covers. The granular renderer is a
+  separate 250-line method of hand-written buckets, and it was never wired. `@AIIgnore` had carried
+  a `reason` since before that and was in the same position.
+
+  A reason left unwritten still emits nothing, and `@AIIgnore`'s declared default is still not
+  echoed back, matching what the aggregate formatters already do.
+
+- **Editing only a `reason` did not regenerate anything.** Nine of those twelve did not feed their
+  reason into `BuildFingerprint` either, having been recorded there as attribute-less markers. With
+  the rendering fixed but the hash unchanged, the `.vibetags-cache` short-circuit matched, the
+  generate phase was skipped, and the committed rule file kept quoting the previous sentence with
+  no diagnostic anywhere. Fixing the renderer alone would have shipped a fix nobody could observe
+  without deleting their cache first, so both halves land together.
+
+  Both are now derived from `GuardrailAnnotations.ALL` and from the `reason()` member itself rather
+  than hand-listed, so an annotation that gains a reason is covered on the day it lands:
+  `GranularReasonRenderedTest`, `GranularReasonEndToEndTest`, and a new sweep in
+  `BuildFingerprintMutationTest`.
+
 ## [1.2.6] - 2026-08-25
 
 ### Added

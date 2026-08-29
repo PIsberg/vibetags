@@ -1,40 +1,49 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AIArchitecture;
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIBannedApi;
+import se.deversity.vibetags.annotations.AICallersOnly;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIDeprecated;
+import se.deversity.vibetags.annotations.AIDomainModel;
 import se.deversity.vibetags.annotations.AIDraft;
+import se.deversity.vibetags.annotations.AIExplain;
+import se.deversity.vibetags.annotations.AIExtensible;
+import se.deversity.vibetags.annotations.AIFeatureFlag;
+import se.deversity.vibetags.annotations.AIGenerated;
+import se.deversity.vibetags.annotations.AIIdempotent;
+import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AIImmutable;
+import se.deversity.vibetags.annotations.AIInputSanitized;
+import se.deversity.vibetags.annotations.AIInternationalized;
+import se.deversity.vibetags.annotations.AIKeepInSync;
+import se.deversity.vibetags.annotations.AILegacyBridge;
+import se.deversity.vibetags.annotations.AILoadBearing;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.annotations.AIMemoryBudget;
 import se.deversity.vibetags.annotations.AIObservability;
+import se.deversity.vibetags.annotations.AIParallelTests;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
-import se.deversity.vibetags.annotations.AIRegulation;
-import se.deversity.vibetags.annotations.AITestDriven;
-import se.deversity.vibetags.annotations.AIThreadSafe;
-import se.deversity.vibetags.annotations.AIArchitecture;
-import se.deversity.vibetags.annotations.AIIdempotent;
-import se.deversity.vibetags.annotations.AIFeatureFlag;
-import se.deversity.vibetags.annotations.AIBannedApi;
-import se.deversity.vibetags.annotations.AIGenerated;
-import se.deversity.vibetags.annotations.AIKeepInSync;
-import se.deversity.vibetags.annotations.AILoadBearing;
-import se.deversity.vibetags.annotations.AIThreadAffinity;
-import se.deversity.vibetags.annotations.AISecure;
-import se.deversity.vibetags.annotations.AICallersOnly;
-import se.deversity.vibetags.annotations.AISandboxOnly;
-import se.deversity.vibetags.annotations.AIMemoryBudget;
-import se.deversity.vibetags.annotations.AIPure;
-import se.deversity.vibetags.annotations.AIDomainModel;
-import se.deversity.vibetags.annotations.AIExtensible;
-import se.deversity.vibetags.annotations.AIInputSanitized;
-import se.deversity.vibetags.annotations.AISecureLogging;
-import se.deversity.vibetags.annotations.AIExplain;
 import se.deversity.vibetags.annotations.AIPrototype;
+import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.annotations.AIPure;
+import se.deversity.vibetags.annotations.AIRegulation;
+import se.deversity.vibetags.annotations.AISandboxOnly;
+import se.deversity.vibetags.annotations.AISchemaSafe;
+import se.deversity.vibetags.annotations.AISecure;
+import se.deversity.vibetags.annotations.AISecureLogging;
+import se.deversity.vibetags.annotations.AIStrictClasspath;
+import se.deversity.vibetags.annotations.AIStrictExceptions;
+import se.deversity.vibetags.annotations.AIStrictTypes;
 import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITemporary;
+import se.deversity.vibetags.annotations.AITestDriven;
+import se.deversity.vibetags.annotations.AIThreadAffinity;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -108,9 +117,8 @@ public final class BuildFingerprint {
             return a == null ? "" : a.focus() + "|" + a.avoids();
         });
         appendAnnotationSet(sb, "I", model.ignore(), e -> {
-            // @AIIgnore has no attributes that affect output beyond presence + element name,
-            // both of which are already captured by the element-path key.
-            return "";
+            AIIgnore a = e.annotation(AIIgnore.class);
+            return a == null ? "" : a.reason();
         });
         appendAnnotationSet(sb, "A", model.audit(), e -> {
             AIAudit a = e.annotation(AIAudit.class);
@@ -172,19 +180,43 @@ public final class BuildFingerprint {
             AIRegulation a = e.annotation(AIRegulation.class);
             return a == null ? "" : a.standard() + "|" + a.clause() + "|" + a.description();
         });
-        appendAnnotationSet(sb, "PT", model.parallelTests(), e -> "");
-        appendAnnotationSet(sb, "LB", model.legacyBridge(), e -> "");
+        appendAnnotationSet(sb, "PT", model.parallelTests(), e -> {
+            AIParallelTests a = e.annotation(AIParallelTests.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "LB", model.legacyBridge(), e -> {
+            AILegacyBridge a = e.annotation(AILegacyBridge.class);
+            return a == null ? "" : a.reason();
+        });
         appendAnnotationSet(sb, "AR", model.architecture(), e -> {
             AIArchitecture a = e.annotation(AIArchitecture.class);
             if (a == null) return "";
             return a.belongsTo() + "|" + String.join(",", a.cannotReference());
         });
-        appendAnnotationSet(sb, "PA", model.publicApi(), e -> "");
-        appendAnnotationSet(sb, "SE", model.strictExceptions(), e -> "");
-        appendAnnotationSet(sb, "ST", model.strictTypes(), e -> "");
-        appendAnnotationSet(sb, "IT", model.internationalized(), e -> "");
-        appendAnnotationSet(sb, "SC", model.strictClasspath(), e -> "");
-        appendAnnotationSet(sb, "SS", model.schemaSafe(), e -> "");
+        appendAnnotationSet(sb, "PA", model.publicApi(), e -> {
+            AIPublicAPI a = e.annotation(AIPublicAPI.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "SE", model.strictExceptions(), e -> {
+            AIStrictExceptions a = e.annotation(AIStrictExceptions.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "ST", model.strictTypes(), e -> {
+            AIStrictTypes a = e.annotation(AIStrictTypes.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "IT", model.internationalized(), e -> {
+            AIInternationalized a = e.annotation(AIInternationalized.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "SC", model.strictClasspath(), e -> {
+            AIStrictClasspath a = e.annotation(AIStrictClasspath.class);
+            return a == null ? "" : a.reason();
+        });
+        appendAnnotationSet(sb, "SS", model.schemaSafe(), e -> {
+            AISchemaSafe a = e.annotation(AISchemaSafe.class);
+            return a == null ? "" : a.reason();
+        });
         appendAnnotationSet(sb, "ID", model.idempotent(), e -> {
             AIIdempotent a = e.annotation(AIIdempotent.class);
             return a == null ? "" : a.reason();

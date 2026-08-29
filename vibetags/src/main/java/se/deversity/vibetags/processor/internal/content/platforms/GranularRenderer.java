@@ -17,6 +17,12 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  */
 public final class GranularRenderer implements PlatformRenderer {
 
+    /**
+     * {@code AIIgnore.reason()}'s declared default, read once at class-load. If the annotation ever
+     * loses the member, every reason is printed, which is noisy rather than wrong.
+     */
+    private static final String IGNORE_DEFAULT_REASON = ignoreDefaultReason();
+
     @Override
     public @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context) {
         // Return null since granular output is written per-element via writeGranular, not as a single file.
@@ -39,7 +45,9 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.ignore()) {
-            appendToGranular(elementRules, e, "Exclusion Rule", "This element is strictly excluded from AI context. Do not reference it.");
+            AIIgnore ignore = e.annotation(AIIgnore.class);
+            appendToGranular(elementRules, e, "Exclusion Rule", "This element is strictly excluded from AI context. Do not reference it."
+                + reason(ignore == null ? "" : ignore.reason(), IGNORE_DEFAULT_REASON));
         }
         for (TaggedElement e : model.audit()) {
             AIAudit audit = e.annotation(AIAudit.class);
@@ -127,10 +135,14 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.parallelTests()) {
-            appendToGranular(elementRules, e, "Strict Test Isolation", "- **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.");
+            AIParallelTests parallel = e.annotation(AIParallelTests.class);
+            appendToGranular(elementRules, e, "Strict Test Isolation", "- **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources."
+                + reason(parallel == null ? "" : parallel.reason()));
         }
         for (TaggedElement e : model.legacyBridge()) {
-            appendToGranular(elementRules, e, "Legacy Compatibility Bridge", "- **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.");
+            AILegacyBridge bridge = e.annotation(AILegacyBridge.class);
+            appendToGranular(elementRules, e, "Legacy Compatibility Bridge", "- **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested."
+                + reason(bridge == null ? "" : bridge.reason()));
         }
         for (TaggedElement e : model.architecture()) {
             AIArchitecture arch = e.annotation(AIArchitecture.class);
@@ -140,22 +152,34 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.publicApi()) {
-            appendToGranular(elementRules, e, "Public API Surface Protection", "- **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.");
+            AIPublicAPI api = e.annotation(AIPublicAPI.class);
+            appendToGranular(elementRules, e, "Public API Surface Protection", "- **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility."
+                + reason(api == null ? "" : api.reason()));
         }
         for (TaggedElement e : model.strictExceptions()) {
-            appendToGranular(elementRules, e, "Strict Exception Handling", "- **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.");
+            AIStrictExceptions exceptions = e.annotation(AIStrictExceptions.class);
+            appendToGranular(elementRules, e, "Strict Exception Handling", "- **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions."
+                + reason(exceptions == null ? "" : exceptions.reason()));
         }
         for (TaggedElement e : model.strictTypes()) {
-            appendToGranular(elementRules, e, "Strict Type Safety", "- **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety.");
+            AIStrictTypes types = e.annotation(AIStrictTypes.class);
+            appendToGranular(elementRules, e, "Strict Type Safety", "- **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety."
+                + reason(types == null ? "" : types.reason()));
         }
         for (TaggedElement e : model.internationalized()) {
-            appendToGranular(elementRules, e, "Internationalization Mandate", "- **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources.");
+            AIInternationalized i18n = e.annotation(AIInternationalized.class);
+            appendToGranular(elementRules, e, "Internationalization Mandate", "- **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources."
+                + reason(i18n == null ? "" : i18n.reason()));
         }
         for (TaggedElement e : model.strictClasspath()) {
-            appendToGranular(elementRules, e, "Strict Classpath Integrity", "- **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.");
+            AIStrictClasspath classpath = e.annotation(AIStrictClasspath.class);
+            appendToGranular(elementRules, e, "Strict Classpath Integrity", "- **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code."
+                + reason(classpath == null ? "" : classpath.reason()));
         }
         for (TaggedElement e : model.schemaSafe()) {
-            appendToGranular(elementRules, e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.");
+            AISchemaSafe schema = e.annotation(AISchemaSafe.class);
+            appendToGranular(elementRules, e, "Schema & Serialization Safety", "- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths."
+                + reason(schema == null ? "" : schema.reason()));
         }
         for (TaggedElement e : model.idempotent()) {
             AIIdempotent idempotent = e.annotation(AIIdempotent.class);
@@ -185,7 +209,9 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.sandboxOnly()) {
-            appendToGranular(elementRules, e, "Sandbox Restriction", "- **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.");
+            AISandboxOnly sandbox = e.annotation(AISandboxOnly.class);
+            appendToGranular(elementRules, e, "Sandbox Restriction", "- **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code."
+                + reason(sandbox == null ? "" : sandbox.reason()));
         }
         for (TaggedElement e : model.memoryBudget()) {
             AIMemoryBudget mb = e.annotation(AIMemoryBudget.class);
@@ -194,7 +220,9 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.pure()) {
-            appendToGranular(elementRules, e, "Mathematical Purity", "- **Rule**: Must remain a pure function. Forbid state modifications and side effects.");
+            AIPure pure = e.annotation(AIPure.class);
+            appendToGranular(elementRules, e, "Mathematical Purity", "- **Rule**: Must remain a pure function. Forbid state modifications and side effects."
+                + reason(pure == null ? "" : pure.reason()));
         }
         for (TaggedElement e : model.domainModel()) {
             AIDomainModel dm = e.annotation(AIDomainModel.class);
@@ -232,7 +260,9 @@ public final class GranularRenderer implements PlatformRenderer {
             }
         }
         for (TaggedElement e : model.prototype()) {
-            appendToGranular(elementRules, e, "Experimental Prototype", "- **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.");
+            AIPrototype prototype = e.annotation(AIPrototype.class);
+            appendToGranular(elementRules, e, "Experimental Prototype", "- **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended."
+                + reason(prototype == null ? "" : prototype.reason()));
         }
         for (TaggedElement e : model.sunset()) {
             AISunset sunset = e.annotation(AISunset.class);
@@ -304,6 +334,46 @@ public final class GranularRenderer implements PlatformRenderer {
         }
 
         return elementRules;
+    }
+
+    /**
+     * The {@code - **Reason**:} line for an annotation's {@code reason()} member, or nothing at all
+     * when the author left it out.
+     *
+     * <p>Nineteen annotations declare a {@code reason()}, and until issue #506 twelve of them had
+     * it discarded here. The stanza that rendered instead was the annotation's constant
+     * boilerplate, byte-identical for every use of that annotation in every project, while the one
+     * project-specific sentence the author wrote reached nobody. Nothing failed, because
+     * {@code reason} is optional and the rule file was still written, which is what made the loss
+     * silent: the annotation reads as though it carries a reason, and the file it generates does
+     * not.
+     *
+     * <p>The line is emitted only when it carries something. A bare annotation must render as
+     * though the member does not exist, not as though its value went missing, which is the rule
+     * {@code CommonFormatterHelper.bullet} already applies in the aggregate renderers.
+     */
+    private static String reason(String value) {
+        return (value == null || value.isBlank()) ? "" : "\n- **Reason**: " + value;
+    }
+
+    /**
+     * As {@link #reason(String)}, but silent while the value is still the annotation's declared
+     * default. {@code @AIIgnore}'s default says "Excluded from AI context.", which restates the
+     * rule line directly above it; echoing it costs an agent's context window and carries no
+     * guardrail in return, so only a reason somebody actually wrote is rendered.
+     * {@code AIIgnoreFormatter} draws the same line for the aggregate files.
+     */
+    private static String reason(String value, String declaredDefault) {
+        return declaredDefault.equals(value) ? "" : reason(value);
+    }
+
+    private static String ignoreDefaultReason() {
+        try {
+            Object declared = AIIgnore.class.getDeclaredMethod("reason").getDefaultValue();
+            return declared instanceof String value ? value : "";
+        } catch (NoSuchMethodException e) {
+            return "";
+        }
     }
 
     /**

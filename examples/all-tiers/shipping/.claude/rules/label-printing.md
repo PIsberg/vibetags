@@ -9,6 +9,7 @@ paths: ["**/*Printer.java"]
 
 ### com.example.alltiers.shipping.LabelPrinter.carrierSessionToken
 This element is strictly excluded from AI context. Do not reference it.
+- **Reason**: Cached carrier handshake token; meaningless outside one process
 
 ## Observability Instrumentation
 

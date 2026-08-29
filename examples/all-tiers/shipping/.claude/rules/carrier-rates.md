@@ -20,11 +20,13 @@ paths: ["**/*Adapter.java", "**/*Calculator.java"]
 
 ### com.example.alltiers.shipping.RateCalculator.primeTestRates()
 - **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.
+- **Reason**: Talks to the carrier's test endpoint with seeded credentials
 
 ## Experimental Prototype
 
 ### com.example.alltiers.shipping.RateCalculator
 - **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.
+- **Reason**: Spike for the Q3 carrier-rate evaluation; no error handling on purpose
 
 ## Generated — Edit The Source
 
@@ -44,6 +46,7 @@ paths: ["**/*Adapter.java", "**/*Calculator.java"]
 
 ### com.example.alltiers.shipping.CarrierAdapter
 - **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.
+- **Reason**: Each adapter test binds its own mock carrier port and shares no state
 
 ## Memory Budget Constraints
 
@@ -55,6 +58,7 @@ paths: ["**/*Adapter.java", "**/*Calculator.java"]
 
 ### com.example.alltiers.shipping.CarrierAdapter.cacheKey(java.lang.String,java.lang.String)
 - **Rule**: Must remain a pure function. Forbid state modifications and side effects.
+- **Reason**: Used inside the rate cache key; a side effect here would poison every cached rate
 
 ## Polymorphic Extension Pattern
 

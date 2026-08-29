@@ -16,16 +16,19 @@ paths: ["**/*Gateway.java"]
 
 ### com.example.alltiers.billing.PaymentGateway.toWireFormat(java.lang.String)
 - **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.
+- **Reason**: Mirrors the acquirer's fixed-width wire format, spaces and all; tidying it broke settlement in 2024
 
 ## Strict Exception Handling
 
 ### com.example.alltiers.billing.PaymentGateway
 - **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.
+- **Reason**: A bare catch(Exception) here once swallowed a timeout and double-charged
 
 ## Strict Classpath Integrity
 
 ### com.example.alltiers.billing.PaymentGateway
 - **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.
+- **Reason**: Runs inside the PCI sandbox where reflection and custom classloaders are refused
 
 ## Feature Flag Gate
 

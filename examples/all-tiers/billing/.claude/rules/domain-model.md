@@ -21,11 +21,13 @@ paths: ["**/*Entry.java", "**/*Rules.java"]
 
 ### com.example.alltiers.billing.LedgerEntry
 - **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety.
+- **Reason**: Money is BigDecimal here and must never widen to double or Object
 
 ## Schema & Serialization Safety
 
 ### com.example.alltiers.billing.LedgerEntry
 - **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.
+- **Reason**: Persisted to the ledger table replicated to the finance warehouse
 
 ## Load-Bearing Oddity
 
@@ -66,6 +68,7 @@ paths: ["**/*Entry.java", "**/*Rules.java"]
 
 ### com.example.alltiers.billing.TaxRules
 - **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources.
+- **Reason**: Tax names are shown on invoices in the customer's locale
 
 ## Idempotency Guarantee
 
@@ -77,6 +80,7 @@ paths: ["**/*Entry.java", "**/*Rules.java"]
 
 ### com.example.alltiers.billing.TaxRules.applyStandardRate(java.math.BigDecimal)
 - **Rule**: Must remain a pure function. Forbid state modifications and side effects.
+- **Reason**: Callers memoize this on the assumption it is referentially transparent
 
 ## Domain Model Boundary
 

@@ -11,12 +11,15 @@ applyTo: "**/DocumentSearchView.java"
 
 ## Public API Surface Protection
 - **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.
+- **Reason**: Returned from the public search endpoint; the field names are the wire format
 
 ## Strict Exception Handling
 - **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.
+- **Reason**: Search failures must surface as SearchException, never a raw runtime type
 
 ## Strict Classpath Integrity
 - **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.
+- **Reason**: Serialized by the platform's own Jackson; adding a second JSON library changes the output
 
 ## Security-Critical Code
 - **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact.

@@ -46,11 +46,13 @@ When modifying this element, audit for:
 
 ### com.example.indexed.app.DocumentImportJob
 - **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.
+- **Reason**: Each import runs against its own temporary directory and shares no state
 
 ## Legacy Compatibility Bridge
 
 ### com.example.indexed.app.DocumentImportJob.mapLegacyColumn(java.lang.String)
 - **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.
+- **Reason**: Translates the pre-2020 column names; deleted once the last tenant is migrated
 
 ## Feature Flag Gate
 
@@ -62,6 +64,7 @@ When modifying this element, audit for:
 
 ### com.example.indexed.app.DocumentImportJob.reindexEverything()
 - **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.
+- **Reason**: Writes directly to the index without validation; catastrophic against production data
 
 ## Polymorphic Extension Pattern
 
@@ -73,6 +76,7 @@ When modifying this element, audit for:
 
 ### com.example.indexed.app.DocumentImportJob
 - **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.
+- **Reason**: Shape of the import pipeline is still being decided; do not build on these types
 
 ## Generated — Edit The Source
 
@@ -92,16 +96,19 @@ When modifying this element, audit for:
 
 ### com.example.indexed.app.DocumentSearchView
 - **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.
+- **Reason**: Returned from the public search endpoint; the field names are the wire format
 
 ## Strict Exception Handling
 
 ### com.example.indexed.app.DocumentSearchView
 - **Rule**: Robust exception handling required. Prohibit catching/throwing generic Exception/Throwable. Use descriptive, specific/custom exceptions.
+- **Reason**: Search failures must surface as SearchException, never a raw runtime type
 
 ## Strict Classpath Integrity
 
 ### com.example.indexed.app.DocumentSearchView
 - **Rule**: Prohibit dynamic class loading, custom classloaders, runtime reflection hacks, or execution of dynamic external code.
+- **Reason**: Serialized by the platform's own Jackson; adding a second JSON library changes the output
 
 ## Security-Critical Code
 
