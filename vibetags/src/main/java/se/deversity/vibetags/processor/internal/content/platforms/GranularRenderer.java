@@ -2,9 +2,11 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.TaggedElement;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import se.deversity.vibetags.annotations.*;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
@@ -22,6 +24,15 @@ public final class GranularRenderer implements PlatformRenderer {
      * loses the member, every reason is printed, which is noisy rather than wrong.
      */
     private static final String IGNORE_DEFAULT_REASON = ignoreDefaultReason();
+
+    /**
+     * A stanza line that is a bold label and nothing else: {@code - **Focus**:} and the line ends.
+     *
+     * <p>Trailing whitespace is part of the match, because the concatenation that builds these
+     * bodies writes the separator before it knows whether a value follows, so the empty form is
+     * {@code "- **Focus**: "} rather than {@code "- **Focus**:"}.
+     */
+    private static final Pattern EMPTY_LABEL = Pattern.compile("\\s*-\\s+\\*\\*[^*]+\\*\\*:\\s*");
 
     @Override
     public @Nullable String render(GuardrailModel model, Platform platform, RenderingContext context) {
@@ -380,10 +391,55 @@ public final class GranularRenderer implements PlatformRenderer {
      * Records one stanza for {@code element} under {@code title}. The stanza is kept structured
      * (see {@link GranularBody}) rather than appended as text, so the file-level renderer can hoist
      * the constant rule sentence shared by every element in a section instead of repeating it.
+     *
+     * <p>Lines that carry nothing are dropped here, and a stanza left with no lines is not recorded
+     * at all. The stanzas above are built by concatenation, so a member the author never set still
+     * writes its label and its colon; {@code CommonFormatterHelper.bullet} has guarded the
+     * aggregate renderers against exactly that since the bare-annotation sweep, and the granular
+     * renderer never grew an equivalent (#507). A bare {@code @AIContext} put {@code - **Focus**:}
+     * and {@code - **Avoid**:} into the rule file with nothing after them: the label costs an
+     * agent's context window, returns no guardrail, and reads as though the value went missing
+     * rather than as though nobody wrote one.
+     *
+     * <p>The guard is here rather than at the forty-odd call sites deliberately. One choke point
+     * covers the annotation added next as well as the forty-four that exist, and
+     * {@code UnsetMemberRenderingTest.granularStanzasLeaveNoDanglingText} sweeps all of them
+     * against it; a guard spelled out per call site is one the next annotation can be written
+     * without.
+     *
+     * <p>Dropping the whole stanza is not a separate decision. A stanza is a heading plus a body,
+     * and a heading with nothing under it reads to an agent as an annotation that says nothing,
+     * which is why a bare {@code @AIAudit} has always been skipped. A bare {@code @AIContext} or
+     * {@code @AIArchitecture} now takes the same route, and the author is told: {@code CoreRules}
+     * and {@code ArchitectureRule} already warn at compile time that the annotation will be
+     * ignored.
      */
     private void appendToGranular(Map<TaggedElement, GranularBody> elementRules, TaggedElement element, String title, String content) {
+        List<String> lines = carryingLines(content);
+        if (lines.isEmpty()) {
+            return;
+        }
         TaggedElement owner = element.owner();
         elementRules.computeIfAbsent(owner, k -> new GranularBody())
-            .add(new GranularBody.Entry(owner, element, title, List.of(content.split("\n", -1))));
+            .add(new GranularBody.Entry(owner, element, title, lines));
+    }
+
+    /**
+     * {@code content} split into stanza lines, without the ones that are only a label.
+     *
+     * <p>Every surviving line is right-trimmed. A summary assembled from optional parts ends in the
+     * separator that would have preceded the part nobody supplied, and this repository's own
+     * {@code trailing-whitespace} pre-commit hook would then rewrite the generated file on commit
+     * and hand the next build a diff to undo.
+     */
+    private static List<String> carryingLines(String content) {
+        List<String> kept = new ArrayList<>();
+        for (String line : content.split("\n", -1)) {
+            String trimmed = line.stripTrailing();
+            if (!EMPTY_LABEL.matcher(trimmed).matches()) {
+                kept.add(trimmed);
+            }
+        }
+        return kept;
     }
 }

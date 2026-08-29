@@ -84,6 +84,59 @@ public final class GuardrailModels {
         return builder.build();
     }
 
+    /**
+     * The model in the state a user can actually put the processor into by writing an annotation
+     * the short way: every member that <em>has</em> a declared default left at it, and every member
+     * that has none populated, because a member with no default does not compile when omitted.
+     *
+     * <p>{@link #everyAnnotationWithMembersUnset} cannot answer that question. It empties the
+     * required members too, so a renderer that emits a label for a blank required member looks like
+     * a defect there and is not one: no source reaches that state. This fixture separates the two,
+     * so anything a renderer leaves empty under it is reachable by construction rather than by
+     * argument (#507).
+     */
+    public static GuardrailModel everyAnnotationWithOptionalMembersUnset() {
+        GuardrailModel.Builder builder = GuardrailModel.builder();
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            builder.add(type, optionalUnsetElementFor(type));
+        }
+        return builder.build();
+    }
+
+    /**
+     * The fixture element for one annotation type with only its optional members left out. The
+     * type parameter binds the wildcard {@link GuardrailAnnotations#ALL} hands out, which
+     * {@code annotation(Class, A)} needs and a {@code Class<? extends Annotation>} cannot supply.
+     */
+    private static <A extends Annotation> TaggedElement optionalUnsetElementFor(Class<A> type) {
+        String qualified = marker(type);
+        String simple = qualified.substring(qualified.lastIndexOf('.') + 1);
+        return TaggedElement.builder(qualified)
+            .names(qualified, simple, qualified, qualified)
+            .kind(ElementTag.CLASS)
+            .signature(qualified)
+            .annotation(type, optionalUnsetInstance(type))
+            // AISunset.replacement() has a declared default, so it counts as optional and no type
+            // member is resolved for it - the renderer has to fall back, exactly as it does for a
+            // source that wrote @AISunset(jira = "...") and nothing else.
+            .build();
+    }
+
+    /** An instance of {@code type} answering optional members with their default and the rest with a value. */
+    @SuppressWarnings("unchecked")
+    private static <A extends Annotation> A optionalUnsetInstance(Class<A> type) {
+        return (A) Proxy.newProxyInstance(
+            type.getClassLoader(),
+            new Class<?>[]{type},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "annotationType" -> type;
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == (args == null ? null : args[0]);
+                case "toString" -> "@" + type.getName() + "(optional-unset)";
+                default -> method.getDefaultValue() != null ? method.getDefaultValue() : member(method);
+            });
+    }
+
     /** The fixture element for one annotation type with every optional member unset. */
     public static TaggedElement elementWithMembersUnset(Class<? extends Annotation> type) {
         return unsetElement(type);
