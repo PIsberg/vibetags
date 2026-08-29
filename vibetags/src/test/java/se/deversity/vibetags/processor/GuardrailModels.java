@@ -290,6 +290,12 @@ public final class GuardrailModels {
     }
 
     /**
+     * What a fixture answers a text member with, before the member's own name. Named rather than
+     * spelled twice so a sweep searching for it cannot drift from what is produced.
+     */
+    public static final String FIXTURE_PREFIX = "fixture-";
+
+    /**
      * A value for one annotation member. Strings carry the member's own name, so a formatter that
      * prints the wrong member is visible in the failure, and booleans answer {@code true} so the
      * "flag is set" branch is the one exercised.
@@ -297,7 +303,7 @@ public final class GuardrailModels {
     private static Object member(Method method) {
         Class<?> returnType = method.getReturnType();
         if (returnType == String.class) {
-            return "fixture-" + method.getName();
+            return FIXTURE_PREFIX + method.getName();
         }
         if (returnType == boolean.class) {
             return true;
@@ -318,7 +324,7 @@ public final class GuardrailModels {
         if (returnType.isArray()) {
             Class<?> component = returnType.getComponentType();
             if (component == String.class) {
-                return new String[]{"fixture-" + method.getName()};
+                return new String[]{FIXTURE_PREFIX + method.getName()};
             }
             Object array = Array.newInstance(component, 1);
             Array.set(array, 0, component.isEnum() ? constant(component) : null);
