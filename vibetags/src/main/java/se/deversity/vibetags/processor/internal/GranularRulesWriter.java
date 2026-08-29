@@ -215,19 +215,36 @@ public final class GranularRulesWriter {
                     body.toString().trim())));
         });
 
-        // Role members → one grouped, human-named file per role.
-        roleMembers.forEach((roleName, members) -> {
-            String stem = filePrefix + RoleConfig.sanitize(roleName);
-            List<String> globs = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
-            if (globs.isEmpty()) {
-                // Role defined only by FQNs — derive globs from the members' own class/package globs.
-                Set<String> derived = new LinkedHashSet<>();
-                for (TaggedElement m : members) {
-                    derived.add(defaultGlob(m));
+        // Role members → one grouped, human-named file per role. Grouped by the stem first,
+        // because the stem is what a file is: RoleConfig.sanitize maps everything a filename
+        // cannot carry to a dash, so "api endpoints" and "api-endpoints" are two roles with one
+        // filename. Planning them one at a time let the second overwrite the first and the first
+        // role's classes lost their rule file with nothing said, while the scoped-rules index went
+        // on pointing them at the survivor. A file several producers write is merged, never
+        // replaced — the same answer the multi-module case gives (issue #365).
+        Map<String, Map<String, List<TaggedElement>>> byStem = new LinkedHashMap<>();
+        roleMembers.forEach((roleName, members) ->
+            byStem.computeIfAbsent(filePrefix + RoleConfig.sanitize(roleName), k -> new LinkedHashMap<>())
+                  .put(roleName, members));
+
+        byStem.forEach((stem, rolesInFile) -> {
+            List<TaggedElement> members = new ArrayList<>();
+            Set<String> globs = new LinkedHashSet<>();
+            rolesInFile.forEach((roleName, ofRole) -> {
+                members.addAll(ofRole);
+                List<String> declared = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
+                if (declared.isEmpty()) {
+                    // Role defined only by FQNs — derive globs from its own members' class/package
+                    // globs. Per role rather than per stem: a role with no globs sharing a filename
+                    // with one that has them still needs its members reachable.
+                    for (TaggedElement m : ofRole) {
+                        globs.add(defaultGlob(m));
+                    }
+                } else {
+                    globs.addAll(declared);
                 }
-                globs = new ArrayList<>(derived);
-            }
-            globs = withExtra(globs, extraGlobs);
+            });
+            List<String> fileGlobs = withExtra(new ArrayList<>(globs), extraGlobs);
             // A role file spans several owners, so its stanzas are re-rendered together in
             // qualified mode: organised by topic (section) with fully-qualified element headings,
             // and with each section's shared rule sentence hoisted once instead of repeated per
@@ -239,8 +256,11 @@ public final class GranularRulesWriter {
                     stanzas.addAll(memberBody.entries());
                 }
             }
-            units.put(stem, new Unit(roleName, "AI rules for role " + roleName,
-                new GranularContribution(globs, GranularSections.render(stanzas, true).trim())));
+            // One name is the name; several are all named, so the heading says which config lines
+            // feed the file rather than picking one and looking like the others were dropped.
+            String displayName = String.join(", ", rolesInFile.keySet());
+            units.put(stem, new Unit(displayName, "AI rules for role " + displayName,
+                new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim())));
         });
 
         return units;
