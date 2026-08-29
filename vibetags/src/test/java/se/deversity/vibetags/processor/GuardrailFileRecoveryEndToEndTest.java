@@ -176,6 +176,51 @@ class GuardrailFileRecoveryEndToEndTest {
             "the cache must be rebuilt so the run after a cold one can short-circuit again");
     }
 
+
+    /**
+     * The ordinary case, and the only one of these that every project is in on every build: a
+     * {@code CLAUDE.md} whose hand-written half sits around a <em>well-formed</em> marker block,
+     * compiled again.
+     *
+     * <p>Every other case in this class reaches the writer through a damaged file: the block
+     * deleted, a start marker with no end, the file truncated. Those take repair paths. The steady
+     * state takes the ordinary replace path, which is the one that runs on every compile of every
+     * project that has ever opted in, and it was reachable here only through
+     * {@code MarkerInjectionTest}, a writer-level unit test framed around an injection attempt.
+     * Measured: dropping the preamble in the replace path left all five tests in this class green
+     * while the invariant this class is named for was broken.
+     *
+     * <p>Content on both sides of the block, because they are two substrings and two chances to
+     * lose one.
+     */
+    @Test
+    void handWrittenContentAroundAWellFormedBlock_survivesTheNextCompile(@TempDir Path dir) throws Exception {
+        compileOnce(dir);
+
+        String generated = Files.readString(dir.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertEquals(1, count(generated, GuardrailFileWriter.MARKER_START_MD),
+            "precondition: the first compile leaves one well-formed block:\n" + generated);
+
+        Files.writeString(dir.resolve("CLAUDE.md"),
+            "# My Project\n\nOnboarding notes above the block.\n\n"
+                + generated.strip()
+                + "\n\n## Team conventions\n\nNotes below the block.\n",
+            StandardCharsets.UTF_8);
+        settle(dir);
+
+        compileOnce(dir);
+
+        String after = Files.readString(dir.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(after.contains("Onboarding notes above the block."),
+            "hand-authored content before the block must survive the ordinary rewrite:\n" + after);
+        assertTrue(after.contains("Notes below the block."),
+            "and so must hand-authored content after it:\n" + after);
+        assertEquals(1, count(after, GuardrailFileWriter.MARKER_START_MD),
+            "still exactly one block, not a second one appended below the human text:\n" + after);
+        assertTrue(after.contains(REASON),
+            "and the block still carries the guardrails:\n" + after);
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
