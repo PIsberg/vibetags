@@ -104,6 +104,30 @@ public final class GuardrailModels {
             });
     }
 
+    /**
+     * An instance of {@code type} with every member at its unset value except {@code reason()},
+     * which answers {@code reason}.
+     *
+     * <p>For the tests that have to vary exactly one member and hold the rest still - whether a
+     * reason reaches the fingerprint, say. Mockito cannot stand in here: a mocked annotation
+     * answers {@code null} for its array members, and the renderers and the fingerprint both join
+     * those, so the mock crashes before the member under test is ever read.
+     */
+    @SuppressWarnings("unchecked")
+    public static <A extends Annotation> A withReason(Class<A> type, String reason) {
+        return (A) Proxy.newProxyInstance(
+            type.getClassLoader(),
+            new Class<?>[]{type},
+            (proxy, method, args) -> switch (method.getName()) {
+                case "annotationType" -> type;
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "equals" -> proxy == (args == null ? null : args[0]);
+                case "toString" -> "@" + type.getName() + "(reason)";
+                case "reason" -> reason;
+                default -> unsetMember(method);
+            });
+    }
+
     /** An instance of {@code type} answering every member with its unset value. */
     @SuppressWarnings("unchecked")
     private static <A extends Annotation> A unsetInstance(Class<A> type) {

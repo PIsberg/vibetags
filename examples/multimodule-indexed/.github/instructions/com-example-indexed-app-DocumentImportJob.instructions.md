@@ -10,9 +10,11 @@ applyTo: "**/DocumentImportJob.java"
 
 ## Strict Test Isolation
 - **Rule**: Strict test isolation required. AI-generated or modified tests must not share mutable state, rely on execution order, or conflict on external resources.
+- **Reason**: Each import runs against its own temporary directory and shares no state
 
 ### Rules for method mapLegacyColumn
 - **Rule**: Compatibility bridge. Do not attempt to modernize, elegant-ize, or refactor structural patterns. Only modify internal business logic as explicitly requested.
+- **Reason**: Translates the pre-2020 column names; deleted once the last tenant is migrated
 
 ### Rules for method useV2Pipeline
 - **Flag**: 'import.v2.enabled' (default: false)
@@ -20,6 +22,7 @@ applyTo: "**/DocumentImportJob.java"
 
 ### Rules for method reindexEverything
 - **Scope**: Strictly sandbox or test environment only. Never use or invoke from production code.
+- **Reason**: Writes directly to the index without validation; catastrophic against production data
 
 ## Polymorphic Extension Pattern
 - **Pattern**: STRATEGY_PATTERN
@@ -27,6 +30,7 @@ applyTo: "**/DocumentImportJob.java"
 
 ## Experimental Prototype
 - **Scope**: Rapid prototype. QA rules and strict coverage metrics are temporarily suspended.
+- **Reason**: Shape of the import pipeline is still being decided; do not build on these types
 
 ### Rules for field LEGACY_COLUMNS
 - **Rule**: Machine-generated. Read it, never write it — hand edits are silently overwritten.

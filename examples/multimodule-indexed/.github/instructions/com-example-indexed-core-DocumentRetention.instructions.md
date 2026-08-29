@@ -11,6 +11,7 @@ applyTo: "**/DocumentRetention.java"
 
 ### Rules for field cachedExpiryEpochDay
 This element is strictly excluded from AI context. Do not reference it.
+- **Reason**: Cached derived value with no meaning outside this instance
 
 ### Rules for field ownerEmail
 - **Rule**: Never log or expose runtime values of this element.
@@ -28,6 +29,7 @@ This element is strictly excluded from AI context. Do not reference it.
 
 ## Internationalization Mandate
 - **Rule**: Prohibit hardcoding user-facing strings, labels, or messages. All user-visible text must be resolved via localization resources.
+- **Reason**: Retention notices are shown to users in their own locale; no concatenated sentences
 
 ### Rules for field ownerEmail
 - **Policy**: HASH

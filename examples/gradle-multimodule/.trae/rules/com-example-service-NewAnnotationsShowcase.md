@@ -16,6 +16,7 @@ description: "AI rules for com.example.service.NewAnnotationsShowcase"
 
 ### Rules for method calculateFastFibonacci
 - **Rule**: Must remain a pure function. Forbid state modifications and side effects.
+- **Reason**: Memoized elsewhere on the assumption it is referentially transparent; adding logging or a cache mutation here would corrupt those callers
 
 ### Rules for parameter NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput
 - **Target Filters**: SQL_INJECTION

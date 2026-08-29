@@ -23,9 +23,11 @@ applyTo: "**/DocumentIndexEntry.java"
 
 ## Strict Type Safety
 - **Rule**: Loose typing (e.g., Object, raw types, generic Map<String, Object>) is strictly prohibited. Enforce type safety.
+- **Reason**: Identifiers are typed to stop a title being passed where an id belongs
 
 ## Schema & Serialization Safety
 - **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.
+- **Reason**: Persisted to the document store; field order and names are the on-disk format
 
 ### Rules for field sequence
 - **Rule**: This looks removable but is deliberate. Refactor only while the invariant holds.

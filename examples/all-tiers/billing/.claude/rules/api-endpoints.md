@@ -48,6 +48,7 @@ When modifying this element, audit for:
 
 ### com.example.alltiers.billing.InvoiceController
 - **Rule**: Exposes public API. Preserve signature, Javadoc, and behavior without breaking backwards or source compatibility.
+- **Reason**: Three partner integrations are pinned to v1 of these endpoints
 
 ## Input Sanitization
 
