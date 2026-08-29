@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -150,7 +151,10 @@ public final class GranularRulesWriter {
             return writtenQNames;
         }
 
-        for (Map.Entry<String, Unit> planned : plan(elementRules, roles, filePrefix, extraGlobs).entrySet()) {
+        Map<String, Unit> units = plan(elementRules, roles, filePrefix, extraGlobs);
+        warnOnStemsDifferingOnlyInCase(units.keySet());
+
+        for (Map.Entry<String, Unit> planned : units.entrySet()) {
             String stem = planned.getKey();
             Unit unit = planned.getValue();
             writtenQNames.add(stem);
@@ -177,6 +181,38 @@ public final class GranularRulesWriter {
         }
 
         return writtenQNames;
+    }
+
+    /**
+     * Warns when two planned rule files differ only in capitalisation.
+     *
+     * <p>A stem comes from the element's fully-qualified name, so a package {@code com.example.pay}
+     * and a class {@code com.example.Pay} plan {@code com-example-pay} and {@code com-example-Pay}.
+     * On a case-sensitive filesystem those are two files and both guardrails survive. On a
+     * case-insensitive one, which is the default on Windows and on macOS, they are one file: the
+     * second write lands on the first and one element's guardrails are gone, while the scoped-rules
+     * index still names both. Nothing failed and the file that remains looks correct.
+     *
+     * <p>The warning is the whole fix here on purpose. Merging the two, or renaming one, would
+     * change output that is correct today on every case-sensitive filesystem, which is a decision
+     * about the generated layout rather than a defect to patch quietly. What the build can do
+     * without that decision is stop being silent about it.
+     */
+    private void warnOnStemsDifferingOnlyInCase(Set<String> stems) {
+        Map<String, List<String>> byFoldedCase = new LinkedHashMap<>();
+        for (String stem : stems) {
+            byFoldedCase.computeIfAbsent(stem.toLowerCase(Locale.ROOT), k -> new ArrayList<>()).add(stem);
+        }
+        byFoldedCase.forEach((folded, colliding) -> {
+            if (colliding.size() > 1) {
+                fileWriter.warn("VibeTags: granular rule files " + colliding + " differ only in "
+                    + "capitalisation. A case-insensitive filesystem (the default on Windows and "
+                    + "macOS) holds one file for all of them, so only one element's guardrails "
+                    + "survive there while a case-sensitive filesystem keeps every one - the same "
+                    + "sources then generate different output on different machines. Rename one of "
+                    + "the annotated elements, or route them into one role file.");
+            }
+        });
     }
 
     /**
@@ -215,19 +251,36 @@ public final class GranularRulesWriter {
                     body.toString().trim())));
         });
 
-        // Role members → one grouped, human-named file per role.
-        roleMembers.forEach((roleName, members) -> {
-            String stem = filePrefix + RoleConfig.sanitize(roleName);
-            List<String> globs = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
-            if (globs.isEmpty()) {
-                // Role defined only by FQNs — derive globs from the members' own class/package globs.
-                Set<String> derived = new LinkedHashSet<>();
-                for (TaggedElement m : members) {
-                    derived.add(defaultGlob(m));
+        // Role members → one grouped, human-named file per role. Grouped by the stem first,
+        // because the stem is what a file is: RoleConfig.sanitize maps everything a filename
+        // cannot carry to a dash, so "api endpoints" and "api-endpoints" are two roles with one
+        // filename. Planning them one at a time let the second overwrite the first and the first
+        // role's classes lost their rule file with nothing said, while the scoped-rules index went
+        // on pointing them at the survivor. A file several producers write is merged, never
+        // replaced — the same answer the multi-module case gives (issue #365).
+        Map<String, Map<String, List<TaggedElement>>> byStem = new LinkedHashMap<>();
+        roleMembers.forEach((roleName, members) ->
+            byStem.computeIfAbsent(filePrefix + RoleConfig.sanitize(roleName), k -> new LinkedHashMap<>())
+                  .put(roleName, members));
+
+        byStem.forEach((stem, rolesInFile) -> {
+            List<TaggedElement> members = new ArrayList<>();
+            Set<String> globs = new LinkedHashSet<>();
+            rolesInFile.forEach((roleName, ofRole) -> {
+                members.addAll(ofRole);
+                List<String> declared = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
+                if (declared.isEmpty()) {
+                    // Role defined only by FQNs — derive globs from its own members' class/package
+                    // globs. Per role rather than per stem: a role with no globs sharing a filename
+                    // with one that has them still needs its members reachable.
+                    for (TaggedElement m : ofRole) {
+                        globs.add(defaultGlob(m));
+                    }
+                } else {
+                    globs.addAll(declared);
                 }
-                globs = new ArrayList<>(derived);
-            }
-            globs = withExtra(globs, extraGlobs);
+            });
+            List<String> fileGlobs = withExtra(new ArrayList<>(globs), extraGlobs);
             // A role file spans several owners, so its stanzas are re-rendered together in
             // qualified mode: organised by topic (section) with fully-qualified element headings,
             // and with each section's shared rule sentence hoisted once instead of repeated per
@@ -239,8 +292,11 @@ public final class GranularRulesWriter {
                     stanzas.addAll(memberBody.entries());
                 }
             }
-            units.put(stem, new Unit(roleName, "AI rules for role " + roleName,
-                new GranularContribution(globs, GranularSections.render(stanzas, true).trim())));
+            // One name is the name; several are all named, so the heading says which config lines
+            // feed the file rather than picking one and looking like the others were dropped.
+            String displayName = String.join(", ", rolesInFile.keySet());
+            units.put(stem, new Unit(displayName, "AI rules for role " + displayName,
+                new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim())));
         });
 
         return units;

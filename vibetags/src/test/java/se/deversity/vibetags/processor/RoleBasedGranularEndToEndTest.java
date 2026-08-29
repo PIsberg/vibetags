@@ -211,4 +211,39 @@ class RoleBasedGranularEndToEndTest {
                 + "silently keeps applying to the old set of files:\n" + web);
         assertTrue(web.contains("com.example.web.OrderController"), "the body must still be there:\n" + web);
     }
+
+    /**
+     * Two role names that differ only in characters a filename cannot carry resolve to one file,
+     * and that file must hold both roles.
+     *
+     * <p>{@code RoleConfig.sanitize} maps everything outside {@code [a-zA-Z0-9._-]} to a dash, so
+     * {@code api endpoints} and {@code api-endpoints} are two roles with one filename. The writer
+     * planned them into a map keyed by that filename and the second put replaced the first, so one
+     * role's classes lost their rule file entirely. Nothing warned, and the scoped-rules index
+     * still pointed those classes at the surviving file, which does not mention them: an index
+     * entry leading to a file that says nothing about the element it names.
+     *
+     * <p>Reachable by renaming a role and leaving the old line, or by two people adding a role from
+     * opposite ends of a config. Merging is the same answer the multi-module case already gives: a
+     * file several producers write is merged, never replaced (issue #365).
+     */
+    @Test
+    void rolesCollidingOnOneFilename_areMerged_notReplaced(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = harness(dir,
+            "api endpoints = **/*Controller.java\n"
+            + "api-endpoints = **/*Entity.java\n");
+        h.addSource("com.example.web.OrderController", ORDER_CONTROLLER);
+        h.addSource("com.example.data.ProductEntity", PRODUCT_ENTITY);
+        h.compile();
+
+        String merged = h.readFile(".cursor/rules/api-endpoints.mdc");
+        assertTrue(merged.contains("com.example.data.ProductEntity"),
+            "the second role reaches its file:" + System.lineSeparator() + merged);
+        assertTrue(merged.contains("com.example.web.OrderController"),
+            "and so does the first, which shares the filename. Replacing it drops the guardrail "
+                + "with no diagnostic:" + System.lineSeparator() + merged);
+        assertTrue(merged.contains("**/*Controller.java") && merged.contains("**/*Entity.java"),
+            "a file holding both roles' classes must declare both roles' globs, or it never loads "
+                + "for half of them:" + System.lineSeparator() + merged);
+    }
 }
