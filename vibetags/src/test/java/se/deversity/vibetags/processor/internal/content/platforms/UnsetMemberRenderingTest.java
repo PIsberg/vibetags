@@ -65,6 +65,24 @@ class UnsetMemberRenderingTest {
         Set.of(se.deversity.vibetags.annotations.AIAudit.class);
 
     /**
+     * The same, for the per-element rule files, which drop two more.
+     *
+     * <p>A stanza is a heading plus a body. {@code @AIContext} written with neither a focus nor an
+     * avoid, and {@code @AIArchitecture} with neither a layer nor a prohibited reference, have no
+     * body to put under the heading, and this class already states that a heading with nothing
+     * under it reads to an agent as an annotation that says nothing. So they take the same route
+     * {@code @AIAudit} has always taken and record no stanza (#507).
+     *
+     * <p>They are not in {@link #RENDERS_NOTHING_WHEN_BARE}, because the aggregate files still
+     * name the element: there the annotation's presence is the line, and the members are detail
+     * hung off it. Only the granular form needs a body of its own.
+     */
+    private static final Set<Class<? extends Annotation>> GRANULAR_RENDERS_NOTHING_WHEN_BARE =
+        Set.of(se.deversity.vibetags.annotations.AIAudit.class,
+               se.deversity.vibetags.annotations.AIContext.class,
+               se.deversity.vibetags.annotations.AIArchitecture.class);
+
+    /**
      * A markdown bullet whose bold label is followed by nothing: {@code - **Reason**:} and the line
      * ends. The label is the whole cost — an agent reading the file pays for it and learns nothing.
      */
@@ -192,7 +210,7 @@ class UnsetMemberRenderingTest {
 
         List<String> dropped = new ArrayList<>();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            if (RENDERS_NOTHING_WHEN_BARE.contains(type)) {
+            if (GRANULAR_RENDERS_NOTHING_WHEN_BARE.contains(type)) {
                 continue;
             }
             if (hasStanza(populated, type) && !hasStanza(bare, type)) {
@@ -203,6 +221,63 @@ class UnsetMemberRenderingTest {
         assertEquals(List.of(), dropped,
             "these annotations produce a per-element rule stanza only when their optional members "
                 + "are populated, so the bare form gets a rule file with no mention of it");
+    }
+
+    /**
+     * The same contract for the per-element rule files: an optional member nobody set must leave no
+     * label, no empty list, no empty code span and no dangling separator behind (#507).
+     *
+     * <p>The two granular assertions above ask only whether a bare annotation still produces a
+     * stanza with a body. It does, and the body was a bold label with nothing after it: the
+     * granular renderer builds its stanzas by string concatenation and never grew the guard
+     * {@code CommonFormatterHelper.bullet} applies once for every aggregate platform.
+     *
+     * <p>Uses {@link GuardrailModels#everyAnnotationWithOptionalMembersUnset()} rather than the
+     * fully-emptied fixture, so every finding is a state a source file can reach: a member with no
+     * declared default does not compile when omitted, and blanking it would report defects nobody
+     * can trigger.
+     */
+    @Test
+    @DisplayName("an unset optional member leaves nothing dangling in the granular rule file")
+    void granularStanzasLeaveNoDanglingText() {
+        List<String> dangling = new ArrayList<>();
+        for (Map.Entry<TaggedElement, GranularBody> owner : granularWithOptionalMembersUnset().entrySet()) {
+            for (GranularBody.Entry stanza : owner.getValue().entries()) {
+                for (String line : stanza.lines()) {
+                    if (EMPTY_LABELLED_BULLET.matcher(line).find()
+                            || DANGLING_BULLET_SEPARATOR.matcher(line).find()
+                            || EMPTY_CODE_SPAN.matcher(line).find()
+                            || EMPTY_BRACKETS.matcher(line).find()
+                            || LABEL_THEN_PUNCTUATION.matcher(line).find()) {
+                        dangling.add(owner.getKey().qualifiedName() + " -> " + line.strip());
+                    }
+                }
+            }
+        }
+
+        assertEquals(List.of(), dangling,
+            "the per-element rule file renders a member that was never set as a label with nothing "
+                + "after it, an empty [] list, an empty `` span, or a separator with nothing "
+                + "following. An annotation written the short way must read as though the member "
+                + "does not exist, not as though its value went missing");
+    }
+
+    /**
+     * Guards the fixture: an empty model, or one whose annotations stopped producing stanzas, would
+     * make the sweep above vacuous. Exact rather than a lower bound, so a bucket that quietly stops
+     * rendering shows up here instead of shrinking the sweep in silence. Three annotations are
+     * subtracted, for the reason {@link #GRANULAR_RENDERS_NOTHING_WHEN_BARE} states.
+     */
+    @Test
+    void theOptionalUnsetFixtureStillProducesStanzas() {
+        assertEquals(GuardrailAnnotations.ALL.size() - GRANULAR_RENDERS_NOTHING_WHEN_BARE.size(),
+            granularWithOptionalMembersUnset().size(),
+            "expected one owner per annotation that renders anything when written the short way");
+    }
+
+    private static Map<TaggedElement, GranularBody> granularWithOptionalMembersUnset() {
+        return new GranularRenderer().renderGranular(
+            GuardrailModels.everyAnnotationWithOptionalMembersUnset());
     }
 
     @Test
