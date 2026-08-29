@@ -1346,7 +1346,7 @@ public Response retryWithBackoffHack(Request req) { ... }
 These five were reverse-engineered from guardrails real maintainers wrote **by hand** in 225
 open-source `CLAUDE.md` files — a hand-written AI rule is a constraint someone wished they could
 express in code, so where one had no annotation, that was a gap in the library. Full evidence,
-frequency counts, and the candidates that did *not* make the cut: [`docs/proposed-annotations.md`](docs/proposed-annotations.md).
+frequency counts, and the candidates that did *not* make the cut: [`docs/proposals/proposed-annotations.md`](docs/proposals/proposed-annotations.md).
 
 Four of the five close the same structural gap: VibeTags owned the *positive* pole of an axis and
 was missing the *negative* one — and an AI reading the **absence** of a tag reliably does the wrong

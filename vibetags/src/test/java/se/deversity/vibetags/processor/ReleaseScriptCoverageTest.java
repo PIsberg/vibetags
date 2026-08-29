@@ -63,9 +63,9 @@ class ReleaseScriptCoverageTest {
         // pitches hypothetical coordinates for a plugin that does not exist. None of them
         // track the current release.
         "USAGE.md",
-        "docs/proposed-annotations.md",
+        "docs/proposals/proposed-annotations.md",
         "docs/RELEASING.md",
-        "docs/CONCEPT_PLUGIN.md",
+        "docs/archive/CONCEPT_PLUGIN.md",
         // The build-layout matrix names the release a behaviour arrived in ("Since
         // 1.2.4 the build says so ..."), which is what tells a reader hitting that Gradle
         // layout whether their version warns them. Rewriting it each release would claim
@@ -126,7 +126,7 @@ class ReleaseScriptCoverageTest {
         // manifest stamped "vibetags/1.2.0" because 1.2.0 is the release that shipped the feature;
         // rewriting it on every later release would make the document claim it proposed something
         // that already existed.
-        "docs/proposals/transitive-guardrails.md",
+        "docs/archive/transitive-guardrails.md",
         // Explanatory prose about pitest-junit5-plugin's own release history (its actual pin
         // lives in ${pitest-junit5-plugin.version} in the parent pom). Coincidentally equals a
         // VibeTags release number from time to time; it is not a VibeTags coordinate.

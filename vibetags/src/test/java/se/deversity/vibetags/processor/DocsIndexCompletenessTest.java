@@ -35,7 +35,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * complete, and completeness is exactly the property a human editor silently loses when adding
  * a file.
  *
- * <p>Scope: every {@code *.md} under {@code docs/}, plus {@code SPEC.md} at the root. Module
+ * <p>Scope: every {@code *.md} under {@code docs/}, which since the archive reorganisation
+ * includes {@code docs/archive/} and {@code docs/proposals/} -- a frozen document still has to be
+ * findable, and {@code docs/archive/README.md} is what routes to it. Module
  * READMEs (example projects, load-tests, the action) travel with their module and are excluded;
  * {@code .claude/rules/} files are generated and routed by glob, not by Markdown links.
  * Reachability starts from the documents a reader or agent actually lands in: {@code README.md},
@@ -124,10 +126,6 @@ class DocsIndexCompletenessTest {
                 return FileVisitResult.CONTINUE;
             }
         });
-        Path spec = REPO_ROOT.resolve("SPEC.md");
-        if (Files.isRegularFile(spec)) {
-            scope.add(spec.normalize());
-        }
         return scope;
     }
 

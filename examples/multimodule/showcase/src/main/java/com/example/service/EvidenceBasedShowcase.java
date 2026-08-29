@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Showcase for the five evidence-based annotations added in v1.0.0, each reverse-engineered from
  * guardrails that real maintainers wrote by hand in open-source {@code CLAUDE.md} files
- * (see {@code docs/proposed-annotations.md}).
+ * (see {@code docs/proposals/proposed-annotations.md}).
  *
  * <p>Four of the five close the same structural gap: VibeTags owned the <em>positive</em> pole of an
  * axis and was missing the <em>negative</em> one — and an AI reading the absence of a tag reliably
