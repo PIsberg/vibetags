@@ -41,5 +41,7 @@ apart. "manual" means nothing runs it automatically; it exists for a human (or t
 | `demo-commands.sh` | The command sequence asciinema replays inside `tools/demo/` to produce `docs/demo.gif` | `demo.yml` |
 | `make-demo-cast.py` | Generates `docs/vibetags-demo.cast` from real VibeTags output | manual |
 
-Through v1.2.7 the four gate scripts lived in a separate `scripts/` directory; `docs/CHANGELOG.md`
-entries from those releases refer to them there.
+The four gate scripts previously lived in a separate `scripts/` directory; older
+`docs/CHANGELOG.md` entries refer to them there. No release version appears in this file on
+purpose: `ReleaseScriptCoverageTest` fails any tracked file that states one unless
+`set-version.sh` rewrites it.
