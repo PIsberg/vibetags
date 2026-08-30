@@ -217,7 +217,7 @@ wall clock.
 
 ### Job: `ecj-degradation`
 
-The one leg that does not run javac. `scripts/ecj-degradation-check.sh` compiles
+The one leg that does not run javac. `tools/ecj-degradation-check.sh` compiles
 `examples/basic` twice over — once with javac, once with the Eclipse Compiler for Java pinned by
 `<ecj.version>` in `vibetags-parent/pom.xml` — and compares the results.
 

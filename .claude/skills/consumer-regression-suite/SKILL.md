@@ -9,7 +9,7 @@ VibeTags' own 1537 tests say the processor works. They say nothing about whether
 consumer still builds. This skill answers that second question, for every Java repo under
 `../` that depends on VibeTags.
 
-The executable core is `scripts/consumer-sweep.sh` in this repo. This document is the
+The executable core is `tools/consumer-sweep.sh` in this repo. This document is the
 judgement around it: what to run, what a result means, and what not to believe.
 
 ## Step 1 — Decide which VibeTags the sweep is testing
@@ -43,8 +43,8 @@ the result.
 ## Step 2 — Run the sweep
 
 ```bash
-bash scripts/consumer-sweep.sh <version>            # every consumer
-bash scripts/consumer-sweep.sh <version> blindbean  # one
+bash tools/consumer-sweep.sh <version>            # every consumer
+bash tools/consumer-sweep.sh <version> blindbean  # one
 ```
 
 Per repo it fetches, branches off `origin/main`, rewrites every place that repo declares the

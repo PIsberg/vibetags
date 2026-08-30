@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * noticed, both of them the normal case rather than bad luck: this repository uses jspecify
  * heavily but never on a parameter of an annotated method, which is the only place a parameter
  * type reaches an element path; and the consumers are pinned to the previous release, so they had
- * never run the change. {@code scripts/consumer-sweep.sh} is the only thing that would have run it
+ * never run the change. {@code tools/consumer-sweep.sh} is the only thing that would have run it
  * for them, and it ran in no workflow and at no step (#490).
  *
  * <p>So the gate lives at the release, which is the moment the consequence becomes real. This test
@@ -41,12 +41,12 @@ class ReleaseConsumerSweepGateTest {
     @DisplayName("the release skill runs the consumer sweep before opening the release PR")
     void releaseSkillRunsTheConsumerSweep() throws IOException {
         Path skill = REPO_ROOT.resolve(".claude/skills/release/SKILL.md");
-        Path script = REPO_ROOT.resolve("scripts/consumer-sweep.sh");
+        Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
 
         // Deliberately not assumeTrue on a missing file. A skipped check reads exactly like a
         // passed one, and this exists because something that ran nowhere looked fine for months.
         assertTrue(Files.isRegularFile(script),
-            "scripts/consumer-sweep.sh is gone, so the release gate below refers to a script that "
+            "tools/consumer-sweep.sh is gone, so the release gate below refers to a script that "
                 + "does not exist. If the sweep moved, point this test and the release skill at "
                 + "wherever it went; if it was deleted, #490 needs reopening rather than the test "
                 + "deleting.");
@@ -56,7 +56,7 @@ class ReleaseConsumerSweepGateTest {
         String text = Files.readString(skill, StandardCharsets.UTF_8);
 
         assertTrue(text.contains("consumer-sweep.sh"),
-            "the release skill no longer runs scripts/consumer-sweep.sh. Without it a release "
+            "the release skill no longer runs tools/consumer-sweep.sh. Without it a release "
                 + "goes out having been verified against this repository's fixtures and the "
                 + "third-party corpus only, neither of which has committed VibeTags output to "
                 + "move, and downstream maintainers find a diff they did not cause (#490).");

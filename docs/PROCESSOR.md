@@ -243,7 +243,7 @@ last-writer-wins. Positions come from `SourcePositionResolver` (javac Compiler T
 wrapper is reflectively unwrapped so positions survive Gradle-run javac (`treesFor`); under
 genuinely non-javac compilers (ECJ) entries omit position fields. That last sentence is
 measured rather than asserted: the `ecj-degradation` CI leg
-(`scripts/ecj-degradation-check.sh`) compiles `examples/basic` under both compilers and
+(`tools/ecj-degradation-check.sh`) compiles `examples/basic` under both compilers and
 compares — same locked elements, positions under javac only.
 
 The `kind` field is `ElementTag.name()`, which mirrors `javax.lang.model.element.ElementKind`

@@ -4,8 +4,8 @@
 # Read-only: it changes nothing. Applying, verifying and the places each pin is mirrored are
 # in .claude/skills/bump-dependencies/SKILL.md, which is the procedure this script serves.
 #
-#   scripts/bump-dependencies.sh                       # stable releases only
-#   scripts/bump-dependencies.sh --include-prereleases # also alpha/beta/M/RC (never applied by default)
+#   tools/bump-dependencies.sh                       # stable releases only
+#   tools/bump-dependencies.sh --include-prereleases # also alpha/beta/M/RC (never applied by default)
 #
 # Every version pin lives in vibetags-parent/pom.xml as a <name.version> property, so the table
 # below maps each property to the Maven Central path whose maven-metadata.xml is authoritative.

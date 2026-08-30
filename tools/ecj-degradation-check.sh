@@ -27,7 +27,7 @@
 #      live in .vibetags-locks, not here. This assertion was narrower for one commit, while
 #      issue #480 - which this check found - was open; the comment above it has the story.
 #
-# Usage: scripts/ecj-degradation-check.sh
+# Usage: tools/ecj-degradation-check.sh
 # Requires: a JDK, mvn on PATH, and vibetags-annotations + vibetags installed
 #           (see CLAUDE.md "Build and test" for the order).
 set -euo pipefail

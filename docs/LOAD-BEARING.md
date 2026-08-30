@@ -235,4 +235,4 @@ and this section seem to disagree, the enforcing test decides.
   `vibetags-bom` and `load-tests` inherit every version; a literal there is one the next release
   will miss. The Gradle builds and the standalone example poms cannot inherit, so they hold
   literals — `BuildVersionParityTest` fails the build when any of them disagrees with the parent.
-  To bump: `scripts/set-version.sh <version>`, then that test.
+  To bump: `tools/set-version.sh <version>`, then that test.

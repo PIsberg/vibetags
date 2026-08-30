@@ -94,7 +94,7 @@
 
         <!-- Verification-only tooling: never on any module's classpath. ECJ is how CI checks
              the documented claim that the processor degrades rather than fails under a compiler
-             with no Tree API (docs/PROCESSOR.md, USAGE.md). scripts/ecj-degradation-check.sh
+             with no Tree API (docs/PROCESSOR.md, USAGE.md). tools/ecj-degradation-check.sh
              reads this property so the version has one home, like every other pin here. -->
         <ecj.version>3.46.0</ecj.version>
 

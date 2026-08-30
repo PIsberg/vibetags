@@ -140,7 +140,7 @@ needing a hand-fix before it could merge. Deriving the value removes the copy th
 policing; asserting the *mechanism* is what stops the check passing vacuously once there is no
 literal left to compare.
 
-To bump the VibeTags release version itself, use `scripts/set-version.sh <version>` and then run
+To bump the VibeTags release version itself, use `tools/set-version.sh <version>` and then run
 that test.
 
 ### Versions deliberately not taken

@@ -40,7 +40,7 @@ updates:
   # redirected, and deliberately:
   #
   #   - examples/*/pom.xml and tools/demo/pom.xml pin se.deversity.vibetags artifacts at the
-  #     released version. That number is owned by scripts/set-version.sh, and
+  #     released version. That number is owned by tools/set-version.sh, and
   #     BuildVersionParityTest fails if it disagrees with <revision>. A dependabot PR moving it
   #     would be red on arrival and could never merge.
   #   - Their maven-compiler-plugin literals are mirrors of the parent property. Bumping the copy

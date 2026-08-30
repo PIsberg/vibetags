@@ -14,7 +14,7 @@ see is whether the pinned version is *current*, which is what this skill is for.
 
 ```bash
 git fetch origin && git checkout -b chore/bump-dependencies-$(date +%F) origin/main
-scripts/bump-dependencies.sh            # read-only; add --include-prereleases to see betas
+tools/bump-dependencies.sh            # read-only; add --include-prereleases to see betas
 ```
 
 The script prints one line per property with its Maven Central latest, then the toolchains
@@ -47,7 +47,7 @@ Edit the property in `vibetags-parent/pom.xml`. Then the places that cannot inhe
 | Groovy, Scala | `examples/groovy/build.gradle`, `examples/scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
 | pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |
 
-Never touch `<revision>`: that is the VibeTags release version, owned by `scripts/set-version.sh`
+Never touch `<revision>`: that is the VibeTags release version, owned by `tools/set-version.sh`
 and the `release` skill.
 
 ## Step 4 - Verify with the gates CI runs
