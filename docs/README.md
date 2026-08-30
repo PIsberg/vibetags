@@ -54,7 +54,7 @@ Read one of these before anything under `docs/`.
 | [`TESTS.md`](TESTS.md) | Which test class covers what, the fast/e2e tier split, and the coverage rules `CoverageGateTest` enforces. Read this before writing a test, not after. |
 | [`WORKFLOW.md`](WORKFLOW.md) | What CI actually runs, step by step, and why each verification exists. |
 | [`DEPENDENCIES.md`](DEPENDENCIES.md) | Every third-party artifact, why it is here, what ships to consumers, and what only runs the build. |
-| [`RELEASING.md`](RELEASING.md) | The release process end to end, including which files carry a version, which `scripts/set-version.sh` rewrites, and which are still updated by hand. |
+| [`RELEASING.md`](RELEASING.md) | The release process end to end, including which files carry a version, which `tools/set-version.sh` rewrites, and which are still updated by hand. |
 | [`CHANGELOG.md`](CHANGELOG.md) | What each release changed and why. The largest file in the repository; search it, do not read it. |
 
 ### Evidence

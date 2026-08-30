@@ -54,11 +54,11 @@ git checkout -b release/v<version>
 
 ## Step 3 — Bump the version
 
-`scripts/set-version.sh` does the whole bump in one pass (it reads the current
+`tools/set-version.sh` does the whole bump in one pass (it reads the current
 version fresh from the parent, so it is idempotent):
 
 ```bash
-scripts/set-version.sh <version>
+tools/set-version.sh <version>
 ```
 
 That rewrites `<revision>` in `vibetags-parent/pom.xml` — which every managed pom
@@ -190,7 +190,7 @@ repository's fixtures and the third-party corpus, and neither of those is a proj
 already has committed VibeTags output.
 
 ```bash
-scripts/consumer-sweep.sh <version>
+tools/consumer-sweep.sh <version>
 ```
 
 **What you are looking for is not "did it build".** It is whether the version being cut

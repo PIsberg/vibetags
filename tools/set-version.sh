@@ -2,10 +2,10 @@
 # Sets the VibeTags release version.
 #
 # Usage:
-#   scripts/set-version.sh <new-version>
+#   tools/set-version.sh <new-version>
 #
 # Example:
-#   scripts/set-version.sh 1.0.0
+#   tools/set-version.sh 1.0.0
 #
 # The version lives in ONE place: <revision> in vibetags-parent/pom.xml. Every pom that
 # inherits from the parent — vibetags-annotations, vibetags, vibetags-bom, load-tests —
@@ -49,7 +49,7 @@ set -eu
 
 NEW_VERSION="${1:-}"
 if [ -z "$NEW_VERSION" ]; then
-    echo "Usage: scripts/set-version.sh <new-version>" >&2
+    echo "Usage: tools/set-version.sh <new-version>" >&2
     exit 1
 fi
 

@@ -155,14 +155,14 @@ cd vibetags-annotations && mvn install -DskipTests
 cd ../vibetags         && mvn install -DskipTests
 cd ../vibetags-bom     && mvn install
 
-bash scripts/consumer-sweep.sh <version>
+bash tools/consumer-sweep.sh <version>
 ```
 
 The `consumer-regression-suite` skill drives this and covers how to read the results — in
 particular, that a failure is not a regression until it has been shown to pass on the
 consumer's existing pinned version.
 
-While the tree is being prepared, `scripts/bump-dependencies.sh` reports which third-party
+While the tree is being prepared, `tools/bump-dependencies.sh` reports which third-party
 pins in `vibetags-parent/pom.xml` (and the Gradle wrapper, Kotlin, Groovy and Scala pins in the
 examples) have a newer stable release. Applying them is its own PR, before the release branch,
 driven by the `bump-dependencies` skill; a release should not be the first build on a new
@@ -183,7 +183,7 @@ git checkout -b release/vX.Y.Z
 Update the version:
 
 ```bash
-scripts/set-version.sh 1.0.0
+tools/set-version.sh 1.0.0
 cd vibetags && mvn test -Dtest=BuildVersionParityTest
 ```
 
@@ -437,7 +437,7 @@ Release created on GitHub
 ## File Checklist
 
 See the table in [§2 Update the version](#2-update-the-version) for the authoritative list of
-files needing a version bump, and run `scripts/set-version.sh` to cover the three core modules
+files needing a version bump, and run `tools/set-version.sh` to cover the three core modules
 in one pass. This section used to keep a second copy of that list; it drifted out of date, so
 the table is now the only place it lives.
 

@@ -1364,7 +1364,7 @@ jobs:
       # Runs both compilers over the same fixture and compares. The javac half is the
       # control: without it every ECJ assertion passes equally well on an empty report.
       - name: Verify the processor degrades under ECJ rather than failing
-        run: scripts/ecj-degradation-check.sh
+        run: tools/ecj-degradation-check.sh
 
   locked-files:
     name: Locked Files Guard

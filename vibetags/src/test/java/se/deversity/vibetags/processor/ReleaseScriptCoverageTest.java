@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * {@code scripts/set-version.sh} must rewrite every file that states the release version.
+ * {@code tools/set-version.sh} must rewrite every file that states the release version.
  *
  * <p>The version lives once, in {@code <revision>}, and everything that can inherit it does. What
  * is left is the set of files that cannot: the Gradle builds, the standalone example poms a user
@@ -139,7 +139,7 @@ class ReleaseScriptCoverageTest {
     @Test
     @DisplayName("no tracked file states the version without the script knowing about it")
     void everyVersionCarryingFileIsInTheScript() throws IOException, InterruptedException {
-        Path script = REPO_ROOT.resolve("scripts/set-version.sh");
+        Path script = REPO_ROOT.resolve("tools/set-version.sh");
         assumeTrue(Files.isRegularFile(script), "set-version.sh not reachable; skipping");
 
         String version = revision();
@@ -172,7 +172,7 @@ class ReleaseScriptCoverageTest {
         }
 
         assertTrue(missing.isEmpty(),
-            "These files state the release version but scripts/set-version.sh does not rewrite "
+            "These files state the release version but tools/set-version.sh does not rewrite "
                 + "them, so the next release leaves them pointing at " + version + ". Add them to "
                 + "the script, or record them in HISTORICAL here with the reason they must not "
                 + "change:\n  " + String.join("\n  ", missing));

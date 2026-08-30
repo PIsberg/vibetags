@@ -3,10 +3,10 @@
 # honestly which ones pass.
 #
 # Usage:
-#   scripts/consumer-sweep.sh <vibetags-version> [repo ...]
+#   tools/consumer-sweep.sh <vibetags-version> [repo ...]
 #
-#   scripts/consumer-sweep.sh <version>             # every known consumer
-#   scripts/consumer-sweep.sh <version> blindbean   # just one
+#   tools/consumer-sweep.sh <version>             # every known consumer
+#   tools/consumer-sweep.sh <version> blindbean   # just one
 #
 # The examples deliberately say <version> rather than a real one: a literal release version
 # here would be a second place the release has to be remembered, and ReleaseScriptCoverageTest

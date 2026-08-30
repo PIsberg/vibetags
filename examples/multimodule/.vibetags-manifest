@@ -10,7 +10,7 @@
 #
 # The version here is deliberately NOT the VibeTags release version. The origin string is rendered
 # into every generated file of every consuming module, so a coordinate tracking the release would
-# put the release version into a dozen committed demo files and oblige scripts/set-version.sh to
+# put the release version into a dozen committed demo files and oblige tools/set-version.sh to
 # rewrite generated output — which ReleaseScriptCoverageTest correctly refuses to let happen.
 # A two-segment version cannot collide with VibeTags' three-segment releases.
 se.deversity.vibetags.example:multimodule-core:1.0

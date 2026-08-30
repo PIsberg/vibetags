@@ -15,5 +15,5 @@
 # The version is deliberately two-segment and NOT the VibeTags release version. The origin string
 # is rendered into every generated file of every consuming module, so a coordinate tracking the
 # release would put the release version into committed demo files and oblige
-# scripts/set-version.sh to rewrite generated output, which ReleaseScriptCoverageTest refuses.
+# tools/set-version.sh to rewrite generated output, which ReleaseScriptCoverageTest refuses.
 se.deversity.vibetags.example:gradle-multimodule-core:1.0
