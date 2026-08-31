@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A case-insensitive filesystem lost one element's guardrails when two rule filenames differed
+  only in capitalisation** ([#510](https://github.com/PIsberg/vibetags/issues/510)). The package
+  `com.example.payment` and the class `com.example.Payment` plan `com-example-payment` and
+  `com-example-Payment`; on Windows and macOS those are one file, the second write landed on the
+  first, and the scoped-rules index went on pointing both elements at a file that said nothing
+  about one of them. On Linux both files survived, so the same sources committed different rules
+  directories depending on who compiled them.
+
+  Of the three layouts the issue weighed, the fix takes the one that cannot break the index
+  invariant: colliding stems are planned as one merged rule file written byte-identically under
+  each name, re-rendered in qualified mode like a role file so each stanza names its element. No
+  stem changes, so `RoleConfig.granularStemFor` stays the single source of truth; on a
+  case-insensitive filesystem the later writes match the first byte for byte and skip. The same
+  answer role-name collisions and the multi-module merge already give: a file several producers
+  write is merged, never replaced. Plans without collisions — every ordinary build — render byte
+  for byte what they rendered before.
+
+  The old warning is now a NOTE, reworded to what is still true: no guardrail is lost, but a
+  case-insensitive filesystem holds one file where a case-sensitive one holds several, so the
+  committed layout depends on who compiled it until the elements are renamed or routed into one
+  role. Verified failing-first: the new per-surviving-file assertion (both elements' guardrails
+  in every colliding file, on any runner) is red against the previous code with exactly the
+  measured loss, green now. Case collisions *across modules* are a remaining gap, filed
+  separately.
+
 - **A suite run deposited gitignored processor state into `vibetags/` that failed the next run**
   ([#521](https://github.com/PIsberg/vibetags/issues/521)). Four test classes ran the processor
   without `vibetags.root`, so it worked at the JVM working directory — the real module dir —

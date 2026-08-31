@@ -16,21 +16,22 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Two annotated elements whose rule filenames differ only in capitalisation must not fail silently.
+ * Two annotated elements whose rule filenames differ only in capitalisation keep both guardrails
+ * on every filesystem (issue #510).
  *
  * <p>A granular stem is the element's fully-qualified name with its dots turned into dashes, so the
  * package {@code com.example.payment} and the class {@code com.example.Payment} plan
  * {@code com-example-payment} and {@code com-example-Payment}. A case-sensitive filesystem holds
- * two files and both guardrails survive. A case-insensitive one, which is what Windows and macOS
- * give you by default, holds one: the second write lands on the first, one element's guardrails are
- * gone, and the scoped-rules index goes on naming both. Measured on Windows before this warning
- * existed, the rules directory held a single {@code com-example-payment.md} and the class's
- * {@code @AILocked} appeared nowhere in the output tree.
+ * two files; a case-insensitive one, which is what Windows and macOS give you by default, holds
+ * one. Measured on Windows before the fold existed, the rules directory held a single
+ * {@code com-example-payment.md} and the class's {@code @AILocked} appeared nowhere in the output
+ * tree, while the scoped-rules index went on naming both.
  *
- * <p>The assertion is on the diagnostic rather than on the files, deliberately: which of the two
- * survives is a property of the filesystem the test happens to run on, and a test that asserts
- * "two files" passes on the Linux CI runner precisely where the bug does not bite. The warning is
- * raised from the plan, so it is the same on every platform.
+ * <p>The fix plans one merged, byte-identical rule file under <em>each</em> colliding name, so the
+ * content assertion here holds on all three CI runners without knowing the filesystem: however
+ * many files survive, every one of them carries every colliding element's guardrails. The
+ * remaining cross-platform difference — the file count — is said out loud as a NOTE, which the
+ * second test pins in the other direction: ordinary builds must not hear about it.
  */
 @Tag("e2e")
 class CaseCollidingGranularStemTest {
@@ -41,8 +42,8 @@ class CaseCollidingGranularStemTest {
     }
 
     @Test
-    @DisplayName("rule files differing only in case are reported, not silently collapsed")
-    void stemsDifferingOnlyInCaseAreWarnedAbout(@TempDir Path dir) throws IOException {
+    @DisplayName("every rule file a case collision leaves behind carries both elements' guardrails")
+    void collidingStemsShareOneMergedBodyUnderEachName(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.touchOptIn("CLAUDE.md");
         h.touchOptIn(".claude/rules/.vibetags");
@@ -58,9 +59,31 @@ class CaseCollidingGranularStemTest {
 
         List<Diagnostic<? extends JavaFileObject>> diagnostics = h.compileReturningDiagnostics();
 
-        assertTrue(warned(diagnostics, "com-example-payment", "com-example-Payment"),
-            "a collision that costs one element its guardrails on half the platforms in use must "
-                + "be said out loud. Diagnostics: " + messages(diagnostics));
+        // The acceptance from #510, phrased so it holds on every runner without knowing the
+        // filesystem: however many of the colliding files this filesystem keeps, each one holds
+        // every colliding element's guardrails, so both index entries reach both rules.
+        List<Path> collidingFiles;
+        try (var entries = java.nio.file.Files.list(dir.resolve(".claude/rules"))) {
+            collidingFiles = entries
+                .filter(p -> String.valueOf(p.getFileName()).toLowerCase(Locale.ROOT)
+                    .equals("com-example-payment.md"))
+                .toList();
+        }
+        assertTrue(!collidingFiles.isEmpty(),
+            "no rule file written for the colliding stems at all");
+        for (Path file : collidingFiles) {
+            String content = java.nio.file.Files.readString(file);
+            assertTrue(content.contains("settlement timing") && content.contains("wire format"),
+                file.getFileName() + " must carry both colliding elements' guardrails, whichever "
+                    + "of the case-colliding names this filesystem kept. Content: " + content);
+            assertTrue(content.contains("com.example.payment") && content.contains("com.example.Payment"),
+                file.getFileName() + " covers two elements, so its stanza headings must say which "
+                    + "fully-qualified element each rule binds. Content: " + content);
+        }
+
+        assertTrue(noted(diagnostics, "com-example-payment", "com-example-Payment"),
+            "the cross-platform file-count difference the merge cannot remove must still be said "
+                + "out loud. Diagnostics: " + messages(diagnostics));
     }
 
     @Test
@@ -90,11 +113,12 @@ class CaseCollidingGranularStemTest {
                 + messages(diagnostics));
     }
 
-    private static boolean warned(List<Diagnostic<? extends JavaFileObject>> diagnostics,
-                                  String first, String second) {
+    private static boolean noted(List<Diagnostic<? extends JavaFileObject>> diagnostics,
+                                 String first, String second) {
+        // A NOTE and not a warning: the merge already handled the collision, and a warning on
+        // handled behaviour is how a team ends up muting the processor.
         return diagnostics.stream()
-            .filter(d -> d.getKind() == Diagnostic.Kind.WARNING
-                || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING)
+            .filter(d -> d.getKind() == Diagnostic.Kind.NOTE || d.getKind() == Diagnostic.Kind.OTHER)
             .map(d -> d.getMessage(Locale.ROOT))
             .anyMatch(m -> m.contains("differ only in capitalisation")
                 && m.contains(first) && m.contains(second));

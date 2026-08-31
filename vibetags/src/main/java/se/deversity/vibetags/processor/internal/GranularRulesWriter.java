@@ -152,7 +152,7 @@ public final class GranularRulesWriter {
         }
 
         Map<String, Unit> units = plan(elementRules, roles, filePrefix, extraGlobs);
-        warnOnStemsDifferingOnlyInCase(units.keySet());
+        noteStemsDifferingOnlyInCase(units.keySet());
 
         for (Map.Entry<String, Unit> planned : units.entrySet()) {
             String stem = planned.getKey();
@@ -184,33 +184,31 @@ public final class GranularRulesWriter {
     }
 
     /**
-     * Warns when two planned rule files differ only in capitalisation.
+     * Notes, informationally, that planned rule files differ only in capitalisation.
      *
-     * <p>A stem comes from the element's fully-qualified name, so a package {@code com.example.pay}
-     * and a class {@code com.example.Pay} plan {@code com-example-pay} and {@code com-example-Pay}.
-     * On a case-sensitive filesystem those are two files and both guardrails survive. On a
-     * case-insensitive one, which is the default on Windows and on macOS, they are one file: the
-     * second write lands on the first and one element's guardrails are gone, while the scoped-rules
-     * index still names both. Nothing failed and the file that remains looks correct.
-     *
-     * <p>The warning is the whole fix here on purpose. Merging the two, or renaming one, would
-     * change output that is correct today on every case-sensitive filesystem, which is a decision
-     * about the generated layout rather than a defect to patch quietly. What the build can do
-     * without that decision is stop being silent about it.
+     * <p>{@link #foldCaseCollisions} already made the collision lossless: every colliding stem
+     * carries the same merged content, so whichever names a filesystem collapses, the surviving
+     * file holds every element's guardrails. What remains true — and worth a NOTE rather than
+     * silence — is that a case-insensitive filesystem holds one file where a case-sensitive one
+     * holds several, so the same sources leave a different file <em>count</em> on different
+     * machines, and the committed rules directory depends on who compiled it. A NOTE and not a
+     * warning, because the build has handled it; a warning on handled behaviour is how a team
+     * ends up muting the processor.
      */
-    private void warnOnStemsDifferingOnlyInCase(Set<String> stems) {
+    private void noteStemsDifferingOnlyInCase(Set<String> stems) {
         Map<String, List<String>> byFoldedCase = new LinkedHashMap<>();
         for (String stem : stems) {
             byFoldedCase.computeIfAbsent(stem.toLowerCase(Locale.ROOT), k -> new ArrayList<>()).add(stem);
         }
         byFoldedCase.forEach((folded, colliding) -> {
             if (colliding.size() > 1) {
-                fileWriter.warn("VibeTags: granular rule files " + colliding + " differ only in "
-                    + "capitalisation. A case-insensitive filesystem (the default on Windows and "
-                    + "macOS) holds one file for all of them, so only one element's guardrails "
-                    + "survive there while a case-sensitive filesystem keeps every one - the same "
-                    + "sources then generate different output on different machines. Rename one of "
-                    + "the annotated elements, or route them into one role file.");
+                fileWriter.note("VibeTags: granular rule files " + colliding + " differ only in "
+                    + "capitalisation, so they are planned as one merged rule file written under "
+                    + "each name - no guardrail is lost either way. A case-insensitive filesystem "
+                    + "(the default on Windows and macOS) still holds one file where a "
+                    + "case-sensitive one holds " + colliding.size() + ", so the committed rules "
+                    + "directory depends on who compiled it. Rename one of the annotated elements, "
+                    + "or route them into one role file, to make the layout identical everywhere.");
             }
         });
     }
@@ -241,14 +239,16 @@ public final class GranularRulesWriter {
             }
         });
 
-        Map<String, Unit> units = new LinkedHashMap<>();
+        Map<String, Planned> planned = new LinkedHashMap<>();
 
         // Unmatched elements → one file per class/package (unchanged output).
         unmatched.forEach((owner, body) -> {
             String qName = filePrefix + owner.granularQName();
-            units.put(qName, new Unit(owner.simpleName(), "AI rules for " + owner,
-                new GranularContribution(withExtra(List.of(defaultGlob(owner)), extraGlobs),
-                    body.toString().trim())));
+            List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
+            planned.put(qName, new Planned(owner.simpleName(), String.valueOf(owner), globs,
+                body.entries(),
+                new Unit(owner.simpleName(), "AI rules for " + owner,
+                    new GranularContribution(globs, body.toString().trim()))));
         });
 
         // Role members → one grouped, human-named file per role. Grouped by the stem first,
@@ -295,15 +295,80 @@ public final class GranularRulesWriter {
             // One name is the name; several are all named, so the heading says which config lines
             // feed the file rather than picking one and looking like the others were dropped.
             String displayName = String.join(", ", rolesInFile.keySet());
-            units.put(stem, new Unit(displayName, "AI rules for role " + displayName,
-                new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim())));
+            planned.put(stem, new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
+                new Unit(displayName, "AI rules for role " + displayName,
+                    new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim()))));
         });
 
+        return foldCaseCollisions(planned);
+    }
+
+    /**
+     * Plans whose stems differ only in capitalisation become one merged rule file written under
+     * <em>each</em> of the colliding names (<a
+     * href="https://github.com/PIsberg/vibetags/issues/510">issue #510</a>).
+     *
+     * <p>On a case-insensitive filesystem — the default on Windows and macOS — the colliding names
+     * are one physical file, and before this fold the second write landed on the first: one
+     * element's guardrails were gone while the scoped-rules index still pointed at them. Writing
+     * the merged content under every colliding name is the one layout that loses nothing anywhere
+     * and changes no stem, so {@code RoleConfig.granularStemFor} stays the single source of truth
+     * and the index cannot drift. The colliding files are byte-identical on purpose: on a
+     * case-insensitive filesystem the later writes then match the first byte for byte and skip,
+     * and the file every index entry reaches carries every element that resolves to it. The same
+     * answer the role-name collision above and the multi-module merge (issue #365) already give:
+     * a file several producers write is merged, never replaced.
+     *
+     * <p>A plan with no case collisions — every ordinary build — takes the singleton branch for
+     * every stem and produces byte-for-byte what it produced before the fold existed.
+     */
+    private static Map<String, Unit> foldCaseCollisions(Map<String, Planned> planned) {
+        Map<String, List<Map.Entry<String, Planned>>> byFoldedCase = new LinkedHashMap<>();
+        for (Map.Entry<String, Planned> entry : planned.entrySet()) {
+            byFoldedCase.computeIfAbsent(entry.getKey().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                .add(entry);
+        }
+
+        Map<String, Unit> units = new LinkedHashMap<>();
+        for (List<Map.Entry<String, Planned>> colliding : byFoldedCase.values()) {
+            if (colliding.size() == 1) {
+                units.put(colliding.get(0).getKey(), colliding.get(0).getValue().rendered());
+                continue;
+            }
+            List<String> displayNames = new ArrayList<>();
+            List<String> subjects = new ArrayList<>();
+            Set<String> globs = new LinkedHashSet<>();
+            List<GranularBody.Entry> stanzas = new ArrayList<>();
+            for (Map.Entry<String, Planned> entry : colliding) {
+                Planned p = entry.getValue();
+                displayNames.add(p.displayName());
+                subjects.add(p.subject());
+                globs.addAll(p.globs());
+                stanzas.addAll(p.stanzas());
+            }
+            // Qualified rendering, like a role file: the file now covers several elements, so each
+            // stanza's heading must say which fully-qualified element it binds.
+            Unit merged = new Unit(String.join(", ", displayNames),
+                "AI rules for " + String.join(", ", subjects),
+                new GranularContribution(new ArrayList<>(globs),
+                    GranularSections.render(stanzas, true).trim()));
+            for (Map.Entry<String, Planned> entry : colliding) {
+                units.put(entry.getKey(), merged);
+            }
+        }
         return units;
     }
 
     /** One planned granular file: its frontmatter description, its heading name, and its content. */
     private record Unit(String displayName, String description, GranularContribution content) {}
+
+    /**
+     * A planned file before case-collision folding: the {@link Unit} exactly as the pre-fold code
+     * rendered it (what singletons emit, byte for byte), plus the raw ingredients — stanzas, globs,
+     * naming — a merged unit is rebuilt from when stems collide case-insensitively.
+     */
+    private record Planned(String displayName, String subject, List<String> globs,
+                           List<GranularBody.Entry> stanzas, Unit rendered) {}
 
     /**
      * The rule's own globs followed by any mirror globs, de-duplicated and order-preserving. Returns
