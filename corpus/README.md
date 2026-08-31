@@ -401,12 +401,17 @@ is that a toolchain pin overrides the JDK you launched Gradle with, so a develop
 
 `warning: The following options were not recognized by any processor: '[vibetags.root,
 kapt.kotlin.generated]'` — for an option `AIGuardrailProcessor` declares in `@SupportedOptions`
-and demonstrably receives, since it prints the resolved root from the same task. `examples/kotlin`
-on Kotlin 2.4.10 does not produce it; this member on Kotlin 2.3.10 does. Removing the javac-side
-configuration so only the documented `kapt { arguments { … } }` route remained did not change it.
+and demonstrably receives, since it prints the resolved root from the same task.
 
-That is as far as the evidence goes, so it is allow-listed as kapt bookkeeping with the evidence
-written next to it, and tracked as an open question rather than asserted to be harmless.
+Attributed on 2026-08-31 (#493) by an `-i` treatment run of this member: the warning is emitted
+by `:kaptKotlin` — not stub generation — two lines after the processor's own
+`Note: VibeTags: Root resolved: …` from the very option being reported. kapt forwards its option
+map to its embedded javac without registering any processor's supported-option set, which is why
+`kapt.kotlin.generated`, kapt's own option, is flagged in the same message: even perfect
+delegation on our side would leave the warning firing for kapt's half. The version hypothesis is
+dead — `examples/kotlin` is silent with its Kotlin/kapt pinned to this member's 2.3.10 as well
+as at 2.4.10 — so surfacing is a property of the consumer's Gradle/kapt logging configuration.
+Allow-listed as attributed kapt bookkeeping; USAGE.md's kapt section says the same to consumers.
 
 **And one in the harness, which is the reason J2 can be trusted at all.**
 

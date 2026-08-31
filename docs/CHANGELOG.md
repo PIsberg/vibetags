@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The kapt "options not recognized" warning is now attributed and documented, not an open
+  question** ([#493](https://github.com/PIsberg/vibetags/issues/493)). An `-i` treatment run of
+  the corpus member pinned it: `:kaptKotlin` emits it two lines after the processor's own
+  "Root resolved" note from the very option being reported, and it names
+  `kapt.kotlin.generated` — kapt's own option — in the same message, so it is kapt failing to
+  register any processor's `@SupportedOptions` with its embedded javac, and nothing VibeTags
+  declares can silence it. The version hypothesis is dead: `examples/kotlin` is silent with its
+  Kotlin/kapt swapped to the corpus member's 2.3.10 as well as at its committed 2.4.10, so
+  whether the message surfaces is a property of the consumer's Gradle/kapt logging
+  configuration. USAGE.md's kapt section now tells consumers it is harmless and whose it is;
+  the corpus allow-list entry is reclassified from unattributed to attributed.
+
 ### Fixed
 
 - **A case-insensitive filesystem lost one element's guardrails when two rule filenames differed
