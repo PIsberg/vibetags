@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-31
+
+A minor rather than a patch because `vibetags doctor` gains a capability (the Groovy
+field-guardrail check) — the same reasoning as 1.1.0. The processor's rendering changes only
+for granular rule filenames that differ solely in capitalisation, which no example or surveyed
+consumer has.
+
+### Upgrade note
+
+The pre-release consumer sweep found guardrail drift in four of five downstream repositories,
+and all of it is the 1.2.5–1.2.7 rendering fixes arriving late: a consumer pinned at 1.2.4 or
+older that upgrades straight to 1.3.0 will see its per-element rule files under
+`.claude/rules/`, `.gemini/rules/` and friends gain the annotations' `reason()` as a
+`- **Reason**:` line (#508, #511). That is the fix landing, not breakage — regenerate and
+commit the files with the version bump. A consumer already on 1.2.5+ sees no drift unless it
+has case-colliding rule filenames (see Fixed below).
+
 ### Fixed
 
 - **Case-colliding granular stems from different reactor modules still lost a file on
@@ -3648,7 +3665,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.2.7...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/PIsberg/vibetags/compare/v1.2.7...v1.3.0
 [1.2.7]: https://github.com/PIsberg/vibetags/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/PIsberg/vibetags/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/PIsberg/vibetags/compare/v1.2.4...v1.2.5
