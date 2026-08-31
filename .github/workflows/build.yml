@@ -115,6 +115,20 @@ jobs:
           fi
           echo "examples/basic/ regenerates byte-for-byte to the committed files."
 
+      - name: Rebuild basic With The Write Cache Disabled
+        run: |
+          cd examples/basic
+          # The cache-off path (-Avibetags.cache=false) ran only inside library tests until
+          # now. `clean` matters: without it an up-to-date compile skips javac, the processor
+          # never runs, and this step verifies nothing.
+          mvn clean compile -B -Dvibetags.cache=false -Dvibetags.log.path=../../vibetags.log
+          if [ -n "$(git status --porcelain -- .)" ]; then
+            echo "::error::a cache-disabled rebuild changed examples/basic/ output."
+            git --no-pager diff -- .
+            exit 1
+          fi
+          echo "Cache-disabled rebuild is byte-identical."
+
       - name: Build Multi-Module Example (Maven reactor)
         run: |
           cd examples/multimodule
@@ -484,6 +498,46 @@ jobs:
           test -f core/.claude/rules/domain-model.md || { echo "MISSING core/.claude/rules/domain-model.md"; exit 1; }
           test -f app/.claude/rules/services.md || { echo "MISSING app/.claude/rules/services.md"; exit 1; }
           echo "Indexed root: safety inline, verbose indexed, Copilot collapsed, all modules' scoped files intact."
+
+      - name: Build Enforcing-Mode Example (issue #284)
+        run: |
+          cd examples/enforcing
+          # Every build of this example compiles with -Avibetags.enforce=locked,contract,publicapi
+          # against the committed .vibetags-baseline, so a green build proves enforcement passes
+          # while the guarded shapes match it.
+          mvn clean compile -B
+
+      - name: Verify The Enforcing Example's Committed Guardrails Match Its Annotations
+        run: |
+          if [ -n "$(git status --porcelain -- examples/enforcing/)" ]; then
+            echo "::error::examples/enforcing/ guardrail files are out of date with its annotations."
+            echo "Run: cd examples/enforcing && mvn clean compile   then commit the regenerated files."
+            git status --porcelain -- examples/enforcing/
+            git --no-pager diff -- examples/enforcing/
+            exit 1
+          fi
+          echo "examples/enforcing/ regenerates byte-for-byte to the committed files."
+
+      - name: Verify Enforcement Fails On Drift (gated, not claimed)
+        run: |
+          cd examples/enforcing
+          # Drift the locked method's parameter type; the build must go red with a violation
+          # naming the abandoned baseline entry. A green build here means enforcement did not
+          # run at all, which is the failure this step exists to catch.
+          sed -i 's/long consumedUnits/int consumedUnits/' src/main/java/com/example/enforcing/TariffEngine.java
+          if mvn clean compile -B > drift.log 2>&1; then
+            echo "::error::enforcing example compiled despite a drifted @AILocked signature."
+            tail -50 drift.log
+            exit 1
+          fi
+          grep -qF "@AILocked violation" drift.log             || { echo "build failed for the wrong reason:"; tail -50 drift.log; exit 1; }
+          grep -qF "computeTariff(java.lang.String,long)" drift.log             || { echo "violation does not name the abandoned baseline entry:"; tail -50 drift.log; exit 1; }
+          rm drift.log
+          # The failing build still rewrites CLAUDE.md with the drifted signature before it
+          # dies, so restore the whole example directory, not just the source file.
+          git checkout -- .
+          echo "Enforcement verified red-on-drift; violation names the baseline entry."
+
       # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
       # step above ran the fast tier; this is the only place the whole suite runs, so it is
       # not the redundant second pass it looks like.
@@ -741,6 +795,18 @@ jobs:
           # files must name the annotated Kotlin elements, stub signatures included.
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
+
+      - name: Verify The Kotlin Example's Committed Guardrails Match Its Annotations
+        if: matrix.java == '21'
+        run: |
+          # The greps above prove the annotated elements appear; this proves the whole committed
+          # files regenerate byte-for-byte, the gate every Maven example already had. Nothing in
+          # the output is version-stamped, so the comparison is stable across releases.
+          if [ -n "$(git status --porcelain -- examples/kotlin/)" ]; then
+            echo "::error::examples/kotlin/ guardrail files are out of date."
+            git --no-pager diff -- examples/kotlin/
+            exit 1
+          fi
 
       # The only CI job that runs VibeTags across a real Gradle reactor. Every other
       # multi-module fixture is Maven, and the other Gradle examples are single-module, so
@@ -1187,6 +1253,20 @@ jobs:
           ./gradlew clean build --no-daemon
           grep -qF "com.example.groovy.InventoryService.reserve(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.groovy.InventoryService" .cursorrules
+          # The gated limitation: groovyc stubs carry no fields, so the deliberate @AIPrivacy
+          # on InventoryService.contactEmail must appear in NO generated file. If it ever does,
+          # groovyc gained fields in its stubs and docs/JVM-LANGUAGES.md is out of date.
+          ! grep -q "contactEmail" CLAUDE.md
+          ! grep -q "contactEmail" .cursorrules
+
+      - name: Verify The Groovy Example's Committed Guardrails Match Its Annotations
+        if: matrix.java == '21'
+        run: |
+          if [ -n "$(git status --porcelain -- examples/groovy/)" ]; then
+            echo "::error::examples/groovy/ guardrail files are out of date."
+            git --no-pager diff -- examples/groovy/
+            exit 1
+          fi
 
       # The Scala example asserts the limitation as well as the feature: scalac has no
       # JSR 269 support, so the annotated Java class must appear and the annotated Scala
@@ -1200,6 +1280,15 @@ jobs:
           grep -qF "com.example.scala.AuditLog" CLAUDE.md
           ! grep -q "ReportEngine" CLAUDE.md
           ! grep -q "ReportEngine" .cursorrules
+
+      - name: Verify The Scala Example's Committed Guardrails Match Its Annotations
+        if: matrix.java == '21'
+        run: |
+          if [ -n "$(git status --porcelain -- examples/scala/)" ]; then
+            echo "::error::examples/scala/ guardrail files are out of date."
+            git --no-pager diff -- examples/scala/
+            exit 1
+          fi
 
       # -Pe2e mirrors the Maven profile; see vibetags/build.gradle. The `build` step above
       # ran the fast tier only, so without this the Gradle legs never see the e2e classes.

@@ -6,12 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>se.deversity.vibetags.example</groupId>
-    <artifactId>vibetags-example</artifactId>
+    <artifactId>vibetags-example-enforcing</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>VibeTags Example Project</name>
-    <description>Example project demonstrating VibeTags AI guardrails library</description>
+    <name>VibeTags Enforcing-Mode Example</name>
+    <description>Consumer project demonstrating -Avibetags.enforce and the committed baseline</description>
 
     <licenses>
         <license>
@@ -24,19 +24,18 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- BOM is the single source of truth for vibetags-* versions. Bumping this one
-             value rolls the processor and any future vibetags-* artifact in lockstep. -->
+        <!-- BOM is the single source of truth for vibetags-* versions. -->
         <vibetags.bom.version>1.3.0</vibetags.bom.version>
-        <vibetags.log.path>vibetags.log</vibetags.log.path>
-      <!-- The diagnostic channel. INFO reports what ran; `mvn compile
-         -Dvibetags.log.level=DEBUG` adds one structured event per decision to vibetags.log,
-         which is how you find out why a file was or was not rewritten. -->
-    <vibetags.log.level>INFO</vibetags.log.level>
-    <!-- The per-file write cache (.vibetags-cache). `mvn clean compile -Dvibetags.cache=false`
-         regenerates with the cache disabled; CI does exactly that and asserts the output is
-         byte-identical. -->
-    <vibetags.cache>true</vibetags.cache>
-  </properties>
+        <!-- Enforcement is ON for every build of this example: the three provable families
+             must match the committed .vibetags-baseline or compilation fails. That is the
+             point of the example, so it is not hidden behind a profile. -->
+        <vibetags.enforce>locked,contract,publicapi</vibetags.enforce>
+        <!-- Flipped per invocation to (re)record the baseline after an approved shape change:
+                 mvn compile -Dvibetags.baseline.update=true
+             Recording replaces checking for that one build, so the very next plain build
+             enforces the shapes you just approved. -->
+        <vibetags.baseline.update>false</vibetags.baseline.update>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -51,9 +50,6 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Annotations only on the compile classpath. The processor itself lives on
-             the annotation-processor path (configured below) so its slf4j/logback
-             baggage does not leak into compileClasspath. Versions come from the BOM. -->
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-annotations</artifactId>
@@ -70,16 +66,13 @@
                     <release>21</release>
                     <compilerArgs>
                         <arg>-Avibetags.root=${project.basedir}</arg>
-                        <arg>-Avibetags.log.path=${vibetags.log.path}</arg>
-                      <arg>-Avibetags.log.level=${vibetags.log.level}</arg>
-                        <arg>-Avibetags.cache=${vibetags.cache}</arg>
-            </compilerArgs>
+                        <arg>-Avibetags.enforce=${vibetags.enforce}</arg>
+                        <arg>-Avibetags.baseline.update=${vibetags.baseline.update}</arg>
+                    </compilerArgs>
                     <!-- Explicit processor path required for Java 23+ where implicit classpath
-                         discovery is disabled by default (see javac release 23 notes). -->
-                    <!-- annotationProcessorPaths does not inherit versions from
-                         dependencyManagement (Maven plugin limitation, MCOMPILER-391),
-                         so the BOM-managed version is repeated here via the same
-                         property. Updating vibetags.bom.version above keeps them in sync. -->
+                         discovery is disabled by default. annotationProcessorPaths does not
+                         inherit versions from dependencyManagement (MCOMPILER-391), so the
+                         BOM-managed version is repeated via the same property. -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>se.deversity.vibetags</groupId>

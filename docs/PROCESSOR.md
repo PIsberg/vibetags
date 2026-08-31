@@ -132,6 +132,10 @@ the processor can actually **prove** from the javac element model (issue #284).
   under Gradle (see `ModuleRootResolver`) — and `@AIThreadSafe`/`@AITestDriven` are semantic. Naming
   one produces a `[WARNING]` explaining the boundary rather than silent non-enforcement.
 
+A runnable consumer project demonstrating the whole workflow, drift failure included, is
+[`examples/enforcing/`](../examples/enforcing/); CI drifts its locked signature and asserts the
+build goes red.
+
 The baseline (`.vibetags-baseline`, committed) stores full signatures, sorted, one per line, keyed
 by **module id** — so a reactor's modules merge into it instead of overwriting each other, the same
 discipline as the sidecars. Full signatures rather than hashes because the point is that a pull

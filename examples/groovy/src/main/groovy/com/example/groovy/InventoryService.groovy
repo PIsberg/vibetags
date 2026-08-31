@@ -2,6 +2,7 @@ package com.example.groovy
 
 import se.deversity.vibetags.annotations.AIContext
 import se.deversity.vibetags.annotations.AILocked
+import se.deversity.vibetags.annotations.AIPrivacy
 
 /**
  * Demonstrates VibeTags on Groovy sources. Joint compilation generates Java stubs for
@@ -14,6 +15,13 @@ import se.deversity.vibetags.annotations.AILocked
     avoids = 'Caching stock counts — reservations race, the ledger query is already indexed'
 )
 class InventoryService {
+
+    // DELIBERATELY LOST: groovyc's Java stubs carry no fields at all, so this field-level
+    // guardrail generates NOTHING. CI asserts its absence from the output; `vibetags doctor`
+    // is the tool that reports it. In real Groovy code, put the guardrail on the accessor or
+    // the class instead. See docs/JVM-LANGUAGES.md ("What Groovy silently loses").
+    @AIPrivacy(reason = 'Warehouse contact addresses are personal data under the carrier DPA')
+    String contactEmail
 
     @AILocked(reason = 'Reservation ordering is contract-tested against the warehouse ledger. Reordering double-allocates stock.')
     String reserve(String sku, int quantity) {
