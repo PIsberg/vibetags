@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Five test surfaces over code the mutation report showed was unverified.** A full PIT run on
+  `main` (3,998 mutants, 83.84% killed, 153 with no coverage) exposed clusters where the code is
+  correct today but nothing would notice if it stopped being. None of these changes shipped
+  output; measured on a scoped re-run, they kill 85 more mutants (142 surviving across the five
+  classes before, 57 after):
+
+  - `ModernJavaRulesEveryRuleFiresTest` — the eight modern-Java detectors had positive tests for
+    none of their warnings; all 23 of the class's surviving mutants die, including the one that
+    unregistered the entire rule set (`all()` returning an empty list was green).
+  - `LlmsSectionHeaderVariantsTest` — all 42 unpinned `full ? long : short` section-header
+    ternaries in the `llms.txt`/`llms-full.txt` renderer could be flipped silently, because
+    existing assertions used `contains("## Heading")`, a substring of both variants. 0 of the
+    renderer's 135 mutants survive the scoped re-run.
+  - `SectionCatalogContractTest` — 7 of the catalog's 9 mutants survived: an override could stop
+    applying, a headerless section could return `""`, and `header()`/`isHeaderless()` could
+    disagree.
+  - `AIContextFormatterInlineTest` — the `focus`+`avoids` both-set joins (the inline `. `
+    separator and the Codex prose sentence break) had never been exercised together; 6 surviving
+    mutants down to 1, an equivalent boundary mutant.
+  - `GuardrailFileWriterEdgeCaseTest` gains the case `hasLegacyHeaderLine`'s javadoc warns about
+    — a header quoted in hand-written prose must not turn the file legacy, because the legacy
+    path keeps only the generated block — plus `fileBytesEqual`'s defensive length answers.
+
+  The interesting failure along the way: the first scoped PIT run killed almost nothing in the
+  llms renderer, because the test rendered into `static final` fields. PIT attributes line
+  coverage to the test that physically executes the line, so class-load handed all 44 sections'
+  coverage to one arbitrary test. Rendering per test method took the renderer from 41 surviving
+  to 0.
+
 ## [1.2.7] - 2026-08-29
 
 ### Fixed
