@@ -227,6 +227,10 @@ final class DoctorCommand {
             "@(?:se\\.deversity\\.vibetags\\.annotations\\.)?(" +
                 String.join("|", fieldTargetedAnnotationNames()) + ")\\b");
         for (int i = 0; i < lines.size(); i++) {
+            String stripped = lines.get(i).strip();
+            if (stripped.startsWith("//") || stripped.startsWith("*") || stripped.startsWith("/*")) {
+                continue;   // an annotation in a comment binds nothing
+            }
             java.util.regex.Matcher m = annotation.matcher(lines.get(i));
             while (m.find()) {
                 String name = m.group(1);

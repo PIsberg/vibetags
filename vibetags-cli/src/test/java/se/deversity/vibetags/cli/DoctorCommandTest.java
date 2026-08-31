@@ -208,6 +208,86 @@ class DoctorCommandTest {
     }
 
     @Test
+    void groovyFieldGuardrail_onOneLineAndFullyQualified_isStillFound() throws Exception {
+        // Groovy idiom puts annotation and declaration on one line, and script-style files use
+        // the fully-qualified form without an import. Both shapes must reach the same finding.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("src/main/groovy/com/example/Card.groovy", """
+            package com.example
+
+            class Card {
+                @se.deversity.vibetags.annotations.AIPrivacy(dataType = "pan") String cardNumber
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("@AIPrivacy") && out().contains("cardNumber"), out());
+    }
+
+    @Test
+    void groovyFieldGuardrail_behindCommentsAndInitializer_isStillFound() throws Exception {
+        // Comments and blank lines between the annotation and its field must be skipped, and a
+        // field whose initializer calls a method is still a field - the parentheses that
+        // disqualify a declaration are the ones before the '='.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("src/main/groovy/com/example/Token.groovy", """
+            package com.example
+
+            import se.deversity.vibetags.annotations.AISecureLogging
+
+            class Token {
+                @AISecureLogging(maskWith = "***")
+                /* rotated hourly
+                 * by the scheduler */
+                // never log it
+                def authToken = TokenSource.next()
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("@AISecureLogging") && out().contains("authToken"), out());
+    }
+
+    @Test
+    void groovyAnnotationWithNoDeclarationAfterIt_isNotFlagged() throws Exception {
+        // An annotation as the last meaningful token binds nothing; there is no field to lose.
+        // Same for a field-only annotation someone left above a class declaration - the class
+        // level survives the stubs, so there is nothing truthful for doctor to report.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("src/main/groovy/com/example/Trailing.groovy", """
+            package com.example
+
+            import se.deversity.vibetags.annotations.AIPrivacy
+
+            @AIPrivacy(dataType = "misplaced")
+            class Trailing {
+            }
+            // dangling annotation below, nothing after it
+            // @AIPrivacy would go here
+            """);
+
+        assertEquals(0, doctor(), out());
+        assertFalse(out().toLowerCase().contains("dropped"), out());
+    }
+
+    @Test
+    void unreadableGroovyFile_isAFindingNotASilentPass() throws Exception {
+        // Same policy as the marker checks: "could not check" reported as "checked, fine" is
+        // the one lie a health tool must not tell.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        Files.createDirectories(dir.resolve("src/main/groovy"));
+        Files.write(dir.resolve("src/main/groovy/Broken.groovy"), new byte[]{(byte) 0xFF, (byte) 0xFE});
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("could not read"), out());
+        assertTrue(out().contains("Broken.groovy"), out());
+    }
+
+    @Test
     void groovyUnderBuildDirectories_isNotScanned() throws Exception {
         // build/ and target/ hold generated or copied sources; flagging those reports the
         // build's plumbing, not the developer's code.
