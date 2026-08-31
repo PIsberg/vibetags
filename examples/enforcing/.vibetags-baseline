@@ -1,0 +1,7 @@
+# VibeTags enforcement baseline — regenerate with -Avibetags.baseline.update=true
+# Lines are <moduleId>\t<family>\t<element>\t<signature>, sorted; review changes here as
+# you would any other API change.
+# format: 1
+_root_	contract	com.example.enforcing.SettlementService.settle(java.lang.String,long)	settle(java.lang.String,long):java.lang.String throws java.lang.IllegalStateException
+_root_	locked	com.example.enforcing.TariffEngine.computeTariff(java.lang.String,long)	computeTariff(java.lang.String,long):long
+_root_	publicapi	com.example.enforcing.RateCardApi	extends[none] members[rateCardFor(java.lang.String,java.time.LocalDate):java.lang.String]

@@ -1,10 +1,11 @@
 # Examples
 
-Eleven runnable consumer projects. Each is standalone: it depends on a published VibeTags release
+Twelve runnable consumer projects. Each is standalone: it depends on a published VibeTags release
 rather than on this repository, so any of them can be copied out and built on its own. Every one of
-them is built by CI, and the generated files each has committed are compared byte for byte against
-what the build produces, so an example that has drifted from the processor's behaviour fails the
-pipeline rather than misleading a reader.
+them is built by CI and gates its committed generated files against a fresh build: 9 of the 12
+byte for byte or via check mode, the 3 Gradle layout examples on their root `CLAUDE.md`. A drifted
+example fails the pipeline rather than misleading a reader. [INDEX.md](INDEX.md) is the coverage
+ledger: what each example exercises, the exact gate each one has, and what no example covers yet.
 
 Pick by what you want to see.
 
@@ -13,6 +14,12 @@ Pick by what you want to see.
 | Example | Build | What it shows |
 |---|---|---|
 | [`basic/`](basic/) | Maven and Gradle | The full tour. All 44 annotations on a realistic e-commerce codebase, every supported platform's output committed, and a README that maps each annotation to the file that uses it. |
+
+## Enforcement
+
+| Example | Build | What it shows |
+|---|---|---|
+| [`enforcing/`](enforcing/) | Maven | The opt-in hard stop. `-Avibetags.enforce` checks `@AILocked`/`@AIContract`/`@AIPublicAPI` shapes against the committed `.vibetags-baseline` and fails the compile on drift. CI drifts a locked signature on purpose and asserts the build goes red. |
 
 ## Reactors and merged output
 
@@ -42,8 +49,15 @@ matrix is maintained.
 | Example | Build | What it shows |
 |---|---|---|
 | [`kotlin/`](kotlin/) | Gradle, Kotlin DSL | kapt runs the processor over Kotlin sources. CI asserts the generated files name the Kotlin elements, stub signatures included. |
-| [`groovy/`](groovy/) | Gradle | Joint compilation with `javaAnnotationProcessing = true`, the Groovy analogue of kapt |
+| [`groovy/`](groovy/) | Gradle | Joint compilation with `javaAnnotationProcessing = true`, the Groovy analogue of kapt. Also gates Groovy's own trap: a deliberate `@AIPrivacy` field, and CI asserts it reaches no generated file, because groovyc stubs carry no fields |
 | [`scala/`](scala/) | Gradle | The limitation, gated. scalac has no JSR 269 support, so CI asserts the annotated Java class appears and the annotated Scala class does not. If that ever changes, the build goes red and the docs are wrong, not the code. |
+
+## The companion CLI
+
+None of these examples runs it, but `vibetags init` (scaffold the opt-in files for chosen
+platforms) and `vibetags doctor` (report configuration problems the build cannot see, including
+the Groovy field drop gated above) work in any of them. See
+[USAGE.md](../USAGE.md#the-companion-cli-vibetags-init-and-vibetags-doctor).
 
 ## Building one
 
