@@ -44,6 +44,7 @@ final class DoctorCommand {
         checkWiring(detectBuildFile());
         Set<String> active = checkActivePlatforms();
         checkMarkers(active);
+        checkGroovyFieldGuardrails();
 
         out.println();
         if (problems.isEmpty()) {
@@ -158,6 +159,152 @@ final class DoctorCommand {
         }
         out.println("markers:         "
             + (broken == 0 ? "all intact" : broken + " file(s) unbalanced or unreadable"));
+    }
+
+    /**
+     * Field-level guardrails in Groovy sources are silently dropped: groovyc's Java stubs carry
+     * the class, its constructors, methods and parameters — and no fields at all — so every
+     * {@code ElementType.FIELD} annotation ({@code @AIPrivacy} included, a safety-tier guardrail)
+     * generates nothing while the build stays green
+     * (<a href="https://github.com/PIsberg/vibetags/issues/494">issue #494</a>). The processor
+     * cannot warn: the annotation never reaches it. Doctor can still read the {@code .groovy}
+     * source, so this is the tool that names the specific annotations being lost, without adding
+     * a diagnostic to anyone's build.
+     *
+     * <p>The scan is a line heuristic, not a parser: a {@code @AI*} annotation whose annotated
+     * declaration has no parameter list before any {@code =} is read as a field. Only annotations
+     * that both exist in {@code GuardrailAnnotations.ALL} and target {@code FIELD} count, so a
+     * method-level {@code @AILocked} or somebody else's {@code @Autowired} never trips it.
+     */
+    private void checkGroovyFieldGuardrails() {
+        List<Path> sources = groovySources();
+        if (sources.isEmpty()) {
+            return;
+        }
+        List<String> dropped = new ArrayList<>();
+        for (Path file : sources) {
+            Optional<String> read = tryRead(file);
+            if (read.isEmpty()) {
+                problems.add("could not read " + dir.relativize(file)
+                    + " (permissions? not UTF-8?) — cannot check it for field-level guardrails");
+                continue;
+            }
+            scanGroovySource(file, read.get(), dropped);
+        }
+        out.println("groovy sources:  " + sources.size() + " file(s); "
+            + (dropped.isEmpty()
+                ? "no field-level guardrails found"
+                : dropped.size() + " field-level guardrail(s) will be dropped by groovyc"));
+        problems.addAll(dropped);
+    }
+
+    /** Developer-authored {@code .groovy} files: everything outside build output directories. */
+    private List<Path> groovySources() {
+        List<Path> sources = new ArrayList<>();
+        Set<String> buildDirs = Set.of("build", "target", ".gradle", ".git");
+        try (var walk = Files.walk(dir)) {
+            walk.filter(Files::isRegularFile)
+                .filter(p -> String.valueOf(p.getFileName()).endsWith(".groovy"))
+                .filter(p -> {
+                    for (Path part : dir.relativize(p)) {
+                        if (buildDirs.contains(part.toString())) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .forEach(sources::add);
+        } catch (IOException e) {
+            problems.add("could not walk " + dir + " for .groovy sources: " + e.getMessage());
+        }
+        sources.sort(java.util.Comparator.comparing(Path::toString));
+        return sources;
+    }
+
+    private void scanGroovySource(Path file, String text, List<String> dropped) {
+        List<String> lines = text.lines().toList();
+        java.util.regex.Pattern annotation = java.util.regex.Pattern.compile(
+            "@(?:se\\.deversity\\.vibetags\\.annotations\\.)?(" +
+                String.join("|", fieldTargetedAnnotationNames()) + ")\\b");
+        for (int i = 0; i < lines.size(); i++) {
+            java.util.regex.Matcher m = annotation.matcher(lines.get(i));
+            while (m.find()) {
+                String name = m.group(1);
+                Optional<String> declaration = declarationAfter(lines, i, m.end());
+                if (declaration.isEmpty() || !looksLikeField(declaration.get())) {
+                    continue;
+                }
+                dropped.add(dir.relativize(file) + ":" + (i + 1) + " @" + name + " on field '"
+                    + fieldName(declaration.get()) + "' — groovyc's Java stubs carry no fields, so this "
+                    + "guardrail is dropped before any processor sees it. Move it to the class or "
+                    + "an accessor, or see USAGE.md's Groovy section");
+            }
+        }
+    }
+
+    /** Simple names of every guardrail annotation that can sit on a field. */
+    private static List<String> fieldTargetedAnnotationNames() {
+        List<String> names = new ArrayList<>();
+        for (Class<? extends java.lang.annotation.Annotation> type
+                : se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL) {
+            java.lang.annotation.Target target =
+                type.getAnnotation(java.lang.annotation.Target.class);
+            if (target == null) {
+                continue;
+            }
+            for (java.lang.annotation.ElementType t : target.value()) {
+                if (t == java.lang.annotation.ElementType.FIELD) {
+                    names.add(type.getSimpleName());
+                    break;
+                }
+            }
+        }
+        return names;
+    }
+
+    /**
+     * The declaration the annotation at {@code (line, col)} binds: the rest of its own line if
+     * non-blank, else the next line that is not blank, a comment, or another annotation. Empty
+     * when the file ends first.
+     */
+    private static Optional<String> declarationAfter(List<String> lines, int line, int col) {
+        String rest = lines.get(line).substring(col)
+            .replaceFirst("^\\s*\\([^)]*\\)", "")   // the annotation's own argument list
+            .strip();
+        if (!rest.isEmpty() && !rest.startsWith("@")) {
+            return Optional.of(rest);
+        }
+        for (int i = line + 1; i < lines.size(); i++) {
+            String candidate = lines.get(i).strip();
+            if (candidate.isEmpty() || candidate.startsWith("@")
+                    || candidate.startsWith("//") || candidate.startsWith("*")
+                    || candidate.startsWith("/*")) {
+                continue;
+            }
+            return Optional.of(candidate);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * A field declaration has no parameter list before any initializer: {@code String email} and
+     * {@code def token = make()} are fields, {@code def charge(amount)} and
+     * {@code class Customer} are not.
+     */
+    private static boolean looksLikeField(String declaration) {
+        String beforeInitializer = declaration.split("=", 2)[0];
+        if (beforeInitializer.contains("(")) {
+            return false;
+        }
+        String first = beforeInitializer.strip().split("\\s+")[0];
+        return !Set.of("class", "interface", "enum", "trait", "record", "import", "package")
+            .contains(first);
+    }
+
+    /** The last identifier before the initializer, which is the field's name. */
+    private static String fieldName(String declaration) {
+        String[] words = declaration.split("=", 2)[0].strip().split("\\s+");
+        return words[words.length - 1];
     }
 
     private static Optional<String> tryRead(Path path) {

@@ -185,6 +185,11 @@ example ([corpus/README.md](corpus/README.md)).
   harness expects those two markers to be missing, and it fails if they ever start appearing —
   so the day groovyc emits fields, this section gets rewritten instead of quietly aging.
 
+  The build cannot warn, but [`vibetags doctor`](#the-companion-cli-vibetags-init-and-vibetags-doctor) can: it reads the `.groovy`
+  sources directly and reports each field-level guardrail with its file, line and annotation as
+  a finding — the check exists because the drop is otherwise completely silent
+  ([#494](https://github.com/PIsberg/vibetags/issues/494)).
+
 - **The compiling JDK must be 21 or newer, and a Gradle toolchain overrides the JDK you
   launched with.** `java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }` runs
   javac from a JDK 17, which cannot load the processor: `class file version 65.0, this version
@@ -419,9 +424,11 @@ jbang se.deversity.vibetags:vibetags-cli:<version> doctor
 - **`doctor`** reports project health without compiling: which build file it found, whether
   `vibetags-processor` / `vibetags-annotations` are wired into it, which platforms are active
   (the same file-existence resolution the processor runs), the AGENTS.md pointer rule when it
-  applies, and whether every active marker file still carries a balanced
-  `VIBETAGS-START` / `VIBETAGS-END` pair. Exit code 0 means healthy, 1 means at least one
-  finding needs action — usable as a cheap CI step.
+  applies, whether every active marker file still carries a balanced
+  `VIBETAGS-START` / `VIBETAGS-END` pair, and — when the project has `.groovy` sources — which
+  field-level guardrails groovyc will silently drop, by file, line and annotation (the build
+  itself cannot warn; see the Groovy section above). Exit code 0 means healthy, 1 means at
+  least one finding needs action — usable as a cheap CI step.
 - **`--dir <path>`** points either command at another project root.
 
 The platform keys, file paths and marker strings are read from `vibetags-processor` at

@@ -150,7 +150,10 @@ The three annotated fields appear nowhere in it. Declaring them `private` does n
 stops Groovy making them properties, and the stub omits them either way.
 
 **What to do instead:** put the guardrail on the accessor or on the enclosing type, or keep the
-rule in the hand-authored region outside the `VIBETAGS-START`/`END` markers.
+rule in the hand-authored region outside the `VIBETAGS-START`/`END` markers. `vibetags doctor`
+finds the annotations this applies to: it reads the `.groovy` sources directly — which the build
+cannot — and reports each field-level guardrail as a finding with its file, line and annotation
+([#494](https://github.com/PIsberg/vibetags/issues/494)).
 
 This is pinned rather than merely written down. The Groovy showcase in the corpus annotates fields
 on purpose, the harness expects those two guardrails to be missing, and it **fails if they ever

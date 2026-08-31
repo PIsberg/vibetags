@@ -75,6 +75,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`vibetags doctor` names the field-level guardrails groovyc silently drops**
+  ([#494](https://github.com/PIsberg/vibetags/issues/494)). groovyc's Java stubs carry no
+  fields, so a field-targeted annotation — `@AIPrivacy` on a PII field being the one that
+  stings — generates nothing while the build stays green, and the processor cannot warn because
+  the annotation never reaches it. Of the issue's three options, the build-side note was
+  rejected by its own analysis (a diagnostic on every Groovy build cuts against the
+  non-interference promise the corpus protects); doctor is the tool that can still read the
+  `.groovy` source, so it now scans developer-authored Groovy files (build output excluded) and
+  reports each dropped guardrail as a finding with file, line, annotation and the move that
+  fixes it. Only annotations that exist in `GuardrailAnnotations.ALL` *and* target
+  `ElementType.FIELD` count, and only on declarations without a parameter list, so class- and
+  method-level guardrails — the levels that survive the stubs — never trip it. Written
+  failing-first; the corpus pin on the two missing Groovy markers is untouched.
+
 - **Five test surfaces over code the mutation report showed was unverified.** A full PIT run on
   `main` (3,998 mutants, 83.84% killed, 153 with no coverage) exposed clusters where the code is
   correct today but nothing would notice if it stopped being. None of these changes shipped

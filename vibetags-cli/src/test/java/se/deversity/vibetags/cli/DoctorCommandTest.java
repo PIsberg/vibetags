@@ -134,4 +134,93 @@ class DoctorCommandTest {
         assertEquals(1, doctor(), out());
         assertTrue(out().contains("no build file found"), out());
     }
+
+    // ------------------------------------------------------------------ Groovy field guardrails
+
+    private Path groovySource(String relPath, String source) throws Exception {
+        Path file = dir.resolve(relPath);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, source);
+        return file;
+    }
+
+    @Test
+    void groovyFieldGuardrail_isReportedAsDropped() throws Exception {
+        // groovyc's Java stubs carry no fields at all, so a field-targeted guardrail generates
+        // nothing and the build says nothing (#494). Doctor is the tool that can still see the
+        // .groovy source and say so, with the file, the line and the annotation.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("src/main/groovy/com/example/Customer.groovy", """
+            package com.example
+
+            import se.deversity.vibetags.annotations.AIPrivacy
+
+            class Customer {
+                @AIPrivacy(dataType = "email")
+                String billingEmail
+
+                String plainField
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Customer.groovy"), out());
+        assertTrue(out().contains("@AIPrivacy"), out());
+        assertTrue(out().contains("billingEmail"), out());
+        assertTrue(out().toLowerCase().contains("dropped"), out());
+    }
+
+    @Test
+    void groovyMethodAndClassGuardrails_areNotFlagged() throws Exception {
+        // Types, constructors, methods and parameters all survive into groovyc's stubs; only
+        // fields are missing. A doctor that cries wolf on the levels that work gets ignored.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("src/main/groovy/com/example/Billing.groovy", """
+            package com.example
+
+            import se.deversity.vibetags.annotations.AILocked
+            import se.deversity.vibetags.annotations.AICore
+
+            @AICore(sensitivity = "high", note = "settlement core")
+            class Billing {
+                @AILocked(reason = "wire format")
+                def charge(BigDecimal amount) {
+                    amount
+                }
+            }
+            """);
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("groovy sources:"), out());
+        assertTrue(out().contains("no field-level guardrails"), out());
+    }
+
+    @Test
+    void projectWithoutGroovy_printsNoGroovyLine() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertFalse(out().contains("groovy sources:"),
+            "a Java-only project has nothing Groovy to report on: " + out());
+    }
+
+    @Test
+    void groovyUnderBuildDirectories_isNotScanned() throws Exception {
+        // build/ and target/ hold generated or copied sources; flagging those reports the
+        // build's plumbing, not the developer's code.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        groovySource("build/tmp/Generated.groovy", """
+            class Generated {
+                @se.deversity.vibetags.annotations.AIPrivacy(dataType = "x")
+                String copied
+            }
+            """);
+
+        assertEquals(0, doctor(), out());
+        assertFalse(out().contains("Generated.groovy"), out());
+    }
 }
