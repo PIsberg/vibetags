@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   coverage to one arbitrary test. Rendering per test method took the renderer from 41 surviving
   to 0.
 
+  Measured by a dispatched `mutation.yml` run on this branch: 3,992 mutants, 3,427 killed =
+  **86%**, test strength 89%. The README badge moves from 80% — a number measured on the
+  1.1.0-era codebase, which `main` had already outgrown to 83.84% — to 86%.
+
 ## [1.2.7] - 2026-08-29
 
 ### Fixed
