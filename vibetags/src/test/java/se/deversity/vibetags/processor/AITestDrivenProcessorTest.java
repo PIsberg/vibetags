@@ -26,6 +26,7 @@ import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AITestDriven;
 
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
@@ -36,7 +37,18 @@ import static org.mockito.Mockito.*;
  * Tests for @AITestDriven annotation definition, validation, and per-platform output.
  */
 @Isolated
+@org.junit.jupiter.api.extension.ExtendWith(ModuleDirHygiene.class)
 class AITestDrivenProcessorTest {
+
+    /**
+     * Root for everything the processor reads or writes in these tests. Without it the processor
+     * defaults to the JVM working directory — the real {@code vibetags/} module dir — where it
+     * deposited {@code .vibetags-mod-*} sidecars and {@code vibetags.log} that git ignores and the
+     * NEXT run then read back: a stale sidecar with a foreign module id merges its sections into
+     * the captured output and fails the no-annotation tests (#521).
+     */
+    @TempDir
+    java.nio.file.Path root;
 
     // -----------------------------------------------------------------------
     // Annotation definition
@@ -285,7 +297,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToCursorRules() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.OrderService.calculateDiscount", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -302,7 +314,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToClaudeMd() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.OrderService.updateOrderStatus", 95, "JUNIT_5", "src/test/java/com/example/service/OrderServiceTest.java"));
             triggerGeneration(processor);
@@ -348,7 +360,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToGemini() throws Exception {
-        withCwdSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("gemini_instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.PricingService.calculatePrice", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -363,7 +375,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToCopilot() throws Exception {
-        withCwdSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
+        withSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.ReportService.generate", 80, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -378,7 +390,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToQwen() throws Exception {
-        withCwdSignalFiles(List.of("QWEN.md"), () -> {
+        withSignalFiles(List.of("QWEN.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.CatalogService.search", 90, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -393,7 +405,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_noTestDrivenAnnotations_noTestDrivenSectionWritten() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), emptyRoundEnv());
             triggerGeneration(processor);
@@ -406,7 +418,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenWithLocation_locationAppearsInOutput() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.Service.method", 100, "JUNIT_5", "src/test/java/com/example/ServiceTest.java"));
             triggerGeneration(processor);
@@ -419,7 +431,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenWithMockPolicy_mockPolicyAppearsInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
 
             Element element = testDrivenElement("com.example.Service.method", 100, "Use H2 for database tests");
@@ -436,7 +448,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenWithMockPolicy_mockPolicyAppearsInClaudeMd() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
 
             Element element = testDrivenElement("com.example.PaymentService.charge", 95, "Mock Stripe client; use real validation logic");
@@ -455,7 +467,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenWithLocation_locationAppearsInLlmsFullTxt() throws Exception {
-        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+        withSignalFiles(List.of("llms-full.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv(
                 "com.example.OrderService.placeOrder", 100, "JUNIT_5",
@@ -472,7 +484,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenWithMockPolicy_mockPolicyAppearsInLlmsFullTxt() throws Exception {
-        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+        withSignalFiles(List.of("llms-full.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
 
             Element element = testDrivenElement("com.example.BillingService.invoice", 90, "Always mock the mailer");
@@ -491,7 +503,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenAnnotation_llmsTxtContainsTestDrivenSection() throws Exception {
-        withCwdSignalFiles(List.of("llms.txt"), () -> {
+        withSignalFiles(List.of("llms.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.OrderService.calculateDiscount", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -504,7 +516,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenAnnotation_llmsFullTxtContainsTestDrivenSection() throws Exception {
-        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+        withSignalFiles(List.of("llms-full.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.OrderService.calculateDiscount", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -519,7 +531,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_multipleTestDrivenElements_allListedInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             Element el1 = testDrivenElement("com.example.OrderService.calculateDiscount", 100, "");
             Element el2 = testDrivenElement("com.example.BillingService.invoice", 90, "");
 
@@ -548,7 +560,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_multipleIdenticalTestDrivenElements_coalescedInClaudeMd() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             Element el1 = testDrivenElement("com.example.diag.AlphaDetector", 80, "");
             Element el2 = testDrivenElement("com.example.diag.BetaDetector", 80, "");
             Element el3 = testDrivenElement("com.example.diag.GammaDetector", 80, "");
@@ -585,7 +597,7 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_testDrivenAnnotation_aiderConventionsContainsTestDrivenSection() throws Exception {
-        withCwdSignalFiles(List.of("CONVENTIONS.md"), () -> {
+        withSignalFiles(List.of("CONVENTIONS.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.BillingApi.invoice", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
@@ -623,29 +635,23 @@ class AITestDrivenProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(java.util.Map.of("vibetags.cache", "false"));
+        when(env.getOptions()).thenReturn(java.util.Map.of(
+            "vibetags.root", root.toString(),
+            "vibetags.cache", "false"));
         processor.init(env);
         return processor;
     }
 
-    private void withCwdSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
-        java.nio.file.Path cwd = java.nio.file.Paths.get("").toAbsolutePath();
-        List<java.nio.file.Path> created = new ArrayList<>();
-        try {
-            for (String rel : relPaths) {
-                java.nio.file.Path p = cwd.resolve(rel);
-                if (!Files.exists(p)) {
-                    Files.createDirectories(p.getParent());
-                    Files.createFile(p);
-                    created.add(p);
-                }
-            }
-            block.run();
-        } finally {
-            for (java.nio.file.Path p : created) {
-                Files.deleteIfExists(p);
+    /** Creates the platform opt-in files under the test's own {@link #root}, never the cwd. */
+    private void withSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
+        for (String rel : relPaths) {
+            java.nio.file.Path p = root.resolve(rel);
+            Files.createDirectories(p.getParent());
+            if (!Files.exists(p)) {
+                Files.createFile(p);
             }
         }
+        block.run();
     }
 
     @FunctionalInterface

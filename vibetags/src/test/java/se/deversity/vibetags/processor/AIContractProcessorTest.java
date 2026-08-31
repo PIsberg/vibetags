@@ -24,6 +24,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
@@ -34,7 +35,18 @@ import static org.mockito.Mockito.*;
  * Tests for @AIContract annotation definition, validation, and per-platform output.
  */
 @Isolated
+@org.junit.jupiter.api.extension.ExtendWith(ModuleDirHygiene.class)
 class AIContractProcessorTest {
+
+    /**
+     * Root for everything the processor reads or writes in these tests. Without it the processor
+     * defaults to the JVM working directory — the real {@code vibetags/} module dir — where it
+     * deposited {@code .vibetags-mod-*} sidecars and {@code vibetags.log} that git ignores and the
+     * NEXT run then read back: a stale sidecar with a foreign module id merges its sections into
+     * the captured output and fails the no-annotation tests (#521).
+     */
+    @TempDir
+    java.nio.file.Path root;
 
     // -----------------------------------------------------------------------
     // Annotation definition
@@ -191,7 +203,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToCursorRules() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.PricingService.calculatePrice", "OpenAPI v2 contract"));
             triggerGeneration(processor);
@@ -210,7 +222,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToClaudeMd() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.BillingService.invoice", "Partner API SLA"));
             triggerGeneration(processor);
@@ -256,7 +268,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToGemini() throws Exception {
-        withCwdSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("gemini_instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.PaymentGateway.charge", "Bank partner API"));
             triggerGeneration(processor);
@@ -271,7 +283,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToCopilot() throws Exception {
-        withCwdSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
+        withSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.ReportService.generate", "Analytics contract"));
             triggerGeneration(processor);
@@ -286,7 +298,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToQwen() throws Exception {
-        withCwdSignalFiles(List.of("QWEN.md"), () -> {
+        withSignalFiles(List.of("QWEN.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.CatalogService.search", "Catalog API v3 contract"));
             triggerGeneration(processor);
@@ -301,7 +313,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_noContractAnnotations_noContractSectionWritten() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), emptyRoundEnv());
             triggerGeneration(processor);
@@ -314,7 +326,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_multipleContractElements_allListedInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             Element el1 = contractElement("com.example.PricingService.calculatePrice", "OpenAPI v2");
             Element el2 = contractElement("com.example.PricingService.applyPromoCode", "Promotions contract");
 
@@ -342,7 +354,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_contractAnnotation_defaultReasonAppearsInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             Element element = mock(Element.class);
             when(element.toString()).thenReturn("com.example.ApiService.execute");
             when(element.getSimpleName()).thenReturn(nameOf("execute"));
@@ -372,7 +384,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_contractAnnotation_llmsTxtContainsContractSection() throws Exception {
-        withCwdSignalFiles(List.of("llms.txt"), () -> {
+        withSignalFiles(List.of("llms.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.PricingService.calculatePrice", "OpenAPI v2 contract"));
             triggerGeneration(processor);
@@ -387,7 +399,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_contractAnnotation_llmsFullTxtContainsContractSection() throws Exception {
-        withCwdSignalFiles(List.of("llms-full.txt"), () -> {
+        withSignalFiles(List.of("llms-full.txt"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.PricingService.calculatePrice", "OpenAPI v2 contract"));
             triggerGeneration(processor);
@@ -402,7 +414,7 @@ class AIContractProcessorTest {
 
     @Test
     void process_contractAnnotation_aiderConventionsContainsContractSection() throws Exception {
-        withCwdSignalFiles(List.of("CONVENTIONS.md"), () -> {
+        withSignalFiles(List.of("CONVENTIONS.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.BillingApi.invoice", "Partner SLA contract"));
             triggerGeneration(processor);
@@ -440,29 +452,23 @@ class AIContractProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(java.util.Map.of("vibetags.cache", "false"));
+        when(env.getOptions()).thenReturn(java.util.Map.of(
+            "vibetags.root", root.toString(),
+            "vibetags.cache", "false"));
         processor.init(env);
         return processor;
     }
 
-    private void withCwdSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
-        java.nio.file.Path cwd = java.nio.file.Paths.get("").toAbsolutePath();
-        List<java.nio.file.Path> created = new ArrayList<>();
-        try {
-            for (String rel : relPaths) {
-                java.nio.file.Path p = cwd.resolve(rel);
-                if (!Files.exists(p)) {
-                    Files.createDirectories(p.getParent());
-                    Files.createFile(p);
-                    created.add(p);
-                }
-            }
-            block.run();
-        } finally {
-            for (java.nio.file.Path p : created) {
-                Files.deleteIfExists(p);
+    /** Creates the platform opt-in files under the test's own {@link #root}, never the cwd. */
+    private void withSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
+        for (String rel : relPaths) {
+            java.nio.file.Path p = root.resolve(rel);
+            Files.createDirectories(p.getParent());
+            if (!Files.exists(p)) {
+                Files.createFile(p);
             }
         }
+        block.run();
     }
 
     @FunctionalInterface

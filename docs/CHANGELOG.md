@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A suite run deposited gitignored processor state into `vibetags/` that failed the next run**
+  ([#521](https://github.com/PIsberg/vibetags/issues/521)). Four test classes ran the processor
+  without `vibetags.root`, so it worked at the JVM working directory — the real module dir —
+  and left `.vibetags-mod-*` sidecars, `.vibetags-cache` and `vibetags.log` behind. All of them
+  are gitignored, so `git status` read as clean while the next run's tests read them back:
+
+  - a stale sidecar carrying a foreign module id (a PIT-mutated run writes one with an empty id)
+    activates the multi-module merge, and the departed run's sections appear in a build with no
+    annotations at all — failing the `no annotations → no section` tests in
+    `AIContractProcessorTest`, `AIPrivacyProcessorTest` and `AITestDrivenProcessorTest`;
+  - a leftover `.vibetags-cache` fed `WriteCacheFileFormatTest`'s parentless-path test, which
+    asserted the developer's working directory held zero cache entries.
+
+  The symptom was a suite that is green exactly once per clean checkout and red forever after,
+  which reads as deterministic breakage — it cost a wrong JDK-26 diagnosis before the ignored
+  files were noticed. CI never sees a second run, so nothing upstream ever caught it.
+
+  Fixed by giving every processor-running test a per-test `vibetags.root` temp directory
+  (which also stops the deposits), and by making the parentless-path cache test assert what the
+  fallback guarantees (no throw) rather than what the real directory holds. A new
+  `ModuleDirHygiene` extension on the four classes fails any test that deposits
+  `.vibetags-*`/`vibetags.log` into the module dir again; broken deliberately, it names the
+  deposited files. Verified with the reconstructed debris (red on the old tests, green now) and
+  with two back-to-back suite runs from a clean tree: run 1 deposits nothing, run 2 is green.
+
 ### Added
 
 - **Five test surfaces over code the mutation report showed was unverified.** A full PIT run on
@@ -37,6 +64,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   coverage to the test that physically executes the line, so class-load handed all 44 sections'
   coverage to one arbitrary test. Rendering per test method took the renderer from 41 surviving
   to 0.
+
+  Measured by a dispatched `mutation.yml` run on this branch: 3,992 mutants, 3,427 killed =
+  **86%**, test strength 89%. The README badge moves from 80% — a number measured on the
+  1.1.0-era codebase, which `main` had already outgrown to 83.84% — to 86%.
 
 ## [1.2.7] - 2026-08-29
 
