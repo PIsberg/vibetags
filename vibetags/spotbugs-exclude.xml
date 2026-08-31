@@ -215,5 +215,16 @@
     <Method name="stripGlobKey"/>
     <Bug pattern="IMPROPER_UNICODE"/>
   </Match>
+  <!-- The case-fold that merges granular stems differing only in capitalisation (#525). The
+       lower-cased string is only a grouping key that approximates what a case-insensitive
+       filesystem does to the same names; it never reaches disk and grants nothing. A Unicode
+       folding collision at worst merges two rule files' bodies — the merge is lossless, so the
+       failure mode of a false fold is a shared file carrying both elements, which is the fix's
+       normal output, not a loss. Locale.ROOT is passed explicitly. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
+    <Method name="mergeGranularUnits"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
 
 </FindBugsFilter>
