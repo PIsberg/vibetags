@@ -11,7 +11,7 @@
 [![Maven](https://img.shields.io/badge/build-Maven-blue?logo=apachemaven)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![Gradle](https://img.shields.io/badge/build-Gradle-blue?logo=gradle)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/PIsberg/vibetags/branch/main/graph/badge.svg)](https://codecov.io/gh/PIsberg/vibetags)
-[![PIT Mutation Testing](https://img.shields.io/badge/PIT%20Mutation-80%25-brightgreen?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/actions/workflows/mutation.yml)
+[![PIT Mutation Testing](https://img.shields.io/badge/PIT%20Mutation-86%25-brightgreen?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/actions/workflows/mutation.yml)
 [![Lines of Code](https://www.aschey.tech/tokei/github/PIsberg/VibeTags?languages=Java&category=code)](https://github.com/PIsberg/VibeTags)
 [![PMD](https://img.shields.io/badge/PMD-passing-brightgreen)](https://pmd.github.io/)
 [![Analyzed with codekoll](https://img.shields.io/badge/analyzed%20with-codekoll-brightgreen?logo=java&logoColor=white)](https://github.com/PIsberg/codekoll)
