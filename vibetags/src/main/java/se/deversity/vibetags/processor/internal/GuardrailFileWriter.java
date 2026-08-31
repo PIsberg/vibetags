@@ -803,6 +803,15 @@ public final class GuardrailFileWriter {
         messager.printMessage(Diagnostic.Kind.WARNING, message);
     }
 
+    /**
+     * Raises {@code message} as an informational NOTE, on the same channel and for the same
+     * collaborators as {@link #warn}. For situations the build has already handled correctly but
+     * a developer may still want to change — a warning there trains people to mute the processor.
+     */
+    public void note(String message) {
+        messager.printMessage(Diagnostic.Kind.NOTE, message);
+    }
+
     /** Visible for testing — verifies the all-overloads no-op contract. */
     public static Messager noopMessager() {
         return new Messager() {
