@@ -293,4 +293,77 @@ class GuardrailFileWriterEdgeCaseTest {
         assertEquals(sentinel, Files.readString(predictableTmp),
             "writer must not use the predictable <file>.vibetags-tmp path (symlink-clobber guard)");
     }
+
+    // ------------------------------------------------------------------
+    // ownsItsLine: a VibeTags header QUOTED in hand-written prose must not make the
+    // file legacy. hasLegacyHeaderLine's own javadoc names the stake: the legacy
+    // path is a whole-file rewrite that keeps only the generated block, so a false
+    // positive here deletes every hand-authored line. The mutation report showed
+    // every conditional in ownsItsLine could be flipped without a failure.
+    // ------------------------------------------------------------------
+
+    @Test
+    void quotedHeaderInProse_isNotALegacyFile_handContentSurvives(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        // Three ways to quote the header without giving it a line of its own: leading text
+        // at file start, leading text mid-file, and trailing text after a line-start match.
+        String hand = "Q# VibeTags\n"
+            + "# VibeTags header quoted with trailing words must stay hand-authored.\n"
+            + "\n"
+            + "Real hand notes.\n";
+        Files.writeString(file, hand);
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), "generated body\n", true));
+
+        String result = Files.readString(file);
+        assertTrue(result.contains("Q# VibeTags"),
+            "a quoted header at file start is prose, not a legacy block: " + result);
+        assertTrue(result.contains("quoted with trailing words must stay hand-authored"),
+            "a line-start match with trailing words is prose, not a legacy block: " + result);
+        assertTrue(result.contains("Real hand notes."),
+            "hand content after a quoted header must survive the write: " + result);
+        assertTrue(result.contains("VIBETAGS-START"),
+            "the generated block is appended after the hand content: " + result);
+    }
+
+    @Test
+    void indentedHeaderOnItsOwnLine_isStillALegacyFile(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        Files.writeString(file, "   # VibeTags\nold generated body\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), "new generated body\n", true));
+
+        String result = Files.readString(file);
+        assertTrue(result.contains("VIBETAGS-START"),
+            "an indented header still owns its line, so the legacy file upgrades to markers: " + result);
+        assertFalse(result.contains("old generated body"),
+            "the legacy generated body is replaced, not preserved: " + result);
+    }
+
+    // ------------------------------------------------------------------
+    // fileBytesEqual: callers guarantee equal sizes, but the defensive answers for a
+    // longer or shorter file must stay "not equal" — a wrong true here is a skipped
+    // write over stale output.
+    // ------------------------------------------------------------------
+
+    @Test
+    void fileBytesEqual_answersForEveryLengthRelation(@TempDir Path tmp) throws IOException {
+        Path file = tmp.resolve("out.txt");
+        Files.write(file, "abcd".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        assertTrue(GuardrailFileWriter.fileBytesEqual(file, "abcd".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertFalse(GuardrailFileWriter.fileBytesEqual(file, "abcx".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            "same length, different bytes");
+        assertFalse(GuardrailFileWriter.fileBytesEqual(file, "ab".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            "the file is longer than expected");
+        assertFalse(GuardrailFileWriter.fileBytesEqual(file, "abcdef".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            "the file is shorter than expected");
+
+        Path empty = tmp.resolve("empty.txt");
+        Files.createFile(empty);
+        assertTrue(GuardrailFileWriter.fileBytesEqual(empty, new byte[0]),
+            "an empty file equals the empty expectation");
+    }
 }
