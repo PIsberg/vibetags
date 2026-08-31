@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -1177,8 +1178,36 @@ public final class ModuleSidecar {
             });
         }
 
+        // Stems that differ only in capitalisation share one physical file on a case-insensitive
+        // filesystem, and each was merged separately here, so whichever module compiled last
+        // replaced the shared file with its own element alone — the cross-module twin of issue
+        // #510 (<a href="https://github.com/PIsberg/vibetags/issues/525">issue #525</a>). Folding
+        // them into one shared contribution makes every colliding stem's file byte-identical, the
+        // same answer the within-plan fold gives: whichever names the filesystem collapses, the
+        // surviving file carries every element. Identical contributions inside a fold group are
+        // kept once — a module whose own plan already folded the collision records the same
+        // contribution under each of its colliding stems, and appending both would double the body.
+        Map<String, List<Map.Entry<String, Map<String, List<GranularContribution>>>>> byFoldedCase =
+            new LinkedHashMap<>();
+        for (Map.Entry<String, Map<String, List<GranularContribution>>> entry : byStem.entrySet()) {
+            byFoldedCase.computeIfAbsent(entry.getKey().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                .add(entry);
+        }
+
         Map<String, GranularContribution> merged = new LinkedHashMap<>();
-        byStem.forEach((stem, byRegion) -> {
+        for (List<Map.Entry<String, Map<String, List<GranularContribution>>>> group : byFoldedCase.values()) {
+            Map<String, List<GranularContribution>> byRegion = new LinkedHashMap<>();
+            for (Map.Entry<String, Map<String, List<GranularContribution>>> stemEntry : group) {
+                stemEntry.getValue().forEach((region, contributions) -> {
+                    List<GranularContribution> kept =
+                        byRegion.computeIfAbsent(region, k -> new ArrayList<>());
+                    for (GranularContribution c : contributions) {
+                        if (!kept.contains(c)) {
+                            kept.add(c);
+                        }
+                    }
+                });
+            }
             Set<String> globs = new LinkedHashSet<>();
             List<Map.Entry<String, String>> regionBodies = new ArrayList<>();
             byRegion.forEach((region, contributions) -> {
@@ -1189,9 +1218,12 @@ public final class ModuleSidecar {
                 }
                 regionBodies.add(new AbstractMap.SimpleEntry<>(region, String.join("\n\n", parts)));
             });
-            merged.put(stem, new GranularContribution(new ArrayList<>(globs),
-                joinRegions(regionBodies, subMarkers)));
-        });
+            GranularContribution shared = new GranularContribution(new ArrayList<>(globs),
+                joinRegions(regionBodies, subMarkers));
+            for (Map.Entry<String, Map<String, List<GranularContribution>>> stemEntry : group) {
+                merged.put(stemEntry.getKey(), shared);
+            }
+        }
         return merged;
     }
 
