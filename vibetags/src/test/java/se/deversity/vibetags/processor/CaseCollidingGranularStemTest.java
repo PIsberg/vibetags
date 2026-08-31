@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code com-example-payment} and {@code com-example-Payment}. A case-sensitive filesystem holds
  * two files; a case-insensitive one, which is what Windows and macOS give you by default, holds
  * one. Measured on Windows before the fold existed, the rules directory held a single
- * {@code com-example-payment.md} and the class's {@code @AILocked} appeared nowhere in the output
- * tree, while the scoped-rules index went on naming both.
+ * {@code com-example-payment.md}, the scoped-rules index named both elements, and the class's
+ * {@code @AILocked} appeared nowhere in the output tree.
  *
  * <p>The fix plans one merged, byte-identical rule file under <em>each</em> colliding name, so the
  * content assertion here holds on all three CI runners without knowing the filesystem: however
