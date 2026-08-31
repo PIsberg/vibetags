@@ -234,12 +234,13 @@ while IFS=$'\t' read -r name url sha lang module src task licence why; do
   #
   # That entry: kapt reports the processor options it forwards as unrecognised, vibetags.root
   # among them - an option AIGuardrailProcessor does declare in @SupportedOptions, and does
-  # receive, since it prints the resolved root from the same task. examples/kotlin, configured
-  # exactly as USAGE.md documents and built on Kotlin 2.4.10, does not produce it; this member,
-  # on Kotlin 2.3.10, does. Removing the javac-side configuration so that only the documented
-  # `kapt { arguments { ... } }` route remained did not change it either. That is as far as the
-  # evidence goes, so it is allow-listed as kapt bookkeeping and tracked as an open question
-  # rather than asserted to be harmless.
+  # receive, since it prints the resolved root from the same task. Attributed (#493, 2026-08-31,
+  # -i run of kotlin-obd-api): emitted by :kaptKotlin two lines after the processor's own
+  # "Root resolved" note, and it names kapt.kotlin.generated - kapt's own option - in the same
+  # message, so it is kapt failing to register any processor's supported-option set with its
+  # embedded javac, and nothing VibeTags declares can silence it. Not version-bound:
+  # examples/kotlin is silent at 2.3.10 and 2.4.10 alike. Allow-listed as attributed kapt
+  # bookkeeping; corpus/README.md carries the full evidence and USAGE.md warns consumers.
   KAPT_NOISE="The following options were not recognized by any processor"
   new_diags=$(comm -13 <(grep -hE "$DIAG_RE" "$dir/.corpus-ctrl.log" | sort -u)                        <(grep -hE "$DIAG_RE" "$dir/.corpus-vt.log" | sort -u)               | grep -vF "$KAPT_NOISE")
   if [ -n "$new_diags" ]; then

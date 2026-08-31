@@ -104,7 +104,7 @@ kapt {
 Processor options (`vibetags.log.path`, `vibetags.check`, …) are passed through the same
 `kapt { arguments { ... } }` block, without the `-A` prefix.
 
-Two kapt-specific limitations, both consequences of kapt processing generated Java stubs
+Three kapt-specific caveats, the first two consequences of kapt processing generated Java stubs
 rather than the Kotlin sources:
 
 - **Method-body-scoped annotations are invisible.** Stubs carry no method bodies, so an
@@ -113,6 +113,16 @@ rather than the Kotlin sources:
 - **Source positions describe the stub.** The `.vibetags-locks` report's line ranges would
   point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
   the locks report.
+- **Some builds print `warning: The following options were not recognized by any processor:
+  '[vibetags.root, kapt.kotlin.generated]'`. It is harmless and it is kapt's, not yours.** kapt
+  forwards its option map to its embedded javac without registering any processor's
+  `@SupportedOptions`, so javac's unmatched-options bookkeeping flags everything — including
+  `kapt.kotlin.generated`, kapt's own option, in the same breath, which is how you can tell no
+  amount of VibeTags configuration will silence it. The warning appears during the `kaptKotlin`
+  task immediately after the processor has already printed its resolved root from the very
+  option being reported: the value arrives and is used. Whether the message surfaces at all
+  depends on the consumer's Gradle/kapt logging configuration, not on the Kotlin version — the
+  same option block is silent in `examples/kotlin` on both 2.3.10 and 2.4.10.
 
 A complete working consumer is in [`examples/kotlin/`](examples/kotlin/README.md), built in CI
 on the JDK 21 Gradle leg.
