@@ -69,6 +69,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **86%**, test strength 89%. The README badge moves from 80% — a number measured on the
   1.1.0-era codebase, which `main` had already outgrown to 83.84% — to 86%.
 
+- **`ArchiveIndexCompletenessTest` — the archive READMEs' tables against the directories they
+  describe** ([#504](https://github.com/PIsberg/vibetags/issues/504)). A row linking a missing
+  file already failed `DocumentationLinksTest`, but the other direction was open: a document
+  moved into `docs/archive/` is reachable through the Design History links and so passes
+  `DocsIndexCompletenessTest` while missing from the table that records when it was retired and
+  what superseded it — the staleness signal the archive exists to give. The new gate asserts set
+  equality for `docs/archive/` and, stem-matched because that table names files as code spans,
+  both directions for `docs/diagrams/archive/`. Verified failing-first with a ghost document and
+  a ghost diagram: each goes red naming the file, green on removal.
+
 ## [1.2.7] - 2026-08-29
 
 ### Fixed
