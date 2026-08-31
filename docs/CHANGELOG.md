@@ -7,21 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **The kapt "options not recognized" warning is now attributed and documented, not an open
-  question** ([#493](https://github.com/PIsberg/vibetags/issues/493)). An `-i` treatment run of
-  the corpus member pinned it: `:kaptKotlin` emits it two lines after the processor's own
-  "Root resolved" note from the very option being reported, and it names
-  `kapt.kotlin.generated` — kapt's own option — in the same message, so it is kapt failing to
-  register any processor's `@SupportedOptions` with its embedded javac, and nothing VibeTags
-  declares can silence it. The version hypothesis is dead: `examples/kotlin` is silent with its
-  Kotlin/kapt swapped to the corpus member's 2.3.10 as well as at its committed 2.4.10, so
-  whether the message surfaces is a property of the consumer's Gradle/kapt logging
-  configuration. USAGE.md's kapt section now tells consumers it is harmless and whose it is;
-  the corpus allow-list entry is reclassified from unattributed to attributed.
-
 ### Fixed
+
+- **Case-colliding granular stems from different reactor modules still lost a file on
+  case-insensitive filesystems** ([#525](https://github.com/PIsberg/vibetags/issues/525)). The
+  #510 fold lives in the writer's plan, which sees one compilation, so a package in module A and
+  a class in module B whose stems differ only in capitalisation never met: the sidecar merge
+  keyed contributions by exact stem, each module wrote its own element alone, and on Windows or
+  macOS whichever module compiled last replaced the shared physical file. `mergeGranular` now
+  folds stems case-insensitively into one shared contribution — every colliding stem's file
+  carries every element, with identical contributions inside a fold group kept once, because a
+  module whose own plan already folded the collision records the same contribution under each of
+  its colliding stems. A cold first pass converges one compile later, exactly as the #365 role
+  merge does, and the new end-to-end test pins both the merged result and that convergence.
+  Verified failing-first: red against the previous merge with the later module's write replacing
+  the earlier module's guardrails, green with the fold.
 
 - **A case-insensitive filesystem lost one element's guardrails when two rule filenames differed
   only in capitalisation** ([#510](https://github.com/PIsberg/vibetags/issues/510)). The package
@@ -73,7 +73,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deposited files. Verified with the reconstructed debris (red on the old tests, green now) and
   with two back-to-back suite runs from a clean tree: run 1 deposits nothing, run 2 is green.
 
+### Changed
+
+- **The kapt "options not recognized" warning is now attributed and documented, not an open
+  question** ([#493](https://github.com/PIsberg/vibetags/issues/493)). An `-i` treatment run of
+  the corpus member pinned it: `:kaptKotlin` emits it two lines after the processor's own
+  "Root resolved" note from the very option being reported, and it names
+  `kapt.kotlin.generated` — kapt's own option — in the same message, so it is kapt failing to
+  register any processor's `@SupportedOptions` with its embedded javac, and nothing VibeTags
+  declares can silence it. The version hypothesis is dead: `examples/kotlin` is silent with its
+  Kotlin/kapt swapped to the corpus member's 2.3.10 as well as at its committed 2.4.10, so
+  whether the message surfaces is a property of the consumer's Gradle/kapt logging
+  configuration. USAGE.md's kapt section now tells consumers it is harmless and whose it is;
+  the corpus allow-list entry is reclassified from unattributed to attributed.
+
 ### Added
+
+- **`HARNESS.md` — an Agent Harness entry point at the repository root**, following the
+  [agentharnesses.io](https://agentharnesses.io) specification: required `name`/`description`
+  frontmatter, a one-paragraph role summary, and a directory index that routes an agent to the
+  file that owns each area (`CLAUDE.md`, `docs/README.md`, the per-directory READMEs). Routing
+  only, deliberately: it repeats no fact another file owns, so the pinned counts and invariants
+  keep their single source and the harness cannot drift into a second CLAUDE.md.
 
 - **`vibetags doctor` names the field-level guardrails groovyc silently drops**
   ([#494](https://github.com/PIsberg/vibetags/issues/494)). groovyc's Java stubs carry no
