@@ -89,6 +89,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`HARNESS.md` — an Agent Harness entry point at the repository root**, following the
+  [agentharnesses.io](https://agentharnesses.io) specification: required `name`/`description`
+  frontmatter, a one-paragraph role summary, and a directory index that routes an agent to the
+  file that owns each area (`CLAUDE.md`, `docs/README.md`, the per-directory READMEs). Routing
+  only, deliberately: it repeats no fact another file owns, so the pinned counts and invariants
+  keep their single source and the harness cannot drift into a second CLAUDE.md.
+
 - **Five test surfaces over code the mutation report showed was unverified.** A full PIT run on
   `main` (3,998 mutants, 83.84% killed, 153 with no coverage) exposed clusters where the code is
   correct today but nothing would notice if it stopped being. None of these changes shipped
