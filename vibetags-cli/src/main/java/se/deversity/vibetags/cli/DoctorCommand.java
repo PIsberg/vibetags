@@ -274,16 +274,20 @@ final class DoctorCommand {
         if (!rest.isEmpty() && !rest.startsWith("@")) {
             return Optional.of(rest);
         }
-        for (int i = line + 1; i < lines.size(); i++) {
+        Optional<String> declaration = Optional.empty();
+        for (int i = line + 1; i < lines.size() && declaration.isEmpty(); i++) {
             String candidate = lines.get(i).strip();
-            if (candidate.isEmpty() || candidate.startsWith("@")
-                    || candidate.startsWith("//") || candidate.startsWith("*")
-                    || candidate.startsWith("/*")) {
-                continue;
+            if (!skippableBeforeDeclaration(candidate)) {
+                declaration = Optional.of(candidate);
             }
-            return Optional.of(candidate);
         }
-        return Optional.empty();
+        return declaration;
+    }
+
+    /** Blank lines, further annotations and comments sit between an annotation and its target. */
+    private static boolean skippableBeforeDeclaration(String candidate) {
+        return candidate.isEmpty() || candidate.startsWith("@") || candidate.startsWith("//")
+            || candidate.startsWith("*") || candidate.startsWith("/*");
     }
 
     /**
