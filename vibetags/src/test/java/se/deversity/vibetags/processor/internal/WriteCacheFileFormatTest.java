@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -277,12 +278,16 @@ class WriteCacheFileFormatTest {
     }
 
     @Test
-    void aCacheDirectlyInTheWorkingDirectoryStillResolvesItsEntries(@TempDir Path dir) throws IOException {
+    void aCacheDirectlyInTheWorkingDirectoryStillResolvesItsEntries() {
         // cachePath.getParent() is null for a bare file name; the constructor has to fall back to
-        // the working directory rather than NPE on the first entry lookup.
+        // the working directory rather than NPE on the first entry lookup. The working directory
+        // here is the REAL module dir, whose contents this test does not own: a .vibetags-cache
+        // deposited by an earlier run made the old `size() == 0` assertion fail every run after
+        // the first (#521). So assert only what the fallback guarantees — no throw on the lookups
+        // that walk the parentless path — never what the developer's directory happens to hold.
         WriteCache cache = new WriteCache(Path.of(CACHE));
-        assertEquals(0, cache.size());
-        assertTrue(cache.allCachedFilesStable());
-        assertNotNull(cache, "constructing from a parentless path must not throw");
+        assertDoesNotThrow(cache::size, "size() must resolve entries against the cwd fallback");
+        assertDoesNotThrow(cache::allCachedFilesStable,
+            "stability probing must resolve entries against the cwd fallback");
     }
 }

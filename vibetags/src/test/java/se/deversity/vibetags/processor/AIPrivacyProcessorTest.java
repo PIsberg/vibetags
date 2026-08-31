@@ -21,6 +21,7 @@ import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Isolated;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 
@@ -31,7 +32,18 @@ import static org.mockito.Mockito.*;
  * Tests for @AIPrivacy annotation definition and processing in AIGuardrailProcessor.
  */
 @Isolated
+@org.junit.jupiter.api.extension.ExtendWith(ModuleDirHygiene.class)
 class AIPrivacyProcessorTest {
+
+    /**
+     * Root for everything the processor reads or writes in these tests. Without it the processor
+     * defaults to the JVM working directory — the real {@code vibetags/} module dir — where it
+     * deposited {@code .vibetags-mod-*} sidecars and {@code vibetags.log} that git ignores and the
+     * NEXT run then read back: a stale sidecar with a foreign module id merges its sections into
+     * the captured output and fails the no-annotation tests (#521).
+     */
+    @TempDir
+    java.nio.file.Path root;
 
     // -----------------------------------------------------------------------
     // Annotation definition
@@ -133,7 +145,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToCursorRules() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.email", "GDPR personal email"));
             triggerGeneration(processor);
@@ -152,7 +164,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToClaudeMd() throws Exception {
-        withCwdSignalFiles(List.of("CLAUDE.md"), () -> {
+        withSignalFiles(List.of("CLAUDE.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.ssn", "SSN - PII"));
             triggerGeneration(processor);
@@ -198,7 +210,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToGemini() throws Exception {
-        withCwdSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("gemini_instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Order.cardNumber", "PCI-DSS card data"));
             triggerGeneration(processor);
@@ -213,7 +225,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToCopilot() throws Exception {
-        withCwdSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
+        withSignalFiles(List.of(".github/copilot-instructions.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.User.address", "Home address PII"));
             triggerGeneration(processor);
@@ -228,7 +240,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToQwen() throws Exception {
-        withCwdSignalFiles(List.of("QWEN.md"), () -> {
+        withSignalFiles(List.of("QWEN.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Employee.salary", "Salary - confidential"));
             triggerGeneration(processor);
@@ -243,7 +255,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_noPrivacyAnnotations_noPiiSectionWritten() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), emptyRoundEnv());
             triggerGeneration(processor);
@@ -256,7 +268,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_multiplePrivacyElements_allListedInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             Element el1 = privacyElement("com.example.User.email", "email address");
             Element el2 = privacyElement("com.example.User.phone", "phone number");
 
@@ -281,7 +293,7 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_privacyAnnotation_defaultReasonAppearsInOutput() throws Exception {
-        withCwdSignalFiles(List.of(".cursorrules"), () -> {
+        withSignalFiles(List.of(".cursorrules"), () -> {
             Element element = mock(Element.class);
             when(element.toString()).thenReturn("com.example.Profile.birthDate");
             when(element.getSimpleName()).thenReturn(nameOf("birthDate"));
@@ -345,7 +357,9 @@ class AIPrivacyProcessorTest {
         Messager messager = noopMessager();
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(java.util.Map.of("vibetags.cache", "false"));
+        when(env.getOptions()).thenReturn(java.util.Map.of(
+            "vibetags.root", root.toString(),
+            "vibetags.cache", "false"));
         processor.init(env);
         return processor;
     }
@@ -354,24 +368,16 @@ class AIPrivacyProcessorTest {
      * Creates the given signal files in the CWD (vibetags/) if they don't exist,
      * runs the block, then deletes any files this method created.
      */
-    private void withCwdSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
-        java.nio.file.Path cwd = java.nio.file.Paths.get("").toAbsolutePath();
-        List<java.nio.file.Path> created = new ArrayList<>();
-        try {
-            for (String rel : relPaths) {
-                java.nio.file.Path p = cwd.resolve(rel);
-                if (!Files.exists(p)) {
-                    Files.createDirectories(p.getParent());
-                    Files.createFile(p);
-                    created.add(p);
-                }
-            }
-            block.run();
-        } finally {
-            for (java.nio.file.Path p : created) {
-                Files.deleteIfExists(p);
+    /** Creates the platform opt-in files under the test's own {@link #root}, never the cwd. */
+    private void withSignalFiles(List<String> relPaths, ThrowingRunnable block) throws Exception {
+        for (String rel : relPaths) {
+            java.nio.file.Path p = root.resolve(rel);
+            Files.createDirectories(p.getParent());
+            if (!Files.exists(p)) {
+                Files.createFile(p);
             }
         }
+        block.run();
     }
 
     @FunctionalInterface

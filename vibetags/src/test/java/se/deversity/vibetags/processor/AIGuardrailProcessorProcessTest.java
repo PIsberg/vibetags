@@ -38,7 +38,12 @@ import static org.mockito.Mockito.*;
  */
 @SuppressWarnings("unchecked")
 @Tag("e2e")
+@org.junit.jupiter.api.extension.ExtendWith(ModuleDirHygiene.class)
 class AIGuardrailProcessorProcessTest {
+
+    /** Per-test root for {@link #mockEnv}; see its javadoc. */
+    @org.junit.jupiter.api.io.TempDir
+    java.nio.file.Path mockEnvRoot;
 
     // -----------------------------------------------------------------------
     // process() — early-return paths
@@ -854,10 +859,17 @@ class AIGuardrailProcessorProcessTest {
         processor.process(Set.of(), genEnv);
     }
 
-    private static ProcessingEnvironment mockEnv(Messager messager) {
+    /**
+     * Everything a processor built on this env reads or writes lands under a per-test temp root.
+     * With no root option the processor works at the JVM working directory — the real
+     * {@code vibetags/} module dir — where these tests deposited {@code .vibetags-cache} and
+     * {@code vibetags.log} that git ignores and later runs tripped over (#521), and where
+     * pre-existing debris could change which platforms the processor saw as active.
+     */
+    private ProcessingEnvironment mockEnv(Messager messager) {
         ProcessingEnvironment env = mock(ProcessingEnvironment.class);
         when(env.getMessager()).thenReturn(messager);
-        when(env.getOptions()).thenReturn(Map.of());
+        when(env.getOptions()).thenReturn(Map.of("vibetags.root", mockEnvRoot.toString()));
         return env;
     }
 
