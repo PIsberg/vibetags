@@ -390,4 +390,53 @@ class GuardrailFileWriterEdgeCaseTest {
         assertTrue(result.contains("<!-- VIBETAGS-START -->\n" + header + "\nnew block\n<!-- VIBETAGS-END -->"),
             "the new block is wrapped in markers: " + result);
     }
+
+    @Test
+    void frontMatterClose_mustOwnItsLine_leadingRuleIsHandContent(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        Path file = tmp.resolve("copilot-instructions.md");
+        // A hand file that opens with a horizontal rule has no front matter at all.
+        Files.writeString(file, "---\nHuman intro paragraph.\n---\nMore human rules.\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(),
+            "---\napplyTo: \"**\"\n---\n# VibeTags\nbody\n", true));
+
+        String result = Files.readString(file);
+        assertTrue(result.contains("Human intro paragraph."),
+            "text between two horizontal rules is hand content, not a YAML header: " + result);
+        assertTrue(result.contains("More human rules."), result);
+        assertTrue(result.endsWith("<!-- VIBETAGS-START -->\n# VibeTags\nbody\n<!-- VIBETAGS-END -->\n"),
+            "the generated block is appended after the hand content: " + result);
+    }
+
+    @Test
+    void frontMatterClose_mustOwnItsLine_dashesInsideAValueDoNotSplit(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        Path file = tmp.resolve("rules.md");
+        Files.writeString(file, "---\ndescription: Team rules --- keep short\nglobs: \"**\"\n---\nHuman body.\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(),
+            "---\napplyTo: \"**\"\n---\n# VibeTags\nbody\n", true));
+
+        String result = Files.readString(file);
+        assertFalse(result.contains("keep short"),
+            "the hand header is replaced whole, never split mid-value into the body: " + result);
+        assertFalse(result.contains("globs:"), result);
+        assertTrue(result.startsWith("---\napplyTo: \"**\"\n---\n\nHuman body.\n"),
+            "the hand body follows the rendered header intact: " + result);
+    }
+
+    @Test
+    void frontMatterEnd_recognisesOnlyRealHeaders() {
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nprose\n---\nmore\n"));
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("----\nkey: v\n----\n"));
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nkey: v\n"));
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("# heading\n---\nkey: v\n---\n"));
+        assertEquals("---\nkey: a --- b\n---".length(),
+            GuardrailFileWriter.frontMatterEnd("---\nkey: a --- b\n---\nbody\n"));
+        assertEquals("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---".length(),
+            GuardrailFileWriter.frontMatterEnd("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---\n"));
+        assertEquals("---\r\nkey: v\r\n---".length(),
+            GuardrailFileWriter.frontMatterEnd("---\r\nkey: v\r\n---\r\nbody\r\n"));
+    }
 }

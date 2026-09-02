@@ -244,12 +244,10 @@ public final class GuardrailFileWriter {
         // Front-matter: markers MUST come after the YAML header
         String frontMatter = "";
         String body = content;
-        if (content.startsWith("---")) {
-            int secondTriple = content.indexOf("---", 3);
-            if (secondTriple != -1) {
-                frontMatter = content.substring(0, secondTriple + 3).trim();
-                body = content.substring(secondTriple + 3).trim();
-            }
+        int renderedClose = frontMatterEnd(content);
+        if (renderedClose != -1) {
+            frontMatter = content.substring(0, renderedClose).trim();
+            body = content.substring(renderedClose).trim();
         }
 
         String wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
@@ -378,16 +376,48 @@ public final class GuardrailFileWriter {
      * @param frontMatter the rendered header, {@code ""} when the content has none
      */
     private static String withRenderedFrontMatter(String before, String frontMatter) {
-        if (frontMatter.isEmpty() || !before.startsWith("---")) {
+        if (frontMatter.isEmpty()) {
             return before;
         }
-        int close = before.indexOf("---", 3);
+        int close = frontMatterEnd(before);
         if (close == -1) {
-            return before; // an unterminated header is not one we wrote; leave it alone
+            return before; // no header, or an unterminated one that is not ours; leave it alone
         }
-        String rest = before.substring(close + 3).stripLeading();
+        String rest = before.substring(close).stripLeading();
         return rest.isEmpty() ? frontMatter : frontMatter + "\n\n" + rest;
     }
+
+    /**
+     * Index just past the closing {@code ---} of a YAML front-matter block that opens
+     * {@code text}, or {@code -1} when the text does not open with one.
+     *
+     * <p>Both fences must own their line, and every line between them must read as YAML: a
+     * mapping entry, a list item, a comment, or an indented continuation. Splitting at the first
+     * {@code ---} found anywhere after the opener did two things wrong: a hand-written file that
+     * opens with a horizontal rule lost everything up to its next rule as if it were a header, and
+     * a {@code ---} inside a value (a description, say) cut the header mid-value and spilled the
+     * rest of it into the body.
+     */
+    public static int frontMatterEnd(String text) {
+        if (text == null || !text.startsWith("---")) return -1;
+        int openerEnd = text.indexOf('\n');
+        if (openerEnd < 0 || !text.substring(3, openerEnd).isBlank()) return -1;
+        int close = indexOfMarkerLine(text, "---", openerEnd);
+        if (close < 0) return -1;
+        for (String line : text.substring(openerEnd + 1, close).split("\n")) {
+            if (line.isBlank() || Character.isWhitespace(line.charAt(0))) continue;
+            String t = line.strip();
+            if (t.startsWith("#") || t.equals("-") || t.startsWith("- ")) continue;
+            int colon = t.indexOf(':');
+            if (colon <= 0 || !t.substring(0, colon).strip().matches(KEY_PATTERN)) {
+                return -1;
+            }
+        }
+        return close + 3;
+    }
+
+    /** A YAML mapping key as it appears in front matter: a bare or quoted identifier. */
+    private static final String KEY_PATTERN = "[\"']?[A-Za-z_][A-Za-z0-9_.-]*[\"']?";
 
     /**
      * Compares two rendered documents for equality, ignoring line-ending differences
