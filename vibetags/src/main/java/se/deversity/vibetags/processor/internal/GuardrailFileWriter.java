@@ -300,8 +300,12 @@ public final class GuardrailFileWriter {
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
         } else if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
-            // Legacy file (no markers but has VibeTags header): upgrade to markers
-            String finalContent = (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n";
+            // Legacy file (no markers but has VibeTags header): upgrade to markers. The hand-authored
+            // text around the legacy block survives, exactly as on the malformed-marker path above;
+            // rewriting the whole file from the rendered content alone deleted it.
+            String human = stripLegacyVibeTagsBlock(existing);
+            String before = human.isEmpty() ? frontMatter : withRenderedFrontMatter(human, frontMatter);
+            String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, finalContent.length());
@@ -543,9 +547,10 @@ public final class GuardrailFileWriter {
             int nlAfter = rest.indexOf('\n', blockEnd);
             humanContent = nlAfter >= 0 ? rest.substring(nlAfter + 1).stripLeading() : "";
         } else {
-            humanContent = hasHumanPrefix
-                ? (rest.contains("\n\n") ? rest.substring(rest.indexOf("\n\n") + 2).stripLeading() : "")
-                : "";
+            // A pre-marker Markdown or hash-comment block was written whole-file and ran to the end
+            // of the file. Its first blank line separates the header from the body, not the block
+            // from hand text, so taking "after the first blank line" as human re-kept the stale body.
+            humanContent = "";
         }
 
         if (prefix.isEmpty()) return humanContent;
