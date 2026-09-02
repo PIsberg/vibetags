@@ -556,12 +556,16 @@ public final class GuardrailFileWriter {
         String rawPrefix = before.substring(0, legacyStart).stripTrailing();
         String rest = before.substring(legacyStart);
 
-        boolean hasHumanPrefix = !rawPrefix.isEmpty()
-            && rawPrefix.lines().anyMatch(l -> {
-                String t = l.trim();
-                return !t.isEmpty() && !t.startsWith("#") && !t.startsWith("*")
-                    && !t.startsWith("-") && !t.startsWith("<!--");
-            });
+        // The only thing VibeTags ever wrote above its own header was one title line glued to it
+        // ("# AUTO-GENERATED AI RULES", "# GitHub Copilot Instructions"). That line is boilerplate.
+        // Anything else above the header was typed by a person, including a prefix made only of
+        // headings and bullets: the old "any line that is not a heading, bullet or comment" test
+        // threw a "## Coding rules / - Never use Lombok" prefix away as if it were ours.
+        String title = rawPrefix.strip();
+        boolean gluedTitle = !title.isEmpty() && title.indexOf('\n') < 0
+            && (title.startsWith("#") || title.startsWith("<!--"))
+            && !before.substring(rawPrefix.length(), legacyStart).contains("\n\n");
+        boolean hasHumanPrefix = !rawPrefix.isEmpty() && !gluedTitle;
         String prefix = hasHumanPrefix ? rawPrefix : "";
 
         // For XML-structured files: find the last VibeTags closing tag within 2 000 chars
