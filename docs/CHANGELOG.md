@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrade note
+
+A guardrail on an enum constant now has the enclosing enum in its element path
+(`com.example.Status.ACTIVE`, where every release so far wrote the bare `ACTIVE`). The path is
+the key in `.vibetags-baseline` and `.vibetags-locks`, so a consumer with an annotated enum
+constant sees the old key reported as approved-but-absent on the first enforcing build after
+upgrading. Run one build with `-Avibetags.baseline.update=true`, commit the rewritten files,
+and the keys are current again. Consumers without annotated enum constants see no drift.
+
+### Fixed
+
+- **Guardrails on two enum constants of the same name were one element.**
+  `ElementNaming.elementPath` prepended the enclosing type only for fields, methods and
+  constructors; an enum constant (and a record component) fell through to `Element.toString()`,
+  which is the bare name. `@AILocked ACTIVE` in `Status` and in `Mode` therefore rendered one
+  `<file path="ACTIVE">` and the second guardrail was dropped from every platform file, and the
+  two enforcement keys collided. Escalated from the 2026-08-16 hunt (#418) because the fix
+  changes persisted keys; landed now with the upgrade note above.
+  `ElementNamingFormatParityTest` now walks enum constants and record components too.
+- **A pre-marker file lost its hand-authored text on upgrade.** The legacy branch of
+  `GuardrailFileWriter` (header present, no markers) rewrote the whole file from the rendered
+  content and never called the helper that exists to keep the human prefix. The upgrade now
+  keeps the text around the legacy block, as the malformed-marker repair always did.
+- **The YAML front-matter fence was the first `---` anywhere, not one owning its line.** A hand
+  file that opened with a horizontal rule lost everything up to its next rule as if it were a
+  header, and a `---` inside a value (`description: Team rules --- keep short`) split the header
+  mid-value and spilled its tail into the body. Both fences must now own their line and the
+  block must read as YAML.
+- **A hand prefix made only of headings and bullets was discarded as boilerplate.** The
+  legacy-block stripper dropped any prefix whose lines all began with `#`, `*`, `-` or `<!--`.
+  The one shape VibeTags ever wrote above its header was a single title line glued to it; only
+  that is boilerplate now.
+
 ## [1.3.0] - 2026-08-31
 
 A minor rather than a patch because `vibetags doctor` gains a capability (the Groovy

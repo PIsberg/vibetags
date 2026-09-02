@@ -140,7 +140,7 @@ public final class ElementNaming {
      * generated files quietly moving.
      */
     private static String memberSignature(Element element) {
-        if (element.getKind() == ElementKind.FIELD) {
+        if (isVariableMember(element.getKind())) {
             return simpleNameOf(element);
         }
         if (!(element instanceof ExecutableElement executable)) {
@@ -244,10 +244,15 @@ public final class ElementNaming {
     }
 
     /**
-     * Returns a fully-qualified path for an element. For FIELD/METHOD/CONSTRUCTOR the enclosing
+     * Returns a fully-qualified path for an element. For a member (see {@link #isMember}) the enclosing
      * type's FQN is prepended; for PARAMETER the enclosing executable's path is prepended with a
      * {@code #} separator (e.g. {@code com.example.Foo.export(java.lang.String)#filePath});
      * otherwise the element's own toString is used.
+     *
+     * <p>Enum constants and record components count as members for the same reason fields do:
+     * their {@code toString()} is the bare name, so without the enclosing type the locked
+     * {@code ACTIVE} of two different enums collapsed into one element and one guardrail was
+     * silently dropped.
      */
     public static String elementPath(Element element) {
         ElementKind kind = element.getKind();
@@ -257,7 +262,7 @@ public final class ElementNaming {
                 return elementPath(executable) + "#" + element.getSimpleName();
             }
         }
-        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+        if (isMember(kind)) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
                 return qualifiedName(enclosing) + "." + memberSignature(element);
@@ -267,7 +272,7 @@ public final class ElementNaming {
     }
 
     /**
-     * Short display name suitable for llms.txt link text. For FIELD/METHOD/CONSTRUCTOR returns
+     * Short display name suitable for llms.txt link text. For a member (see {@link #isMember}) returns
      * "EnclosingSimpleName.memberSig"; for PARAMETER the enclosing executable's display name is
      * prepended with a {@code #} separator; for types just the simple name.
      */
@@ -279,7 +284,7 @@ public final class ElementNaming {
                 return elementDisplayName(executable) + "#" + simpleNameOf(element);
             }
         }
-        if (kind == ElementKind.FIELD || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR) {
+        if (isMember(kind)) {
             Element enclosing = element.getEnclosingElement();
             if (enclosing != null) {
                 return simpleNameOf(enclosing) + "." + memberSignature(element);
@@ -296,5 +301,17 @@ public final class ElementNaming {
     public static String simpleNameOf(Element element) {
         Name name = element.getSimpleName();
         return name != null ? name.toString() : "";
+    }
+
+    /** A member whose signature is just its name: a field, an enum constant, a record component. */
+    private static boolean isVariableMember(ElementKind kind) {
+        return kind == ElementKind.FIELD
+            || kind == ElementKind.ENUM_CONSTANT
+            || kind == ElementKind.RECORD_COMPONENT;
+    }
+
+    /** A member of a type, whose path is the enclosing type FQN plus its signature. */
+    private static boolean isMember(ElementKind kind) {
+        return isVariableMember(kind) || kind == ElementKind.METHOD || kind == ElementKind.CONSTRUCTOR;
     }
 }

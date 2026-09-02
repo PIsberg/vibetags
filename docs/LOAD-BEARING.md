@@ -147,7 +147,7 @@ Beyond what the generated section below describes:
   `getElementsAnnotatedWith` returns a `Set` with no specified iteration order, so preserving the
   order the collector received makes generated output and the `BuildFingerprint` depend on which
   machine ran the build. `OutputOrderDeterminismTest` pins it
-- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE. Called at snapshot time only
+- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, CONSTRUCTOR, FIELD, ENUM_CONSTANT, RECORD_COMPONENT, PARAMETER, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 
 ### Content rendering subsystem (`internal/content/`)
