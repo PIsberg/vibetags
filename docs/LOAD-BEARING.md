@@ -51,7 +51,7 @@ Generated content is written between markers so a file can hold hand-authored co
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
 - **No markers** (JSON/TOML config files): complete overwrite
 
-YAML front-matter in `.mdc`/`.md` files sits before the markers. A hand-written header on a file whose renderer emits none (`CLAUDE.md`, a Junie or Void rules file) is preserved untouched. A header VibeTags renders itself (the `globs:` / `paths:` / `applyTo:` list of a granular rule file, the Claude skill's `name`/`description`) is generated content and is refreshed on every update like the block, so a role that gains a glob or an FQN-only role that gains a member reaches the file's scope (`WriteFileFrontMatterTest`, `RoleBasedGranularEndToEndTest`). Files written by an older VibeTags (without markers) are migrated on the next compile.
+YAML front-matter in `.mdc`/`.md` files sits before the markers. A header is recognised only when both `---` fences own their line and every line between them reads as YAML (a mapping entry, list item, comment or indented continuation): a hand file that opens with a horizontal rule has no header, and a `---` inside a value is not a fence (`GuardrailFileWriterEdgeCaseTest`). A hand-written header on a file whose renderer emits none (`CLAUDE.md`, a Junie or Void rules file) is preserved untouched. A header VibeTags renders itself (the `globs:` / `paths:` / `applyTo:` list of a granular rule file, the Claude skill's `name`/`description`) is generated content and is refreshed on every update like the block, so a role that gains a glob or an FQN-only role that gains a member reaches the file's scope (`WriteFileFrontMatterTest`, `RoleBasedGranularEndToEndTest`). Files written by an older VibeTags (without markers) are migrated on the next compile; the hand-written text around the old block is kept, and only the single title line the pre-marker writer glued above its header counts as boilerplate.
 
 ### Output files
 
@@ -147,7 +147,7 @@ Beyond what the generated section below describes:
   `getElementsAnnotatedWith` returns a `Set` with no specified iteration order, so preserving the
   order the collector received makes generated output and the `BuildFingerprint` depend on which
   machine ran the build. `OutputOrderDeterminismTest` pins it
-- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, FIELD, PACKAGE. Called at snapshot time only
+- `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, CONSTRUCTOR, FIELD, ENUM_CONSTANT, RECORD_COMPONENT, PARAMETER, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 
 ### Content rendering subsystem (`internal/content/`)

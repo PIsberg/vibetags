@@ -96,6 +96,14 @@ class ElementNamingFormatParityTest {
                 ONE, TWO;
                 public void onFlavour(Flavour other) {}
             }
+
+            // Same constant name in a second enum: an identity built from the bare name alone
+            // would collapse the two into one element.
+            public enum Mode {
+                ONE;
+            }
+
+            public record Point(int x, String label) {}
         }
         """;
 
@@ -205,6 +213,8 @@ class ElementNamingFormatParityTest {
             for (Element member : type.getEnclosedElements()) {
                 ElementKind kind = member.getKind();
                 if (kind == ElementKind.FIELD
+                    || kind == ElementKind.ENUM_CONSTANT
+                    || kind == ElementKind.RECORD_COMPONENT
                     || kind == ElementKind.METHOD
                     || kind == ElementKind.CONSTRUCTOR) {
                     Element enclosing = member.getEnclosingElement();
