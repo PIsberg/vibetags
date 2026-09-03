@@ -1,7 +1,12 @@
 package se.deversity.vibetags.cli;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,7 +28,17 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        System.exit(run(args, System.out, System.err, Path.of("").toAbsolutePath()));
+        System.exit(run(args, utf8(new FileOutputStream(FileDescriptor.out)),
+            utf8(new FileOutputStream(FileDescriptor.err)), Path.of("").toAbsolutePath()));
+    }
+
+    /**
+     * A console stream that always writes UTF-8. {@code System.out} encodes with the platform
+     * console charset, which on Windows is Cp1252 whenever stdout is a pipe or a file, so the
+     * em-dashes in doctor output arrived in CI logs as a single stray byte.
+     */
+    static PrintStream utf8(OutputStream raw) {
+        return new PrintStream(raw, true, StandardCharsets.UTF_8);
     }
 
     /**
@@ -52,11 +67,24 @@ public final class Main {
             usage(out);
             return rest.isEmpty() ? 2 : 0;
         }
+        if (!Files.isDirectory(dir)) {
+            err.println("error: not a directory: " + dir);
+            return 2;
+        }
         String command = rest.remove(0);
         try {
             return switch (command) {
                 case "init" -> new InitCommand(out, err, dir).run(rest);
-                case "doctor" -> new DoctorCommand(out, dir).run();
+                case "doctor" -> {
+                    if (!rest.isEmpty()) {
+                        /* A stray argument used to be ignored, so "doctor /other/project" quietly
+                           reported on the current directory instead. */
+                        err.println("error: doctor takes no arguments (use --dir <path>): "
+                            + String.join(" ", rest));
+                        yield 2;
+                    }
+                    yield new DoctorCommand(out, dir).run();
+                }
                 case "--version", "version" -> {
                     out.println("vibetags-cli " + version());
                     yield 0;
