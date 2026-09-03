@@ -321,7 +321,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: PIsberg/vibetags/action/locked-files@main
+      - uses: PIsberg/vibetags/action/locked-files@v1.3.0
 ```
 
 The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
@@ -414,6 +414,11 @@ jbang se.deversity.vibetags:vibetags-cli:<version> init --list
 jbang se.deversity.vibetags:vibetags-cli:<version> init --platforms claude,cursor,claude_granular
 jbang se.deversity.vibetags:vibetags-cli:<version> doctor
 ```
+
+The launcher is not a convenience: the published `vibetags-cli` jar declares a `Main-Class` but
+carries no dependencies and no `Class-Path`, so `java -jar vibetags-cli-<version>.jar doctor` fails
+with a `NoClassDefFoundError` on the processor classes. Run it through jbang, or any other launcher
+that resolves the Maven coordinate.
 
 - **`init --list`** prints every opt-in platform key with the file it maps to, marking the
   ones already active in the current directory.

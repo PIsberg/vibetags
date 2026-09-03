@@ -509,6 +509,10 @@ jbang se.deversity.vibetags:vibetags-cli:1.3.0 doctor
 The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
 cannot drift from what the processor actually does.
 
+The jar itself is not standalone: it declares a `Main-Class` but carries no dependencies, so
+`java -jar vibetags-cli-1.3.0.jar` fails on the processor classes. jbang — or any launcher that
+resolves the Maven coordinate — is the supported way to run it.
+
 ## 🚀 Installation
 
 ### Prerequisites

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `vibetags-cli` jar looked runnable and was not.** It declares a `Main-Class` but carries
+  no dependencies and no `Class-Path`, so `java -jar vibetags-cli-1.3.0.jar doctor` fails with
+  `NoClassDefFoundError: se/deversity/vibetags/processor/internal/ServiceRegistry`. Every
+  documented invocation goes through jbang, which resolves the dependencies, so the jar only
+  misled someone who downloaded it directly. README.md and USAGE.md now say the jar is not
+  standalone and that jbang — or any launcher that resolves the Maven coordinate — is the
+  supported way to run it. No shaded artifact is published. (#557)
+- **The documented `locked-files` action ref was `@main`.** `USAGE.md` and
+  `action/locked-files/README.md` are snippets a consumer copies verbatim into a workflow, in a
+  repository that SHA-pins every action it consumes itself, so the one action VibeTags publishes
+  was the only unpinned thing in the file. Both now pin `@v1.3.0`, `tools/set-version.sh` rewrites
+  the ref on every release, and `ReleaseScriptCoverageTest` fails if either snippet drifts back to
+  a floating ref — which the version-coverage test alone could not catch, since `@main` states no
+  version at all. (#559)
 - **A parallel reactor recording enforcement baselines lost a module's approvals, or failed the
   build.** `mvn -T` with two enforcing modules under `-Avibetags.baseline.update=true` had both
   merge into the snapshot they loaded before either wrote, so the second rename erased the first
