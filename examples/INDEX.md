@@ -49,16 +49,14 @@ Which example to read for a given processor feature.
 | scalac's missing JSR 269 support, gated not claimed | `scala` |
 | Processor options exercised by a build file | `root`, `module`, `check`, `enforce`, `baseline.update`, `cache`, `log.level`, `log.path`, `project` |
 | Manifest fallback options (`manifest.dir`, `manifest.packages`, `manifest.max`) | documented in the `.vibetags-transitive` comments; no build passes them |
+| The companion CLI, run | CI runs `doctor --dir examples/groovy` (it must name the dropped `contactEmail` field) and `init --list --dir examples/basic` (it must print the platform keys and create nothing) — issue #533 |
 
 ## Not covered by any example
 
 Verified absent by grep over `examples/` on 2026-08-31. Each entry says what a reader cannot
 currently see demonstrated.
 
-1. **The companion CLI, run.** `vibetags init` and `vibetags doctor` run in no example build or CI
-   step; [README.md](README.md) points at [USAGE.md](../USAGE.md) for both. `doctor` is the tool
-   that reports the Groovy field drop the `groovy` example gates.
-2. **Manifest tuning options.** `manifest.dir`, `manifest.packages` and `manifest.max` exist for
+1. **Manifest tuning options.** `manifest.dir`, `manifest.packages` and `manifest.max` exist for
    builds where classpath discovery cannot work (kapt, ECJ, JPMS). They are documented where a
    reader will meet them, in the `.vibetags-transitive` comments, and exercised by library tests
    only.
