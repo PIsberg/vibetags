@@ -31,6 +31,12 @@ processor older than the trailer wrote, which is skipped until its module recomp
 in the other direction skip the `# end` line as an unrecognised comment, which is why this is an
 appended line rather than a format-version bump.
 
+When a sidecar is left out, `vibetags.log` says why: `sidecar.prune reason=… path=…` for one that
+was deleted (`stale-format`, `malformed`, `module-gone`, `invalid-module-path`, `superseded`) and
+`sidecar.skip reason=…` for one that was kept and merely ignored this build (`future-version`,
+`unreadable`, and every prune reason under check mode, which deletes nothing). That is the trace to
+grep for when a module's section is missing from a generated file.
+
 ### YAML outputs merge differently
 
 Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the six

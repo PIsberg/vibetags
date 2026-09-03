@@ -809,7 +809,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Read BEFORE readAll, which deletes the stale sidecars that are the only record of which
         // rule files a departed module wrote. Acted on after the claim set below is known.
         Set<String> departedStems = ModuleSidecar.staleGranularStems(root);
-        List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root);
+        List<ModuleSidecar> allSidecars = ModuleSidecar.readAll(root, log);
         // Diagnostic only, and it reads the sidecars this round just resolved. No step moved.
         warnAboutPlatformsOptedInAfterAModuleLastCompiled(activeServices, serviceFiles, allSidecars);
         if (log != null && log.isDebugEnabled()) {
@@ -1343,7 +1343,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // peekAll, not readAll: check mode writes nothing, and that includes the pruning of a
         // stale sidecar — which is the only record of a departed module's rule files, and belongs
         // to the real build that acts on it.
-        List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
+        List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.peekAll(root, log));
         if (collector.anyAnnotationsFound()) {
             boolean replaced = false;
             for (int i = 0; i < allSidecars.size(); i++) {
@@ -1658,7 +1658,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         List<String> named = new java.util.ArrayList<>();
         // A read for a diagnostic, and it runs before generateFiles() reads the departed stems:
         // pruning here would throw that record away first.
-        for (ModuleSidecar existing : ModuleSidecar.peekAll(root)) {
+        for (ModuleSidecar existing : ModuleSidecar.peekAll(root, log)) {
             if (!existing.getModuleId().equals(moduleId)) {
                 named.add(existing.getModuleId());
             }

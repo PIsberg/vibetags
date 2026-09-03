@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A module could vanish from the merged guardrails with no trace in the log.**
+  `ModuleSidecar.readAll` deleted a version-1, headerless or corrupt sidecar and skipped a
+  future-version one without a single event: the class held no logger, so the only symptom was a
+  section missing from a generated file. Every drop now logs its reason — `sidecar.prune reason=…`
+  when the file is deleted (`stale-format`, `malformed`, `module-gone`, `invalid-module-path`,
+  `superseded`) and `sidecar.skip reason=…` when it is kept and only ignored this build
+  (`future-version`, `unreadable`, and every reason under check mode, which deletes nothing).
+  `stale-format` and `malformed` are separated by reading the file's own version header, because
+  "written by an older processor" and "corrupt" are different facts about somebody's build.
+  (#555, `ModuleSidecarLogContractTest`)
 - **A truncated module sidecar loaded as a valid one.** `Base64.getDecoder()` accepts cut-off
   input and the `.vibetags-mod-*` format carried no length or checksum, so a sidecar missing its
   last seven bytes still loaded, with the body truncated mid-text — and that half-sentence was
