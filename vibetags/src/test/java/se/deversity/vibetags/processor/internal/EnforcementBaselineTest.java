@@ -15,6 +15,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -45,7 +46,7 @@ class EnforcementBaselineTest {
     }
 
     @Test
-    void anAbsentBaselineLoadsEmptyAndReportsItself(@TempDir Path root) {
+    void anAbsentBaselineLoadsEmptyAndReportsItself(@TempDir Path root) throws IOException {
         assertFalse(EnforcementBaseline.exists(root));
         EnforcementBaseline baseline = EnforcementBaseline.load(root);
         assertTrue(baseline.hasNothingFor("core"));
@@ -101,6 +102,26 @@ class EnforcementBaselineTest {
             "a baseline that cannot be read approves nothing, and must not fail the compile");
         assertFalse(EnforcementBaseline.exists(root),
             "a directory is not a baseline file");
+    }
+
+    /**
+     * A file that is there but cannot be decoded is the other read-side failure: reading it as
+     * empty told the enforcer "nothing recorded", and the gate went quiet with a warning. One
+     * Cp1252 byte from a Windows editor is all it takes, so the reader must say so, not shrug.
+     */
+    @Test
+    void aBaselineWithAByteThatIsNotUtf8IsReportedRatherThanReadAsEmpty(@TempDir Path root)
+            throws IOException {
+        byte[] bytes = ("# format: 1\n"
+            + line("core", "AIContract", "com.example.Ledger#charge(int)", "charge(int):boolean")
+            + "\n").getBytes(StandardCharsets.UTF_8);
+        bytes[bytes.length - 2] = (byte) 0xE5;
+        Files.write(root.resolve(EnforcementBaseline.FILE_NAME), bytes);
+
+        assertThrows(IOException.class, () -> EnforcementBaseline.load(root),
+            "a corrupt baseline must not load as an empty one");
+        assertThrows(IOException.class, () -> EnforcementBaseline.exists(root),
+            "nor be reported as absent");
     }
 
     @Test

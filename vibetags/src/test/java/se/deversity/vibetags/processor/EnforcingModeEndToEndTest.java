@@ -247,4 +247,28 @@ class EnforcingModeEndToEndTest {
 
         assertFalse(errors(added, "violation"), "adding a guarded element is not breaking one");
     }
+
+    /**
+     * A baseline that is there but cannot be decoded is not "nothing recorded". Treating it that
+     * way turned one Cp1252 byte from a Windows editor into a green enforcing build with a
+     * warning nobody reads; the gate must fail loudly on a file it could not parse.
+     */
+    @Test
+    void failsRatherThanPassesOnABaselineItCannotRead() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(CONTRACT_V1, "-Avibetags.baseline.update=true");
+        Path baseline = root.resolve(".vibetags-baseline");
+        byte[] bytes = Files.readAllBytes(baseline);
+        bytes[bytes.length - 2] = (byte) 0xE5; // 'å' as Cp1252 writes it: not valid UTF-8
+        Files.write(baseline, bytes);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            compile(CONTRACT_V2_BROKEN, "-Avibetags.enforce=contract");
+
+        assertTrue(errors(diagnostics, "could not read .vibetags-baseline"),
+            "an unreadable baseline must stop the build, not be waved through");
+        assertTrue(errors(diagnostics, "-Avibetags.baseline.update=true"), "and must name the way out");
+        assertFalse(warns(diagnostics, "records nothing for module"),
+            "an unreadable file is not an unrecorded one");
+    }
 }

@@ -27,6 +27,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files, both Codex files and the root index are in the table now, and
   `ProjectFactsConsistencyTest` fails whenever `ServiceRegistry` declares a path the table does
   not name.
+- **An illegal character in a path option failed the whole compilation.** `-Avibetags.root`,
+  `-Avibetags.log.path` and `-Avibetags.manifest.dir` went through `Paths.get` in `init()`, which
+  nothing guards; a colon on Windows or a NUL byte anywhere threw InvalidPathException and javac
+  reported an uncaught processor exception. Each now warns, naming the option, and falls back to
+  its default. (`PathOptionRobustnessTest`, `PathOptionUnitTest`)
+- **Boolean options recognised one literal each and were silently the default otherwise.**
+  `-Avibetags.check=yes` generated instead of checking, a bare `-Avibetags.check` was ignored, and
+  `-Avibetags.cache=No` still wrote the cache. All three now read the same way: a bare key is
+  true, `true`/`false` in any case, anything else warns and keeps the default. (`BooleanOptionTest`)
+- **Two elements planning the same granular stem lost one guardrail.** The nested
+  `com.example.Foo.Bar` and the top-level `com.example.Foo_Bar` both become
+  `com-example-Foo-Bar`; the plan was keyed by stem, so the second overwrote the first before the
+  case fold of #510 could see it. Equal stems now fold into one merged file the same way.
+  (`UnderscoreDotStemCollisionTest`)
+- **A sibling sidecar naming a module path this filesystem cannot represent failed every
+  module.** `root.resolve` threw InvalidPathException from `readAll`, `staleGranularStems` and
+  `anyStale`. Such a module cannot exist here, so its sidecar is stale and is pruned or skipped
+  like any other. (`ModuleSidecarResilienceTest`)
 
 ### Upgrade note
 
@@ -39,6 +57,12 @@ and the keys are current again. Consumers without annotated enum constants see n
 
 ### Fixed
 
+- **A corrupt `.vibetags-baseline` switched enforcement off with a warning.** `EnforcementBaseline`
+  read a file it could not decode as an empty one, so `-Avibetags.enforce` saw "nothing recorded
+  for this module", printed the advisory warning and passed. One byte that is not UTF-8 (a Cp1252
+  save from a Windows editor) was enough. The reader now throws, and the enforcer reports a compile
+  error that names the file and the way out; `EnforcementBaselineTest` and
+  `EnforcingModeEndToEndTest` pin both halves.
 - **Guardrails on two enum constants of the same name were one element.**
   `ElementNaming.elementPath` prepended the enclosing type only for fields, methods and
   constructors; an enum constant (and a record component) fell through to `Element.toString()`,

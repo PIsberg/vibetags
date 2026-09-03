@@ -213,4 +213,28 @@ class ModuleSidecarResilienceTest {
         assertNotNull(reloaded);
         assertEquals("body", reloaded.getBodies().get("claude"));
     }
+
+    // ---------------------------------------------------------------- unrepresentable module path
+
+    /**
+     * A sibling sidecar can name a module directory this filesystem cannot even spell: written on
+     * Linux for a module called {@code api:v2} or {@code core } and synced into a Windows checkout,
+     * or hand-edited. {@code root.resolve} then throws InvalidPathException, a RuntimeException
+     * that escaped readAll, staleGranularStems and anyStale alike and failed every module of the
+     * reactor with an uncaught-exception diagnostic. A NUL byte is illegal everywhere, so the
+     * case reproduces on Linux as well. The module cannot exist here, so it is stale, not fatal.
+     */
+    @Test
+    void aModulePathThisFilesystemRejectsIsStaleNotFatal(@TempDir Path root) throws IOException {
+        Files.writeString(root.resolve(".vibetags-mod-core"),
+            "# version=2\nmoduleId=core\nmodulePath=core" + (char) 0 + "x\nregionId=core\n");
+
+        assertTrue(ModuleSidecar.anyStale(root), "the module cannot exist here, so its sidecar is stale");
+        assertTrue(ModuleSidecar.staleGranularStems(root).isEmpty(),
+            "it names no live stems and, above all, does not throw");
+        assertTrue(ModuleSidecar.readAll(root).isEmpty(),
+            "a module whose directory cannot exist here contributes nothing");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-core")),
+            "and the reading round prunes it like any other stale sidecar");
+    }
 }

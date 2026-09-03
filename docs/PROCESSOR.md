@@ -23,6 +23,18 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.manifest.packages` | (off) | Comma-separated package names to look up explicitly, for builds where the compiler exposes no Tree API |
 | `vibetags.manifest.max` | (no limit) | Cap on inherited **advisory** rules. Safety-tier rules are never dropped, and a cap that drops anything says so as a `NOTE` |
 
+### How option values are read
+
+The boolean options (`vibetags.check`, `vibetags.baseline.update`, `vibetags.cache`) all read the
+same way: a bare `-Avibetags.check` is `true`, `true` and `false` are accepted in any case, and any
+other value warns with the value named and keeps the default. Before this each option recognised
+one literal and everything else was silently the default, so `-Avibetags.check=yes` generated
+instead of checking. The path options (`vibetags.root`, `vibetags.log.path`,
+`vibetags.manifest.dir`) fall back to their default with a warning when the value is not a path
+this filesystem can represent; an illegal character used to throw out of `init()` and fail the
+whole compilation, which is the one thing VibeTags promises never to do. (`BooleanOptionTest`,
+`PathOptionRobustnessTest`)
+
 ## Transitive guardrails (dependency tree propagation)
 
 Package-level `@AI...` annotations can travel from a library into the projects that depend on it.
@@ -149,7 +161,10 @@ compilation is therefore a violation too — that covers renames, deletions and 
 Enforcement runs in `process()` before `generateFiles()`, deliberately: the generation path has a
 fingerprint short-circuit that would let an unchanged-inputs build skip the check silently.
 Switching the option on before a baseline exists warns and checks nothing, rather than failing every
-build on day one.
+build on day one. A baseline that exists but cannot be read is different: a byte that is not UTF-8
+(a Cp1252 save from a Windows editor), a permission error, anything that stops the file from being
+parsed is a compile **error** naming the file, never an unrecorded baseline. The gate does not go
+quiet on a file it could not read.
 
 ## Top-level fingerprint short-circuit
 

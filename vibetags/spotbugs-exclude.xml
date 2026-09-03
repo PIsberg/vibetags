@@ -153,6 +153,21 @@
     <Method name="init"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
+  <!-- The same three option paths, now parsed in one place so a value the filesystem rejects is
+       a warning rather than an uncaught InvalidPathException out of init(). -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="pathOption"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+  <!-- IMPROPER_UNICODE: the comparison is against the ASCII literals true and false, whose case
+       mapping has no locale or normalisation pitfall; the option value is a compiler flag, not
+       user-facing text. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <Method name="booleanOption"/>
+    <Bug pattern="IMPROPER_UNICODE"/>
+  </Match>
   <Match>
     <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
     <Method name="checkFiles"/>

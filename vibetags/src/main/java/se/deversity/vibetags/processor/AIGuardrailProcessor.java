@@ -42,6 +42,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -241,12 +242,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         super.init(processingEnv);
         Map<String, String> options = processingEnv.getOptions();
 
-        String rootOverride = options.get("vibetags.root");
-        this.root = Paths.get((rootOverride != null && !rootOverride.isBlank())
-                ? rootOverride
-                : Paths.get("").toAbsolutePath().toString()).toAbsolutePath().normalize();
-
         Messager messager = getSafeMessager();
+        Path rootOverride = pathOption(options, "vibetags.root", messager);
+        this.root = (rootOverride != null ? rootOverride : Paths.get("")).toAbsolutePath().normalize();
+
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root resolved: " + this.root);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir:      " + System.getProperty("user.dir"));
 
@@ -270,12 +269,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.moduleIdOverride = (moduleOption != null && !moduleOption.isBlank())
             ? ModuleSidecar.sanitizeId(moduleOption.trim()) : null;
 
-        String logPath = options.get("vibetags.log.path");
+        Path logPathOption = pathOption(options, "vibetags.log.path", messager);
+        String logPath = logPathOption == null ? null : logPathOption.toString();
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
-        this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
-        this.baselineUpdate = "true".equalsIgnoreCase(options.getOrDefault("vibetags.baseline.update", "false"));
+        this.checkMode = booleanOption(options, "vibetags.check", false, messager);
+        this.baselineUpdate = booleanOption(options, "vibetags.baseline.update", false, messager);
         this.enforceFamilies = new GuardrailEnforcer(messager, log).parseFamilies(options.get("vibetags.enforce"));
         // Structural signatures are read by nothing except the enforcing mode, and computing one
         // walks and sorts a type's whole visible member set. Same opt-in shape as the locks report
@@ -287,10 +287,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
-        String useCache = options.getOrDefault("vibetags.cache", "true");
-        if ("false".equalsIgnoreCase(useCache)) {
-            this.writeCache = null;
-        } else {
+        if (booleanOption(options, "vibetags.cache", true, messager)) {
             this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
             // Options that shape output without being part of the annotation fingerprint: the
             // project name (the llms.txt H1) and the module override (the region a reactor merge
@@ -300,6 +297,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             this.writeCache.bindContext(ContentHash.of(
                 "project=" + this.projectName + ";module="
                     + (this.moduleIdOverride == null ? "" : this.moduleIdOverride)));
+        } else {
+            this.writeCache = null;
         }
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
@@ -317,9 +316,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
-        String dirOption = options.get("vibetags.manifest.dir");
-        this.manifestDir = (dirOption != null && !dirOption.isBlank())
-            ? this.root.resolve(dirOption.strip()).normalize() : null;
+        Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
+        this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
         String packagesOption = options.get("vibetags.manifest.packages");
         this.manifestPackages = (packagesOption == null || packagesOption.isBlank())
             ? List.of()
@@ -464,6 +462,63 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Path compilationRoot() {
         return moduleIdentity != null ? moduleIdentity.root() : Paths.get("").toAbsolutePath();
+    }
+
+    /**
+     * A path-valued option, or {@code null} when it is absent, blank, or not a path this
+     * filesystem can represent. The last case used to throw InvalidPathException out of
+     * {@link #init}, which nothing catches: process() guards generation, init() guarded nothing,
+     * and one illegal character in {@code -Avibetags.manifest.dir} failed the whole compilation
+     * with an uncaught-exception diagnostic. The reason is reported, the raw value is not: it can
+     * hold the very byte a terminal cannot print.
+     */
+    static @Nullable Path pathOption(Map<String, String> options, String key, Messager messager) {
+        String value = options.get(key);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Paths.get(value.strip());
+        } catch (InvalidPathException rejected) {
+            // Windows puts the offending character inside the reason ("Illegal char <?>"), so
+            // the reason is filtered the same way the value is withheld.
+            String reason = rejected.getReason().codePoints().filter(c -> c >= 0x20)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: -A" + key + " is not a valid path on this filesystem ("
+                    + reason + "); option ignored.");
+            return null;
+        }
+    }
+
+    /**
+     * A boolean option. A bare {@code -Akey} is true, {@code true}/{@code false} in any case are
+     * themselves, and anything else warns and keeps the default. Until this existed each option
+     * read its own literal ({@code check} only "true", {@code cache} only "false") and every other
+     * spelling was silently the default: a CI gate written {@code -Avibetags.check=yes} generated
+     * instead of checking and was green forever.
+     */
+    static boolean booleanOption(Map<String, String> options, String key, boolean defaultValue,
+                                 Messager messager) {
+        if (!options.containsKey(key)) {
+            return defaultValue;
+        }
+        String value = options.get(key);
+        if (value == null || value.isBlank()) {
+            return true; // javac hands a bare -Akey over with no value
+        }
+        String normalised = value.strip();
+        if ("true".equalsIgnoreCase(normalised)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(normalised)) {
+            return false;
+        }
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: -A" + key + "=" + value + " is not true or false; using the default ("
+                + defaultValue + ").");
+        return defaultValue;
     }
 
     /**
