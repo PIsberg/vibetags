@@ -27,7 +27,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 
 The boolean options (`vibetags.check`, `vibetags.baseline.update`, `vibetags.cache`) all read the
 same way: a bare `-Avibetags.check` is `true`, `true` and `false` are accepted in any case, and any
-other value warns with the value named and keeps the default. Until 1.3.1 each option recognised
+other value warns with the value named and keeps the default. Before this each option recognised
 one literal and everything else was silently the default, so `-Avibetags.check=yes` generated
 instead of checking. The path options (`vibetags.root`, `vibetags.log.path`,
 `vibetags.manifest.dir`) fall back to their default with a warning when the value is not a path
