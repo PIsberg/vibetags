@@ -47,7 +47,7 @@ class JsonTest {
 
     @Test
     void roundTripsThroughQuote() {
-        String awkward = "line1\nline2\t\"quoted\" \\ back \u0001 control å";
+        String awkward = "line1\nline2\t\"quoted\" \\ back \u0001 control \b backspace \f feed å";
         Map<String, Object> parsed = Json.parseObject("{\"v\":" + Json.quote(awkward) + "}");
         assertEquals(awkward, parsed.get("v"),
             "anything quote() emits must read back identically, or a library's own words change "

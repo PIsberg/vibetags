@@ -87,6 +87,12 @@ and the keys are current again. Consumers without annotated enum constants see n
 
 ### Changed
 
+- **One JSON string escaper instead of three.** `Json.quote` (the transitive manifest) and the
+  `.vibetags-locks` report now escape through `Escape.json`, the same code every JSON platform
+  file uses. The one observable difference is in the JSON platform files: a backspace or form
+  feed in an annotation value is now written as the RFC 8259 short escape rather than the
+  six-character `u` form the manifest already used; both decode identically, and `JsonTest`
+  round-trips both through the manifest parser. Closes #548.
 - **String members of an annotation read as one line on every platform.** A `reason` written as
   a Java text block used to end a Markdown bullet at its first line break and leave the rest as a
   bare paragraph under it (Cursor, Windsurf, Copilot, Gemini, Qwen, Zed, llms.txt, Aider, Open

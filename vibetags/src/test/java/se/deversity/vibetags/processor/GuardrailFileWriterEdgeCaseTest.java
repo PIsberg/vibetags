@@ -438,6 +438,57 @@ class GuardrailFileWriterEdgeCaseTest {
             GuardrailFileWriter.frontMatterEnd("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---\n"));
         assertEquals("---\r\nkey: v\r\n---".length(),
             GuardrailFileWriter.frontMatterEnd("---\r\nkey: v\r\n---\r\nbody\r\n"));
+        // Every early exit and every kind of line the scan accepts or rejects.
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd(null));
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd(""));
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---"), "opener with no line end");
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("--- x\nkey: v\n---\n"), "opener with trailing text");
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nkey v\n---\n"), "no colon is prose");
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n: v\n---\n"), "empty key");
+        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n1st: v\n---\n"), "key must start with a letter");
+        assertEquals("---\n\"quoted.key\": v\n-\n- item\n---".length(),
+            GuardrailFileWriter.frontMatterEnd("---\n\"quoted.key\": v\n-\n- item\n---\n"));
+    }
+
+    @Test
+    void legacyUpgrade_withRenderedFrontMatter_andNoHandText(@TempDir Path tmp) throws IOException {
+        String header = "# VibeTags\n";
+        GuardrailFileWriter writer = new GuardrailFileWriter(header, null, null, null);
+        Path file = tmp.resolve("rules.md");
+        Files.writeString(file, "# VibeTags\nold generated body\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), "---\nk: v\n---\n# VibeTags\nnew\n", true));
+
+        assertEquals("---\nk: v\n---\n\n<!-- VIBETAGS-START -->\n# VibeTags\nnew\n<!-- VIBETAGS-END -->\n",
+            Files.readString(file), "the rendered header leads and nothing else is kept");
+    }
+
+    @Test
+    void legacyUpgrade_withRenderedFrontMatter_replacesTheHandHeader(@TempDir Path tmp) throws IOException {
+        String header = "# VibeTags\n";
+        GuardrailFileWriter writer = new GuardrailFileWriter(header, null, null, null);
+        Path file = tmp.resolve("rules.md");
+        Files.writeString(file, "---\nold: header\n---\nHand text.\n\n# VibeTags\nold generated body\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), "---\nk: v\n---\n# VibeTags\nnew\n", true));
+
+        String result = Files.readString(file);
+        assertTrue(result.startsWith("---\nk: v\n---\n\nHand text.\n\n<!-- VIBETAGS-START -->"),
+            "the hand header is refreshed and the hand body kept: " + result);
+        assertFalse(result.contains("old: header"), result);
+    }
+
+    @Test
+    void legacyUpgrade_gluedHtmlCommentTitleIsBoilerplate(@TempDir Path tmp) throws IOException {
+        String header = "# VibeTags\n";
+        GuardrailFileWriter writer = new GuardrailFileWriter(header, null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        Files.writeString(file, "<!-- banner -->\n<!-- # VibeTags -->\nold\n");
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), header + "new\n", true));
+
+        assertTrue(Files.readString(file).startsWith("<!-- VIBETAGS-START -->"),
+            "a single HTML-comment line glued to the header is dropped like a hash title");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.internal.content.Escape;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -167,35 +168,17 @@ public final class Json {
         return value instanceof String s ? s : fallback;
     }
 
-    /** The JSON string literal for {@code value}, quotes included, escaped per RFC 8259. */
+    /**
+     * The JSON string literal for {@code value}, quotes included, escaped per RFC 8259, or the
+     * literal {@code null}. The escaping itself is {@link Escape#json}: one implementation for the
+     * manifest, the locks report and every JSON platform file, so a value that is safe in one is
+     * safe in all of them.
+     */
     public static String quote(@Nullable String value) {
         if (value == null) {
             return "null";
         }
-        StringBuilder sb = new StringBuilder(value.length() + 16);
-        sb.append('"');
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            switch (c) {
-                case '"'  -> sb.append("\\\"");
-                case '\\' -> sb.append("\\\\");
-                case '\n' -> sb.append("\\n");
-                case '\r' -> sb.append("\\r");
-                case '\t' -> sb.append("\\t");
-                case '\b' -> sb.append("\\b");
-                case '\f' -> sb.append("\\f");
-                default -> {
-                    // Control characters must be escaped; everything else (including non-ASCII) is
-                    // emitted as-is, because the manifest is written and read as UTF-8.
-                    if (c < 0x20) {
-                        sb.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        sb.append(c);
-                    }
-                }
-            }
-        }
-        return sb.append('"').toString();
+        return '"' + Escape.json(value) + '"';
     }
 
     // ---------------------------------------------------------------------------------------

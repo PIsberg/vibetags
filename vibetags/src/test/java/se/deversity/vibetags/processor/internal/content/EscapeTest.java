@@ -63,9 +63,9 @@ class EscapeTest {
     @Test
     void json_escapesOtherControlCharsAsLowercaseUnicode() {
         assertEquals("\\u0000", Escape.json(ch(0x00)));
-        assertEquals("\\u0008", Escape.json(ch(0x08)));  // backspace — not a switch shorthand
+        assertEquals("\\b", Escape.json(ch(0x08)));  // backspace — the RFC 8259 short escape
         assertEquals("\\u000b", Escape.json(ch(0x0b)));  // vertical tab — not a switch shorthand
-        assertEquals("\\u000c", Escape.json(ch(0x0c)));  // form feed — not a switch shorthand
+        assertEquals("\\f", Escape.json(ch(0x0c)));  // form feed — the RFC 8259 short escape
         assertEquals("\\u001f", Escape.json(ch(0x1f)));  // last control char below 0x20
         // 0x20 (space) and above are ordinary and pass through unchanged
         assertEquals(" ", Escape.json(ch(0x20)));
