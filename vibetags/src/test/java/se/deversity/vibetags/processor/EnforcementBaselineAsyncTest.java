@@ -93,9 +93,14 @@ class EnforcementBaselineAsyncTest {
             EnforcementBaseline.load(root).update(root, moduleId, currentFor(moduleId));
             RECORDED.add(moduleId);
 
+            // Snapshot the roll of recorded modules BEFORE reading the file, never after: a
+            // sibling that records between the read and the loop below is not yet expected to be
+            // in what this thread read, and asserting it would fail the test for a write that
+            // was never lost.
+            Set<String> expected = Set.copyOf(RECORDED);
             EnforcementBaseline reread = EnforcementBaseline.load(root);
             assertTrue(Files.exists(root.resolve(BASELINE)), "the baseline itself went missing");
-            for (String recorded : RECORDED) {
+            for (String recorded : expected) {
                 assertEquals(approvedKeys(recorded), reread.approvedFor(recorded, FAMILIES),
                     () -> "module " + recorded + " recorded its approvals and a sibling's update "
                         + "erased them; its next enforcing build reports every guarded element as "
