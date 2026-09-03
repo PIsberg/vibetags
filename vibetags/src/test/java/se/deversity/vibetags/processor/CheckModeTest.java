@@ -370,7 +370,8 @@ class CheckModeTest {
         String content = "# version=2\n"
             + "moduleId=" + moduleId + "\n"
             + "modulePath=\n"
-            + service + "=" + encoded + "\n";
+            + service + "=" + encoded + "\n"
+            + "# end\n";
         Files.writeString(root.resolve(".vibetags-mod-" + moduleId), content, StandardCharsets.UTF_8);
     }
 }
