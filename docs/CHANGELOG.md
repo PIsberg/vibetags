@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The PIT mutation score had no floor.** `mutation.yml` published a badge saying 86% and neither
+  the workflow nor the pom set a threshold, so a change that dropped the score to 70 was green.
+  The `mutation` profile now sets `<mutationThreshold>80</mutationThreshold>` and
+  `<coverageThreshold>90</coverageThreshold>` — six points under the 86% mutation coverage
+  (3427/3992 over 138 classes) and 96% line coverage measured by run 33372147965 on 2026-08-31.
+  A floor rather than a ratchet, because PIT varies run to run and a gate that fails on noise is
+  one people learn to rerun rather than read; `docs/WORKFLOW.md` states the same numbers and
+  `MutationThresholdTest` fails if the two disagree or either disappears. (#558)
 - **A sibling's edit inside one filesystem tick was skipped by the reactor short-circuit.** The
   sidecar stamp that gates the fingerprint short-circuit folded mtimes only, and timestamp
   granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes several sidecars a second. Two

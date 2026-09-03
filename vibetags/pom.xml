@@ -549,6 +549,17 @@
                                  provide 4 vCPUs, so running mutants in parallel cuts wall-clock time
                                  roughly proportionally without changing what gets analyzed. -->
                             <threads>4</threads>
+                            <!-- A score with no floor is a number, not a gate: the badge said 86%
+                                 and a change that dropped it to 70 was green (#558). Run
+                                 33372147965 (2026-08-31) measured 86% mutation coverage
+                                 (3427/3992 over 138 classes) and 96% line coverage, so these sit
+                                 six points under each. Deliberately a floor rather than a ratchet:
+                                 PIT varies a little run to run, and a gate that fails on noise is
+                                 one people learn to rerun rather than read. Raise it when the
+                                 score rises, and record the new number in docs/WORKFLOW.md. -->
+                            
+                            <mutationThreshold>80</mutationThreshold>
+                            <coverageThreshold>90</coverageThreshold>
                         </configuration>
                         <dependencies>
                             <dependency>
