@@ -244,6 +244,37 @@ class MultiModuleAggregationTest {
         assertNotEquals(stamp0, stamp1, "Stamp should change after a sidecar is written");
     }
 
+    /**
+     * Two saves the filesystem cannot tell apart in time.
+     *
+     * <p>Timestamp granularity is 1 s on HFS+ and 2 s on FAT, and a reactor writes several
+     * sidecars a second, so this is reachable on a real build rather than only in a test that
+     * forces the mtimes equal: the sibling's edit stayed out of this module's output until
+     * something else moved a timestamp (issue #556). The mtimes are pinned here so the case is
+     * deterministic on every filesystem, including the ones with millisecond resolution.
+     */
+    @Test
+    void computeSidecarStamp_changesWhenContentChangesUnderAnUnchangedMtime(@TempDir Path root)
+            throws IOException {
+        ModuleSidecar first = new ModuleSidecar("_root_", "");
+        first.putBody("cursor", "the rules as they were");
+        first.save(root);
+        java.nio.file.attribute.FileTime frozen =
+            java.nio.file.attribute.FileTime.fromMillis(1_700_000_000_000L);
+        java.nio.file.Path file = root.resolve(".vibetags-mod-_root_");
+        Files.setLastModifiedTime(file, frozen);
+        long before = ModuleSidecar.computeSidecarStamp(root);
+
+        ModuleSidecar edited = new ModuleSidecar("_root_", "");
+        edited.putBody("cursor", "the rules after the edit");
+        edited.save(root);
+        Files.setLastModifiedTime(file, frozen);
+
+        assertNotEquals(before, ModuleSidecar.computeSidecarStamp(root),
+            "a sibling's edit inside one filesystem tick left the stamp unchanged, so this "
+                + "module short-circuited past the merge and shipped the previous content");
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
@@ -262,7 +293,7 @@ class MultiModuleAggregationTest {
     void sidecar_corruptBase64_prunedOnLoad(@TempDir Path root) throws IOException {
         // Write a syntactically valid sidecar file but with corrupt Base64 in a body line.
         Path sidecarFile = root.resolve(".vibetags-mod-" + "corrupt");
-        Files.writeString(sidecarFile, "# version=2\nmoduleId=corrupt\nmodulePath=\ncursor=!!!NOT_BASE64!!!\n");
+        Files.writeString(sidecarFile, "# version=2\nmoduleId=corrupt\nmodulePath=\ncursor=!!!NOT_BASE64!!!\n# end\n");
 
         // readAll should silently discard the malformed sidecar and delete the file.
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
@@ -340,7 +371,7 @@ class MultiModuleAggregationTest {
             + "moduleId=skiptest\n"
             + "modulePath=\n"
             + "THIS_LINE_HAS_NO_EQUALS_SIGN\n"
-            + "cursor=" + encoded + "\n");
+            + "cursor=" + encoded + "\n# end\n");
 
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
         assertEquals(1, loaded.size(), "Sidecar with an invalid line must still load");
@@ -358,7 +389,7 @@ class MultiModuleAggregationTest {
         Files.writeString(sidecarFile,
             "# version=2\n"
             + "modulePath=\n"
-            + "cursor=" + encoded + "\n");
+            + "cursor=" + encoded + "\n# end\n");
 
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
         assertTrue(loaded.isEmpty(), "Sidecar without moduleId must be pruned by readAll()");

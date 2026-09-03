@@ -191,6 +191,30 @@ class EnforcementBaselineTest {
     }
 
     @Test
+    void aConstructorIsKeyedUnderInitSoItCannotCollideWithANamesakeMethod() {
+        assertEquals("com.acme.Foo.<init>(java.lang.String)",
+            EnforcementBaseline.constructorPath("com.acme.Foo.Foo(java.lang.String)"),
+            "javac renders both a constructor and a method named like the class under that name, "
+                + "and one key for two elements leaves one of them unenforceable");
+        assertEquals("com.acme.Outer.Inner.<init>(int)",
+            EnforcementBaseline.constructorPath("com.acme.Outer.Inner.Inner(int)"),
+            "a nested class's constructor is keyed under the nested class, not the outer one");
+        assertEquals("com.acme.Foo.<init>(java.util.List<T>)",
+            EnforcementBaseline.constructorPath("com.acme.Foo.<T>Foo(java.util.List<T>)"),
+            "a generic constructor drops its type parameters here; two constructors of one class "
+                + "cannot share a parameter list, so the key stays unique");
+    }
+
+    @Test
+    void aPathWithNoParameterListIsLeftAlone() {
+        assertEquals("com.acme.Foo",
+            EnforcementBaseline.constructorPath("com.acme.Foo"),
+            "nothing that is not an executable may be rewritten by the constructor rule");
+        assertEquals("Foo(int)", EnforcementBaseline.constructorPath("Foo(int)"),
+            "a path with no package is returned unchanged rather than half-rewritten");
+    }
+
+    @Test
     void updateMergesWhatIsOnDiskNowRatherThanWhatWasLoaded(@TempDir Path root) throws IOException {
         // Both modules of a reactor load the baseline before either has written: the shape of
         // `mvn -T` with two enforcing modules recording against one shared root.

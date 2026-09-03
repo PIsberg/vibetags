@@ -18,6 +18,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A sibling's edit inside one filesystem tick was skipped by the reactor short-circuit.** The
+  sidecar stamp that gates the fingerprint short-circuit folded mtimes only, and timestamp
+  granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes several sidecars a second. Two
+  saves inside one tick left the stamp unchanged, so the compiling module short-circuited past the
+  merge and shipped the previous content until something else moved a timestamp. The stamp now
+  folds each sidecar's name, mtime, size and content. (part of #556,
+  `MultiModuleAggregationTest.computeSidecarStamp_changesWhenContentChangesUnderAnUnchangedMtime`)
+- **A module could vanish from the merged guardrails with no trace in the log.**
+  `ModuleSidecar.readAll` deleted a version-1, headerless or corrupt sidecar and skipped a
+  future-version one without a single event: the class held no logger, so the only symptom was a
+  section missing from a generated file. Every drop now logs its reason — `sidecar.prune reason=…`
+  when the file is deleted (`stale-format`, `malformed`, `module-gone`, `invalid-module-path`,
+  `superseded`) and `sidecar.skip reason=…` when it is kept and only ignored this build
+  (`future-version`, `unreadable`, and every reason under check mode, which deletes nothing).
+  `stale-format` and `malformed` are separated by reading the file's own version header, because
+  "written by an older processor" and "corrupt" are different facts about somebody's build.
+  The logger is resolved from the round rather than passed in: the caller that prunes is
+  `AIGuardrailProcessor.generateFiles()`, which is `@AILocked` because its step order is
+  load-bearing, and threading a parameter through it would have edited locked code to add a
+  diagnostic. `VibeTagsLogger.currentFor(root)` looks up the logger the round already
+  configured, never creates one, and answers null for a root nobody configured or one whose
+  level is OFF, so a caller outside a build stays silent.
+  (#555, `ModuleSidecarLogContractTest`, `VibeTagsLoggerUnitTest`)
+- **A locked constructor could change and the enforcing gate passed.** javac renders a constructor
+  under its class's simple name, so `public Foo(String)` and a method `public void Foo(String)` on
+  the same class produce one identical element path. `EnforcementBaseline` keyed on that path
+  alone, so the two collapsed into one entry: the baseline recorded whichever came second, the
+  other was never checked, and `CLAUDE.md` listed the path twice. Constructors are now keyed under
+  `<init>` in the baseline. The rendered path is unchanged — it is deliberately byte-identical to
+  javac's `toString()` because `action/locked-files` matches it against a PR diff.
+  **Upgrade note:** a project with a locked or contracted constructor should run one build with
+  `-Avibetags.baseline.update=true` and commit the result; until it does, that constructor is
+  reported as an approved entry with no matching element. (#552,
+  `EnforcingModeEndToEndTest.failsTheBuildWhenTheGuardedConstructorChanges`)
+- **A truncated module sidecar loaded as a valid one.** `Base64.getDecoder()` accepts cut-off
+  input and the `.vibetags-mod-*` format carried no length or checksum, so a sidecar missing its
+  last seven bytes still loaded, with the body truncated mid-text — and that half-sentence was
+  rendered into every sibling module's aggregate. `save()` now writes a final `# end` line and
+  `load()` treats a sidecar without it as unreadable: skipped, never deleted, the same as a file
+  that could not be opened. Appended rather than version-bumped, because a bump discards every
+  sibling's contribution on the first mixed-version build, and a processor that predates the
+  trailer skips the unrecognised `#` line and reads the file exactly as before.
+  **Upgrade note:** a sidecar written by an older processor has no trailer, so the first build
+  after upgrading skips those siblings' regions until each module recompiles; a full build
+  regenerates all of them. (#553, `ModuleSidecarResilienceTest`)
 - **The `vibetags-cli` jar looked runnable and was not.** It declares a `Main-Class` but carries
   no dependencies and no `Class-Path`, so `java -jar vibetags-cli-1.3.0.jar doctor` fails with
   `NoClassDefFoundError: se/deversity/vibetags/processor/internal/ServiceRegistry`. Every

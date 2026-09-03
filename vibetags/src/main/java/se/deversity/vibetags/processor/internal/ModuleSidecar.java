@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import se.deversity.vibetags.processor.VibeTagsLogger;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AITestDriven;
@@ -95,6 +97,24 @@ public final class ModuleSidecar {
      */
     static final int FORMAT_VERSION = 2;
     private static final String KEY_FORMAT_VERSION = "# version";
+    /**
+     * Written last, checked first: the marker that says this file is whole.
+     *
+     * <p>Without it a cut-short sidecar loaded as a valid one. {@code Base64.getDecoder()} accepts
+     * unpadded input, so removing the last seven bytes of a saved sidecar still decoded — to a body
+     * that was never saved, which the merge then rendered into every sibling module's aggregate
+     * (issue #553). The format carries no length and no checksum, so a torn write is otherwise
+     * indistinguishable from a complete file.
+     *
+     * <p>Appended rather than version-bumped, because a bump discards every sibling's contribution
+     * on the first mixed-version build: a processor that predates this line skips any {@code #} key
+     * it does not recognise, so it reads a file carrying the trailer exactly as before
+     * ({@code anUnknownCommentLineIsSkippedRatherThanParsed} pins that rule). The cost is the other
+     * direction: a sidecar written by an older processor has no trailer and is skipped as
+     * unreadable until its module recompiles. Skipped, never deleted — the same treatment as a file
+     * this reader could not open.
+     */
+    static final String TRAILER = "# end";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
     private static final String KEY_REGION_ID = "regionId";
@@ -319,6 +339,8 @@ public final class ModuleSidecar {
 
         // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
         // an IDE compiling the same module at once) otherwise truncate each other's temp file.
+        sb.append(TRAILER).append('\n');
+
         Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
@@ -559,6 +581,10 @@ public final class ModuleSidecar {
                     bodies.put(key, decode(val));
                 }
             }
+            // Before the checks below, because those delete: a file cut short can lose its
+            // moduleId line as easily as its last body, and pruning a module's sidecar over a torn
+            // write takes that module out of every sibling's output until it recompiles.
+            if (!isWhole(lines)) return UNREADABLE;
             if (moduleId == null || !sawCurrentVersion) return null;
             // Sidecars written before the source-set split carry no regionId; their module id IS
             // the region id, which is exactly what they meant.
@@ -609,6 +635,15 @@ public final class ModuleSidecar {
         return loaded == FUTURE_VERSION || loaded == UNREADABLE ? null : loaded;
     }
 
+    /** True when {@link #TRAILER} is the last non-blank line, i.e. the writer got to the end. */
+    private static boolean isWhole(List<String> lines) {
+        String last = "";
+        for (int i = lines.size() - 1; i >= 0 && last.isEmpty(); i--) {
+            last = lines.get(i).strip();
+        }
+        return TRAILER.equals(last);
+    }
+
     private static String decode(String base64) {
         return new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8);
     }
@@ -622,9 +657,29 @@ public final class ModuleSidecar {
      * {@code --parallel}), a sibling's sidecar may be absent or mid-write when this method runs.
      * The worst case is a single build cycle where one module's content is missing from the merged
      * output; the next incremental build picks it up because the sidecar stamp will have changed.
+     *
+     * <p>Reports its skips and prunes on whatever logger the round already configured for
+     * {@code root}, resolved rather than passed. The caller that needs that is
+     * {@code AIGuardrailProcessor.generateFiles()}, which is {@code @AILocked} because its step
+     * order is load-bearing: threading a logger through it would have edited locked code to add a
+     * diagnostic, which is the trade the lock exists to refuse. Callers that hold a logger should
+     * pass it to {@link #readAll(Path, Logger)} instead - explicit beats ambient wherever the
+     * choice exists, and a test with no configured root gets {@code null} here and stays silent.
      */
     public static List<ModuleSidecar> readAll(Path root) {
-        return readAll(root, true);
+        return readAll(root, true, VibeTagsLogger.currentFor(root));
+    }
+
+    /**
+     * {@link #readAll(Path)}, saying on {@code log} why any sidecar was skipped or pruned.
+     *
+     * <p>A module vanishing from the merged output is the failure this class exists to prevent, and
+     * until now it left no trace at all: {@code ModuleSidecar} held no logger, so a deleted or
+     * skipped sidecar was invisible in {@code vibetags.log} (issue #555). Every drop now names its
+     * reason, which docs/LOGGING.md requires of any {@code .skip}.
+     */
+    public static List<ModuleSidecar> readAll(Path root, @Nullable Logger log) {
+        return readAll(root, true, log);
     }
 
     /**
@@ -633,12 +688,19 @@ public final class ModuleSidecar {
      * promise is that it touches nothing VibeTags manages, and whose pruning of a departed
      * module's sidecar threw away the only record of the rule files that module wrote, so the
      * next real build could no longer remove them (see {@link #staleGranularStems}).
+     *
+     * <p>Resolves its logger the way {@link #readAll(Path)} does, and for the same reason.
      */
     public static List<ModuleSidecar> peekAll(Path root) {
-        return readAll(root, false);
+        return readAll(root, false, VibeTagsLogger.currentFor(root));
     }
 
-    private static List<ModuleSidecar> readAll(Path root, boolean prune) {
+    /** {@link #peekAll(Path)}, saying on {@code log} why any sidecar was left out. */
+    public static List<ModuleSidecar> peekAll(Path root, @Nullable Logger log) {
+        return readAll(root, false, log);
+    }
+
+    private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
         // Kept index-aligned with result so a sidecar dropped below can also be deleted.
@@ -664,9 +726,11 @@ public final class ModuleSidecar {
                           // a sibling save in a parallel reactor does exactly that on Windows.
                           // Skip this round (readAll already tolerates a missing sibling) and,
                           // above all, do not delete a file we never managed to look at.
+                          logSkipped(log, p, "unreadable");
                           return;
                       }
                       if (s == null) {
+                          logDropped(log, prune, p, formatReason(p));
                           if (prune) tryDelete(p);
                           return;
                       }
@@ -674,13 +738,18 @@ public final class ModuleSidecar {
                           // Written by a newer processor in a mixed-version build: skip it (its
                           // module's content is missing from OUR merge, the newer module merges
                           // everything correctly) but never delete a sibling's valid sidecar.
+                          logSkipped(log, p, "future-version");
                           return;
                       }
                       // Stale check: if the module path (relative to root) no longer exists, prune.
-                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)
-                              && !moduleDirExists(root, s.modulePath)) {
-                          if (prune) tryDelete(p);
-                          return;
+                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
+                          ModuleDir dir = moduleDir(root, s.modulePath);
+                          if (dir != ModuleDir.EXISTS) {
+                              logDropped(log, prune, p,
+                                  dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
+                              if (prune) tryDelete(p);
+                              return;
+                          }
                       }
                       result.add(s);
                       resultFiles.add(p);
@@ -694,7 +763,7 @@ public final class ModuleSidecar {
             // directory the build does not need.
 
         }
-        dropSupersededRegions(result, resultFiles, prune);
+        dropSupersededRegions(result, resultFiles, prune, log);
         applyRootIndexModeTo(root, result);
         return result;
     }
@@ -743,7 +812,8 @@ public final class ModuleSidecar {
      * whose timestamp cannot be read.
      */
     private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
-                                              List<Path> files, boolean prune) {
+                                              List<Path> files, boolean prune,
+                                              @Nullable Logger log) {
         if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
         Map<String, String> pathByRegion = new LinkedHashMap<>();
         Map<String, Set<String>> elementsByRegion = new LinkedHashMap<>();
@@ -787,6 +857,7 @@ public final class ModuleSidecar {
 
         for (int i = sidecars.size() - 1; i >= 0; i--) {
             if (!superseded.contains(sidecars.get(i).regionId)) continue;
+            logDropped(log, prune, files.get(i), "superseded");
             if (prune) tryDelete(files.get(i));
             sidecars.remove(i);
             files.remove(i);
@@ -1505,22 +1576,107 @@ public final class ModuleSidecar {
         return false;
     }
 
+    /** Whether a sidecar's module directory is still there, and if not, why not. */
+    enum ModuleDir {
+        EXISTS,
+        /** The directory is gone: the module was removed from the build. */
+        MISSING,
+        /**
+         * This filesystem cannot even spell the path — a module called {@code api:v2} written on
+         * Linux and read in a Windows checkout. Retired like a missing one, but a different fact
+         * about the world, and the log says which.
+         */
+        UNREPRESENTABLE
+    }
+
     /**
-     * Whether the module directory a sidecar names still exists under {@code root}.
+     * Whether the module directory a sidecar names still exists under {@code root}, and if not,
+     * whether this filesystem could even represent the path.
      *
      * <p>A path this filesystem cannot represent counts as gone. A sidecar written on Linux for a
      * module directory called {@code api:v2} or {@code core } and synced into a Windows checkout
      * makes {@code root.resolve} throw InvalidPathException, a RuntimeException that escaped
      * readAll, staleGranularStems and anyStale and failed every module of the reactor with an
      * uncaught-exception diagnostic. The module cannot exist on this filesystem, so the answer
-     * that keeps the build alive is also the true one: it is stale.
+     * that keeps the build alive is also the true one: it is stale. The two cases are told apart
+     * only so the prune event can name which one happened (issue #555).
      */
-    private static boolean moduleDirExists(Path root, String modulePath) {
+    private static ModuleDir moduleDir(Path root, String modulePath) {
         try {
-            return Files.isDirectory(root.resolve(modulePath));
+            return Files.isDirectory(root.resolve(modulePath)) ? ModuleDir.EXISTS : ModuleDir.MISSING;
         } catch (java.nio.file.InvalidPathException unrepresentable) {
-            return false;
+            return ModuleDir.UNREPRESENTABLE;
         }
+    }
+
+    /** {@link #moduleDir} as the yes/no question the callers that do not log ask. */
+    private static boolean moduleDirExists(Path root, String modulePath) {
+        return moduleDir(root, modulePath) == ModuleDir.EXISTS;
+    }
+
+    /**
+     * Why {@link #load} refused a file, read back from its header. Cheap and only on the path where
+     * a sidecar is already being dropped: {@code load} answers "not usable" with one {@code null},
+     * and "written by an older processor" and "corrupt" are different facts about somebody's build.
+     */
+    private static String formatReason(Path sidecar) {
+        Integer version = readFormatVersionHeader(sidecar);
+        if (version == null) {
+            return "no-version-header";
+        }
+        return version < FORMAT_VERSION ? "stale-format" : "malformed";
+    }
+
+    /** The {@code # version} header of one sidecar, or {@code null} when absent or unparseable. */
+    private static @Nullable Integer readFormatVersionHeader(Path sidecar) {
+        try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
+            for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+                if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
+                    try {
+                        return Integer.valueOf(line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                    } catch (NumberFormatException unparseable) {
+                        return null;
+                    }
+                }
+                if (!line.startsWith("#")) {
+                    return null; // the version header is written first; past it there is none
+                }
+            }
+        } catch (IOException | RuntimeException unreadable) {
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * A sidecar left out of this merge but kept on disk. DEBUG: in a parallel reactor this is
+     * ordinary and self-correcting — the sibling's next build brings it back.
+     */
+    private static void logSkipped(@Nullable Logger log, Path sidecar, String reason) {
+        if (log != null && log.isDebugEnabled()) {
+            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+        }
+    }
+
+    /**
+     * A sidecar dropped from this merge, deleted when {@code prune} is set. INFO rather than DEBUG,
+     * because a module disappearing from every generated file is an outcome of the run and the
+     * question people arrive with; when nothing is deleted it is a plain skip, and says so.
+     */
+    private static void logDropped(@Nullable Logger log, boolean prune, Path sidecar, String reason) {
+        if (log == null) {
+            return;
+        }
+        if (prune) {
+            log.info("sidecar.prune reason={} path={}", reason, fileName(sidecar));
+        } else if (log.isDebugEnabled()) {
+            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+        }
+    }
+
+    private static String fileName(Path path) {
+        Path name = path.getFileName();
+        return name != null ? name.toString() : path.toString();
     }
 
     /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */
@@ -1543,20 +1699,46 @@ public final class ModuleSidecar {
     }
 
     /**
-     * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
-     * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
+     * A stamp over every sidecar in {@code root}: its name, mtime, size and content. A change in
+     * any sibling changes the stamp, which invalidates the fingerprint short-circuit so this module
+     * regenerates against the new merge.
+     *
+     * <p>Content is folded in, not just the mtime. Filesystem timestamp granularity is 1 s on
+     * HFS+ and 2 s on FAT, and a reactor writes several sidecars per second: two saves inside one
+     * tick left the stamp unchanged, so the sibling's edit stayed out of this module's output until
+     * something else happened to move a timestamp (issue #556). The name is folded in for the same
+     * reason — a module renamed with no edit is a different set of sidecars, and mtimes alone
+     * cannot see that.
+     *
+     * <p>The read this costs is one pass over files the same build reads again in
+     * {@link #readAll(Path)}, and a sidecar is the compressed form of one module's guardrails, not
+     * a source tree.
      */
     public static long computeSidecarStamp(Path root) {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
             try {
-                stamp = 31L * stamp + Files.getLastModifiedTime(p).toMillis();
+                stamp = 31L * stamp + fileName(p).hashCode();
+                java.nio.file.attribute.BasicFileAttributes attrs =
+                    Files.readAttributes(p, java.nio.file.attribute.BasicFileAttributes.class);
+                stamp = 31L * stamp + attrs.lastModifiedTime().toMillis();
+                stamp = 31L * stamp + attrs.size();
+                stamp = 31L * stamp + contentStamp(p);
             } catch (IOException ignored) {
                 // A file that vanished between listing and stat contributes nothing to the stamp.
                 // That is correct: it is not there, so it is not part of this round of state.
             }
         }
         return stamp;
+    }
+
+    /** 64-bit FNV-1a over a sidecar's bytes. Not cryptographic; it only has to notice an edit. */
+    private static long contentStamp(Path sidecar) throws IOException {
+        long hash = 0xcbf29ce484222325L;
+        for (byte b : Files.readAllBytes(sidecar)) {
+            hash = (hash ^ (b & 0xffL)) * 0x100000001b3L;
+        }
+        return hash;
     }
 
     // -----------------------------------------------------------------------

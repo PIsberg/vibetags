@@ -158,6 +158,13 @@ encodes its parameter types, so changing `charge(String,double)` to `charge(Stri
 the approved entry rather than editing it. An approved entry with no matching element in the
 compilation is therefore a violation too — that covers renames, deletions and removed annotations.
 
+A constructor is recorded under `<init>`: javac renders one under its class's simple name, so
+`public Foo(String)` and a method `public void Foo(String)` on the same class produce one identical
+element path, and a baseline keyed on that alone held one of the two while the other was silently
+unenforceable (issue #552). Only the baseline key moves, and only for constructors — the rendered
+path stays byte-identical to javac's own `toString()`, because `action/locked-files` matches it
+against a pull request's diff and the granular rule files are named from it.
+
 Recording is safe to run in parallel. Every enforcing module of a reactor rewrites its own lines
 in the one root-level file from its own javac invocation, so `update()` re-reads the file and merges
 under an exclusive lock on `.vibetags-baseline.lock` (empty, gitignored, never read) and renames a
@@ -187,6 +194,13 @@ The project name (`-Avibetags.project`) and module override (`-Avibetags.module`
 output without being part of the annotation fingerprint, so they are bound separately as a *run
 context* (`# context: <hex>` in the same cache file, via `WriteCache.bindContext`); a stored
 fingerprint recorded under a different context is treated as absent and the build regenerates.
+
+In a reactor the short-circuit is also gated on a *sidecar stamp* (`# sidecar-stamp:` in the same
+file): a fold over every `.vibetags-mod-*` file's name, mtime, size and content. Content is in there
+because filesystem timestamp granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes
+several sidecars a second — an mtime-only stamp left two saves inside one tick indistinguishable, so
+a sibling's edit stayed out of this module's output until something else moved a timestamp
+(issue #556). It costs one pass over files the same build reads again in `ModuleSidecar.readAll`.
 
 On the next compile, if the fingerprint still matches AND every previously written file is
 byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no

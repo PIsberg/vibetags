@@ -24,7 +24,10 @@ Write events, not positions:
 - `ERROR` means the build is affected. Generation failures that are downgraded to a warning are
   `WARN` at most.
 - **A log event asserted in a test is a contract.** `GuardrailFileWriterLogContractTest` pins the
-  skip reasons; renaming one of those events is a breaking change, not a cleanup.
+  writer's skip reasons and `ModuleSidecarLogContractTest` the sidecar reader's
+  (`sidecar.skip` / `sidecar.prune`, with `stale-format`, `malformed`, `future-version`,
+  `module-gone`, `invalid-module-path`, `superseded`, `unreadable`); renaming one of those events
+  is a breaking change, not a cleanup.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
 Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".
