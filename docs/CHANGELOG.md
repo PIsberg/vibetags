@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A truncated module sidecar loaded as a valid one.** `Base64.getDecoder()` accepts cut-off
+  input and the `.vibetags-mod-*` format carried no length or checksum, so a sidecar missing its
+  last seven bytes still loaded, with the body truncated mid-text — and that half-sentence was
+  rendered into every sibling module's aggregate. `save()` now writes a final `# end` line and
+  `load()` treats a sidecar without it as unreadable: skipped, never deleted, the same as a file
+  that could not be opened. Appended rather than version-bumped, because a bump discards every
+  sibling's contribution on the first mixed-version build, and a processor that predates the
+  trailer skips the unrecognised `#` line and reads the file exactly as before.
+  **Upgrade note:** a sidecar written by an older processor has no trailer, so the first build
+  after upgrading skips those siblings' regions until each module recompiles; a full build
+  regenerates all of them. (#553, `ModuleSidecarResilienceTest`)
 - **A parallel reactor recording enforcement baselines lost a module's approvals, or failed the
   build.** `mvn -T` with two enforcing modules under `-Avibetags.baseline.update=true` had both
   merge into the snapshot they loaded before either wrote, so the second rename erased the first

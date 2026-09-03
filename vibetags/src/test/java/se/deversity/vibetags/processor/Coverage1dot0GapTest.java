@@ -591,7 +591,9 @@ class Coverage1dot0GapTest {
     @Test
     void moduleSidecar_load_malformedFile_returnsNull(@TempDir Path tmp) throws IOException {
         Path bad = tmp.resolve(".vibetags-mod-bad");
-        Files.writeString(bad, "no-equals-sign-anywhere\n", StandardCharsets.UTF_8);
+        // Ends with the trailer, so it is whole and merely malformed — the combination the
+        // caller may delete. Without the trailer it would read as cut short and be kept.
+        Files.writeString(bad, "no-equals-sign-anywhere\n# end\n", StandardCharsets.UTF_8);
         // load parses lines and returns null when moduleId is never found
         // Force a fresh load by reading all sidecars from tmp
         var sidecars = ModuleSidecar.readAll(tmp);

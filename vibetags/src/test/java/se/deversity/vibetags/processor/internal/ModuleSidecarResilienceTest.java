@@ -181,7 +181,10 @@ class ModuleSidecarResilienceTest {
         Files.createDirectories(root.resolve("good"));
         valid.save(root);
 
-        Path malformed = Files.writeString(root.resolve(".vibetags-mod-bad"), "not a sidecar at all\n");
+        // Whole (it ends with the trailer) but not a sidecar: that combination is what the
+        // caller may delete. A file with no trailer is treated as cut short instead.
+        Path malformed = Files.writeString(root.resolve(".vibetags-mod-bad"),
+            "not a sidecar at all\n# end\n");
 
         // A directory sitting where a sidecar file should be is the portable stand-in for
         // "cannot be read": every OS refuses to read it, none of them call it corrupt.
@@ -214,6 +217,56 @@ class ModuleSidecarResilienceTest {
         assertEquals("body", reloaded.getBodies().get("claude"));
     }
 
+    // ---------------------------------------------------------------- truncated sidecar
+
+    /**
+     * A sidecar cut short — a torn write, a full disk, a copy interrupted mid-flight — used to
+     * load as if nothing were wrong. Base64 accepts unpadded input, so the body decoded to
+     * whatever survived the cut and that half-sentence was rendered into every sibling module's
+     * aggregate. Seven bytes is deliberately small: the file still parses, the header is intact,
+     * and only a trailer written last can tell the difference (issue #553).
+     */
+    @Test
+    void aSidecarCutShortIsUnreadableRatherThanQuietlyHalfDecoded(@TempDir Path root)
+            throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        ModuleSidecar saved = new ModuleSidecar("core", "core");
+        saved.putBody("claude", "## Guardrails\n\n- a line long enough to survive a small cut\n");
+        saved.save(root);
+
+        Path file = root.resolve(".vibetags-mod-core");
+        byte[] full = Files.readAllBytes(file);
+        Files.write(file, java.util.Arrays.copyOf(full, full.length - 7));
+
+        assertSame(ModuleSidecar.UNREADABLE, ModuleSidecar.load(file),
+            "a truncated sidecar decoded to a body that was never saved, and that body was "
+                + "rendered into every sibling module's aggregate");
+        assertTrue(ModuleSidecar.readAll(root).isEmpty(), "a reader must not use what it cannot trust");
+        assertTrue(Files.exists(file),
+            "and must not delete it either: unreadable is not evidence the content is garbage");
+    }
+
+    /**
+     * The trailer has to be invisible to a processor that predates it, or a mixed-version reactor
+     * loses every module compiled by the newer half. Older readers skip any {@code #} line they do
+     * not recognise, which is what makes appending one safe; this pins that rule from the other
+     * side, with a comment key this version has never written.
+     */
+    @Test
+    void anUnknownCommentLineIsSkippedRatherThanParsed(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve(".vibetags-mod-core"),
+            "# version=2\n# crc=deadbeef\nmoduleId=core\nmodulePath=core\nregionId=core\n"
+                + "claude=" + java.util.Base64.getEncoder().encodeToString(
+                    "body".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                + "\n# end\n");
+
+        ModuleSidecar loaded = ModuleSidecar.load(root.resolve(".vibetags-mod-core"));
+        assertNotNull(loaded);
+        assertEquals("body", loaded.getBodies().get("claude"),
+            "an unrecognised comment key must not become a body, and must not stop the parse");
+    }
+
     // ---------------------------------------------------------------- unrepresentable module path
 
     /**
@@ -227,7 +280,7 @@ class ModuleSidecarResilienceTest {
     @Test
     void aModulePathThisFilesystemRejectsIsStaleNotFatal(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve(".vibetags-mod-core"),
-            "# version=2\nmoduleId=core\nmodulePath=core" + (char) 0 + "x\nregionId=core\n");
+            "# version=2\nmoduleId=core\nmodulePath=core" + (char) 0 + "x\nregionId=core\n# end\n");
 
         assertTrue(ModuleSidecar.anyStale(root), "the module cannot exist here, so its sidecar is stale");
         assertTrue(ModuleSidecar.staleGranularStems(root).isEmpty(),
