@@ -287,9 +287,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
-        if (!booleanOption(options, "vibetags.cache", true, messager)) {
-            this.writeCache = null;
-        } else {
+        if (booleanOption(options, "vibetags.cache", true, messager)) {
             this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
             // Options that shape output without being part of the annotation fingerprint: the
             // project name (the llms.txt H1) and the module override (the region a reactor merge
@@ -299,6 +297,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             this.writeCache.bindContext(ContentHash.of(
                 "project=" + this.projectName + ";module="
                     + (this.moduleIdOverride == null ? "" : this.moduleIdOverride)));
+        } else {
+            this.writeCache = null;
         }
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
@@ -465,10 +465,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Parses a non-negative integer option, warning and falling back to "no limit" on nonsense.
-     * A mistyped cap must not fail somebody's compile over an advisory feature.
-     */
-    /**
      * A path-valued option, or {@code null} when it is absent, blank, or not a path this
      * filesystem can represent. The last case used to throw InvalidPathException out of
      * {@link #init}, which nothing catches: process() guards generation, init() guarded nothing,
@@ -525,6 +521,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         return defaultValue;
     }
 
+    /**
+     * Parses a non-negative integer option, warning and falling back to "no limit" on nonsense.
+     * A mistyped cap must not fail somebody's compile over an advisory feature.
+     */
     private static int parsePositiveInt(@Nullable String value, Messager messager) {
         if (value == null || value.isBlank()) {
             return 0;
