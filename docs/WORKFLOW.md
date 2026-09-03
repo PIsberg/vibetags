@@ -6,7 +6,7 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 
 | Workflow | File | Trigger |
 |---|---|---|
-| Build and Test | `build.yml` | Push to `main`/`master`/`feature/*`/`fix/*`, PRs to `main`/`master` |
+| Build and Test | `build.yml` | Push to `main`/`master`; every pull request, whichever branch it targets |
 | CodeQL | `codeql.yml` | Push/PR to `main`, weekly cron (Mondays 00:00 UTC) |
 | Dependency Review | `dependency-review.yml` | Pull requests |
 | Scorecard | `scorecards.yml` | Push to `main`, branch-protection-rule, weekly cron (Tuesdays 07:20 UTC) |
@@ -29,6 +29,20 @@ All third-party actions are pinned by full commit SHA with the version as a trai
 ## 1. Build and Test (`build.yml`)
 
 The main CI workflow. Jobs run in parallel except `load-tests`, which waits on `build-maven`.
+
+''It runs once per change, not twice.'' The `push` trigger is `main` and `master` only; every
+branch is tested through the `pull_request` trigger, which is deliberately unfiltered so a
+stacked PR - one targeting the branch it was built on - is tested too. Until #573 the push
+trigger also listed the branch prefixes, so a branch with an open PR ran the whole matrix
+twice, identically except `Locked Files Guard`, which skips on a push because it needs a PR
+base to diff against. The cost of the narrowing, stated plainly: a branch pushed with no PR
+open runs nothing.
+
+''A superseded run is cancelled.'' Every workflow except `publish.yml` and `dependency-review.yml`
+now declares a `concurrency` group keyed on the ref, cancelling in progress everywhere except
+`main` and `master` - a run there is the record of that branch's health and must finish.
+`publish.yml` is excluded on purpose: cancelling a release mid-flight is worse than queueing
+behind it.
 
 ### Job: `build-maven`
 

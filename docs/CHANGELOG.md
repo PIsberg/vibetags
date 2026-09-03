@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CI stopped building every branch twice and queueing behind itself.** Wall-clock per run
+  went from 6.5-10.7 minutes to 25-38 while every job kept its speed: on run 33791512492,
+  `JVM-Language Corpus` waited 24.6 minutes to run for 4.0. Two causes. `build.yml` fired on
+  both `push` to the branch prefixes and `pull_request`, so a branch with an open PR ran the
+  whole matrix twice - identically, except `Locked Files Guard`, which skips on a push
+  because it needs a PR base to diff against; the push trigger is now `main` and `master`
+  only, and the deliberately unfiltered `pull_request` trigger is what tests a branch. And
+  nine workflows had no `concurrency` group, so a second push queued a full copy behind the
+  run it superseded and both finished; they all have one now, cancelling in progress
+  everywhere except `main` and `master`. `publish.yml` is excluded on purpose - cancelling a
+  release mid-flight is worse than queueing behind it.
+
+  The cost, stated plainly: a branch pushed with no PR open now runs nothing. `docs/WORKFLOW.md`
+  said "PRs to `main`/`master`", which the unfiltered trigger never matched, and now describes
+  what the file actually does. (#573)
+
 ### Added
 
 - **CI runs the companion CLI against a real example.** `doctor --dir examples/groovy` must exit 1

@@ -7,6 +7,15 @@ name: Mutation Testing (PIT)
 on:
   workflow_dispatch:
 
+concurrency:
+  # One run per workflow per ref. cancel-in-progress everywhere except main: a superseded
+  # push has nothing left to say, while a run on main is the record of main's health and
+  # must finish. Without this a second push queued a full copy behind the run it replaced
+  # and both completed, which is half of why wall-clock tripled while every job kept its
+  # speed (#573).
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
 permissions:
   contents: read
 
