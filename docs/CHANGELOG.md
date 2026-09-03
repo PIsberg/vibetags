@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A locked constructor could change and the enforcing gate passed.** javac renders a constructor
+  under its class's simple name, so `public Foo(String)` and a method `public void Foo(String)` on
+  the same class produce one identical element path. `EnforcementBaseline` keyed on that path
+  alone, so the two collapsed into one entry: the baseline recorded whichever came second, the
+  other was never checked, and `CLAUDE.md` listed the path twice. Constructors are now keyed under
+  `<init>` in the baseline. The rendered path is unchanged — it is deliberately byte-identical to
+  javac's `toString()` because `action/locked-files` matches it against a PR diff.
+  **Upgrade note:** a project with a locked or contracted constructor should run one build with
+  `-Avibetags.baseline.update=true` and commit the result; until it does, that constructor is
+  reported as an approved entry with no matching element. (#552,
+  `EnforcingModeEndToEndTest.failsTheBuildWhenTheGuardedConstructorChanges`)
 - **A truncated module sidecar loaded as a valid one.** `Base64.getDecoder()` accepts cut-off
   input and the `.vibetags-mod-*` format carried no length or checksum, so a sidecar missing its
   last seven bytes still loaded, with the body truncated mid-text — and that half-sentence was

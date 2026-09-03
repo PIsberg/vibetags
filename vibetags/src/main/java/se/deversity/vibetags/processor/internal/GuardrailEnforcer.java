@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPublicAPI;
+import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -122,7 +123,10 @@ public final class GuardrailEnforcer {
                 if (element.signature().isEmpty()) {
                     continue; // no provable shape (a package, or an element javac did not model)
                 }
-                String key = EnforcementBaseline.familyAndPath(family, element.path());
+                String path = element.kind() == ElementTag.CONSTRUCTOR
+                    ? EnforcementBaseline.constructorPath(element.path())
+                    : element.path();
+                String key = EnforcementBaseline.familyAndPath(family, path);
                 current.put(key, element.signature());
                 elementsByKey.put(key, element);
             }

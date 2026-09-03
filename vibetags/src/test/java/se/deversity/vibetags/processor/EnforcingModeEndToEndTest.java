@@ -84,6 +84,40 @@ class EnforcingModeEndToEndTest {
     @TempDir
     Path root;
 
+    /**
+     * A constructor and a method whose name is the class name. javac prints both under the class's
+     * simple name, so their element paths are byte-identical and a path-keyed baseline holds only
+     * one of them (issue #552).
+     */
+    private static final String NAMESAKE_V1 = """
+        package com.example;
+
+        import se.deversity.vibetags.annotations.AILocked;
+
+        public class PaymentGateway {
+            @AILocked(reason = "constructor invariants are frozen")
+            public PaymentGateway(String customerId) {}
+
+            @AILocked(reason = "the legacy factory entry point is frozen")
+            public void PaymentGateway(String customerId) {}
+        }
+        """;
+
+    /** The constructor gains a parameter; the method is untouched. */
+    private static final String NAMESAKE_V2_CONSTRUCTOR_CHANGED = """
+        package com.example;
+
+        import se.deversity.vibetags.annotations.AILocked;
+
+        public class PaymentGateway {
+            @AILocked(reason = "constructor invariants are frozen")
+            public PaymentGateway(String customerId, double fee) {}
+
+            @AILocked(reason = "the legacy factory entry point is frozen")
+            public void PaymentGateway(String customerId) {}
+        }
+        """;
+
     @AfterEach
     void tearDown() {
         VibeTagsLogger.shutdown();
@@ -123,6 +157,32 @@ class EnforcingModeEndToEndTest {
 
         List<Diagnostic<? extends JavaFileObject>> second = compile(CONTRACT_V1, "-Avibetags.enforce=contract");
         assertFalse(errors(second, "violation"), "an unchanged signature must pass");
+    }
+
+    @Test
+    void aConstructorAndAMethodNamedLikeItsClassAreSeparateEntries() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(NAMESAKE_V1, "-Avibetags.baseline.update=true");
+
+        String content = Files.readString(root.resolve(".vibetags-baseline"));
+        long entries = content.lines().filter(line -> !line.isBlank() && !line.startsWith("#")).count();
+        assertEquals(2, entries,
+            "both guarded elements must be recorded; keyed on the path alone javac renders them "
+                + "identically, so one silently replaces the other and is left unenforceable:\n"
+                + content);
+    }
+
+    @Test
+    void failsTheBuildWhenTheGuardedConstructorChanges() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(NAMESAKE_V1, "-Avibetags.baseline.update=true");
+
+        List<Diagnostic<? extends JavaFileObject>> broken =
+            compile(NAMESAKE_V2_CONSTRUCTOR_CHANGED, "-Avibetags.enforce=locked");
+
+        assertTrue(errors(broken, "@AILocked violation"),
+            "the constructor shares its rendered path with the namesake method, and the method won "
+                + "the single entry, so changing the constructor was invisible to the gate");
     }
 
     @Test
