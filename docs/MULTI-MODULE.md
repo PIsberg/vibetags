@@ -22,6 +22,15 @@ per module: a module inherits what *its* sources import, and two modules of a re
 on the same set. `.vibetags-mirror` on its own still creates no region — mirrored rules are scoped
 files, and they never reach the aggregate.
 
+A sidecar is `key=value` lines with Base64 bodies, opened by `# version=2` and closed by `# end`.
+The trailer is what says the file is whole: `Base64.getDecoder()` accepts cut-off input, so without
+it a sidecar truncated by a torn write still decoded — to a body that was never saved, which the
+merge rendered into every sibling's aggregate (issue #553). A sidecar with no trailer is treated
+like one that could not be opened at all: skipped, never deleted. That also covers the file a
+processor older than the trailer wrote, which is skipped until its module recompiles; older readers
+in the other direction skip the `# end` line as an unrecognised comment, which is why this is an
+appended line rather than a format-version bump.
+
 ### YAML outputs merge differently
 
 Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the six

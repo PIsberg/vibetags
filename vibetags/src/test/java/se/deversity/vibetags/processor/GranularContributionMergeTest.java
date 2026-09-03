@@ -166,7 +166,7 @@ class GranularContributionMergeTest {
     void aSidecarWithoutContributionsStillLoads(@TempDir Path dir) throws IOException {
         String body = Base64.getEncoder().encodeToString("x".getBytes(StandardCharsets.UTF_8));
         Files.writeString(dir.resolve(".vibetags-mod-legacy"),
-            "# version=2\nmoduleId=legacy\nmodulePath=\nregionId=legacy\nclaude=" + body + "\n");
+            "# version=2\nmoduleId=legacy\nmodulePath=\nregionId=legacy\nclaude=" + body + "\n# end\n");
 
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(dir);
 
@@ -181,7 +181,7 @@ class GranularContributionMergeTest {
     void aMalformedContributionIsDroppedButTheSidecarLoads(@TempDir Path dir) throws IOException {
         String garbage = Base64.getEncoder().encodeToString("no-newline".getBytes(StandardCharsets.UTF_8));
         Files.writeString(dir.resolve(".vibetags-mod-broken"),
-            "# version=2\nmoduleId=broken\nmodulePath=\nregionId=broken\n~gran~role=" + garbage + "\n");
+            "# version=2\nmoduleId=broken\nmodulePath=\nregionId=broken\n~gran~role=" + garbage + "\n# end\n");
 
         List<ModuleSidecar> loaded = ModuleSidecar.readAll(dir);
 

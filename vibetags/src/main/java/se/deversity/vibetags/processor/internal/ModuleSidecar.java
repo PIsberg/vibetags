@@ -95,6 +95,24 @@ public final class ModuleSidecar {
      */
     static final int FORMAT_VERSION = 2;
     private static final String KEY_FORMAT_VERSION = "# version";
+    /**
+     * Written last, checked first: the marker that says this file is whole.
+     *
+     * <p>Without it a cut-short sidecar loaded as a valid one. {@code Base64.getDecoder()} accepts
+     * unpadded input, so removing the last seven bytes of a saved sidecar still decoded — to a body
+     * that was never saved, which the merge then rendered into every sibling module's aggregate
+     * (issue #553). The format carries no length and no checksum, so a torn write is otherwise
+     * indistinguishable from a complete file.
+     *
+     * <p>Appended rather than version-bumped, because a bump discards every sibling's contribution
+     * on the first mixed-version build: a processor that predates this line skips any {@code #} key
+     * it does not recognise, so it reads a file carrying the trailer exactly as before
+     * ({@code anUnknownCommentLineIsSkippedRatherThanParsed} pins that rule). The cost is the other
+     * direction: a sidecar written by an older processor has no trailer and is skipped as
+     * unreadable until its module recompiles. Skipped, never deleted — the same treatment as a file
+     * this reader could not open.
+     */
+    static final String TRAILER = "# end";
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
     private static final String KEY_REGION_ID = "regionId";
@@ -319,6 +337,8 @@ public final class ModuleSidecar {
 
         // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
         // an IDE compiling the same module at once) otherwise truncate each other's temp file.
+        sb.append(TRAILER).append('\n');
+
         Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
@@ -559,6 +579,10 @@ public final class ModuleSidecar {
                     bodies.put(key, decode(val));
                 }
             }
+            // Before the checks below, because those delete: a file cut short can lose its
+            // moduleId line as easily as its last body, and pruning a module's sidecar over a torn
+            // write takes that module out of every sibling's output until it recompiles.
+            if (!isWhole(lines)) return UNREADABLE;
             if (moduleId == null || !sawCurrentVersion) return null;
             // Sidecars written before the source-set split carry no regionId; their module id IS
             // the region id, which is exactly what they meant.
@@ -607,6 +631,15 @@ public final class ModuleSidecar {
         }
         ModuleSidecar loaded = load(path);
         return loaded == FUTURE_VERSION || loaded == UNREADABLE ? null : loaded;
+    }
+
+    /** True when {@link #TRAILER} is the last non-blank line, i.e. the writer got to the end. */
+    private static boolean isWhole(List<String> lines) {
+        String last = "";
+        for (int i = lines.size() - 1; i >= 0 && last.isEmpty(); i--) {
+            last = lines.get(i).strip();
+        }
+        return TRAILER.equals(last);
     }
 
     private static String decode(String base64) {
