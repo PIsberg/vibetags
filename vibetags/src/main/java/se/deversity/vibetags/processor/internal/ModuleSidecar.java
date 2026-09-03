@@ -1699,20 +1699,46 @@ public final class ModuleSidecar {
     }
 
     /**
-     * Computes a lightweight stamp over all sidecar mtimes. A change in any sibling sidecar
-     * changes the stamp, invalidating the fingerprint short-circuit so this module regenerates.
+     * A stamp over every sidecar in {@code root}: its name, mtime, size and content. A change in
+     * any sibling changes the stamp, which invalidates the fingerprint short-circuit so this module
+     * regenerates against the new merge.
+     *
+     * <p>Content is folded in, not just the mtime. Filesystem timestamp granularity is 1 s on
+     * HFS+ and 2 s on FAT, and a reactor writes several sidecars per second: two saves inside one
+     * tick left the stamp unchanged, so the sibling's edit stayed out of this module's output until
+     * something else happened to move a timestamp (issue #556). The name is folded in for the same
+     * reason — a module renamed with no edit is a different set of sidecars, and mtimes alone
+     * cannot see that.
+     *
+     * <p>The read this costs is one pass over files the same build reads again in
+     * {@link #readAll(Path)}, and a sidecar is the compressed form of one module's guardrails, not
+     * a source tree.
      */
     public static long computeSidecarStamp(Path root) {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
             try {
-                stamp = 31L * stamp + Files.getLastModifiedTime(p).toMillis();
+                stamp = 31L * stamp + fileName(p).hashCode();
+                java.nio.file.attribute.BasicFileAttributes attrs =
+                    Files.readAttributes(p, java.nio.file.attribute.BasicFileAttributes.class);
+                stamp = 31L * stamp + attrs.lastModifiedTime().toMillis();
+                stamp = 31L * stamp + attrs.size();
+                stamp = 31L * stamp + contentStamp(p);
             } catch (IOException ignored) {
                 // A file that vanished between listing and stat contributes nothing to the stamp.
                 // That is correct: it is not there, so it is not part of this round of state.
             }
         }
         return stamp;
+    }
+
+    /** 64-bit FNV-1a over a sidecar's bytes. Not cryptographic; it only has to notice an edit. */
+    private static long contentStamp(Path sidecar) throws IOException {
+        long hash = 0xcbf29ce484222325L;
+        for (byte b : Files.readAllBytes(sidecar)) {
+            hash = (hash ^ (b & 0xffL)) * 0x100000001b3L;
+        }
+        return hash;
     }
 
     // -----------------------------------------------------------------------
