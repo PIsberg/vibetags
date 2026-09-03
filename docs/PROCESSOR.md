@@ -195,6 +195,13 @@ output without being part of the annotation fingerprint, so they are bound separ
 context* (`# context: <hex>` in the same cache file, via `WriteCache.bindContext`); a stored
 fingerprint recorded under a different context is treated as absent and the build regenerates.
 
+In a reactor the short-circuit is also gated on a *sidecar stamp* (`# sidecar-stamp:` in the same
+file): a fold over every `.vibetags-mod-*` file's name, mtime, size and content. Content is in there
+because filesystem timestamp granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes
+several sidecars a second — an mtime-only stamp left two saves inside one tick indistinguishable, so
+a sibling's edit stayed out of this module's output until something else moved a timestamp
+(issue #556). It costs one pass over files the same build reads again in `ModuleSidecar.readAll`.
+
 On the next compile, if the fingerprint still matches AND every previously written file is
 byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no
 `GuardrailContentBuilder.build()`, no per-file compares, no writes. The two-part guard means a

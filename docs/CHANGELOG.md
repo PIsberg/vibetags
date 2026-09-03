@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A sibling's edit inside one filesystem tick was skipped by the reactor short-circuit.** The
+  sidecar stamp that gates the fingerprint short-circuit folded mtimes only, and timestamp
+  granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes several sidecars a second. Two
+  saves inside one tick left the stamp unchanged, so the compiling module short-circuited past the
+  merge and shipped the previous content until something else moved a timestamp. The stamp now
+  folds each sidecar's name, mtime, size and content. (part of #556,
+  `MultiModuleAggregationTest.computeSidecarStamp_changesWhenContentChangesUnderAnUnchangedMtime`)
 - **A module could vanish from the merged guardrails with no trace in the log.**
   `ModuleSidecar.readAll` deleted a version-1, headerless or corrupt sidecar and skipped a
   future-version one without a single event: the class held no logger, so the only symptom was a
