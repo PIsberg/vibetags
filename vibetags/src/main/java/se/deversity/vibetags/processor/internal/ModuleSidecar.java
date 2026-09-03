@@ -655,12 +655,10 @@ public final class ModuleSidecar {
                           return;
                       }
                       // Stale check: if the module path (relative to root) no longer exists, prune.
-                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
-                          Path moduleDir = root.resolve(s.modulePath);
-                          if (!Files.isDirectory(moduleDir)) {
-                              if (prune) tryDelete(p);
-                              return;
-                          }
+                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)
+                              && !moduleDirExists(root, s.modulePath)) {
+                          if (prune) tryDelete(p);
+                          return;
                       }
                       result.add(s);
                       resultFiles.add(p);
@@ -1404,7 +1402,7 @@ public final class ModuleSidecar {
                 if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
                     continue;
                 }
-                if (Files.isDirectory(root.resolve(modulePath))) continue;
+                if (moduleDirExists(root, modulePath)) continue;
                 ModuleSidecar stale = load(p);
                 if (stale != null && stale != UNREADABLE && stale != FUTURE_VERSION) {
                     stems.addAll(stale.getGranularStems());
@@ -1476,13 +1474,31 @@ public final class ModuleSidecar {
                 if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
                     continue;
                 }
-                if (!Files.isDirectory(root.resolve(modulePath))) return true;
+                if (!moduleDirExists(root, modulePath)) return true;
             }
         } catch (IOException ignored) {
             // A root we cannot list tells us nothing; treat it as "nothing to prune" and let the
             // ordinary round decide. Failing a build over a directory listing would be the larger bug.
         }
         return false;
+    }
+
+    /**
+     * Whether the module directory a sidecar names still exists under {@code root}.
+     *
+     * <p>A path this filesystem cannot represent counts as gone. A sidecar written on Linux for a
+     * module directory called {@code api:v2} or {@code core } and synced into a Windows checkout
+     * makes {@code root.resolve} throw InvalidPathException, a RuntimeException that escaped
+     * readAll, staleGranularStems and anyStale and failed every module of the reactor with an
+     * uncaught-exception diagnostic. The module cannot exist on this filesystem, so the answer
+     * that keeps the build alive is also the true one: it is stale.
+     */
+    private static boolean moduleDirExists(Path root, String modulePath) {
+        try {
+            return Files.isDirectory(root.resolve(modulePath));
+        } catch (java.nio.file.InvalidPathException unrepresentable) {
+            return false;
+        }
     }
 
     /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */

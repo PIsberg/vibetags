@@ -23,6 +23,18 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.manifest.packages` | (off) | Comma-separated package names to look up explicitly, for builds where the compiler exposes no Tree API |
 | `vibetags.manifest.max` | (no limit) | Cap on inherited **advisory** rules. Safety-tier rules are never dropped, and a cap that drops anything says so as a `NOTE` |
 
+### How option values are read
+
+The boolean options (`vibetags.check`, `vibetags.baseline.update`, `vibetags.cache`) all read the
+same way: a bare `-Avibetags.check` is `true`, `true` and `false` are accepted in any case, and any
+other value warns with the value named and keeps the default. Before this each option recognised
+one literal and everything else was silently the default, so `-Avibetags.check=yes` generated
+instead of checking. The path options (`vibetags.root`, `vibetags.log.path`,
+`vibetags.manifest.dir`) fall back to their default with a warning when the value is not a path
+this filesystem can represent; an illegal character used to throw out of `init()` and fail the
+whole compilation, which is the one thing VibeTags promises never to do. (`BooleanOptionTest`,
+`PathOptionRobustnessTest`)
+
 ## Transitive guardrails (dependency tree propagation)
 
 Package-level `@AI...` annotations can travel from a library into the projects that depend on it.
