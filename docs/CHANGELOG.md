@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-04
+
+### Upgrading
+
+Two things change under you on the first build after this upgrade. Neither is a code change
+you have to make; both are one regeneration you have to commit.
+
+1. **Guardrail files gain reason text and reflow.** A string member of an annotation that
+   spanned lines in the source used to render broken across lines, and on some platforms
+   its reason line did not render at all. Both are fixed, so regenerated guardrail files
+   differ from what is committed. Measured on the consumer sweep for this release: 3 files
+   in one consumer, 12 in another, 0 in a third. If your CI diffs regenerated guardrails -
+   and at least one consumer does - it fails until you rebuild and commit the result.
+
+2. **A locked or contracted constructor needs its baseline re-recorded.** Constructors are
+   now keyed under `<init>` in `.vibetags-baseline`, because a constructor and a method named
+   like its class rendered to one identical element path and collapsed into a single entry
+   - the baseline recorded whichever came second and the other was never checked. Run one
+   build with `-Avibetags.baseline.update=true` and commit the result. Until you do, that
+   constructor is reported as an approved entry with no matching element.
+
+The rendered element path is deliberately unchanged - it is byte-identical to javac's
+`toString()` because `action/locked-files` matches it against a PR diff.
+
 ### Changed
 
 - **CI stopped building every branch twice and queueing behind itself.** Wall-clock per run
