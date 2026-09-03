@@ -274,8 +274,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
-        this.checkMode = "true".equalsIgnoreCase(options.getOrDefault("vibetags.check", "false"));
-        this.baselineUpdate = "true".equalsIgnoreCase(options.getOrDefault("vibetags.baseline.update", "false"));
+        this.checkMode = booleanOption(options, "vibetags.check", false, messager);
+        this.baselineUpdate = booleanOption(options, "vibetags.baseline.update", false, messager);
         this.enforceFamilies = new GuardrailEnforcer(messager, log).parseFamilies(options.get("vibetags.enforce"));
         // Structural signatures are read by nothing except the enforcing mode, and computing one
         // walks and sorts a type's whole visible member set. Same opt-in shape as the locks report
@@ -287,8 +287,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
-        String useCache = options.getOrDefault("vibetags.cache", "true");
-        if ("false".equalsIgnoreCase(useCache)) {
+        if (!booleanOption(options, "vibetags.cache", true, messager)) {
             this.writeCache = null;
         } else {
             this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
@@ -495,6 +494,35 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     + reason + "); option ignored.");
             return null;
         }
+    }
+
+    /**
+     * A boolean option. A bare {@code -Akey} is true, {@code true}/{@code false} in any case are
+     * themselves, and anything else warns and keeps the default. Until this existed each option
+     * read its own literal ({@code check} only "true", {@code cache} only "false") and every other
+     * spelling was silently the default: a CI gate written {@code -Avibetags.check=yes} generated
+     * instead of checking and was green forever.
+     */
+    static boolean booleanOption(Map<String, String> options, String key, boolean defaultValue,
+                                 Messager messager) {
+        if (!options.containsKey(key)) {
+            return defaultValue;
+        }
+        String value = options.get(key);
+        if (value == null || value.isBlank()) {
+            return true; // javac hands a bare -Akey over with no value
+        }
+        String normalised = value.strip();
+        if ("true".equalsIgnoreCase(normalised)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(normalised)) {
+            return false;
+        }
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: -A" + key + "=" + value + " is not true or false; using the default ("
+                + defaultValue + ").");
+        return defaultValue;
     }
 
     private static int parsePositiveInt(@Nullable String value, Messager messager) {
