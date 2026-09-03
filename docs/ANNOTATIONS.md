@@ -19,6 +19,14 @@ the rest of the parsed set is described in
 [ARCHITECTURE.md](ARCHITECTURE.md#parsed-diagrams-code-karta). Adding an annotation means
 rerunning that script — see the `add-annotation` skill for the full checklist.
 
+**String members are one line.** A `reason`, `note`, `instructions` or any other string member
+may be written as a Java text block; the processor collapses every line break, together with the
+indentation after it, into a single space before the value reaches any platform, and blank lines
+add nothing. A value written on one line is passed through untouched, byte for byte. The Markdown
+platforms append the value straight after a bullet, so without this rule the second line of a
+text block became a bare paragraph under it. `SingleLineAnnotationTest` pins the rule;
+`MultiLineReasonEndToEndTest` shows it on Copilot and CLAUDE.md.
+
 ### Visibility boundaries
 
 Two places an annotation can be written and silently mean nothing, both inherent to JSR 269

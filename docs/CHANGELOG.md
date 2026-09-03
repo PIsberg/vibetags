@@ -85,6 +85,17 @@ and the keys are current again. Consumers without annotated enum constants see n
   The one shape VibeTags ever wrote above its header was a single title line glued to it; only
   that is boilerplate now.
 
+### Changed
+
+- **String members of an annotation read as one line on every platform.** A `reason` written as
+  a Java text block used to end a Markdown bullet at its first line break and leave the rest as a
+  bare paragraph under it (Cursor, Windsurf, Copilot, Gemini, Qwen, Zed, llms.txt, Aider, Open
+  Interpreter); the XML block in `CLAUDE.md` carried the raw newline. The collector now hands out
+  annotations whose string members have each line break and the indentation after it collapsed to
+  one space, so all 37 platforms, the granular files and the fingerprint agree. A value written on
+  one line is unchanged byte for byte, so no committed file moves unless it carried a line break.
+  Closes #549.
+
 ## [1.3.0] - 2026-08-31
 
 A minor rather than a patch because `vibetags doctor` gains a capability (the Groovy
