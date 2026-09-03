@@ -38,6 +38,20 @@ final class InitCommand {
     }
 
     int run(List<String> args) {
+        List<String> unknownArgs = new ArrayList<>(args);
+        unknownArgs.remove("--list");
+        int platformsAt = unknownArgs.indexOf("--platforms");
+        if (platformsAt >= 0) {
+            unknownArgs.remove(platformsAt);
+            if (platformsAt < unknownArgs.size()) {
+                unknownArgs.remove(platformsAt);
+            }
+        }
+        if (!unknownArgs.isEmpty()) {
+            /* A misspelt flag used to be ignored and the command went ahead without it. */
+            err.println("error: init does not understand: " + String.join(" ", unknownArgs));
+            return 2;
+        }
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(dir);
         Set<String> optIn = ServiceRegistry.optInKeys();
 

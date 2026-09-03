@@ -82,15 +82,60 @@ escape_sed() {
 OLD_ESCAPED=$(escape_sed "$OLD_VERSION")
 
 # In-place edit that works with both GNU sed (Git Bash/Linux) and BSD sed (macOS).
+# Rewrites only the four shapes in which these files state the VibeTags version:
+#
+#   <version>OLD</version> on the line after an <artifactId>vibetags-*</artifactId>
+#   <vibetags.bom.version>OLD</vibetags.bom.version>
+#   se.deversity.vibetags:<artifact>:OLD  (Gradle and jbang coordinates)
+#   version: OLD                          (the usage skill front matter)
+#
+# A blanket s/OLD/NEW/g used to run here. It bumps any third-party pin that happens to equal
+# the release version (jspecify once did, and the fix made for <revision> did not reach these
+# files), and nothing fails when it does. Every replacement is anchored to a vibetags token now.
 replace_in_file() {
     file="$1"
     if [ ! -f "$file" ]; then
         echo "warning: $file not found, skipping" >&2
         return 0
     fi
-    sed -i.bak "s/$OLD_ESCAPED/$NEW_VERSION/g" "$file"
-    rm -f "$file.bak"
-    echo "  updated ${file#"$ROOT_DIR"/}"
+    awk -v old="$OLD_VERSION" -v new="$NEW_VERSION" '
+        function swap_first(s,   i) {
+            i = index(s, old)
+            return i ? substr(s, 1, i - 1) new substr(s, i + length(old)) : s
+        }
+        function swap_coordinates(s,   out, i, j, k, p) {
+            out = ""
+            while ((i = index(s, "se.deversity.vibetags:")) > 0) {
+                j = i + length("se.deversity.vibetags:")
+                k = index(substr(s, j), ":")
+                if (k == 0) { return out s }
+                p = j + k
+                out = out substr(s, 1, p - 1)
+                if (substr(s, p, length(old)) == old) {
+                    out = out new
+                    s = substr(s, p + length(old))
+                } else {
+                    s = substr(s, p)
+                }
+            }
+            return out s
+        }
+        {
+            line = $0
+            if (index(line, "se.deversity.vibetags:") > 0) {
+                line = swap_coordinates(line)
+            } else if (line ~ /<vibetags\.bom\.version>/) {
+                line = swap_first(line)
+            } else if (line ~ /<version>/ && prev ~ /<artifactId>vibetags-/) {
+                line = swap_first(line)
+            } else if (line ~ /^version: /) {
+                line = swap_first(line)
+            }
+            print line
+            prev = $0
+        }' "$file" > "$file.tmp"
+    mv "$file.tmp" "$file"
+    echo "  updated ${file#"$ROOT_DIR"/} (vibetags coordinates only)"
 }
 
 # Scoped edit for files that also pin third-party dependency versions which can coincidentally

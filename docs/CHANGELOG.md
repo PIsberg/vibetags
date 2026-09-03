@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`vibetags doctor` and `vibetags init` silently ignored arguments they did not understand.**
+  `doctor /other/project` reported on the current directory, `init --platforms claude --bogus`
+  went ahead without the flag, and `--dir` pointing at a missing directory surfaced as a symlink
+  warning. All three now exit 2 with the argument named. The CLI also writes UTF-8 to the
+  console regardless of the platform charset, so the em-dashes in doctor output no longer reach
+  a piped Windows log as a single Cp1252 byte. (`MainTest`)
+- **The locked-files GitHub Action passed when it found no `.vibetags-locks` report.** A wrong
+  `working-directory`, or a project that never opted in, produced a warning and a green check
+  that guarded nothing. The job now fails unless `warn-only` is set. (`MissingReportTest`)
+- **`tools/set-version.sh` still blanket-replaced the version in twelve files.** The
+  third-party-pin fix reached `<revision>` and the Gradle coordinates but not the README, the
+  example POMs or the usage skill, so any dependency pinned at the same version as VibeTags
+  would have been bumped with it. Every replacement is now anchored to a `vibetags` token.
+  (`ReleaseScriptCoverageTest.thirdPartyPinsEqualToTheReleaseVersionAreLeftAlone`)
+- **`docs/PLATFORMS.md` claimed to list every generated file but omitted six.** The three ignore
+  files, both Codex files and the root index are in the table now, and
+  `ProjectFactsConsistencyTest` fails whenever `ServiceRegistry` declares a path the table does
+  not name.
 - **An illegal character in a path option failed the whole compilation.** `-Avibetags.root`,
   `-Avibetags.log.path` and `-Avibetags.manifest.dir` went through `Paths.get` in `init()`, which
   nothing guards; a colon on Windows or a NUL byte anywhere threw InvalidPathException and javac

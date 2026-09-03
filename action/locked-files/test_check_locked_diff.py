@@ -222,6 +222,51 @@ class IntroducingALockTest(unittest.TestCase):
                          "an established lock must still block a change to its range")
 
 
+class MissingReportTest(unittest.TestCase):
+    """No report is a failed run, not a passed one.
+
+    The report is opted in by committing ``.vibetags-locks``; not finding it means the action is
+    looking in the wrong directory or the project never opted in. Both used to print a warning
+    and exit 0, so the check went green without guarding anything.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.dir, ignore_errors=True)
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "user.email", "t@example.com")
+        self.git("config", "user.name", "T")
+        with open(os.path.join(self.dir, "Src.java"), "w", encoding="utf-8") as fh:
+            fh.write(UNLOCKED_SRC)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "base")
+        self.base = self.git("rev-parse", "HEAD").strip()
+
+    def git(self, *args):
+        out = subprocess.run(["git", "-C", self.dir, *args], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return out.stdout
+
+    def run_guard(self, warn_only):
+        cwd, env = os.getcwd(), dict(os.environ)
+        os.chdir(self.dir)
+        os.environ["VIBETAGS_BASE_REF"] = self.base
+        os.environ["VIBETAGS_WARN_ONLY"] = "true" if warn_only else "false"
+        try:
+            return check_locked_diff.main()
+        finally:
+            os.chdir(cwd)
+            os.environ.clear()
+            os.environ.update(env)
+
+    def test_no_report_fails_the_check(self):
+        self.assertEqual(self.run_guard(warn_only=False), 1,
+                         "a guard with no report to read must not pass")
+
+    def test_no_report_is_a_warning_only_when_asked(self):
+        self.assertEqual(self.run_guard(warn_only=True), 0)
+
+
 class LocksAtTest(unittest.TestCase):
     """``locks_at`` reads the base side, and tolerates a report that was not there."""
 

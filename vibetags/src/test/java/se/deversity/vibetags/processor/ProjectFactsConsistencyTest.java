@@ -216,6 +216,36 @@ class ProjectFactsConsistencyTest {
             "The README's scoped-rule-directory count disagrees with ServiceRegistry.");
     }
 
+    /**
+     * PLATFORMS.md opens with "Every file VibeTags can generate". The count tests above cannot
+     * catch a table that has the right number of rows and the wrong names, and three ignore files
+     * plus the two Codex files were missing from it while the counts stayed green.
+     */
+    @Test
+    void platformsDocNamesEveryPathTheServiceRegistryDeclares() throws IOException {
+        Path doc = REPO_ROOT.resolve("docs/PLATFORMS.md");
+        if (!Files.isRegularFile(doc)) {
+            return; // repo layout not reachable; the other tests document this skip
+        }
+        String md = Files.readString(doc, StandardCharsets.UTF_8);
+        Path root = Paths.get(".").toAbsolutePath().normalize();
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (Path file : ServiceRegistry.buildServiceFileMap(Paths.get(".")).values()) {
+            String rel = root.relativize(file.toAbsolutePath().normalize()).toString()
+                .replace(java.io.File.separatorChar, '/');
+            Path name = file.getFileName();
+            boolean directory = name != null && !name.toString().contains(".");
+            String needle = directory ? "`" + rel + "/" : "`" + rel + "`";
+            if (!md.contains(needle)) {
+                missing.add(rel);
+            }
+        }
+        assertTrue(missing.isEmpty(),
+            "docs/PLATFORMS.md says it lists every file VibeTags can generate, but ServiceRegistry "
+                + "declares paths its table does not name. Add a row for each:\n  "
+                + String.join("\n  ", missing));
+    }
+
     @Test
     void readmeAnnotationCountMatchesTheNumberOfAnnotationInterfaces() throws IOException {
         Path annotationsDir = REPO_ROOT.resolve(

@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -135,6 +136,59 @@ class ReleaseScriptCoverageTest {
     /** Build outputs and local scratch that are not part of the release. */
     private static final Set<String> IGNORED_SUFFIXES =
         Set.of(".flattened-pom.xml", "dependency-reduced-pom.xml");
+
+    /**
+     * A third-party pin that happens to equal the release version must survive a bump. jspecify
+     * once shared a version with VibeTags and the blanket replace bumped it along with the real
+     * coordinates; the fix made for the parent POM did not reach the README and example files.
+     */
+    @Test
+    @DisplayName("set-version.sh leaves a third-party pin equal to the release version alone")
+    void thirdPartyPinsEqualToTheReleaseVersionAreLeftAlone() throws IOException, InterruptedException {
+        Path script = REPO_ROOT.resolve("tools/set-version.sh");
+        assumeTrue(Files.isRegularFile(script), "set-version.sh not reachable; skipping");
+        Path tmp = Files.createTempDirectory("set-version");
+        Files.createDirectories(tmp.resolve("tools"));
+        Files.copy(script, tmp.resolve("tools/set-version.sh"));
+        Files.createDirectories(tmp.resolve("vibetags-parent"));
+        Files.writeString(tmp.resolve("vibetags-parent/pom.xml"),
+            "<project><properties><revision>1.3.0</revision></properties></project>\n");
+        String readme = String.join("\n",
+            "<dependency>",
+            "  <groupId>org.jspecify</groupId>",
+            "  <artifactId>jspecify</artifactId>",
+            "  <version>1.3.0</version>",
+            "</dependency>",
+            "<dependency>",
+            "  <groupId>se.deversity.vibetags</groupId>",
+            "  <artifactId>vibetags-bom</artifactId>",
+            "  <version>1.3.0</version>",
+            "</dependency>",
+            "implementation platform(\"se.deversity.vibetags:vibetags-bom:1.3.0\")",
+            "testImplementation \"org.other:thing:1.3.0\"",
+            "");
+        Files.writeString(tmp.resolve("README.md"), readme);
+
+        Process bump;
+        try {
+            bump = new ProcessBuilder("sh", "tools/set-version.sh", "9.9.9")
+                .directory(tmp.toFile()).redirectErrorStream(true).start();
+        } catch (IOException noShell) {
+            assumeTrue(false, "no sh on PATH; the Linux CI job runs this");
+            return;
+        }
+        String log = new String(bump.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, bump.waitFor(), log);
+
+        String after = Files.readString(tmp.resolve("README.md"), StandardCharsets.UTF_8);
+        assertTrue(after.contains("<artifactId>jspecify</artifactId>\n  <version>1.3.0</version>"),
+            "the jspecify pin must keep its own version:\n" + after);
+        assertTrue(after.contains("\"org.other:thing:1.3.0\""), "a third-party coordinate stays:\n" + after);
+        assertTrue(after.contains("<artifactId>vibetags-bom</artifactId>\n  <version>9.9.9</version>"),
+            "the VibeTags dependency is bumped:\n" + after);
+        assertTrue(after.contains("se.deversity.vibetags:vibetags-bom:9.9.9"), after);
+        assertTrue(Files.readString(tmp.resolve("vibetags-parent/pom.xml")).contains("<revision>9.9.9</revision>"));
+    }
 
     @Test
     @DisplayName("no tracked file states the version without the script knowing about it")

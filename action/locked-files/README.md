@@ -48,6 +48,11 @@ jobs:
 | `working-directory` | `.` | Directory to build and check from |
 | `warn-only` | `false` | Emit warnings instead of failing the job |
 
+If no `.vibetags-locks` report is found under `working-directory`, the job fails (or warns, with
+`warn-only`). The report is opted in by committing the file at the project root, so its absence
+means the action is looking in the wrong place or the project never opted in; a green check that
+guarded nothing is the one outcome the action must not produce.
+
 ## Report format
 
 `.vibetags-locks` is JSON Lines wrapped in `# VIBETAGS` hash markers. The first JSON record
