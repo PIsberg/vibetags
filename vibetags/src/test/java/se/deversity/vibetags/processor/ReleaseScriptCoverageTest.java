@@ -232,6 +232,38 @@ class ReleaseScriptCoverageTest {
                 + "change:\n  " + String.join("\n  ", missing));
     }
 
+    /**
+     * The composite action's {@code uses:} ref in the docs names a release tag, never
+     * {@code @main}.
+     *
+     * <p>Both files are snippets a consumer copies verbatim into a workflow, and this repository
+     * SHA-pins every action it consumes itself. A floating ref changes under whoever copied it —
+     * including behaviour changes such as the guard that now fails when it finds no report, which
+     * a pinned ref lets them adopt on their own schedule (issue #559).
+     *
+     * <p>Pinned to the <em>current</em> version on purpose: that is what {@code set-version.sh}
+     * rewrites, and what {@link #everyVersionCarryingFileIsInTheScript} then keeps in the script.
+     * Reverting either snippet to {@code @main} would satisfy that test — nothing states a version
+     * any more — and only this one catches it.
+     */
+    @Test
+    @DisplayName("the documented action ref is pinned to this release's tag")
+    void theDocumentedActionRefIsPinnedToThisReleasesTag() throws IOException {
+        String version = revision();
+        assumeTrue(version != null && !version.isBlank(), "could not read <revision>; skipping");
+
+        for (String rel : List.of("USAGE.md", "action/locked-files/README.md")) {
+            Path doc = REPO_ROOT.resolve(rel);
+            assumeTrue(Files.isRegularFile(doc), rel + " not reachable; skipping");
+            String text = Files.readString(doc, StandardCharsets.UTF_8);
+            assumeTrue(text.contains("PIsberg/vibetags/action/locked-files@"),
+                rel + " no longer shows the action; skipping");
+            assertTrue(text.contains("PIsberg/vibetags/action/locked-files@v" + version),
+                rel + " must pin the locked-files action at @v" + version + ". A consumer copies "
+                    + "this snippet verbatim, and an unpinned ref changes under them.");
+        }
+    }
+
     // -----------------------------------------------------------------------
 
     /**

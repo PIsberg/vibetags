@@ -169,6 +169,22 @@ replace_gradle_vibetags_refs() {
     echo "  updated ${file#"$ROOT_DIR"/} (se.deversity.vibetags refs only)"
 }
 
+# Scoped edit for the composite action's `uses:` ref in the docs. A consumer copies these
+# snippets verbatim into a workflow, and this repository SHA- or tag-pins every action it
+# consumes itself; @main hands them a ref that changes under them, including behaviour
+# changes like the guard that now fails when it finds no report (#559). Anchored on the
+# action path, so a version elsewhere on the line is left alone.
+replace_action_ref() {
+    file="$1"
+    if [ ! -f "$file" ]; then
+        echo "warning: $file not found, skipping" >&2
+        return 0
+    fi
+    sed -i.bak -E "s#(PIsberg/vibetags/action/locked-files@v)$OLD_ESCAPED#\1$NEW_VERSION#g" "$file"
+    rm -f "$file.bak"
+    echo "  updated ${file#"$ROOT_DIR"/} (locked-files action ref only)"
+}
+
 # The one authoritative edit — <revision> only, so a third-party version pin that happens to
 # equal $OLD_VERSION (jspecify.version has collided with it before) is never touched.
 replace_xml_property "$PARENT_POM" "revision"
@@ -204,6 +220,14 @@ for rel in \
     .claude/skills/vibetags-usage/SKILL.md \
 ; do
     replace_in_file "$ROOT_DIR/$rel"
+done
+
+# The action's `uses:` ref, which no other pattern here matches.
+for rel in \
+    USAGE.md \
+    action/locked-files/README.md \
+; do
+    replace_action_ref "$ROOT_DIR/$rel"
 done
 
 echo "Done."
