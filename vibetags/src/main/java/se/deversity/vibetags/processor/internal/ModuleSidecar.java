@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+import se.deversity.vibetags.processor.VibeTagsLogger;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AITestDriven;
@@ -656,9 +657,17 @@ public final class ModuleSidecar {
      * {@code --parallel}), a sibling's sidecar may be absent or mid-write when this method runs.
      * The worst case is a single build cycle where one module's content is missing from the merged
      * output; the next incremental build picks it up because the sidecar stamp will have changed.
+     *
+     * <p>Reports its skips and prunes on whatever logger the round already configured for
+     * {@code root}, resolved rather than passed. The caller that needs that is
+     * {@code AIGuardrailProcessor.generateFiles()}, which is {@code @AILocked} because its step
+     * order is load-bearing: threading a logger through it would have edited locked code to add a
+     * diagnostic, which is the trade the lock exists to refuse. Callers that hold a logger should
+     * pass it to {@link #readAll(Path, Logger)} instead - explicit beats ambient wherever the
+     * choice exists, and a test with no configured root gets {@code null} here and stays silent.
      */
     public static List<ModuleSidecar> readAll(Path root) {
-        return readAll(root, true, null);
+        return readAll(root, true, VibeTagsLogger.currentFor(root));
     }
 
     /**
@@ -679,9 +688,11 @@ public final class ModuleSidecar {
      * promise is that it touches nothing VibeTags manages, and whose pruning of a departed
      * module's sidecar threw away the only record of the rule files that module wrote, so the
      * next real build could no longer remove them (see {@link #staleGranularStems}).
+     *
+     * <p>Resolves its logger the way {@link #readAll(Path)} does, and for the same reason.
      */
     public static List<ModuleSidecar> peekAll(Path root) {
-        return readAll(root, false, null);
+        return readAll(root, false, VibeTagsLogger.currentFor(root));
     }
 
     /** {@link #peekAll(Path)}, saying on {@code log} why any sidecar was left out. */

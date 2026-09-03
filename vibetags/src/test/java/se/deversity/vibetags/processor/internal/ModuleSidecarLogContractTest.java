@@ -10,7 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.deversity.vibetags.processor.VibeTagsLogger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +21,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -37,6 +41,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModuleSidecarLogContractTest {
 
     private static final String SIDECAR_PREFIX = ".vibetags-mod-";
+
+    /** Sidecars are line-oriented; the fixture writes the same separator the reader splits on. */
+    private static final String EOL = "\n";
 
     private ch.qos.logback.classic.Logger logger;
     private ListAppender<ILoggingEvent> appender;
@@ -161,5 +168,41 @@ class ModuleSidecarLogContractTest {
     private String dump() {
         return appender.list.stream().map(ILoggingEvent::getFormattedMessage)
             .reduce("", (a, b) -> a + "\n  " + b);
+    }
+
+    @Test
+    @DisplayName("the no-logger overload reports on the round's own log, and is silent without one")
+    void theOverloadTheLockedCallSiteUsesStillReports(@TempDir Path root) throws IOException {
+        // AIGuardrailProcessor.generateFiles() calls readAll(root) and is @AILocked, so the
+        // logger cannot be threaded through it without editing locked code. It is resolved from
+        // the round instead. This is the case that proves the main build path - the one that
+        // actually prunes - is not the silent one.
+        write(root, "old", String.join(EOL,
+                        "# version=1", "moduleId=old", "modulePath=", "# end", ""));
+
+        assertNull(VibeTagsLogger.currentFor(root), "nothing has configured this root yet");
+        ModuleSidecar.readAll(root);
+        assertFalse(Files.exists(root.resolve("vibetags.log")),
+            "with no round in progress the read stays silent and creates no log");
+
+        write(root, "old", String.join(EOL,
+                        "# version=1", "moduleId=old", "modulePath=", "# end", ""));
+        Logger roundLog = VibeTagsLogger.forRoot(root, null, "DEBUG");
+        try {
+            ModuleSidecar.readAll(root);
+        } finally {
+            VibeTagsLogger.shutdown(root);
+        }
+
+        assertNotNull(roundLog, "the round configured a logger");
+        Path logFile = root.resolve("vibetags.log");
+        assertTrue(Files.exists(logFile),
+            "the round configured a logger and the read had a sidecar to prune, so the log "
+                + "must exist; an absent file is the overload having stayed silent");
+        String written = Files.readString(logFile);
+        assertTrue(written.contains("sidecar.prune reason=stale-format"),
+            "the locked call site's overload has to say why it deleted a module's sidecar, or "
+                + "issue #555 is only fixed on the paths that were never the problem. Log: "
+                + written);
     }
 }

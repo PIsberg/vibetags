@@ -201,4 +201,43 @@ class VibeTagsLoggerUnitTest {
         // Should fallback to a standard SLF4J logger (not necessarily the NOP logger)
         assertNotSame(NOPLogger.NOP_LOGGER, logger);
     }
+
+    // --- currentFor(Path): the lookup that never configures ---
+
+    @Test
+    void currentForReturnsTheLoggerTheRoundAlreadyConfigured() {
+        Logger configured = VibeTagsLogger.forRoot(tempDir);
+
+        assertSame(configured, VibeTagsLogger.currentFor(tempDir),
+                "code deep in a round must report on the log the round is writing, not on a "
+                        + "second logger of its own");
+    }
+
+    @Test
+    void currentForAcceptsAnEquivalentPath() {
+        Logger configured = VibeTagsLogger.forRoot(tempDir);
+        Path equivalent = tempDir.resolve("child").resolve("..");
+
+        assertSame(configured, VibeTagsLogger.currentFor(equivalent),
+                "a caller holding an unnormalised path to the same root is the same root");
+    }
+
+    @Test
+    void currentForAnswersNullForARootNobodyConfigured() {
+        assertNull(VibeTagsLogger.currentFor(tempDir),
+                "nothing configured this root, so there is no log to write to; a test calling "
+                        + "into the processor's internals must not create one as a side effect");
+        assertNull(VibeTagsLogger.currentFor(null), "and null is a root nobody configured");
+        assertFalse(Files.exists(tempDir.resolve(VibeTagsLogger.DEFAULT_LOG_FILE)),
+                "the lookup must not create the log file it did not find");
+    }
+
+    @Test
+    void currentForAnswersNullWhenLoggingIsOff() {
+        VibeTagsLogger.forRoot(tempDir, null, "OFF");
+
+        assertNull(VibeTagsLogger.currentFor(tempDir),
+                "OFF means no file and no events, so the ambient lookup has to say the same "
+                        + "thing the explicit call said: there is nothing to log to");
+    }
 }

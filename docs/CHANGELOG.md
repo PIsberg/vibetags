@@ -18,7 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`future-version`, `unreadable`, and every reason under check mode, which deletes nothing).
   `stale-format` and `malformed` are separated by reading the file's own version header, because
   "written by an older processor" and "corrupt" are different facts about somebody's build.
-  (#555, `ModuleSidecarLogContractTest`)
+  The logger is resolved from the round rather than passed in: the caller that prunes is
+  `AIGuardrailProcessor.generateFiles()`, which is `@AILocked` because its step order is
+  load-bearing, and threading a parameter through it would have edited locked code to add a
+  diagnostic. `VibeTagsLogger.currentFor(root)` looks up the logger the round already
+  configured, never creates one, and answers null for a root nobody configured or one whose
+  level is OFF, so a caller outside a build stays silent.
+  (#555, `ModuleSidecarLogContractTest`, `VibeTagsLoggerUnitTest`)
 - **A locked constructor could change and the enforcing gate passed.** javac renders a constructor
   under its class's simple name, so `public Foo(String)` and a method `public void Foo(String)` on
   the same class produce one identical element path. `EnforcementBaseline` keyed on that path

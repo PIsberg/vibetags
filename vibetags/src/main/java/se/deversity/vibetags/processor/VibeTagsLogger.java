@@ -137,6 +137,38 @@ public final class VibeTagsLogger {
     }
 
     /**
+     * {@return the logger this thread already configured for {@code projectRoot}, or {@code null}}
+     *
+     * <p>A lookup, never a setup. {@link #forRoot(Path)} builds an appender, opens a file and sets
+     * a level; this method does none of that, so code deep inside a compilation round can report
+     * on the log the round is already writing without having to be handed it. That matters where
+     * the call site cannot be changed - {@code AIGuardrailProcessor.generateFiles()} is
+     * {@code @AILocked} because its step order is load-bearing, and threading a logger through it
+     * would have edited locked code to add a diagnostic.
+     *
+     * <p>A root nobody configured on this thread answers {@code null}, and so does a root whose
+     * level is {@code OFF}: {@code forRoot} removes it from the thread's set before returning the
+     * no-op logger, so "logging is off" and "no logger here" are the same answer, which is the
+     * right one for both.
+     *
+     * @param projectRoot the root whose logger is wanted; {@code null} answers {@code null}
+     */
+    public static @Nullable Logger currentFor(@Nullable Path projectRoot) {
+        if (projectRoot == null) {
+            return null;
+        }
+        // Compared normalised: the processor registers the root it resolved, and a caller deeper
+        // in the round may hold an equivalent path that is not equal() to it.
+        Path target = projectRoot.toAbsolutePath().normalize();
+        for (Path known : THREAD_PROJECT_ROOTS.get()) {
+            if (known.toAbsolutePath().normalize().equals(target)) {
+                return LoggerFactory.getLogger(getLoggerName(known));
+            }
+        }
+        return null;
+    }
+
+    /**
      * Suffixes the logger name with an absolute path hash to isolate concurrent parallel test threads.
      */
     private static String getLoggerName(@Nullable Path projectRoot) {
