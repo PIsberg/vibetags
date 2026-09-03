@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.SourceLocation;
+import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -48,39 +49,16 @@ public final class LocksReportRenderer implements PlatformRenderer {
             SourceLocation pos = model.lockedPosition(e);
 
             sb.append("{\"type\":\"locked\"")
-              .append(",\"element\":\"").append(escapeJson(e.path())).append('"')
+              .append(",\"element\":\"").append(Escape.json(e.path())).append('"')
               .append(",\"kind\":\"").append(e.kind().name()).append('"');
             if (pos != null) {
-                sb.append(",\"file\":\"").append(escapeJson(pos.file())).append('"')
+                sb.append(",\"file\":\"").append(Escape.json(pos.file())).append('"')
                   .append(",\"startLine\":").append(pos.startLine())
                   .append(",\"endLine\":").append(pos.endLine());
             }
-            sb.append(",\"reason\":\"").append(escapeJson(reason)).append('"')
+            sb.append(",\"reason\":\"").append(Escape.json(reason)).append('"')
               .append("}\n");
         }
         return sb.toString();
-    }
-
-    /** Minimal JSON string escaping: backslash, quote, and control characters. */
-    private static String escapeJson(String s) {
-        StringBuilder out = new StringBuilder(s.length() + 8);
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            switch (c) {
-                case '\\' -> out.append("\\\\");
-                case '"' -> out.append("\\\"");
-                case '\n' -> out.append("\\n");
-                case '\r' -> out.append("\\r");
-                case '\t' -> out.append("\\t");
-                default -> {
-                    if (c < 0x20) {
-                        out.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        out.append(c);
-                    }
-                }
-            }
-        }
-        return out.toString();
     }
 }
