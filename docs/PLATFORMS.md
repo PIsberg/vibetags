@@ -35,16 +35,20 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 |---|---|---|
 | `.cursorrules` | Cursor IDE | Markdown |
 | `.cursor/rules/*.mdc` | Cursor IDE (granular) | YAML front-matter + Markdown |
+| `.cursorignore` | Cursor IDE | Glob patterns |
 | `CLAUDE.md` | Claude | XML + Markdown |
 | `CLAUDE.local.md` | Claude Code (local override) | XML + Markdown |
+| `.claudeignore` | Claude | Glob patterns |
 | `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
 | `.aiexclude` | Gemini | Glob patterns |
 | `AGENTS.md` | Codex CLI | Markdown |
-| `.codex/` | Codex CLI | Config + Starlark |
+| `.codex/config.toml` | Codex CLI | TOML config |
+| `.codex/rules/vibetags.rules` | Codex CLI | Starlark rules |
 | `gemini_instructions.md` | Gemini | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
+| `.copilotignore` | GitHub Copilot | Glob patterns |
 | `CONVENTIONS.md` | Aider | Markdown |
 | `.aiderignore` | Aider | Glob patterns |
 | `QWEN.md` | Qwen | Markdown |
@@ -90,6 +94,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.ghostcoderignore` | Ghostcoder | Glob patterns |
 | `.piecesignore` | Pieces for Developers | Glob patterns |
 | `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
+| `.vibetags-root-index` | Reactor root, opt-in to the lean indexed aggregate ([MULTI-MODULE.md](MULTI-MODULE.md#lean-indexed-root-aggregate-vibetags-root-index)) | Marker file |
 
 #### Granular rules
 
