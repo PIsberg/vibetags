@@ -85,6 +85,14 @@ and the keys are current again. Consumers without annotated enum constants see n
   The one shape VibeTags ever wrote above its header was a single title line glued to it; only
   that is boilerplate now.
 
+### Added
+
+- **The review platforms' annotation subsets are declared and gated.** Sweep, Mentat and Plandex
+  carry 16, 9 and 3 of the 44 annotations, a set that had grown by accretion with nothing saying
+  which. `docs/PLATFORMS.md` now lists each platform's set, and `ReviewPlatformSubsetClaimTest`
+  derives the sets from the formatters and holds the doc lines to them in both directions. No
+  generated file changes. Closes #547.
+
 ### Changed
 
 - **One JSON string escaper instead of three.** `Json.quote` (the transitive manifest) and the
