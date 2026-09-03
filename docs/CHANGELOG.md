@@ -85,6 +85,15 @@ and the keys are current again. Consumers without annotated enum constants see n
   The one shape VibeTags ever wrote above its header was a single title line glued to it; only
   that is boilerplate now.
 
+### Changed
+
+- **One JSON string escaper instead of three.** `Json.quote` (the transitive manifest) and the
+  `.vibetags-locks` report now escape through `Escape.json`, the same code every JSON platform
+  file uses. The one observable difference is in the JSON platform files: a backspace or form
+  feed in an annotation value is now written as the RFC 8259 short escape rather than the
+  six-character `u` form the manifest already used; both decode identically, and `JsonTest`
+  round-trips both through the manifest parser. Closes #548.
+
 ## [1.3.0] - 2026-08-31
 
 A minor rather than a patch because `vibetags doctor` gains a capability (the Groovy
