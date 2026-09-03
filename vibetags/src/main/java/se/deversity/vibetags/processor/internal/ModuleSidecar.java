@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AITestDriven;
@@ -657,7 +658,19 @@ public final class ModuleSidecar {
      * output; the next incremental build picks it up because the sidecar stamp will have changed.
      */
     public static List<ModuleSidecar> readAll(Path root) {
-        return readAll(root, true);
+        return readAll(root, true, null);
+    }
+
+    /**
+     * {@link #readAll(Path)}, saying on {@code log} why any sidecar was skipped or pruned.
+     *
+     * <p>A module vanishing from the merged output is the failure this class exists to prevent, and
+     * until now it left no trace at all: {@code ModuleSidecar} held no logger, so a deleted or
+     * skipped sidecar was invisible in {@code vibetags.log} (issue #555). Every drop now names its
+     * reason, which docs/LOGGING.md requires of any {@code .skip}.
+     */
+    public static List<ModuleSidecar> readAll(Path root, @Nullable Logger log) {
+        return readAll(root, true, log);
     }
 
     /**
@@ -668,10 +681,15 @@ public final class ModuleSidecar {
      * next real build could no longer remove them (see {@link #staleGranularStems}).
      */
     public static List<ModuleSidecar> peekAll(Path root) {
-        return readAll(root, false);
+        return readAll(root, false, null);
     }
 
-    private static List<ModuleSidecar> readAll(Path root, boolean prune) {
+    /** {@link #peekAll(Path)}, saying on {@code log} why any sidecar was left out. */
+    public static List<ModuleSidecar> peekAll(Path root, @Nullable Logger log) {
+        return readAll(root, false, log);
+    }
+
+    private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
         // Kept index-aligned with result so a sidecar dropped below can also be deleted.
@@ -697,9 +715,11 @@ public final class ModuleSidecar {
                           // a sibling save in a parallel reactor does exactly that on Windows.
                           // Skip this round (readAll already tolerates a missing sibling) and,
                           // above all, do not delete a file we never managed to look at.
+                          logSkipped(log, p, "unreadable");
                           return;
                       }
                       if (s == null) {
+                          logDropped(log, prune, p, formatReason(p));
                           if (prune) tryDelete(p);
                           return;
                       }
@@ -707,13 +727,18 @@ public final class ModuleSidecar {
                           // Written by a newer processor in a mixed-version build: skip it (its
                           // module's content is missing from OUR merge, the newer module merges
                           // everything correctly) but never delete a sibling's valid sidecar.
+                          logSkipped(log, p, "future-version");
                           return;
                       }
                       // Stale check: if the module path (relative to root) no longer exists, prune.
-                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)
-                              && !moduleDirExists(root, s.modulePath)) {
-                          if (prune) tryDelete(p);
-                          return;
+                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
+                          ModuleDir dir = moduleDir(root, s.modulePath);
+                          if (dir != ModuleDir.EXISTS) {
+                              logDropped(log, prune, p,
+                                  dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
+                              if (prune) tryDelete(p);
+                              return;
+                          }
                       }
                       result.add(s);
                       resultFiles.add(p);
@@ -727,7 +752,7 @@ public final class ModuleSidecar {
             // directory the build does not need.
 
         }
-        dropSupersededRegions(result, resultFiles, prune);
+        dropSupersededRegions(result, resultFiles, prune, log);
         applyRootIndexModeTo(root, result);
         return result;
     }
@@ -776,7 +801,8 @@ public final class ModuleSidecar {
      * whose timestamp cannot be read.
      */
     private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
-                                              List<Path> files, boolean prune) {
+                                              List<Path> files, boolean prune,
+                                              @Nullable Logger log) {
         if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
         Map<String, String> pathByRegion = new LinkedHashMap<>();
         Map<String, Set<String>> elementsByRegion = new LinkedHashMap<>();
@@ -820,6 +846,7 @@ public final class ModuleSidecar {
 
         for (int i = sidecars.size() - 1; i >= 0; i--) {
             if (!superseded.contains(sidecars.get(i).regionId)) continue;
+            logDropped(log, prune, files.get(i), "superseded");
             if (prune) tryDelete(files.get(i));
             sidecars.remove(i);
             files.remove(i);
@@ -1538,22 +1565,107 @@ public final class ModuleSidecar {
         return false;
     }
 
+    /** Whether a sidecar's module directory is still there, and if not, why not. */
+    enum ModuleDir {
+        EXISTS,
+        /** The directory is gone: the module was removed from the build. */
+        MISSING,
+        /**
+         * This filesystem cannot even spell the path — a module called {@code api:v2} written on
+         * Linux and read in a Windows checkout. Retired like a missing one, but a different fact
+         * about the world, and the log says which.
+         */
+        UNREPRESENTABLE
+    }
+
     /**
-     * Whether the module directory a sidecar names still exists under {@code root}.
+     * Whether the module directory a sidecar names still exists under {@code root}, and if not,
+     * whether this filesystem could even represent the path.
      *
      * <p>A path this filesystem cannot represent counts as gone. A sidecar written on Linux for a
      * module directory called {@code api:v2} or {@code core } and synced into a Windows checkout
      * makes {@code root.resolve} throw InvalidPathException, a RuntimeException that escaped
      * readAll, staleGranularStems and anyStale and failed every module of the reactor with an
      * uncaught-exception diagnostic. The module cannot exist on this filesystem, so the answer
-     * that keeps the build alive is also the true one: it is stale.
+     * that keeps the build alive is also the true one: it is stale. The two cases are told apart
+     * only so the prune event can name which one happened (issue #555).
      */
-    private static boolean moduleDirExists(Path root, String modulePath) {
+    private static ModuleDir moduleDir(Path root, String modulePath) {
         try {
-            return Files.isDirectory(root.resolve(modulePath));
+            return Files.isDirectory(root.resolve(modulePath)) ? ModuleDir.EXISTS : ModuleDir.MISSING;
         } catch (java.nio.file.InvalidPathException unrepresentable) {
-            return false;
+            return ModuleDir.UNREPRESENTABLE;
         }
+    }
+
+    /** {@link #moduleDir} as the yes/no question the callers that do not log ask. */
+    private static boolean moduleDirExists(Path root, String modulePath) {
+        return moduleDir(root, modulePath) == ModuleDir.EXISTS;
+    }
+
+    /**
+     * Why {@link #load} refused a file, read back from its header. Cheap and only on the path where
+     * a sidecar is already being dropped: {@code load} answers "not usable" with one {@code null},
+     * and "written by an older processor" and "corrupt" are different facts about somebody's build.
+     */
+    private static String formatReason(Path sidecar) {
+        Integer version = readFormatVersionHeader(sidecar);
+        if (version == null) {
+            return "no-version-header";
+        }
+        return version < FORMAT_VERSION ? "stale-format" : "malformed";
+    }
+
+    /** The {@code # version} header of one sidecar, or {@code null} when absent or unparseable. */
+    private static @Nullable Integer readFormatVersionHeader(Path sidecar) {
+        try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
+            for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+                if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
+                    try {
+                        return Integer.valueOf(line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                    } catch (NumberFormatException unparseable) {
+                        return null;
+                    }
+                }
+                if (!line.startsWith("#")) {
+                    return null; // the version header is written first; past it there is none
+                }
+            }
+        } catch (IOException | RuntimeException unreadable) {
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * A sidecar left out of this merge but kept on disk. DEBUG: in a parallel reactor this is
+     * ordinary and self-correcting — the sibling's next build brings it back.
+     */
+    private static void logSkipped(@Nullable Logger log, Path sidecar, String reason) {
+        if (log != null && log.isDebugEnabled()) {
+            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+        }
+    }
+
+    /**
+     * A sidecar dropped from this merge, deleted when {@code prune} is set. INFO rather than DEBUG,
+     * because a module disappearing from every generated file is an outcome of the run and the
+     * question people arrive with; when nothing is deleted it is a plain skip, and says so.
+     */
+    private static void logDropped(@Nullable Logger log, boolean prune, Path sidecar, String reason) {
+        if (log == null) {
+            return;
+        }
+        if (prune) {
+            log.info("sidecar.prune reason={} path={}", reason, fileName(sidecar));
+        } else if (log.isDebugEnabled()) {
+            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+        }
+    }
+
+    private static String fileName(Path path) {
+        Path name = path.getFileName();
+        return name != null ? name.toString() : path.toString();
     }
 
     /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A module could vanish from the merged guardrails with no trace in the log.**
+  `ModuleSidecar.readAll` deleted a version-1, headerless or corrupt sidecar and skipped a
+  future-version one without a single event: the class held no logger, so the only symptom was a
+  section missing from a generated file. Every drop now logs its reason — `sidecar.prune reason=…`
+  when the file is deleted (`stale-format`, `malformed`, `module-gone`, `invalid-module-path`,
+  `superseded`) and `sidecar.skip reason=…` when it is kept and only ignored this build
+  (`future-version`, `unreadable`, and every reason under check mode, which deletes nothing).
+  `stale-format` and `malformed` are separated by reading the file's own version header, because
+  "written by an older processor" and "corrupt" are different facts about somebody's build.
+  (#555, `ModuleSidecarLogContractTest`)
 - **A locked constructor could change and the enforcing gate passed.** javac renders a constructor
   under its class's simple name, so `public Foo(String)` and a method `public void Foo(String)` on
   the same class produce one identical element path. `EnforcementBaseline` keyed on that path
