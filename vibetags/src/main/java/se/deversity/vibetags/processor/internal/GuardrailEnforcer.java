@@ -128,7 +128,24 @@ public final class GuardrailEnforcer {
             }
         }
 
-        EnforcementBaseline baseline = EnforcementBaseline.load(root);
+        EnforcementBaseline baseline;
+        boolean recorded;
+        try {
+            baseline = EnforcementBaseline.load(root);
+            recorded = EnforcementBaseline.exists(root);
+        } catch (IOException e) {
+            // Present but unreadable is not "nothing recorded". Reading it as empty fell through to
+            // the warning below and a pass: one Cp1252 byte from a Windows editor switched the gate
+            // off, and the build stayed green.
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                "VibeTags: could not read " + EnforcementBaseline.FILE_NAME + " ("
+                    + e.getClass().getSimpleName() + ": " + e.getMessage() + "); enforcement did not run."
+                    + " Fix the file, or delete it and record it again with -Avibetags.baseline.update=true.");
+            if (log != null) {
+                log.error("enforce.skip module={} reason=baseline-unreadable error={}", moduleId, e.toString());
+            }
+            return 1;
+        }
         if (update) {
             try {
                 baseline.update(root, moduleId, current);
@@ -143,7 +160,7 @@ public final class GuardrailEnforcer {
             return 0;
         }
 
-        if (!EnforcementBaseline.exists(root) || baseline.hasNothingFor(moduleId)) {
+        if (!recorded || baseline.hasNothingFor(moduleId)) {
             // Enforcing against a baseline that was never recorded would fail every build on the
             // day the option is switched on, which teaches people to switch it off again.
             messager.printMessage(Diagnostic.Kind.WARNING,

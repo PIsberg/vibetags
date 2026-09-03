@@ -18,6 +18,12 @@ and the keys are current again. Consumers without annotated enum constants see n
 
 ### Fixed
 
+- **A corrupt `.vibetags-baseline` switched enforcement off with a warning.** `EnforcementBaseline`
+  read a file it could not decode as an empty one, so `-Avibetags.enforce` saw "nothing recorded
+  for this module", printed the advisory warning and passed. One byte that is not UTF-8 (a Cp1252
+  save from a Windows editor) was enough. The reader now throws, and the enforcer reports a compile
+  error that names the file and the way out; `EnforcementBaselineTest` and
+  `EnforcingModeEndToEndTest` pin both halves.
 - **Guardrails on two enum constants of the same name were one element.**
   `ElementNaming.elementPath` prepended the enclosing type only for fields, methods and
   constructors; an enum constant (and a record component) fell through to `Element.toString()`,

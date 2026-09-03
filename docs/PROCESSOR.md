@@ -149,7 +149,10 @@ compilation is therefore a violation too — that covers renames, deletions and 
 Enforcement runs in `process()` before `generateFiles()`, deliberately: the generation path has a
 fingerprint short-circuit that would let an unchanged-inputs build skip the check silently.
 Switching the option on before a baseline exists warns and checks nothing, rather than failing every
-build on day one.
+build on day one. A baseline that exists but cannot be read is different: a byte that is not UTF-8
+(a Cp1252 save from a Windows editor), a permission error, anything that stops the file from being
+parsed is a compile **error** naming the file, never an unrecorded baseline. The gate does not go
+quiet on a file it could not read.
 
 ## Top-level fingerprint short-circuit
 

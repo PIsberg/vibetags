@@ -49,42 +49,40 @@ public final class EnforcementBaseline {
         this.entries = entries;
     }
 
-    /** Reads the baseline at {@code root}, or an empty one when absent or unreadable. */
-    public static EnforcementBaseline load(Path root) {
+    /**
+     * Reads the baseline at {@code root}, or an empty one when absent.
+     *
+     * <p>A file that is present but cannot be read or decoded throws instead of loading empty.
+     * Loading it empty told the enforcer "nothing recorded", which it answers with a warning and a
+     * pass; one Cp1252 byte from a Windows editor was enough to switch the gate off unnoticed.
+     */
+    public static EnforcementBaseline load(Path root) throws IOException {
         Map<String, String> entries = new LinkedHashMap<>();
         Path file = root.resolve(FILE_NAME);
         if (!Files.isRegularFile(file)) {
             return new EnforcementBaseline(entries);
         }
-        try {
-            for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-                if (line.isBlank() || line.startsWith("#")) {
-                    continue;
-                }
-                int lastTab = line.lastIndexOf('\t');
-                if (lastTab < 0) {
-                    continue;
-                }
-                entries.put(line.substring(0, lastTab), line.substring(lastTab + 1));
+        for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
             }
-        } catch (IOException | RuntimeException e) {
-            return new EnforcementBaseline(new LinkedHashMap<>());
+            int lastTab = line.lastIndexOf('\t');
+            if (lastTab < 0) {
+                continue;
+            }
+            entries.put(line.substring(0, lastTab), line.substring(lastTab + 1));
         }
         return new EnforcementBaseline(entries);
     }
 
-    /** True when the file exists and carries a format header this processor understands. */
-    public static boolean exists(Path root) {
+    /**
+     * True when the file exists and carries a format header this processor understands. Throws
+     * when the file is there but cannot be read, for the same reason {@link #load} does.
+     */
+    public static boolean exists(Path root) throws IOException {
         Path file = root.resolve(FILE_NAME);
-        if (!Files.isRegularFile(file)) {
-            return false;
-        }
-        try {
-            return Files.readAllLines(file, StandardCharsets.UTF_8).stream()
-                        .anyMatch(FORMAT_MARKER::equals);
-        } catch (IOException e) {
-            return false;
-        }
+        return Files.isRegularFile(file)
+            && Files.readAllLines(file, StandardCharsets.UTF_8).stream().anyMatch(FORMAT_MARKER::equals);
     }
 
     /** The approved signature for {@code path} under {@code family}, or {@code null} if unrecorded. */
