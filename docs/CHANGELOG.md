@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI runs the companion CLI against a real example.** `doctor --dir examples/groovy` must exit 1
+  and name `InventoryService.groovy` and `field 'contactEmail'` — the groovyc field drop that
+  `examples/groovy/` gates in its generated files was reported only by `doctor`, and `doctor`'s
+  side of it was exercised by the CLI's own unit tests alone, never against a checkout. An exit 0
+  now fails the build. `init --list --dir examples/basic` runs beside it and must create nothing.
+  Both run from the module's classpath, which is the shape jbang resolves for a consumer. (#533)
+
 ### Fixed
 
 - **The `vibetags-cli` jar looked runnable and was not.** It declares a `Main-Class` but carries

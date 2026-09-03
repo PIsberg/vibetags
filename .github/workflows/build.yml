@@ -76,6 +76,49 @@ jobs:
             mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
           fi
 
+      # doctor is the only thing that reports the groovyc field drop that examples/groovy
+      # gates, and that detection was exercised only by the CLI's own unit tests — never
+      # against a real checkout, which is where a path or encoding difference would show
+      # (#533). Run from the module's classpath rather than `java -jar`: the published jar
+      # declares a Main-Class but carries no dependencies (#557), so the classpath here is
+      # the same shape jbang resolves for a consumer.
+      - name: Run vibetags doctor Against The Groovy Example (issue #533)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags-cli
+          mvn -B -q dependency:build-classpath -Dmdep.outputFile=target/cp.txt
+          CP="target/classes:$(cat target/cp.txt)"
+          set +e
+          java -cp "$CP" se.deversity.vibetags.cli.Main doctor --dir ../examples/groovy > "$RUNNER_TEMP/doctor-groovy.txt" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/doctor-groovy.txt"
+          # 1 means "findings present", and the dropped Groovy field is one. A 0 here would mean
+          # doctor stopped seeing it, which is exactly the regression this step exists to catch.
+          if [ "$status" -ne 1 ]; then
+            echo "::error::doctor exited $status against examples/groovy; expected 1 (findings)."
+            exit 1
+          fi
+          grep -qF "groovy sources:" "$RUNNER_TEMP/doctor-groovy.txt"
+          grep -qF "InventoryService.groovy" "$RUNNER_TEMP/doctor-groovy.txt"
+          grep -qF "field 'contactEmail'" "$RUNNER_TEMP/doctor-groovy.txt"
+
+      # init --list prints and creates nothing, so it is safe to run against a committed
+      # example. It is the other half of the CLI a consumer meets first.
+      - name: Run vibetags init --list Against The Basic Example (issue #533)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags-cli
+          CP="target/classes:$(cat target/cp.txt)"
+          java -cp "$CP" se.deversity.vibetags.cli.Main init --list --dir ../examples/basic > "$RUNNER_TEMP/init-list.txt"
+          cat "$RUNNER_TEMP/init-list.txt"
+          grep -qF "claude" "$RUNNER_TEMP/init-list.txt"
+          if [ -n "$(git status --porcelain -- examples/basic/)" ]; then
+            echo "::error::init --list must not create or modify anything."
+            git --no-pager status --porcelain -- examples/basic/
+            exit 1
+          fi
+
       # The repo dogfoods its own guardrails but never verified them, so the committed
       # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
       # processor writes and nothing said so — which is exactly what happened, and is only
