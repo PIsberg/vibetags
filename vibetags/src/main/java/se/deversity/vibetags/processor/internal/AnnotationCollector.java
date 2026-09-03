@@ -480,7 +480,9 @@ public final class AnnotationCollector {
      */
     private static <A extends Annotation> void record(TaggedElement.Builder builder, Element e, Class<A> type) {
         A annotation = e.getAnnotation(type);
-        builder.annotation(type, annotation);
+        // String members read as one line from here on: a text-block reason must not end a Markdown
+        // bullet halfway (issue #549). Done once, at the only place an annotation enters the model.
+        builder.annotation(type, SingleLineAnnotation.of(type, annotation));
         if (annotation instanceof AISunset sunset) {
             builder.typeMember("AISunset.replacement", replacementTypeName(sunset));
         }
