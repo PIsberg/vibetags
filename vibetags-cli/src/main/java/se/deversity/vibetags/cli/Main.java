@@ -1,7 +1,5 @@
 package se.deversity.vibetags.cli;
 
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
@@ -28,14 +26,15 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        System.exit(run(args, utf8(new FileOutputStream(FileDescriptor.out)),
-            utf8(new FileOutputStream(FileDescriptor.err)), Path.of("").toAbsolutePath()));
+        System.exit(run(args, utf8(System.out), utf8(System.err), Path.of("").toAbsolutePath()));
     }
 
     /**
      * A console stream that always writes UTF-8. {@code System.out} encodes with the platform
      * console charset, which on Windows is Cp1252 whenever stdout is a pipe or a file, so the
-     * em-dashes in doctor output arrived in CI logs as a single stray byte.
+     * em-dashes in doctor output arrived in CI logs as a single stray byte. Wrapping the
+     * existing stream keeps the bytes this layer produces untouched: a PrintStream passes
+     * {@code write(byte[])} through without re-encoding.
      */
     static PrintStream utf8(OutputStream raw) {
         return new PrintStream(raw, true, StandardCharsets.UTF_8);
