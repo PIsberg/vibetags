@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An illegal character in a path option failed the whole compilation.** `-Avibetags.root`,
+  `-Avibetags.log.path` and `-Avibetags.manifest.dir` went through `Paths.get` in `init()`, which
+  nothing guards; a colon on Windows or a NUL byte anywhere threw InvalidPathException and javac
+  reported an uncaught processor exception. Each now warns, naming the option, and falls back to
+  its default. (`PathOptionRobustnessTest`, `PathOptionUnitTest`)
+- **Boolean options recognised one literal each and were silently the default otherwise.**
+  `-Avibetags.check=yes` generated instead of checking, a bare `-Avibetags.check` was ignored, and
+  `-Avibetags.cache=No` still wrote the cache. All three now read the same way: a bare key is
+  true, `true`/`false` in any case, anything else warns and keeps the default. (`BooleanOptionTest`)
+- **Two elements planning the same granular stem lost one guardrail.** The nested
+  `com.example.Foo.Bar` and the top-level `com.example.Foo_Bar` both become
+  `com-example-Foo-Bar`; the plan was keyed by stem, so the second overwrote the first before the
+  case fold of #510 could see it. Equal stems now fold into one merged file the same way.
+  (`UnderscoreDotStemCollisionTest`)
+- **A sibling sidecar naming a module path this filesystem cannot represent failed every
+  module.** `root.resolve` threw InvalidPathException from `readAll`, `staleGranularStems` and
+  `anyStale`. Such a module cannot exist here, so its sidecar is stale and is pruned or skipped
+  like any other. (`ModuleSidecarResilienceTest`)
+
 ### Upgrade note
 
 A guardrail on an enum constant now has the enclosing enum in its element path
