@@ -213,9 +213,15 @@ def main():
 
     reports = find_reports(os.getcwd())
     if not reports:
-        print("::warning::VibeTags locked-files guard: no .vibetags-locks report found -- "
-              "did the build step run with the file touched?")
-        return 0
+        # A guard that found nothing to guard has not passed; it has not run. The report is
+        # opted in by committing .vibetags-locks, so its absence here means the action runs in
+        # the wrong working-directory or the project never opted in -- either way the check
+        # would be green while guarding nothing.
+        level = "warning" if warn_only else "error"
+        print(f"::{level}::VibeTags locked-files guard: no .vibetags-locks report found under "
+              f"{os.getcwd()} -- commit an empty .vibetags-locks at the project root to opt in, "
+              "and point working-directory at that root")
+        return 0 if warn_only else 1
     locks = load_locks(reports, repo_root)
     print(f"VibeTags locked-files guard: {len(locks)} locked element(s) "
           f"from {len(reports)} report(s); diffing against {merge_base[:12]}")
