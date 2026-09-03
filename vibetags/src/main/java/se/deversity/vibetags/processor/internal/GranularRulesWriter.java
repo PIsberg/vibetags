@@ -239,16 +239,21 @@ public final class GranularRulesWriter {
             }
         });
 
-        Map<String, Planned> planned = new LinkedHashMap<>();
+        // A list, not a map keyed by stem: two elements can plan the same stem outright (the
+        // nested com.example.Foo.Bar and the top-level com.example.Foo_Bar both become
+        // com-example-Foo-Bar, since every non-alphanumeric character is a dash). Keyed by stem,
+        // the second put replaced the first before foldCaseCollisions ever saw it, and one
+        // element had no guardrail in any output while the index still pointed at the file.
+        List<Map.Entry<String, Planned>> planned = new ArrayList<>();
 
         // Unmatched elements → one file per class/package (unchanged output).
         unmatched.forEach((owner, body) -> {
             String qName = filePrefix + owner.granularQName();
             List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
-            planned.put(qName, new Planned(owner.simpleName(), String.valueOf(owner), globs,
+            planned.add(Map.entry(qName, new Planned(owner.simpleName(), String.valueOf(owner), globs,
                 body.entries(),
                 new Unit(owner.simpleName(), "AI rules for " + owner,
-                    new GranularContribution(globs, body.toString().trim()))));
+                    new GranularContribution(globs, body.toString().trim())))));
         });
 
         // Role members → one grouped, human-named file per role. Grouped by the stem first,
@@ -295,9 +300,9 @@ public final class GranularRulesWriter {
             // One name is the name; several are all named, so the heading says which config lines
             // feed the file rather than picking one and looking like the others were dropped.
             String displayName = String.join(", ", rolesInFile.keySet());
-            planned.put(stem, new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
+            planned.add(Map.entry(stem, new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
                 new Unit(displayName, "AI rules for role " + displayName,
-                    new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim()))));
+                    new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim())))));
         });
 
         return foldCaseCollisions(planned);
@@ -322,9 +327,12 @@ public final class GranularRulesWriter {
      * <p>A plan with no case collisions — every ordinary build — takes the singleton branch for
      * every stem and produces byte-for-byte what it produced before the fold existed.
      */
-    private static Map<String, Unit> foldCaseCollisions(Map<String, Planned> planned) {
+    private static Map<String, Unit> foldCaseCollisions(List<Map.Entry<String, Planned>> planned) {
+        // Equal stems fold here too, the same way: they are the limiting case of a case
+        // collision, one physical file on every filesystem, and the merged unit written under
+        // the one name carries every element that resolves to it.
         Map<String, List<Map.Entry<String, Planned>>> byFoldedCase = new LinkedHashMap<>();
-        for (Map.Entry<String, Planned> entry : planned.entrySet()) {
+        for (Map.Entry<String, Planned> entry : planned) {
             byFoldedCase.computeIfAbsent(entry.getKey().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
                 .add(entry);
         }
