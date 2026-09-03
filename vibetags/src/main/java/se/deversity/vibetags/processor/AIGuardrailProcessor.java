@@ -42,6 +42,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -241,12 +242,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         super.init(processingEnv);
         Map<String, String> options = processingEnv.getOptions();
 
-        String rootOverride = options.get("vibetags.root");
-        this.root = Paths.get((rootOverride != null && !rootOverride.isBlank())
-                ? rootOverride
-                : Paths.get("").toAbsolutePath().toString()).toAbsolutePath().normalize();
-
         Messager messager = getSafeMessager();
+        Path rootOverride = pathOption(options, "vibetags.root", messager);
+        this.root = (rootOverride != null ? rootOverride : Paths.get("")).toAbsolutePath().normalize();
+
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root resolved: " + this.root);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir:      " + System.getProperty("user.dir"));
 
@@ -270,7 +269,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.moduleIdOverride = (moduleOption != null && !moduleOption.isBlank())
             ? ModuleSidecar.sanitizeId(moduleOption.trim()) : null;
 
-        String logPath = options.get("vibetags.log.path");
+        Path logPathOption = pathOption(options, "vibetags.log.path", messager);
+        String logPath = logPathOption == null ? null : logPathOption.toString();
         String logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
@@ -317,9 +317,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
-        String dirOption = options.get("vibetags.manifest.dir");
-        this.manifestDir = (dirOption != null && !dirOption.isBlank())
-            ? this.root.resolve(dirOption.strip()).normalize() : null;
+        Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
+        this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
         String packagesOption = options.get("vibetags.manifest.packages");
         this.manifestPackages = (packagesOption == null || packagesOption.isBlank())
             ? List.of()
@@ -470,6 +469,34 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * Parses a non-negative integer option, warning and falling back to "no limit" on nonsense.
      * A mistyped cap must not fail somebody's compile over an advisory feature.
      */
+    /**
+     * A path-valued option, or {@code null} when it is absent, blank, or not a path this
+     * filesystem can represent. The last case used to throw InvalidPathException out of
+     * {@link #init}, which nothing catches: process() guards generation, init() guarded nothing,
+     * and one illegal character in {@code -Avibetags.manifest.dir} failed the whole compilation
+     * with an uncaught-exception diagnostic. The reason is reported, the raw value is not: it can
+     * hold the very byte a terminal cannot print.
+     */
+    static @Nullable Path pathOption(Map<String, String> options, String key, Messager messager) {
+        String value = options.get(key);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Paths.get(value.strip());
+        } catch (InvalidPathException rejected) {
+            // Windows puts the offending character inside the reason ("Illegal char <?>"), so
+            // the reason is filtered the same way the value is withheld.
+            String reason = rejected.getReason().codePoints().filter(c -> c >= 0x20)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: -A" + key + " is not a valid path on this filesystem ("
+                    + reason + "); option ignored.");
+            return null;
+        }
+    }
+
     private static int parsePositiveInt(@Nullable String value, Messager messager) {
         if (value == null || value.isBlank()) {
             return 0;
