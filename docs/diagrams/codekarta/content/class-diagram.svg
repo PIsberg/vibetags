@@ -301,8 +301,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" x="1810.5" y="780.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">VOID_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" d="M1914.0 454.0 Q1896.2 702.4 1938.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" x="1911.1" y="695.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ROO_MODES_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" d="M1914.0 454.0 Q1998.3 713.6 2138.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" x="2012.1" y="701.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOCKS_REPORT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" d="M1914.0 454.0 Q1998.0 713.7 2138.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" x="2012.0" y="701.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOCKS_REPORT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" d="M1914.0 454.0 Q1602.5 722.8 1338.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" x="1614.3" y="728.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GRANULAR_RENDERER</text>
 <path class="edge-line" data-source="AiderConventionsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 768.0 Q1657.7 549.1 1714.0 306.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -369,8 +369,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" x="1855.7" y="1448.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="LlmsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 768.0 Q1553.5 559.4 1714.0 306.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="LlmsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1539.8" y="542.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 948.0 Q1955.8 607.3 1714.0 306.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1940.9" y="611.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 948.0 Q1956.0 607.2 1714.0 306.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1941.0" y="611.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 858.0 Q1658.0 592.2 1714.0 306.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1642.0" y="581.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" d="M1538.0 858.0 Q1746.1 750.7 1914.0 587.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -1133,13 +1133,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="LocksReportRenderer">
   <title>LocksReportRenderer [CLASS]</title>
-  <rect class="node-rect" x="2048.0" y="948.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="2048.0" y="948.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="2138.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">LocksReportRenderer</text>
   <line x1="2048.0" y1="992.0" x2="2228.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2056.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
   <line x1="2048.0" y1="1019.0" x2="2228.0" y2="1019.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2056.0" y="1032.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="2056.0" y="1047.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">escapeJson(String): String</text>
 </g>
 <g id="GranularRenderer">
   <title>GranularRenderer [CLASS]</title>
