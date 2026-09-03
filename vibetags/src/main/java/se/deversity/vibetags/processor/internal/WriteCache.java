@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -324,14 +323,16 @@ public final class WriteCache {
             }
             // Path.getFileName() returns null only for root paths — guard for correctness.
             Path cacheFileName = cachePath.getFileName();
-            Path tmp = cachePath.resolveSibling(
-                    (cacheFileName != null ? cacheFileName.toString() : ".vibetags-cache") + ".tmp");
-            Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
-            try {
-                Files.move(tmp, cachePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (java.nio.file.AtomicMoveNotSupportedException amnse) {
-                Files.move(tmp, cachePath, StandardCopyOption.REPLACE_EXISTING);
+            // Unique per writer: every module of a reactor flushes this one root-level cache, and a
+            // fixed temp name lets the second writer truncate the first's bytes mid-move (#554).
+            Path tmpDir = cacheParent != null ? cacheParent : cachePath.toAbsolutePath().getParent();
+            if (tmpDir == null) {
+                return; // a cache path that is a filesystem root is not a cache location
             }
+            Path tmp = ModuleSidecar.uniqueTempFile(
+                    tmpDir, cacheFileName != null ? cacheFileName.toString() : ".vibetags-cache");
+            Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
+            ModuleSidecar.moveIntoPlace(tmp, cachePath, ModuleSidecar.ATOMIC_REPLACE);
             dirty = false;
         } catch (IOException ignored) {
             // Cache flush is best-effort — losing it just means we rebuild on the next compile.

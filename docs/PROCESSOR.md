@@ -158,6 +158,15 @@ encodes its parameter types, so changing `charge(String,double)` to `charge(Stri
 the approved entry rather than editing it. An approved entry with no matching element in the
 compilation is therefore a violation too — that covers renames, deletions and removed annotations.
 
+Recording is safe to run in parallel. Every enforcing module of a reactor rewrites its own lines
+in the one root-level file from its own javac invocation, so `update()` re-reads the file and merges
+under an exclusive lock on `.vibetags-baseline.lock` (empty, gitignored, never read) and renames a
+temp file created unique per writer. Merging the snapshot loaded before a sibling wrote used to
+erase that sibling's approvals, and a shared temp name let one writer truncate the other's bytes
+mid-move — reported as a compile error on a build that changed nothing (issue #554,
+`EnforcementBaselineAsyncTest`). Where a filesystem refuses advisory locks the merge still re-reads,
+which is strictly better than the snapshot it replaced.
+
 Enforcement runs in `process()` before `generateFiles()`, deliberately: the generation path has a
 fingerprint short-circuit that would let an unchanged-inputs build skip the check silently.
 Switching the option on before a baseline exists warns and checks nothing, rather than failing every

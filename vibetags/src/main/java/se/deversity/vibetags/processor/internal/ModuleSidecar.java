@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 /**
@@ -288,7 +289,6 @@ public final class ModuleSidecar {
     /** Persists this sidecar atomically to {@code <root>/<SIDECAR_PREFIX><moduleId>}. */
     public void save(Path root) throws IOException {
         Path target = root.resolve(SIDECAR_PREFIX + moduleId);
-        Path tmp = root.resolve(SIDECAR_PREFIX + moduleId + ".tmp");
 
         StringBuilder sb = new StringBuilder();
         sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n')
@@ -317,6 +317,9 @@ public final class ModuleSidecar {
             appendEncoded(sb, KEY_ELEMENT_IDS, String.join("\n", elementIds));
         }
 
+        // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
+        // an IDE compiling the same module at once) otherwise truncate each other's temp file.
+        Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
     }
@@ -360,6 +363,25 @@ public final class ModuleSidecar {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     };
+
+    /** Distinguishes two temp files written by two threads of one JVM; the pid does the rest. */
+    private static final AtomicLong TEMP_SEQUENCE = new AtomicLong();
+
+    /**
+     * A temp-file path unique to this process and call: {@code <baseName>.<pid>-<n>.tmp}.
+     *
+     * <p>A fixed {@code <baseName>.tmp} is the bug this replaces (#554). Every module of a parallel
+     * reactor writes the root-level cache and baseline, and two of them sharing one temp name means
+     * the second truncates the first's bytes: one rename moves content its writer never produced,
+     * and the other fails outright. Built by hand rather than with {@code Files.createTempFile}
+     * because that call is a find-sec-bugs path-traversal sink when the directory comes from a
+     * processor option, and the name still has to start with the caller's prefix and end in
+     * {@code .tmp} — what {@code readAll}, the prune scan and the ignore files all filter on.
+     */
+    static Path uniqueTempFile(Path dir, String baseName) {
+        return dir.resolve(baseName + "." + ProcessHandle.current().pid()
+            + "-" + TEMP_SEQUENCE.incrementAndGet() + ".tmp");
+    }
 
     /**
      * Renames the freshly written temp file over {@code target}, retrying briefly before failing.
