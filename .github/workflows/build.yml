@@ -2,12 +2,27 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, 'feature/*', 'fix/*', 'chore/*', 'docs/*', 'ci/*', 'release/*' ]
+    # main and master only. A branch with an open PR was building the whole matrix
+    # twice - once for the push, once for the pull_request - and the two runs were
+    # identical except Locked Files Guard, which skips on a push because it needs a PR
+    # base to diff against. The pull_request trigger below is what tests a branch, and
+    # it is deliberately unfiltered so a stacked PR is tested too. The cost of this
+    # narrowing, stated plainly: a branch pushed with no PR open runs nothing (#573).
+    branches: [ main, master ]
   # Deliberately unfiltered: a pull request is a request to review a change, so it is tested
   # whichever branch it targets. Restricting this to main meant a stacked PR — one targeting the
   # branch it was built on, so its diff shows only its own work — ran no tests at all, and its PR
   # page was indistinguishable from one whose tests had passed.
   pull_request:
+
+concurrency:
+  # One run per workflow per ref. cancel-in-progress everywhere except main: a superseded
+  # push has nothing left to say, while a run on main is the record of main's health and
+  # must finish. Without this a second push queued a full copy behind the run it replaced
+  # and both completed, which is half of why wall-clock tripled while every job kept its
+  # speed (#573).
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
 permissions:
   contents: read
