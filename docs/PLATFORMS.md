@@ -128,3 +128,16 @@ VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent dis
 - **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
 
 Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
+
+### The review platforms carry a subset
+
+Sweep, Mentat and Plandex are code-review tools, not editors. Their formatters carry an arm for
+the annotations a reviewer can act on from a diff, and nothing else; the other 34 platforms carry
+all 44. The three lists below are the declaration, and `ReviewPlatformSubsetClaimTest` derives
+each set from the formatters and holds these lines to it in both directions, so an arm added or
+removed without the matching name here fails the build. To carry one more annotation on one of
+these platforms, add the arm in its formatter and the name on its line in the same commit.
+
+- **Sweep** (`sweep.yaml`) carries: `@AIAudit`, `@AIBannedApi`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIFeatureFlag`, `@AIGenerated`, `@AIIdempotent`, `@AIKeepInSync`, `@AILoadBearing`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AISecure`, `@AITestDriven`, `@AIThreadAffinity`.
+- **Mentat** (`.mentatconfig.json`) carries: `@AIAudit`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIIgnore`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AITestDriven`.
+- **Plandex** (`.plandex.yaml`) carries: `@AIAudit`, `@AILocked`, `@AIPrivacy`.
