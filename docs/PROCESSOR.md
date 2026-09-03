@@ -158,6 +158,13 @@ encodes its parameter types, so changing `charge(String,double)` to `charge(Stri
 the approved entry rather than editing it. An approved entry with no matching element in the
 compilation is therefore a violation too — that covers renames, deletions and removed annotations.
 
+A constructor is recorded under `<init>`: javac renders one under its class's simple name, so
+`public Foo(String)` and a method `public void Foo(String)` on the same class produce one identical
+element path, and a baseline keyed on that alone held one of the two while the other was silently
+unenforceable (issue #552). Only the baseline key moves, and only for constructors — the rendered
+path stays byte-identical to javac's own `toString()`, because `action/locked-files` matches it
+against a pull request's diff and the granular rule files are named from it.
+
 Recording is safe to run in parallel. Every enforcing module of a reactor rewrites its own lines
 in the one root-level file from its own javac invocation, so `update()` re-reads the file and merges
 under an exclusive lock on `.vibetags-baseline.lock` (empty, gitignored, never read) and renames a

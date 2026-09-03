@@ -246,6 +246,30 @@ public final class EnforcementBaseline {
         return family + "\t" + path;
     }
 
+    /**
+     * The path a constructor is recorded under: the class's own name replaced by {@code <init>}.
+     *
+     * <p>javac renders a constructor under the enclosing class's simple name, so
+     * {@code public Foo(String)} and a method {@code public void Foo(String)} on the same class
+     * produce one identical element path. Keyed on that alone, the baseline held one of the two and
+     * the other was silently unenforceable — a locked constructor could change and the gate passed
+     * (issue #552).
+     *
+     * <p>Applied here rather than in {@code ElementNaming} on purpose: the rendered path is
+     * deliberately byte-identical to javac's own {@code toString()}, because
+     * {@code action/locked-files} matches it against a pull request's diff and the granular rule
+     * files are named from it, which {@code ElementNamingFormatParityTest} keeps true. Only the
+     * baseline key moves, and only for constructors, so no other entry changes.
+     */
+    public static String constructorPath(String path) {
+        int paren = path.indexOf('(');
+        if (paren < 0) {
+            return path;
+        }
+        int dot = path.lastIndexOf('.', paren);
+        return dot < 0 ? path : path.substring(0, dot + 1) + "<init>" + path.substring(paren);
+    }
+
     private static String key(String moduleId, String family, String path) {
         return moduleId + "\t" + familyAndPath(family, path);
     }
