@@ -89,7 +89,7 @@
         <mockito.version>5.23.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
         <async-test-lib.version>1.11.0</async-test-lib.version>
-        <snakeyaml.version>2.6</snakeyaml.version>
+        <snakeyaml.version>2.7</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
 
         <!-- Verification-only tooling: never on any module's classpath. ECJ is how CI checks
