@@ -1,11 +1,14 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AIThreadSafe;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -13,6 +16,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * The committed record of what enforced elements looked like when they were last approved.
@@ -32,9 +37,30 @@ import java.util.Set;
  * for the same reason: without it the last module to compile would silently erase the rest
  * (issues #278, #330).
  */
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
+    note = "update() alone is safe, and across processes as well as threads: a per-root monitor "
+        + "plus an exclusive lock on .vibetags-baseline.lock serialise the re-read and rename that "
+        + "a parallel reactor's modules run against one shared file. The read side is an unguarded "
+        + "snapshot on purpose"
+)
 public final class EnforcementBaseline {
 
     static final String FILE_NAME = ".vibetags-baseline";
+    /**
+     * The inter-process mutex held across read-merge-write. Separate from the baseline itself
+     * because the write replaces the baseline by rename, and Windows refuses to rename over a file
+     * another process holds open — locking the target would trade a lost update for a failed move.
+     * Empty, never read, and safe to delete between builds.
+     */
+    static final String LOCK_FILE_NAME = ".vibetags-baseline.lock";
+    /**
+     * One monitor per reactor root, because a {@link FileLock} is held by the whole JVM: two
+     * threads of one Gradle daemon locking the same file get an
+     * {@code OverlappingFileLockException} rather than mutual exclusion. Keyed by the normalised
+     * root so unrelated roots never serialise.
+     */
+    private static final ConcurrentMap<String, Object> ROOT_MONITORS = new ConcurrentHashMap<>();
     private static final String HEADER =
         "# VibeTags enforcement baseline — regenerate with -Avibetags.baseline.update=true\n"
         + "# Lines are <moduleId>\\t<family>\\t<element>\\t<signature>, sorted; review changes here as\n"
@@ -125,10 +151,74 @@ public final class EnforcementBaseline {
      * Rewrites the baseline, replacing every line owned by {@code moduleId} with {@code current}
      * and preserving every sibling module's. Written atomically and sorted.
      *
+     * <p>The merge re-reads the file under an exclusive lock instead of merging into whatever this
+     * instance loaded. In a parallel reactor two enforcing modules record from separate javac
+     * invocations against one shared root: without the lock both merge into the snapshot they read
+     * before either wrote, the second rename wins, and the first module's approvals are gone — its
+     * next enforcing build reports every guarded element as unrecorded (issue #554). Where the
+     * filesystem refuses the lock the merge still re-reads, which is strictly better than merging a
+     * snapshot from before the sibling wrote.
+     *
      * @param current family + path → signature for the compiling module
      */
     public void update(Path root, String moduleId, Map<String, String> current) throws IOException {
-        Map<String, String> merged = new LinkedHashMap<>(entries);
+        Object monitor = ROOT_MONITORS.computeIfAbsent(
+            root.toAbsolutePath().normalize().toString(), key -> new Object());
+        synchronized (monitor) {
+            try (FileChannel channel = openLockFile(root)) {
+                FileLock lock = acquire(channel);
+                try {
+                    updateLocked(root, moduleId, current);
+                } finally {
+                    release(lock);
+                }
+            }
+        }
+    }
+
+    /**
+     * The lock file's channel, or {@code null} when this filesystem will not give us one. A
+     * read-only or exotic root must not fail a build that is only recording a baseline, so the
+     * caller proceeds unlocked rather than throwing.
+     */
+    private static @Nullable FileChannel openLockFile(Path root) {
+        try {
+            return FileChannel.open(root.resolve(LOCK_FILE_NAME),
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        } catch (IOException | RuntimeException unlockable) {
+            return null;
+        }
+    }
+
+    /** The exclusive lock, or {@code null} when it could not be taken. */
+    private static @Nullable FileLock acquire(@Nullable FileChannel channel) {
+        if (channel == null) {
+            return null;
+        }
+        try {
+            return channel.lock();
+        } catch (IOException | RuntimeException unlockable) {
+            // NFS and some container overlays refuse advisory locks outright, and a second lock on
+            // the same file from this JVM arrives as OverlappingFileLockException.
+            return null;
+        }
+    }
+
+    private static void release(@Nullable FileLock lock) {
+        if (lock == null) {
+            return;
+        }
+        try {
+            lock.release();
+        } catch (IOException ignored) {
+            // The channel is closed immediately after, which releases it anyway.
+        }
+    }
+
+    /** The read-merge-write itself, run with the lock held. */
+    private void updateLocked(Path root, String moduleId, Map<String, String> current)
+            throws IOException {
+        Map<String, String> merged = new LinkedHashMap<>(load(root).entries);
         String prefix = moduleId + "\t";
         merged.keySet().removeIf(k -> k.startsWith(prefix));
         current.forEach((familyAndPath, signature) -> merged.put(prefix + familyAndPath, signature));
@@ -140,14 +230,13 @@ public final class EnforcementBaseline {
         StringBuilder sb = new StringBuilder(HEADER);
         lines.forEach(line -> sb.append(line).append('\n'));
 
+        // A temp name unique per writer: a fixed one is truncated by whichever sibling starts
+        // second, so the first rename moves the other module's bytes into place and the second
+        // fails with NoSuchFileException, which reaches the enforcer as a compile error.
         Path target = root.resolve(FILE_NAME);
-        Path tmp = root.resolve(FILE_NAME + ".tmp");
+        Path tmp = ModuleSidecar.uniqueTempFile(root, FILE_NAME);
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        try {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-        }
+        ModuleSidecar.moveIntoPlace(tmp, target, ModuleSidecar.ATOMIC_REPLACE);
         entries.clear();
         entries.putAll(merged);
     }

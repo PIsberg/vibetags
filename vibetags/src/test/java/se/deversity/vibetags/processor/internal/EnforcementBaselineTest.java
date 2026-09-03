@@ -191,6 +191,33 @@ class EnforcementBaselineTest {
     }
 
     @Test
+    void updateMergesWhatIsOnDiskNowRatherThanWhatWasLoaded(@TempDir Path root) throws IOException {
+        // Both modules of a reactor load the baseline before either has written: the shape of
+        // `mvn -T` with two enforcing modules recording against one shared root.
+        EnforcementBaseline core = EnforcementBaseline.load(root);
+        EnforcementBaseline web = EnforcementBaseline.load(root);
+
+        Map<String, String> webCurrent = new LinkedHashMap<>();
+        webCurrent.put(EnforcementBaseline.familyAndPath("AIContract", "com.example.Web#serve()"),
+            "serve():void");
+        web.update(root, "web", webCurrent);
+
+        Map<String, String> coreCurrent = new LinkedHashMap<>();
+        coreCurrent.put(EnforcementBaseline.familyAndPath("AIContract", "com.example.Ledger#charge(int)"),
+            "charge(int):boolean");
+        core.update(root, "core", coreCurrent);
+
+        EnforcementBaseline reread = EnforcementBaseline.load(root);
+        assertEquals(Set.of("AIContract	com.example.Web#serve()"),
+            reread.approvedFor("web", Set.of("AIContract")),
+            "the second writer merged into the snapshot it loaded before the sibling wrote, so the "
+                + "sibling's approvals are gone and its next enforcing build reports every guarded "
+                + "element as unrecorded");
+        assertEquals(Set.of("AIContract	com.example.Ledger#charge(int)"),
+            reread.approvedFor("core", Set.of("AIContract")));
+    }
+
+    @Test
     void updateWritesASortedFileWithItsHeader(@TempDir Path root) throws IOException {
         Map<String, String> current = new LinkedHashMap<>();
         current.put(EnforcementBaseline.familyAndPath("AIContract", "com.example.Z#z()"), "z():void");

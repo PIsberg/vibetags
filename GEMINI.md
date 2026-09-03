@@ -31,6 +31,7 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `se.deversity.vibetags.processor.VibeTagsLogger` → `.gemini/rules/se-deversity-vibetags-processor-VibeTagsLogger.md`
 - `se.deversity.vibetags.processor.internal.AnnotationCollector` → `.gemini/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md`
 - `se.deversity.vibetags.processor.internal.BuildFingerprint` → `.gemini/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md`
+- `se.deversity.vibetags.processor.internal.EnforcementBaseline` → `.gemini/rules/se-deversity-vibetags-processor-internal-EnforcementBaseline.md`
 - `se.deversity.vibetags.processor.internal.GranularRulesWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md`
 - `se.deversity.vibetags.processor.internal.GuardrailFileWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md`
 - `se.deversity.vibetags.processor.internal.ModuleSidecar` → `.gemini/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md`

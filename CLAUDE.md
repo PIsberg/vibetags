@@ -119,6 +119,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
     <element path="se.deversity.vibetags.processor.VibeTagsLogger" rules=".claude/rules/se-deversity-vibetags-processor-VibeTagsLogger.md"/>
     <element path="se.deversity.vibetags.processor.internal.AnnotationCollector" rules=".claude/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md"/>
     <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
+    <element path="se.deversity.vibetags.processor.internal.EnforcementBaseline" rules=".claude/rules/se-deversity-vibetags-processor-internal-EnforcementBaseline.md"/>
     <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>

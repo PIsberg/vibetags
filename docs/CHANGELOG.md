@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A parallel reactor recording enforcement baselines lost a module's approvals, or failed the
+  build.** `mvn -T` with two enforcing modules under `-Avibetags.baseline.update=true` had both
+  merge into the snapshot they loaded before either wrote, so the second rename erased the first
+  module's lines and that module's next enforcing build reported every guarded element as
+  unrecorded. The same builds shared one fixed temp file name per root, which let the second writer
+  truncate the first's bytes: one rename moved the wrong content into place and the other failed
+  with `NoSuchFileException`, surfacing as a compile error on a build that changed nothing.
+  `EnforcementBaseline.update` now re-reads and merges under an exclusive lock on
+  `.vibetags-baseline.lock` (empty, gitignored), and the baseline, the write cache and the module
+  sidecars each rename a temp file created unique per writer, through the sidecar's existing
+  retry-move. (#554, `EnforcementBaselineTest.updateMergesWhatIsOnDiskNowRatherThanWhatWasLoaded`,
+  `EnforcementBaselineAsyncTest`)
 - **`vibetags doctor` and `vibetags init` silently ignored arguments they did not understand.**
   `doctor /other/project` reported on the current directory, `init --platforms claude --bogus`
   went ahead without the flag, and `--dir` pointing at a missing directory surfaced as a symlink
