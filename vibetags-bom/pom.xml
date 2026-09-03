@@ -44,8 +44,8 @@
             &lt;/dependencyManagement&gt;
 
         Gradle:
-            implementation platform('se.deversity.vibetags:vibetags-bom:1.3.0')
-            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.3.0')
+            implementation platform('se.deversity.vibetags:vibetags-bom:1.3.1')
+            annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.3.1')
             compileOnly 'se.deversity.vibetags:vibetags-annotations'
             annotationProcessor 'se.deversity.vibetags:vibetags-processor'
     </description>
