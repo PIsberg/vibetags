@@ -325,4 +325,61 @@ class MirrorEndToEndTest {
         assertFalse(Files.exists(reactorRoot.resolve("app-tests/.claude")),
             "VibeTags never creates an opt-in directory that does not already exist");
     }
+
+    /**
+     * Module ids that prefix each other — {@code core} beside {@code core-api} is ordinary Maven
+     * naming — must keep their mirrored namespaces apart. The namespace is a filename prefix,
+     * {@code mirrored-core-}, and that is also how {@code mirrored-core-api-...} begins, so core's
+     * cleanup read every one of core-api's mirrored files as an orphan of its own and deleted
+     * them. The next core-api compile put them back; every build of core alone, and every
+     * check-mode run, took them away again.
+     */
+    @Test
+    void siblingWhoseIdExtendsMine_keepsItsMirroredFilesThroughMyCleanup() throws IOException {
+        mirrorTarget("app-tests", "");
+        compileModule("core-api", "com.example.runtime.KeyContext", RUNTIME_SOURCE);
+        Path fromApi = mirrored("app-tests", "core-api", "com-example-runtime-KeyContext");
+        assertTrue(Files.exists(fromApi), "precondition: core-api's mirror exists");
+
+        compileModule("core", "com.example.fhe.NativeBridge", FHE_SOURCE);
+
+        assertTrue(Files.exists(mirrored("app-tests", "core", "com-example-fhe-NativeBridge")),
+            "core mirrors its own rules");
+        assertTrue(Files.exists(fromApi),
+            "core's cleanup must not delete core-api's files: mirrored-core- is how mirrored-core-api- begins");
+    }
+
+    /**
+     * A module's test sources compile as a second source set under the same module id. The
+     * mirrored namespace was keyed on the module alone, so the test round (an
+     * {@code @AIParallelTests} fixture is enough to run the processor) cleaned up every mirrored
+     * file the main round had written and the main round returned the favour: the target's rules
+     * flapped between the two halves of every {@code mvn install}, and check mode failed on
+     * whichever half it ran after.
+     */
+    @Test
+    void testSourceSetOfTheSameModule_keepsTheMainSourceSetsMirroredFiles() throws IOException {
+        mirrorTarget("app-tests", "");
+        compileModuleSourceSet("app-fhe", "main", "com.example.fhe.NativeBridge", FHE_SOURCE);
+        Path fromMain = mirrored("app-tests", "app-fhe", "com-example-fhe-NativeBridge");
+        assertTrue(Files.exists(fromMain), "precondition: the main round mirrored its rule");
+
+        compileModuleSourceSet("app-fhe", "test", "com.example.tests.SharedFixtures", TEST_MODULE_SOURCE);
+
+        assertTrue(Files.exists(fromMain),
+            "the test round of the same module must not delete what its main round mirrored");
+        assertTrue(Files.exists(reactorRoot.resolve("app-tests/.claude/rules")
+                .resolve("mirrored-app-fhe__test-com-example-tests-SharedFixtures.md")),
+            "the test round mirrors under its own source-set namespace");
+    }
+
+    private void compileModuleSourceSet(String module, String sourceSet, String fqn, String source)
+            throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        Files.createDirectories(reactorRoot.resolve(module));
+        Files.writeString(reactorRoot.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile(module + "/src/" + sourceSet + "/java/" + fqn.replace('.', '/') + ".java", source);
+        harness.compile();
+    }
 }

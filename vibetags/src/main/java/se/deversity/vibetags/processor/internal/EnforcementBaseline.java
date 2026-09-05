@@ -149,7 +149,8 @@ public final class EnforcementBaseline {
 
     /**
      * Rewrites the baseline, replacing every line owned by {@code moduleId} with {@code current}
-     * and preserving every sibling module's. Written atomically and sorted.
+     * and preserving every sibling module's. Written atomically and sorted. Replaces the module's
+     * lines in every family; see the four-argument form for a partial update.
      *
      * <p>The merge re-reads the file under an exclusive lock instead of merging into whatever this
      * instance loaded. In a parallel reactor two enforcing modules record from separate javac
@@ -162,13 +163,30 @@ public final class EnforcementBaseline {
      * @param current family + path → signature for the compiling module
      */
     public void update(Path root, String moduleId, Map<String, String> current) throws IOException {
+        update(root, moduleId, null, current);
+    }
+
+    /**
+     * As above, replacing only the module's lines in {@code families} and keeping its lines in
+     * every other family as they are.
+     *
+     * <p>{@code -Avibetags.enforce=locked -Avibetags.baseline.update=true} is how a developer
+     * re-records one locked element they changed on purpose. Replacing the module's whole block
+     * on that run threw its {@code @AIContract} and {@code @AIPublicAPI} lines away, and the next
+     * {@code -Avibetags.enforce=all} build read a broken contract as "newly annotated, not yet
+     * approved" and stayed green. Only what was asked to be re-recorded may be dropped.
+     *
+     * @param families the families {@code current} was collected for; {@code null} means all
+     */
+    public void update(Path root, String moduleId, @Nullable Set<String> families,
+                       Map<String, String> current) throws IOException {
         Object monitor = ROOT_MONITORS.computeIfAbsent(
             root.toAbsolutePath().normalize().toString(), key -> new Object());
         synchronized (monitor) {
             try (FileChannel channel = openLockFile(root)) {
                 FileLock lock = acquire(channel);
                 try {
-                    updateLocked(root, moduleId, current);
+                    updateLocked(root, moduleId, families, current);
                 } finally {
                     release(lock);
                 }
@@ -216,11 +234,18 @@ public final class EnforcementBaseline {
     }
 
     /** The read-merge-write itself, run with the lock held. */
-    private void updateLocked(Path root, String moduleId, Map<String, String> current)
-            throws IOException {
+    private void updateLocked(Path root, String moduleId, @Nullable Set<String> families,
+                              Map<String, String> current) throws IOException {
         Map<String, String> merged = new LinkedHashMap<>(load(root).entries);
         String prefix = moduleId + "\t";
-        merged.keySet().removeIf(k -> k.startsWith(prefix));
+        if (families == null) {
+            merged.keySet().removeIf(k -> k.startsWith(prefix));
+        } else {
+            for (String family : families) {
+                String familyPrefix = prefix + family + "\t";
+                merged.keySet().removeIf(k -> k.startsWith(familyPrefix));
+            }
+        }
         current.forEach((familyAndPath, signature) -> merged.put(prefix + familyAndPath, signature));
 
         List<String> lines = new ArrayList<>(merged.size());

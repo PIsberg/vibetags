@@ -236,6 +236,26 @@ public final class GuardrailFileWriter {
         }
     }
 
+    /**
+     * Records a file this round found already current, so the cache owns it from here on.
+     *
+     * <p>A file the round never had to write is still a file the round is responsible for. The
+     * fresh-clone shape is the common case: every committed output is byte-identical to what the
+     * round renders, nothing is written, and before this nothing was recorded either. The next
+     * build's short-circuit then asked the cache whether every file it knew about was stable,
+     * and the cache knew about none of these — so a hand edit inside the generated block, or a
+     * CRLF checkout of it, survived every later build while check mode failed on the same tree.
+     * The entry records the file as it is on disk, line endings included, which is exactly what
+     * {@link WriteCache#isUnchanged} has to compare against next time. Nothing to record in
+     * dry-run, which must leave the cache as it found it.
+     */
+    private void noteCurrent(Path filePath, String bodyForCache) {
+        if (dryRun || writeCache == null) {
+            return;
+        }
+        writeCache.recordWrite(filePath, bodyForCache);
+    }
+
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
                                      String existing, boolean hasNewRules, String[] markers) throws IOException {
         String markerStart = markers[0];
@@ -263,6 +283,7 @@ public final class GuardrailFileWriter {
                 String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
+                    noteCurrent(filePath, content);
                     return false;
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
@@ -284,6 +305,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
                     fileName, finalContent.length());
+                noteCurrent(filePath, content);
                 return false;
             }
 
@@ -307,6 +329,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, finalContent.length());
+                noteCurrent(filePath, content);
                 return false;
             }
 
@@ -325,7 +348,10 @@ public final class GuardrailFileWriter {
             String updated = existing.isEmpty()
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                 : withRenderedFrontMatter(existing.stripTrailing(), frontMatter) + "\n\n" + wrappedBody + "\n";
-            if (contentMatches(existing, updated)) return false;
+            if (contentMatches(existing, updated)) {
+                noteCurrent(filePath, content);
+                return false;
+            }
 
             if (!hasNewRules && !existing.isEmpty()) {
                 skipUpdateMsg(fileName);
@@ -342,7 +368,10 @@ public final class GuardrailFileWriter {
     private boolean writeWithoutMarkers(Path filePath, String fileName, String content, String existing,
                                         boolean fileExists, long existingSize,
                                         boolean hasNewRules) throws IOException {
-        if (contentMatches(existing, content)) return false;
+        if (contentMatches(existing, content)) {
+            noteCurrent(filePath, content);
+            return false;
+        }
 
         if (!hasNewRules && fileExists && existingSize > 0) {
             skipUpdateMsg(fileName);
@@ -369,7 +398,9 @@ public final class GuardrailFileWriter {
      *
      * <p>When the renderer emits no header ({@code frontMatter} is empty), a header the file
      * carries is a hand-written one — CLAUDE.md, a Junie or Void rules file — and is preserved
-     * untouched, as before.
+     * untouched, as before. When the renderer emits one and the file has none — a role file
+     * somebody wrote by hand before the build, or a file an earlier round left headerless — the
+     * rendered header is put in front of what is there.
      *
      * @param before      the file's content ahead of the start marker (or the whole file when
      *                    there is none), legacy block already stripped
@@ -381,7 +412,12 @@ public final class GuardrailFileWriter {
         }
         int close = frontMatterEnd(before);
         if (close == -1) {
-            return before; // no header, or an unterminated one that is not ours; leave it alone
+            // No header to replace, so the rendered one opens the file. It has to: the glob list
+            // in it is what the editor reads to decide when the rule loads at all, and appending
+            // the block beneath a hand-written file without it left a rule nothing ever applied.
+            // A leading block this parser does not read as YAML stays where it is, below ours;
+            // the next round then finds the rendered header first and replaces only that.
+            return before.isEmpty() ? frontMatter : frontMatter + "\n\n" + before;
         }
         String rest = before.substring(close).stripLeading();
         return rest.isEmpty() ? frontMatter : frontMatter + "\n\n" + rest;
