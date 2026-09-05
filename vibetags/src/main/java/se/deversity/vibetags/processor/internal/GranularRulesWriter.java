@@ -129,7 +129,8 @@ public final class GranularRulesWriter {
             Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig roles) {
         Map<String, GranularContribution> contributions = new LinkedHashMap<>();
         plan(elementRules, roles, "", List.of())
-            .forEach((stem, unit) -> contributions.put(stem, unit.content()));
+            .forEach((stem, unit) -> contributions.put(stem,
+                unit.content().named(unit.displayName(), unit.description())));
         return contributions;
     }
 
@@ -165,9 +166,19 @@ public final class GranularRulesWriter {
             GranularContribution merged = mergedByStem.get(stem);
             List<String> globs = unit.content().globs();
             String body = unit.content().body();
+            String displayName = unit.displayName();
+            String description = unit.description();
             if (merged != null && !merged.isEmpty() && !merged.globs().isEmpty()) {
                 globs = merged.globs();
                 body = merged.body();
+                // The heading follows the merged view too, or a file two modules write under
+                // two spellings of one name is headed by whichever compiled last (issue #579).
+                // A merge assembled from sidecars that carry no naming (an older sibling's)
+                // keeps this module's own heading, as before.
+                if (merged.isNamed()) {
+                    displayName = merged.displayName();
+                    description = merged.description();
+                }
             }
             for (GranularFormat f : formats) {
                 Path serviceDir = serviceFiles.get(f.serviceKey);
@@ -176,7 +187,7 @@ public final class GranularRulesWriter {
                 }
                 fileWriter.writeFileIfChanged(
                     serviceDir.resolve(stem + f.extension).toString(),
-                    f.render(unit.description(), unit.displayName(), globs, body), true);
+                    f.render(description, displayName, globs, body), true);
             }
         }
 

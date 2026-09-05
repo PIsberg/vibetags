@@ -137,6 +137,15 @@ public final class ModuleSidecar {
     private static final String KEY_GRANULAR_UNIT_PREFIX = "~gran~";
     /** As above, for the module's own (nested) granular output; merged across source sets only. */
     private static final String KEY_MODULE_GRANULAR_UNIT_PREFIX = "~modgran~";
+    /**
+     * Key prefix for a granular contribution's heading name and description, keyed by stem. A key
+     * of its own rather than a field inside the {@code ~gran~} value: that value's shape is what an
+     * older sibling parses, and a field added to it would be read as glob or body text, whereas an
+     * unknown reserved key is one such a reader leaves unstored (issue #579).
+     */
+    private static final String KEY_GRANULAR_NAMING_PREFIX = "~granname~";
+    /** As above, for the module's own (nested) granular output. */
+    private static final String KEY_MODULE_GRANULAR_NAMING_PREFIX = "~modgranname~";
 
     /** Windows path separator, folded to '/' before any module path is compared. */
     private static final char BACKSLASH = (char) 92;
@@ -326,9 +335,17 @@ public final class ModuleSidecar {
         }
         for (Map.Entry<String, GranularContribution> entry : granularUnits.entrySet()) {
             appendEncoded(sb, KEY_GRANULAR_UNIT_PREFIX + entry.getKey(), entry.getValue().serialize());
+            if (entry.getValue().isNamed()) {
+                appendEncoded(sb, KEY_GRANULAR_NAMING_PREFIX + entry.getKey(),
+                    entry.getValue().serializeNaming());
+            }
         }
         for (Map.Entry<String, GranularContribution> entry : moduleGranularUnits.entrySet()) {
             appendEncoded(sb, KEY_MODULE_GRANULAR_UNIT_PREFIX + entry.getKey(), entry.getValue().serialize());
+            if (entry.getValue().isNamed()) {
+                appendEncoded(sb, KEY_MODULE_GRANULAR_NAMING_PREFIX + entry.getKey(),
+                    entry.getValue().serializeNaming());
+            }
         }
         if (!granularStems.isEmpty()) {
             appendEncoded(sb, KEY_GRANULAR_STEMS, String.join("\n", granularStems));
@@ -524,6 +541,8 @@ public final class ModuleSidecar {
             Set<String> elementIds = new LinkedHashSet<>();
             Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
             Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
+            Map<String, String> granularNaming = new LinkedHashMap<>();
+            Map<String, String> moduleGranularNaming = new LinkedHashMap<>();
             for (String line : lines) {
                 if (line.startsWith("#")) {
                     // Enforce the format-version header: refuse to (mis-)parse future formats,
@@ -561,6 +580,10 @@ public final class ModuleSidecar {
                     for (String id : decode(val).split("\n", -1)) {
                         if (!id.isBlank()) elementIds.add(id);
                     }
+                } else if (key.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)) {
+                    moduleGranularNaming.put(key.substring(KEY_MODULE_GRANULAR_NAMING_PREFIX.length()), decode(val));
+                } else if (key.startsWith(KEY_GRANULAR_NAMING_PREFIX)) {
+                    granularNaming.put(key.substring(KEY_GRANULAR_NAMING_PREFIX.length()), decode(val));
                 } else if (key.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)) {
                     // Checked before the ~mod~ prefix below: "~modgran~" does not start with
                     // "~mod~", but the two read alike and the order is what keeps that true.
@@ -595,6 +618,11 @@ public final class ModuleSidecar {
             s.indexDigests.putAll(indexDigests);
             s.granularStems.addAll(granularStems);
             s.elementIds.addAll(elementIds);
+            // Naming lines may precede or follow their contribution; attach once both are in.
+            granularNaming.forEach((stem, naming) ->
+                granularUnits.computeIfPresent(stem, (k, c) -> c.withNaming(naming)));
+            moduleGranularNaming.forEach((stem, naming) ->
+                moduleGranularUnits.computeIfPresent(stem, (k, c) -> c.withNaming(naming)));
             s.granularUnits.putAll(granularUnits);
             s.moduleGranularUnits.putAll(moduleGranularUnits);
             return s;
@@ -1300,17 +1328,30 @@ public final class ModuleSidecar {
                 });
             }
             Set<String> globs = new LinkedHashSet<>();
+            // The heading and description travel with each contribution and are joined here the
+            // way the single-module fold joins them, so a file two modules write under two
+            // spellings of one name is headed the same whichever compiled last (issue #579).
+            // Deduplicated by value: a role file spanning modules names the role once.
+            Set<String> displayNames = new LinkedHashSet<>();
+            Set<String> subjects = new LinkedHashSet<>();
             List<Map.Entry<String, String>> regionBodies = new ArrayList<>();
             byRegion.forEach((region, contributions) -> {
                 List<String> parts = new ArrayList<>();
                 for (GranularContribution c : contributions) {
                     globs.addAll(c.globs());
                     parts.add(c.body().strip());
+                    if (c.isNamed()) {
+                        displayNames.add(c.displayName());
+                        subjects.add(c.subject());
+                    }
                 }
                 regionBodies.add(new AbstractMap.SimpleEntry<>(region, String.join("\n\n", parts)));
             });
             GranularContribution shared = new GranularContribution(new ArrayList<>(globs),
-                joinRegions(regionBodies, subMarkers));
+                joinRegions(regionBodies, subMarkers),
+                String.join(", ", displayNames),
+                displayNames.isEmpty() ? ""
+                    : GranularContribution.DESCRIPTION_PREFIX + String.join(", ", subjects));
             for (Map.Entry<String, Map<String, List<GranularContribution>>> stemEntry : group) {
                 merged.put(stemEntry.getKey(), shared);
             }

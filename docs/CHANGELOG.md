@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Two modules whose granular stems differ only in capitalisation (`com.example.Payment` in one,
+  package `com.example.payment` in another) share one rule file on Windows and macOS, and its heading
+  and description came from whichever module compiled last, so check mode's verdict depended on
+  build order. Each sidecar contribution now carries its heading name and description under a key
+  of its own (`~granname~<stem>`, ignored by older siblings), and the cross-module merge joins them
+  the way the single-module fold already did. `MultiModuleCaseCollisionTest` pins it (issue #579).
+
 ## [1.3.1] - 2026-09-04
 
 ### Upgrading

@@ -22,7 +22,54 @@ import java.util.List;
  * body underneath. Globs are single-line by construction (they come from a config line or from a
  * class name), so the first newline is an unambiguous separator.
  */
-public record GranularContribution(List<String> globs, String body) {
+public record GranularContribution(List<String> globs, String body, String displayName, String description) {
+
+    /** Prefix every planned description starts with; what the merge joins subjects behind. */
+    public static final String DESCRIPTION_PREFIX = "AI rules for ";
+
+    /** A contribution with no naming of its own; the writer falls back to its local plan. */
+    public GranularContribution(List<String> globs, String body) {
+        this(globs, body, "", "");
+    }
+
+    /** The description's subject: what follows {@link #DESCRIPTION_PREFIX}, or the whole text. */
+    public String subject() {
+        return description.startsWith(DESCRIPTION_PREFIX)
+            ? description.substring(DESCRIPTION_PREFIX.length()) : description;
+    }
+
+    /** Whether this contribution names itself (heading and description travel with it). */
+    public boolean isNamed() {
+        return !displayName.isEmpty();
+    }
+
+    /**
+     * The heading name and description, serialized for the sidecar under their own key.
+     *
+     * <p>Kept apart from {@link #serialize()} on purpose: that value's shape is what an older
+     * sibling's {@link #parse} reads, and a field added to it would be read back as part of the
+     * glob line or the body. A key of its own is one an older reader recognises as reserved and
+     * leaves unstored.
+     */
+    public String serializeNaming() {
+        return displayName + "\n" + description;
+    }
+
+    /** {@code this}, named as {@code serializedNaming} says; unchanged when it is malformed. */
+    public GranularContribution withNaming(String serializedNaming) {
+        int newline = serializedNaming.indexOf('\n');
+        if (newline < 0) {
+            return this;
+        }
+        return new GranularContribution(globs, body,
+            serializedNaming.substring(0, newline), serializedNaming.substring(newline + 1));
+    }
+
+    /** {@code this} under another name; the fold across modules builds its joined heading here. */
+    public GranularContribution named(String newDisplayName, String newDescription) {
+        return new GranularContribution(globs, body, newDisplayName, newDescription);
+    }
+
 
     /** Separator between globs on the serialized header line; illegal inside a glob pattern. */
     private static final String GLOB_SEPARATOR = "\t";
