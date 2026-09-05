@@ -39,6 +39,19 @@ public final class ModuleOutputWriter {
 
     private ModuleOutputWriter() {}
 
+    /**
+     * The {@code __<sourceSet>} part of a sidecar id, or {@code ""} for the primary source set or
+     * a caller that named neither. Read back off the two ids rather than passed in, because the
+     * call that has the source set is inside the step-order-locked {@code generateFiles()}.
+     */
+    static String sourceSetSuffix(@Nullable String regionId, @Nullable String moduleId) {
+        if (regionId == null || moduleId == null
+                || !moduleId.startsWith(regionId + ModuleSidecar.SOURCE_SET_SEPARATOR)) {
+            return "";
+        }
+        return moduleId.substring(regionId.length());
+    }
+
     /** Single-module / no-sidecar entry point: builds the module's content and writes it as-is. */
     public static void write(Path moduleRoot,
                              Path vibetagsRoot,
@@ -94,7 +107,7 @@ public final class ModuleOutputWriter {
         // that contributes only to the reactor-root aggregate still has guardrails worth mirroring
         // into a test module that asked for them (issue #312).
         MirrorWriter.write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader,
-            roles, writer, messager);
+            roles, writer, messager, sourceSetSuffix(regionId, moduleId));
 
         if (moduleRoot == null || moduleRoot.equals(vibetagsRoot) || moduleActive.isEmpty()) {
             return; // module is the root, or nothing opted in here

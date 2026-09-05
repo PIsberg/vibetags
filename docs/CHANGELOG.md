@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A marker file the round found already current was never recorded in `.vibetags-cache`, so on a
   fresh clone the short-circuit could not see a later hand edit inside its generated block and left
   it there while check mode failed on the same tree. `WriteCacheProcessorIntegrationTest` pins it.
+- `-Avibetags.baseline.update=true` combined with `-Avibetags.enforce=<one family>` replaced the
+  module's whole block in `.vibetags-baseline`, so the families it was not asked about lost their
+  approvals and the next `-Avibetags.enforce=all` build read a broken contract as newly annotated
+  and passed. The update now rewrites only the families named. `EnforcingModeEndToEndTest` pins it.
+- Cross-module mirroring (`.vibetags-mirror`) deleted a sibling's files in two shapes. A module
+  whose id begins another's (`core` beside `core-api`) cleaned up under `mirrored-core-`, which is
+  how `mirrored-core-api-…` begins, so every build of `core` alone removed `core-api`'s mirrored
+  rules and check mode failed on the tree. And the test source set of a module shared the main
+  round's namespace, so each round removed what the other had mirrored. The cleanup now leaves
+  alone the prefix of any sibling module directory whose id extends this module's, and a
+  non-primary source set mirrors under `mirrored-<id>__<sourceSet>-`. `MirrorEndToEndTest` pins
+  both.
+
+### Upgrading
+
+- A module whose *test* sources carry VibeTags annotations and that mirrors into a sibling now
+  writes those mirrors as `mirrored-<id>__test-…`. The files it previously wrote under
+  `mirrored-<id>-…` from the test round are removed by the main round's cleanup on the next build,
+  as they were before; nothing else changes on disk.
 
 ## [1.3.1] - 2026-09-04
 

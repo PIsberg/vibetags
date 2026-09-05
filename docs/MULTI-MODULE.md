@@ -368,10 +368,17 @@ Mechanics:
   (`.claude/rules/`, `.cursor/rules/`, …). Aggregate files are not mirrored — a module's own
   `CLAUDE.md` is its to own, and merging siblings into the root aggregate is what the sidecar
   merge already does.
-- Filenames carry the reserved prefix `mirrored-<sourceModuleId>-`. Modules of a reactor compile in
-  separate javac invocations, so each source module must be able to clean up its own stale mirrors
-  without touching the target's own rules or another module's. A module's ordinary granular cleanup
-  skips anything starting with `mirrored-`, and `cleanupMirrored` only ever considers its own prefix.
+- Filenames carry the reserved prefix `mirrored-<sourceModuleId>-`; a non-primary source set of the
+  module mirrors under `mirrored-<sourceModuleId>__<sourceSet>-` (the test round of `core` writes
+  `mirrored-core__test-…`), so the main and test rounds of one module never clean up each other's
+  files. Modules of a reactor compile in separate javac invocations, so each source module must be
+  able to clean up its own stale mirrors without touching the target's own rules or another
+  module's. A module's ordinary granular cleanup skips anything starting with `mirrored-`, and
+  `cleanupMirrored` only ever considers its own prefix. One prefix can begin another's — `core`
+  beside `core-api` — so the cleanup also leaves alone every file under the prefix of a sibling
+  module directory whose id extends this module's id; the siblings are read off the module
+  directories under the root (build file present, up to three levels down), which a cold clone has
+  before any sidecar exists.
   **`mirrored-` is therefore reserved** at the start of a granular filename: a role named
   `mirrored-…`, or a class in a top-level package named `mirrored`, produces a stem VibeTags will
   still write and refresh, but will not garbage-collect once its annotations are gone. Rename either
