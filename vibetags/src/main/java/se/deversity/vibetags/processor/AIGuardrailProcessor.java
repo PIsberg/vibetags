@@ -385,6 +385,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
                     enforceGuardrails();
+                    // The cache keeps one set of run headers per module (issue #556). Bound here
+                    // rather than in init(), where the cache is built: the module is known only
+                    // once a round has shown the processor its sources. Same id the sidecar
+                    // gets, so the two files agree on what a module is.
+                    if (writeCache != null) {
+                        writeCache.bindModule(currentModuleId());
+                    }
                     if (checkMode) {
                         checkFiles();
                     } else {
@@ -462,6 +469,22 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Path compilationRoot() {
         return moduleIdentity != null ? moduleIdentity.root() : Paths.get("").toAbsolutePath();
+    }
+
+    /**
+     * The region this compilation files its output under: {@code -Avibetags.module} when given,
+     * else the module id derived from the compilation root. The same expression
+     * {@code generateFiles()} evaluates inline; that body is locked, so it is not the caller.
+     */
+    private String currentRegionId() {
+        return moduleIdOverride != null
+            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot(), root);
+    }
+
+    /** The sidecar id for this compilation: the region plus its source set. */
+    private String currentModuleId() {
+        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
+        return ModuleSidecar.scopedModuleId(currentRegionId(), sourceSet);
     }
 
     /**
@@ -1302,10 +1325,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // this compilation saw no annotations, mirroring the conditional save in generateFiles()
         // (a test-compile pass must not evict the main compile's contribution from the merge).
         Path compilationRoot = compilationRoot();
-        String regionId = moduleIdOverride != null
-            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
-        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
-        String moduleId = ModuleSidecar.scopedModuleId(regionId, sourceSet);
+        String regionId = currentRegionId();
+        String moduleId = currentModuleId();
         String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
 
         // This module's own opt-ins and content, resolved here rather than just before the nested
@@ -1495,12 +1516,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // first-time adopter does not have to name the families twice.
             ? enforcer.parseFamilies(GuardrailEnforcer.ALL)
             : enforceFamilies;
-        Path compilationRoot = compilationRoot();
-        String regionId = moduleIdOverride != null
-            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
-        String moduleId = ModuleSidecar.scopedModuleId(regionId,
-            moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN);
-        enforcer.enforce(collector.model(), families, root, moduleId, baselineUpdate);
+        enforcer.enforce(collector.model(), families, root, currentModuleId(), baselineUpdate);
     }
 
     /** Reports rounds that remove guardrails rather than add them (see the class javadoc there). */

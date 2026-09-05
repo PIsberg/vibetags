@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A marker file the round found already current was never recorded in `.vibetags-cache`, so on a
   fresh clone the short-circuit could not see a later hand edit inside its generated block and left
   it there while check mode failed on the same tree. `WriteCacheProcessorIntegrationTest` pins it.
+- A no-op rebuild of a reactor now short-circuits in every module (issue #556). `.vibetags-cache`
+  carried one `# fingerprint` and one `# context` header for the whole root, so each module's flush
+  overwrote its sibling's, and a module's sidecar was rewritten on every full round even when its
+  bytes were unchanged, which moved the stamp every other module had recorded. The cache is now
+  format 3 with the fingerprint, context, and sidecar stamp recorded under a `# module: <id>` line
+  per module alongside a root-wide sidecar stamp (catching both sibling sidecar additions before a
+  module catches up, and external sidecar deletions), and an unchanged sidecar is not rewritten.
+  `MultiModuleShortCircuitTest` and `MultiModuleCaseCollidingStemTest` pin it.
 - `-Avibetags.baseline.update=true` combined with `-Avibetags.enforce=<one family>` replaced the
   module's whole block in `.vibetags-baseline`, so the families it was not asked about lost their
   approvals and the next `-Avibetags.enforce=all` build read a broken contract as newly annotated
@@ -35,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- `.vibetags-cache` is now format 3. A processor older than this release discards a format-3 cache
+  wholesale and rebuilds it (one full round, no wrong output); this release adopts a format-2
+  cache's whole-root headers for the first module that compiles, so upgrading costs no extra round
+  for a single-module project and one for each further module of a reactor.
 - A module whose *test* sources carry VibeTags annotations and that mirrors into a sibling now
   writes those mirrors as `mirrored-<id>__test-…`. The files it previously wrote under
   `mirrored-<id>-…` from the test round are removed by the main round's cleanup on the next build,

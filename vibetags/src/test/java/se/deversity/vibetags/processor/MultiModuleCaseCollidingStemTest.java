@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.tools.Diagnostic;
+import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -60,13 +62,20 @@ class MultiModuleCaseCollidingStemTest {
     }
 
     /** Compiles one module's sources into the shared reactor root, mimicking one reactor pass. */
-    private void compileModule(String module, String fqn, String source) throws IOException {
+    private List<Diagnostic<? extends JavaFileObject>> compileModule(String module, String fqn, String source)
+            throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
         Files.writeString(reactorRoot.resolve(module).resolve("pom.xml"),
             "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
         harness.writeSourceFile(
             module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
-        harness.compile();
+        return harness.compileReturningDiagnostics();
+    }
+
+    private static boolean shortCircuited(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+        return diagnostics.stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.NOTE)
+            .anyMatch(d -> d.getMessage(Locale.ROOT).contains("inputs unchanged since last run"));
     }
 
     private List<Path> collidingFiles() throws IOException {
@@ -102,8 +111,11 @@ class MultiModuleCaseCollidingStemTest {
 
         // Second pass for the first module: with its sibling's sidecar now on disk, its own file
         // converges. From here every surviving file must carry every colliding element, whichever
-        // names this filesystem kept.
-        compileModule("module-payments", "com.example.payment.package-info", PACKAGE_SOURCE);
+        // names this filesystem kept. It must not falsely short-circuit before catching up.
+        List<Diagnostic<? extends JavaFileObject>> pass2 =
+            compileModule("module-payments", "com.example.payment.package-info", PACKAGE_SOURCE);
+        assertFalse(shortCircuited(pass2),
+            "second pass of first module must catch up with sibling sidecars rather than short-circuiting");
 
         List<Path> files = collidingFiles();
         assertFalse(files.isEmpty(), "no colliding rule file survived at all");
