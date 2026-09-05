@@ -48,7 +48,7 @@ public final class MirrorConfig {
     public static final String FILE_NAME = ".vibetags-mirror";
 
     /** Directory names never descended into while discovering mirror targets. */
-    private static final Set<String> SKIP_DIRS = Set.of(
+    static final Set<String> SKIP_DIRS = Set.of(
         "target", "build", "out", "bin", "src", "node_modules", ".git", ".idea", ".mvn", ".gradle");
 
     /** How far below the VibeTags root a mirror target may sit (covers {@code root/group/module}). */

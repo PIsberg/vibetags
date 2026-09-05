@@ -185,7 +185,8 @@ quiet on a file it could not read.
 ## Top-level fingerprint short-circuit
 
 The processor records a fingerprint of the build inputs — the processor version (`ProcessorVersion`),
-every collected annotation (FQN + attribute values), plus the resolved active-services set — into
+every collected annotation (element path, element kind and attribute values), plus the resolved
+active-services set — into
 `.vibetags-cache` under a `# fingerprint: <hex>` header. Folding the version in means upgrading the
 processor invalidates the previous fingerprint, so a release that renders different content from
 unchanged annotations can never be skipped. The cache file also carries a `# format: <n>` header; a
