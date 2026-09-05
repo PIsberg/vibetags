@@ -24,9 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carried one `# fingerprint` and one `# context` header for the whole root, so each module's flush
   overwrote its sibling's, and a module's sidecar was rewritten on every full round even when its
   bytes were unchanged, which moved the stamp every other module had recorded. The cache is now
-  format 3 with the fingerprint and context under a `# module: <id>` line per module (the sidecar
-  stamp stays shared, on purpose: a per-module stamp cannot see a sibling's sidecar being deleted),
-  and an unchanged sidecar is not rewritten. `MultiModuleShortCircuitTest` pins it.
+  format 3 with the fingerprint, context, and sidecar stamp recorded under a `# module: <id>` line
+  per module alongside a root-wide sidecar stamp (catching both sibling sidecar additions before a
+  module catches up, and external sidecar deletions), and an unchanged sidecar is not rewritten.
+  `MultiModuleShortCircuitTest` and `MultiModuleCaseCollidingStemTest` pin it.
 - `-Avibetags.baseline.update=true` combined with `-Avibetags.enforce=<one family>` replaced the
   module's whole block in `.vibetags-baseline`, so the families it was not asked about lost their
   approvals and the next `-Avibetags.enforce=all` build read a broken contract as newly annotated

@@ -212,13 +212,14 @@ because filesystem timestamp granularity is 1 s on HFS+ and 2 s on FAT while a r
 several sidecars a second — an mtime-only stamp left two saves inside one tick indistinguishable, so
 a sibling's edit stayed out of this module's output until something else moved a timestamp
 (issue #556). It costs one pass over files the same build reads again in `ModuleSidecar.readAll`.
-The stamp is deliberately the one header that stays shared across modules: it describes the sidecar
-set as the last full round left it, and the last full round is what wrote the shared files. Recorded
-per module it would match again the moment a sibling's sidecar was deleted (the documented way to
-retire an emptied module), since the set would equal what this module saw before the sibling ever
-compiled. For the same reason `ModuleSidecar.save` leaves a sidecar untouched when its bytes are
-unchanged: rewriting identical content moved the mtime, which moved the stamp every sibling had
-recorded, and each module's full round guaranteed the next module's.
+The stamp is recorded both root-wide (the sidecar set as the last full round of any module left
+it, so deleting a sibling's sidecar to retire an emptied module invalidates every module's cache)
+and per-module under `# module: <id>` (the sidecar set when this module last compiled, so a module
+does not short-circuit before catching up with a newly added sibling sidecar;
+`MultiModuleCaseCollidingStemTest` pins it). Both must match the current sidecars on disk. For the
+same reason `ModuleSidecar.save` leaves a sidecar untouched when its bytes are unchanged:
+rewriting identical content moved the mtime, which moved the stamp every sibling had recorded, and
+each module's full round guaranteed the next module's.
 
 On the next compile, if the fingerprint still matches AND every previously written file is
 byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no

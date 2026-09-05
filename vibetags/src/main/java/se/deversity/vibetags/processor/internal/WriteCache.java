@@ -69,16 +69,21 @@ public final class WriteCache {
      * empty id is the pre-version-3 whole-root section, kept so a cache written before the split
      * still answers for the first module that adopts it.
      *
-     * <p>The sidecar stamp deliberately stays one header for the whole root. It describes the
-     * sidecar set as the last full round left it, and the last full round is what wrote the
-     * shared files: a stamp recorded per module would match again the moment a sibling's sidecar
-     * was deleted (the documented way to retire an emptied module), because the set would equal
-     * what this module saw before the sibling ever compiled, and the sibling's contribution
-     * would stay in the merged output.
+     * <p>The sidecar stamp is recorded both root-wide (reflecting the state when any module last
+     * wrote) and per-module (reflecting the state when this specific module last compiled). Both
+     * must match:
+     * <ul>
+     *   <li>A root-wide stamp that differs from disk means a sidecar was deleted or modified
+     *       externally (e.g. retiring an emptied module), preventing stale short-circuits.</li>
+     *   <li>A module section stamp that differs from the root-wide stamp means a sibling module
+     *       compiled and updated the sidecar set since this module last ran, so this module must
+     *       regenerate and catch up before it can short-circuit (issue #556, issue #525).</li>
+     * </ul>
      */
     private static final class Section {
         @Nullable String fingerprint;
         @Nullable String storedContext;
+        @Nullable String sidecarStamp;
     }
 
     /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
@@ -199,12 +204,30 @@ public final class WriteCache {
     }
 
     /**
-     * Returns the persisted sidecar stamp from the previous run, or {@code null} if not on file.
-     * The stamp is a hex-encoded polynomial hash of all module sidecar file mtimes; a change means a sibling
-     * module's annotations changed and the aggregated output must be regenerated.
+     * Returns the persisted sidecar stamp from the previous run, or {@code null} if not on file
+     * or if the sidecar set has changed.
+     *
+     * <p>Both the root-wide sidecar stamp and this module's own view of it must match:
+     * <ul>
+     *   <li>If the root-wide stamp differs from the disk stamp, some module's sidecar was modified
+     *       or deleted externally (e.g. retiring an emptied module; see {@code GuardrailLifecycleEndToEndTest}).</li>
+     *   <li>If the root-wide stamp differs from this module's section stamp, another module in the
+     *       reactor has compiled and updated the sidecar set since this module last ran, so this
+     *       module must not short-circuit before catching up (see {@code MultiModuleCaseCollidingStemTest}).</li>
+     * </ul>
      */
     public synchronized @Nullable String getSidecarStamp() {
         loadIfNeeded();
+        if (!LEGACY_SECTION.equals(currentModule)) {
+            Section section = sections.get(currentModule);
+            if (section == null) {
+                return null;
+            }
+            if (!java.util.Objects.equals(this.sidecarStamp, section.sidecarStamp)) {
+                return null;
+            }
+            return section.sidecarStamp;
+        }
         return sidecarStamp;
     }
 
@@ -213,6 +236,11 @@ public final class WriteCache {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.sidecarStamp, stamp)) {
             this.sidecarStamp = stamp;
+            this.dirty = true;
+        }
+        Section section = section();
+        if (!java.util.Objects.equals(section.sidecarStamp, stamp)) {
+            section.sidecarStamp = stamp;
             this.dirty = true;
         }
     }
@@ -402,10 +430,13 @@ public final class WriteCache {
         }
     }
 
-    /** The fingerprint and context lines of one section; the current module's context is the bound one. */
+    /** The fingerprint, sidecar-stamp, and context lines of one section; the current module's context is the bound one. */
     private void appendHeaders(StringBuilder sb, String moduleId, Section section) {
         if (section.fingerprint != null) {
             sb.append("# fingerprint: ").append(section.fingerprint).append('\n');
+        }
+        if (!LEGACY_SECTION.equals(moduleId) && section.sidecarStamp != null) {
+            sb.append("# sidecar-stamp: ").append(section.sidecarStamp).append('\n');
         }
         String effectiveContext = moduleId.equals(currentModule) && currentContext != null
             ? currentContext : section.storedContext;
@@ -476,7 +507,14 @@ public final class WriteCache {
                     String sidecarPrefix = "# sidecar-stamp: ";
                     if (line.startsWith(sidecarPrefix)) {
                         String st = line.substring(sidecarPrefix.length()).trim();
-                        if (!st.isEmpty()) sidecarStamp = st;
+                        if (!st.isEmpty()) {
+                            if (readingLegacy) {
+                                sidecarStamp = st;
+                                legacy.sidecarStamp = st;
+                            } else {
+                                loading.sidecarStamp = st;
+                            }
+                        }
                     }
                     String contextPrefix = "# context: ";
                     if (line.startsWith(contextPrefix)) {

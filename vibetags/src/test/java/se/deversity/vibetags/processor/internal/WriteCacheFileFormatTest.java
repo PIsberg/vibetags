@@ -290,4 +290,70 @@ class WriteCacheFileFormatTest {
         assertDoesNotThrow(cache::allCachedFilesStable,
             "stability probing must resolve entries against the cwd fallback");
     }
+
+    @Test
+    void perModuleSidecarStamps_mustMatchRootStamp(@TempDir Path dir) throws IOException {
+        Path file = writeCacheFile(dir,
+            "# format: 3",
+            "# sidecar-stamp: stamp-b",
+            "# module: a",
+            "# fingerprint: fp-a",
+            "# sidecar-stamp: stamp-a",
+            "# module: b",
+            "# fingerprint: fp-b",
+            "# sidecar-stamp: stamp-b");
+
+        WriteCache cache = new WriteCache(file);
+        // An unbound lookup returns the root stamp:
+        assertEquals("stamp-b", cache.getSidecarStamp());
+
+        // Module b's section stamp matches root stamp:
+        cache.bindModule("b");
+        assertEquals("stamp-b", cache.getSidecarStamp());
+
+        // Module a's section stamp is stamp-a, which does not match root stamp stamp-b:
+        WriteCache cacheA = new WriteCache(file);
+        cacheA.bindModule("a");
+        assertNull(cacheA.getSidecarStamp(),
+            "module a must not report a sidecar stamp when its view is older than root");
+
+        // An unknown module has no stamp:
+        WriteCache cacheUnknown = new WriteCache(file);
+        cacheUnknown.bindModule("c");
+        assertNull(cacheUnknown.getSidecarStamp());
+    }
+
+    @Test
+    void perModuleSidecarStamp_roundTripsThroughFlush(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve(CACHE);
+        WriteCache first = new WriteCache(file);
+        first.bindModule("mod-a");
+        first.setBuildFingerprint("fp-a");
+        first.setSidecarStamp("stamp-1");
+        first.flush();
+
+        WriteCache second = new WriteCache(file);
+        second.bindModule("mod-b");
+        second.setBuildFingerprint("fp-b");
+        second.setSidecarStamp("stamp-2");
+        second.flush();
+
+        // Mod b is up to date:
+        WriteCache checkB = new WriteCache(file);
+        checkB.bindModule("mod-b");
+        assertEquals("stamp-2", checkB.getSidecarStamp());
+
+        // Mod a is behind:
+        WriteCache checkA = new WriteCache(file);
+        checkA.bindModule("mod-a");
+        assertNull(checkA.getSidecarStamp());
+
+        // Once mod a catches up and sets stamp-2:
+        checkA.setSidecarStamp("stamp-2");
+        checkA.flush();
+
+        WriteCache checkA2 = new WriteCache(file);
+        checkA2.bindModule("mod-a");
+        assertEquals("stamp-2", checkA2.getSidecarStamp());
+    }
 }
