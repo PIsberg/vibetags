@@ -196,12 +196,29 @@ output without being part of the annotation fingerprint, so they are bound separ
 context* (`# context: <hex>` in the same cache file, via `WriteCache.bindContext`); a stored
 fingerprint recorded under a different context is treated as absent and the build regenerates.
 
+The fingerprint and the context are recorded **per module** (format 3): each module's headers
+follow a `# module: <sidecarId>` line, bound from `process()` once the compiling module is known
+(`WriteCache.bindModule`, the same id its sidecar gets). One header for the whole root meant every
+module's flush overwrote its sibling's, so a no-op reactor rebuild short-circuited in at most the
+module that flushed last (issue #556). A format-2 cache's whole-root headers are adopted by the
+first module that binds, so the upgrade costs no extra round for a single-module project and one
+per further module in a reactor; a processor older than format 3 discards the file and rebuilds
+it. `MultiModuleShortCircuitTest` pins that both modules of a reactor short-circuit on a no-op
+rebuild.
+
 In a reactor the short-circuit is also gated on a *sidecar stamp* (`# sidecar-stamp:` in the same
 file): a fold over every `.vibetags-mod-*` file's name, mtime, size and content. Content is in there
 because filesystem timestamp granularity is 1 s on HFS+ and 2 s on FAT while a reactor writes
 several sidecars a second — an mtime-only stamp left two saves inside one tick indistinguishable, so
 a sibling's edit stayed out of this module's output until something else moved a timestamp
 (issue #556). It costs one pass over files the same build reads again in `ModuleSidecar.readAll`.
+The stamp is deliberately the one header that stays shared across modules: it describes the sidecar
+set as the last full round left it, and the last full round is what wrote the shared files. Recorded
+per module it would match again the moment a sibling's sidecar was deleted (the documented way to
+retire an emptied module), since the set would equal what this module saw before the sibling ever
+compiled. For the same reason `ModuleSidecar.save` leaves a sidecar untouched when its bytes are
+unchanged: rewriting identical content moved the mtime, which moved the stamp every sibling had
+recorded, and each module's full round guaranteed the next module's.
 
 On the next compile, if the fingerprint still matches AND every previously written file is
 byte-stable on disk (size + mtime unchanged), the entire generate phase is skipped: no

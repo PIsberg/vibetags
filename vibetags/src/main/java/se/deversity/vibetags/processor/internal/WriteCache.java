@@ -59,7 +59,30 @@ public final class WriteCache {
      * older processor never re-records such an entry, so a deleted input would suppress its
      * short-circuit forever. Bumping the version makes that processor discard the cache instead.
      */
-    static final int FORMAT_VERSION = 2;
+    static final int FORMAT_VERSION = 3;
+
+    /**
+     * A module's own run headers. Version 3 keeps one of these per module id: the fingerprint
+     * and the run context a module recorded are questions about that module's last round, and
+     * one set for the whole root meant every module's flush overwrote its sibling's, so a no-op
+     * reactor rebuild short-circuited in at most the module that flushed last (issue #556). The
+     * empty id is the pre-version-3 whole-root section, kept so a cache written before the split
+     * still answers for the first module that adopts it.
+     *
+     * <p>The sidecar stamp deliberately stays one header for the whole root. It describes the
+     * sidecar set as the last full round left it, and the last full round is what wrote the
+     * shared files: a stamp recorded per module would match again the moment a sibling's sidecar
+     * was deleted (the documented way to retire an emptied module), because the set would equal
+     * what this module saw before the sibling ever compiled, and the sibling's contribution
+     * would stay in the merged output.
+     */
+    private static final class Section {
+        @Nullable String fingerprint;
+        @Nullable String storedContext;
+    }
+
+    /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
+    private static final String LEGACY_SECTION = "";
 
     /** Cache record. */
     static final class Entry {
@@ -79,17 +102,17 @@ public final class WriteCache {
     private boolean loaded;
     private boolean dirty;
 
-    /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
-    private @Nullable String buildFingerprint;
+    /** Per-module run headers, keyed by module id; see {@link Section}. */
+    private final Map<String, Section> sections = new LinkedHashMap<>();
 
-    /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
+    /** Stamp over the sidecar set as the last full round of any module left it; {@code null} when unknown. */
     private @Nullable String sidecarStamp;
+
+    /** The module this compilation records under ({@link #bindModule}); the legacy section until bound. */
+    private String currentModule = LEGACY_SECTION;
 
     /** Run context bound by the current compilation ({@link #bindContext}). {@code null} when unbound. */
     private @Nullable String currentContext;
-
-    /** Run context persisted by the previous run's flush. {@code null} when none is on file. */
-    private @Nullable String storedContext;
 
     public WriteCache(Path cachePath) {
         this.cachePath = cachePath;
@@ -120,13 +143,46 @@ public final class WriteCache {
      */
     public synchronized @Nullable String getBuildFingerprint() {
         loadIfNeeded();
-        if (currentContext != null && !currentContext.equals(storedContext)) {
+        Section section = sections.get(currentModule);
+        if (section == null) {
+            return null;
+        }
+        if (currentContext != null && !currentContext.equals(section.storedContext)) {
             // Recorded under a different run context (project name or module override): the
             // annotations may be identical, but the rendered output would not be. Report no
             // fingerprint so the caller regenerates rather than short-circuits.
             return null;
         }
-        return buildFingerprint;
+        return section.fingerprint;
+    }
+
+    /**
+     * Binds the module id this compilation records its run headers under.
+     *
+     * <p>Called once the compiling module is known, which is after {@link #bindContext}: the
+     * context is read in {@code init()}, the module identity only once a round has shown the
+     * processor its sources. A module with no section of its own adopts the whole-root section a
+     * pre-version-3 cache carries, so an upgrade costs no extra round for a single-module project
+     * and one for every module but the first in a reactor.
+     */
+    public synchronized void bindModule(String moduleId) {
+        loadIfNeeded();
+        this.currentModule = moduleId;
+        if (!sections.containsKey(moduleId)) {
+            Section legacy = sections.remove(LEGACY_SECTION);
+            if (legacy != null) {
+                sections.put(moduleId, legacy);
+                dirty = true;
+            }
+        }
+        Section section = sections.get(moduleId);
+        if (currentContext != null && (section == null || !currentContext.equals(section.storedContext))) {
+            dirty = true; // the header must converge on this run's context; see bindContext
+        }
+    }
+
+    private Section section() {
+        return sections.computeIfAbsent(currentModule, id -> new Section());
     }
 
     /**
@@ -135,8 +191,9 @@ public final class WriteCache {
      */
     public synchronized void setBuildFingerprint(String fingerprint) {
         loadIfNeeded();
-        if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
-            this.buildFingerprint = fingerprint;
+        Section section = section();
+        if (!java.util.Objects.equals(section.fingerprint, fingerprint)) {
+            section.fingerprint = fingerprint;
             this.dirty = true;
         }
     }
@@ -172,7 +229,8 @@ public final class WriteCache {
     public synchronized void bindContext(String context) {
         loadIfNeeded();
         this.currentContext = context;
-        if (!context.equals(this.storedContext)) {
+        Section section = sections.get(currentModule);
+        if (section == null || !context.equals(section.storedContext)) {
             // The persisted header must converge on the new context even when nothing else
             // changes this run — otherwise the same mismatch re-fires on every later compile.
             this.dirty = true;
@@ -299,15 +357,20 @@ public final class WriteCache {
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
             .append("# format: ").append(FORMAT_VERSION).append('\n');
-        if (buildFingerprint != null) {
-            sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
-        }
         if (sidecarStamp != null) {
             sb.append("# sidecar-stamp: ").append(sidecarStamp).append('\n');
         }
-        String effectiveContext = currentContext != null ? currentContext : storedContext;
-        if (effectiveContext != null) {
-            sb.append("# context: ").append(effectiveContext).append('\n');
+        // One header block per module. The legacy (unbound) section, when present, is written
+        // first and without a "# module:" line, which is exactly the shape version 2 read.
+        Section legacy = sections.get(LEGACY_SECTION);
+        if (legacy != null) {
+            appendHeaders(sb, LEGACY_SECTION, legacy);
+        }
+        for (Map.Entry<String, Section> section : sections.entrySet()) {
+            if (!LEGACY_SECTION.equals(section.getKey())) {
+                sb.append("# module: ").append(section.getKey()).append('\n');
+                appendHeaders(sb, section.getKey(), section.getValue());
+            }
         }
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             sb.append(e.getKey()).append('\t')
@@ -339,6 +402,18 @@ public final class WriteCache {
         }
     }
 
+    /** The fingerprint and context lines of one section; the current module's context is the bound one. */
+    private void appendHeaders(StringBuilder sb, String moduleId, Section section) {
+        if (section.fingerprint != null) {
+            sb.append("# fingerprint: ").append(section.fingerprint).append('\n');
+        }
+        String effectiveContext = moduleId.equals(currentModule) && currentContext != null
+            ? currentContext : section.storedContext;
+        if (effectiveContext != null) {
+            sb.append("# context: ").append(effectiveContext).append('\n');
+        }
+    }
+
     /** Visible for tests. */
     public synchronized int size() {
         loadIfNeeded();
@@ -348,6 +423,11 @@ public final class WriteCache {
     private synchronized void loadIfNeeded() {
         if (loaded) return;
         loaded = true;
+        // Headers before any "# module:" line belong to the whole-root section; registered only
+        // once one is read, so a cache with nothing there leaves no empty section to adopt.
+        Section legacy = new Section();
+        Section loading = legacy;
+        boolean readingLegacy = true;
         try {
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
                 if (line.isEmpty()) continue;
@@ -361,25 +441,37 @@ public final class WriteCache {
                             int version = Integer.parseInt(line.substring(formatPrefix.length()).trim());
                             if (version > FORMAT_VERSION) {
                                 entries.clear();
-                                buildFingerprint = null;
+                                sections.clear();
                                 sidecarStamp = null;
-                                storedContext = null;
                                 return;
                             }
                         } catch (NumberFormatException ignored) {
                             // Unparseable format header — treat as unknown and start over.
                             entries.clear();
-                            buildFingerprint = null;
+                            sections.clear();
                             sidecarStamp = null;
-                            storedContext = null;
                             return;
                         }
+                    }
+                    // A "# module:" line opens that module's section; headers before any such
+                    // line are the whole-root section a version-2 cache carries.
+                    String modulePrefix = "# module: ";
+                    if (line.startsWith(modulePrefix)) {
+                        String id = line.substring(modulePrefix.length()).trim();
+                        if (!id.isEmpty()) {
+                            loading = sections.computeIfAbsent(id, k -> new Section());
+                            readingLegacy = false;
+                        }
+                        continue;
                     }
                     // Recognise the fingerprint header; ignore other comments.
                     String prefix = "# fingerprint: ";
                     if (line.startsWith(prefix)) {
                         String fp = line.substring(prefix.length()).trim();
-                        if (!fp.isEmpty()) buildFingerprint = fp;
+                        if (!fp.isEmpty()) {
+                            loading.fingerprint = fp;
+                            if (readingLegacy) sections.putIfAbsent(LEGACY_SECTION, legacy);
+                        }
                     }
                     String sidecarPrefix = "# sidecar-stamp: ";
                     if (line.startsWith(sidecarPrefix)) {
@@ -389,7 +481,10 @@ public final class WriteCache {
                     String contextPrefix = "# context: ";
                     if (line.startsWith(contextPrefix)) {
                         String cx = line.substring(contextPrefix.length()).trim();
-                        if (!cx.isEmpty()) storedContext = cx;
+                        if (!cx.isEmpty()) {
+                            loading.storedContext = cx;
+                            if (readingLegacy) sections.putIfAbsent(LEGACY_SECTION, legacy);
+                        }
                     }
                     continue;
                 }
