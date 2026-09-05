@@ -369,7 +369,9 @@ public final class GuardrailFileWriter {
      *
      * <p>When the renderer emits no header ({@code frontMatter} is empty), a header the file
      * carries is a hand-written one — CLAUDE.md, a Junie or Void rules file — and is preserved
-     * untouched, as before.
+     * untouched, as before. When the renderer emits one and the file has none — a role file
+     * somebody wrote by hand before the build, or a file an earlier round left headerless — the
+     * rendered header is put in front of what is there.
      *
      * @param before      the file's content ahead of the start marker (or the whole file when
      *                    there is none), legacy block already stripped
@@ -381,7 +383,12 @@ public final class GuardrailFileWriter {
         }
         int close = frontMatterEnd(before);
         if (close == -1) {
-            return before; // no header, or an unterminated one that is not ours; leave it alone
+            // No header to replace, so the rendered one opens the file. It has to: the glob list
+            // in it is what the editor reads to decide when the rule loads at all, and appending
+            // the block beneath a hand-written file without it left a rule nothing ever applied.
+            // A leading block this parser does not read as YAML stays where it is, below ours;
+            // the next round then finds the rendered header first and replaces only that.
+            return before.isEmpty() ? frontMatter : frontMatter + "\n\n" + before;
         }
         String rest = before.substring(close).stripLeading();
         return rest.isEmpty() ? frontMatter : frontMatter + "\n\n" + rest;
