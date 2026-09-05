@@ -1,0 +1,31 @@
+{
+  "manifestVersion": 1,
+  "origin": "se.deversity.vibetags.example:multimodule-core:1.0",
+  "package": "com.example.multimodule.core",
+  "producedBy": "vibetags/1.3.0",
+  "rules": [
+    {
+      "annotation": "@AIContext",
+      "tier": "ADVISORY",
+      "members": {
+        "avoids": "Adding mutable state, framework annotations, or a dependency on any sibling module.",
+        "focus": "Immutable IR data model shared across every module of the reactor."
+      }
+    },
+    {
+      "annotation": "@AISecure",
+      "tier": "SAFETY",
+      "members": {
+        "aspect": "Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line."
+      }
+    },
+    {
+      "annotation": "@AIThreadSafe",
+      "tier": "ADVISORY",
+      "members": {
+        "note": "Every type in this package is safe to publish across threads without synchronization.",
+        "strategy": "IMMUTABLE"
+      }
+    }
+  ]
+}

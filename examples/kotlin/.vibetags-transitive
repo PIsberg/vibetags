@@ -1,0 +1,17 @@
+# Opts this project into reading guardrails published by its dependencies.
+#
+# Presence of this file is the opt-in; it needs no content. On a plain javac build VibeTags derives
+# lookup keys from the packages the sources import and reads the matching vibetags/manifests/
+# entries off the compile classpath. kapt compiles generated Java stubs, and the classpath
+# discovery that works under javac is not something to rely on there, so this example uses the
+# fallback documented for builds where discovery cannot work (kapt, ECJ, JPMS):
+#
+#   -Avibetags.manifest.dir=<dir>        read pre-extracted manifests from a directory
+#   -Avibetags.manifest.packages=a.b,c.d supply lookup keys explicitly (classpath lookup)
+#   -Avibetags.manifest.max=<n>          cap inherited advisory rules (safety rules are never cut)
+#
+# build.gradle.kts passes manifest.dir pointing at vibetags-manifests/, which holds one manifest
+# copied verbatim from what examples/multimodule/core publishes into its JAR
+# (target/classes/vibetags/manifests/com.example.multimodule.core.json), and manifest.max=1 so the
+# cap is visible in the output: of the manifest's two advisory rules only the first survives, while
+# its @AISecure rule is kept regardless because safety-tier rules are never dropped.

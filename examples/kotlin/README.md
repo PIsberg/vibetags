@@ -36,6 +36,28 @@ kapt {
 }
 ```
 
+## Inherited guardrails under kapt
+
+`.vibetags-transitive` opts this project into guardrails published by its dependencies. A javac
+build finds them by looking up the packages the sources import on the compile classpath; kapt
+compiles generated stubs, and that discovery is not something to rely on there. The fallback the
+processor documents for such builds is what this example uses:
+
+```kotlin
+kapt {
+    arguments {
+        arg("vibetags.manifest.dir", file("vibetags-manifests").absolutePath)
+        arg("vibetags.manifest.max", "1")
+    }
+}
+```
+
+`vibetags-manifests/com.example.multimodule.core.json` is a manifest copied verbatim from what
+`examples/multimodule/core` publishes into its JAR. The generated `CLAUDE.md` and `.cursorrules`
+render its rules under the origin coordinate the manifest carries. `manifest.max=1` keeps one of
+the manifest's two advisory rules and drops the other, which the build reports as a note; the
+`@AISecure` rule is kept regardless, because safety-tier rules are never cut by the cap.
+
 ## Kotlin-specific limitations
 
 kapt runs annotation processors over generated **Java stubs**, not the Kotlin sources.

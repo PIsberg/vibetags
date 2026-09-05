@@ -48,7 +48,7 @@ matrix is maintained.
 
 | Example | Build | What it shows |
 |---|---|---|
-| [`kotlin/`](kotlin/) | Gradle, Kotlin DSL | kapt runs the processor over Kotlin sources. CI asserts the generated files name the Kotlin elements, stub signatures included. |
+| [`kotlin/`](kotlin/) | Gradle, Kotlin DSL | kapt runs the processor over Kotlin sources. CI asserts the generated files name the Kotlin elements, stub signatures included. Also the fixture for the transitive-manifest fallbacks: `-Avibetags.manifest.dir` reads a pre-extracted manifest and `-Avibetags.manifest.max` caps the inherited advisory rules. |
 | [`groovy/`](groovy/) | Gradle | Joint compilation with `javaAnnotationProcessing = true`, the Groovy analogue of kapt. Also gates Groovy's own trap: a deliberate `@AIPrivacy` field, and CI asserts it reaches no generated file, because groovyc stubs carry no fields |
 | [`scala/`](scala/) | Gradle | The limitation, gated. scalac has no JSR 269 support, so CI asserts the annotated Java class appears and the annotated Scala class does not. If that ever changes, the build goes red and the docs are wrong, not the code. |
 
