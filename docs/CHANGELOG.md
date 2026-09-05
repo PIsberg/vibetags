@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two modules whose granular stems differ only in capitalisation (`com.example.Payment` in one,
+  package `com.example.payment` in another) share one rule file on Windows and macOS, and its heading
+  and description came from whichever module compiled last, so check mode's verdict depended on
+  build order. Each sidecar contribution now carries its heading name and description under a key
+  of its own (`~granname~<stem>`, ignored by older siblings), and the cross-module merge joins them
+  the way the single-module fold already did. `MultiModuleCaseCollisionTest` pins it (issue #579).
 - The build fingerprint now folds in each annotated element's kind. A class that became an
   interface (or a record, or an enum) with nothing else moving kept the same path, lines and
   attributes, so the short-circuit skipped regeneration and `.vibetags-locks` went on reporting

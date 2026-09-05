@@ -271,10 +271,15 @@ written differently). `ModuleSidecar.mergeGranular` then groups those contributi
 hands the writer one body per file: a lone contributor's body verbatim — which is what keeps the
 single-module output byte-for-byte unchanged — and several wrapped in `VIBETAGS-MODULE` sub-markers,
 with their globs unioned. The union is taken whole rather than per module, so every module writes
-the same bytes and reactor order cannot churn the diff.
+the same bytes and reactor order cannot churn the diff. The heading name and front-matter description
+travel with each contribution under `~granname~<stem>` (a key of its own, so an older sibling that
+does not know it leaves it unstored instead of reading it as glob or body text) and are joined the
+way the single-module case-collision fold joins them: two modules whose stems differ only in
+capitalisation, one physical file on Windows and macOS, get `# Rules for Payment, payment` from
+either module rather than a heading that flips with compile order (issue #579).
 
 The module's own nested rules (`module-a/.claude/rules/`) merge through the same machinery, under
-`~modgran~<stem>` and scoped to one region: no cross-module merge and no sub-markers there, but a
+`~modgran~<stem>` (naming under `~modgranname~<stem>`) and scoped to one region: no cross-module merge and no sub-markers there, but a
 role matched by both a module's main and test sources still needs both rounds' contributions —
 without them the second source set to compile replaced the first's file.
 
