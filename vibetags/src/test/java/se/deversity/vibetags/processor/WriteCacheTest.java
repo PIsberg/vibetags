@@ -123,7 +123,7 @@ class WriteCacheTest {
         cache.flush();
 
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        assertTrue(content.contains("# format: 2\n"),
+        assertTrue(content.contains("# format: 3\n"),
             "flushed cache must carry the format-version header: " + content);
     }
 
@@ -141,7 +141,7 @@ class WriteCacheTest {
         seed.setBuildFingerprint("cafebabe");
         seed.flush();
         String v1 = Files.readString(cachePath, StandardCharsets.UTF_8);
-        Files.writeString(cachePath, v1.replace("# format: 2", "# format: 99"),
+        Files.writeString(cachePath, v1.replace("# format: 3", "# format: 99"),
             StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
@@ -168,7 +168,7 @@ class WriteCacheTest {
         seed.recordWrite(file, "hello");
         seed.flush();
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        String legacy = content.replace("# format: 2\n", "");
+        String legacy = content.replace("# format: 3\n", "");
         Files.writeString(cachePath, legacy, StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
