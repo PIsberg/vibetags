@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The build fingerprint now folds in each annotated element's kind. A class that became an
+  interface (or a record, or an enum) with nothing else moving kept the same path, lines and
+  attributes, so the short-circuit skipped regeneration and `.vibetags-locks` went on reporting
+  `"kind":"CLASS"` while check mode failed on the same tree. `FingerprintShortCircuitTest` pins it.
+- A granular rule file that had no YAML header (a role file written by hand before the build) got
+  the generated block appended without the `globs:` / `paths:` / `applyTo:` header the editor reads
+  to decide when the rule loads, so the rule never applied. The rendered header now opens such a
+  file, with the hand content below it. `WriteFileFrontMatterTest` pins it.
+- A marker file the round found already current was never recorded in `.vibetags-cache`, so on a
+  fresh clone the short-circuit could not see a later hand edit inside its generated block and left
+  it there while check mode failed on the same tree. `WriteCacheProcessorIntegrationTest` pins it.
+
 ## [1.3.1] - 2026-09-04
 
 ### Upgrading

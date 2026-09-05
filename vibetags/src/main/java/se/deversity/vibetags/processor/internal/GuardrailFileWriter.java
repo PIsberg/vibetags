@@ -236,6 +236,26 @@ public final class GuardrailFileWriter {
         }
     }
 
+    /**
+     * Records a file this round found already current, so the cache owns it from here on.
+     *
+     * <p>A file the round never had to write is still a file the round is responsible for. The
+     * fresh-clone shape is the common case: every committed output is byte-identical to what the
+     * round renders, nothing is written, and before this nothing was recorded either. The next
+     * build's short-circuit then asked the cache whether every file it knew about was stable,
+     * and the cache knew about none of these — so a hand edit inside the generated block, or a
+     * CRLF checkout of it, survived every later build while check mode failed on the same tree.
+     * The entry records the file as it is on disk, line endings included, which is exactly what
+     * {@link WriteCache#isUnchanged} has to compare against next time. Nothing to record in
+     * dry-run, which must leave the cache as it found it.
+     */
+    private void noteCurrent(Path filePath, String bodyForCache) {
+        if (dryRun || writeCache == null) {
+            return;
+        }
+        writeCache.recordWrite(filePath, bodyForCache);
+    }
+
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
                                      String existing, boolean hasNewRules, String[] markers) throws IOException {
         String markerStart = markers[0];
@@ -263,6 +283,7 @@ public final class GuardrailFileWriter {
                 String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
+                    noteCurrent(filePath, content);
                     return false;
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
@@ -284,6 +305,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
                     fileName, finalContent.length());
+                noteCurrent(filePath, content);
                 return false;
             }
 
@@ -307,6 +329,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, finalContent.length());
+                noteCurrent(filePath, content);
                 return false;
             }
 
@@ -325,7 +348,10 @@ public final class GuardrailFileWriter {
             String updated = existing.isEmpty()
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                 : withRenderedFrontMatter(existing.stripTrailing(), frontMatter) + "\n\n" + wrappedBody + "\n";
-            if (contentMatches(existing, updated)) return false;
+            if (contentMatches(existing, updated)) {
+                noteCurrent(filePath, content);
+                return false;
+            }
 
             if (!hasNewRules && !existing.isEmpty()) {
                 skipUpdateMsg(fileName);
@@ -342,7 +368,10 @@ public final class GuardrailFileWriter {
     private boolean writeWithoutMarkers(Path filePath, String fileName, String content, String existing,
                                         boolean fileExists, long existingSize,
                                         boolean hasNewRules) throws IOException {
-        if (contentMatches(existing, content)) return false;
+        if (contentMatches(existing, content)) {
+            noteCurrent(filePath, content);
+            return false;
+        }
 
         if (!hasNewRules && fileExists && existingSize > 0) {
             skipUpdateMsg(fileName);

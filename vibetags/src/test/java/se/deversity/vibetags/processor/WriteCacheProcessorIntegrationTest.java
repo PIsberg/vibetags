@@ -109,4 +109,38 @@ class WriteCacheProcessorIntegrationTest {
         assertTrue(afterRecompile.contains("# user-added comment"),
             "user content above the marker block must be preserved");
     }
+
+    /**
+     * A marker file that is already current on the first cached build is still a file this
+     * processor owns. That is the fresh-clone shape: the committed CLAUDE.md is byte-identical to
+     * what the round renders, so nothing is written — and nothing was recorded either. The next
+     * build's short-circuit then asked the cache whether every file it knew about was stable, the
+     * cache knew nothing about this one, and a hand edit inside the generated block survived every
+     * later build while check mode reported drift on the same tree.
+     */
+    @Test
+    void fileFoundCurrentOnFirstCachedBuild_isStillRepairedWhenEditedInsideTheBlock(@TempDir Path tmp)
+            throws Exception {
+        ProcessorTestHarness h = ProcessorTestHarness.withExampleSources(tmp);
+        Path claude = h.root().resolve("CLAUDE.md");
+        String generated = Files.readString(claude, StandardCharsets.UTF_8);
+        assertTrue(generated.contains("<!-- VIBETAGS-START -->\n"), "fixture must carry a start marker");
+
+        // A fresh clone: the generated files are committed and current, the cache is not.
+        Files.delete(h.root().resolve(".vibetags-cache"));
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+        ProcessorTestHarness.withExampleSources(tmp);
+        assertEquals(generated, Files.readString(claude, StandardCharsets.UTF_8),
+            "a current file is not rewritten");
+
+        // Somebody edits inside the generated block.
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+        Files.writeString(claude, generated.replace("<!-- VIBETAGS-START -->\n",
+            "<!-- VIBETAGS-START -->\nHAND EDIT INSIDE THE BLOCK\n"), StandardCharsets.UTF_8);
+
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+        ProcessorTestHarness.withExampleSources(tmp);
+        assertFalse(Files.readString(claude, StandardCharsets.UTF_8).contains("HAND EDIT INSIDE THE BLOCK"),
+            "the next build must regenerate the block it owns, whether or not it ever wrote it before");
+    }
 }
