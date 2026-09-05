@@ -340,20 +340,27 @@ public final class ModuleSidecar {
         // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
         // an IDE compiling the same module at once) otherwise truncate each other's temp file.
         sb.append(TRAILER).append('\n');
-        String serialized = sb.toString();
-        if (Files.exists(target)) {
-            try {
-                if (serialized.equals(Files.readString(target, StandardCharsets.UTF_8))) {
-                    return;
-                }
-            } catch (IOException ignored) {
-                // Replace unreadable or mid-rename sidecars via the normal atomic path below.
-            }
+        if (sameAsOnDisk(target, sb)) {
+            // Rewriting identical bytes moved the file's mtime, and the mtime is part of the
+            // stamp every sibling recorded, so each module's full round guaranteed the next
+            // module's and a no-op reactor rebuild never converged (issue #556). Unchanged
+            // content leaves the file, and the stamp, exactly as the siblings last saw it.
+            return;
         }
 
         Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
-        Files.writeString(tmp, serialized, StandardCharsets.UTF_8);
+        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
+    }
+
+    /** Whether {@code target} already holds exactly {@code content}; false when unreadable. */
+    private static boolean sameAsOnDisk(Path target, CharSequence content) {
+        try {
+            return Files.isRegularFile(target)
+                && Files.readString(target, StandardCharsets.UTF_8).contentEquals(content);
+        } catch (IOException | RuntimeException unreadable) {
+            return false; // could not compare, so write: a stale sidecar is the worse outcome
+        }
     }
 
     /**
