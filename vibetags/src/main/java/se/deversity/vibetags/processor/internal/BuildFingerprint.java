@@ -83,6 +83,8 @@ public final class BuildFingerprint {
      * Computes the fingerprint over (processor version × collector annotations × resolved active
      * services).
      *
+     * <p>Each element contributes its path, its kind and its attribute values.
+     *
      * <p>Element ordering is normalised by element-path (a stable, FQN-like string) before hashing,
      * because {@link java.util.LinkedHashSet} preserves insertion order and javac's discovery order
      * is not guaranteed to be deterministic across runs. Active services are sorted alphabetically
@@ -360,7 +362,13 @@ public final class BuildFingerprint {
         List<TaggedElement> sorted = new ArrayList<>(elements);
         sorted.sort(Comparator.comparing(TaggedElement::path));
         for (TaggedElement e : sorted) {
-            sb.append(e.path()).append('=').append(attrs.extract(e)).append(';');
+            // The kind is rendered content too: the locks report names it, so a class that
+            // becomes an interface with nothing else moving — same path, same lines, same reason
+            // — changes what the file says while every other input here stays byte-identical.
+            // Left out, that edit short-circuited past regeneration and check mode failed on the
+            // tree the build had just called current.
+            sb.append(e.path()).append('#').append(e.kind().name())
+              .append('=').append(attrs.extract(e)).append(';');
         }
         sb.append('}');
     }
