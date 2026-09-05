@@ -201,4 +201,63 @@ class WriteFileFrontMatterTest {
             "a hand-written header the renderer knows nothing about must survive:\n" + result);
         assertTrue(result.contains("refreshed") && !result.contains("old rules"));
     }
+
+    /**
+     * A hand-written rule file with no YAML header — a role file somebody created ahead of the
+     * build, say — must still end up with the header VibeTags renders for it. The header is where
+     * Cursor, Windsurf and Copilot read the glob list that decides when the rule loads at all;
+     * appending the block beneath the hand text without it produced a rule no editor ever applied,
+     * and the only trace was the absence of four lines nobody had seen before.
+     */
+    @Test
+    void mdcFile_appendToHandFileWithoutHeader_addsTheRenderedFrontMatter(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("security.mdc");
+        Files.writeString(file, "# Team notes\n\nKeep it small.\n", StandardCharsets.UTF_8);
+        String rendered =
+            "---\n" +
+            "description: \"AI rules for role security\"\n" +
+            "globs: [\"**/*Auth*.java\"]\n" +
+            "alwaysApply: false\n" +
+            "---\n\n" +
+            "# Rules for security\n\n## Locked Status\n- **Reason**: audited\n";
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        assertTrue(p.writeFileIfChanged(file.toString(), rendered, true));
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+        assertTrue(result.startsWith("---\ndescription: \"AI rules for role security\"\n"
+                + "globs: [\"**/*Auth*.java\"]\nalwaysApply: false\n---\n"),
+            "the rendered front matter must open the file:\n" + result);
+        int frontMatterEnd = result.indexOf("---", 3);
+        int hand = result.indexOf("# Team notes");
+        int marker = result.indexOf("<!-- VIBETAGS-START -->");
+        assertTrue(frontMatterEnd < hand && hand < marker,
+            "hand content stays between the header and the block:\n" + result);
+        assertTrue(result.contains("Keep it small."), "hand content survives:\n" + result);
+        assertFalse(p.writeFileIfChanged(file.toString(), rendered, true),
+            "the second round must find the file current");
+    }
+
+    /**
+     * The same header, for a file that opens directly on the marker block. That is what the
+     * append above left behind before it was fixed, so an already-affected file has to heal on
+     * its next round rather than stay headerless forever.
+     */
+    @Test
+    void mdcFile_updateOfHeaderlessMarkerFile_addsTheRenderedFrontMatter(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("security.mdc");
+        Files.writeString(file, "<!-- VIBETAGS-START -->\nold rules\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+        String rendered =
+            "---\n" +
+            "globs: [\"**/*Auth*.java\"]\n" +
+            "---\n\n" +
+            "# Rules for security\n\n## Locked Status\n- **Reason**: audited\n";
+        AIGuardrailProcessor p = new AIGuardrailProcessor();
+        assertTrue(p.writeFileIfChanged(file.toString(), rendered, true));
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+        assertTrue(result.startsWith("---\nglobs: [\"**/*Auth*.java\"]\n---\n\n<!-- VIBETAGS-START -->\n"),
+            "the rendered front matter must open the file:\n" + result);
+        assertFalse(result.contains("old rules"), result);
+    }
 }

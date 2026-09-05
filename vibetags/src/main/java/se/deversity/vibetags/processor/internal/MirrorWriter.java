@@ -63,6 +63,28 @@ public final class MirrorWriter {
                              @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
                              @Nullable Messager messager) {
+        write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader, roles, writer, messager, "");
+    }
+
+    /**
+     * As above, for one source set of the module.
+     *
+     * @param sourceSetSuffix {@code ""} for the primary source set, otherwise the
+     *        {@code __<sourceSet>} suffix {@code ModuleSidecar.scopedModuleId} gives a sidecar id.
+     *        The test round of a module writes and cleans up under its own namespace,
+     *        {@code mirrored-<id>__test-}, because a namespace keyed on the module alone had each
+     *        round delete what the other had mirrored: the target's rules flapped between the two
+     *        halves of every build, and check mode failed on whichever half it ran after.
+     */
+    public static void write(Path moduleRoot,
+                             Path vibetagsRoot,
+                             AnnotationCollector collector,
+                             String projectName,
+                             String generatedHeader,
+                             @Nullable RoleConfig roles,
+                             GuardrailFileWriter writer,
+                             @Nullable Messager messager,
+                             String sourceSetSuffix) {
         if (moduleRoot == null || vibetagsRoot == null || moduleRoot.equals(vibetagsRoot)) {
             // No module identity (in-memory/non-javac compile) or the module IS the root: there is
             // no sibling to mirror into, and a root-scoped mirror would just duplicate root output.
@@ -73,7 +95,9 @@ public final class MirrorWriter {
             return;
         }
 
-        String moduleId = ModuleSidecar.computeModuleId(moduleRoot, vibetagsRoot);
+        String regionId = ModuleSidecar.computeModuleId(moduleRoot, vibetagsRoot);
+        String moduleId = regionId + sourceSetSuffix;
+        Set<String> shadowing = shadowingPrefixes(vibetagsRoot, regionId);
         int written = 0;
 
         for (MirrorConfig target : targets) {
@@ -87,6 +111,11 @@ public final class MirrorWriter {
             }
 
             String prefix = MIRROR_PREFIX + moduleId + "-";
+            GranularRulesWriter granular = new GranularRulesWriter(writer);
+            // A sibling whose id begins with this module's id and a dash — core-api beside core —
+            // mirrors under a prefix that begins with this module's prefix. Its files are not
+            // this module's orphans, and the cleanup below is told so by name.
+            Set<String> keep = granular.stemsWithPrefix(targetFiles, targetActive, shadowing);
             if (!target.accepts(moduleRoot)) {
                 // Not (or no longer) a source for this target. Anything under this module's own
                 // mirror prefix here was written while the config did name it, and is an orphan the
@@ -95,20 +124,19 @@ public final class MirrorWriter {
                 // has not compiled. Cleaning it is still self-cleanup — the prefix scopes it to this
                 // module's own files — so it never reaches a sibling's, which is what stops a cold
                 // reactor deleting work it merely has not seen yet (issue #383).
-                new GranularRulesWriter(writer)
-                    .cleanupMirrored(targetFiles, targetActive, prefix, Set.of());
+                granular.cleanupMirrored(targetFiles, targetActive, prefix, keep);
                 continue;
             }
 
             GuardrailContentBuilder.Result built =
                 new GuardrailContentBuilder(collector, targetActive, projectName, generatedHeader, roles).build();
 
-            GranularRulesWriter granular = new GranularRulesWriter(writer);
             Set<String> stems = granular.writeMirrored(
                 built.elementRules, targetFiles, targetActive, roles, prefix, target.globs());
             // Cleanup runs after write and only within this module's namespace, so a stale mirror
             // disappears when its annotations do while everything else in the directory survives.
-            granular.cleanupMirrored(targetFiles, targetActive, prefix, stems);
+            keep.addAll(stems);
+            granular.cleanupMirrored(targetFiles, targetActive, prefix, keep);
             written += stems.size();
         }
 
@@ -116,6 +144,67 @@ public final class MirrorWriter {
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: mirrored " + written + " scoped rule file(s) from module " + moduleId
                     + " into " + targets.size() + " mirror target(s).");
+        }
+    }
+
+    /**
+     * Mirror prefixes of every module under {@code root} whose id begins with {@code regionId}
+     * and a dash, e.g. {@code mirrored-core-api} when {@code core} is compiling.
+     *
+     * <p>{@code mirrored-core-} is how {@code mirrored-core-api-...} begins, so core's cleanup
+     * read every one of core-api's mirrored files as an orphan of its own and deleted them; the
+     * next core-api compile put them back, and every build of core alone took them away again.
+     * The siblings are found from the module directories on disk, which is evidence a cold clone
+     * has before any sidecar exists (issue #383 forbids arguing from a sidecar's absence). The
+     * prefix stops at the sibling's id so that every source set of the sibling is covered.
+     */
+    static Set<String> shadowingPrefixes(Path root, String regionId) {
+        Set<String> prefixes = new LinkedHashSet<>();
+        String extended = regionId + "-";
+        for (Path dir : moduleDirectories(root)) {
+            String id = ModuleSidecar.computeModuleId(dir, root);
+            if (id.startsWith(extended)) {
+                prefixes.add(MIRROR_PREFIX + id);
+            }
+        }
+        return prefixes;
+    }
+
+    /** How deep below the root a sibling module is looked for; one level past mirror discovery. */
+    private static final int MODULE_SEARCH_DEPTH = 3;
+
+    /** Directories under {@code root} that carry a build file of their own, {@code root} excluded. */
+    private static List<Path> moduleDirectories(Path root) {
+        List<Path> modules = new java.util.ArrayList<>();
+        collectModules(root.toAbsolutePath().normalize(), 0, modules, new LinkedHashSet<>());
+        return modules;
+    }
+
+    private static void collectModules(Path dir, int depth, List<Path> out, Set<Path> seen) {
+        if (!seen.add(dir)) {
+            return; // symlink cycle guard
+        }
+        if (depth > 0 && dir.equals(ModuleRootResolver.nearestBuildFileAncestor(dir))) {
+            out.add(dir);
+        }
+        if (depth >= MODULE_SEARCH_DEPTH) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> children = java.nio.file.Files.list(dir)) {
+            List<Path> dirs = children
+                .filter(java.nio.file.Files::isDirectory)
+                .filter(p -> {
+                    Path name = p.getFileName();
+                    return name != null && !MirrorConfig.SKIP_DIRS.contains(name.toString());
+                })
+                .sorted()
+                .toList();
+            for (Path child : dirs) {
+                collectModules(child, depth + 1, out, seen);
+            }
+        } catch (java.io.IOException | RuntimeException ignored) {
+            // A directory this build cannot list holds no sibling this build can protect; the
+            // ordinary prefix cleanup then behaves as it did before.
         }
     }
 

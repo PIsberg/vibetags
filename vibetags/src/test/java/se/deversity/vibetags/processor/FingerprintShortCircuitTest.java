@@ -211,6 +211,41 @@ class FingerprintShortCircuitTest {
             "the module sidecar must be re-saved under the new -Avibetags.module id");
     }
 
+    /**
+     * The locks report records each element's kind, so a class that becomes an interface with
+     * nothing else moving — same name, same lines, same reason — changes what the file should say.
+     * The fingerprint hashed the path and the annotation attributes and nothing about the element
+     * itself, so this build short-circuited and left the report describing a class that no longer
+     * exists, while check mode on the same tree reported drift (issue #440's shape again).
+     */
+    @Test
+    void shortCircuit_doesNotFire_whenAnElementChangesKind(@TempDir Path tmp) throws Exception {
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"frozen\")\n" +
+            "public class A {}\n");
+        h1.compile();
+        Path locks = tmp.resolve(".vibetags-locks");
+        assertTrue(Files.readString(locks).contains("\"kind\":\"CLASS\""),
+            "the first build reports a class");
+
+        ProcessorTestHarness.awaitFilesystemTick(tmp);
+
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"frozen\")\n" +
+            "public interface A {}\n");
+        h2.compile();
+        String report = Files.readString(locks);
+        assertTrue(report.contains("\"kind\":\"INTERFACE\""),
+            "the report must follow the element's kind:\n" + report);
+        assertFalse(report.contains("\"kind\":\"CLASS\""), report);
+    }
+
     // -----------------------------------------------------------------------
     // Helper
     // -----------------------------------------------------------------------

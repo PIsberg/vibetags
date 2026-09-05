@@ -486,6 +486,49 @@ public final class GranularRulesWriter {
     }
 
     /**
+     * Stems of the files in the active granular directories whose name begins with one of
+     * {@code prefixes}, in the form {@link #cleanupMirrored} takes as its exclusion set.
+     *
+     * <p>For a module whose mirror namespace is a prefix of a sibling's: {@code mirrored-core-}
+     * is how {@code mirrored-core-api-...} begins, so without this core's cleanup read every one
+     * of core-api's mirrored files as an orphan of its own. The extension is stripped per format
+     * here because only this class knows which of {@code .md} and {@code .instructions.md} a
+     * directory uses.
+     */
+    public Set<String> stemsWithPrefix(Map<String, Path> serviceFiles, Set<String> activeServices,
+                                       java.util.Collection<String> prefixes) {
+        Set<String> stems = new LinkedHashSet<>();
+        if (prefixes.isEmpty()) {
+            return stems;
+        }
+        for (GranularFormat f : FORMATS) {
+            Path dir = serviceFiles.get(f.serviceKey);
+            if (dir == null || !activeServices.contains(f.serviceKey)
+                    || !java.nio.file.Files.isDirectory(dir)) {
+                continue;
+            }
+            try (java.util.stream.Stream<Path> files = java.nio.file.Files.list(dir)) {
+                for (Path file : files.toList()) {
+                    String name = String.valueOf(file.getFileName());
+                    if (!name.endsWith(f.extension)) {
+                        continue;
+                    }
+                    for (String prefix : prefixes) {
+                        if (name.startsWith(prefix)) {
+                            stems.add(name.substring(0, name.length() - f.extension.length()));
+                            break;
+                        }
+                    }
+                }
+            } catch (java.io.IOException ignored) {
+                // A directory this build cannot list has nothing in it to protect; the cleanup
+                // that follows cannot list it either.
+            }
+        }
+        return stems;
+    }
+
+    /**
      * Per-platform granular file format: extension, frontmatter builder (from description + glob
      * list), and heading builder. A file is {@code frontmatter + heading + body}; the single-glob
      * case reproduces the historical per-class output byte-for-byte.
