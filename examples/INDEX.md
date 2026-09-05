@@ -1,7 +1,7 @@
 # Examples coverage index
 
 What each example exercises and how CI verifies it, audited against
-`.github/workflows/build.yml` on 2026-08-31. [README.md](README.md) is the narrative guide for
+`.github/workflows/build.yml` on 2026-08-31, manifest row updated 2026-09-05. [README.md](README.md) is the narrative guide for
 picking an example to read; this file is the coverage ledger. When the two disagree, the workflow
 file wins: every gate named below is a step that exists there.
 
@@ -21,7 +21,7 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 | [`gradle-shared-buildfile/`](gradle-shared-buildfile/) | Gradle | 2 | 2 | `CLAUDE.md` only | both module identities survive |
 | [`gradle-flat/`](gradle-flat/) | Gradle | 2 | 2 | `CLAUDE.md` only | module ids are names, not path hashes |
 | [`gradle-composite/`](gradle-composite/) | Gradle, `includeBuild` | 2 builds | 2 | `CLAUDE.md` only | both builds land in one root file |
-| [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included |
+| [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included; inherited rules from a pre-extracted manifest render under their origin, the `manifest.max` cap drops exactly the advisory rule |
 | [`groovy/`](groovy/) | Gradle | 1 | 3 | byte for byte, whole directory | annotated class and method appear; the `@AIPrivacy` field does NOT (groovyc stubs carry no fields) |
 | [`scala/`](scala/) | Gradle | 1 | 2 | byte for byte, whole directory | annotated Java class appears, Scala class does not |
 
@@ -48,7 +48,7 @@ Which example to read for a given processor feature.
 | Groovy joint-compilation stubs, field drop gated | `groovy` |
 | scalac's missing JSR 269 support, gated not claimed | `scala` |
 | Processor options exercised by a build file | `root`, `module`, `check`, `enforce`, `baseline.update`, `cache`, `log.level`, `log.path`, `project` |
-| Manifest fallback options (`manifest.dir`, `manifest.packages`, `manifest.max`) | documented in the `.vibetags-transitive` comments; no build passes them |
+| Manifest fallback options (`manifest.dir`, `manifest.max`) | `kotlin` (kapt reads a pre-extracted manifest from `vibetags-manifests/` and caps advisory rules at 1; CI asserts the origin, the safety rule and the dropped advisory rule). `manifest.packages` is still documented only, in the `.vibetags-transitive` comments |
 | The companion CLI, run | CI runs `doctor --dir examples/groovy` (it must name the dropped `contactEmail` field) and `init --list --dir examples/basic` (it must print the platform keys and create nothing) — issue #533 |
 
 ## Not covered by any example
@@ -56,7 +56,8 @@ Which example to read for a given processor feature.
 Verified absent by grep over `examples/` on 2026-08-31. Each entry says what a reader cannot
 currently see demonstrated.
 
-1. **Manifest tuning options.** `manifest.dir`, `manifest.packages` and `manifest.max` exist for
-   builds where classpath discovery cannot work (kapt, ECJ, JPMS). They are documented where a
-   reader will meet them, in the `.vibetags-transitive` comments, and exercised by library tests
-   only.
+1. **`manifest.packages`.** The explicit-lookup-key variant of the manifest fallbacks needs a
+   dependency JAR that carries manifests on the compile classpath, which no example has;
+   `manifest.dir` and `manifest.max` are exercised by `kotlin/` since issue #534. It is documented
+   where a reader will meet it, in the `.vibetags-transitive` comments, and exercised by library
+   tests only.

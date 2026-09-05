@@ -853,6 +853,17 @@ jobs:
           # files must name the annotated Kotlin elements, stub signatures included.
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
+          # The transitive-manifest fallbacks a kapt build needs (issue #534): the manifest under
+          # vibetags-manifests/ is read through -Avibetags.manifest.dir and rendered under its
+          # origin coordinate; -Avibetags.manifest.max=1 keeps the first advisory rule and drops
+          # the second, while the safety-tier rule survives the cap regardless.
+          grep -qF "(from se.deversity.vibetags.example:multimodule-core:1.0)" CLAUDE.md
+          grep -qF "@AISecure: aspect=Node identity is a security boundary" CLAUDE.md
+          grep -qF "@AIContext: avoids=Adding mutable state" CLAUDE.md
+          if grep -qF "@AIThreadSafe: note=Every type in this package" CLAUDE.md; then
+            echo "::error::-Avibetags.manifest.max=1 must drop the second advisory rule."
+            exit 1
+          fi
 
       - name: Verify The Kotlin Example's Committed Guardrails Match Its Annotations
         if: matrix.java == '21'

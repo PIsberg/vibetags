@@ -33,5 +33,11 @@ kapt {
         // kapt compiles from generated Java stubs, so the JVM working directory is not
         // the project directory — the root must be passed explicitly.
         arg("vibetags.root", projectDir.absolutePath)
+        // Transitive guardrails (.vibetags-transitive) under kapt: the classpath discovery a
+        // javac build uses is not something to rely on from stub compilation, so the manifests
+        // are read from a directory of pre-extracted files instead. manifest.max=1 caps the
+        // inherited advisory rules so the cap is visible in CLAUDE.md; safety rules are never cut.
+        arg("vibetags.manifest.dir", file("vibetags-manifests").absolutePath)
+        arg("vibetags.manifest.max", "1")
     }
 }

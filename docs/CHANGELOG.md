@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `examples/kotlin` exercises the transitive-manifest fallbacks a kapt build needs:
+  `-Avibetags.manifest.dir` reads a manifest copied from what `examples/multimodule/core`
+  publishes, `-Avibetags.manifest.max=1` caps the inherited advisory rules, and CI asserts the
+  origin coordinate, the surviving safety rule and the dropped advisory rule in the regenerated
+  files. `manifest.packages` stays documented only; it needs a dependency JAR on the classpath
+  that no example carries. (#534)
+
 ## [1.3.1] - 2026-09-04
 
 ### Upgrading
