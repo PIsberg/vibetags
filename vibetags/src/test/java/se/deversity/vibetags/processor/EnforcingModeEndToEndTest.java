@@ -331,4 +331,55 @@ class EnforcingModeEndToEndTest {
         assertFalse(warns(diagnostics, "records nothing for module"),
             "an unreadable file is not an unrecorded one");
     }
+
+    private static final String TWO_FAMILIES = """
+        package com.example;
+        import se.deversity.vibetags.annotations.AIContract;
+        import se.deversity.vibetags.annotations.AILocked;
+        public interface PaymentGateway {
+            @AIContract(reason = "External gateway API")
+            double charge(String customerId, double amount);
+            @AILocked(reason = "settlement order is frozen")
+            void settle();
+        }
+        """;
+
+    private static final String TWO_FAMILIES_CONTRACT_BROKEN = """
+        package com.example;
+        import se.deversity.vibetags.annotations.AIContract;
+        import se.deversity.vibetags.annotations.AILocked;
+        public interface PaymentGateway {
+            @AIContract(reason = "External gateway API")
+            double charge(String customerId, long amount);
+            @AILocked(reason = "settlement order is frozen")
+            void settle();
+        }
+        """;
+
+    /**
+     * Re-approving one family must not throw the others away. {@code -Avibetags.enforce=locked}
+     * with {@code -Avibetags.baseline.update=true} is how a developer re-records a locked element
+     * they changed on purpose. The update replaced the module's whole block, so its
+     * {@code @AIContract} entries vanished; the next {@code -Avibetags.enforce=all} build then had
+     * nothing to compare the contracts against, read a broken one as "newly annotated", and stayed
+     * green.
+     */
+    @Test
+    void updatingOneFamilyKeepsTheOtherFamiliesApproved() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(TWO_FAMILIES, "-Avibetags.enforce=all", "-Avibetags.baseline.update=true");
+        String recorded = Files.readString(root.resolve(".vibetags-baseline"));
+        assertTrue(recorded.contains("\tcontract\t") && recorded.contains("\tlocked\t"),
+            "precondition: both families recorded:\n" + recorded);
+
+        compile(TWO_FAMILIES, "-Avibetags.enforce=locked", "-Avibetags.baseline.update=true");
+        String after = Files.readString(root.resolve(".vibetags-baseline"));
+        assertTrue(after.contains("\tcontract\t"),
+            "re-recording the locked family must leave the contract entries in place:\n" + after);
+
+        List<Diagnostic<? extends JavaFileObject>> broken =
+            compile(TWO_FAMILIES_CONTRACT_BROKEN, "-Avibetags.enforce=all");
+        assertTrue(errors(broken, "@AIContract violation"),
+            "the contract must still be enforced after an unrelated family was re-approved");
+    }
 }

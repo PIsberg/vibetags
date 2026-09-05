@@ -152,7 +152,7 @@ public final class GuardrailEnforcer {
         }
         if (update) {
             try {
-                baseline.update(root, moduleId, current);
+                baseline.update(root, moduleId, families, current);
                 messager.printMessage(Diagnostic.Kind.NOTE,
                     "VibeTags: enforcement baseline updated for module '" + moduleId + "' ("
                         + current.size() + " guarded element(s)). Commit " + EnforcementBaseline.FILE_NAME + ".");
