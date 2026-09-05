@@ -123,7 +123,7 @@ class WriteCacheTest {
         cache.flush();
 
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        assertTrue(content.contains("# format: 2\n"),
+        assertTrue(content.contains("# format: 3\n"),
             "flushed cache must carry the format-version header: " + content);
     }
 
@@ -141,7 +141,7 @@ class WriteCacheTest {
         seed.setBuildFingerprint("cafebabe");
         seed.flush();
         String v1 = Files.readString(cachePath, StandardCharsets.UTF_8);
-        Files.writeString(cachePath, v1.replace("# format: 2", "# format: 99"),
+        Files.writeString(cachePath, v1.replace("# format: 3", "# format: 99"),
             StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
@@ -168,7 +168,7 @@ class WriteCacheTest {
         seed.recordWrite(file, "hello");
         seed.flush();
         String content = Files.readString(cachePath, StandardCharsets.UTF_8);
-        String legacy = content.replace("# format: 2\n", "");
+        String legacy = content.replace("# format: 3\n", "");
         Files.writeString(cachePath, legacy, StandardCharsets.UTF_8);
 
         WriteCache cache = new WriteCache(cachePath);
@@ -597,5 +597,54 @@ class WriteCacheTest {
         rebound.flush();
         assertEquals(firstMtime, Files.getLastModifiedTime(cachePath).toMillis(),
             "re-binding the unchanged context must not rewrite the cache file");
+    }
+
+    @Test
+    void scopedHeaders_preserveSiblingFingerprintsAcrossFlushes(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache moduleA = new WriteCache(cachePath);
+        moduleA.bindContext("module-a");
+        moduleA.setBuildFingerprint("aaaa1111");
+        moduleA.setSidecarStamp("1111aaaa");
+        moduleA.flush();
+
+        WriteCache moduleB = new WriteCache(cachePath);
+        moduleB.bindContext("module-b");
+        moduleB.setBuildFingerprint("bbbb2222");
+        moduleB.setSidecarStamp("2222bbbb");
+        moduleB.flush();
+
+        WriteCache readerA = new WriteCache(cachePath);
+        readerA.bindContext("module-a");
+        assertEquals("aaaa1111", readerA.getBuildFingerprint(),
+            "module B's flush must not overwrite module A's fingerprint header");
+        assertEquals("2222bbbb", readerA.getSidecarStamp(),
+            "module B's flush updates the reactor-wide sidecar stamp");
+
+        WriteCache readerB = new WriteCache(cachePath);
+        readerB.bindContext("module-b");
+        assertEquals("bbbb2222", readerB.getBuildFingerprint());
+        assertEquals("2222bbbb", readerB.getSidecarStamp());
+    }
+
+    @Test
+    void unboundInstancePatchesTheOnlyScopedHeader(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache writer = new WriteCache(cachePath);
+        writer.bindContext("module-a");
+        writer.setBuildFingerprint("aaaa1111");
+        writer.setSidecarStamp("1111aaaa");
+        writer.flush();
+
+        WriteCache patcher = new WriteCache(cachePath);
+        patcher.setSidecarStamp("00000000");
+        patcher.flush();
+
+        WriteCache reader = new WriteCache(cachePath);
+        reader.bindContext("module-a");
+        assertEquals("aaaa1111", reader.getBuildFingerprint(),
+            "patching one scoped stamp must preserve the scoped fingerprint");
+        assertEquals("00000000", reader.getSidecarStamp(),
+            "the test helper path used by fingerprint tests must still patch the stored stamp");
     }
 }

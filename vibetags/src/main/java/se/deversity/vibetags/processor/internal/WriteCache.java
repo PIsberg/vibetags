@@ -58,8 +58,12 @@ public final class WriteCache {
      * unchanged, but only a version that knows to prune them can be allowed to keep them — an
      * older processor never re-records such an entry, so a deleted input would suppress its
      * short-circuit forever. Bumping the version makes that processor discard the cache instead.
+     *
+     * <p>Version 3 keeps file-entry rows unchanged and scopes the fingerprint/context
+     * headers by module context. A reactor still has one root cache file, but one module flushing
+     * no longer overwrites the header the next sibling needs for its own short-circuit.
      */
-    static final int FORMAT_VERSION = 2;
+    static final int FORMAT_VERSION = 3;
 
     /** Cache record. */
     static final class Entry {
@@ -79,11 +83,14 @@ public final class WriteCache {
     private boolean loaded;
     private boolean dirty;
 
-    /** Top-level build fingerprint (input-state hash). {@code null} when unknown. */
+    /** Legacy/unscoped top-level build fingerprint (input-state hash). {@code null} when unknown. */
     private @Nullable String buildFingerprint;
 
-    /** Combined mtime stamp of all module sidecar files (polynomial hash); detects cross-module changes. {@code null} when unknown. */
+    /** Reactor-wide sidecar stamp. {@code null} when unknown. */
     private @Nullable String sidecarStamp;
+
+    /** Module-context-scoped fingerprints, in file encounter order. */
+    private final Map<String, String> fingerprints = new LinkedHashMap<>();
 
     /** Run context bound by the current compilation ({@link #bindContext}). {@code null} when unbound. */
     private @Nullable String currentContext;
@@ -120,11 +127,11 @@ public final class WriteCache {
      */
     public synchronized @Nullable String getBuildFingerprint() {
         loadIfNeeded();
-        if (currentContext != null && !currentContext.equals(storedContext)) {
-            // Recorded under a different run context (project name or module override): the
-            // annotations may be identical, but the rendered output would not be. Report no
-            // fingerprint so the caller regenerates rather than short-circuits.
-            return null;
+        if (currentContext != null) {
+            return fingerprints.get(currentContext);
+        }
+        if (fingerprints.size() == 1) {
+            return fingerprints.values().iterator().next();
         }
         return buildFingerprint;
     }
@@ -135,7 +142,18 @@ public final class WriteCache {
      */
     public synchronized void setBuildFingerprint(String fingerprint) {
         loadIfNeeded();
-        if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
+        if (currentContext != null) {
+            String prev = fingerprints.put(currentContext, fingerprint);
+            if (!java.util.Objects.equals(prev, fingerprint)) {
+                this.dirty = true;
+            }
+        } else if (fingerprints.size() == 1) {
+            String onlyKey = fingerprints.keySet().iterator().next();
+            String prev = fingerprints.put(onlyKey, fingerprint);
+            if (!java.util.Objects.equals(prev, fingerprint)) {
+                this.dirty = true;
+            }
+        } else if (!java.util.Objects.equals(this.buildFingerprint, fingerprint)) {
             this.buildFingerprint = fingerprint;
             this.dirty = true;
         }
@@ -172,11 +190,6 @@ public final class WriteCache {
     public synchronized void bindContext(String context) {
         loadIfNeeded();
         this.currentContext = context;
-        if (!context.equals(this.storedContext)) {
-            // The persisted header must converge on the new context even when nothing else
-            // changes this run — otherwise the same mismatch re-fires on every later compile.
-            this.dirty = true;
-        }
     }
 
     /**
@@ -299,15 +312,25 @@ public final class WriteCache {
         StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
             .append("# format: ").append(FORMAT_VERSION).append('\n');
-        if (buildFingerprint != null) {
-            sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
-        }
         if (sidecarStamp != null) {
             sb.append("# sidecar-stamp: ").append(sidecarStamp).append('\n');
         }
-        String effectiveContext = currentContext != null ? currentContext : storedContext;
-        if (effectiveContext != null) {
-            sb.append("# context: ").append(effectiveContext).append('\n');
+        if (fingerprints.isEmpty()) {
+            if (buildFingerprint != null) {
+                sb.append("# fingerprint: ").append(buildFingerprint).append('\n');
+            }
+            String effectiveContext = currentContext != null ? currentContext : storedContext;
+            if (effectiveContext != null) {
+                sb.append("# context: ").append(effectiveContext).append('\n');
+            }
+        } else {
+            for (Map.Entry<String, String> scoped : fingerprints.entrySet()) {
+                if (scoped.getValue() == null) {
+                    continue;
+                }
+                sb.append("# context: ").append(scoped.getKey()).append('\n')
+                  .append("# fingerprint: ").append(scoped.getValue()).append('\n');
+            }
         }
         for (Map.Entry<String, Entry> e : entries.entrySet()) {
             sb.append(e.getKey()).append('\t')
@@ -349,6 +372,7 @@ public final class WriteCache {
         if (loaded) return;
         loaded = true;
         try {
+            @Nullable String activeContext = null;
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
                 if (line.isEmpty()) continue;
                 if (line.charAt(0) == '#') {
@@ -364,6 +388,7 @@ public final class WriteCache {
                                 buildFingerprint = null;
                                 sidecarStamp = null;
                                 storedContext = null;
+                                fingerprints.clear();
                                 return;
                             }
                         } catch (NumberFormatException ignored) {
@@ -372,6 +397,7 @@ public final class WriteCache {
                             buildFingerprint = null;
                             sidecarStamp = null;
                             storedContext = null;
+                            fingerprints.clear();
                             return;
                         }
                     }
@@ -379,7 +405,13 @@ public final class WriteCache {
                     String prefix = "# fingerprint: ";
                     if (line.startsWith(prefix)) {
                         String fp = line.substring(prefix.length()).trim();
-                        if (!fp.isEmpty()) buildFingerprint = fp;
+                        if (!fp.isEmpty()) {
+                            if (activeContext != null) {
+                                fingerprints.put(activeContext, fp);
+                            } else {
+                                buildFingerprint = fp;
+                            }
+                        }
                     }
                     String sidecarPrefix = "# sidecar-stamp: ";
                     if (line.startsWith(sidecarPrefix)) {
@@ -389,7 +421,10 @@ public final class WriteCache {
                     String contextPrefix = "# context: ";
                     if (line.startsWith(contextPrefix)) {
                         String cx = line.substring(contextPrefix.length()).trim();
-                        if (!cx.isEmpty()) storedContext = cx;
+                        if (!cx.isEmpty()) {
+                            storedContext = cx;
+                            activeContext = cx;
+                        }
                     }
                     continue;
                 }
@@ -419,6 +454,10 @@ public final class WriteCache {
                 } catch (NumberFormatException ignored) {
                     // Skip corrupt rows — fresh entries replace them on next write.
                 }
+            }
+            if (storedContext != null && buildFingerprint != null) {
+                fingerprints.putIfAbsent(storedContext, buildFingerprint);
+                buildFingerprint = null;
             }
         } catch (NoSuchFileException ignored) {
             // First run — empty cache is fine.

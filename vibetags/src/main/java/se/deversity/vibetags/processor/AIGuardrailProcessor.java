@@ -399,6 +399,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
             if (moduleIdentity == null) {
                 moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+                bindWriteCacheContext();
             }
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
@@ -462,6 +463,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private Path compilationRoot() {
         return moduleIdentity != null ? moduleIdentity.root() : Paths.get("").toAbsolutePath();
+    }
+
+    private void bindWriteCacheContext() {
+        if (writeCache == null || moduleIdentity == null) {
+            return;
+        }
+        Path compilationRoot = compilationRoot();
+        String regionId = moduleIdOverride != null
+            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
+        String moduleId = ModuleSidecar.scopedModuleId(regionId, moduleIdentity.sourceSet());
+        writeCache.bindContext(ContentHash.of("project=" + projectName + ";module=" + moduleId));
     }
 
     /**

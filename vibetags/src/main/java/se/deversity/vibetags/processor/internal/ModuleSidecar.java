@@ -340,9 +340,19 @@ public final class ModuleSidecar {
         // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
         // an IDE compiling the same module at once) otherwise truncate each other's temp file.
         sb.append(TRAILER).append('\n');
+        String serialized = sb.toString();
+        if (Files.exists(target)) {
+            try {
+                if (serialized.equals(Files.readString(target, StandardCharsets.UTF_8))) {
+                    return;
+                }
+            } catch (IOException ignored) {
+                // Replace unreadable or mid-rename sidecars via the normal atomic path below.
+            }
+        }
 
         Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
-        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
+        Files.writeString(tmp, serialized, StandardCharsets.UTF_8);
         moveIntoPlace(tmp, target, ATOMIC_REPLACE);
     }
 

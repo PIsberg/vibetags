@@ -275,6 +275,24 @@ class MultiModuleAggregationTest {
                 + "module short-circuited past the merge and shipped the previous content");
     }
 
+    @Test
+    void sidecar_saveIdenticalContent_doesNotTouchTheFile(@TempDir Path root) throws Exception {
+        ModuleSidecar first = new ModuleSidecar("_root_", "");
+        first.putBody("cursor", "stable rules");
+        first.save(root);
+        Path file = root.resolve(".vibetags-mod-_root_");
+        long mtime = Files.getLastModifiedTime(file).toMillis();
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+
+        ModuleSidecar second = new ModuleSidecar("_root_", "");
+        second.putBody("cursor", "stable rules");
+        second.save(root);
+
+        assertEquals(mtime, Files.getLastModifiedTime(file).toMillis(),
+            "an unchanged sidecar must not move its mtime and invalidate sibling stamps");
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------

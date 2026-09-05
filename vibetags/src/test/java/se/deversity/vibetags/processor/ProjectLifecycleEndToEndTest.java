@@ -177,6 +177,33 @@ class ProjectLifecycleEndToEndTest {
                 + "one build further out");
     }
 
+    @Test
+    void reactorSteadyState_eachModuleKeepsItsOwnFingerprintShortCircuit(
+            @TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+
+        Path coreSidecar = root.resolve(".vibetags-mod-module-core");
+        Path cliSidecar = root.resolve(".vibetags-mod-module-cli");
+        long coreMtime = Files.getLastModifiedTime(coreSidecar).toMillis();
+        long cliMtime = Files.getLastModifiedTime(cliSidecar).toMillis();
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+        assertEquals(cliMtime, Files.getLastModifiedTime(cliSidecar).toMillis(),
+            "module-cli must short-circuit in reactor steady state");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        assertEquals(coreMtime, Files.getLastModifiedTime(coreSidecar).toMillis(),
+            "module-core must short-circuit in reactor steady state");
+    }
+
     // -----------------------------------------------------------------------
     // A platform opted into long after the code was annotated
     // -----------------------------------------------------------------------
