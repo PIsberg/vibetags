@@ -18,6 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A sidecar written before the `# end` trailer existed is read again instead of being skipped as
+  unreadable (issue #590). The trailer was appended without a format-version bump so that older
+  processors would keep reading newer files; the reverse direction was documented as "skipped until
+  its module recompiles", but a skipped sibling drops out of `readAll`, the round then sees one
+  region and merges as single-module, and every other module's region disappears from the aggregate
+  and from the granular role files. A project that commits its `.vibetags-mod-*` files therefore
+  lost whole modules from its generated output on the first build after upgrading, silently, and
+  nothing repaired them until each module happened to recompile. Measured on a consumer that
+  commits them: CLAUDE.md lost 30 lines, GEMINI.md 35, and a role file was emptied. The format
+  version now carries the promise instead - version 3 writes a trailer and is held to it, version 2
+  is the pre-trailer shape and is read in full without one - so a missing trailer is evidence of a
+  torn write only for a version that always writes one, and issue #553's protection is intact for
+  every file this processor writes. `ModuleSidecarResilienceTest` pins both directions.
+
 - Two modules whose granular stems differ only in capitalisation (`com.example.Payment` in one,
   package `com.example.payment` in another) share one rule file on Windows and macOS, and its heading
   and description came from whichever module compiled last, so check mode's verdict depended on
