@@ -32,6 +32,17 @@ fingerprinting, multi-module reactors and mirroring, international characters, a
 loops. Those are exactly the areas where "it compiled and the file looked right" is not evidence, so
 run `-Pe2e` before pushing anything that touches them.
 
+**The Gradle test worker's heap is pinned, and has to be.** Gradle defaults a test worker to
+`-Xmx512m`; surefire's fork inherits the JVM default, a quarter of RAM. Since
+`junit-platform.properties` runs the suite concurrently and most e2e classes drive an in-process
+`javac` over the whole test classpath, the same suite was running under heaps an order of magnitude
+apart, and only the Gradle legs could exhaust theirs. `vibetags/build.gradle` sets
+`maxHeapSize = "2g"`; `BuildToolchainParityTest` fails if that line goes away. The failure that
+prompted the pin (a Gradle-only leg, two arbitrary e2e tests, on a tree byte-identical to a green
+run) was never captured with a message, so the heap is the leading explanation and not a proven
+one; the same change turns on `exceptionFormat = "full"` and uploads the Gradle test report on
+failure so the next occurrence can be read rather than guessed at.
+
 **Naming a test overrides the tag.** `mvn test -Dtest=WriteCacheProcessorIntegrationTest` runs that
 class even though it is tagged, and so does `gradlew test --tests '*WriteCacheProcessorIntegrationTest'`.
 Both build files special-case this deliberately: without it the command prints `Tests run: 0` and

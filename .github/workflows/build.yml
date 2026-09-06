@@ -1366,6 +1366,21 @@ jobs:
           cd vibetags
           ./gradlew test -Pe2e --no-daemon
 
+      # A failing test here used to leave nothing behind: Gradle's console output names the
+      # exception class and a line number, and the reports that carry the assertion message and
+      # the processor diagnostics live in a build directory the runner throws away. build.gradle
+      # now prints the full exception; this keeps the report too, so an intermittent failure can
+      # be read after the fact instead of re-run until it hides.
+      - name: Upload the Gradle test report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gradle-test-report-jdk${{ matrix.java }}
+          path: |
+            vibetags/build/reports/tests/test
+            vibetags/build/test-results/test
+          retention-days: 7
+
       - name: Verify Generated AI Config Files
         uses: ./.github/actions/verify-generated-files
         with:

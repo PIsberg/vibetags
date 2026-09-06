@@ -162,6 +162,26 @@ compileJava {
 test {
     useJUnitPlatform()
     jvmArgs "-Dnet.bytebuddy.experimental=true", "-Dlicense.mock.mode=true"
+    // Measured: a Gradle test worker for this task started with -Xmx512m. Surefire's fork takes
+    // the JVM default instead, a quarter of RAM, so the same suite ran under heaps an order of
+    // magnitude apart depending on which build system launched it. That matters here because
+    // junit-platform.properties runs the suite concurrently and most e2e classes drive an
+    // in-process javac holding the whole test classpath, with the JaCoCo agent attached on top.
+    // The failure that prompted this was Gradle-only and intermittent: two arbitrary transitive
+    // e2e tests failed on a commit whose tree was byte-identical to an earlier green run, and a
+    // re-run of the same commit passed. Whether it was the heap is inferred, not proven - the
+    // console format at the time printed no message to read - but the asymmetry is real and this
+    // is the side that could run out. BuildToolchainParityTest keeps the line here.
+    maxHeapSize = "2g"
+    testLogging {
+        // Gradle's default exceptionFormat is SHORT: a CI failure prints the exception class and
+        // a line number and nothing else, which is how the flake above cost a full investigation
+        // to say no more than "it failed here". The assertion messages in this suite carry the
+        // generated file and the processor's own diagnostics; print them.
+        exceptionFormat = "full"
+        showStackTraces = true
+        events "failed"
+    }
     finalizedBy jacocoTestReport
 }
 
