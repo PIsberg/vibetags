@@ -557,7 +557,7 @@
                                  PIT varies a little run to run, and a gate that fails on noise is
                                  one people learn to rerun rather than read. Raise it when the
                                  score rises, and record the new number in docs/WORKFLOW.md. -->
-                            
+
                             <mutationThreshold>80</mutationThreshold>
                             <coverageThreshold>90</coverageThreshold>
                         </configuration>

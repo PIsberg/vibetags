@@ -125,6 +125,28 @@ class BuildToolchainParityTest {
         }
     }
 
+    /**
+     * Gradle gives a test worker {@code -Xmx512m} unless the build file says otherwise. Surefire
+     * gives its fork the JVM default, a quarter of the machine's RAM. Left to the defaults the two
+     * build systems therefore run this suite, concurrently and with the JaCoCo agent attached,
+     * under heaps that differ by roughly an order of magnitude, and only one of them can run out.
+     *
+     * <p>What was observed: a Gradle leg failed two arbitrary transitive end-to-end tests on a
+     * commit whose tree was byte-identical to an earlier green run, every Maven leg stayed green,
+     * and a re-run of the same commit passed. The console format at the time printed no assertion
+     * message, so the heap is the leading explanation rather than a proven one. Pinning it is what
+     * makes the Gradle legs test the same thing the Maven legs do, rather than also testing how
+     * close Gradle's default sits to this suite's peak footprint.
+     */
+    @Test
+    void theGradleTestWorker_pinsAnExplicitHeapRatherThanTakingGradlesDefault() {
+        String gradle = read(repoRoot().resolve("vibetags/build.gradle"));
+        assertTrue(gradle.contains("maxHeapSize"),
+            "vibetags/build.gradle no longer pins maxHeapSize on the test task, so Gradle's 512m"
+                + " default is back and the Gradle legs run this suite under a heap Maven's legs"
+                + " never see. See the javadoc on this test for what that failure looks like.");
+    }
+
     // -----------------------------------------------------------------------
 
     private static Path repoRoot() {

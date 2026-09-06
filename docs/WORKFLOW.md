@@ -148,7 +148,13 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
   check reported `UP-TO-DATE` and exited 0. The second step drifts `CLAUDE.md` deliberately and
   requires a non-zero exit, then asserts the drift is still there, since check mode must never
   write. Every other check-mode gate in the pipeline is Maven.
-- Tests use `cd vibetags && ./gradlew test --no-daemon`.
+- Tests: the library build above runs the fast tier, and a later step runs the whole suite with
+  `cd vibetags && ./gradlew test -Pe2e --no-daemon`. That step is followed by an `if: failure()`
+  upload of `vibetags/build/reports/tests/test` and `vibetags/build/test-results/test`. Before
+  that upload existed, a failing Gradle test left only an exception class and a line number in
+  the console, and the report carrying the assertion message died with the runner;
+  `build.gradle` now also sets `exceptionFormat = "full"`. See `docs/TESTS.md` for why the
+  Gradle worker's heap is pinned rather than left at Gradle's 512m default.
 - Codecov reads `vibetags/build/reports/jacoco/test/jacocoTestReport.xml`, uploads under flag `unittests-gradle`, and passes `fail_ci_if_error: false`.
 
 The same `.github/actions/verify-generated-files` composite action runs after the Gradle build, so any divergence between Maven and Gradle output paths is caught.
