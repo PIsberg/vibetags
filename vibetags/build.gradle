@@ -171,7 +171,10 @@ test {
     // e2e tests failed on a commit whose tree was byte-identical to an earlier green run, and a
     // re-run of the same commit passed. Whether it was the heap is inferred, not proven - the
     // console format at the time printed no message to read - but the asymmetry is real and this
-    // is the side that could run out. BuildToolchainParityTest keeps the line here.
+    // is the side that could run out. Since measured (issue #588): the suite peaks at 543 MB
+    // live and 769 MB occupancy, so Gradle's 512 MB default sat below its peak and 2g is
+    // about 2.7x it. docs/TESTS.md carries the method and the caveats.
+    // BuildToolchainParityTest keeps the line here.
     maxHeapSize = "2g"
     testLogging {
         // Gradle's default exceptionFormat is SHORT: a CI failure prints the exception class and

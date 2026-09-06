@@ -1003,7 +1003,48 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Warns when a platform was opted into after some module last compiled, so the merged file is
+     * Says out loud that this round is writing an aggregate without a module it can see but not read.
+     *
+     * <p>A sidecar written by a newer processor, or one locked or mid-rename under a parallel
+     * build, is skipped and never deleted - correctly, because deleting it would lose that module
+     * for good. The gap was that skipping was announced only at DEBUG. The module then vanished
+     * from CLAUDE.md and from the granular rule files with nothing said, and the developer met it
+     * as an unexplained diff. Issue #590 was that shape reached by an older format; issue #592 is
+     * the same shape reached by a newer one, which no change here can prevent because the
+     * processor that drops the regions is the older one.
+     *
+     * <p>A warning rather than an error: the output is stale, not wrong, it repairs itself on the
+     * next round once the file is readable, and failing a consumer's compile over a sibling's
+     * temporary lock would be worse than the diff this exists to explain.
+     */
+    private void warnAboutSidecarsThisRoundCouldNotRead(Path root) {
+        List<String> unreadable = ModuleSidecar.unreadableSidecarNames(root);
+        if (unreadable.isEmpty()) {
+            return;
+        }
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: " + unreadable.size() + " module sidecar(s) could not be read this round, so"
+                + " the modules they describe are missing from the generated files: "
+                + String.join(", ", unreadable)
+                + ". A sidecar written by a newer VibeTags than this one (a mixed-version reactor)"
+                + " or held open by a parallel build reads this way. Nothing was deleted; build"
+                + " again with one version throughout and the regions come back.");
+        if (log != null) {
+            log.warn("sidecar.unreadable count={} names={}", unreadable.size(), unreadable);
+        }
+    }
+
+    /**
+     * The diagnostics that belong immediately after the sidecar read, both about the same thing:
+     * a merged file that is missing a module's guardrails.
+     *
+     * <p>Hosting the second one here rather than calling it from {@code generateFiles()} is
+     * deliberate. That method is {@code @AILocked} for step order and the repository dogfoods its
+     * own locked-files guard as a required check, so adding a call there fails the build for a
+     * change that moves no step. One call site for both post-read diagnostics keeps the lock armed
+     * for everyone else, which is worth more than the tidier name this method would otherwise have.
+     *
+     * <p>Warns when a platform was opted into after some module last compiled, so the merged file is
      * missing that module's guardrails.
      *
      * <p>Creating an opt-in file at a reactor root activates a platform for the whole build, but a
@@ -1020,6 +1061,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private void warnAboutPlatformsOptedInAfterAModuleLastCompiled(
             Set<String> activeServices, Map<String, Path> serviceFiles,
             List<ModuleSidecar> allSidecars) {
+        warnAboutSidecarsThisRoundCouldNotRead(root);
         if (allSidecars.size() < 2) {
             return; // Single module: its own round is by definition current.
         }

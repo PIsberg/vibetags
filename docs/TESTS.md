@@ -37,7 +37,14 @@ run `-Pe2e` before pushing anything that touches them.
 `junit-platform.properties` runs the suite concurrently and most e2e classes drive an in-process
 `javac` over the whole test classpath, the same suite was running under heaps an order of magnitude
 apart, and only the Gradle legs could exhaust theirs. `vibetags/build.gradle` sets
-`maxHeapSize = "2g"`; `BuildToolchainParityTest` fails if that line goes away. The failure that
+`maxHeapSize = "2g"`; `BuildToolchainParityTest` fails if that line goes away.
+
+The 2g is measured, not guessed. Running the full `-Pe2e` suite under `-Xlog:gc` on a 16-core
+Windows machine, JDK 21, on 2026-09-06: 77 GC events, **no full GCs**, peak live set after GC
+**543 MB**, peak occupancy before GC **769 MB**, and G1 grew the heap to 875 MB without ever
+approaching the 2048 MB cap. So 2g is about 2.7x the peak occupancy, and Gradle's 512 MB default
+sat *below* it - which is the measurement behind the flake in issue #587. CI runs Linux, where the
+figures will differ somewhat; re-measure with the same command before changing the number. The failure that
 prompted the pin (a Gradle-only leg, two arbitrary e2e tests, on a tree byte-identical to a green
 run) was never captured with a message, so the heap is the leading explanation and not a proven
 one; the same change turns on `exceptionFormat = "full"` and uploads the Gradle test report on

@@ -1093,6 +1093,46 @@ public final class ModuleSidecar {
     }
 
     /**
+     * The sidecars present on disk that this processor could not read, by file name.
+     *
+     * <p>Two shapes reach here, and both mean the same thing to the caller: this round is about to
+     * render an aggregate that is missing whoever owns these files. A {@code future-version}
+     * sidecar belongs to a module compiled by a newer processor - a mixed-version reactor, which is
+     * a misconfiguration but a silent one (issue #592). An {@code unreadable} one is a file locked,
+     * vanishing or mid-rename under a parallel build, which is ordinary on Windows and clears on
+     * the next round.
+     *
+     * <p>Neither is deleted, and neither can be merged. What was missing was anyone saying so:
+     * both are logged at DEBUG, which nobody has on, so the module simply disappeared from the
+     * generated files and the developer found it in a diff. This is what lets the round state it.
+     *
+     * <p>Deliberately re-reads rather than being folded into {@link #readAll}: that method is
+     * called from a step-ordered sequence this must not perturb, and a directory listing of a
+     * handful of files costs nothing next to the compile it runs inside.
+     *
+     * @return file names, sorted, or empty when every sidecar on disk was readable
+     */
+    public static List<String> unreadableSidecarNames(Path root) {
+        if (!Files.isDirectory(root)) return List.of();
+        List<String> unreadable = new ArrayList<>();
+        try (Stream<Path> stream = Files.list(root)) {
+            for (Path p : stream.toList()) {
+                Path fn = p.getFileName();
+                if (fn == null) continue;
+                String name = fn.toString();
+                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
+                ModuleSidecar loaded = load(p);
+                if (loaded == UNREADABLE || loaded == FUTURE_VERSION) unreadable.add(name);
+            }
+        } catch (IOException unlistable) {
+            // A root we cannot list contributes no names, the same as a root with no sidecars.
+            return List.of();
+        }
+        Collections.sort(unreadable);
+        return unreadable;
+    }
+
+    /**
      * Lists sidecar file paths under {@code root} without parsing them.
      * Used to compute a lightweight stamp for the fingerprint short-circuit.
      */

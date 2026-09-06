@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A round that cannot read a sidecar now says so, instead of writing an aggregate without that
+  module in silence (issue #592). A sidecar written by a newer VibeTags than the one compiling
+  (a mixed-version reactor) or held open by a parallel build is skipped and never deleted, which is
+  right - but the skip was announced only at DEBUG, so the module simply disappeared from the
+  generated files and turned up as an unexplained diff. The compiler now warns, names the files,
+  and states that nothing was deleted and that a build with one version throughout brings the
+  regions back. This is the same disappearance issue #590 reached through an older format; the
+  newer-format direction cannot be prevented from here, because the round that drops the regions
+  belongs to the older processor.
 - A sidecar written before the `# end` trailer existed is read again instead of being skipped as
   unreadable (issue #590). The trailer was appended without a format-version bump so that older
   processors would keep reading newer files; the reverse direction was documented as "skipped until
