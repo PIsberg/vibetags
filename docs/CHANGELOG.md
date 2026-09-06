@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-07
+
 ### Added
 
 - `examples/kotlin` exercises the transitive-manifest fallbacks a kapt build needs:
@@ -81,6 +83,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrading
 
+- **`.vibetags-mod-*` sidecars are rewritten to format 3 on the first build.** Most projects
+  gitignore them and will not notice. A project that commits them - which is a reasonable thing to
+  do, and `async-test-lib` does it deliberately - gets one commit's worth of churn: the version
+  header, the `# end` trailer, and the per-stem granular heading keys. Measured on that consumer:
+  +7, +4 and +24 lines across its three sidecars, and nothing else in the tree changed.
+- **If you commit your sidecars and are on 1.3.1, upgrade rather than stay.** On 1.3.1 the first
+  build after upgrading from 1.3.0 read those committed sidecars as unreadable and silently wrote
+  an aggregate missing every module that had not yet recompiled (issue #590). This release reads
+  them, so the first build produces the complete aggregate again.
 - `.vibetags-cache` is now format 3. A processor older than this release discards a format-3 cache
   wholesale and rebuilds it (one full round, no wrong output); this release adopts a format-2
   cache's whole-root headers for the first module that compiles, so upgrading costs no extra round
@@ -3981,7 +3992,9 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/PIsberg/vibetags/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/PIsberg/vibetags/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/PIsberg/vibetags/compare/v1.2.7...v1.3.0
 [1.2.7]: https://github.com/PIsberg/vibetags/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/PIsberg/vibetags/compare/v1.2.5...v1.2.6
