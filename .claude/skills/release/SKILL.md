@@ -139,14 +139,23 @@ cd vibetags-annotations && mvn -q install && cd ..
 cd vibetags && mvn -q clean install && cd ..
 cd vibetags-bom && mvn -q install && cd ..
 cd vibetags-cli && mvn -q clean install && cd ..
-cd examples/basic && mvn -q clean compile && cd ..
-cd examples/multimodule && mvn -q clean compile && cd ..
-cd examples/multimodule-indexed && mvn -q clean compile && cd ..
+cd examples/basic && mvn -q clean compile && cd ../..
+cd examples/multimodule && mvn -q clean test-compile && cd ../..
+cd examples/multimodule-indexed && mvn -q clean compile && cd ../..
 ```
 
 `vibetags-cli` is in that list because it is published too, and it depends on the processor
 as a library. Both reactor examples are there because they exercise the sidecar merge, which
 the single-module `example` cannot reach.
+
+`test-compile`, not `compile`, for `examples/multimodule`, and the difference is not a
+detail. Its `tests` module has only `src/test/java`, so a `compile` never runs the processor
+over that module, its sidecar goes stale, and the root merge drops the whole
+`VIBETAGS-MODULE: tests` region from all 18 generated files. That reads exactly like the
+drift this step exists to catch: 18 files, hundreds of deleted lines, on the one step whose
+whole job is to notice a rendering change. It has happened, and cost a round
+of investigation to reduce to a wrong verb. If the region is missing and nothing else moved,
+re-run this with `test-compile` before believing it.
 
 Then check that the examples produced **no** guardrail-file drift:
 
