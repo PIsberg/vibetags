@@ -349,6 +349,73 @@ class ModuleSidecarResilienceTest {
             .encodeToString(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
+    // ---------------------------------------------------------------- naming what could not be read
+
+    /**
+     * A round that cannot read a sidecar is about to write an aggregate without that module, and
+     * until now said so only at DEBUG - which nobody has on, so the module simply vanished from
+     * CLAUDE.md and the developer met it as an unexplained diff. Issue #590 reached that state
+     * through an older format; issue #592 reaches it through a newer one, which this processor
+     * cannot prevent because the round that drops the regions belongs to the older processor.
+     * Naming the files is what turns a silent loss into a stated one.
+     *
+     * <p>Both unreadable shapes count and a healthy sidecar does not, because a warning that fires
+     * on every build is one people turn off.
+     */
+    @Test
+    void everySidecarThisProcessorCannotReadIsNamed(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        Files.createDirectories(root.resolve("newer"));
+        Files.createDirectories(root.resolve("torn"));
+        // Readable: this one must not be named, or the warning cries wolf on a healthy reactor.
+        Files.writeString(root.resolve(".vibetags-mod-core"), """
+            # version=2
+            moduleId=core
+            modulePath=core
+            regionId=core
+            claude=%s
+            """.formatted(encoded("core body")));
+        // Written by a newer processor: a mixed-version reactor.
+        Files.writeString(root.resolve(".vibetags-mod-newer"), """
+            # version=99
+            moduleId=newer
+            modulePath=newer
+            regionId=newer
+            # end
+            """);
+        // Current format, promising a trailer, cut short before it: a torn write.
+        Files.writeString(root.resolve(".vibetags-mod-torn"), """
+            # version=%d
+            moduleId=torn
+            modulePath=torn
+            regionId=torn
+            claude=%s
+            """.formatted(ModuleSidecar.FORMAT_VERSION, encoded("half a body")));
+
+        List<String> named = ModuleSidecar.unreadableSidecarNames(root);
+
+        assertEquals(List.of(".vibetags-mod-newer", ".vibetags-mod-torn"), named,
+            "both unreadable shapes are named, and the healthy sidecar is not");
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-newer")),
+            "naming a sidecar must never be a step towards deleting it");
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-torn")), "nor this one");
+    }
+
+    /** A reactor whose sidecars are all readable says nothing, so the warning stays meaningful. */
+    @Test
+    void aHealthyReactorNamesNothing(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve(".vibetags-mod-core"), """
+            # version=2
+            moduleId=core
+            modulePath=core
+            regionId=core
+            claude=%s
+            """.formatted(encoded("core body")));
+
+        assertTrue(ModuleSidecar.unreadableSidecarNames(root).isEmpty());
+    }
+
     // ---------------------------------------------------------------- unrepresentable module path
 
     /**
