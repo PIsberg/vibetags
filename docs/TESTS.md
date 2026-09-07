@@ -122,15 +122,25 @@ just enough cells, checked for real, to show the shape of what a fuller pass wou
 | `GuardrailFileWriter` | `GuardrailFileRecoveryEndToEndTest` | same (marker-aware write path) | `MarkerInjectionTest`, `MarkerInProseTest` | n/a |
 | `ModuleSidecar` | `MultiModuleProcessorTest` | `ModuleSidecarResilienceTest` | `ModuleSidecarLogContractTest` (unrepresentable paths) | `MultiModuleAggregationTest`, `AncestorModuleDuplicateRegionTest` |
 | `WriteCache` | `WriteCacheTest` | `WriteCacheMutationTest` (PIT-survivor hardened) | not audited this session | `WriteCacheProcessorIntegrationTest` |
-| `content/` renderers (37 platforms) | `AllAnnotationsAllPlatformsEndToEndTest` | not audited this session | **`OutputEscapingSecurityTest` end-to-end covers 4 of 37 platforms** (Claude XML, Sweep YAML, Plandex YAML, Mentat JSON) — the escaping *primitive* itself (`Escape.xml`/`.json`/`.tomlMultiline`) is fully covered by `EscapeTest`, so this is a wiring gap (does every renderer call it), not a logic gap | `MultiModuleWholeFileMergeTest`, `YamlMergeShapeContractTest` |
+| `content/` renderers (73 `Platform` constants) | `AllAnnotationsAllPlatformsEndToEndTest` | not audited this session | `OutputEscapingSecurityTest` end-to-end (see below) | `MultiModuleWholeFileMergeTest`, `YamlMergeShapeContractTest` |
 
-The renderer row is the one finding worth acting on: `PlatformRendererRegistryCoverageTest` already
-proves the pattern this needs — `@ParameterizedTest @EnumSource(Platform.class)` — for a different
-property (every platform resolves to a renderer). The same shape, driving a hostile `reason` string
-through every renderer and asserting no unescaped metacharacter reaches the output, would turn this
-row from "4 of 37, chosen ad hoc" into "37 of 37, chosen because they exist." Not built here — this
-pass is the matrix, not the fix — but it is the concrete next candidate the matrix was for. Tracked
-as issue #598.
+**Closed, 2026-09-07 (issue #598).** The "4 of 37" reading above turned out to overstate the gap: most
+`Platform` constants are static templates or plain Markdown/glob-pattern files with no user-controlled
+value interpolated at all, so `@ParameterizedTest @EnumSource(Platform.class)` — the shape the issue
+proposed, copying `PlatformRendererRegistryCoverageTest` — was the wrong tool; it would have needed a
+different expected-escaped-form per format family, or produced false positives on every plain-text
+platform. Reading every renderer that reaches `Escape.*` or a YAML block scalar instead of guessing
+found the real, narrower gap: `OutputEscapingSecurityTest` now covers all ten structured, value-bearing
+platforms — the original four (Claude XML, Sweep YAML, Plandex YAML, Mentat JSON) plus PR-Agent TOML,
+Ellipsis YAML, `CLAUDE.local.md` (shares `ClaudeRenderer` outright), and a structural (not
+character-escaping) proof for the three YAML block-scalar platforms (CodeRabbit, Roo Code modes, Open
+Interpreter) that a later element's bullet line stays indented rather than dedenting into a bare
+top-level key — the one property those three actually depend on, since a block scalar has no quote to
+escape. `.vibetags-locks` is JSON too but already covered separately by `LocksReportEndToEndTest`. The
+remaining ~60 constants render no interpolated value (Cody, `.qwen/settings.json`,
+`.codex/config.toml`, `.codex/rules/vibetags.rules`, the Qwen refactor command) or are plain
+Markdown/ignore-glob lists with no document structure to break out of — verified per-renderer, not
+assumed.
 
 ## Index
 
