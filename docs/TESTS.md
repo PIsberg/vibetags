@@ -65,6 +65,73 @@ the numbers from a full-suite run, and trust wall clock over the sum.
 `TestTagVocabularyTest` fails the build if a tag is misspelled, or if `pom.xml` and `build.gradle`
 stop excluding the same one.
 
+**Suite health, separate from what each test asserts.** `tools/test-half-life.sh` heat-maps which
+test files have changed most often recently — a maintenance-cost signal, not a correctness one. A
+central class churning because every new annotation touches it (`AIGuardrailProcessorUnitTest`,
+`AnnotationProcessorEndToEndTest`) is expected; the same count on a narrower class is worth reading
+`git log` on before assuming either an evolving feature or a fragile test.
+
+**Audited every `Thread.sleep` in the suite** (three total, 2026-09-07) against "wait for events,
+not time": `ProcessorTestHarness.awaitFilesystemTick()` already polls the real filesystem mtime
+with a safety cap rather than guessing a duration — the correct pattern, used as the harness's
+shared helper. `AIGuardrailProcessorUnitTest` had a hand-rolled fixed 50ms sleep solving the exact
+same problem beside it; it now calls the harness method instead. `VibeTagsLoggerConcurrencyTest`'s
+sleep widens a thread-interleaving window in a concurrency stress test — nothing there depends on
+the sleep's duration for correctness, so it stayed.
+
+**Manual chaos-monkey session, 2026-09-07** ("Let the chaos monkey out periodically", ch. 4): a
+time-boxed, risk-driven mutation pass on three of the four `core_elements` from CLAUDE.md
+(`AIGuardrailProcessor.generateFiles()` is off-limits — it's in `locked_files`), picking mutations
+from the exact failure shape of a real incident rather than an exhaustive or random one. Every
+mutation below was applied to the real source, run against the suite, confirmed red, and reverted;
+none of the three source files carry any trace of the session.
+
+- `WriteCache.isUnchanged()`: `&&` → `||` between the mtime and hash comparison — the false-positive
+  shape the class's own `@AICore` note names ("false positives would silently corrupt generated
+  files"). Caught by 4 tests in `WriteCacheTest`, including `differentBody_misses`, which happens to
+  construct the exact failing scenario (same mtime, different hash) without needing explicit
+  mtime manipulation.
+- `GuardrailFileWriter.ownsItsLine()`: disabled the leading-whitespace check — the corruption class
+  the method's own javadoc documents by name ("this repository's own CLAUDE.md was corrupted
+  exactly that way"). Caught, but by only 1 of 55 tests run (`GuardrailFileWriterEdgeCaseTest`, via
+  `hasLegacyHeaderLine` rather than the marker-ownership path directly) — `MarkerInProseTest`, the
+  class named for this exact scenario, did not fail, because its fixtures all place non-whitespace
+  on *both* sides of the cited marker on its line, never leading-only. The regression is still
+  caught, so this is a precision gap, not a coverage gap: worth knowing before trusting
+  `MarkerInProseTest` alone to guard this invariant, not urgent enough to add a fixture for on its
+  own.
+- `ModuleSidecar` readAll's stale-module check: `dir != ModuleDir.EXISTS` → `dir == ModuleDir.EXISTS`,
+  inverting which modules get pruned — a realistic flipped-condition slip next to the #383/#384
+  departed-module logic. Caught immediately and loudly: 14 failures across `ModuleSidecarLogContractTest`,
+  `ModuleSidecarResilienceTest` and `ProjectLifecycleEndToEndTest`.
+
+All three held. The finding isn't "add tests" — it's a verified answer to "would today's suite
+actually catch this again if reintroduced by hand", which PIT's blind mutation can't ask because it
+doesn't know which mutants correspond to a real incident.
+
+**ACC-matrix-lite, 2026-09-07** ("Organise test ideas using an ACC matrix", ch. 1): most edge-case
+tests in this index exist because an issue found the edge case first — the Coverage descriptions
+above cite #547, #549, #556, #591 and others by number. That is coverage earned reactively. A
+components × quality-attributes grid, filled in only where actually checked rather than guessed at,
+is a cheap way to ask "what's the next #591" before it ships instead of after. Not a full matrix —
+just enough cells, checked for real, to show the shape of what a fuller pass would look like.
+
+| Component | Correctness | Byte-stability | Hostile/malformed input | Cross-module merge |
+|---|---|---|---|---|
+| `AIGuardrailProcessor` | `AIGuardrailProcessorUnitTest` + generation e2e | `ProjectLifecycleEndToEndTest` (3 rebuilds, byte-identical) | `PathOptionRobustnessTest` (NUL bytes), `BooleanOptionTest` | n/a (orchestrator) |
+| `GuardrailFileWriter` | `GuardrailFileRecoveryEndToEndTest` | same (marker-aware write path) | `MarkerInjectionTest`, `MarkerInProseTest` | n/a |
+| `ModuleSidecar` | `MultiModuleProcessorTest` | `ModuleSidecarResilienceTest` | `ModuleSidecarLogContractTest` (unrepresentable paths) | `MultiModuleAggregationTest`, `AncestorModuleDuplicateRegionTest` |
+| `WriteCache` | `WriteCacheTest` | `WriteCacheMutationTest` (PIT-survivor hardened) | not audited this session | `WriteCacheProcessorIntegrationTest` |
+| `content/` renderers (37 platforms) | `AllAnnotationsAllPlatformsEndToEndTest` | not audited this session | **`OutputEscapingSecurityTest` end-to-end covers 4 of 37 platforms** (Claude XML, Sweep YAML, Plandex YAML, Mentat JSON) — the escaping *primitive* itself (`Escape.xml`/`.json`/`.tomlMultiline`) is fully covered by `EscapeTest`, so this is a wiring gap (does every renderer call it), not a logic gap | `MultiModuleWholeFileMergeTest`, `YamlMergeShapeContractTest` |
+
+The renderer row is the one finding worth acting on: `PlatformRendererRegistryCoverageTest` already
+proves the pattern this needs — `@ParameterizedTest @EnumSource(Platform.class)` — for a different
+property (every platform resolves to a renderer). The same shape, driving a hostile `reason` string
+through every renderer and asserting no unescaped metacharacter reaches the output, would turn this
+row from "4 of 37, chosen ad hoc" into "37 of 37, chosen because they exist." Not built here — this
+pass is the matrix, not the fix — but it is the concrete next candidate the matrix was for. Tracked
+as issue #598.
+
 ## Index
 
 
