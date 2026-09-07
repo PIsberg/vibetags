@@ -109,6 +109,29 @@ All three held. The finding isn't "add tests" — it's a verified answer to "wou
 actually catch this again if reintroduced by hand", which PIT's blind mutation can't ask because it
 doesn't know which mutants correspond to a real incident.
 
+**ACC-matrix-lite, 2026-09-07** ("Organise test ideas using an ACC matrix", ch. 1): most edge-case
+tests in this index exist because an issue found the edge case first — the Coverage descriptions
+above cite #547, #549, #556, #591 and others by number. That is coverage earned reactively. A
+components × quality-attributes grid, filled in only where actually checked rather than guessed at,
+is a cheap way to ask "what's the next #591" before it ships instead of after. Not a full matrix —
+just enough cells, checked for real, to show the shape of what a fuller pass would look like.
+
+| Component | Correctness | Byte-stability | Hostile/malformed input | Cross-module merge |
+|---|---|---|---|---|
+| `AIGuardrailProcessor` | `AIGuardrailProcessorUnitTest` + generation e2e | `ProjectLifecycleEndToEndTest` (3 rebuilds, byte-identical) | `PathOptionRobustnessTest` (NUL bytes), `BooleanOptionTest` | n/a (orchestrator) |
+| `GuardrailFileWriter` | `GuardrailFileRecoveryEndToEndTest` | same (marker-aware write path) | `MarkerInjectionTest`, `MarkerInProseTest` | n/a |
+| `ModuleSidecar` | `MultiModuleProcessorTest` | `ModuleSidecarResilienceTest` | `ModuleSidecarLogContractTest` (unrepresentable paths) | `MultiModuleAggregationTest`, `AncestorModuleDuplicateRegionTest` |
+| `WriteCache` | `WriteCacheTest` | `WriteCacheMutationTest` (PIT-survivor hardened) | not audited this session | `WriteCacheProcessorIntegrationTest` |
+| `content/` renderers (37 platforms) | `AllAnnotationsAllPlatformsEndToEndTest` | not audited this session | **`OutputEscapingSecurityTest` end-to-end covers 4 of 37 platforms** (Claude XML, Sweep YAML, Plandex YAML, Mentat JSON) — the escaping *primitive* itself (`Escape.xml`/`.json`/`.tomlMultiline`) is fully covered by `EscapeTest`, so this is a wiring gap (does every renderer call it), not a logic gap | `MultiModuleWholeFileMergeTest`, `YamlMergeShapeContractTest` |
+
+The renderer row is the one finding worth acting on: `PlatformRendererRegistryCoverageTest` already
+proves the pattern this needs — `@ParameterizedTest @EnumSource(Platform.class)` — for a different
+property (every platform resolves to a renderer). The same shape, driving a hostile `reason` string
+through every renderer and asserting no unescaped metacharacter reaches the output, would turn this
+row from "4 of 37, chosen ad hoc" into "37 of 37, chosen because they exist." Not built here — this
+pass is the matrix, not the fix — but it is the concrete next candidate the matrix was for. Tracked
+as issue #598.
+
 ## Index
 
 
