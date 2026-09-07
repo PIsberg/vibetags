@@ -79,6 +79,36 @@ same problem beside it; it now calls the harness method instead. `VibeTagsLogger
 sleep widens a thread-interleaving window in a concurrency stress test — nothing there depends on
 the sleep's duration for correctness, so it stayed.
 
+**Manual chaos-monkey session, 2026-09-07** ("Let the chaos monkey out periodically", ch. 4): a
+time-boxed, risk-driven mutation pass on three of the four `core_elements` from CLAUDE.md
+(`AIGuardrailProcessor.generateFiles()` is off-limits — it's in `locked_files`), picking mutations
+from the exact failure shape of a real incident rather than an exhaustive or random one. Every
+mutation below was applied to the real source, run against the suite, confirmed red, and reverted;
+none of the three source files carry any trace of the session.
+
+- `WriteCache.isUnchanged()`: `&&` → `||` between the mtime and hash comparison — the false-positive
+  shape the class's own `@AICore` note names ("false positives would silently corrupt generated
+  files"). Caught by 4 tests in `WriteCacheTest`, including `differentBody_misses`, which happens to
+  construct the exact failing scenario (same mtime, different hash) without needing explicit
+  mtime manipulation.
+- `GuardrailFileWriter.ownsItsLine()`: disabled the leading-whitespace check — the corruption class
+  the method's own javadoc documents by name ("this repository's own CLAUDE.md was corrupted
+  exactly that way"). Caught, but by only 1 of 55 tests run (`GuardrailFileWriterEdgeCaseTest`, via
+  `hasLegacyHeaderLine` rather than the marker-ownership path directly) — `MarkerInProseTest`, the
+  class named for this exact scenario, did not fail, because its fixtures all place non-whitespace
+  on *both* sides of the cited marker on its line, never leading-only. The regression is still
+  caught, so this is a precision gap, not a coverage gap: worth knowing before trusting
+  `MarkerInProseTest` alone to guard this invariant, not urgent enough to add a fixture for on its
+  own.
+- `ModuleSidecar` readAll's stale-module check: `dir != ModuleDir.EXISTS` → `dir == ModuleDir.EXISTS`,
+  inverting which modules get pruned — a realistic flipped-condition slip next to the #383/#384
+  departed-module logic. Caught immediately and loudly: 14 failures across `ModuleSidecarLogContractTest`,
+  `ModuleSidecarResilienceTest` and `ProjectLifecycleEndToEndTest`.
+
+All three held. The finding isn't "add tests" — it's a verified answer to "would today's suite
+actually catch this again if reintroduced by hand", which PIT's blind mutation can't ask because it
+doesn't know which mutants correspond to a real incident.
+
 ## Index
 
 
