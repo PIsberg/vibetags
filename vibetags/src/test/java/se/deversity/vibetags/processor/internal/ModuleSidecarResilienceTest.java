@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -265,6 +266,87 @@ class ModuleSidecarResilienceTest {
         assertNotNull(loaded);
         assertEquals("body", loaded.getBodies().get("claude"),
             "an unrecognised comment key must not become a body, and must not stop the parse");
+    }
+
+    // ---------------------------------------------------------------- the pre-trailer format
+
+    /**
+     * A sidecar written before the {@code # end} trailer existed must still be readable.
+     *
+     * <p>The trailer was appended by #572 without a format-version bump, deliberately, so that an
+     * older processor would keep reading a newer file. The other direction was documented as
+     * costing "skipped as unreadable until its module recompiles", and that cost turned out to be
+     * a silent module loss: {@code readAll} returns fewer sidecars than are on disk, the round
+     * therefore merges as single-module, and every sibling region disappears from the aggregate
+     * and from the granular role files. Measured on a real consumer (issue #590): the first build
+     * after upgrading dropped 30 lines from CLAUDE.md, 35 from GEMINI.md and emptied a role file,
+     * and because such sidecars are skipped rather than pruned, nothing repaired them until each
+     * module happened to recompile.
+     *
+     * <p>A file this reader could not open and a file written by a processor that never wrote
+     * trailers are not the same thing, and only the first is a reason to drop a module.
+     */
+    @Test
+    void aSidecarWrittenBeforeTheTrailerExistedIsStillRead(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        // Byte-for-byte the shape written before the trailer existed: header, keys, body.
+        Files.writeString(root.resolve(".vibetags-mod-core"), """
+            # version=2
+            moduleId=core
+            modulePath=core
+            regionId=core
+            claude=%s
+            """.formatted(encoded("legacy body")));
+
+        ModuleSidecar loaded = ModuleSidecar.load(root.resolve(".vibetags-mod-core"));
+
+        assertNotNull(loaded, "a complete pre-trailer sidecar is not malformed");
+        assertNotSame(ModuleSidecar.UNREADABLE, loaded,
+            "a sidecar with no trailer was written by a processor that wrote none, not torn in half");
+        assertEquals("legacy body", loaded.getBodies().get("claude"));
+    }
+
+    /**
+     * The consequence the consumer actually saw: one module already recompiled under the new
+     * processor, its siblings still carrying pre-trailer sidecars, and the merge reduced to the one
+     * region it could read. Asserted through {@code readAll} because that is what decides
+     * {@code isMultiModule}, and a count of one is what turns a reactor aggregate into a
+     * single-module document.
+     */
+    @Test
+    void aReactorMixingPreTrailerAndCurrentSidecarsKeepsEveryRegion(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        Files.createDirectories(root.resolve("app"));
+        // core has not recompiled yet, so it is still in the pre-trailer shape.
+        Files.writeString(root.resolve(".vibetags-mod-core"), """
+            # version=2
+            moduleId=core
+            modulePath=core
+            regionId=core
+            claude=%s
+            """.formatted(encoded("core body")));
+        // app recompiled under this processor, so it carries the trailer.
+        Files.writeString(root.resolve(".vibetags-mod-app"), """
+            # version=2
+            moduleId=app
+            modulePath=app
+            regionId=app
+            claude=%s
+            # end
+            """.formatted(encoded("app body")));
+
+        List<ModuleSidecar> all = ModuleSidecar.readAll(root);
+
+        assertEquals(List.of("app", "core"),
+            all.stream().map(ModuleSidecar::getModuleId).sorted().toList(),
+            "both modules must reach the merge; dropping one writes an aggregate missing its region");
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-core")),
+            "and a pre-trailer sidecar is never pruned - deleting it would lose the module for good");
+    }
+
+    private static String encoded(String body) {
+        return java.util.Base64.getEncoder()
+            .encodeToString(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     // ---------------------------------------------------------------- unrepresentable module path

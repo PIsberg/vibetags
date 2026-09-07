@@ -95,7 +95,16 @@ public final class ModuleSidecar {
      * names ({@code ~...}) match no service and are therefore never rendered. Bumping would have
      * discarded every sibling's contribution on the first mixed-version build for no gain.
      */
-    static final int FORMAT_VERSION = 2;
+    static final int FORMAT_VERSION = 3;
+
+    /**
+     * The oldest on-disk shape this reader still accepts, rather than prunes as stale.
+     *
+     * <p>Version 2 is the pre-trailer format. It is readable in full - the trailer is the only
+     * difference - so a reader that dropped it would take that module out of every sibling's
+     * output for no reason, which is exactly what issue #590 was.
+     */
+    static final int MIN_READABLE_VERSION = 2;
     private static final String KEY_FORMAT_VERSION = "# version";
     /**
      * Written last, checked first: the marker that says this file is whole.
@@ -106,13 +115,21 @@ public final class ModuleSidecar {
      * (issue #553). The format carries no length and no checksum, so a torn write is otherwise
      * indistinguishable from a complete file.
      *
-     * <p>Appended rather than version-bumped, because a bump discards every sibling's contribution
-     * on the first mixed-version build: a processor that predates this line skips any {@code #} key
-     * it does not recognise, so it reads a file carrying the trailer exactly as before
-     * ({@code anUnknownCommentLineIsSkippedRatherThanParsed} pins that rule). The cost is the other
-     * direction: a sidecar written by an older processor has no trailer and is skipped as
-     * unreadable until its module recompiles. Skipped, never deleted — the same treatment as a file
-     * this reader could not open.
+     * <p>Appended rather than version-bumped at first, because a bump makes an older processor
+     * skip a newer sibling's file: one that predates this line skips any {@code #} key it does not
+     * recognise, so it reads a file carrying the trailer exactly as before
+     * ({@code anUnknownCommentLineIsSkippedRatherThanParsed} pins that rule). The cost was
+     * described as the other direction being "skipped as unreadable until its module recompiles",
+     * and that cost was underestimated: skipping a sibling drops it from {@code readAll}, the round
+     * then sees one region and merges as single-module, and every other module's region vanishes
+     * from the aggregate and from the granular role files. On a project that commits its sidecars,
+     * the first build after upgrading did exactly that, silently (issue #590).
+     *
+     * <p>So the version carries the promise instead. {@link #FORMAT_VERSION} 3 writes a trailer and
+     * is held to it; {@link #MIN_READABLE_VERSION} 2 is the pre-trailer shape, read in full without
+     * one. A missing trailer is evidence of a torn write only for a version that always writes one,
+     * which keeps issue #553's protection intact for every file this processor writes while a file
+     * written before the trailer existed is read rather than discarded. Either way, never deleted.
      */
     static final String TRAILER = "# end";
     private static final String KEY_MODULE_ID = "moduleId";
@@ -551,6 +568,7 @@ public final class ModuleSidecar {
             String modulePath = "";
             String regionId = null;
             boolean sawCurrentVersion = false;
+            int loadedVersion = 0;
             Map<String, String> bodies = new LinkedHashMap<>();
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
@@ -569,7 +587,8 @@ public final class ModuleSidecar {
                             int version = Integer.parseInt(
                                     line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
                             if (version > FORMAT_VERSION) return FUTURE_VERSION;
-                            if (version < FORMAT_VERSION) return null;
+                            if (version < MIN_READABLE_VERSION) return null;
+                            loadedVersion = version;
                             sawCurrentVersion = true;
                         } catch (NumberFormatException malformed) {
                             return null;
@@ -624,7 +643,10 @@ public final class ModuleSidecar {
             // Before the checks below, because those delete: a file cut short can lose its
             // moduleId line as easily as its last body, and pruning a module's sidecar over a torn
             // write takes that module out of every sibling's output until it recompiles.
-            if (!isWhole(lines)) return UNREADABLE;
+            // Only a version that promises a trailer may be judged by one. A version-2 file has
+            // none to lose, so its absence says nothing about whether the write finished, and
+            // treating it as torn is what silently reduced a reactor to one region (issue #590).
+            if (loadedVersion >= FORMAT_VERSION && !isWhole(lines)) return UNREADABLE;
             if (moduleId == null || !sawCurrentVersion) return null;
             // Sidecars written before the source-set split carry no regionId; their module id IS
             // the region id, which is exactly what they meant.
@@ -1682,7 +1704,9 @@ public final class ModuleSidecar {
         if (version == null) {
             return "no-version-header";
         }
-        return version < FORMAT_VERSION ? "stale-format" : "malformed";
+        // MIN_READABLE_VERSION, not FORMAT_VERSION: a readable older format that failed to
+        // parse is corrupt, and saying "stale-format" would blame the version for it.
+        return version < MIN_READABLE_VERSION ? "stale-format" : "malformed";
     }
 
     /** The {@code # version} header of one sidecar, or {@code null} when absent or unparseable. */
