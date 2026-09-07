@@ -65,6 +65,12 @@ the numbers from a full-suite run, and trust wall clock over the sum.
 `TestTagVocabularyTest` fails the build if a tag is misspelled, or if `pom.xml` and `build.gradle`
 stop excluding the same one.
 
+**Suite health, separate from what each test asserts.** `tools/test-half-life.sh` heat-maps which
+test files have changed most often recently — a maintenance-cost signal, not a correctness one. A
+central class churning because every new annotation touches it (`AIGuardrailProcessorUnitTest`,
+`AnnotationProcessorEndToEndTest`) is expected; the same count on a narrower class is worth reading
+`git log` on before assuming either an evolving feature or a fragile test.
+
 ## Index
 
 

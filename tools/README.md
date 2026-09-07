@@ -17,6 +17,12 @@ apart. "manual" means nothing runs it automatically; it exists for a human (or t
 | `bump-dependencies.sh` | Reports third-party pins that have a newer stable release (read-only) | `bump-dependencies` skill | manual |
 | `ecj-degradation-check.sh` | Compiles `examples/basic` under javac and ECJ, compares the locks output | `ecj` job in `build.yml` | that CI job |
 
+## Suite health
+
+| Tool | What it does | Run by | Enforced by |
+|---|---|---|---|
+| `test-half-life.sh` | Heat-maps which test files have needed the most changes recently — a maintenance-cost signal, not a correctness one | manual, ahead of a release | manual |
+
 ## Architecture diagrams
 
 | Tool | What it does | Run by | Enforced by |
