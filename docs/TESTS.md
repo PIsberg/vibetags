@@ -71,6 +71,14 @@ central class churning because every new annotation touches it (`AIGuardrailProc
 `AnnotationProcessorEndToEndTest`) is expected; the same count on a narrower class is worth reading
 `git log` on before assuming either an evolving feature or a fragile test.
 
+**Audited every `Thread.sleep` in the suite** (three total, 2026-09-07) against "wait for events,
+not time": `ProcessorTestHarness.awaitFilesystemTick()` already polls the real filesystem mtime
+with a safety cap rather than guessing a duration — the correct pattern, used as the harness's
+shared helper. `AIGuardrailProcessorUnitTest` had a hand-rolled fixed 50ms sleep solving the exact
+same problem beside it; it now calls the harness method instead. `VibeTagsLoggerConcurrencyTest`'s
+sleep widens a thread-interleaving window in a concurrency stress test — nothing there depends on
+the sleep's duration for correctness, so it stayed.
+
 ## Index
 
 

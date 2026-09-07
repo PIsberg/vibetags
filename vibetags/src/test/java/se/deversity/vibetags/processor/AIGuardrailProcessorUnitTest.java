@@ -327,14 +327,14 @@ class AIGuardrailProcessorUnitTest {
     }
 
     @Test
-    void testWriteFileIfChanged_sameContent_returnsFalseAndDoesNotWrite(@TempDir Path tempDir) throws IOException {
+    void testWriteFileIfChanged_sameContent_returnsFalseAndDoesNotWrite(@TempDir Path tempDir) throws IOException, InterruptedException {
         Path file = tempDir.resolve("test.md");
         String markedContent = "<!-- VIBETAGS-START -->\nsame content\n<!-- VIBETAGS-END -->";
         Files.writeString(file, markedContent);
         long before = Files.getLastModifiedTime(file).toMillis();
 
-        // Small sleep to ensure mtime would differ if written
-        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+        // Wait for a real filesystem mtime tick rather than a fixed-duration guess
+        ProcessorTestHarness.awaitFilesystemTick(tempDir);
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
         // Passing "same content" should result in the same markedContent being compared
