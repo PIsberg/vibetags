@@ -32,6 +32,32 @@ public final class ProcessorVersion {
         return VERSION;
     }
 
+    /**
+     * Where the running processor was loaded from — the jar path, or the classes directory — or
+     * {@code "unknown"} when the JVM will not say.
+     *
+     * <p>Logged next to the version because the pair is what settles the one question a version
+     * banner cannot answer on its own. A build once reported a banner naming a release two
+     * versions older than the only one {@code dependencies --configuration annotationProcessor}
+     * listed, and the natural reading was a hardcoded fallback somewhere in the processor. There
+     * is none: {@link #get()} is one constant read from the jar manifest and every banner prints
+     * it, so an old banner means an old jar was on the processor path — a second configuration, a
+     * stale build cache, or a daemon holding an old classloader. The jar's own path says which,
+     * in one line, instead of an afternoon spent looking for a constant that does not exist.
+     */
+    public static String origin() {
+        try {
+            java.security.CodeSource source =
+                ProcessorVersion.class.getProtectionDomain().getCodeSource();
+            if (source != null && source.getLocation() != null) {
+                return source.getLocation().toString();
+            }
+        } catch (RuntimeException withheld) {
+            // A security manager or an exotic classloader may refuse; the version still prints.
+        }
+        return "unknown";
+    }
+
     private static String resolve() {
         Package pkg = ProcessorVersion.class.getPackage();
         if (pkg != null) {

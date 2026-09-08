@@ -193,9 +193,11 @@
     <Method name="writeFileIfChanged"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
+  <!-- Was directoryOf, which returned the parent of this same path; the URI it converts comes
+       from javac's own compilation unit, not from anything a caller supplies. -->
   <Match>
     <Class name="se.deversity.vibetags.processor.internal.ModuleRootResolver"/>
-    <Method name="directoryOf"/>
+    <Method name="fileOf"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
   <Match>

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A compilation shown only some of a module's sources no longer rewrites that module's guardrails
+  from what it happened to see. Reported from a Gradle single-module build: touching one annotated
+  file and running an ordinary incremental `compileJava` deleted 22 checked-in rule files and cut
+  27 lines out of `CLAUDE.md`, including a whole `<security_elements>` block, with exit code 0 and
+  nothing on the console. Gradle picks the files to recompile from the annotations it can see in
+  class files, and every VibeTags annotation is `SOURCE`-retention, so an edit to one file
+  recompiles that file alone; the processor was then handed one element where the last build had
+  twelve, and every element it was not shown read as an element whose annotation had been deleted.
+  `PartialRoundDetector` now refuses such a round: nothing is written, nothing is swept, no
+  fingerprint is recorded, and a `WARNING` names the sources the round never read and how to get a
+  full compile. The refusal needs two independent facts, so that neither of its own failure modes
+  can happen — a sidecar for this source tree naming an element the round did not produce, *and* an
+  uncompiled `.java` file under a source root the round did compile from that names the annotation
+  package. An annotation genuinely removed from a source the round *did* compile still loses its
+  rule file, and a source permanently excluded from compilation never blocks a write.
+- The orphan sweep no longer reports files it did not touch. A hand-written `booking-flow.md` in
+  `.claude/rules/` was named in `removed=` while sitting intact on disk, which inflated the
+  destructive-sweep count and sent the reader hunting for a deletion that never happened. A file
+  with no VibeTags markers is neither modified nor listed.
+
+### Changed
+
+- `vibetags.log` records the jar the running processor was loaded from alongside its version
+  (`processor.origin version=… origin=…`). A build reported a banner naming a release two versions
+  older than the only one its dependency block resolved, which reads as a hardcoded fallback
+  constant; there is none, so the answer is always "an older jar was on the processor path" and
+  the path itself says which one.
+
 ## [1.3.2] - 2026-09-07
 
 ### Added
