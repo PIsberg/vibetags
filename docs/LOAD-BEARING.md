@@ -187,6 +187,13 @@ and this section seem to disagree, the enforcing test decides.
   configs are whole-file overwrites.
 - **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
   already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
+  Worth knowing what this now costs: `AGENTS.md` has become the default rules file for 20+ tools,
+  so in the common case, a project that also uses Claude or Cursor, VibeTags writes none. Most of
+  those tools also read a file VibeTags does write, but Amp, OpenCode, Jules, Factory Droid,
+  Devin, Mistral Vibe, Pi and Ona read no other one. The rule still stands, because overwriting a
+  hand-authored `AGENTS.md` is the most destructive thing this processor could do; the marker-pair
+  escape hatch is the answer, and `USAGE.md` documents how to use it. Issue #610 holds the
+  reasoning and the options that were rejected.
 - **All 44 `@AI*` annotations are `RetentionPolicy.SOURCE`.** They must not leak into runtime.
 - **When a platform has both an aggregate and a granular directory opted in, the aggregate collapses
   to a scoped-rules index:** only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`,

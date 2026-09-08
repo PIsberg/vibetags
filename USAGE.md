@@ -512,7 +512,7 @@ touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
-touch AGENTS.md                              # Codex CLI
+touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
 
 mvn compile                                  # VibeTags populates all opted-in files
@@ -739,6 +739,29 @@ Critical Vulnerabilities to Prevent:
 ```
 
 **Codex CLI (AGENTS.md):**
+
+> **`AGENTS.md` is generated only when it is the sole AI config file in the project.** It is
+> the most widely read agent-instructions file there is (Codex, Amp, OpenCode, Jules, Factory
+> Droid, Devin, Ona, Mistral Vibe and Pi read it, and so do Cursor, Windsurf, Gemini CLI, Qwen,
+> Roo, Zed, Kilo, Warp and Copilot's coding agent alongside their own files), and it is also
+> the file people most often hand-write. VibeTags will not overwrite your prose, so if any
+> other AI config file exists it leaves `AGENTS.md` alone entirely.
+>
+> **To have VibeTags maintain it anyway, mark the region once by hand:**
+>
+> ```markdown
+> # Our project
+> Whatever you have already written stays here, untouched.
+>
+> <!-- VIBETAGS-START -->
+> <!-- VIBETAGS-END -->
+> ```
+>
+> From the next compile on, VibeTags owns what is between those two markers and nothing else
+> in the file. This is the only way to get generated guardrails into `AGENTS.md` in a project
+> that also uses Claude, Cursor or any other platform, and it matters most for the agents in
+> the first group above, which read no other file VibeTags writes.
+
 ```markdown
 ## 🛡️ MANDATORY SECURITY AUDITS
 * `com.example.database.DatabaseConnector`
