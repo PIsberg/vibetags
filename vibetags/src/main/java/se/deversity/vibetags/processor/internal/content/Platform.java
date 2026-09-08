@@ -60,6 +60,7 @@ public enum Platform {
     QWEN_REFACTOR("qwen_refactor"),
     CODY("cody"),
     LOCKS_REPORT("locks_report"),
+    GOOSE("goose"),
 
     // Granular rule platforms
     CURSOR_GRANULAR("cursor_granular"),
@@ -75,7 +76,10 @@ public enum Platform {
     CLAUDE_GRANULAR("claude_granular"),
     COPILOT_GRANULAR("copilot_granular"),
     GEMINI_GRANULAR("gemini_granular"),
-    GROK_GRANULAR("grok_granular");
+    GROK_GRANULAR("grok_granular"),
+    ANTIGRAVITY_GRANULAR("antigravity_granular"),
+    AIASSISTANT_GRANULAR("aiassistant_granular"),
+    AUGMENT_GRANULAR("augment_granular");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

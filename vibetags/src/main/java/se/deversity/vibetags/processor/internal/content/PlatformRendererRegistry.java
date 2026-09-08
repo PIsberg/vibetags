@@ -37,6 +37,7 @@ public final class PlatformRendererRegistry {
     private static final RooModesRenderer ROO_MODES_RENDERER = new RooModesRenderer();
     private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
+    private static final GooseRenderer GOOSE_RENDERER = new GooseRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -153,6 +154,8 @@ public final class PlatformRendererRegistry {
                 return JUNIE_RENDERER;
             case FIREBASE:
                 return FIREBASE_RENDERER;
+            case GOOSE:
+                return GOOSE_RENDERER;
             case CLAUDE_LOCAL:
                 return CLAUDE_LOCAL_RENDERER;
             case CLAUDE_SKILL:

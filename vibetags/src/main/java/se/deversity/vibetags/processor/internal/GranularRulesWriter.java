@@ -588,6 +588,16 @@ public final class GranularRulesWriter {
         // Grok Build loads every *.md in .grok/rules/ unconditionally and alphabetically and
         // parses no front matter, so a globs block would land in the model's context as literal
         // text at the top of every rule. fmNone is the correct shape here, not a shortcut.
-        new GranularFormat("grok_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n")
+        new GranularFormat("grok_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        // The 2026-09 sweep platforms all take fmNone, each for its own documented reason:
+        // Antigravity sets a rule's activation mode outside the file and documents no
+        // front-matter format; JetBrains AI Assistant chooses the mode in IDE settings; and
+        // Augment defaults a front-matter-free rule to always_apply, which is the safe mode
+        // for a guardrail. Its other mode, agent_requested, leaves loading to the model's
+        // discretion, and a locked-file guardrail that might not load is worse than one that
+        // always does.
+        new GranularFormat("antigravity_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("aiassistant_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("augment_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n")
     );
 }

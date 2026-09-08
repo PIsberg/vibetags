@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Four platforms from a sweep of the AI tool landscape on 2026-09-08, taking the totals to 41
+  platforms, 50 config files and 17 scoped-rule directories: **Antigravity** workspace rules
+  (`.agents/rules/`, which was half-supported before this, since `.antigravityignore` was
+  already generated), **JetBrains AI Assistant** project rules (`.aiassistant/rules/`, a
+  separate product from the already-supported Junie), **Augment Code** workspace rules
+  (`.augment/rules/`) and **goose** (`.goosehints`). All three granular directories are
+  front-matter-free, each for a reason read from the vendor's own docs: Antigravity and
+  JetBrains set a rule's activation mode outside the file, and Augment defaults a
+  front-matter-free rule to `always_apply`, which is the safe mode for a guardrail because its
+  alternative leaves loading to the model. `PlatformSweep202609EndToEndTest` also pins
+  Antigravity's documented 12,000-character-per-rule cap, the one output constraint nothing
+  else in the codebase has had to respect.
+
+- `examples/basic` now opts into `.gemini/rules`, which it never had. Gemini's granular output
+  shipped in #320 and no example ever covered it, so for four releases it had no committed
+  fixture, no byte-for-byte drift gate, and no coverage of the dual-opt-in path where
+  `GEMINI.md` collapses to a scoped-rules index. Adding it moved that file from 274 lines to
+  93, with the safety buckets inline and 32 pointers into the scoped files, which is what
+  invariant 6 has always specified and nothing was checking. `ExampleOptInCoverageTest` now
+  holds the example to every opt-in key, with `root_index` and `locks_report` exempted by name
+  and reason.
+
 - Grok Build scoped rules: opting in `.grok/rules/` writes one Markdown rule file per annotated
   element there, bringing the count to 38 platforms and 14 scoped-rule directories. Grok reads
   `AGENTS.md` natively and `.claude/rules/` for compatibility, so a project already opted into

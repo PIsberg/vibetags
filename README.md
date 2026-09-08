@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **38 AI platforms**, written as **49 config files** and **14 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **41 AI platforms**, written as **50 config files** and **17 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -386,11 +386,11 @@ The [44 annotations](#project-facts) group into six categories by intent. Within
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with the [**38 AI platforms**](#project-facts) below (Cursor and Windsurf each appear under two formats):
+Generated configuration files work out-of-the-box with the [**41 AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aiderignore`)
-- **Antigravity AI** (`.antigravityignore`)
+- **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
 - **Cline** (`.clinerules`)
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
@@ -399,6 +399,7 @@ Generated configuration files work out-of-the-box with the [**38 AI platforms**]
 - **Double.bot** (`.doubleignore`)
 - **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
+- **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)
 - **Mentat** (`.mentatconfig.json`)
@@ -429,6 +430,9 @@ Generated configuration files work out-of-the-box with the [**38 AI platforms**]
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
 - **Grok Build** (`.grok/rules/*.md` - xAI's coding agent; reads every file in the directory, so no front matter)
+- **JetBrains AI Assistant** (`.aiassistant/rules/*.md`)
+- **Augment Code** (`.augment/rules/*.md`)
+- **Antigravity AI** (`.agents/rules/*.md`)
 - **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
 - **Amazon Kiro** (`.kiro/steering/*.md`)

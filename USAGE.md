@@ -485,6 +485,12 @@ mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-c
 # --- Grok Build ---
 mkdir -p .grok/rules                         # Grok Build scoped rules (per-class .md)
 
+# --- Antigravity, JetBrains AI Assistant, Augment Code, goose ---
+mkdir -p .agents/rules                       # Antigravity workspace rules (per-class .md)
+mkdir -p .aiassistant/rules                  # JetBrains AI Assistant project rules (per-class .md)
+mkdir -p .augment/rules                      # Augment Code workspace rules (per-class .md)
+touch .goosehints                            # goose project hints
+
 # --- Mentat, Sweep, Plandex ---
 touch .mentatconfig.json                     # Mentat AI assistant
 touch sweep.yaml                             # Sweep AI code review (GitHub App)
