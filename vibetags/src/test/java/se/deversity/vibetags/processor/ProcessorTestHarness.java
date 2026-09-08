@@ -149,6 +149,9 @@ class ProcessorTestHarness {
         touch(".clinerules");
         touch(".junie/guidelines.md");
         touch(".kiro/steering/.vibetags");
+        // Grok Build scoped rules: granular with no aggregate sibling, so opting it in by
+        // default cannot collapse another platform's aggregate to an index.
+        touch(".grok/rules/.vibetags");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");

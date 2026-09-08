@@ -23,7 +23,11 @@ load-tests/target/
 tools/demo/target/
 tools/demo/.codex/
 load-tests/dependency-reduced-pom.xml
-.grok/
+# Grok Build local settings at the repo root only. NOT a bare '.grok/': that would also
+# ignore examples/basic/.grok/rules/, the committed opt-in fixture for the Grok platform,
+# and any consumer copying this file would silently lose their own generated rules.
+/.grok/settings.json
+/.grok/*.local.*
 # VibeTags per-output-file write cache (regenerated on every compile)
 .vibetags-cache
 # VibeTags per-module sidecar files (created by the processor during self-annotation and integration tests)

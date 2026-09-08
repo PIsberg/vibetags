@@ -46,6 +46,9 @@ public final class ServiceRegistry {
         "claude_local", "claude_skill", "claude_granular", "copilot_granular",
         // Gemini granular rules (#320): lets GEMINI.md collapse to a scoped-rules index
         "gemini_granular",
+        // Grok Build scoped rules. Granular only: Grok reads AGENTS.md natively, so it has no
+        // VibeTags aggregate of its own and this key never collapses another file to an index.
+        "grok_granular",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -132,6 +135,8 @@ public final class ServiceRegistry {
         map.put("claude_granular",  root.resolve(".claude/rules"));
         map.put("copilot_granular", root.resolve(".github/instructions"));
         map.put("gemini_granular", root.resolve(".gemini/rules"));
+        // Grok Build scoped rules
+        map.put("grok_granular",   root.resolve(".grok/rules"));
         // Context-packer ignore files
         map.put("repomix_ignore",    root.resolve(".repomixignore"));
         map.put("gitingest_ignore",  root.resolve(".gitingestignore"));

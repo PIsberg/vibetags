@@ -154,6 +154,7 @@ touch .antigravityignore                   # Antigravity AI
 touch .clinerules                          # Cline AI assistant
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
+mkdir -p .grok/rules                       # Grok Build (granular per-class rules)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
 touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
@@ -1389,12 +1390,13 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.ai/rules/*.md` | Universal AI standard | Markdown |
 | `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
+| `.grok/rules/*.md` | Grok Build | Markdown |
 
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
-mkdir -p .kiro/steering
+mkdir -p .kiro/steering .grok/rules
 mkdir -p .claude/rules .github/instructions
 ```
 
@@ -1636,6 +1638,7 @@ tasks.withType(JavaCompile) {
 | `.clinerules` | Cline AI assistant |
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
+| `.grok/rules/*.md` | Grok Build (granular per-class rules) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
 | `.void/rules.md` | Void Editor |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |

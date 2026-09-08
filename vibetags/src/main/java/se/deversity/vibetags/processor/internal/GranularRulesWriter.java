@@ -584,6 +584,10 @@ public final class GranularRulesWriter {
             n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("copilot_granular", ".instructions.md",
             (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
-            n -> "# Copilot Instructions for " + n + "\n\n")
+            n -> "# Copilot Instructions for " + n + "\n\n"),
+        // Grok Build loads every *.md in .grok/rules/ unconditionally and alphabetically and
+        // parses no front matter, so a globs block would land in the model's context as literal
+        // text at the top of every rule. fmNone is the correct shape here, not a shortcut.
+        new GranularFormat("grok_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n")
     );
 }

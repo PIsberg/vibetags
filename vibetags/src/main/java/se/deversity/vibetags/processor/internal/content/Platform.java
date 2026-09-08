@@ -74,7 +74,8 @@ public enum Platform {
     KIRO_GRANULAR("kiro_granular"),
     CLAUDE_GRANULAR("claude_granular"),
     COPILOT_GRANULAR("copilot_granular"),
-    GEMINI_GRANULAR("gemini_granular");
+    GEMINI_GRANULAR("gemini_granular"),
+    GROK_GRANULAR("grok_granular");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

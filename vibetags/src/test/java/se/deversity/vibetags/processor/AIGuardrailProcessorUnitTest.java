@@ -235,6 +235,8 @@ class AIGuardrailProcessorUnitTest {
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
             "claude_local", "claude_skill", "claude_granular", "copilot_granular",
             "gemini_granular",
+            // Grok Build scoped rules
+            "grok_granular",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

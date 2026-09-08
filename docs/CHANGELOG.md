@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Grok Build scoped rules: opting in `.grok/rules/` writes one Markdown rule file per annotated
+  element there, bringing the count to 38 platforms and 14 scoped-rule directories. Grok reads
+  `AGENTS.md` natively and `.claude/rules/` for compatibility, so a project already opted into
+  either was reaching Grok before this; the new directory is for projects that keep Grok's rules
+  separate from another tool's. Three properties of Grok's discovery, taken from its own user
+  guide rather than from third-party guides, shape the output: it reads only `*.md`, it parses no
+  YAML front matter (so none is written, where Cursor and Windsurf get a `globs:` block), and it
+  loads every file in the directory on every session rather than on demand by glob. That last one
+  is a cost to weigh before opting in on a large codebase. Grok has no VibeTags aggregate of its
+  own, so opting in never collapses another platform's file to a scoped-rules index.
+
 ### Fixed
 
 - A compilation shown only some of a module's sources no longer rewrites that module's guardrails
