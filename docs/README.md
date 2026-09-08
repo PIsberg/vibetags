@@ -83,7 +83,7 @@ for the community standard.
 - [`diagrams/`](diagrams/) holds the hand-drawn PlantUML sources and the code-karta SVGs that CI
   regenerates and fails on drift; [`diagrams/archive/`](diagrams/archive/README.md) holds the
   generations they replaced.
-- `analysis/` at the repository root holds dated one-off audits and surveys, dated in the
+- [`analysis/`](analysis/README.md) holds dated one-off audits and surveys, dated in the
   filename. They are records of a day's findings and are never updated.
 
 ## Loading this efficiently
