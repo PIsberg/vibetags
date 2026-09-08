@@ -85,22 +85,33 @@ private var billingEmail: String? = null
 
 ### The strategic risk, stated plainly
 
-Kotlin support rests entirely on kapt, and **kapt is in maintenance mode**: JetBrains keeps it
-current with new Kotlin and Java releases but has no plans to add features, and recommends KSP for
-annotation processing ([kapt](https://kotlinlang.org/docs/kapt.html),
-[KSP overview](https://kotlinlang.org/docs/ksp-overview.html),
-[migration guide](https://kotlinlang.org/docs/ksp-kapt-migration.html)).
+Kotlin support rests entirely on kapt. This page previously called kapt "in maintenance mode",
+citing three kotlinlang.org pages. **Re-checked on 2026-09-08 against the docs' own source**
+([`kapt.md`](https://github.com/JetBrains/kotlin-web-site/blob/master/docs/topics/compiler-plugins/kapt.md)
+in `JetBrains/kotlin-web-site`, rather than the rendered page), and none of the three carries that
+statement. The kapt page opens with the opposite of a wind-down notice:
 
-KSP is not a route for VibeTags as it stands. KSP defines its own processor interface
-(`SymbolProcessor`) rather than implementing `javax.annotation.processing.Processor`, so a JSR 269
-processor is not loadable by it. A Kotlin project that has migrated fully to KSP cannot run
-VibeTags at all.
+> Use **kapt** if:
+> * You have a Maven project.
+> * You have a Gradle project, but the required Java annotation processor doesn't support KSP yet.
 
-This is the largest single exposure in the matrix. Kotlin support does not degrade gradually if
-kapt is ever withdrawn; it goes from "one level lost" to nothing, and the only in-principle fix is
-a separate KSP processor reading the same annotations. Nothing about that is imminent, and no
-deprecation has been announced. It is written down here because the alternative is finding out
-from a release note.
+The first bullet is this project's own case. JetBrains does recommend KSP where a processor supports
+it, and kapt's stub generation is genuinely expensive, but "recommended against for Gradle projects
+whose processors support KSP" is a different claim from "being wound down", and only the first is
+sourced. No deprecation has been announced and no removal date exists.
+
+**The structural half of the risk is unchanged, and it is the half that matters.** KSP defines its
+own processor interface (`SymbolProcessor`) rather than implementing
+`javax.annotation.processing.Processor`, so a JSR 269 processor is not loadable by it. That is not a
+policy that might soften; it is how KSP is built. A Kotlin project that has migrated *fully* to KSP
+cannot run VibeTags at all, today, and that is already true for teams whose remaining processors
+(Hilt, Room, Moshi, Glide) all support KSP and who therefore have no reason to keep the kapt plugin.
+
+So the exposure is real but differently shaped than it was written: not "the mechanism is being
+withdrawn", but "the mechanism is fine and a growing share of Kotlin projects no longer load it".
+Kotlin support does not degrade gradually in that case, it goes from one level lost to nothing, and
+the only in-principle fix is a separate KSP front end reading the same annotations. Issue #496
+holds that analysis, including why the compiler-free rendering layer makes it tractable.
 
 ---
 
