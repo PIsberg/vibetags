@@ -254,6 +254,7 @@ assumed.
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
+| `GrokGranularEndToEndTest` | `.grok/rules/` granular rule generation for Grok Build: Markdown-only extensions, no front matter, and no aggregate collapsed to an index |
 | `ParallelFileWriteTest` | Parallel file-write correctness: 50+ active services written via `ForkJoinPool.commonPool()` without corruption (v0.9.7) |
 | `NewAnnotationsV5DefinitionTest` | Definition-level tests for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` |
 | `NewAnnotationsV5EndToEndTest` | End-to-end generated content for `@AIIdempotent`, `@AIFeatureFlag`, and `@AISecure` across all platforms |

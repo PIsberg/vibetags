@@ -482,6 +482,9 @@ mkdir -p .pearai/rules                       # PearAI granular rules (per-class 
 # --- Amazon Kiro ---
 mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
 
+# --- Grok Build ---
+mkdir -p .grok/rules                         # Grok Build scoped rules (per-class .md)
+
 # --- Mentat, Sweep, Plandex ---
 touch .mentatconfig.json                     # Mentat AI assistant
 touch sweep.yaml                             # Sweep AI code review (GitHub App)
