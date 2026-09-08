@@ -79,7 +79,7 @@
 
         <!-- Third-party runtime/compile dependencies -->
         <jspecify.version>1.0.1</jspecify.version>
-        <slf4j.version>2.0.18</slf4j.version>
+        <slf4j.version>2.0.19</slf4j.version>
         <logback.version>1.6.3</logback.version>
 
         <!-- Test dependencies. Keep in step with vibetags/build.gradle and
