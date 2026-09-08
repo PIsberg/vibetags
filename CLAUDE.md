@@ -25,6 +25,7 @@ Each line names its enforcing check; run it, do not just read this list.
 14. Version literals live in `vibetags-parent/pom.xml` and nowhere else; bump via `tools/set-version.sh`. `BuildVersionParityTest`
 15. Logging is law: `domain.event key=value`, `reason=` on every `.skip`, tested events are contracts. [docs/LOGGING.md](docs/LOGGING.md), `GuardrailFileWriterLogContractTest`
 16. Every module that compiles Java runs the same static-analysis stack, and each module keeps its own `.mvn/jvm.config` because Error Prone silently does not run without it. `BuildToolchainParityTest`
+17. A round that was not shown every annotated source in its module writes nothing, sweeps nothing, and says so. `PartialRoundGuardrailLossTest`
 
 ## Build and test
 
@@ -106,6 +107,10 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
       <sensitivity>high</sensitivity>
       <note>Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility</note>
     </element>
+    <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector">
+      <sensitivity>high</sensitivity>
+      <note>Both conditions in unreadAnnotatedSources are load-bearing and neither may be dropped as redundant: without the missing-element check an excluded-but-annotated source stops VibeTags writing for good, and without the unread-source check a genuinely deleted annotation can never have its rule file retired</note>
+    </element>
     <element path="se.deversity.vibetags.processor.internal.WriteCache">
       <sensitivity>high</sensitivity>
       <note>Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files</note>
@@ -123,6 +128,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
     <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>
+    <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector" rules=".claude/rules/se-deversity-vibetags-processor-internal-PartialRoundDetector.md"/>
     <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
     <element path="se.deversity.vibetags.processor.internal.TransitiveManifest" rules=".claude/rules/se-deversity-vibetags-processor-internal-TransitiveManifest.md"/>
     <element path="se.deversity.vibetags.processor.internal.WriteCache" rules=".claude/rules/se-deversity-vibetags-processor-internal-WriteCache.md"/>

@@ -24,6 +24,15 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>The two halves of the contract are equally important: it fires on a wholesale replacement, and
  * it stays silent on ordinary work. A warning that cries wolf is one people configure away.
+ *
+ * <p><strong>Why the replaced sources are deleted from disk here.</strong> These cases used to
+ * leave the previous class sitting in {@code src/main/java} and simply not compile it, which is
+ * the same shape as a Gradle incremental round — and {@link PartialRoundGuardrailLossTest} is why
+ * that shape now never reaches this warner at all: it is refused before generation, because a
+ * round that was not shown a source cannot conclude anything about it. What is left for this
+ * diagnostic is the case where the round genuinely did see everything and the result is still a
+ * wholesale replacement: a rename. Deleting the old file is what makes these tests describe that,
+ * rather than a partial build the guard above already prevents.
  */
 @Tag("e2e")
 class DestructiveRewriteWarningTest {
@@ -68,8 +77,10 @@ class DestructiveRewriteWarningTest {
     void warnsWhenAModulesElementsAreAllReplacedByADisjointSet() throws IOException {
         Files.createFile(root.resolve("CLAUDE.md"));
         compile("main", "Alpha", LOCKED_A);
-        // Same module id, same source set, and not one element in common: this is what a round that
-        // could not see the sources looks like, not what editing an annotation looks like.
+        // Alpha renamed to Beta: same module id, same source set, not one element in common, and
+        // the round saw every source the module still has. There is nothing left to explain the
+        // replacement except a genuine wholesale change, which is what makes it worth saying.
+        Files.delete(root.resolve("src/main/java/com/example/Alpha.java"));
         List<Diagnostic<? extends JavaFileObject>> second = compile("main", "Beta", LOCKED_B);
 
         assertTrue(warns(second, "completely different set"),
@@ -123,9 +134,10 @@ class DestructiveRewriteWarningTest {
     }
 
     /**
-     * A round that deletes more rules than it writes is describing a compilation that could not see
-     * the sources, not one whose annotations were deleted — the arithmetic of issue #330, where the
-     * test round wrote one rule file and swept eleven away.
+     * A round that deletes more rules than it writes is worth a line in the build log even when
+     * every deletion is correct — the arithmetic of issue #330, where the test round wrote one
+     * rule file and swept eleven away. Here the three classes really are gone from disk, so the
+     * sweep is right and the warning is a report rather than a refusal.
      */
     @Test
     void warnsWhenASweepRemovesMoreThanTheRoundWrote() throws IOException {
@@ -144,7 +156,11 @@ class DestructiveRewriteWarningTest {
         first.compile();
         assertEquals(3, ruleFileCount(), "precondition: three scoped rule files");
 
-        // One annotated class where there were three: two files go, one is written.
+        // All three deleted and one added: three files go, one is written, and the round saw
+        // every source the module still has.
+        for (String name : new String[]{"Alpha", "Gamma", "Delta"}) {
+            Files.delete(root.resolve("src/main/java/com/example/" + name + ".java"));
+        }
         List<Diagnostic<? extends JavaFileObject>> sweep = compile("main", "Beta", LOCKED_B);
 
         assertTrue(warns(sweep, "while writing only 1"),

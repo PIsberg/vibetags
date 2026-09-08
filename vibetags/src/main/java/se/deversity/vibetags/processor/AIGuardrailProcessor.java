@@ -22,6 +22,7 @@ import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
+import se.deversity.vibetags.processor.internal.PartialRoundDetector;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.RoleConfig;
@@ -183,6 +184,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private @Nullable ModuleIdentity moduleIdentity;
 
+    /**
+     * What this compilation was actually shown: every source file it compiled, and the source
+     * roots they came from. Read once at {@code processingOver()} to tell a build that saw all of
+     * a module's sources from one that saw a subset of them — see {@link PartialRoundDetector}.
+     */
+    private PartialRoundDetector sourceLedger = new PartialRoundDetector();
+
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
 
@@ -327,6 +335,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // Reset for potential reuse (tests reuse the processor instance via init).
         this.processed.set(false);
         this.moduleIdentity = null;
+        this.sourceLedger = new PartialRoundDetector();
         collector.reset();
         collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
@@ -381,6 +390,26 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // regardless; the guarantee is about the files VibeTags manages in the
                     // project, and those are still untouched. See checkFiles().
                     emitTransitiveManifests();
+                    // A compilation shown only some of its module's sources cannot regenerate that
+                    // module's guardrails from what it saw: everything it was not shown reads as
+                    // deleted. Same shape as the errorRaised guard above and refused for the same
+                    // reason — the round's view is incomplete, so every artifact is left as this
+                    // build found it, enforcement included: a subset of the module's elements is
+                    // not something to check a baseline against. Gradle's incremental compileJava
+                    // is where this actually happens; PartialRoundDetector holds what makes it
+                    // distinguishable from an annotation the developer really did remove.
+                    //
+                    // After applyTransitiveRules rather than before it: the comparison is against
+                    // the elements a previous round recorded, and those included the inherited
+                    // ones. Reading the set before they arrive makes every transitive build look
+                    // like it lost them.
+                    List<Path> unread =
+                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds());
+                    if (!unread.isEmpty()) {
+                        reportPartialRound(unread);
+                        VibeTagsLogger.shutdown(root);
+                        return false;
+                    }
                     // Enforcement runs BEFORE generation, and outside generateFiles(), for two
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
@@ -407,6 +436,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (moduleIdentity == null) {
                 moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
             }
+
+            // Which sources this round was handed, for the same reason and under the same
+            // constraint: an element can only be mapped back to its file while its round is live.
+            sourceLedger.observe(processingEnv, roundEnv);
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
             // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
@@ -479,6 +512,48 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private String currentRegionId() {
         return moduleIdOverride != null
             ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot(), root);
+    }
+
+    /**
+     * Says that this compilation was shown only part of its module, and that nothing was written.
+     *
+     * <p>A WARNING, not a NOTE. The files on disk are now older than the source that was just
+     * edited, and the developer has to know that before they read them or commit them — silence
+     * is what let the incremental build delete twenty-two committed rule files without anyone
+     * noticing until the diff was already staged. It names the sources the round never read,
+     * because "your build is partial" is unactionable and "these eight files were not compiled"
+     * points straight at the build setting that caused it.
+     *
+     * <p>Check mode gets the same warning rather than an error. Its promise is to fail on drift
+     * between the committed files and what a build would produce, and a round that cannot see the
+     * whole module cannot produce anything to compare against; failing there would report drift
+     * that does not exist. Skipped is said out loud so it is not mistaken for a passed gate.
+     */
+    private void reportPartialRound(List<Path> unread) {
+        String names = unread.stream()
+            .map(p -> {
+                try {
+                    return root.toAbsolutePath().normalize().relativize(p).toString().replace('\\', '/');
+                } catch (IllegalArgumentException differentFileSystemRoot) {
+                    return p.toString();
+                }
+            })
+            .collect(Collectors.joining(", "));
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: this compilation did not compile every annotated source in the module, so"
+                + " the guardrail files were left exactly as the last full build wrote them"
+                + (checkMode ? " and nothing was verified" : "")
+                + ". Regenerating from a partial round would delete the guardrails of every"
+                + " element it was not shown. Sources carrying VibeTags annotations that this"
+                + " round never read: " + names + ". Gradle's incremental compileJava does this"
+                + " because VibeTags annotations are SOURCE-retention and Gradle cannot see them"
+                + " when it picks the files to recompile; run a full compile (./gradlew clean"
+                + " compileJava, or set options.incremental = false for this task) to bring the"
+                + " guardrail files up to date.");
+        if (log != null) {
+            log.warn("round.skip reason=partial-round unread={} seen={} checkMode={}",
+                unread.size(), collector.model().elementIds().size(), checkMode);
+        }
     }
 
     /** The sidecar id for this compilation: the region plus its source set. */
@@ -1737,6 +1812,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     private void logSummary(Set<String> activeServices) {
         if (log == null) return;
+        // The version banner alone cannot settle "the version in this log is not the version I
+        // depend on", and one report spent an afternoon on that, reading it as a hardcoded
+        // fallback constant. The jar the running processor was actually loaded from answers it
+        // outright — see ProcessorVersion.origin(). Logged here rather than beside the banner in
+        // init(), because a compilation with no annotations must still leave no vibetags.log at
+        // all (LazyLogFileTest), and init() runs for every compilation.
+        log.info("processor.origin version={} origin={}", VERSION, ProcessorVersion.origin());
         log.info("Active services ({}): {}", activeServices.size(),
             activeServices.stream().sorted().collect(Collectors.joining(", ")));
         collector.model().labeledSets().forEach(this::logSet);

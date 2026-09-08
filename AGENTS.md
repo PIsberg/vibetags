@@ -44,6 +44,7 @@ The following elements are well-tested core components. Make changes with extrem
 - **se.deversity.vibetags.processor.AIGuardrailProcessor** (sensitivity: critical): JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes
 - **se.deversity.vibetags.processor.internal.GuardrailFileWriter** (sensitivity: high): Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost
 - **se.deversity.vibetags.processor.internal.ModuleSidecar** (sensitivity: high): Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility
+- **se.deversity.vibetags.processor.internal.PartialRoundDetector** (sensitivity: high): Both conditions in unreadAnnotatedSources are load-bearing and neither may be dropped as redundant: without the missing-element check an excluded-but-annotated source stops VibeTags writing for good, and without the unread-source check a genuinely deleted annotation can never have its rule file retired
 - **se.deversity.vibetags.processor.internal.WriteCache** (sensitivity: high): Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files
 
 ## ⚡ PERFORMANCE CONSTRAINTS

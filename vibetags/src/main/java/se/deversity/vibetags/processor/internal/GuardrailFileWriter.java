@@ -654,8 +654,13 @@ public final class GuardrailFileWriter {
      *                       (a source module cleaning up its own mirrored files); when null, files
      *                       carrying the reserved mirror prefix are skipped instead, so a module's
      *                       own cleanup never deletes rules a sibling mirrored in (issue #312)
-     * @return the qNames whose rules were removed, sorted, so the caller can report a destructive
-     *         sweep. Empty on a healthy build — a non-empty result means guardrails left the repo
+     * @return the qNames whose rules were actually removed, sorted, so the caller can report a
+     *         destructive sweep. Empty on a healthy build — a non-empty result means guardrails
+     *         left the repo. A file with no VibeTags markers is not one of ours and is neither
+     *         touched nor listed: a hand-written {@code booking-flow.md} sitting in
+     *         {@code .claude/rules/} was reported as removed while it was still on disk, which
+     *         inflates the destructive-sweep count and sends the reader hunting for a deletion
+     *         that never happened
      */
     public List<String> cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
                                                  @Nullable String filePrefix) {
@@ -682,8 +687,9 @@ public final class GuardrailFileWriter {
                   .forEach(p -> {
                       Path fn = p.getFileName();
                       String name = fn != null ? fn.toString() : "";
-                      scrubGranularFile(p);
-                      removed.add(name.substring(0, Math.max(0, name.length() - extension.length())));
+                      if (scrubGranularFile(p)) {
+                          removed.add(name.substring(0, Math.max(0, name.length() - extension.length())));
+                      }
                   });
         } catch (IOException ignored) {
             // Stay silent during compilation
@@ -756,7 +762,16 @@ public final class GuardrailFileWriter {
         }
     }
 
-    private void scrubGranularFile(Path p) {
+    /**
+     * Takes the VibeTags section out of one granular rule file, deleting the file when nothing
+     * of its own is left.
+     *
+     * @return {@code true} when this file carried a VibeTags marker pair and was therefore
+     *         rewritten or deleted (in dry-run: would have been). {@code false} means the file was
+     *         left exactly as it was — either it is not ours, or it could not be read — and it is
+     *         the caller's signal not to report a removal that did not happen.
+     */
+    private boolean scrubGranularFile(Path p) {
         try {
             String content = Files.readString(p, StandardCharsets.UTF_8);
             boolean updated = false;
@@ -796,7 +811,7 @@ public final class GuardrailFileWriter {
 
                 if (dryRun) {
                     dryRunChanges.add(p.toString());
-                    return;
+                    return true;
                 }
 
                 if (isEmptyOrBoilerplate) {
@@ -806,10 +821,12 @@ public final class GuardrailFileWriter {
                     Files.writeString(p, content + "\n", StandardCharsets.UTF_8);
                     if (writeCache != null) writeCache.invalidate(p);
                 }
+                return true;
             }
         } catch (IOException ignored) {
             // Skip files we can't read
         }
+        return false;
     }
 
     /**

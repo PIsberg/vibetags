@@ -345,8 +345,37 @@ annotation processing contract says aggregating processors "can only read `CLASS
 retention annotations", and every VibeTags annotation is deliberately `SOURCE` retention (zero
 runtime footprint) — which puts VibeTags outside the documented support envelope. What Gradle
 does with a rule-breaking processor is version-dependent; its userguide promises nothing better
-than "silent failures". The output stays correct whenever the processor re-sees every annotated
-source (the full-recompilation case); treat a Gradle build where only a subset of sources
-recompiled as suspect and prefer a clean build before trusting regenerated guardrails. The
-"re-runs only when annotations change" incrementality this section previously claimed is not
-something a consumer should count on.
+than "silent failures". The "re-runs only when annotations change" incrementality this section
+previously claimed is not something a consumer should count on.
+
+### The partial round, and what the processor does about it
+
+Gradle's incremental compiler decides which sources to recompile from the annotations it can see
+in class files. It can see none of VibeTags', so an edit to one annotated file recompiles that
+file alone. The processor is then handed one element where the last build had twelve, and every
+element it was not shown looks exactly like an element whose annotation was deleted. Regenerating
+from that view deleted 22 committed rule files and cut a whole block out of `CLAUDE.md`, exit code
+0, nothing on the console.
+
+`PartialRoundDetector` refuses that round. It calls a compilation partial only when two
+independent facts hold: a sidecar describing this compilation's own source tree names an element
+the round did not produce, **and** a `.java` file under a source root the round did compile from
+was not compiled and names `se.deversity.vibetags.annotations`. Either fact alone is ambiguous —
+the first is also what deleting an annotation looks like, the second is also what a source
+excluded from compilation looks like — and together they are not. When both hold, nothing is
+written, nothing is swept, no fingerprint is recorded, and a `WARNING` names the sources the round
+never read. `PartialRoundGuardrailLossTest` pins both the refusal and its opposite: an annotation
+genuinely removed from a source the round *did* compile still loses its rule file.
+
+The guard degrades to silence rather than to a false alarm. A compilation whose sources are
+in-memory, or run by a compiler that exposes neither the Tree API nor `Elements.getFileObjectOf`
+(kapt, ECJ), resolves no source root, so the second condition can never hold and the round is
+never called partial — the same behaviour as before this existed. `PartialRoundGuardrailLossTest`
+covers the wrapped-`ProcessingEnvironment` case that Gradle actually presents, because a guard
+that is inert in exactly the builds it exists for is the failure mode worth pinning.
+
+The cost is that a Gradle incremental build no longer updates the guardrail files at all; it
+leaves them as the last full compile wrote them and says so. Run `./gradlew clean compileJava`, or
+set `options.incremental = false` on the `JavaCompile` task, to get regeneration back. Stale and
+loud beats destroyed and silent, and the ordering is not a preference: a deletion committed
+without being read cannot be noticed later.

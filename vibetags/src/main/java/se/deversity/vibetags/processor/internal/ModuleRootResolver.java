@@ -106,16 +106,30 @@ public final class ModuleRootResolver {
 
     /**
      * Directory holding {@code element}'s source file, or {@code null} when no available compiler
-     * API can say. Tries the Tree API first (it is the cheaper lookup when javac hands us its own
-     * environment), then the standard {@link Elements#getFileObjectOf}.
+     * API can say.
      */
     private static @Nullable Path sourceDirOf(@Nullable Trees trees, @Nullable Elements elements, Element element) {
+        Path file = sourceFileOf(trees, elements, element);
+        return file != null ? file.getParent() : null;
+    }
+
+    /**
+     * The source file {@code element} was declared in, or {@code null} when no available compiler
+     * API can say. Tries the Tree API first (it is the cheaper lookup when javac hands us its own
+     * environment), then the standard {@link Elements#getFileObjectOf}.
+     *
+     * <p>Package-private because {@link PartialRoundDetector} needs the file rather than its
+     * directory, and one resolution shared by both is the point: a round that resolved its module
+     * from a source file must agree with the ledger about which file that was, or the two disagree
+     * about what this compilation saw.
+     */
+    static @Nullable Path sourceFileOf(@Nullable Trees trees, @Nullable Elements elements, Element element) {
         if (trees != null) {
             try {
                 TreePath path = trees.getPath(element);
                 if (path != null) {
-                    Path dir = directoryOf(path.getCompilationUnit().getSourceFile().toUri());
-                    if (dir != null) return dir;
+                    Path file = fileOf(path.getCompilationUnit().getSourceFile().toUri());
+                    if (file != null) return file;
                 }
             } catch (RuntimeException ignored) {
                 // Malformed URI or unexpected tree state — fall through to the Elements path.
@@ -125,7 +139,7 @@ public final class ModuleRootResolver {
             try {
                 JavaFileObject file = elements.getFileObjectOf(element);
                 if (file != null) {
-                    return directoryOf(file.toUri());
+                    return fileOf(file.toUri());
                 }
             } catch (RuntimeException | Error ignored) {
                 // Older/alternative compilers may not implement it — treat as unavailable.
@@ -134,11 +148,11 @@ public final class ModuleRootResolver {
         return null;
     }
 
-    /** Parent directory of a {@code file:} URI, or {@code null} for in-memory sources. */
-    private static @Nullable Path directoryOf(URI uri) {
+    /** A {@code file:} URI as an absolute path, or {@code null} for in-memory sources. */
+    private static @Nullable Path fileOf(URI uri) {
         if (!"file".equals(uri.getScheme())) return null; // in-memory source (tests, JSR 199 strings)
         try {
-            return Paths.get(uri).toAbsolutePath().normalize().getParent();
+            return Paths.get(uri).toAbsolutePath().normalize();
         } catch (RuntimeException e) {
             return null;
         }
