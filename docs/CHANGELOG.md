@@ -1395,7 +1395,7 @@ has case-colliding rule filenames (see Fixed below).
 ### Added
 
 - Repository alignment with the practices taught in *Vibe Architecture* (audit recorded in
-  `analysis/2026-08-15-health-scorecard.md`). Library behaviour is unchanged; everything below
+  `docs/analysis/2026-08-15-health-scorecard.md`). Library behaviour is unchanged; everything below
   is enforcement, measurement, or documentation around it:
   - Locked Files Guard CI job — the shipped `action/locked-files` now runs on this repository's
     own pull requests, with `.vibetags-locks` committed and kept current by check mode.
