@@ -41,7 +41,12 @@ runs:
           .clinerules .junie/guidelines.md .idx/airules.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
           .claude/rules/com-example-payment-PaymentProcessor.md \
-          .github/instructions/com-example-payment-PaymentProcessor.instructions.md \n          .gemini/rules/com-example-payment-PaymentProcessor.md \n          .agents/rules/com-example-payment-PaymentProcessor.md \n          .aiassistant/rules/com-example-payment-PaymentProcessor.md \n          .augment/rules/com-example-payment-PaymentProcessor.md \n          .goosehints; do
+          .github/instructions/com-example-payment-PaymentProcessor.instructions.md \
+          .gemini/rules/com-example-payment-PaymentProcessor.md \
+          .agents/rules/com-example-payment-PaymentProcessor.md \
+          .aiassistant/rules/com-example-payment-PaymentProcessor.md \
+          .augment/rules/com-example-payment-PaymentProcessor.md \
+          .goosehints; do
           if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
           if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
           echo "OK $f"
