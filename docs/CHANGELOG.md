@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `examples/basic/reset-ai-files.sh` now clears `.kiro/steering`, which it had left behind since
+  v0.9.7. The script exists so a following clean compile proves the processor regenerates
+  everything, and it worked from two hand-maintained copies of a `ServiceRegistry` subset. A rule
+  file for a class whose annotation had since been removed survived the reset, the next compile
+  did not rewrite it, and the stale file read as current output, so the check proved less than it
+  appeared to. `ExampleResetScriptCoverageTest` now derives both lists from the registry, in both
+  directions: every path the example opts into must be cleared, and every path the script names
+  must still be written by some service. It reported `.kiro/steering` before the fix.
+
 - A compilation shown only some of a module's sources no longer rewrites that module's guardrails
   from what it happened to see. Reported from a Gradle single-module build: touching one annotated
   file and running an ordinary incremental `compileJava` deleted 22 checked-in rule files and cut
