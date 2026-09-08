@@ -237,6 +237,8 @@ class AIGuardrailProcessorUnitTest {
             "gemini_granular",
             // Grok Build scoped rules
             "grok_granular",
+            // 2026-09 platform sweep
+            "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

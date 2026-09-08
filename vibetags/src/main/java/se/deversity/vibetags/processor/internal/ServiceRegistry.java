@@ -49,6 +49,8 @@ public final class ServiceRegistry {
         // Grok Build scoped rules. Granular only: Grok reads AGENTS.md natively, so it has no
         // VibeTags aggregate of its own and this key never collapses another file to an index.
         "grok_granular",
+        // 2026-09 platform sweep: three granular directories and one aggregate
+        "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -137,6 +139,11 @@ public final class ServiceRegistry {
         map.put("gemini_granular", root.resolve(".gemini/rules"));
         // Grok Build scoped rules
         map.put("grok_granular",   root.resolve(".grok/rules"));
+        // 2026-09 platform sweep
+        map.put("antigravity_granular", root.resolve(".agents/rules"));
+        map.put("aiassistant_granular", root.resolve(".aiassistant/rules"));
+        map.put("augment_granular",     root.resolve(".augment/rules"));
+        map.put("goose",                root.resolve(".goosehints"));
         // Context-packer ignore files
         map.put("repomix_ignore",    root.resolve(".repomixignore"));
         map.put("gitingest_ignore",  root.resolve(".gitingestignore"));

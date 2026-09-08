@@ -155,6 +155,10 @@ touch .clinerules                          # Cline AI assistant
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 mkdir -p .grok/rules                       # Grok Build (granular per-class rules)
+mkdir -p .agents/rules                     # Antigravity (granular per-class rules)
+mkdir -p .aiassistant/rules                # JetBrains AI Assistant (granular per-class rules)
+mkdir -p .augment/rules                    # Augment Code (granular per-class rules)
+touch .goosehints                          # goose (Block)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
 touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
@@ -1391,12 +1395,16 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
 | `.grok/rules/*.md` | Grok Build | Markdown |
+| `.agents/rules/*.md` | Antigravity | Markdown |
+| `.aiassistant/rules/*.md` | JetBrains AI Assistant | Markdown |
+| `.augment/rules/*.md` | Augment Code | Markdown |
 
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
 mkdir -p .kiro/steering .grok/rules
+mkdir -p .agents/rules .aiassistant/rules .augment/rules
 mkdir -p .claude/rules .github/instructions
 ```
 
@@ -1639,6 +1647,10 @@ tasks.withType(JavaCompile) {
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `.grok/rules/*.md` | Grok Build (granular per-class rules) |
+| `.agents/rules/*.md` | Antigravity (granular per-class rules) |
+| `.aiassistant/rules/*.md` | JetBrains AI Assistant (granular per-class rules) |
+| `.augment/rules/*.md` | Augment Code (granular per-class rules) |
+| `.goosehints` | goose (Block) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
 | `.void/rules.md` | Void Editor |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |

@@ -152,6 +152,12 @@ class ProcessorTestHarness {
         // Grok Build scoped rules: granular with no aggregate sibling, so opting it in by
         // default cannot collapse another platform's aggregate to an index.
         touch(".grok/rules/.vibetags");
+        // 2026-09 platform sweep: none of these has an aggregate sibling, so opting them in
+        // by default cannot collapse another platform's file to a scoped-rules index.
+        touch(".agents/rules/.vibetags");
+        touch(".aiassistant/rules/.vibetags");
+        touch(".augment/rules/.vibetags");
+        touch(".goosehints");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");
