@@ -810,10 +810,11 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="GranularContribution">
   <title>GranularContribution [CLASS]</title>
-  <rect class="node-rect" x="1824.0" y="114.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="1824.0" y="114.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="1914.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularContribution</text>
   <line x1="1824.0" y1="158.0" x2="2004.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1832.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GLOB_SEPARATOR: String</text>
+  <text x="1832.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DESCRIPTION_PREFIX: String</text>
+  <text x="1832.0" y="186.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GLOB_SEPARATOR: String</text>
 </g>
 <g id="GranularSections">
   <title>GranularSections [CLASS]</title>
