@@ -59,128 +59,63 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <rect width="960" height="918" fill="url(#dotGrid)"/>
 <rect class="group-rect" x="410.0" y="100.0" width="408.0" height="638.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="416.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.model</text>
-<path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M624.0 164.0 Q415.0 81.7 192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" x="411.5" y="89.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
+<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M424.0 224.0 Q323.2 118.7 192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="315.6" y="123.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
+<path class="edge-line" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" d="M604.0 434.0 Q631.5 389.1 624.0 337.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" x="622.7" y="381.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">kind</text>
+<path class="edge-line" data-source="TaggedElement" data-target="Annotation" data-type="HAS" d="M514.0 294.0 Q426.1 176.5 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TaggedElement" data-target="Annotation" data-type="HAS" x="417.0" y="180.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">annotations</text>
+<path class="edge-line" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" d="M514.0 294.0 Q463.6 434.0 514.0 574.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" x="488.8" y="428.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">owner</text>
 <path class="edge-line" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" d="M514.0 395.7 Q466.3 528.2 514.0 660.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" x="490.2" y="522.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">EMPTY</text>
 <path class="edge-line" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" d="M604.0 528.2 Q632.1 481.2 624.0 427.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" x="623.0" y="473.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
 <path class="edge-line" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" d="M604.0 528.2 Q601.3 567.2 624.0 599.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" x="607.6" y="559.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
-<path class="edge-line" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" d="M514.0 395.7 Q431.0 230.5 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" x="419.5" y="232.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
-<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M514.0 204.0 Q524.4 149.1 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="516.2" y="144.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
-<path class="edge-line" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" d="M604.0 434.0 Q631.5 389.1 624.0 337.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" x="622.7" y="381.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">kind</text>
-<path class="edge-line" data-source="TaggedElement" data-target="Annotation" data-type="HAS" d="M514.0 294.0 Q626.5 213.8 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TaggedElement" data-target="Annotation" data-type="HAS" x="617.3" y="198.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">annotations</text>
-<path class="edge-line" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" d="M514.0 294.0 Q463.6 434.0 514.0 574.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" x="488.8" y="428.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">owner</text>
-<path class="edge-line" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" d="M624.0 599.0 Q431.8 349.3 192.0 145.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" x="419.9" y="354.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="TransitiveRule" data-target="Tier" data-type="HAS" d="M714.0 474.0 Q526.7 304.1 302.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TransitiveRule" data-target="Tier" data-type="HAS" x="517.3" y="311.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">tier</text>
-<g id="ContentHash">
-  <title>ContentHash [CLASS]</title>
-  <rect class="node-rect" x="424.0" y="114.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="514.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ContentHash</text>
+<path class="edge-line" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" d="M514.0 395.7 Q533.2 245.8 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" x="520.6" y="240.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
+<path class="edge-line" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" d="M714.0 474.0 Q735.6 285.1 702.0 98.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" x="721.8" y="279.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="TransitiveRule" data-target="Tier" data-type="HAS" d="M624.0 599.0 Q431.8 349.3 192.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TransitiveRule" data-target="Tier" data-type="HAS" x="419.9" y="354.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">tier</text>
+<path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M424.0 254.0 Q426.3 194.1 392.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" x="417.1" y="190.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
+<g id="RoleConfig">
+  <title>RoleConfig [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="114.0" width="180.0" height="220.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RoleConfig</text>
   <line x1="424.0" y1="158.0" x2="604.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">HEX: char</text>
-  <line x1="424.0" y1="185.0" x2="604.0" y2="185.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="198.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(String): String</text>
+  <text x="432.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FILE_NAME: String</text>
+  <text x="432.0" y="186.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: List&lt;Role&gt;</text>
+  <text x="432.0" y="201.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash: String</text>
+  <line x1="424.0" y1="215.0" x2="604.0" y2="215.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="228.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">load(Path): RoleConfig</text>
+  <text x="432.0" y="243.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
+  <text x="432.0" y="258.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash(): String</text>
+  <text x="432.0" y="273.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleFor(TaggedElement): Optiona…</text>
+  <text x="432.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">globsFor(String): List&lt;String&gt;</text>
+  <text x="432.0" y="303.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularStemFor(TaggedElement):…</text>
+  <text x="432.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+5 more)</text>
 </g>
-<g id="ElementTag">
-  <title>ElementTag [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="714.0" y="316.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementTag</text>
-  <line x1="624.0" y1="338.0" x2="804.0" y2="338.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_NAME: Map&lt;String,ElementTag&gt;</text>
-</g>
-<g id="GuardrailAnnotations">
-  <title>GuardrailAnnotations [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="114.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="714.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailAnnotations</text>
-  <line x1="624.0" y1="158.0" x2="804.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL: List&lt;Class&lt;? extends Annot…</text>
-  <line x1="624.0" y1="185.0" x2="804.0" y2="185.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="198.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">label(Class&lt;? extends Annotatio…</text>
-</g>
-<g id="Class">
-  <title>Class [CLASS]</title>
+<g id="Role">
+  <title>Role [CLASS]</title>
   <rect class="node-rect" x="12.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="102.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Class</text>
-</g>
-<g id="GuardrailModel">
-  <title>GuardrailModel [CLASS]</title>
-  <rect class="node-rect" x="424.0" y="395.7" width="180.0" height="265.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="514.0" y="417.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModel</text>
-  <line x1="424.0" y1="439.7" x2="604.0" y2="439.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="453.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">EMPTY: GuardrailModel</text>
-  <text x="432.0" y="468.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
-  <text x="432.0" y="483.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
-  <text x="432.0" y="498.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
-  <text x="432.0" y="513.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: List&lt;Transitiv…</text>
-  <text x="432.0" y="528.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_IDENTITY: Comparator&lt;TaggedE…</text>
-  <line x1="424.0" y1="541.7" x2="604.0" y2="541.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="555.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sorted(Set&lt;TaggedElement&gt;): Set…</text>
-  <text x="432.0" y="570.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sortedByKey(Map&lt;TaggedElement,S…</text>
-  <text x="432.0" y="585.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Class&lt;? extends Annotation&gt;)…</text>
-  <text x="432.0" y="600.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement): …</text>
-  <text x="432.0" y="615.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound(): boolean</text>
-  <text x="432.0" y="630.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(): List&lt;Transit…</text>
-  <text x="432.0" y="645.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+49 more)</text>
+  <text class="node-label" x="102.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Role</text>
 </g>
 <g id="SourceLocation">
   <title>SourceLocation [CLASS]</title>
   <rect class="node-rect" x="624.0" y="384.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="714.0" y="427.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">SourceLocation</text>
 </g>
-<g id="TransitiveRule">
-  <title>TransitiveRule [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="474.0" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="714.0" y="496.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">TransitiveRule</text>
-  <line x1="624.0" y1="518.0" x2="804.0" y2="518.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="531.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin: String</text>
-  <text x="632.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName: String</text>
-  <text x="632.0" y="561.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation: String</text>
-  <text x="632.0" y="576.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier: Tier</text>
-  <text x="632.0" y="591.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members: Map&lt;String,String&gt;</text>
-  <line x1="624.0" y1="605.0" x2="804.0" y2="605.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin(): String</text>
-  <text x="632.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName(): String</text>
-  <text x="632.0" y="648.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation(): String</text>
-  <text x="632.0" y="663.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier(): Tier</text>
-  <text x="632.0" y="678.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members(): Map&lt;String,String&gt;</text>
-  <text x="632.0" y="693.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">memberSummary(): String</text>
-  <text x="632.0" y="708.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
-</g>
-<g id="Comparator">
-  <title>Comparator [CLASS]</title>
-  <rect class="node-rect" x="212.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="302.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparator</text>
-</g>
-<g id="RoleConfig">
-  <title>RoleConfig [CLASS]</title>
-  <rect class="node-rect" x="424.0" y="204.0" width="180.0" height="220.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="514.0" y="226.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RoleConfig</text>
-  <line x1="424.0" y1="248.0" x2="604.0" y2="248.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="261.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FILE_NAME: String</text>
-  <text x="432.0" y="276.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: List&lt;Role&gt;</text>
-  <text x="432.0" y="291.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash: String</text>
-  <line x1="424.0" y1="305.0" x2="604.0" y2="305.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">load(Path): RoleConfig</text>
-  <text x="432.0" y="333.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
-  <text x="432.0" y="348.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash(): String</text>
-  <text x="432.0" y="363.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleFor(TaggedElement): Optiona…</text>
-  <text x="432.0" y="378.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">globsFor(String): List&lt;String&gt;</text>
-  <text x="432.0" y="393.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularStemFor(TaggedElement):…</text>
-  <text x="432.0" y="408.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+5 more)</text>
-</g>
-<g id="Role">
-  <title>Role [CLASS]</title>
-  <rect class="node-rect" x="412.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="502.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Role</text>
+<g id="ContentHash">
+  <title>ContentHash [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="114.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ContentHash</text>
+  <line x1="624.0" y1="158.0" x2="804.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">HEX: char</text>
+  <line x1="624.0" y1="185.0" x2="804.0" y2="185.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="198.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(String): String</text>
 </g>
 <g id="TaggedElement">
   <title>TaggedElement [CLASS]</title>
@@ -203,21 +138,86 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="432.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularQName(): String</text>
   <text x="432.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+10 more)</text>
 </g>
+<g id="ElementTag">
+  <title>ElementTag [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="316.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementTag</text>
+  <line x1="624.0" y1="338.0" x2="804.0" y2="338.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_NAME: Map&lt;String,ElementTag&gt;</text>
+</g>
 <g id="Annotation">
   <title>Annotation [CLASS]</title>
-  <rect class="node-rect" x="612.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="702.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Annotation</text>
+  <rect class="node-rect" x="212.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="302.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Annotation</text>
+</g>
+<g id="GuardrailModel">
+  <title>GuardrailModel [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="395.7" width="180.0" height="265.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="417.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModel</text>
+  <line x1="424.0" y1="439.7" x2="604.0" y2="439.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="453.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">EMPTY: GuardrailModel</text>
+  <text x="432.0" y="468.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
+  <text x="432.0" y="483.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
+  <text x="432.0" y="498.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
+  <text x="432.0" y="513.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: List&lt;Transitiv…</text>
+  <text x="432.0" y="528.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_IDENTITY: Comparator&lt;TaggedE…</text>
+  <line x1="424.0" y1="541.7" x2="604.0" y2="541.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="555.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sorted(Set&lt;TaggedElement&gt;): Set…</text>
+  <text x="432.0" y="570.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sortedByKey(Map&lt;TaggedElement,S…</text>
+  <text x="432.0" y="585.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Class&lt;? extends Annotation&gt;)…</text>
+  <text x="432.0" y="600.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement): …</text>
+  <text x="432.0" y="615.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound(): boolean</text>
+  <text x="432.0" y="630.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(): List&lt;Transit…</text>
+  <text x="432.0" y="645.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+49 more)</text>
+</g>
+<g id="TransitiveRule">
+  <title>TransitiveRule [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="474.0" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="496.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">TransitiveRule</text>
+  <line x1="624.0" y1="518.0" x2="804.0" y2="518.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="531.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin: String</text>
+  <text x="632.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName: String</text>
+  <text x="632.0" y="561.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation: String</text>
+  <text x="632.0" y="576.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier: Tier</text>
+  <text x="632.0" y="591.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members: Map&lt;String,String&gt;</text>
+  <line x1="624.0" y1="605.0" x2="804.0" y2="605.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin(): String</text>
+  <text x="632.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName(): String</text>
+  <text x="632.0" y="648.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation(): String</text>
+  <text x="632.0" y="663.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier(): Tier</text>
+  <text x="632.0" y="678.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members(): Map&lt;String,String&gt;</text>
+  <text x="632.0" y="693.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">memberSummary(): String</text>
+  <text x="632.0" y="708.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
+</g>
+<g id="Comparator">
+  <title>Comparator [CLASS]</title>
+  <rect class="node-rect" x="412.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="502.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparator</text>
 </g>
 <g id="Comparable">
   <title>Comparable [INTERFACE]</title>
-  <rect class="node-rect" x="12.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-INTERFACE)" stroke="#1d4ed8" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="102.0" y="132.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">«interface»</text>
-  <text class="node-label" x="102.0" y="157.9" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparable</text>
+  <rect class="node-rect" x="612.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-INTERFACE)" stroke="#1d4ed8" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="702.0" y="42.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">«interface»</text>
+  <text class="node-label" x="702.0" y="67.9" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparable</text>
 </g>
 <g id="Tier">
   <title>Tier [CLASS]</title>
+  <rect class="node-rect" x="12.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Tier</text>
+</g>
+<g id="GuardrailAnnotations">
+  <title>GuardrailAnnotations [CLASS]</title>
+  <rect class="node-rect" x="424.0" y="204.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="226.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailAnnotations</text>
+  <line x1="424.0" y1="248.0" x2="604.0" y2="248.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="261.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL: List&lt;Class&lt;? extends Annot…</text>
+  <line x1="424.0" y1="275.0" x2="604.0" y2="275.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">label(Class&lt;? extends Annotatio…</text>
+</g>
+<g id="Class">
+  <title>Class [CLASS]</title>
   <rect class="node-rect" x="212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Tier</text>
+  <text class="node-label" x="302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Class</text>
 </g>
 <rect x="724.0" y="784.0" width="220.0" height="100.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
 <text x="740.0" y="804.0" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>

@@ -41,7 +41,7 @@ runs:
           .clinerules .junie/guidelines.md .idx/airules.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
           .claude/rules/com-example-payment-PaymentProcessor.md \
-          .github/instructions/com-example-payment-PaymentProcessor.instructions.md; do
+          .github/instructions/com-example-payment-PaymentProcessor.instructions.md \n          .gemini/rules/com-example-payment-PaymentProcessor.md \n          .agents/rules/com-example-payment-PaymentProcessor.md \n          .aiassistant/rules/com-example-payment-PaymentProcessor.md \n          .augment/rules/com-example-payment-PaymentProcessor.md \n          .goosehints; do
           if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
           if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
           echo "OK $f"
@@ -59,8 +59,16 @@ runs:
         echo "OK Claude audit requirements"
         grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
         echo "OK Gemini audit requirements"
-        grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
-        echo "OK GEMINI.md audit requirements"
+        # GEMINI.md renders the COLLAPSED shape here, because this example opts into both it
+        # and .gemini/rules/ (tier-1 invariant 6). The audit bucket is a safety bucket, so it
+        # stays inline under the shared heading rather than Gemini's full-render
+        # "CONTINUOUS AUDIT REQUIREMENTS" one, which is what this check used to look for.
+        # Both halves are asserted: safety inline AND per-element detail moved out. Nothing
+        # in CI pinned that pair before the example opted in.
+        grep -q "MANDATORY SECURITY AUDITS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
+        grep -q "Scoped Rules Index" GEMINI.md || { echo "FAIL GEMINI.md did not collapse to a scoped-rules index despite .gemini/rules being opted in"; exit 1; }
+        grep -q "gemini/rules/" GEMINI.md || { echo "FAIL GEMINI.md index points at no scoped rule files"; exit 1; }
+        echo "OK GEMINI.md audit requirements (collapsed, with scoped-rules index)"
         # AGENTS.md must be left untouched (sole-file fallback rule): it ships as a hand-authored
         # pointer alongside other AI config files, so VibeTags must not generate into it.
         if grep -q "VIBETAGS-START" AGENTS.md; then echo "FAIL AGENTS.md was generated — sole-file fallback rule broken"; exit 1; fi
