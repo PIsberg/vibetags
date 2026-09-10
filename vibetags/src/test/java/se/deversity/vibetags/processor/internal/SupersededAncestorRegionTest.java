@@ -364,4 +364,46 @@ class SupersededAncestorRegionTest {
             "and the leftover sidecar must be deleted, not merely skipped");
     }
 
+
+    /**
+     * The reported shape in #621: the ancestor is the <em>fresher</em> file, and its element set is
+     * a strict subset of the nested module's.
+     *
+     * <p>Before strict containment was decided ahead of freshness, neither region could go. The
+     * ancestor was protected because its only descendant was older, and the descendant was
+     * protected because the ancestor's smaller set did not cover it. Both survived and every
+     * element they shared was written twice into every generated file.
+     */
+    @Test
+    void aFresherRootIsRetiredWhenTheSubprojectKnowsStrictlyMore(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A", "com.example.B");
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.B", "com.example.C");
+        writtenAt(root, "app", 1_000_000L);
+        writtenAt(root, "_root_", 2_000_000L);   // the fallback identity, written last
+
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.readAll(root)),
+            "the ancestor holds nothing the nested module does not, so recency does not save it: "
+                + "the ancestor identity is the fallback taken when a module root cannot be "
+                + "resolved, which makes it the one most likely to be both wrong and recent");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
+    }
+
+    /**
+     * The safety that makes the rule above sound: containment, not depth. A root that compiles
+     * sources of its own keeps an element no submodule has, and keeps its region however much
+     * more the submodule knows.
+     */
+    @Test
+    void aRootWithAnElementOfItsOwnSurvivesDescendantsThatKnowMore(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A", "com.example.RootOnly");
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.B", "com.example.C");
+        writtenAt(root, "app", 2_000_000L);
+        writtenAt(root, "_root_", 1_000_000L);
+
+        assertEquals(List.of("_root_", "app"), regionIds(ModuleSidecar.readAll(root)),
+            "the root owns an element no submodule claims, so it is a real module and keeps its "
+                + "region even though the submodule knows strictly more");
+    }
 }
