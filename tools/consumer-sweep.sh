@@ -143,9 +143,26 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   want "$repo" "$@" || continue
   [ -d "$ROOT/$repo/.git" ] || { printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "not a git repo under $ROOT"; continue; }
 
-  # Refuse to sweep a repo with uncommitted work. Branching off origin/main under someone's
-  # edits either fails or drags them along, and neither is this script's call to make.
-  if [ -n "$(git -C "$ROOT/$repo" status --porcelain)" ]; then
+  # Is this repo swept in a worktree? Answered before the dirty check, because the answer
+  # decides whether that check applies at all.
+  contended=0
+  case " $WORKTREE_REPOS " in
+    *" $repo "*) contended=1 ;;
+  esac
+
+  # Refuse to sweep a repo with uncommitted work. `checkout -B` switches the branch of the
+  # very checkout those edits live in, so it either fails or drags them along, and neither
+  # is this script's call to make.
+  #
+  # A worktree repo is exempt, and that exemption is the point rather than a loophole:
+  # `git worktree add` builds a separate directory from origin/main and never touches the
+  # contended checkout or its index. A dirty checkout is the *expected* state there, since a
+  # repo lands in WORKTREE_REPOS precisely because someone else is working in it. With the
+  # guard applied to them, async-test-lib was skipped on every sweep (#617), and it is the
+  # only consumer that commits its .vibetags-mod-* sidecars, the file class #590 was found
+  # through. The footer prints identically either way, so a sweep covering four repos of
+  # five read exactly like a complete one.
+  if [ "$contended" -eq 0 ] && [ -n "$(git -C "$ROOT/$repo" status --porcelain)" ]; then
     printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "working tree dirty; commit or stash first"
     continue
   fi
@@ -155,24 +172,21 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   # A contended repo is swept in a detached worktree so its checkout is never touched.
   work="$ROOT/$repo"
   wt=""
-  case " $WORKTREE_REPOS " in
-    *" $repo "*)
-      wt="$LOGDIR/wt-$repo"
-      rm -rf "$wt"
-      git -C "$ROOT/$repo" worktree prune
-      # -B, not -b: the branch survives the worktree being removed, so a second sweep of the
-      # same version died with "a branch named ... already exists" and reported ERROR for a
-      # repo whose build was never attempted. The non-worktree path already used checkout -B
-      # for exactly this reason.
-      git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
-        printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "worktree add failed"; continue; }
-      work="$wt"
-      ;;
-    *)
-      git -C "$work" checkout -q -B "$BRANCH" origin/main || {
-        printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "checkout failed"; continue; }
-      ;;
-  esac
+  if [ "$contended" -eq 1 ]; then
+    wt="$LOGDIR/wt-$repo"
+    rm -rf "$wt"
+    git -C "$ROOT/$repo" worktree prune
+    # -B, not -b: the branch survives the worktree being removed, so a second sweep of the
+    # same version died with "a branch named ... already exists" and reported ERROR for a
+    # repo whose build was never attempted. The non-worktree path already used checkout -B
+    # for exactly this reason.
+    git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
+      printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "worktree add failed"; continue; }
+    work="$wt"
+  else
+    git -C "$work" checkout -q -B "$BRANCH" origin/main || {
+      printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "checkout failed"; continue; }
+  fi
 
   if ! bump "$work" "$VERSION"; then
     printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "no version declaration matched; update this script"

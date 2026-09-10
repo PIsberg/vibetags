@@ -275,14 +275,8 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 Before uploading the release notes, rewrite the relative paths to absolute raw-content URLs pinned to the tag. From the repo root:
 
 ```bash
-TAG=v0.7.1
-awk -v v="[${TAG#v}]" '
-  index($0, "## " v) == 1 { f=1; print; next }
-  f && /^## \[/ { exit }
-  f { print }
-' docs/CHANGELOG.md \
-  | sed "s|](changelog-assets/${TAG#v}/|](https://github.com/PIsberg/vibetags/raw/${TAG}/docs/changelog-assets/${TAG#v}/|g" \
-  > /tmp/release-notes-${TAG}.md
+TAG=v<version>
+tools/release-notes.sh "${TAG#v}" > /tmp/release-notes-${TAG}.md
 
 gh release create $TAG \
   --target main \
@@ -291,11 +285,15 @@ gh release create $TAG \
   --latest
 ```
 
-> **Do not use an `awk` range here.** `awk '/^## \[1.2.3\]/,/^## \[/'` returns the header
-> line and nothing else: when a range's start and end patterns both match the same record, awk
-> closes the range on that record, so the `exit` guard inside it never runs. That form shipped in
-> this document and produced a one-line release note for 1.2.3. The flag-driven version above
-> starts on the header and stops at the *next* `## [`.
+> **Do not inline the extraction, in any form.** `awk '/^## \[1.2.3\]/,/^## \[/'` returns the
+> header line and nothing else: when a range's start and end patterns both match the same
+> record, awk closes the range on that record, so the `exit` guard inside it never runs. That
+> form shipped in this document and produced a one-line release note for 1.2.3. It was
+> corrected here, with this warning, and the release skill kept its own broken copy and
+> produced the same one-line extract again at 1.3.3 (#619). Two copies of a subtle command is
+> the defect, so `tools/release-notes.sh` is now the only implementation: it starts on the
+> header, stops at the *next* `## [`, and refuses to emit fewer than five lines so a
+> truncated file cannot reach a step that cannot be undone.
 
 If you forget the `sed`, the release will publish with broken image links. Fix afterward via:
 
