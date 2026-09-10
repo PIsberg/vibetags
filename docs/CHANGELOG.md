@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- One module's guardrails are no longer written twice when the leftover sidecar is the newer file
+  (issue #621). A repository whose sources live in one subproject below the VibeTags root can end
+  up with two sidecars for what is really one module: the ancestor identity a compilation falls
+  back to when it cannot resolve its module root from the round's sources, and the module's own.
+  The prune that exists to retire the leftover consulted timestamps before containment, so it only
+  let a descendant retire its ancestor when the descendant was the fresher file. Reverse the write
+  order and nothing was retired at all: the ancestor was protected because its descendant was
+  older, and the descendant was protected because the ancestor's smaller element set did not cover
+  it. Both survived, and every element they shared was written twice, byte-identical, wrapped in
+  two `VIBETAGS-MODULE` regions, into every granular rule file and every aggregate, with exit code
+  0 and nothing on the console.
+
+  Containment is now decided first and without timestamps, provided it is strict: the nested
+  modules must between them know at least one element the ancestor never had. Recency is not
+  evidence of correctness here and arguably the reverse, because a nested identity is only ever
+  produced by resolving a real build file while the ancestor identity is the fallback. Equal
+  element sets stay with freshness, because that is also what "the sources moved up out of the
+  subproject" looks like, and there it is the nested sidecar that is the leftover. A reactor root
+  that compiles sources of its own still keeps at least one element no submodule has, fails
+  containment, and keeps its region.
+
+  The symptom is worth recognising, because it points away from the cause: only *some* annotated
+  elements duplicate, and they are exactly the ancestor's smaller set, which reads like a bug
+  specific to certain annotations and is nothing of the kind. `-Avibetags.module` with a stable
+  name remains the way to rule the whole class out, by pinning the identity so the fallback is
+  never produced.
+
 ## [1.3.3] - 2026-09-10
 
 ### Upgrading

@@ -140,6 +140,28 @@ Ties go to the more specific module: on equal timestamps a descendant still reti
 never the reverse. Two sidecars written inside one filesystem tick therefore resolve the same way on
 every build.
 
+Timestamps decide only where they have to. A region whose elements are all claimed by the modules
+nested inside it, where those modules between them also know **at least one element it never had**,
+is retired without consulting timestamps at all. Freshness gated this until #621, and that left a
+build repairing nothing in either direction: the ancestor was the more recently written file, so its
+descendant was not allowed to retire it, and the ancestor's smaller element set could not cover the
+descendant's, so neither went. Both survived and every element they shared was written twice.
+
+Recency is not evidence of correctness in that direction, and arguably the reverse: a nested identity
+is only ever produced by resolving a real build file, while the ancestor identity is the *fallback* a
+compilation takes when it cannot resolve its module root from the round's sources. So the fresher of
+the two is the one more likely to be wrong. The strictness is what keeps the second row of the table
+above working: equal element sets are exactly what "sources moved up" also looks like, and there the
+nested sidecar is the leftover, so equality is still settled by freshness.
+
+The symptom to recognise, because it misleads: only *some* annotated elements duplicate, and they are
+exactly the ancestor's smaller set. That reads like a bug specific to certain annotations, or to
+elements carrying more than one, and it is neither.
+
+If you need to rule this out entirely rather than have it repaired, pass `-Avibetags.module` with a
+stable name alongside `-Avibetags.root`. That pins the identity instead of leaving it to per-round
+resolution, so the fallback identity is never produced in the first place.
+
 The rule is conservative in every other respect. A region is dropped only when the fresher regions
 cover *all* of its elements, so a reactor root that compiles sources of its own keeps at least one
 element no submodule has and keeps its region and its sub-markers. Sibling modules are never in a

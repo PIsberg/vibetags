@@ -868,15 +868,33 @@ public final class ModuleSidecar {
      * so before this was handled both regions survived and every generated file stated the same
      * guardrails twice. {@link #yieldsOnSamePath} settles that pair, again by freshness.
      *
-     * <p>Ties go to the more specific module, which is the first case's shape and the historical
-     * default: on equal timestamps a descendant still retires its ancestor, never the reverse,
-     * and on one path the named module outlives the root identity.
+     * <p><strong>Strict containment is decided first, and without timestamps.</strong> A region
+     * whose every element is claimed by regions nested inside it, where those regions between them
+     * also know at least one element it never had, is retired on that ground alone. The strictness
+     * matters: equal element sets are exactly what the second case above also looks like, and
+     * there it is the nested sidecar that is the leftover, so equality is left to freshness. Freshness used to gate this, and that left the reported case unrepaired in both
+     * directions at once (#621): the ancestor was the more recently written file, so its
+     * descendant was not allowed to retire it, and the ancestor's smaller element set could
+     * not cover the descendant's, so neither went. Both survived and every element they
+     * shared was written twice, byte-identical, into every generated file.
      *
-     * <p>Conservative in every other respect. A region is dropped only when the fresher regions
-     * cover <em>all</em> of its elements, so a reactor root that compiles sources of its own keeps
-     * at least one element no submodule has and keeps its region. Sibling modules are never in a
-     * path relation. A sidecar recording no element ids says nothing and is left alone, as is one
-     * whose timestamp cannot be read.
+     * <p>Recency is not evidence of correctness here, and arguably the reverse. The ancestor
+     * identity is the <em>fallback</em> a compilation takes when it cannot resolve its module
+     * root from the round's sources, so it is the identity most likely to be simultaneously
+     * wrong and freshly written. A nested identity is only ever produced by resolving a real
+     * build file.
+     *
+     * <p>Freshness still settles the two relations where containment cannot say which identity
+     * is the leftover: a nested region against an ancestor that outlived it, and two regions
+     * on one path. A region already retired by containment takes no part in those decisions,
+     * because two regions holding equal element sets each cover the other and dropping both
+     * would take every guardrail with them. Ties go to the more specific module, as before.
+     *
+     * <p>Conservative in every other respect. A region is dropped only when the surviving
+     * regions cover <em>all</em> of its elements, so a reactor root that compiles sources of
+     * its own keeps at least one element no submodule has and keeps its region. Sibling
+     * modules are never in a path relation. A sidecar recording no element ids says nothing
+     * and is left alone, as is one whose timestamp cannot be read.
      */
     private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
                                               List<Path> files, boolean prune,
@@ -895,19 +913,65 @@ public final class ModuleSidecar {
             writtenAtByRegion.merge(s.regionId, written, Math::max);
         }
 
-        Set<String> superseded = new LinkedHashSet<>();
+        // Pass 1: containment by the modules nested inside a region, decided without
+        // consulting timestamps. A region whose every element is also claimed by regions
+        // below it is the same sources under a less specific identity, and that is true
+        // whenever it is true. Gating it on freshness left the reported case unrepaired in
+        // both directions at once: the ancestor was the newer file so its descendant could
+        // not retire it, and the ancestor's smaller element set could not cover the
+        // descendant's, so neither was dropped and every shared element was written twice
+        // (#621). Recency is no evidence here. The ancestor identity is the *fallback* a
+        // compilation takes when it cannot resolve its module root from the round's sources,
+        // so it is exactly the identity most likely to be both wrong and freshly written.
+        //
+        // The safety is containment itself, unchanged: a reactor root that compiles sources
+        // of its own keeps at least one element no submodule has, fails containment, and
+        // keeps its region.
+        Set<String> supersededByDescendants = new LinkedHashSet<>();
         elementsByRegion.forEach((region, elements) -> {
-            if (elements.isEmpty()) return; // nothing to compare against — keep it
-            long writtenAt = writtenAtByRegion.getOrDefault(region, Long.MAX_VALUE);
-            if (writtenAt == Long.MAX_VALUE) return; // unreadable timestamp — never retire on a guess
+            if (elements.isEmpty()) return; // nothing to compare against - keep it
             String path = pathByRegion.getOrDefault(region, "");
             Set<String> covered = new LinkedHashSet<>();
             elementsByRegion.forEach((other, otherElements) -> {
                 if (other.equals(region)) return;
+                if (isNestedUnder(pathByRegion.getOrDefault(other, ""), path)) {
+                    covered.addAll(otherElements);
+                }
+            });
+            // Strictly more, not merely as much. Equal element sets are genuinely ambiguous:
+            // they are what "the sources moved up out of the subproject" also looks like, and
+            // there it is the nested sidecar that is the leftover and the root that is real.
+            // Only freshness separates those two, so equality is left to pass 2. A descendant
+            // that knows an element the ancestor never had cannot be the stale one.
+            if (covered.containsAll(elements) && !elements.containsAll(covered)) {
+                supersededByDescendants.add(region);
+            }
+        });
+
+        // Pass 2: the relations that genuinely need a tie-break, which are the ones where
+        // containment alone cannot say which identity is the leftover.
+        //
+        // A region already retired above is not allowed to retire anything here. Without that,
+        // two regions holding equal element sets each cover the other and both are dropped,
+        // taking every guardrail with them. Ties go to the more specific module, as before.
+        Set<String> superseded = new LinkedHashSet<>(supersededByDescendants);
+        elementsByRegion.forEach((region, elements) -> {
+            if (superseded.contains(region)) return;
+            if (elements.isEmpty()) return; // nothing to compare against - keep it
+            long writtenAt = writtenAtByRegion.getOrDefault(region, Long.MAX_VALUE);
+            if (writtenAt == Long.MAX_VALUE) return; // unreadable timestamp - never retire on a guess
+            String path = pathByRegion.getOrDefault(region, "");
+            Set<String> covered = new LinkedHashSet<>();
+            elementsByRegion.forEach((other, otherElements) -> {
+                if (other.equals(region)) return;
+                if (supersededByDescendants.contains(other)) return;
                 String otherPath = pathByRegion.getOrDefault(other, "");
                 long otherWrittenAt = writtenAtByRegion.getOrDefault(other, Long.MIN_VALUE);
                 if (isNestedUnder(otherPath, path)) {
                     // A descendant retires its ancestor on equal timestamps too (see javadoc).
+                    // Pass 1 has already taken the cases where the descendants know strictly
+                    // more; what is left here is equal element sets, where only freshness can
+                    // say which identity is the leftover.
                     if (otherWrittenAt >= writtenAt) covered.addAll(otherElements);
                 } else if (isNestedUnder(path, otherPath) && otherWrittenAt > writtenAt) {
                     covered.addAll(otherElements);
