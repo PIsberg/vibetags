@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-09-10
+
 ### Fixed
 
 - One module's guardrails are no longer written twice when the leftover sidecar is the newer file
@@ -35,6 +37,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   specific to certain annotations and is nothing of the kind. `-Avibetags.module` with a stable
   name remains the way to rule the whole class out, by pinning the identity so the fallback is
   never produced.
+
+- The consumer sweep no longer skips the one downstream repository it can least afford to lose
+  (issue #617). `tools/consumer-sweep.sh` refused any repo with a dirty working tree, and that
+  guard ran before the branch that sweeps a contended repo in a `git worktree`. A worktree sweep
+  builds a separate directory from `origin/main` and never touches the contended checkout, and a
+  repo is on that list precisely because someone else works in it, so a dirty checkout is its
+  normal state. The sweep's footer prints identically either way, so covering four repos of five
+  read exactly like a complete run.
+
+- Release notes are extracted by one script that refuses to emit a truncated file (issue #619).
+  The extraction was an inline `awk` range, and an awk range tests its end pattern against the
+  record that opened it, so `/^## \[/` closed the range on the section heading and the command
+  emitted the correct release title with the whole body missing. `gh release create --notes-file`
+  accepts that without complaint, by which point the tag exists and the deploy has fired.
+  `tools/release-notes.sh` is now the only implementation, both `docs/RELEASING.md` and the
+  release skill call it, and it fails rather than hand fewer than five lines to a step that
+  cannot be undone.
+
+### Changed
+
+- `async-test-lib` moves from 1.11.2 to 1.12.0 (#623). Test scope only; nothing ships to
+  consumers from it.
 
 ## [1.3.3] - 2026-09-10
 
@@ -4108,7 +4132,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.4...HEAD
+[1.3.4]: https://github.com/PIsberg/vibetags/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PIsberg/vibetags/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PIsberg/vibetags/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/PIsberg/vibetags/compare/v1.3.0...v1.3.1
