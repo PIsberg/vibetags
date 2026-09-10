@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-09-10
+
+### Upgrading
+
+One build outcome changes under you, and it changes in the safe direction. A compilation
+that was shown only part of a module's sources now writes nothing at all, warns, and names
+the sources it never read. The build that hits this most often is an ordinary incremental
+Gradle `compileJava` after touching one annotated file: before this release that round
+rewrote the module's guardrails from the one element it could see, deleting rule files for
+every element it was not shown. If your workflow relied on an incremental compile to
+regenerate guardrails, it no longer does; run a full compile (`clean compileJava`, or
+`gradle --rerun-tasks`) when you want the files refreshed. Nothing is deleted either way.
+
 ### Added
 
 - Four platforms from a sweep of the AI tool landscape on 2026-09-08, taking the totals to 41
@@ -4066,7 +4079,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/PIsberg/vibetags/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PIsberg/vibetags/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/PIsberg/vibetags/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/PIsberg/vibetags/compare/v1.2.7...v1.3.0
