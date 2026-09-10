@@ -250,17 +250,26 @@ create the release before the PR is merged — the release tags `main`.
 
 ## Step 7 — Create the GitHub release (after the PR is merged)
 
-Only once the user confirms the PR is merged. Extract the release notes from the
-CHANGELOG and rewrite the relative image paths to absolute raw URLs pinned to the tag
-— GitHub resolves `changelog-assets/…` from the repo root on a release page, so
-without the `sed` every embedded image 404s:
+Only once the user confirms the PR is merged. `tools/release-notes.sh` extracts the
+section from the CHANGELOG and rewrites the relative image paths to absolute raw URLs
+pinned to the tag, because GitHub resolves `changelog-assets/…` from the repo root on a
+release page and an unrewritten link 404s there:
 
 ```bash
 TAG=v<version>
-awk "/^## \[${TAG#v}\]/,/^## \[/{if (\$0 ~ /^## \[/ && \$0 !~ /\[${TAG#v}\]/) exit; print}" docs/CHANGELOG.md \
-  | sed "s|](changelog-assets/${TAG#v}/|](https://github.com/PIsberg/vibetags/raw/${TAG}/docs/changelog-assets/${TAG#v}/|g" \
-  > "$SCRATCHPAD/release-notes-${TAG}.md"
+tools/release-notes.sh "${TAG#v}" > "$SCRATCHPAD/release-notes-${TAG}.md"
 ```
+
+Do not inline the extraction here. It was an `awk` range in this file until #619, and an
+awk range tests its end pattern against the line that opened it, so `/^## \[/` closed the
+range on the heading and the command emitted one line: the correct release title with the
+whole body missing. `gh release create --notes-file` accepts that without complaint, and by
+the time anyone reads the release page the tag exists and the Central deploy has fired.
+`docs/RELEASING.md` had already hit this at 1.2.3 and had already been corrected, with a
+warning against the range form; this file kept the broken copy, and this file is the one an
+agent follows. One script, called from both, is why that cannot drift a third time. The
+script refuses to emit fewer than five lines rather than let a truncated file reach an
+irreversible step.
 
 Show the user the generated notes and get an explicit go-ahead before publishing —
 this step is irreversible and pushes artifacts to Maven Central:
