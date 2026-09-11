@@ -25,24 +25,32 @@ The following elements are well-tested core components. Make changes with extrem
 - `se.deversity.vibetags.processor.internal.PartialRoundDetector`: Sensitivity: high. Note: Both conditions in unreadAnnotatedSources are load-bearing and neither may be dropped as redundant: without the missing-element check an excluded-but-annotated source stops VibeTags writing for good, and without the unread-source check a genuinely deleted annotation can never have its rule file retired
 - `se.deversity.vibetags.processor.internal.WriteCache`: Sensitivity: high. Note: Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files
 
-## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+## 🔐 SECURITY-CRITICAL CODE
+The following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.
 
-- `se.deversity.vibetags.processor.AIGuardrailProcessor` → `.gemini/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md`
-- `se.deversity.vibetags.processor.VibeTagsLogger` → `.gemini/rules/se-deversity-vibetags-processor-VibeTagsLogger.md`
-- `se.deversity.vibetags.processor.internal.AnnotationCollector` → `.gemini/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md`
-- `se.deversity.vibetags.processor.internal.BuildFingerprint` → `.gemini/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md`
-- `se.deversity.vibetags.processor.internal.EnforcementBaseline` → `.gemini/rules/se-deversity-vibetags-processor-internal-EnforcementBaseline.md`
-- `se.deversity.vibetags.processor.internal.GranularRulesWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md`
-- `se.deversity.vibetags.processor.internal.GuardrailFileWriter` → `.gemini/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md`
-- `se.deversity.vibetags.processor.internal.ModuleSidecar` → `.gemini/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md`
-- `se.deversity.vibetags.processor.internal.PartialRoundDetector` → `.gemini/rules/se-deversity-vibetags-processor-internal-PartialRoundDetector.md`
-- `se.deversity.vibetags.processor.internal.ServiceRegistry` → `.gemini/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md`
-- `se.deversity.vibetags.processor.internal.TransitiveManifest` → `.gemini/rules/se-deversity-vibetags-processor-internal-TransitiveManifest.md`
-- `se.deversity.vibetags.processor.internal.WriteCache` → `.gemini/rules/se-deversity-vibetags-processor-internal-WriteCache.md`
-- `se.deversity.vibetags.processor.internal.content` → `.gemini/rules/se-deversity-vibetags-processor-internal-content.md`
-- `se.deversity.vibetags.processor.internal.content.PlatformRenderer` → `.gemini/rules/se-deversity-vibetags-processor-internal-content-PlatformRenderer.md`
-- `se.deversity.vibetags.processor.internal.validation.ValidationRule` → `.gemini/rules/se-deversity-vibetags-processor-internal-validation-ValidationRule.md`
-- `se.deversity.vibetags.processor.model` → `.gemini/rules/se-deversity-vibetags-processor-model.md`
-- `se.deversity.vibetags.processor.model.GuardrailAnnotations` → `.gemini/rules/se-deversity-vibetags-processor-model-GuardrailAnnotations.md`
+- `se.deversity.vibetags.processor.internal.TransitiveManifestReader`: Security-critical code [Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer's always-loaded instruction files, so a dependency can put text in front of the consumer's agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.]. Do not weaken security properties. Flag any change for security review.
+- `se.deversity.vibetags.processor.internal.content.Escape`: Security-critical code [Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own <locked_files> or <rule> entries in a file the agent loads on every session.]. Do not weaken security properties. Flag any change for security review.
+
+## Scoped Rules Index
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
+
+- `se.deversity.vibetags.processor.AIGuardrailProcessor`
+- `se.deversity.vibetags.processor.VibeTagsLogger`
+- `se.deversity.vibetags.processor.internal.AnnotationCollector`
+- `se.deversity.vibetags.processor.internal.BuildFingerprint`
+- `se.deversity.vibetags.processor.internal.EnforcementBaseline`
+- `se.deversity.vibetags.processor.internal.GranularRulesWriter`
+- `se.deversity.vibetags.processor.internal.GuardrailFileWriter`
+- `se.deversity.vibetags.processor.internal.ModuleSidecar`
+- `se.deversity.vibetags.processor.internal.PartialRoundDetector`
+- `se.deversity.vibetags.processor.internal.ServiceRegistry`
+- `se.deversity.vibetags.processor.internal.TransitiveManifest`
+- `se.deversity.vibetags.processor.internal.TransitiveManifestReader`
+- `se.deversity.vibetags.processor.internal.WriteCache`
+- `se.deversity.vibetags.processor.internal.content`
+- `se.deversity.vibetags.processor.internal.content.Escape`
+- `se.deversity.vibetags.processor.internal.content.PlatformRenderer`
+- `se.deversity.vibetags.processor.internal.validation.ValidationRule`
+- `se.deversity.vibetags.processor.model`
+- `se.deversity.vibetags.processor.model.GuardrailAnnotations`
 <!-- VIBETAGS-END -->

@@ -90,6 +90,12 @@ Strict layering must be respected. No illegal boundary crossing references:
 - **se.deversity.vibetags.processor.internal.content**: Belongs to layer: `rendering`. Prohibited from referencing: [javax.lang.model, javax.annotation.processing, javax.tools, com.sun.source, se.deversity.vibetags.processor.internal]
 - **se.deversity.vibetags.processor.model**: Belongs to layer: `model`. Prohibited from referencing: [javax.lang.model, javax.annotation.processing, javax.tools, com.sun.source, se.deversity.vibetags.processor, se.deversity.vibetags.processor.internal]
 
+## 🔐 SECURITY-CRITICAL CODE
+Do not weaken security properties of these elements. Review every change for security impact:
+
+- **se.deversity.vibetags.processor.internal.TransitiveManifestReader**: Security-critical code [Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer's always-loaded instruction files, so a dependency can put text in front of the consumer's agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.]. Do not weaken security properties. Flag any change for security review.
+- **se.deversity.vibetags.processor.internal.content.Escape**: Security-critical code [Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own <locked_files> or <rule> entries in a file the agent loads on every session.]. Do not weaken security properties. Flag any change for security review.
+
 ## 🧩 LOAD-BEARING ODDITIES
 These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
 

@@ -117,6 +117,38 @@ final class GranularIndexSection {
     }
 
     /**
+     * The path {@code owner}'s scoped file would have under {@code platform}'s naming convention:
+     * the granular directory, the element's qualified name with every non-alphanumeric character
+     * replaced by {@code -}, and the platform's suffix.
+     *
+     * <p>When {@link #scopedPath} agrees with this, the index omits the pointer and states the
+     * convention once instead: printing a value derived from the FQN next to the FQN it was
+     * derived from spends always-loaded context on nothing (issue #626). A {@code .vibetags-roles}
+     * config routes several elements onto one shared role file, so the two disagree there and the
+     * explicit pointer is kept.
+     */
+    private static @Nullable String conventionalPath(Platform platform, TaggedElement owner) {
+        String dir = scopedDir(platform);
+        String suffix = scopedSuffix(platform);
+        return dir == null || suffix == null ? null : dir + "/" + owner.granularQName() + suffix;
+    }
+
+    /**
+     * One sentence naming the convention, so an entry that carries no explicit pointer is still
+     * resolvable. Empty when the platform has no granular directory, which {@link #indexActive}
+     * already rules out for every caller.
+     */
+    private static String conventionNote(Platform platform) {
+        String dir = scopedDir(platform);
+        String suffix = scopedSuffix(platform);
+        if (dir == null || suffix == null) {
+            return "";
+        }
+        return " Unless an entry carries an explicit path, its file is "
+            + dir + "/{path, every non-alphanumeric character replaced by '-'}" + suffix + ".";
+    }
+
+    /**
      * Appends the XML {@code <scoped_rules>} index (CLAUDE.md format). Attribute values are
      * XML-escaped for consistency with the rest of the Claude output. Emits nothing when there are
      * no owners.
@@ -127,10 +159,16 @@ final class GranularIndexSection {
             return;
         }
         sb.append("  <scoped_rules>\n")
-            .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>\n");
+            .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened."
+                + Escape.xml(conventionNote(platform))
+                + " Consult the file before modifying an element.</note>\n");
         for (TaggedElement owner : owners) {
-            sb.append("    <element path=\"").append(Escape.xml(owner.toString()))
-              .append("\" rules=\"").append(Escape.xml(scopedPath(platform, owner, context))).append("\"/>\n");
+            String path = scopedPath(platform, owner, context);
+            sb.append("    <element path=\"").append(Escape.xml(owner.toString()));
+            if (!path.equals(conventionalPath(platform, owner))) {
+                sb.append("\" rules=\"").append(Escape.xml(path));
+            }
+            sb.append("\"/>\n");
         }
         sb.append("  </scoped_rules>\n")
             .append("\n<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>\n");
@@ -147,9 +185,16 @@ final class GranularIndexSection {
             return;
         }
         sb.append("\n## Scoped Rules Index\n")
-            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:\n\n");
+            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file."
+                + conventionNote(platform)
+                + " Consult the file before modifying an element:\n\n");
         for (TaggedElement owner : owners) {
-            sb.append("- `").append(owner.toString()).append("` → `").append(scopedPath(platform, owner, context)).append("`\n");
+            String path = scopedPath(platform, owner, context);
+            sb.append("- `").append(owner.toString()).append("`");
+            if (!path.equals(conventionalPath(platform, owner))) {
+                sb.append(" → `").append(path).append("`");
+            }
+            sb.append("\n");
         }
     }
 }

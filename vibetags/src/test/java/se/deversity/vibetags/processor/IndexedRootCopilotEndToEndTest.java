@@ -97,8 +97,15 @@ class IndexedRootCopilotEndToEndTest {
         String copilot = Files.readString(reactorRoot.resolve(".github/copilot-instructions.md"));
         assertTrue(copilot.contains("## Scoped Rules Index"),
             "the Copilot aggregate must collapse, exactly as CLAUDE.md does:\n" + copilot);
-        assertTrue(copilot.contains(".github/instructions/com-example-core-DocumentModel.instructions.md"),
-            "…pointing at the scoped file it actually wrote:\n" + copilot);
+        // The pointer is implied by the convention stated in the index note rather than repeated
+        // per entry (issue #626); the file it names must still be the one actually written.
+        assertTrue(copilot.contains("- `com.example.core.DocumentModel`"),
+            "…listing the element it wrote a scoped file for:\n" + copilot);
+        assertTrue(copilot.contains(".github/instructions/{path, every non-alphanumeric"),
+            "…and stating the convention that resolves it:\n" + copilot);
+        assertTrue(Files.exists(reactorRoot.resolve(
+                ".github/instructions/com-example-core-DocumentModel.instructions.md")),
+            "…and the file that convention names must exist");
         assertFalse(copilot.contains("CORE VERBOSE FOCUS"),
             "the verbose tier belongs in the scoped file, not the always-loaded aggregate:\n" + copilot);
         assertTrue(copilot.contains("CORE LOCKED REASON"),

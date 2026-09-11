@@ -51,38 +51,38 @@ Never weaken security properties of these elements. Every change requires securi
 * `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .windsurf/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
 
-- `com.example.NotificationService` → `.windsurf/rules/com-example-NotificationService.md`
-- `com.example.compliance.GdprService` → `.windsurf/rules/com-example-compliance-GdprService.md`
-- `com.example.concurrent.SessionCache` → `.windsurf/rules/com-example-concurrent-SessionCache.md`
-- `com.example.config.AsyncTestConfig` → `.windsurf/rules/com-example-config-AsyncTestConfig.md`
-- `com.example.config.ParallelTestSettings` → `.windsurf/rules/com-example-config-ParallelTestSettings.md`
-- `com.example.database.DatabaseConnector` → `.windsurf/rules/com-example-database-DatabaseConnector.md`
-- `com.example.database.UserEntity` → `.windsurf/rules/com-example-database-UserEntity.md`
-- `com.example.internal.GeneratedMetadata` → `.windsurf/rules/com-example-internal-GeneratedMetadata.md`
-- `com.example.legacy.LegacyBridgeService` → `.windsurf/rules/com-example-legacy-LegacyBridgeService.md`
-- `com.example.legacy.OldPaymentApi` → `.windsurf/rules/com-example-legacy-OldPaymentApi.md`
-- `com.example.metrics.OrderMetrics` → `.windsurf/rules/com-example-metrics-OrderMetrics.md`
-- `com.example.payment.PaymentDetails` → `.windsurf/rules/com-example-payment-PaymentDetails.md`
-- `com.example.payment.PaymentProcessor` → `.windsurf/rules/com-example-payment-PaymentProcessor.md`
-- `com.example.security.SecurityConfig` → `.windsurf/rules/com-example-security-SecurityConfig.md`
-- `com.example.service.EvidenceBasedShowcase` → `.windsurf/rules/com-example-service-EvidenceBasedShowcase.md`
-- `com.example.service.InventoryService` → `.windsurf/rules/com-example-service-InventoryService.md`
-- `com.example.service.LayeredDomainService` → `.windsurf/rules/com-example-service-LayeredDomainService.md`
-- `com.example.service.NewAnnotationsShowcase` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase.md`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.windsurf/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md`
-- `com.example.service.NotificationService` → `.windsurf/rules/com-example-service-NotificationService.md`
-- `com.example.service.OrderService` → `.windsurf/rules/com-example-service-OrderService.md`
-- `com.example.service.PricingService` → `.windsurf/rules/com-example-service-PricingService.md`
-- `com.example.service.PublicPaymentController` → `.windsurf/rules/com-example-service-PublicPaymentController.md`
-- `com.example.service.TransactionalPaymentService` → `.windsurf/rules/com-example-service-TransactionalPaymentService.md`
-- `com.example.strategy.PaymentStrategy` → `.windsurf/rules/com-example-strategy-PaymentStrategy.md`
-- `com.example.strategy.impl.CreditCardStrategy` → `.windsurf/rules/com-example-strategy-impl-CreditCardStrategy.md`
-- `com.example.utils.I18nMessageHelper` → `.windsurf/rules/com-example-utils-I18nMessageHelper.md`
-- `com.example.utils.StrictUtility` → `.windsurf/rules/com-example-utils-StrictUtility.md`
-- `com.example.utils.StringParser` → `.windsurf/rules/com-example-utils-StringParser.md`
+- `com.example.NotificationService`
+- `com.example.compliance.GdprService`
+- `com.example.concurrent.SessionCache`
+- `com.example.config.AsyncTestConfig`
+- `com.example.config.ParallelTestSettings`
+- `com.example.database.DatabaseConnector`
+- `com.example.database.UserEntity`
+- `com.example.internal.GeneratedMetadata`
+- `com.example.legacy.LegacyBridgeService`
+- `com.example.legacy.OldPaymentApi`
+- `com.example.metrics.OrderMetrics`
+- `com.example.payment.PaymentDetails`
+- `com.example.payment.PaymentProcessor`
+- `com.example.security.SecurityConfig`
+- `com.example.service.EvidenceBasedShowcase`
+- `com.example.service.InventoryService`
+- `com.example.service.LayeredDomainService`
+- `com.example.service.NewAnnotationsShowcase`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy`
+- `com.example.service.NotificationService`
+- `com.example.service.OrderService`
+- `com.example.service.PricingService`
+- `com.example.service.PublicPaymentController`
+- `com.example.service.TransactionalPaymentService`
+- `com.example.strategy.PaymentStrategy`
+- `com.example.strategy.impl.CreditCardStrategy`
+- `com.example.utils.I18nMessageHelper`
+- `com.example.utils.StrictUtility`
+- `com.example.utils.StringParser`
 # VIBETAGS-END

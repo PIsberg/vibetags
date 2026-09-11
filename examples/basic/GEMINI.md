@@ -56,38 +56,38 @@ The following elements are security-critical. AI must not weaken security proper
 - `com.example.security.SecurityConfig`: Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
 
-- `com.example.NotificationService` → `.gemini/rules/com-example-NotificationService.md`
-- `com.example.compliance.GdprService` → `.gemini/rules/com-example-compliance-GdprService.md`
-- `com.example.concurrent.SessionCache` → `.gemini/rules/com-example-concurrent-SessionCache.md`
-- `com.example.config.AsyncTestConfig` → `.gemini/rules/com-example-config-AsyncTestConfig.md`
-- `com.example.config.ParallelTestSettings` → `.gemini/rules/com-example-config-ParallelTestSettings.md`
-- `com.example.database.DatabaseConnector` → `.gemini/rules/com-example-database-DatabaseConnector.md`
-- `com.example.database.UserEntity` → `.gemini/rules/com-example-database-UserEntity.md`
-- `com.example.internal.GeneratedMetadata` → `.gemini/rules/com-example-internal-GeneratedMetadata.md`
-- `com.example.legacy.LegacyBridgeService` → `.gemini/rules/com-example-legacy-LegacyBridgeService.md`
-- `com.example.legacy.OldPaymentApi` → `.gemini/rules/com-example-legacy-OldPaymentApi.md`
-- `com.example.metrics.OrderMetrics` → `.gemini/rules/com-example-metrics-OrderMetrics.md`
-- `com.example.payment.PaymentDetails` → `.gemini/rules/com-example-payment-PaymentDetails.md`
-- `com.example.payment.PaymentProcessor` → `.gemini/rules/com-example-payment-PaymentProcessor.md`
-- `com.example.security.SecurityConfig` → `.gemini/rules/com-example-security-SecurityConfig.md`
-- `com.example.service.EvidenceBasedShowcase` → `.gemini/rules/com-example-service-EvidenceBasedShowcase.md`
-- `com.example.service.InventoryService` → `.gemini/rules/com-example-service-InventoryService.md`
-- `com.example.service.LayeredDomainService` → `.gemini/rules/com-example-service-LayeredDomainService.md`
-- `com.example.service.NewAnnotationsShowcase` → `.gemini/rules/com-example-service-NewAnnotationsShowcase.md`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.gemini/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.gemini/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.gemini/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.gemini/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md`
-- `com.example.service.NotificationService` → `.gemini/rules/com-example-service-NotificationService.md`
-- `com.example.service.OrderService` → `.gemini/rules/com-example-service-OrderService.md`
-- `com.example.service.PricingService` → `.gemini/rules/com-example-service-PricingService.md`
-- `com.example.service.PublicPaymentController` → `.gemini/rules/com-example-service-PublicPaymentController.md`
-- `com.example.service.TransactionalPaymentService` → `.gemini/rules/com-example-service-TransactionalPaymentService.md`
-- `com.example.strategy.PaymentStrategy` → `.gemini/rules/com-example-strategy-PaymentStrategy.md`
-- `com.example.strategy.impl.CreditCardStrategy` → `.gemini/rules/com-example-strategy-impl-CreditCardStrategy.md`
-- `com.example.utils.I18nMessageHelper` → `.gemini/rules/com-example-utils-I18nMessageHelper.md`
-- `com.example.utils.StrictUtility` → `.gemini/rules/com-example-utils-StrictUtility.md`
-- `com.example.utils.StringParser` → `.gemini/rules/com-example-utils-StringParser.md`
+- `com.example.NotificationService`
+- `com.example.compliance.GdprService`
+- `com.example.concurrent.SessionCache`
+- `com.example.config.AsyncTestConfig`
+- `com.example.config.ParallelTestSettings`
+- `com.example.database.DatabaseConnector`
+- `com.example.database.UserEntity`
+- `com.example.internal.GeneratedMetadata`
+- `com.example.legacy.LegacyBridgeService`
+- `com.example.legacy.OldPaymentApi`
+- `com.example.metrics.OrderMetrics`
+- `com.example.payment.PaymentDetails`
+- `com.example.payment.PaymentProcessor`
+- `com.example.security.SecurityConfig`
+- `com.example.service.EvidenceBasedShowcase`
+- `com.example.service.InventoryService`
+- `com.example.service.LayeredDomainService`
+- `com.example.service.NewAnnotationsShowcase`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy`
+- `com.example.service.NotificationService`
+- `com.example.service.OrderService`
+- `com.example.service.PricingService`
+- `com.example.service.PublicPaymentController`
+- `com.example.service.TransactionalPaymentService`
+- `com.example.strategy.PaymentStrategy`
+- `com.example.strategy.impl.CreditCardStrategy`
+- `com.example.utils.I18nMessageHelper`
+- `com.example.utils.StrictUtility`
+- `com.example.utils.StringParser`
 <!-- VIBETAGS-END -->

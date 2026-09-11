@@ -53,38 +53,38 @@ The following elements are security-critical. AI must not weaken security proper
 * `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .cursor/rules/{path, every non-alphanumeric character replaced by '-'}.mdc. Consult the file before modifying an element:
 
-- `com.example.NotificationService` → `.cursor/rules/com-example-NotificationService.mdc`
-- `com.example.compliance.GdprService` → `.cursor/rules/com-example-compliance-GdprService.mdc`
-- `com.example.concurrent.SessionCache` → `.cursor/rules/com-example-concurrent-SessionCache.mdc`
-- `com.example.config.AsyncTestConfig` → `.cursor/rules/com-example-config-AsyncTestConfig.mdc`
-- `com.example.config.ParallelTestSettings` → `.cursor/rules/com-example-config-ParallelTestSettings.mdc`
-- `com.example.database.DatabaseConnector` → `.cursor/rules/com-example-database-DatabaseConnector.mdc`
-- `com.example.database.UserEntity` → `.cursor/rules/com-example-database-UserEntity.mdc`
-- `com.example.internal.GeneratedMetadata` → `.cursor/rules/com-example-internal-GeneratedMetadata.mdc`
-- `com.example.legacy.LegacyBridgeService` → `.cursor/rules/com-example-legacy-LegacyBridgeService.mdc`
-- `com.example.legacy.OldPaymentApi` → `.cursor/rules/com-example-legacy-OldPaymentApi.mdc`
-- `com.example.metrics.OrderMetrics` → `.cursor/rules/com-example-metrics-OrderMetrics.mdc`
-- `com.example.payment.PaymentDetails` → `.cursor/rules/com-example-payment-PaymentDetails.mdc`
-- `com.example.payment.PaymentProcessor` → `.cursor/rules/com-example-payment-PaymentProcessor.mdc`
-- `com.example.security.SecurityConfig` → `.cursor/rules/com-example-security-SecurityConfig.mdc`
-- `com.example.service.EvidenceBasedShowcase` → `.cursor/rules/com-example-service-EvidenceBasedShowcase.mdc`
-- `com.example.service.InventoryService` → `.cursor/rules/com-example-service-InventoryService.mdc`
-- `com.example.service.LayeredDomainService` → `.cursor/rules/com-example-service-LayeredDomainService.mdc`
-- `com.example.service.NewAnnotationsShowcase` → `.cursor/rules/com-example-service-NewAnnotationsShowcase.mdc`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.mdc`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.mdc`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.mdc`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.cursor/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.mdc`
-- `com.example.service.NotificationService` → `.cursor/rules/com-example-service-NotificationService.mdc`
-- `com.example.service.OrderService` → `.cursor/rules/com-example-service-OrderService.mdc`
-- `com.example.service.PricingService` → `.cursor/rules/com-example-service-PricingService.mdc`
-- `com.example.service.PublicPaymentController` → `.cursor/rules/com-example-service-PublicPaymentController.mdc`
-- `com.example.service.TransactionalPaymentService` → `.cursor/rules/com-example-service-TransactionalPaymentService.mdc`
-- `com.example.strategy.PaymentStrategy` → `.cursor/rules/com-example-strategy-PaymentStrategy.mdc`
-- `com.example.strategy.impl.CreditCardStrategy` → `.cursor/rules/com-example-strategy-impl-CreditCardStrategy.mdc`
-- `com.example.utils.I18nMessageHelper` → `.cursor/rules/com-example-utils-I18nMessageHelper.mdc`
-- `com.example.utils.StrictUtility` → `.cursor/rules/com-example-utils-StrictUtility.mdc`
-- `com.example.utils.StringParser` → `.cursor/rules/com-example-utils-StringParser.mdc`
+- `com.example.NotificationService`
+- `com.example.compliance.GdprService`
+- `com.example.concurrent.SessionCache`
+- `com.example.config.AsyncTestConfig`
+- `com.example.config.ParallelTestSettings`
+- `com.example.database.DatabaseConnector`
+- `com.example.database.UserEntity`
+- `com.example.internal.GeneratedMetadata`
+- `com.example.legacy.LegacyBridgeService`
+- `com.example.legacy.OldPaymentApi`
+- `com.example.metrics.OrderMetrics`
+- `com.example.payment.PaymentDetails`
+- `com.example.payment.PaymentProcessor`
+- `com.example.security.SecurityConfig`
+- `com.example.service.EvidenceBasedShowcase`
+- `com.example.service.InventoryService`
+- `com.example.service.LayeredDomainService`
+- `com.example.service.NewAnnotationsShowcase`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy`
+- `com.example.service.NotificationService`
+- `com.example.service.OrderService`
+- `com.example.service.PricingService`
+- `com.example.service.PublicPaymentController`
+- `com.example.service.TransactionalPaymentService`
+- `com.example.strategy.PaymentStrategy`
+- `com.example.strategy.impl.CreditCardStrategy`
+- `com.example.utils.I18nMessageHelper`
+- `com.example.utils.StrictUtility`
+- `com.example.utils.StringParser`
 # VIBETAGS-END

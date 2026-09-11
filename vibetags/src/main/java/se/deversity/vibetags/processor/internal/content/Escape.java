@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal.content;
 
+import se.deversity.vibetags.annotations.AISecure;
+
 /**
  * Escapes interpolated values for the structured output formats VibeTags generates, so a value
  * containing format metacharacters (from a method signature with generics, or from a hostile
@@ -13,6 +15,7 @@ package se.deversity.vibetags.processor.internal.content;
  * an <em>unescaped</em> interpolation instead of all of them. Renaming or moving one means editing
  * that file in the same change — its entries are matched by fully qualified name and signature.
  */
+@AISecure(aspect = "Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own <locked_files> or <rule> entries in a file the agent loads on every session.")
 public final class Escape {
 
     private Escape() {}
