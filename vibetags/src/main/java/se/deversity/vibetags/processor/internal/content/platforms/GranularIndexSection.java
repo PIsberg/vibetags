@@ -159,9 +159,9 @@ final class GranularIndexSection {
             return;
         }
         sb.append("  <scoped_rules>\n")
-            .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened."
-                + Escape.xml(conventionNote(platform))
-                + " Consult the file before modifying an element.</note>\n");
+            .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened.")
+            .append(Escape.xml(conventionNote(platform)))
+            .append(" Consult the file before modifying an element.</note>\n");
         for (TaggedElement owner : owners) {
             String path = scopedPath(platform, owner, context);
             sb.append("    <element path=\"").append(Escape.xml(owner.toString()));
@@ -185,16 +185,16 @@ final class GranularIndexSection {
             return;
         }
         sb.append("\n## Scoped Rules Index\n")
-            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file."
-                + conventionNote(platform)
-                + " Consult the file before modifying an element:\n\n");
+            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file.")
+            .append(conventionNote(platform))
+            .append(" Consult the file before modifying an element:\n\n");
         for (TaggedElement owner : owners) {
             String path = scopedPath(platform, owner, context);
-            sb.append("- `").append(owner.toString()).append("`");
+            sb.append("- `").append(owner.toString()).append('`');
             if (!path.equals(conventionalPath(platform, owner))) {
-                sb.append(" → `").append(path).append("`");
+                sb.append(" → `").append(path).append('`');
             }
-            sb.append("\n");
+            sb.append('\n');
         }
     }
 }
