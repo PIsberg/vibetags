@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used
+  to print the element twice: once as the fully qualified name in `path=`, and once as the
+  dot-to-dash transform of that same name in `rules=`. `ElementNaming.granularQName` is a pure
+  transform of the FQN and the directory and suffix are fixed per platform, so in the ordinary case
+  the whole `rules=` value was derivable from the line it sat on. Because the aggregate is loaded on
+  every session, that is context spent on nothing: measured across this repo's own aggregates it was
+  117 of 127 entries and 8,219 bytes, between 10.5% and 23.5% of each file. `GranularIndexSection`
+  now states the naming convention once in the index note and emits a path only for an element whose
+  file deviates from it, which is what a `.vibetags-roles` config does when it groups several
+  elements onto one role file. `examples/basic/CLAUDE.md` fell from 10,934 to 8,954 bytes and its
+  `.cursorrules` from 8,537 to 6,646.
+
+### Added
+
+- `@AISecure` on `Escape` and `TransitiveManifestReader`, the two ends of the path by which text
+  authored outside the project reaches an agent's always-loaded instructions. A dependency JAR's
+  manifest is read by the latter and merged into the consumer's aggregate; the former is what stops
+  a value in it closing a tag and forging its own `<locked_files>` or `<rule>` entries. Both facts
+  were in the classes' javadoc, where an agent that never opens the file cannot see them; as
+  `@AISecure` they render inline in every aggregate. This also gives the repo's own output its first
+  `security_elements` section, so the always-inline safety path is now dogfooded rather than only
+  tested.
+
 ## [1.3.4] - 2026-09-10
 
 ### Fixed

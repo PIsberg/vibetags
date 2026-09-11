@@ -118,25 +118,37 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
   </core_elements>
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
+  <security_elements>
+    <element path="se.deversity.vibetags.processor.internal.TransitiveManifestReader">
+      <aspect>Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer&#39;s always-loaded instruction files, so a dependency can put text in front of the consumer&#39;s agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.</aspect>
+    </element>
+    <element path="se.deversity.vibetags.processor.internal.content.Escape">
+      <aspect>Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own &lt;locked_files&gt; or &lt;rule&gt; entries in a file the agent loads on every session.</aspect>
+    </element>
+  </security_elements>
+
+<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
-    <element path="se.deversity.vibetags.processor.AIGuardrailProcessor" rules=".claude/rules/se-deversity-vibetags-processor-AIGuardrailProcessor.md"/>
-    <element path="se.deversity.vibetags.processor.VibeTagsLogger" rules=".claude/rules/se-deversity-vibetags-processor-VibeTagsLogger.md"/>
-    <element path="se.deversity.vibetags.processor.internal.AnnotationCollector" rules=".claude/rules/se-deversity-vibetags-processor-internal-AnnotationCollector.md"/>
-    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint" rules=".claude/rules/se-deversity-vibetags-processor-internal-BuildFingerprint.md"/>
-    <element path="se.deversity.vibetags.processor.internal.EnforcementBaseline" rules=".claude/rules/se-deversity-vibetags-processor-internal-EnforcementBaseline.md"/>
-    <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GranularRulesWriter.md"/>
-    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter" rules=".claude/rules/se-deversity-vibetags-processor-internal-GuardrailFileWriter.md"/>
-    <element path="se.deversity.vibetags.processor.internal.ModuleSidecar" rules=".claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md"/>
-    <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector" rules=".claude/rules/se-deversity-vibetags-processor-internal-PartialRoundDetector.md"/>
-    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry" rules=".claude/rules/se-deversity-vibetags-processor-internal-ServiceRegistry.md"/>
-    <element path="se.deversity.vibetags.processor.internal.TransitiveManifest" rules=".claude/rules/se-deversity-vibetags-processor-internal-TransitiveManifest.md"/>
-    <element path="se.deversity.vibetags.processor.internal.WriteCache" rules=".claude/rules/se-deversity-vibetags-processor-internal-WriteCache.md"/>
-    <element path="se.deversity.vibetags.processor.internal.content" rules=".claude/rules/se-deversity-vibetags-processor-internal-content.md"/>
-    <element path="se.deversity.vibetags.processor.internal.content.PlatformRenderer" rules=".claude/rules/se-deversity-vibetags-processor-internal-content-PlatformRenderer.md"/>
-    <element path="se.deversity.vibetags.processor.internal.validation.ValidationRule" rules=".claude/rules/se-deversity-vibetags-processor-internal-validation-ValidationRule.md"/>
-    <element path="se.deversity.vibetags.processor.model" rules=".claude/rules/se-deversity-vibetags-processor-model.md"/>
-    <element path="se.deversity.vibetags.processor.model.GuardrailAnnotations" rules=".claude/rules/se-deversity-vibetags-processor-model-GuardrailAnnotations.md"/>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
+    <element path="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
+    <element path="se.deversity.vibetags.processor.VibeTagsLogger"/>
+    <element path="se.deversity.vibetags.processor.internal.AnnotationCollector"/>
+    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint"/>
+    <element path="se.deversity.vibetags.processor.internal.EnforcementBaseline"/>
+    <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter"/>
+    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
+    <element path="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
+    <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector"/>
+    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry"/>
+    <element path="se.deversity.vibetags.processor.internal.TransitiveManifest"/>
+    <element path="se.deversity.vibetags.processor.internal.TransitiveManifestReader"/>
+    <element path="se.deversity.vibetags.processor.internal.WriteCache"/>
+    <element path="se.deversity.vibetags.processor.internal.content"/>
+    <element path="se.deversity.vibetags.processor.internal.content.Escape"/>
+    <element path="se.deversity.vibetags.processor.internal.content.PlatformRenderer"/>
+    <element path="se.deversity.vibetags.processor.internal.validation.ValidationRule"/>
+    <element path="se.deversity.vibetags.processor.model"/>
+    <element path="se.deversity.vibetags.processor.model.GuardrailAnnotations"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

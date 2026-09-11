@@ -53,38 +53,38 @@ The following elements are security-critical — do not weaken their security pr
 - `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.NotificationService` → `.github/instructions/com-example-NotificationService.instructions.md`
-- `com.example.compliance.GdprService` → `.github/instructions/com-example-compliance-GdprService.instructions.md`
-- `com.example.concurrent.SessionCache` → `.github/instructions/com-example-concurrent-SessionCache.instructions.md`
-- `com.example.config.AsyncTestConfig` → `.github/instructions/com-example-config-AsyncTestConfig.instructions.md`
-- `com.example.config.ParallelTestSettings` → `.github/instructions/com-example-config-ParallelTestSettings.instructions.md`
-- `com.example.database.DatabaseConnector` → `.github/instructions/com-example-database-DatabaseConnector.instructions.md`
-- `com.example.database.UserEntity` → `.github/instructions/com-example-database-UserEntity.instructions.md`
-- `com.example.internal.GeneratedMetadata` → `.github/instructions/com-example-internal-GeneratedMetadata.instructions.md`
-- `com.example.legacy.LegacyBridgeService` → `.github/instructions/com-example-legacy-LegacyBridgeService.instructions.md`
-- `com.example.legacy.OldPaymentApi` → `.github/instructions/com-example-legacy-OldPaymentApi.instructions.md`
-- `com.example.metrics.OrderMetrics` → `.github/instructions/com-example-metrics-OrderMetrics.instructions.md`
-- `com.example.payment.PaymentDetails` → `.github/instructions/com-example-payment-PaymentDetails.instructions.md`
-- `com.example.payment.PaymentProcessor` → `.github/instructions/com-example-payment-PaymentProcessor.instructions.md`
-- `com.example.security.SecurityConfig` → `.github/instructions/com-example-security-SecurityConfig.instructions.md`
-- `com.example.service.EvidenceBasedShowcase` → `.github/instructions/com-example-service-EvidenceBasedShowcase.instructions.md`
-- `com.example.service.InventoryService` → `.github/instructions/com-example-service-InventoryService.instructions.md`
-- `com.example.service.LayeredDomainService` → `.github/instructions/com-example-service-LayeredDomainService.instructions.md`
-- `com.example.service.NewAnnotationsShowcase` → `.github/instructions/com-example-service-NewAnnotationsShowcase.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike` → `.github/instructions/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice` → `.github/instructions/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper` → `.github/instructions/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.instructions.md`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy` → `.github/instructions/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.instructions.md`
-- `com.example.service.NotificationService` → `.github/instructions/com-example-service-NotificationService.instructions.md`
-- `com.example.service.OrderService` → `.github/instructions/com-example-service-OrderService.instructions.md`
-- `com.example.service.PricingService` → `.github/instructions/com-example-service-PricingService.instructions.md`
-- `com.example.service.PublicPaymentController` → `.github/instructions/com-example-service-PublicPaymentController.instructions.md`
-- `com.example.service.TransactionalPaymentService` → `.github/instructions/com-example-service-TransactionalPaymentService.instructions.md`
-- `com.example.strategy.PaymentStrategy` → `.github/instructions/com-example-strategy-PaymentStrategy.instructions.md`
-- `com.example.strategy.impl.CreditCardStrategy` → `.github/instructions/com-example-strategy-impl-CreditCardStrategy.instructions.md`
-- `com.example.utils.I18nMessageHelper` → `.github/instructions/com-example-utils-I18nMessageHelper.instructions.md`
-- `com.example.utils.StrictUtility` → `.github/instructions/com-example-utils-StrictUtility.instructions.md`
-- `com.example.utils.StringParser` → `.github/instructions/com-example-utils-StringParser.instructions.md`
+- `com.example.NotificationService`
+- `com.example.compliance.GdprService`
+- `com.example.concurrent.SessionCache`
+- `com.example.config.AsyncTestConfig`
+- `com.example.config.ParallelTestSettings`
+- `com.example.database.DatabaseConnector`
+- `com.example.database.UserEntity`
+- `com.example.internal.GeneratedMetadata`
+- `com.example.legacy.LegacyBridgeService`
+- `com.example.legacy.OldPaymentApi`
+- `com.example.metrics.OrderMetrics`
+- `com.example.payment.PaymentDetails`
+- `com.example.payment.PaymentProcessor`
+- `com.example.security.SecurityConfig`
+- `com.example.service.EvidenceBasedShowcase`
+- `com.example.service.InventoryService`
+- `com.example.service.LayeredDomainService`
+- `com.example.service.NewAnnotationsShowcase`
+- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike`
+- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice`
+- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper`
+- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy`
+- `com.example.service.NotificationService`
+- `com.example.service.OrderService`
+- `com.example.service.PricingService`
+- `com.example.service.PublicPaymentController`
+- `com.example.service.TransactionalPaymentService`
+- `com.example.strategy.PaymentStrategy`
+- `com.example.strategy.impl.CreditCardStrategy`
+- `com.example.utils.I18nMessageHelper`
+- `com.example.utils.StrictUtility`
+- `com.example.utils.StringParser`
 <!-- VIBETAGS-END -->

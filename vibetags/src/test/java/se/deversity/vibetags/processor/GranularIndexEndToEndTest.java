@@ -128,8 +128,10 @@ class GranularIndexEndToEndTest {
         assertFalse(claude.contains("<contextual_instructions>"), "context moves to scoped files");
         // The index is present and points at the real scoped files.
         assertTrue(claude.contains("<scoped_rules>"), "scoped-rules index present");
-        assertTrue(claude.contains("rules=\".claude/rules/com-example-Gateway.md\""),
-            "index must point at the Gateway scoped file with the exact granular filename");
+        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"),
+            "a conventionally named entry resolves through the stated convention, not a repeated path");
+        assertTrue(claude.contains(".claude/rules/{path, every non-alphanumeric"),
+            "the note states the naming convention the entry relies on");
         assertTrue(h.fileExists(".claude/rules/com-example-Gateway.md"),
             "the scoped file the index points at must exist");
         // The scoped file carries the detail that left the aggregate.
@@ -162,12 +164,62 @@ class GranularIndexEndToEndTest {
         assertTrue(gemini.contains("LOCKED FILES"), "locked stays inline");
         // The index is present and points at the real scoped file.
         assertTrue(gemini.contains("## Scoped Rules Index"), "scoped-rules index present");
-        assertTrue(gemini.contains(".gemini/rules/com-example-Gateway.md"),
-            "index must point at the Gateway scoped file");
+        assertTrue(gemini.contains("- `com.example.Gateway`"),
+            "the index lists the Gateway element");
+        assertTrue(gemini.contains(".gemini/rules/{path, every non-alphanumeric"),
+            "the note states the naming convention that names its scoped file");
         assertTrue(h.fileExists(".gemini/rules/com-example-Gateway.md"),
             "the scoped file the index points at must exist");
         assertTrue(h.readFile(".gemini/rules/com-example-Gateway.md").contains("charge"),
             "per-method contract detail lives in the scoped file");
+    }
+
+    /**
+     * A scoped-rules entry whose file follows the naming convention carries no {@code rules=}
+     * attribute (issue #626).
+     *
+     * <p>{@code ElementNaming.granularQName} is a pure dot-to-dash transform of the FQN, and the
+     * directory and suffix are fixed per platform, so printing the derived path next to the FQN it
+     * was derived from spends always-loaded context on nothing. Across this repo's own aggregates
+     * that was 117 of 127 entries and 8,219 bytes. The index note states the convention instead.
+     */
+    @Test
+    void conventionalEntriesOmitTheDerivableRulesPath(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.touchOptIn(".claude/rules/.vibetags");
+        addMixedSources(h);
+        h.compile();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"),
+            "a conventionally named entry is just its FQN");
+        assertFalse(claude.contains("rules=\".claude/rules/com-example-Gateway.md\""),
+            "the derived path must not be restated next to the FQN it derives from");
+        assertTrue(claude.contains(".claude/rules/"),
+            "the note must state the directory so the pointer stays resolvable");
+        assertTrue(h.fileExists(".claude/rules/com-example-Gateway.md"),
+            "the file the convention names must exist");
+    }
+
+    /**
+     * The markdown index drops the same derivable pointer, and keeps the FQN (issue #626).
+     */
+    @Test
+    void conventionalMarkdownEntriesOmitTheDerivableRulesPath(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        addMixedSources(h);
+        h.compile();
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("- `com.example.Gateway`"),
+            "a conventionally named entry is just its FQN");
+        assertFalse(gemini.contains("\u2192 `.gemini/rules/com-example-Gateway.md`"),
+            "the derived path must not be restated next to the FQN it derives from");
+        assertTrue(gemini.contains(".gemini/rules/"),
+            "the note must state the directory so the pointer stays resolvable");
     }
 
     @Test

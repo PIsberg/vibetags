@@ -627,11 +627,12 @@ class ProjectLifecycleEndToEndTest {
         String partial = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
         assertTrue(partial.contains("alpha-routing"),
             "the module that recompiled must state its guardrails inline again");
-        assertTrue(partial.contains(".claude/rules/com-example-b-Beta.md"),
+        assertTrue(partial.contains("<element path=\"com.example.b.Beta\""),
             "measured limitation: the module that did not recompile keeps its collapsed body, so "
-                + "the aggregate still names a rule file the opt-out deleted. If this now fails, "
-                + "the dangling-pointer window has been closed - assert the guardrail is inline "
-                + "instead");
+                + "the aggregate still indexes an element whose rule file the opt-out deleted "
+                + "(the index note resolves that entry to .claude/rules/com-example-b-Beta.md). "
+                + "If this now fails, the dangling-pointer window has been closed - assert the "
+                + "guardrail is inline instead");
         assertFalse(Files.exists(root.resolve(".claude/rules/com-example-b-Beta.md")),
             "and that named file is genuinely gone, which is what makes the pointer dangling");
 

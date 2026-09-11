@@ -106,39 +106,39 @@
 
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
-    <element path="com.example.NotificationService" rules=".claude/rules/com-example-NotificationService.md"/>
-    <element path="com.example.compliance.GdprService" rules=".claude/rules/com-example-compliance-GdprService.md"/>
-    <element path="com.example.concurrent.SessionCache" rules=".claude/rules/com-example-concurrent-SessionCache.md"/>
-    <element path="com.example.config.AsyncTestConfig" rules=".claude/rules/com-example-config-AsyncTestConfig.md"/>
-    <element path="com.example.config.ParallelTestSettings" rules=".claude/rules/com-example-config-ParallelTestSettings.md"/>
-    <element path="com.example.database.DatabaseConnector" rules=".claude/rules/com-example-database-DatabaseConnector.md"/>
-    <element path="com.example.database.UserEntity" rules=".claude/rules/com-example-database-UserEntity.md"/>
-    <element path="com.example.internal.GeneratedMetadata" rules=".claude/rules/com-example-internal-GeneratedMetadata.md"/>
-    <element path="com.example.legacy.LegacyBridgeService" rules=".claude/rules/com-example-legacy-LegacyBridgeService.md"/>
-    <element path="com.example.legacy.OldPaymentApi" rules=".claude/rules/com-example-legacy-OldPaymentApi.md"/>
-    <element path="com.example.metrics.OrderMetrics" rules=".claude/rules/com-example-metrics-OrderMetrics.md"/>
-    <element path="com.example.payment.PaymentDetails" rules=".claude/rules/com-example-payment-PaymentDetails.md"/>
-    <element path="com.example.payment.PaymentProcessor" rules=".claude/rules/com-example-payment-PaymentProcessor.md"/>
-    <element path="com.example.security.SecurityConfig" rules=".claude/rules/com-example-security-SecurityConfig.md"/>
-    <element path="com.example.service.EvidenceBasedShowcase" rules=".claude/rules/com-example-service-EvidenceBasedShowcase.md"/>
-    <element path="com.example.service.InventoryService" rules=".claude/rules/com-example-service-InventoryService.md"/>
-    <element path="com.example.service.LayeredDomainService" rules=".claude/rules/com-example-service-LayeredDomainService.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase" rules=".claude/rules/com-example-service-NewAnnotationsShowcase.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-DraftKafkaIntegrationSpike.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-ImmutableProductPrice.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-SandboxTestHelper.md"/>
-    <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy" rules=".claude/rules/com-example-service-NewAnnotationsShowcase-TaxCalculatorStrategy.md"/>
-    <element path="com.example.service.NotificationService" rules=".claude/rules/com-example-service-NotificationService.md"/>
-    <element path="com.example.service.OrderService" rules=".claude/rules/com-example-service-OrderService.md"/>
-    <element path="com.example.service.PricingService" rules=".claude/rules/com-example-service-PricingService.md"/>
-    <element path="com.example.service.PublicPaymentController" rules=".claude/rules/com-example-service-PublicPaymentController.md"/>
-    <element path="com.example.service.TransactionalPaymentService" rules=".claude/rules/com-example-service-TransactionalPaymentService.md"/>
-    <element path="com.example.strategy.PaymentStrategy" rules=".claude/rules/com-example-strategy-PaymentStrategy.md"/>
-    <element path="com.example.strategy.impl.CreditCardStrategy" rules=".claude/rules/com-example-strategy-impl-CreditCardStrategy.md"/>
-    <element path="com.example.utils.I18nMessageHelper" rules=".claude/rules/com-example-utils-I18nMessageHelper.md"/>
-    <element path="com.example.utils.StrictUtility" rules=".claude/rules/com-example-utils-StrictUtility.md"/>
-    <element path="com.example.utils.StringParser" rules=".claude/rules/com-example-utils-StringParser.md"/>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
+    <element path="com.example.NotificationService"/>
+    <element path="com.example.compliance.GdprService"/>
+    <element path="com.example.concurrent.SessionCache"/>
+    <element path="com.example.config.AsyncTestConfig"/>
+    <element path="com.example.config.ParallelTestSettings"/>
+    <element path="com.example.database.DatabaseConnector"/>
+    <element path="com.example.database.UserEntity"/>
+    <element path="com.example.internal.GeneratedMetadata"/>
+    <element path="com.example.legacy.LegacyBridgeService"/>
+    <element path="com.example.legacy.OldPaymentApi"/>
+    <element path="com.example.metrics.OrderMetrics"/>
+    <element path="com.example.payment.PaymentDetails"/>
+    <element path="com.example.payment.PaymentProcessor"/>
+    <element path="com.example.security.SecurityConfig"/>
+    <element path="com.example.service.EvidenceBasedShowcase"/>
+    <element path="com.example.service.InventoryService"/>
+    <element path="com.example.service.LayeredDomainService"/>
+    <element path="com.example.service.NewAnnotationsShowcase"/>
+    <element path="com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike"/>
+    <element path="com.example.service.NewAnnotationsShowcase.ImmutableProductPrice"/>
+    <element path="com.example.service.NewAnnotationsShowcase.SandboxTestHelper"/>
+    <element path="com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy"/>
+    <element path="com.example.service.NotificationService"/>
+    <element path="com.example.service.OrderService"/>
+    <element path="com.example.service.PricingService"/>
+    <element path="com.example.service.PublicPaymentController"/>
+    <element path="com.example.service.TransactionalPaymentService"/>
+    <element path="com.example.strategy.PaymentStrategy"/>
+    <element path="com.example.strategy.impl.CreditCardStrategy"/>
+    <element path="com.example.utils.I18nMessageHelper"/>
+    <element path="com.example.utils.StrictUtility"/>
+    <element path="com.example.utils.StringParser"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>
@@ -160,7 +160,7 @@
   If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
 </rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
     <element path="com.example.gmm.app.App" rules=".claude/rules/reactor-spine.md"/>
   </scoped_rules>
 
@@ -198,7 +198,7 @@ Conventions the dependency's authors documented. Follow them unless this project
 
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
     <element path="com.example.gmm.core" rules=".claude/rules/reactor-spine.md"/>
     <element path="com.example.gmm.core.IrNode" rules=".claude/rules/reactor-spine.md"/>
   </scoped_rules>
@@ -222,9 +222,9 @@ Conventions the dependency's authors documented. Follow them unless this project
   If you are asked to modify any file listed in <audit_requirements>, you must first silently analyze your proposed code for the listed <vulnerability_check> items. If your code introduces these vulnerabilities, you must rewrite it before displaying it to the user.
 </rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
-    <element path="com.example.gmm.platform.FeatureGate" rules=".claude/rules/com-example-gmm-platform-FeatureGate.md"/>
-    <element path="com.example.gmm.platform.Telemetry" rules=".claude/rules/com-example-gmm-platform-Telemetry.md"/>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
+    <element path="com.example.gmm.platform.FeatureGate"/>
+    <element path="com.example.gmm.platform.Telemetry"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

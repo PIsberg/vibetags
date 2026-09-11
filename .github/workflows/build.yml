@@ -904,7 +904,12 @@ jobs:
           # per-class one. platform sits outside the glob and keeps its per-class name. Asserting
           # both is what stops a change to the role config from quietly emptying one path.
           grep -qF '.claude/rules/reactor-spine.md' CLAUDE.md
-          grep -qF '.claude/rules/com-example-gmm-platform-Telemetry.md' CLAUDE.md
+          # Telemetry is unrouted, so since #626 its file is named by the convention stated once
+          # in the index note rather than by a path repeated on its entry. Assert the entry, the
+          # note, and (below) the file itself: that is the same two-stem-namespace property the
+          # explicit path used to prove.
+          grep -qF '<element path="com.example.gmm.platform.Telemetry"/>' CLAUDE.md
+          grep -qF '.claude/rules/{path, every non-alphanumeric character replaced by' CLAUDE.md
           # The safety bucket must NOT move into a scoped file: an agent has to see @AILocked
           # without opening anything.
           grep -qF '<locked_files>' CLAUDE.md
@@ -1044,7 +1049,10 @@ jobs:
           # be reachable, so the count is asserted rather than merely the region marker.
           grep -qF "VIBETAGS-MODULE: annotations-showcase" CLAUDE.md \
             || { echo "::error::annotations-showcase is missing from the reactor root merge"; exit 1; }
-          indexed=$(grep -c 'rules=".claude/rules/com-example-' CLAUDE.md)
+          # Counts index entries, not explicit rules= pointers: since #626 a conventionally
+          # named entry carries only its path=, so counting the attribute would count zero on a
+          # perfectly merged reactor.
+          indexed=$(grep -c '<element path="com.example' CLAUDE.md)
           if [ "$indexed" -lt 30 ]; then
             echo "::error::the root index names only $indexed showcase elements; the merge dropped some"
             exit 1

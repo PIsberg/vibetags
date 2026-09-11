@@ -35,7 +35,7 @@
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Consult the referenced file before modifying an element.</note>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
     <element path="com.example.alltiers.billing.InvoiceController" rules=".claude/rules/api-endpoints.md"/>
     <element path="com.example.alltiers.billing.LedgerEntry" rules=".claude/rules/domain-model.md"/>
     <element path="com.example.alltiers.billing.PaymentGateway" rules=".claude/rules/payments.md"/>

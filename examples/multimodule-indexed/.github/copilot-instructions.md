@@ -16,11 +16,11 @@ The following elements are security-critical — do not weaken their security pr
 - `com.example.indexed.app.DocumentSearchView` - Security-critical code [Query handling]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.indexed.app.DocumentImportJob` → `.github/instructions/com-example-indexed-app-DocumentImportJob.instructions.md`
-- `com.example.indexed.app.DocumentSearchView` → `.github/instructions/com-example-indexed-app-DocumentSearchView.instructions.md`
-- `com.example.indexed.app.DocumentService` → `.github/instructions/com-example-indexed-app-DocumentService.instructions.md`
+- `com.example.indexed.app.DocumentImportJob`
+- `com.example.indexed.app.DocumentSearchView`
+- `com.example.indexed.app.DocumentService`
 <!-- VIBETAGS-MODULE-END: app -->
 <!-- VIBETAGS-MODULE: core -->
 # GitHub Copilot Instructions
@@ -48,10 +48,10 @@ The following elements are well-tested core components — change with extreme c
 - `com.example.indexed.core.DocumentIndexEntry` — sensitivity: high. Index entries are read by every module; a field change is a format change
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Consult the referenced file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.indexed.core.DocumentIndexEntry` → `.github/instructions/com-example-indexed-core-DocumentIndexEntry.instructions.md`
-- `com.example.indexed.core.DocumentModel` → `.github/instructions/com-example-indexed-core-DocumentModel.instructions.md`
-- `com.example.indexed.core.DocumentRetention` → `.github/instructions/com-example-indexed-core-DocumentRetention.instructions.md`
+- `com.example.indexed.core.DocumentIndexEntry`
+- `com.example.indexed.core.DocumentModel`
+- `com.example.indexed.core.DocumentRetention`
 <!-- VIBETAGS-MODULE-END: core -->
 <!-- VIBETAGS-END -->

@@ -6,6 +6,7 @@ import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.processor.model.TransitiveRule;
 
 import javax.annotation.processing.Filer;
@@ -61,6 +62,7 @@ import java.util.TreeSet;
  * <p>Gradle looks like that case and is not: it wraps the environment rather than hiding the trees,
  * so discovery goes through {@link SourcePositionResolver#treesFor}, which unwraps it.
  */
+@AISecure(aspect = "Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer's always-loaded instruction files, so a dependency can put text in front of the consumer's agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.")
 public final class TransitiveManifestReader {
 
     /** Marker file at the consumer root that opts a project into reading dependency manifests. */
