@@ -4,6 +4,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.WriteCache;
 
@@ -59,7 +62,9 @@ class GuardrailFileWriterAsyncTest {
         }
     }
 
-    @AsyncTest(threads = 8, invocations = 20, timeoutMs = 60_000)
+    @AsyncTest(threads = 8, invocations = 20, timeoutMs = 60_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void handAuthoredContentSurvivesTheParallelWritePhase() throws IOException {
         // One distinct file per worker, as in the real write phase: the concurrency is across
         // files, over shared writer and cache state.

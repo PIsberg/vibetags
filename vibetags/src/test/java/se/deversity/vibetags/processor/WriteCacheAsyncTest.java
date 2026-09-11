@@ -3,6 +3,9 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.BeforeEach;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.WriteCache;
 
 import java.io.IOException;
@@ -27,7 +30,9 @@ class WriteCacheAsyncTest {
         this.cache = new WriteCache(tempDir.resolve(".vibetags-cache"));
     }
 
-    @AsyncTest(threads = 10, invocations = 20, timeoutMs = 30_000)
+    @AsyncTest(threads = 10, invocations = 20, timeoutMs = 30_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void testConcurrentCacheOperations() throws IOException {
         String uniqueId = UUID.randomUUID().toString();
         Path file = rootDir.resolve("file-" + uniqueId + ".txt");

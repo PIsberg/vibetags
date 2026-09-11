@@ -4,6 +4,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 
 import java.io.IOException;
@@ -79,7 +82,9 @@ class ModuleSidecarAsyncTest {
      */
     private static final int CYCLES_PER_INVOCATION = 15;
 
-    @AsyncTest(threads = 8, invocations = 6, timeoutMs = 120_000)
+    @AsyncTest(threads = 8, invocations = 6, timeoutMs = 120_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void concurrentSavesAndReadsNeverTearOrPruneASibling() throws IOException {
         // One module per worker, all sharing one reactor root — the shape of a parallel reactor.
         String moduleId = "mod" + Thread.currentThread().threadId();
