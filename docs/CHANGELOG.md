@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A warning when a hand-authored top-level key collides with a generated YAML block** (#635).
+  VibeTags keeps text outside its markers, as it must, so a user's own `read:` in `.aider.conf.yml`
+  survives next to the generated one and the document declares the key twice. PyYAML keeps the
+  last occurrence and drops the other with nothing logged; a strict loader rejects the file. The
+  warning names both lines and which one is read, fires on every build including ones the
+  fingerprint short-circuit skips, and covers all seven YAML platforms by reading their keys off the
+  renderers. `HandAuthoredYamlKeyEndToEndTest` was red against the unchanged processor on four of
+  its five cases (the fifth asserts silence).
+
+  The previous advice in PLATFORMS.md, to move your own `read:` entries inside the generated block,
+  was wrong and is gone: a probe showed the block is rewritten on the next build and those entries
+  are lost.
+
 - **Gemini Code Assist** (`.gemini/styleguide.md`) and **aider's `.aider.conf.yml`**. 42 AI
   platforms, 52 config files.
 

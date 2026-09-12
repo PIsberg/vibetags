@@ -208,6 +208,9 @@ and this section seem to disagree, the enforcing test decides.
   `ModernJavaRules` under `processor/internal/validation/` — never a new loop in
   `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
   `scans()`, and the registry runs one round query per annotation type however many rules share it.
+  A check over an output file's existing content rather than over annotated elements follows the
+  same split: the logic is a class in `processor/internal/validation/` (`DuplicateYamlKeyRule`), and
+  the class that runs it (`HandAuthoredYamlKeyWarner`) only finds the files and reports.
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
   annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
   `add-platform` / `add-annotation` skills rather than improvising.
