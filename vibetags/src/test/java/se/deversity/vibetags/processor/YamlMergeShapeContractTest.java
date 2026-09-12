@@ -118,6 +118,43 @@ class YamlMergeShapeContractTest {
         assertEquals(null, PlatformRendererRegistry.mergeShapeFor("not-a-service-key"));
     }
 
+    /**
+     * The declared empty body is re-emitted verbatim when every module contributed nothing, so its
+     * own leading whitespace has to be the declared indent rather than stripped.
+     *
+     * <p>Found by extending {@code examples/multimodule}, not by a unit test: a shape whose
+     * emptyBody had been {@code strip()}ped rendered {@code read:} then {@code - CONVENTIONS.md} at
+     * column 0 in a reactor build, against column 2 in a single-module one. That one parses either
+     * way, which is exactly why it survived, but the same mistake under a block scalar dedents text
+     * out of the scalar and breaks the document. Checking it here covers every platform rather than
+     * the one that happened to get a fixture.
+     */
+    @Test
+    void mergingModulesThatAllContributedNothing_keepsTheDeclaredIndent() {
+        for (Platform platform : platformsWithAShape()) {
+            YamlMergeShape shape = shapeOf(platform);
+            if (shape.keyedBuckets() || shape.emptyBody().isBlank()) {
+                continue;
+            }
+            String empty = render(platform, GuardrailModel.EMPTY);
+            String merged = shape.merge(
+                List.of(Map.entry("alpha", empty), Map.entry("beta", empty)),
+                id -> "# VIBETAGS-MODULE: " + id,
+                id -> "# VIBETAGS-MODULE-END: " + id);
+            assertNotNull(merged, platform + ": merge returned null for two empty contributions");
+
+            String body = afterAnchor(merged, shape.anchor());
+            String firstLine = body.lines()
+                .filter(l -> !l.isBlank() && !l.strip().startsWith("#"))
+                .findFirst().orElse("");
+            int actual = firstLine.length() - firstLine.stripLeading().length();
+            assertEquals(shape.indent(), actual,
+                platform + ": a reactor where no module contributed re-emits the empty body at "
+                    + "column " + actual + ", but the shape declares " + shape.indent()
+                    + ". Declare emptyBody with its indentation. Merged:\n" + merged);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------

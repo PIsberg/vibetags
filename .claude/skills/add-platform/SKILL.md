@@ -11,6 +11,26 @@ Void/Roo, `406f353` Firebase AI — the smallest recent example). If a path belo
 architecture has drifted since — `grep -rn "FIREBASE" vibetags/src/main/java` from the repo root
 will re-locate every dispatch point this skill lists.
 
+## Step 0a — Verify the path at the vendor, before anything else
+
+**Every** candidate path checked against a vendor's own docs rather than a cross-tool round-up has
+so far turned out wrong or stale: Warp, Antigravity, OpenHands, Kilo and Crush in the 2026-09-08
+sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continuerules` in the
+2026-09-12 one (#638, #640). Nine for nine. Read the vendor's page before writing a line.
+
+- If the docs page is a JS app, behind a login, or 404s, get the shape from **real files**:
+  `gh api -X GET search/code -f q='filename:X' --jq '.items[].repository.full_name'`, then
+  `curl -sL https://raw.githubusercontent.com/<repo>/HEAD/<path>`. That is how Zencoder's front
+  matter (`description` + `alwaysApply`) was settled rather than guessed.
+- **Adoption prompts the look and never settles it.** `.aiignore` sits in 820 repositories and is
+  worth nothing, because JetBrains states that a project with `.cursorignore`, `.codeiumignore` or
+  `.aiexclude` needs no `.aiignore` — and VibeTags writes all three. Ask what the tool *reads*, not
+  what people have.
+- Check the product is alive. Cody retired 2025-07-23, Supermaven 2025-11. Nothing in the build can
+  notice a vendor sunsetting a product (#641).
+- If the path is reached by a file VibeTags already writes (`AGENTS.md`, `.cursorrules`,
+  `CLAUDE.md`), a second copy of the same content is not reach, it is duplication. Say so and stop.
+
 ## Step 0 — Decide the shape before touching code
 
 - **New platform or new format of an existing one?** Claude Code's local-override/granular/Skill
@@ -59,7 +79,11 @@ will re-locate every dispatch point this skill lists.
      you rely on then needs a `case YOUR_PLATFORM:` (Step 5).
    - *Ignore-only file*: don't write a renderer — add a `case YOUR_IGNORE:` to
      `IgnoreFileRenderer.getPlatformSpecificName()` and route the Platform enum constant to
-     `IGNORE_FILE_RENDERER` in the registry (Step 4).
+     `IGNORE_FILE_RENDERER` in the registry (Step 4). **Then add the same case to
+     `AIIgnoreFormatter`'s glob branch.** Its `default` arm writes nothing, so an ignore file wired
+     through `ServiceRegistry` and the registry but missed there is created, opted into, and left
+     holding a header with no globs under it: nothing thrown, nothing logged, and an existence check
+     green. Assert the glob in the test, never the file.
    - *Delegating*: wrap and forward to the existing renderer's `render()` (`FirebaseRenderer`).
    - **YAML output** — also override `mergeShape()`. A YAML document has one of each top-level key,
      and the multi-module merge stacks whole renderings unless told otherwise, so without this the
@@ -135,7 +159,8 @@ will re-locate every dispatch point this skill lists.
 
 12. **Docs — four places, none auto-propagate:**
     - `docs/PLATFORMS.md` — add the file / platform / format table row
-    - `CLAUDE.md` (repo root) — the same "Output files" table, kept as a second hand-authored copy
+    - `USAGE.md` — the `touch`/`mkdir -p` opt-in block (the root `CLAUDE.md` no longer carries a
+      second copy of the output table; it links to `docs/PLATFORMS.md`)
     - `README.md` — add a `- **Name** — ...` bullet under `### Supported AI Platforms` **only if
       this is a new platform**, not a new format of one already listed; if you do, bump the
       `**N AI platforms**` figure in the project-facts line to match — `ProjectFactsConsistencyTest`
@@ -143,6 +168,56 @@ will re-locate every dispatch point this skill lists.
       Windsurf are deliberately counted once each despite appearing under two formats)
     - `.claude/skills/vibetags-usage/SKILL.md` — add the `touch`/`mkdir -p` line to the Quick
       Setup block and a row to "Supported Output Files"
+
+## Three gates no Maven build runs
+
+`mvn verify -Pe2e` green does not mean CI is green. Each of these has failed a platform PR after a
+clean local suite:
+
+1. **`.github/actions/verify-generated-files`** — a hardcoded file list plus content greps, run
+   against `examples/basic`. Add the new file to the list, and prefer a **content** assertion over
+   an existence one: `CONVENTIONS.md` existed and was non-empty for eleven releases while aider
+   never opened it, so "exists" is the property that was true throughout the defect. **Run the
+   action's body, do not read it** — extract every `run: |` block into a file and
+   `bash -e -o pipefail` it from `examples/basic`. A hand edit put a literal backslash-n into that
+   list and turned the loop into `FAIL n missing` across every Maven, Gradle and cross-platform job.
+2. **Architecture Diagram Drift** — fingerprints which types exist, so *any new renderer class*
+   makes the committed SVGs stale. Do not reproduce the code-karta toolchain: the job uploads a
+   `regenerated-diagrams` artifact. `gh run download <run> -n regenerated-diagrams -D /tmp/diag`,
+   copy the five SVGs over `docs/diagrams/codekarta/`, commit. Budget one CI round-trip for it.
+3. **Static analysis** — `mvn test` runs none of it. Use **`mvn -B verify -Pe2e`**; PMD, CPD and
+   SpotBugs bind to `verify`, and PMD has caught `InefficientStringBuffering` in new renderer code
+   before.
+
+## Two traps when regenerating an example
+
+**Clear `.vibetags-cache` first.** The write cache and fingerprint short-circuit mean an unchanged
+"no diff" is ambiguous: the processor may simply not have run. `rm -f .vibetags-cache` before
+rebuilding, or a stale fixture looks like a correct one.
+
+**Regenerate `examples/multimodule` with `mvn clean verify`, not `mvn clean compile`.** Its `tests`
+module has no main sources, so `compile` never shows the processor that module's annotated test
+sources and it contributes nothing. CI runs `verify`, sees the module, and the byte-for-byte drift
+gate goes red on a `VIBETAGS-MODULE: tests` block the local build never produced. The tell that the
+fixture is stale rather than the renderer wrong: every other aggregate in that reactor already
+carries a `tests` block. The Gradle reactor has the same shape — use `./gradlew clean build -x test`,
+not `compileJava`.
+
+Both reactors also assert a **hardcoded active-service count** in `.github/workflows/build.yml`
+(`expected=` appears twice, once per reactor). Adding an opt-in to either example moves it, and no
+Maven build checks either one. Rebuild the reactor and read the number out of its own
+`vibetags.log` rather than doing the arithmetic.
+
+## Extend the multi-module examples too, when the shape calls for it
+
+`examples/basic` is the exhaustive fixture and `ExampleOptInCoverageTest` enforces it. The others
+carry deliberate subsets (`examples/INDEX.md` is the ledger), so do not add a new file to all of
+them by reflex. One case does call for it: **a YAML platform with a `mergeShape()` belongs in
+`examples/multimodule` and `examples/gradle-multimodule`**, which already opt into every other one
+(`.coderabbit.yaml`, `sweep.yaml`, `.plandex.yaml`, `.roomodes`). Those are the byte-for-byte drift
+gate for the merge, and the unit tests do not cover the re-emit path: `.aider.conf.yml` shipped with
+a `strip()`ped `emptyBody` that dedented the sequence to column 0 in a reactor and column 2 in a
+single module, and only building the multi-module example showed it.
 
 ## Verify
 

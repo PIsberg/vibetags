@@ -1,7 +1,7 @@
 # Examples coverage index
 
 What each example exercises and how CI verifies it, audited against
-`.github/workflows/build.yml` on 2026-08-31, manifest row updated 2026-09-05. [README.md](README.md) is the narrative guide for
+`.github/workflows/build.yml` on 2026-08-31, manifest row updated 2026-09-05, YAML-merge row 2026-09-12. [README.md](README.md) is the narrative guide for
 picking an example to read; this file is the coverage ledger. When the two disagree, the workflow
 file wins: every gate named below is a step that exists there.
 
@@ -24,6 +24,15 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 | [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included; inherited rules from a pre-extracted manifest render under their origin, the `manifest.max` cap drops exactly the advisory rule |
 | [`groovy/`](groovy/) | Gradle | 1 | 3 | byte for byte, whole directory | annotated class and method appear; the `@AIPrivacy` field does NOT (groovyc stubs carry no fields) |
 | [`scala/`](scala/) | Gradle | 1 | 2 | byte for byte, whole directory | annotated Java class appears, Scala class does not |
+
+### Which examples carry a YAML merge-shape platform
+
+`multimodule/` and `gradle-multimodule/` are the drift gate for `PlatformRenderer.mergeShape()`,
+so every YAML platform that declares one is opted into both: `.coderabbit.yaml`, `sweep.yaml`,
+`.plandex.yaml`, `.roomodes` and, since 2026-09-12, `.aider.conf.yml`. A YAML platform added to
+`basic/` alone has its shape checked by `YamlMergeShapeContractTest` against a single rendering and
+never against a real reactor merge, which is how `.aider.conf.yml` first shipped re-emitting its
+entry at column 0 in a reactor and column 2 in a single module.
 
 ## Feature map
 
