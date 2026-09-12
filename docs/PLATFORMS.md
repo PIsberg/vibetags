@@ -88,7 +88,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
 | `.goosehints` | goose (Block) | Markdown |
 | `.antigravityignore` | Antigravity AI | Glob patterns |
-| `.clinerules` | Cline AI assistant | Markdown |
+| `.clinerules` | Cline AI assistant (single file) | Markdown |
+| `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `.void/rules.md` | Void Editor | Markdown |
@@ -111,11 +112,11 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
-Claude Code's granular rules (`.claude/rules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
+Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
-**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. (`CLAUDE.local.md` follows `CLAUDE.md`; the other twelve granular platforms have no aggregate counterpart, so nothing is de-duplicated for them.)
+**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together.)
 
 **Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
 
@@ -188,12 +189,35 @@ reads. Removal belongs to a major version, tracked in #641.
 | `gemini_instructions.md` | **No vendor source found.** Google documents `GEMINI.md` for the Gemini CLI (configurable via `contextFileName`), `.idx/airules.md` for Firebase, and `.gemini/styleguide.md` for the GitHub reviewer. This path appears in none of them. It sits in 55 public repositories, none of them VibeTags consumers, so people do write it -- but no documentation says anything reads it. | [Gemini CLI context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) |
 | `.cody/config.json`, `.codyignore` | **Product retired.** Sourcegraph retired Cody Free and Pro on 23 July 2025; the successor, Amp, reads `AGENTS.md`, which VibeTags writes. 4 and 3 public repositories. | [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans) |
 | `.supermavenignore` | **Product sunset.** Supermaven was acquired by Anysphere in November 2024 and the standalone product was discontinued in November 2025; its technology is inside Cursor Tab, and VibeTags writes `.cursorignore`. 5 public repositories. | [Cursor's announcement](https://cursor.com/blog/supermaven) |
-| `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file. Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md`, all of which VibeTags writes, so no Cline user loses guardrails over this. #642 covers writing the directory form. |
+| `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags now writes the directory form as well (see [Cline's two shapes at one path](#clines-two-shapes-at-one-path)), so the file is kept for projects that already have it rather than as the recommended opt-in. |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file
 outlives the product it was generated for. Nothing in the build can notice that, which is why it is
 checked by hand and written down here.
+
+### Cline's two shapes at one path
+
+Cline reads `.clinerules` as either a single file or a directory of rule files, and VibeTags writes
+both: the `cline` service for the file, `cline_granular` for the directory. They share one path, so
+which one activates is decided by what is on disk. A regular file opts into the file, a directory
+opts into the directory, and the two can never both be active in one project.
+
+The directory's rule files carry `paths:` front matter, the same shape Claude Code uses. That is read
+from Cline's source rather than its prose: `rule-helpers.ts` parses each file's YAML front matter and
+activates a rule when a `paths:` glob matches a file in the task's context, and that context includes
+files Cline is about to edit. A rule without front matter would load on every request instead.
+
+**Cline converts the file for you, and nothing is lost when it does.** Creating a workspace rule from
+Cline's UI while a `.clinerules` file exists turns the file into a directory and moves its content
+into `.clinerules/default-rules.md`. The next build sees a directory, switches to the directory form,
+and sweeps the moved VibeTags block out of `default-rules.md` as a stale copy, leaving your own text
+in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for step.
+
+**How the README counts it.** `.clinerules` is counted once among the config files and once among
+the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
+it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there.
+
 ### Three ignore files added, and three checked and refused
 
 `@AIIgnore` already drove fifteen exclusion files. Three more were added because each is the only

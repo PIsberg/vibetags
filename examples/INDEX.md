@@ -41,7 +41,7 @@ Which example to read for a given processor feature.
 | Feature | Where |
 |---|---|
 | All 44 annotations in use | `basic`, `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
-| Every supported platform's output committed | `basic`, enforced by `ExampleOptInCoverageTest` rather than by convention. It had lapsed: `.gemini/rules` shipped in #320 and no example opted into it until the 2026-09 sweep, so Gemini's granular output and the `GEMINI.md` index collapse had no committed fixture for four releases. |
+| Every supported platform's output committed | `basic`, enforced by `ExampleOptInCoverageTest` rather than by convention. It had lapsed: `.gemini/rules` shipped in #320 and no example opted into it until the 2026-09 sweep, so Gemini's granular output and the `GEMINI.md` index collapse had no committed fixture for four releases. One platform is exempt and covered elsewhere: Cline's `.clinerules/` directory shares its path with the `.clinerules` file `basic` carries, so `multimodule-indexed` carries it, and the test checks that it does (#642). |
 | Enforcing mode (`-Avibetags.enforce`, `.vibetags-baseline`, `-Avibetags.baseline.update`) | `enforcing` |
 | Sidecar merge into a root aggregate | every reactor example |
 | Granular rules grouped by role (`.vibetags-roles`) | `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
