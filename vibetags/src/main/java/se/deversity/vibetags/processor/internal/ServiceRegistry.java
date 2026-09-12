@@ -233,7 +233,7 @@ public final class ServiceRegistry {
     public static Set<String> resolveActiveServices(Map<String, Path> allServiceFiles) {
         Set<String> active = new HashSet<>();
         allServiceFiles.forEach((key, path) -> {
-            if (OPT_IN_KEYS.contains(key) && Files.exists(path)) {
+            if (OPT_IN_KEYS.contains(key) && optedIn(key, path)) {
                 active.add(key);
             }
         });
@@ -245,6 +245,27 @@ public final class ServiceRegistry {
             active.remove("codex");
         }
         return active;
+    }
+
+    /**
+     * True when {@code path} is the <em>kind</em> of filesystem entry the service writes.
+     *
+     * <p>This used to be a bare {@code Files.exists}, and the shape of that bug is worth keeping
+     * written down. Two platforms map a single-file service and a directory service to the same
+     * path, because the vendor changed which one it reads: Cline documents {@code .clinerules/} as
+     * a directory of rule files and no longer documents the single {@code .clinerules} file
+     * VibeTags wrote. A user following the current docs creates the directory, {@code exists()} is
+     * true for it, the file service activates, and the writer is handed a directory to write a
+     * regular file over.
+     *
+     * <p>A path cannot be both, so the entry's type is an unambiguous signal for which of the two
+     * the user meant. Granular services write a directory; everything else writes a file. The
+     * {@code _granular} suffix is already load-bearing elsewhere — {@code PlatformRendererRegistry}
+     * routes on it and {@code GuardrailContentBuilder} filters on it — so this reads an existing
+     * convention rather than inventing a second one.
+     */
+    private static boolean optedIn(String key, Path path) {
+        return key.endsWith("_granular") ? Files.isDirectory(path) : Files.isRegularFile(path);
     }
 
     /**

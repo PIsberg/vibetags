@@ -39,7 +39,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a link four lines below said 49. `ProjectFactsConsistencyTest` pinned the first and not the
   second.
 
+### Fixed
+
+- A `.clinerules/` **directory** no longer activates the single-file `cline` service. Cline's
+  current documentation describes `.clinerules/` as a directory of rule files and does not mention
+  the single file VibeTags writes, so a user following those docs created a directory at exactly the
+  path the `cline` service maps to. `ServiceRegistry.resolveActiveServices` opted in on
+  `Files.exists`, which is true for a directory, and the writer was then handed a directory to write
+  a regular file over.
+
+  The fix reads the entry's type: a granular service needs a directory, everything else needs a
+  regular file. A path cannot be both, so its type is an unambiguous signal for which of the two the
+  user meant. The `_granular` suffix was already load-bearing in `PlatformRendererRegistry` and
+  `GuardrailContentBuilder`, so this reads an existing convention rather than inventing one.
+
+  `ClineDirectoryOptInTest` was written first and confirmed red against `main`. VibeTags still does
+  not write the directory form; #642 says what that needs and why it was not folded into a bug fix.
+
 ### Changed
+
+- Four generated outputs are now documented as naming a tool that has moved on, in
+  [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
+  (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`
+  (Cody Free and Pro retired 23 July 2025; the successor Amp reads `AGENTS.md`),
+  `.supermavenignore` (standalone product discontinued November 2025; the technology is in Cursor
+  Tab and VibeTags writes `.cursorignore`), and the single-file `.clinerules`.
+
+  Removing a service stops an opted-in consumer's file regenerating, which leaves it looking current
+  while drifting from the annotations -- worse than a file nobody reads. Removal is a breaking
+  change and belongs to a major version; #641 holds the decision and the steps.
+
 
 - `AtomicityValidator` now runs, in a surefire fork of its own (#629). The async detectors were
   switched on earlier, but that one needs bytecode instrumentation and the build attached no
