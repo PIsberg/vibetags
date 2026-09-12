@@ -6,6 +6,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 import se.deversity.asynctest.AsyncTest;
@@ -70,6 +71,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * production code to test an invariant no production caller can currently violate.
  */
 @Tag("e2e")
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class LazyFileAppenderAsyncTest {
 
     @TempDir

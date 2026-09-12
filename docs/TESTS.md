@@ -53,6 +53,18 @@ One detector is still **not run** rather than passing: `AtomicityValidator` need
 announces itself with `runner.agent.absent`. Tracked separately; do not read its silence as a clean
 bill.
 
+**The async stress classes are `@Isolated`, and that is not optional.** They hold real platform
+threads and run detector instrumentation that takes repeated thread dumps, while
+`junit-platform.properties` executes classes concurrently. Turning the detectors on without
+isolating them made `TransitiveGuardrailLifecycleE2ETest` fail three times on `windows-latest` with
+`compilation reported failure with no ERROR diagnostic` out of `buildLibraryJar` — a javac run that
+returned failure while reporting nothing, which is what an environmental failure looks like rather
+than a source error. Linux passed, and so did a sixteen-core local Windows box; only the low-core
+runner saw it. The stress classes now run alone, so their contention stays theirs.
+
+If you add an `@AsyncTest`, isolate the class. A stress test that shares a small runner with a
+compiler is testing the runner.
+
 **Reproducing an async flake.** The runner picks a fresh interleaving seed per round and logs it at
 DEBUG as `runner.round.start … seed=<n>`. To replay one, pass that value back:
 `@AsyncTest(replaySeed = <n>)`. Seeds are deliberately not pinned in committed tests — a fixed seed

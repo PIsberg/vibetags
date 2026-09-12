@@ -25,7 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   set `threads`, `invocations` and `timeoutMs` and nothing else, so roughly 190 detectors shipped in
   the dependency and none of them ran; the tests caught only what a JUnit assertion caught. They now
   set `preset = Preset.ALL, failOn = FailOn.HIGH, minTrust = TrustTier.FACT,
-  useVirtualThreads = false`.
+  useVirtualThreads = false`, and each class is now `@Isolated`.
+
+  The isolation is part of the same change, not tidying. Real platform threads plus detector
+  instrumentation, running concurrently with the javac-based end-to-end tests (JUnit executes
+  classes in parallel here), made `TransitiveGuardrailLifecycleE2ETest` fail three times on
+  `windows-latest` with `compilation reported failure with no ERROR diagnostic` out of
+  `buildLibraryJar` — a compilation that returned failure while reporting nothing, the shape of an
+  environmental failure rather than a source error. Linux passed and so did a sixteen-core local
+  Windows box; only the low-core runner saw it.
 
   `useVirtualThreads = false` is the part that matters most. The runner reports `LivelockDetector`
   and `DaemonThreadHygieneDetector` as **inert** under virtual threads, because `dumpAllThreads()`

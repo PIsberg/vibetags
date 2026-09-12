@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.BeforeEach;
 import se.deversity.asynctest.AsyncTest;
 import se.deversity.asynctest.FailOn;
@@ -19,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Concurrency stress test for {@link WriteCache} using async-test-lib.
  * Verifies that the cache is resilient under concurrent reads, writes, and invalidations.
  */
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class WriteCacheAsyncTest {
 
     private WriteCache cache;

@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.Isolated;
 import se.deversity.asynctest.AsyncTest;
 import se.deversity.asynctest.FailOn;
 import se.deversity.asynctest.Preset;
@@ -42,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * file created unique per writer (issue #554).
  */
 @Tag("e2e")
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class EnforcementBaselineAsyncTest {
 
     /**
