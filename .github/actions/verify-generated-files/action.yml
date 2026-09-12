@@ -36,7 +36,7 @@ runs:
           .mentatconfig.json sweep.yaml .plandex.yaml \
           .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
           GEMINI.md .antigravityignore \
-          .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore \
+          .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore \
           .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
           .clinerules .junie/guidelines.md .idx/airules.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \

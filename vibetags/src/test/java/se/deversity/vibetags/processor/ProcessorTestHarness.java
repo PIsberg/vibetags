@@ -162,6 +162,10 @@ class ProcessorTestHarness {
         // makes aider load the CONVENTIONS.md this harness already opts into.
         touch(".gemini/styleguide.md");
         touch(".aider.conf.yml");
+        // Ignore files for three platforms whose rules directory is already opted in above
+        touch(".rooignore");
+        touch(".continueignore");
+        touch(".augmentignore");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");

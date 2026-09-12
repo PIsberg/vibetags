@@ -127,6 +127,8 @@ mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
 mkdir -p .roo/rules                        # Roo Code (per-class rules)
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what loads CONVENTIONS.md)
+touch .rooignore .continueignore .augmentignore  # Roo / Continue / Augment exclusion lists
+touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
@@ -1388,7 +1390,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
-| `.roo/rules/*.md` | Roo Code | Markdown |
+| `.roo/rules/*.md`, `.rooignore` | Roo Code | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q | Markdown |
@@ -1622,6 +1624,8 @@ tasks.withType(JavaCompile) {
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
 | `.roo/rules/*.md` | Roo Code |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
+| `.roo/rules/*.md`, `.rooignore` | Roo Code |
+| `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `gemini_instructions.md`, `GEMINI.md`, `.aiexclude` | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |

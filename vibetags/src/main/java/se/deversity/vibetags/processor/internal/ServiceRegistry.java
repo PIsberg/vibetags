@@ -36,6 +36,9 @@ public final class ServiceRegistry {
         // v0.8.0 platforms
         "pearai_granular", "mentat", "sweep", "plandex",
         "double_ignore", "interpreter", "codeium_ignore",
+        // Ignore files for Roo Code, Continue and Augment Code, each the tool's only
+        // exclusion mechanism (see docs/PLATFORMS.md for the three that were rejected)
+        "roo_ignore", "continue_ignore", "augment_ignore",
         // v0.9.6 platforms
         "gemini_md", "antigravity_ignore",
         // v0.9.7 platforms
@@ -129,6 +132,10 @@ public final class ServiceRegistry {
         map.put("double_ignore",    root.resolve(".doubleignore"));
         map.put("interpreter",      root.resolve(".interpreter/profiles/vibetags.yaml"));
         map.put("codeium_ignore",   root.resolve(".codeiumignore"));
+        // Ignore files for three platforms whose rules directory VibeTags already writes
+        map.put("roo_ignore",       root.resolve(".rooignore"));
+        map.put("continue_ignore",  root.resolve(".continueignore"));
+        map.put("augment_ignore",   root.resolve(".augmentignore"));
         // v0.9.6 platforms
         map.put("gemini_md",          root.resolve("GEMINI.md"));
         map.put("antigravity_ignore", root.resolve(".antigravityignore"));

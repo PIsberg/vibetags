@@ -133,6 +133,9 @@ public final class PlatformRendererRegistry {
             case SUPERMAVEN_IGNORE:
             case DOUBLE_IGNORE:
             case CODEIUM_IGNORE:
+            case ROO_IGNORE:
+            case CONTINUE_IGNORE:
+            case AUGMENT_IGNORE:
             case ANTIGRAVITY_IGNORE:
             case REPOMIX_IGNORE:
             case GITINGEST_IGNORE:

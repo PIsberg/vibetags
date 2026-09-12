@@ -37,6 +37,9 @@ AI_FILES=(
   "sweep.yaml"
   ".plandex.yaml"
   ".doubleignore"
+  ".rooignore"
+  ".continueignore"
+  ".augmentignore"
   ".interpreter/profiles/vibetags.yaml"
   ".codeiumignore"
   # v0.9.6 platforms

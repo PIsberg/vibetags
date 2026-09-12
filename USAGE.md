@@ -504,6 +504,7 @@ touch .antigravityignore                     # Antigravity AI exclusion list
 
 # --- Cline, JetBrains Junie ---
 touch .clinerules                            # Cline AI assistant
+touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
