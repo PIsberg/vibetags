@@ -81,8 +81,24 @@ variable under measurement is the committed instruction stack of this repository
 
 `.github/workflows/instruction-evals.yml` runs the bank when a PR touches `CLAUDE.md`,
 `AGENTS.md`, `GEMINI.md`, or `.claude/**` - the merge gate for instruction edits - and on
-manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the workflow
-reports SKIPPED, which is not a pass. Results upload as an artifact.
+manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the evals job is
+**skipped**, not passed. Results upload as an artifact.
+
+That is a deliberate change (#632). It used to print "Skipped is not passed" and then exit 0, so
+the check went green having run nothing — and it had done exactly that on every run in recent
+history, both of the most recent release PRs included. A green tick that means "never ran" is
+indistinguishable from a measurement.
+
+The workflow now answers the question in a `preflight` job whose output gates the real one, because
+`jobs.<id>.if` cannot read the `secrets` context. With no key the evals job never starts and the
+check reads **Skipped**, which is visibly not a pass and does not block the PR.
+
+**One caveat worth knowing before you rely on it:** GitHub treats a skipped job as satisfying a
+*required* status check in branch protection. So "Skipped" is honest in the PR's check list but
+would not stop a merge if this check were ever made required. If you want it to be unmissable
+rather than merely visible, change the `if:` on the `evals` job to always run and restore a step
+that exits 1 when the key is absent — that blocks every PR touching the instruction files until the
+secret exists, which is the stricter reading of "a skipped gate is not a passed gate".
 
 The CLI itself is pinned: `evals/package.json` names the version and
 `evals/package-lock.json` carries an integrity hash per tarball, so CI installs it with

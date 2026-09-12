@@ -6,8 +6,9 @@
 # Cost: a default run is 15 headless model sessions (5 tasks x 3 trials). That is why this
 # triggers on the instruction-file paths and manual dispatch, never on every commit.
 #
-# Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not
-# a pass. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
+# Requires the ANTHROPIC_API_KEY secret; without it the evals job is SKIPPED rather than
+# reporting a green check it did not earn (#632) - see the preflight job below for why that needs
+# two jobs. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
 # so a run resolves the same integrity-checked tarballs every time instead of whatever npm
 # serves that day, and actions/setup-node pins the node/npm doing that install rather than
 # taking whatever the runner image ships. The CLI's flag surface still has to track the live
@@ -40,11 +41,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Exists only so the evals job can be SKIPPED rather than reporting a result it did not earn.
+  # `jobs.<id>.if` cannot read the `secrets` context - only github, needs, vars and inputs - so the
+  # answer has to arrive as a job output. Without this the workflow's only options were a green tick
+  # for a job that ran nothing (what it did for months, #632) or a red one that blocks every PR
+  # touching the instruction files. A skipped job is neither: the check reads "Skipped" in the PR,
+  # which is visibly not a pass.
+  preflight:
+    name: Check for the eval key
+    runs-on: ubuntu-latest
+    outputs:
+      has_key: ${{ steps.check.outputs.has_key }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - id: check
+        env:
+          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          echo "has_key=$HAVE_KEY" >> "$GITHUB_OUTPUT"
+          if [ "$HAVE_KEY" != "true" ]; then
+            {
+              echo "## Instruction evals were SKIPPED"
+              echo
+              echo "The \`ANTHROPIC_API_KEY\` repository secret is not configured, so the task bank"
+              echo "did not run. The evals job is skipped rather than green: a skipped gate is not a"
+              echo "passed gate, and a green tick here would be indistinguishable from a measurement."
+              echo
+              echo "Set the secret to turn this into a real check."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Instruction evals skipped: ANTHROPIC_API_KEY is not configured. Skipped is not passed (#632)."
+          fi
+
   evals:
     name: Instruction Evals
     runs-on: ubuntu-latest
-    env:
-      HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    needs: preflight
+    if: needs.preflight.outputs.has_key == 'true'
     steps:
       # The agent lane runs sandboxed: ephemeral runner, the API key as its only secret,
       # egress BLOCKED except what the job demonstrably needs (Anthropic API, GitHub, npm
@@ -64,15 +99,7 @@ jobs:
             raw.githubusercontent.com:443
             registry.npmjs.org:443
             nodejs.org:443
-
-      - name: Note when the key is absent
-        if: env.HAVE_KEY != 'true'
-        run: |
-          echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; the instruction evals did not run." >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Instruction evals skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.HAVE_KEY == 'true'
 
       # The lockfile pins the CLI; this pins the toolchain that installs it. Without this step
       # the job ran on whatever `ubuntu-latest` shipped that week, and the npm version is
@@ -86,7 +113,6 @@ jobs:
       # agreeing, so a Dependabot bump that raises the floor turns CI red here instead of
       # failing a $-costing eval run later. Dependabot bumps the action SHA on its own.
       - name: Pin the Node toolchain that installs the CLI
-        if: env.HAVE_KEY == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.23.2'
@@ -98,7 +124,6 @@ jobs:
       # placeholder for the native binary. Without the check that stub surfaces as a dozen
       # identical trial failures later; with it, the job stops here.
       - name: Install the claude CLI (pinned by evals/package-lock.json)
-        if: env.HAVE_KEY == 'true'
         working-directory: evals
         run: |
           npm ci
@@ -106,7 +131,6 @@ jobs:
           "$PWD/node_modules/.bin/claude" --version
 
       - name: Run the task bank
-        if: env.HAVE_KEY == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TRIALS: ${{ github.event.inputs.trials || '3' }}
@@ -122,7 +146,7 @@ jobs:
           exit $status
 
       - name: Upload trial logs
-        if: env.HAVE_KEY == 'true' && always()
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: instruction-eval-results
