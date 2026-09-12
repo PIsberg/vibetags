@@ -140,6 +140,10 @@ class DeprecatedServicesTest {
         }
         assertTrue(offered.contains("GEMINI.md") && offered.contains("AGENTS.md"),
             "still offers the replacements:\n" + note);
+        // .clinerules is both the deprecated file and the current directory (#642), so only the
+        // trailing slash tells a new user which one to create.
+        assertTrue(offered.contains(".clinerules/"),
+            "offers Cline's directory, marked as a directory:\n" + note);
     }
 
     @Test

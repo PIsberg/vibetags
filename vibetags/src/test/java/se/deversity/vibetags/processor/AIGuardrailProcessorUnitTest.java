@@ -188,24 +188,12 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void testResolveActiveServices_allFilesExist_allServicesActive(@TempDir Path tempDir) throws IOException {
-        ServiceRegistry.buildServiceFileMap(tempDir).forEach((key, p) -> {
-            try {
-                if (key.endsWith("_granular")) {
-                    Files.createDirectories(p);
-                    // Add a signal file so isNotEmpty check passes
-                    Files.createFile(p.resolve(".vibetags"));
-                } else {
-                    Files.createDirectories(p.getParent());
-                    Files.createFile(p);
-                }
-            } catch (IOException e) {
-                throw new java.io.UncheckedIOException(e);
-            }
-        });
+        createEveryServicePath(tempDir);
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         // Note: "codex" (AGENTS.md) is intentionally absent — when other AI config files are
-        // present it is treated as a pointer and left untouched (sole-file fallback rule).
+        // present it is treated as a pointer and left untouched (sole-file fallback rule). So is
+        // "cline_granular": .clinerules is a file here, and a path is one service or the other.
         Set<String> expected = Set.of(
             "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
@@ -251,6 +239,36 @@ class AIGuardrailProcessorUnitTest {
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
         assertFalse(active.contains("codex"),
             "AGENTS.md (codex) must be skipped when other AI config files are present");
+        assertFalse(active.contains("cline_granular"),
+            ".clinerules exists as a file here, so the directory service at the same path must stay off");
+    }
+
+    /**
+     * Creates every service's path in the form that service writes: a directory holding a signal
+     * file for a granular service, an empty file for everything else.
+     *
+     * <p>One path is two services. {@code .clinerules} is the {@code cline} file and the
+     * {@code cline_granular} directory, and a filesystem entry can only be one of them, so the first
+     * key in map order claims the path and the second is skipped. Creating both used to throw
+     * {@code FileAlreadyExistsException} (issue #642).
+     */
+    private static void createEveryServicePath(Path root) {
+        ServiceRegistry.buildServiceFileMap(root).forEach((key, p) -> {
+            try {
+                if (Files.exists(p)) {
+                    return; // claimed by the other service at this path
+                }
+                if (ServiceRegistry.writesDirectory(key)) {
+                    Files.createDirectories(p);
+                    Files.createFile(p.resolve(".vibetags"));
+                } else {
+                    Files.createDirectories(p.getParent());
+                    Files.createFile(p);
+                }
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        });
     }
 
     @Test

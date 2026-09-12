@@ -96,6 +96,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   destroy them. `.continuerules` was **refused**: it does not appear in Continue's current rules
   documentation, which documents `.continue/rules/` -- which VibeTags already writes.
 
+- **Cline's `.clinerules/` directory** (`.clinerules/*.md`, #642). 19 scoped-rule directories; the
+  config-file count stays 57. Cline documents only the directory now, so a user following its docs
+  got no Cline-specific output at all. The single `.clinerules` file keeps working for projects that
+  have it: Cline's loader still reads it, and a path is a file or a directory, so exactly one of
+  the two services activates.
+
+  The rule files carry `paths:` front matter, read from Cline's source rather than inferred:
+  `rule-helpers.ts` activates a rule when a `paths:` glob matches a file in the task's context,
+  including files Cline is about to edit. When Cline converts an existing `.clinerules` file into
+  the directory itself (it does, the first time a rule is created from its UI), the next build
+  sweeps the moved VibeTags block out of `default-rules.md` and keeps the user's text.
+  `ClineRulesDirectoryEndToEndTest` replays that conversion.
+
+  Two keys at one path broke three assumptions, and each was a latent bug rather than a test to
+  bend. `ProjectFactsConsistencyTest` classified directories by "no dot in the name", so it counted
+  the directory as a 58th config file; it now counts by service kind through
+  `ServiceRegistry.writesDirectory`, and requires the project-facts line to name any path counted in
+  both figures. `ExampleOptInCoverageTest` checked `Files.exists`, so `examples/basic`'s `.clinerules`
+  file satisfied the directory service and the check passed for a platform no example carried; it
+  now checks the entry's kind, and `examples/multimodule-indexed` carries the directory. And
+  `vibetags init --platforms cline_granular` reported a `.clinerules` file as "already active"; it
+  now refuses and names the platform that file belongs to.
+
 ### Deprecated
 
 - **`gemini_instructions.md`, `.cody/config.json`, `.codyignore`, `.supermavenignore` and the
@@ -112,7 +135,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a
   `platform.deprecated key=... file=... replacement=...` event per file. The "no AI config files
-  found" note stops offering them to new projects. To move off one, create the replacement, move
+  found" note stops offering them to new projects, and names directory outputs with a trailing
+  `/`, since `.clinerules` is both the deprecated file and the current directory. To move off one, create the replacement, move
   any hand-written content outside the markers across, and delete the deprecated file.
 
   Why a warning rather than a removal: removing a service stops an opted-in consumer's file
@@ -139,8 +163,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user meant. The `_granular` suffix was already load-bearing in `PlatformRendererRegistry` and
   `GuardrailContentBuilder`, so this reads an existing convention rather than inventing one.
 
-  `ClineDirectoryOptInTest` was written first and confirmed red against `main`. VibeTags still does
-  not write the directory form; #642 says what that needs and why it was not folded into a bug fix.
+  `ClineDirectoryOptInTest` was written first and confirmed red against `main`. The directory form
+  itself is written since #642, above under Added.
 
 ### Changed
 

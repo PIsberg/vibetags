@@ -196,14 +196,12 @@ class ProjectFactsConsistencyTest {
         String md = Files.readString(readme, StandardCharsets.UTF_8);
 
         Map<String, Path> services = ServiceRegistry.buildServiceFileMap(Paths.get("."));
-        // A scoped-rules entry is a directory of per-element rule files; everything else is a
-        // single config file. The file name is the only thing that distinguishes them without
-        // touching the disk, and rule directories are the ones with no extension.
-        long directories = services.values().stream()
-            .map(Path::getFileName)
-            .filter(java.util.Objects::nonNull)
-            .filter(name -> !name.toString().contains("."))
-            .count();
+        // A scoped-rules service writes a directory of per-element rule files; every other service
+        // writes a single config file. Counted per service, by the kind it writes, and not by file
+        // name: the name used to decide it ("rule directories have no extension"), and .clinerules
+        // is a name with a dot that is also Cline's rules directory, so the directory was counted as
+        // a 58th config file (issue #642).
+        long directories = services.keySet().stream().filter(ServiceRegistry::writesDirectory).count();
         long files = services.size() - directories;
 
         assertEquals(files,
@@ -214,6 +212,23 @@ class ProjectFactsConsistencyTest {
         assertEquals(directories,
             extractCount(md, "\\*\\*(\\d+) scoped-rule directories\\*\\*", "scoped-rule directory"),
             "The README's scoped-rule-directory count disagrees with ServiceRegistry.");
+
+        // A path written as a file by one service and as a directory by another is counted once in
+        // each figure, which is only honest if the README says so beside them.
+        String facts = lineOf(md, md.indexOf("**At a glance:**"));
+        List<String> unstated = new ArrayList<>();
+        services.entrySet().stream()
+            .filter(e -> ServiceRegistry.writesDirectory(e.getKey()))
+            .map(Map.Entry::getValue)
+            .filter(dir -> services.entrySet().stream().anyMatch(
+                e -> !ServiceRegistry.writesDirectory(e.getKey()) && e.getValue().equals(dir)))
+            .map(dir -> String.valueOf(dir.getFileName()))
+            .filter(name -> !facts.contains("`" + name + "`"))
+            .forEach(unstated::add);
+        assertTrue(unstated.isEmpty(),
+            "These paths are counted as a config file and as a scoped-rule directory, because two "
+                + "mutually exclusive services write them. The project-facts line must name each one, "
+                + "or its two figures silently double-count: " + unstated);
     }
 
     /**
@@ -230,12 +245,12 @@ class ProjectFactsConsistencyTest {
         String md = Files.readString(doc, StandardCharsets.UTF_8);
         Path root = Paths.get(".").toAbsolutePath().normalize();
         java.util.List<String> missing = new java.util.ArrayList<>();
-        for (Path file : ServiceRegistry.buildServiceFileMap(Paths.get(".")).values()) {
-            String rel = root.relativize(file.toAbsolutePath().normalize()).toString()
+        for (Map.Entry<String, Path> service : ServiceRegistry.buildServiceFileMap(Paths.get(".")).entrySet()) {
+            String rel = root.relativize(service.getValue().toAbsolutePath().normalize()).toString()
                 .replace(java.io.File.separatorChar, '/');
-            Path name = file.getFileName();
-            boolean directory = name != null && !name.toString().contains(".");
-            String needle = directory ? "`" + rel + "/" : "`" + rel + "`";
+            // By service kind, not by file name: .clinerules is both a file and a directory row.
+            String needle = ServiceRegistry.writesDirectory(service.getKey())
+                ? "`" + rel + "/" : "`" + rel + "`";
             if (!md.contains(needle)) {
                 missing.add(rel);
             }

@@ -156,7 +156,8 @@ mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # O
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
 touch .antigravityignore                   # Antigravity AI
-touch .clinerules                          # Cline AI assistant (deprecated, #645)
+touch .clinerules                          # Cline AI assistant (single file, deprecated #645), OR:
+# mkdir -p .clinerules                     # Cline granular rules (same path: pick one)
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 mkdir -p .grok/rules                       # Grok Build (granular per-class rules)
@@ -1651,7 +1652,8 @@ tasks.withType(JavaCompile) {
 | `.doubleignore` | Double.bot |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.codeiumignore` | Codeium |
-| `.clinerules` (deprecated) | Cline AI assistant |
+| `.clinerules` (deprecated) | Cline AI assistant (single file) |
+| `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `.grok/rules/*.md` | Grok Build (granular per-class rules) |

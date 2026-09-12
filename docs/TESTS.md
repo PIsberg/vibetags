@@ -329,6 +329,8 @@ assumed.
 | `NewPlatformsV3EndToEndTest` | `GEMINI.md` and `.antigravityignore` generation (v0.9.6) |
 | `NewPlatformsV4EndToEndTest` | AI PR reviewers (`.coderabbit.yaml`, `.pr_agent.toml`, `ellipsis.yaml`), context-packer ignore files (`.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore`), Void (`.void/rules.md`), and Roo modes (`.roomodes`) |
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
+| `ClineDirectoryOptInTest` | One path, two services: a `.clinerules/` directory activates exactly `cline_granular`, a `.clinerules` file exactly `cline` (#643, #642) |
+| `ClineRulesDirectoryEndToEndTest` | Cline's `.clinerules/*.md` directory form: per-element rules carry `paths:` front matter; a hand-written rule in the directory stays byte-identical; Cline's own file-to-directory conversion keeps the hand text in `default-rules.md` and sweeps the stale VibeTags block (#642) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |
 | `PlatformSweep202609EndToEndTest` | `.agents/rules/`, `.aiassistant/rules/`, `.augment/rules/` and `.goosehints`: front-matter-free output, Antigravity's 12,000-character rule cap, and that none collapses another platform's aggregate |
@@ -443,6 +445,6 @@ is exercised on Windows and macOS path separators):
 
 | Test class | What it covers |
 |---|---|
-| `InitCommandTest` | `vibetags init`: `--list` shows opt-in keys without creating anything; `--platforms` creates empty opt-in files (directories for `*_granular` keys, parents for nested paths); an existing file is reported active and never truncated; an unknown key rejects the whole request before creating the valid half; bare `init` creates nothing; `--dir` targets another root |
+| `InitCommandTest` | `vibetags init`: `--list` shows opt-in keys without creating anything, marking `[active]` by the kind of entry each service writes; `--platforms` creates empty opt-in files (directories for `*_granular` keys, parents for nested paths); an existing file is reported active and never truncated; a path held by the other form of a shared-path platform (a `.clinerules` file when `cline_granular` is requested) is refused, not reported active; an unknown key rejects the whole request before creating the valid half; bare `init` creates nothing; `--dir` targets another root |
 | `OnboardingLifecycleTest` | The onboarding path end to end, and the only place the CLI and the processor run against one directory: `init` creates the opt-in files, a real `AIGuardrailProcessor` round fills them, and `doctor` reports healthy, including `markers: all intact`, which is doctor recognising the marker form the writer actually emits rather than one a fixture typed. Plus the negative: half a marker pair removed from a *generated* file must be a finding |
 | `DoctorCommandTest` | `vibetags doctor`: exit 0 only for a wired project with intact markers; findings (exit 1) for missing processor/annotations wiring, no opt-in files, unbalanced `VIBETAGS-START`/`END` pairs, and no build file; the AGENTS.md pointer rule is explained as a note, not a finding |

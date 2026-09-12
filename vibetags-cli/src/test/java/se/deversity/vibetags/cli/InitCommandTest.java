@@ -96,6 +96,35 @@ class InitCommandTest {
         assertTrue(out().contains("already active"), out());
     }
 
+    /**
+     * {@code .clinerules} is two platforms at one path: the {@code cline} file and the
+     * {@code cline_granular} directory. An entry of the other kind is not "already active", it is
+     * the other platform, and saying otherwise tells the user they got the form they asked for.
+     */
+    @Test
+    void pathHeldByTheOtherFormOfThePlatform_isRefusedNotReportedActive() throws Exception {
+        Files.writeString(dir.resolve(".clinerules"), "hand-authored\n");
+
+        int code = run("init", "--platforms", "cline_granular");
+
+        assertEquals(1, code, out() + err());
+        assertFalse(out().contains("already active"), out());
+        assertTrue(err().contains(".clinerules") && err().contains("cline"), err());
+        assertEquals("hand-authored\n", Files.readString(dir.resolve(".clinerules")),
+            "the existing file is the user's; init must not replace it with a directory");
+    }
+
+    @Test
+    void list_marksOnlyTheFormThatIsActuallyOptedIn() throws Exception {
+        Files.createDirectory(dir.resolve(".clinerules"));
+
+        run("init", "--list");
+
+        assertTrue(out().contains("cline_granular -> .clinerules  [active]"), out());
+        assertFalse(out().contains("cline -> .clinerules  [active]"),
+            "a .clinerules/ directory does not activate the single-file service:\n" + out());
+    }
+
     @Test
     void unknownKey_failsBeforeCreatingAnything() {
         int code = run("init", "--platforms", "claude,notaplatform");

@@ -549,6 +549,16 @@ jobs:
             test -f ".github/instructions/$f.instructions.md" \
               || { echo "MISSING shared granular file (cross-module cleanup regression): $f"; exit 1; }
           done
+          # Cline's .clinerules/ directory (#642): the same shared-root granular merge, for a
+          # directory at a path another service writes as a file. A rule without its paths: glob
+          # never activates in Cline, so assert the front matter and the guardrail, not the file.
+          test -d .clinerules || { echo ".clinerules is no longer a directory (#642)"; exit 1; }
+          for f in com-example-indexed-core-DocumentModel com-example-indexed-app-DocumentService; do
+            awk 'NR == 2 && /^paths: \[/ { ok = 1 } END { exit !ok }' ".clinerules/$f.md" \
+              || { echo ".clinerules/$f.md has no paths: front matter, so Cline never loads it (#642)"; exit 1; }
+            grep -qF "VIBETAGS-START" ".clinerules/$f.md" \
+              || { echo ".clinerules/$f.md carries no generated rules (#642)"; exit 1; }
+          done
           # A module with nothing locked must not repeat an empty heading once per module.
           test "$(grep -c '^## Locked Files' .github/copilot-instructions.md)" = "1" \
             || { echo "empty Locked Files heading repeated per module (#319)"; exit 1; }
