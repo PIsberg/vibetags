@@ -21,7 +21,7 @@ runs:
           .cursorrules CLAUDE.md .aiexclude QWEN.md .qwenignore \
           .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
           .github/copilot-instructions.md llms.txt llms-full.txt \
-          CONVENTIONS.md .aiderignore \
+          CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
           .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
           .cursor/rules/com-example-payment-PaymentProcessor.mdc \
           .cursor/rules/com-example-database-DatabaseConnector.mdc \
@@ -88,6 +88,11 @@ runs:
         grep -q "Mandatory Security Audit Requirements" llms-full.txt || { echo "FAIL llms-full.txt audit section missing"; exit 1; }
         echo "OK llms-full.txt audit section"
         grep -q "SECURITY AUDIT: com.example.database.DatabaseConnector" CONVENTIONS.md || { echo "FAIL Aider conventions audit section missing"; exit 1; }
+        # A CONVENTIONS.md aider never reads was the defect this platform shipped with for
+        # eleven releases: the file existing is not the property that matters, the read:
+        # entry naming it is.
+        grep -q "^  - CONVENTIONS.md$" .aider.conf.yml || { echo "FAIL .aider.conf.yml does not name CONVENTIONS.md, so aider never loads it"; exit 1; }
+        grep -q "PaymentProcessor" .gemini/styleguide.md || { echo "FAIL Gemini Code Assist style guide carries no locked element"; exit 1; }
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"
