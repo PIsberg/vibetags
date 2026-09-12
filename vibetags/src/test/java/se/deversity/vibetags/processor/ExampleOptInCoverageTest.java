@@ -48,7 +48,20 @@ class ExampleOptInCoverageTest {
             + "examples/multimodule-indexed is the fixture for it",
         "locks_report",
         ".vibetags-locks is an enforcement baseline for a CI diff guard rather than a platform "
-            + "file, and examples/enforcing is the fixture that exercises it");
+            + "file, and examples/enforcing is the fixture that exercises it",
+        "cline_granular",
+        "Cline's .clinerules/ directory is the same path as the .clinerules file basic/ carries, and "
+            + "a path is a file or a directory, never both. The file stays here because basic/'s "
+            + "committed .clinerules is the drift gate for the single-file renderer; "
+            + "examples/multimodule-indexed carries the directory, checked below");
+
+    /**
+     * The exemptions above that exist only because two services share one path, and the example
+     * that carries the one basic/ cannot. {@link #everyMutuallyExclusivePlatformIsOptedIntoTheExampleItsExemptionNames}
+     * checks each, so the exemption cannot outlive its fixture.
+     */
+    private static final Map<String, String> COVERED_ELSEWHERE = Map.of(
+        "cline_granular", "examples/multimodule-indexed");
 
     @Test
     void basicExampleOptsIntoEveryPlatform() throws IOException {
@@ -62,7 +75,10 @@ class ExampleOptInCoverageTest {
                 continue;
             }
             Path target = serviceFiles.get(key);
-            if (target != null && !Files.exists(target)) {
+            // By the kind of entry the service writes, not bare existence: basic/ has a .clinerules
+            // file, and Files.exists let that stand in for the cline_granular directory, so the
+            // check passed for a platform the example did not carry at all (issue #642).
+            if (target != null && !ServiceRegistry.isOptedIn(key, target)) {
                 missing.add(key + " -> " + example.relativize(target).toString().replace('\\', '/'));
             }
         }
@@ -75,6 +91,27 @@ class ExampleOptInCoverageTest {
                 + String.join("\n  ", missing)
                 + "\nIf a platform genuinely does not belong here, add it to NOT_APPLICABLE with "
                 + "the reason and name the example that does cover it.");
+    }
+
+    /**
+     * An exemption for a platform that cannot share basic/ with another is only a decision if the
+     * example it names really carries that platform. Checked by the kind of entry the service
+     * writes, because the whole reason for the exemption is that the path exists in basic/ as the
+     * other kind.
+     */
+    @Test
+    void everyMutuallyExclusivePlatformIsOptedIntoTheExampleItsExemptionNames() {
+        assumeTrue(Files.isDirectory(REPO_ROOT.resolve("examples")), "repo layout not reachable; skipping");
+        List<String> uncovered = new ArrayList<>();
+        COVERED_ELSEWHERE.forEach((key, exampleDir) -> {
+            Path example = REPO_ROOT.resolve(exampleDir);
+            Path target = ServiceRegistry.buildServiceFileMap(example).get(key);
+            if (target == null || !ServiceRegistry.isOptedIn(key, target)) {
+                uncovered.add(key + " is exempted from examples/basic as covered by " + exampleDir
+                    + ", which does not opt into it");
+            }
+        });
+        assertTrue(uncovered.isEmpty(), String.join("\n", uncovered));
     }
 
     /**

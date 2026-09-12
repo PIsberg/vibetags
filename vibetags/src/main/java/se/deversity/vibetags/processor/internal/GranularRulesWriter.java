@@ -564,6 +564,11 @@ public final class GranularRulesWriter {
         return "";
     }
 
+    /** A {@code paths:} glob list and nothing else: the shape Claude Code and Cline both evaluate. */
+    private static String fmPaths(String desc, List<String> globs) {
+        return "---\npaths: " + arr(globs) + "\n---\n\n";
+    }
+
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
         new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
@@ -579,9 +584,7 @@ public final class GranularRulesWriter {
         new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
         new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("claude_granular", ".md",
-            (desc, globs) -> "---\npaths: " + arr(globs) + "\n---\n\n",
-            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("claude_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("copilot_granular", ".instructions.md",
             (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
             n -> "# Copilot Instructions for " + n + "\n\n"),
@@ -604,6 +607,11 @@ public final class GranularRulesWriter {
         // alwaysApply: true because a guardrail the model may decline to load is not a guardrail.
         new GranularFormat("zencoder_granular", ".md",
             (desc, globs) -> "---\ndescription: \"" + desc + "\"\nalwaysApply: true\n---\n\n",
-            n -> "# Rules for " + n + "\n\n")
+            n -> "# Rules for " + n + "\n\n"),
+        // Cline's .clinerules/ directory (issue #642). Its loader (rule-helpers.ts) parses YAML front
+        // matter and activates a rule when a paths: glob matches a file in the task's context, and
+        // that context includes files Cline is about to edit, so a locked class's rule arrives before
+        // the edit. Loading is decided by the glob, not left to the model.
+        new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n")
     );
 }

@@ -503,7 +503,9 @@ touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list
 
 # --- Cline, JetBrains Junie ---
-touch .clinerules                            # Cline AI assistant
+touch .clinerules                            # Cline AI assistant (single file), OR:
+# mkdir -p .clinerules                       # Cline (granular per-class rules). Same path: pick one
+#                                            # (Cline itself converts the file to the directory)
 touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)

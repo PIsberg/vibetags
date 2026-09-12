@@ -36,6 +36,12 @@ notes — collapses to a one-line module pointer and loads from `core/.claude/ru
 `.claudeignore` and `.copilotignore` are opted in at the root so `@AIIgnore` has somewhere to write;
 without them the processor emits a NOTE saying the annotation is used but no ignore file exists.
 
+`.clinerules/` is opted in at the root as a **directory**, Cline's granular form. `examples/basic`
+cannot carry it, because it carries the single `.clinerules` file at the same path, so this reactor
+is the fixture for it (`ExampleOptInCoverageTest` checks that). Both modules write into the one
+shared directory, the same cross-module merge `.github/instructions/` exercises, and Cline has no
+aggregate here, so nothing collapses to an index for it.
+
 ## Build
 
 Requires the in-development processor (indexed root landed in RC6). Install the library first (see the
