@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="2488" height="1872" viewBox="0 0 2488 1872">
+<svg xmlns="http://www.w3.org/2000/svg" width="2488" height="1962" viewBox="0 0 2488 1962">
 <defs>
 <style>
 svg { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -55,11 +55,11 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <path d="M0,0 L10,5 L0,10 Z" fill="#ffffff" stroke="#1d4ed8" stroke-width="1"/>
 </marker>
 </defs>
-<rect width="2488" height="1872" fill="#f9fafb"/>
-<rect width="2488" height="1872" fill="url(#dotGrid)"/>
+<rect width="2488" height="1962" fill="#f9fafb"/>
+<rect width="2488" height="1962" fill="url(#dotGrid)"/>
 <rect class="group-rect" x="1610.0" y="10.0" width="608.0" height="743.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1616.0" y="23.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content</text>
-<rect class="group-rect" x="1234.0" y="664.0" width="1208.0" height="1028.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<rect class="group-rect" x="1234.0" y="664.0" width="1208.0" height="1118.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1240.0" y="677.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.platforms</text>
 <rect class="group-rect" x="10.0" y="664.0" width="1208.0" height="820.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="677.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.annotations</text>
@@ -163,8 +163,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="SweepRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1842.5" y="401.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1218.0 Q1659.0 689.4 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1642.5" y="674.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1268.0 Q1431.1 1325.8 1468.0 1370.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" x="1439.6" y="1316.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1268.0 Q1422.1 1367.3 1468.0 1455.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" x="1435.0" y="1358.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="CodexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 678.0 Q2057.7 389.2 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="CodexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2041.8" y="389.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="CodexRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2048.0 735.5 Q1233.9 361.4 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -183,6 +183,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PrAgentRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1741.3" y="450.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="PrAgentRenderer" data-target="WholeFileMerge" data-type="HAS" d="M1628.0 825.5 Q1750.4 697.6 1824.0 536.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PrAgentRenderer" data-target="WholeFileMerge" data-type="HAS" x="1738.2" y="683.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
+<path class="edge-line" data-source="ReplitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1308.0 Q1659.6 733.4 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ReplitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1642.8" y="719.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ReplitRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1358.0 Q1431.8 1413.4 1468.0 1455.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ReplitRenderer" data-target="CursorRenderer" data-type="HAS" x="1439.9" y="1404.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="LlmsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 768.0 Q1859.9 456.3 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="LlmsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.0" y="445.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AnnotationSections" data-target="Section" data-type="HAS" d="M2048.0 863.0 Q1337.7 427.1 592.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -197,16 +201,16 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="GeminiRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.2" y="490.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1648.0 908.0 Q1040.4 451.4 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1030.2" y="460.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1558.0 1313.0 Q1771.3 730.1 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1753.7" y="718.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1313.0 Q956.7 677.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="943.4" y="685.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1313.0 Q956.7 677.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="943.4" y="685.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
-<path class="edge-line" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1308.0 Q1659.6 733.4 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1642.8" y="719.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1358.0 Q1445.8 1371.5 1468.0 1370.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" x="1446.9" y="1361.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1558.0 1398.0 Q1771.7 772.0 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1753.8" y="761.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1398.0 Q957.6 721.3 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="943.8" y="728.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1398.0 Q957.6 721.3 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="943.8" y="728.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
+<path class="edge-line" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1398.0 Q1660.2 777.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.1" y="763.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1448.0 Q1446.7 1459.0 1468.0 1455.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" x="1447.3" y="1449.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 858.0 Q1961.4 490.8 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1943.7" y="485.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 858.0 Q2059.9 481.6 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -215,10 +219,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AiderConfRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2141.6" y="477.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 948.0 Q1656.4 558.3 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1641.2" y="541.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1398.0 Q1660.0 777.4 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.0" y="763.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1455.5 Q1462.4 1419.8 1468.0 1370.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" x="1455.2" y="1410.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1488.0 Q1660.5 821.6 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.2" y="808.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1545.5 Q1463.1 1507.2 1468.0 1455.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" x="1455.6" y="1497.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 948.0 Q1758.8 552.0 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1742.4" y="538.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1448.0 1005.5 Q944.4 503.2 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -227,14 +231,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="932.2" y="510.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
 <path class="edge-line" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 948.0 Q1861.2 544.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.6" y="534.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1488.0 Q1660.6 821.7 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.3" y="808.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1538.0 Q1472.2 1460.0 1468.0 1370.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" x="1460.1" y="1451.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1578.0 Q1661.1 865.9 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.5" y="853.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1338.0 1578.0 Q1465.7 1529.0 1558.0 1428.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" x="1456.9" y="1510.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1578.0 Q1661.1 865.9 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.5" y="853.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1628.0 Q1472.7 1547.5 1468.0 1455.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" x="1460.3" y="1538.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1668.0 Q1661.4 910.2 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1643.7" y="897.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1338.0 1668.0 Q1466.1 1616.2 1558.0 1513.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" x="1457.1" y="1597.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 948.0 Q2060.8 527.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2043.4" y="526.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="CodyRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2338.0 948.0 Q2158.6 520.2 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -257,8 +261,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.9" y="579.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1128.0 Q1658.2 645.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1642.1" y="630.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1178.0 Q1421.7 1279.7 1468.0 1370.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" x="1434.8" y="1271.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" d="M1338.0 1228.0 Q1428.8 1337.8 1558.0 1398.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" x="1438.4" y="1319.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" d="M2024.0 96.5 Q1409.2 40.9 792.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" x="1408.6" y="52.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OVERRIDES</text>
 <path class="edge-line" data-source="AIPrivacyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1204.0 721.0 Q1441.4 459.4 1624.0 157.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -367,8 +371,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" x="1616.5" y="180.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularOwners</text>
 <path class="edge-line" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" d="M1824.0 344.0 Q1731.0 181.1 1592.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" x="1719.5" y="184.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" d="M2114.0 454.0 Q1806.9 864.7 1558.0 1313.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" x="1821.4" y="868.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" d="M2114.0 454.0 Q1805.9 908.3 1558.0 1398.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" x="1821.0" y="911.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" d="M2114.0 454.0 Q2096.4 747.2 2138.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" x="2111.2" y="740.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" d="M2114.0 454.0 Q1898.2 728.1 1738.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -401,36 +405,38 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" x="1714.1" y="596.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PLANDEX_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" d="M2024.0 329.0 Q1797.8 595.7 1628.0 901.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" x="1811.9" y="599.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">INTERPRETER_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" d="M2114.0 454.0 Q1697.2 949.4 1338.0 1488.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" x="1711.6" y="954.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLINE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" d="M2114.0 454.0 Q1696.3 995.5 1338.0 1578.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" x="1711.1" y="999.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLINE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" d="M2114.0 454.0 Q1702.6 764.0 1338.0 1128.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" x="1714.3" y="771.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">JUNIE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" d="M2114.0 454.0 Q1700.9 810.5 1338.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" x="1713.5" y="817.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FIREBASE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" d="M2114.0 454.0 Q1996.0 737.0 1938.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" x="2011.0" y="735.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_LOCAL_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" d="M2114.0 454.0 Q1698.4 903.3 1338.0 1398.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" x="1712.2" y="908.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_SKILL_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" d="M2114.0 454.0 Q1697.3 949.5 1338.0 1488.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" x="1711.7" y="954.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_SKILL_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" d="M2114.0 454.0 Q1900.1 681.3 1738.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" x="1913.0" y="685.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODERABBIT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="PrAgentRenderer" data-type="HAS" d="M2024.0 329.0 Q1799.9 556.4 1628.0 825.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="PrAgentRenderer" data-type="HAS" x="1812.9" y="560.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PR_AGENT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" d="M2114.0 454.0 Q2096.2 702.4 2138.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" x="2111.1" y="695.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ELLIPSIS_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" d="M2114.0 454.0 Q1699.5 856.9 1338.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" x="1712.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">VOID_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" d="M2114.0 454.0 Q1698.3 903.2 1338.0 1398.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" x="1712.1" y="908.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">VOID_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" d="M2024.0 329.0 Q1700.0 636.9 1428.0 991.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" x="1713.0" y="642.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ROO_MODES_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" d="M2114.0 454.0 Q2098.1 657.7 2138.0 858.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" x="2112.1" y="650.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOCKS_REPORT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" d="M2024.0 329.0 Q1705.9 528.2 1428.0 780.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" x="1715.9" y="535.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GRANULAR_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" d="M2114.0 454.0 Q1696.3 995.5 1338.0 1578.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" x="1711.1" y="999.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GOOSE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" d="M2114.0 454.0 Q1695.5 1041.5 1338.0 1668.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" x="1710.7" y="1045.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GOOSE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GeminiStyleguideRenderer" data-type="HAS" d="M2114.0 454.0 Q2202.4 627.9 2338.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="GeminiStyleguideRenderer" data-type="HAS" x="2214.2" y="613.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GEMINI_STYLEGUIDE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiderConfRenderer" data-type="HAS" d="M2114.0 454.0 Q2200.3 670.3 2338.0 858.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiderConfRenderer" data-type="HAS" x="2213.1" y="657.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AIDER_CONF_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ReplitRenderer" data-type="HAS" d="M2114.0 454.0 Q1699.5 856.9 1338.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ReplitRenderer" data-type="HAS" x="1712.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">REPLIT_RENDERER</text>
 <g id="FormatterRegistry">
   <title>FormatterRegistry [CLASS]</title>
   <rect class="node-rect" x="1624.0" y="24.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
@@ -829,13 +835,13 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="CursorRenderer">
   <title>CursorRenderer [CLASS]</title>
-  <rect class="node-rect" x="1468.0" y="1313.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1558.0" y="1335.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CursorRenderer</text>
-  <line x1="1468.0" y1="1357.0" x2="1648.0" y2="1357.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1476.0" y="1370.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
-  <text x="1476.0" y="1385.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
-  <line x1="1468.0" y1="1399.0" x2="1648.0" y2="1399.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1476.0" y="1412.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1468.0" y="1398.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1558.0" y="1420.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CursorRenderer</text>
+  <line x1="1468.0" y1="1442.0" x2="1648.0" y2="1442.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1476.0" y="1455.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <text x="1476.0" y="1470.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
+  <line x1="1468.0" y1="1484.0" x2="1648.0" y2="1484.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1476.0" y="1497.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="GuardrailInstructionBlock">
   <title>GuardrailInstructionBlock [CLASS]</title>
@@ -892,6 +898,15 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1832.0" y="543.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">merge(List&lt;Map.Entry&lt;String,Str…</text>
   <text x="1832.0" y="558.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">jsonRules(): WholeFileMerge</text>
   <text x="1832.0" y="573.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tomlInstructions(): WholeFileMe…</text>
+</g>
+<g id="ReplitRenderer">
+  <title>ReplitRenderer [CLASS]</title>
+  <rect class="node-rect" x="1248.0" y="1308.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1330.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ReplitRenderer</text>
+  <line x1="1248.0" y1="1352.0" x2="1428.0" y2="1352.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1365.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1379.0" x2="1428.0" y2="1379.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1392.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="LlmsRenderer">
   <title>LlmsRenderer [CLASS]</title>
@@ -969,12 +984,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="VoidRenderer">
   <title>VoidRenderer [CLASS]</title>
-  <rect class="node-rect" x="1248.0" y="1308.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1330.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VoidRenderer</text>
-  <line x1="1248.0" y1="1352.0" x2="1428.0" y2="1352.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1365.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1248.0" y1="1379.0" x2="1428.0" y2="1379.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1392.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1398.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1420.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VoidRenderer</text>
+  <line x1="1248.0" y1="1442.0" x2="1428.0" y2="1442.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1455.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1469.0" x2="1428.0" y2="1469.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1482.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="IgnoreFileRenderer">
   <title>IgnoreFileRenderer [CLASS]</title>
@@ -1013,13 +1028,13 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="ClaudeSkillRenderer">
   <title>ClaudeSkillRenderer [CLASS]</title>
-  <rect class="node-rect" x="1248.0" y="1398.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1420.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeSkillRenderer</text>
-  <line x1="1248.0" y1="1442.0" x2="1428.0" y2="1442.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1455.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <text x="1256.0" y="1470.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FRONT_MATTER: String</text>
-  <line x1="1248.0" y1="1484.0" x2="1428.0" y2="1484.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1497.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1488.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1510.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeSkillRenderer</text>
+  <line x1="1248.0" y1="1532.0" x2="1428.0" y2="1532.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1545.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <text x="1256.0" y="1560.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FRONT_MATTER: String</text>
+  <line x1="1248.0" y1="1574.0" x2="1428.0" y2="1574.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1587.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="QwenRenderer">
   <title>QwenRenderer [CLASS]</title>
@@ -1041,21 +1056,21 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="ClineRenderer">
   <title>ClineRenderer [CLASS]</title>
-  <rect class="node-rect" x="1248.0" y="1488.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1510.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClineRenderer</text>
-  <line x1="1248.0" y1="1532.0" x2="1428.0" y2="1532.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1545.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1248.0" y1="1559.0" x2="1428.0" y2="1559.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1572.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-</g>
-<g id="GooseRenderer">
-  <title>GooseRenderer [CLASS]</title>
   <rect class="node-rect" x="1248.0" y="1578.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1600.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GooseRenderer</text>
+  <text class="node-label" x="1338.0" y="1600.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClineRenderer</text>
   <line x1="1248.0" y1="1622.0" x2="1428.0" y2="1622.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1256.0" y="1635.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
   <line x1="1248.0" y1="1649.0" x2="1428.0" y2="1649.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1256.0" y="1662.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+</g>
+<g id="GooseRenderer">
+  <title>GooseRenderer [CLASS]</title>
+  <rect class="node-rect" x="1248.0" y="1668.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1690.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GooseRenderer</text>
+  <line x1="1248.0" y1="1712.0" x2="1428.0" y2="1712.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1725.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1739.0" x2="1428.0" y2="1739.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1752.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="GranularIndexSection">
   <title>GranularIndexSection [CLASS]</title>
@@ -1315,7 +1330,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="2032.0" y="306.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CODEX_RENDERER: CodexRenderer</text>
   <text x="2032.0" y="321.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">COPILOT_RENDERER: CopilotRender…</text>
   <text x="2032.0" y="336.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">QWEN_RENDERER: QwenRenderer</text>
-  <text x="2032.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+26 more)</text>
+  <text x="2032.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+27 more)</text>
   <line x1="2024.0" y1="365.0" x2="2204.0" y2="365.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2032.0" y="378.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getRenderer(Platform): Platform…</text>
   <text x="2032.0" y="393.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShapeFor(String): YamlMerg…</text>
@@ -1344,12 +1359,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1832.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">remaining(GranularBody.Entry, S…</text>
   <text x="1832.0" y="483.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+7 more)</text>
 </g>
-<rect x="2252.0" y="1738.0" width="220.0" height="100.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
-<text x="2268.0" y="1758.0" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
-<line x1="2268.0" y1="1782.0" x2="2304.0" y2="1782.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
-<text x="2312.0" y="1786.0" font-family="sans-serif" font-size="11" fill="#374151">has</text>
-<line x1="2268.0" y1="1806.0" x2="2304.0" y2="1806.0" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text x="2312.0" y="1810.0" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
+<rect x="2252.0" y="1828.0" width="220.0" height="100.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
+<text x="2268.0" y="1848.0" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
+<line x1="2268.0" y1="1872.0" x2="2304.0" y2="1872.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
+<text x="2312.0" y="1876.0" font-family="sans-serif" font-size="11" fill="#374151">has</text>
+<line x1="2268.0" y1="1896.0" x2="2304.0" y2="1896.0" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text x="2312.0" y="1900.0" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
 <script type="text/javascript">
 <![CDATA[
 document.addEventListener('DOMContentLoaded', () => {
@@ -1415,6 +1430,6 @@ document.addEventListener('DOMContentLoaded', () => {
 ]]>
 </script>
 <a class="diagram-attribution" href="https://github.com/PIsberg/codekarta" target="_blank" rel="noopener noreferrer">
-  <text x="2472.0" y="1856.0" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
+  <text x="2472.0" y="1946.0" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
 </a>
 </svg>

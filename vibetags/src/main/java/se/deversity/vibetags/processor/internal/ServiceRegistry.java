@@ -54,6 +54,8 @@ public final class ServiceRegistry {
         "grok_granular",
         // 2026-09 platform sweep: three granular directories and one aggregate
         "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
+        // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent context file
+        "agents_skill", "zencoder_granular", "replit",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -148,6 +150,9 @@ public final class ServiceRegistry {
         // Claude Code local override, Skill, and granular rules; Copilot granular instructions
         map.put("claude_local",     root.resolve("CLAUDE.local.md"));
         map.put("claude_skill",     root.resolve(".claude/skills/vibetags-guardrails/SKILL.md"));
+        // The cross-client Agent Skills location. Same SKILL.md, read by every client that scans
+        // .agents/skills/ rather than only its own vendor directory.
+        map.put("agents_skill",     root.resolve(".agents/skills/vibetags-guardrails/SKILL.md"));
         map.put("claude_granular",  root.resolve(".claude/rules"));
         map.put("copilot_granular", root.resolve(".github/instructions"));
         map.put("gemini_granular", root.resolve(".gemini/rules"));
@@ -157,6 +162,8 @@ public final class ServiceRegistry {
         map.put("antigravity_granular", root.resolve(".agents/rules"));
         map.put("aiassistant_granular", root.resolve(".aiassistant/rules"));
         map.put("augment_granular",     root.resolve(".augment/rules"));
+        map.put("zencoder_granular",    root.resolve(".zencoder/rules"));
+        map.put("replit",               root.resolve("replit.md"));
         map.put("goose",                root.resolve(".goosehints"));
         // Context-packer ignore files
         map.put("repomix_ignore",    root.resolve(".repomixignore"));

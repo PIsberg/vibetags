@@ -128,6 +128,8 @@ mkdir -p .trae/rules                       # Trae (granular per-class rules)
 mkdir -p .roo/rules                        # Roo Code (per-class rules)
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what loads CONVENTIONS.md)
 touch .rooignore .continueignore .augmentignore  # Roo / Continue / Augment exclusion lists
+mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
+touch replit.md                            # Replit Agent
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini

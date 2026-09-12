@@ -24,13 +24,13 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **42 AI platforms**, written as **55 config files** and **17 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **44 AI platforms**, written as **57 config files** and **18 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
 `.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
 
-- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [55 config files](#project-facts).
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [57 config files](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
 - **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 76 lines, with 271 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
@@ -386,7 +386,7 @@ The [44 annotations](#project-facts) group into six categories by intent. Within
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with the [**41 AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
+Generated configuration files work out-of-the-box with the [**43 AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
@@ -407,6 +407,7 @@ Generated configuration files work out-of-the-box with the [**41 AI platforms**]
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
 - **Plandex** (`.plandex.yaml`)
 - **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
+- **Replit Agent** (`replit.md`)
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
 - **Supermaven** (`.supermavenignore`)
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
@@ -433,6 +434,7 @@ Generated configuration files work out-of-the-box with the [**41 AI platforms**]
 - **Grok Build** (`.grok/rules/*.md` - xAI's coding agent; reads every file in the directory, so no front matter)
 - **JetBrains AI Assistant** (`.aiassistant/rules/*.md`)
 - **Augment Code** (`.augment/rules/*.md`, plus `.augmentignore`)
+- **Zencoder** (`.zencoder/rules/*.md`)
 - **Antigravity AI** (`.agents/rules/*.md`)
 - **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)

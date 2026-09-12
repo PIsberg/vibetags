@@ -598,6 +598,12 @@ public final class GranularRulesWriter {
         // always does.
         new GranularFormat("antigravity_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("aiassistant_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("augment_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n")
+        new GranularFormat("augment_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        // Zencoder's own Repo-Info Agent writes .zencoder/rules/repo.md with exactly this front
+        // matter, so the shape is copied from the tool's output rather than inferred from prose.
+        // alwaysApply: true because a guardrail the model may decline to load is not a guardrail.
+        new GranularFormat("zencoder_granular", ".md",
+            (desc, globs) -> "---\ndescription: \"" + desc + "\"\nalwaysApply: true\n---\n\n",
+            n -> "# Rules for " + n + "\n\n")
     );
 }

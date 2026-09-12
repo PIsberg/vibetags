@@ -44,6 +44,8 @@ public enum Platform {
     FIREBASE("firebase"),
     CLAUDE_LOCAL("claude_local"),
     CLAUDE_SKILL("claude_skill"),
+    AGENTS_SKILL("agents_skill"),
+    REPLIT("replit"),
     // Context-packer ignore files
     REPOMIX_IGNORE("repomix_ignore"),
     GITINGEST_IGNORE("gitingest_ignore"),
@@ -84,7 +86,8 @@ public enum Platform {
     GROK_GRANULAR("grok_granular"),
     ANTIGRAVITY_GRANULAR("antigravity_granular"),
     AIASSISTANT_GRANULAR("aiassistant_granular"),
-    AUGMENT_GRANULAR("augment_granular");
+    AUGMENT_GRANULAR("augment_granular"),
+    ZENCODER_GRANULAR("zencoder_granular");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

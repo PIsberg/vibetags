@@ -68,6 +68,8 @@ AI_FILES=(
   ".claude/skills/vibetags-guardrails/SKILL.md"
   # 2026-09 platform sweep
   ".goosehints"
+  ".agents/skills/vibetags-guardrails/SKILL.md"
+  "replit.md"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"
@@ -92,7 +94,7 @@ find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
 # Cleanup granular rules in directories. Kept in step with ServiceRegistry by
 # ExampleResetScriptCoverageTest: every directory this example opts into must appear here,
 # or a reset silently leaves the last build's rule files in place.
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules" ".zencoder/rules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +

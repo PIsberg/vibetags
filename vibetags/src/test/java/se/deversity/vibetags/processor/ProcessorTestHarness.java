@@ -166,6 +166,11 @@ class ProcessorTestHarness {
         touch(".rooignore");
         touch(".continueignore");
         touch(".augmentignore");
+        // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent context file.
+        // None has an aggregate sibling, so opting them in by default collapses nothing.
+        touch(".agents/skills/vibetags-guardrails/SKILL.md");
+        touch(".zencoder/rules/.vibetags");
+        touch("replit.md");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");
