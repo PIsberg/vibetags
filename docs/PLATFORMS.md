@@ -168,3 +168,23 @@ upside. Its `ignore_patterns` key would collide the same way, and unlike aider's
 nothing that `.gemini/styleguide.md` does not already deliver: the style guide is where Gemini Code
 Assist takes its review rules from, and it is Markdown, so the marker merge is clean. Issue #636
 records the decision.
+
+### Four outputs whose tool has moved on
+
+These are still written, and nothing about an existing project changes. They are recorded here
+because the file-presence opt-in model means a path VibeTags names is a path a user may create, and
+three of these four name a tool that no longer reads them. None is removed: removing a service stops
+an opted-in consumer's file regenerating, which is a silent staleness worse than a file nobody
+reads. Removal belongs to a major version, tracked in #641.
+
+| Output | Status | Evidence |
+|---|---|---|
+| `gemini_instructions.md` | **No vendor source found.** Google documents `GEMINI.md` for the Gemini CLI (configurable via `contextFileName`), `.idx/airules.md` for Firebase, and `.gemini/styleguide.md` for the GitHub reviewer. This path appears in none of them. It sits in 55 public repositories, none of them VibeTags consumers, so people do write it -- but no documentation says anything reads it. | [Gemini CLI context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) |
+| `.cody/config.json`, `.codyignore` | **Product retired.** Sourcegraph retired Cody Free and Pro on 23 July 2025; the successor, Amp, reads `AGENTS.md`, which VibeTags writes. 4 and 3 public repositories. | [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans) |
+| `.supermavenignore` | **Product sunset.** Supermaven was acquired by Anysphere in November 2024 and the standalone product was discontinued in November 2025; its technology is inside Cursor Tab, and VibeTags writes `.cursorignore`. 5 public repositories. | [Cursor's announcement](https://cursor.com/blog/supermaven) |
+| `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file. Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md`, all of which VibeTags writes, so no Cline user loses guardrails over this. #642 covers writing the directory form. |
+
+The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
+write once: the tools underneath it are renamed, acquired and retired, and a generated file
+outlives the product it was generated for. Nothing in the build can notice that, which is why it is
+checked by hand and written down here.
