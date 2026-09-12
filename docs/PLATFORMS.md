@@ -165,9 +165,18 @@ block is one `read:` entry; everything else in the file is yours.
 
 The cost is that `read:` is a top-level YAML key, and a hand-authored `read:` outside the VibeTags
 markers would be a duplicate. PyYAML, which aider uses, does not reject a duplicate key: it keeps
-the last one, so whichever of the two sits lower in the file silently wins. Opt in with an empty
-`.aider.conf.yml`, or move your own `read:` entries inside the generated block. Issue #635 tracks
-turning that into a validation warning rather than a caveat in prose.
+the last one, so whichever of the two sits lower in the file silently wins. Opt in with a
+`.aider.conf.yml` that has no `read:` of its own. Moving your entries inside the generated block
+does not work: the block is rewritten on every build and they are gone after the next one.
+
+The build says so when it happens. On every compile, including one the fingerprint short-circuit
+skips, VibeTags reads each opted-in YAML file and warns about any top-level key the generated block
+writes that also appears outside it, naming both line numbers and which one a last-wins loader
+reads. That covers every YAML platform, not only aider: the keys come from the renderers
+themselves, so CodeRabbit's `reviews:`, Ellipsis's `version:` and `pr_review:`, Sweep's `rules:`,
+Plandex's `guardrails:`, Open Interpreter's `instructions:` and Roo Code's `customModes:` are
+checked the same way. `reviews:` is the one most likely to bite, since it is where CodeRabbit keeps
+every review setting.
 
 `.gemini/config.yaml` is deliberately **not** written, for the same reason with none of the
 upside. Its `ignore_patterns` key would collide the same way, and unlike aider's `read:` it buys
