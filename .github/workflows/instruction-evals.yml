@@ -6,8 +6,8 @@
 # Cost: a default run is 15 headless model sessions (5 tasks x 3 trials). That is why this
 # triggers on the instruction-file paths and manual dispatch, never on every commit.
 #
-# Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not
-# a pass. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
+# Requires the ANTHROPIC_API_KEY secret; without it the job FAILS rather than reporting a
+# green check it did not earn (#632). The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
 # so a run resolves the same integrity-checked tarballs every time instead of whatever npm
 # serves that day, and actions/setup-node pins the node/npm doing that install rather than
 # taking whatever the runner image ships. The CLI's flag surface still has to track the live
@@ -65,11 +65,31 @@ jobs:
             registry.npmjs.org:443
             nodejs.org:443
 
-      - name: Note when the key is absent
+      # Fails rather than passing quietly. This step used to print "Skipped is not passed" and
+      # then exit 0, so the check went green having run nothing — and it had done exactly that on
+      # every run in recent history, including the 1.3.3 and 1.3.4 release PRs (#632). A gate whose
+      # own README says the instruction layer "can go red" cannot be the one gate that never does.
+      #
+      # The cost is stated plainly: with no secret configured, every PR touching CLAUDE.md,
+      # AGENTS.md, GEMINI.md, .claude/** or evals/** now goes red here. That is the intended
+      # pressure — configure the secret, or delete this workflow and stop claiming the rules are
+      # measured. To soften it back to a warning, change `exit 1` to `exit 0`; nothing else here
+      # depends on it.
+      - name: Fail when the key is absent
         if: env.HAVE_KEY != 'true'
         run: |
-          echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; the instruction evals did not run." >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Instruction evals skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
+          {
+            echo "## Instruction evals did NOT run"
+            echo
+            echo "The \`ANTHROPIC_API_KEY\` repository secret is not configured, so the task bank"
+            echo "was never executed. This check is red because a skipped gate is not a passed one:"
+            echo "a green tick here would be indistinguishable from a real measurement."
+            echo
+            echo "Fix: set the \`ANTHROPIC_API_KEY\` secret on the repository, or remove this"
+            echo "workflow and the claim in README.md that the rules are measured rather than assumed."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Instruction evals did not run: ANTHROPIC_API_KEY is not configured. Skipped is not passed (#632)."
+          exit 1
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.HAVE_KEY == 'true'

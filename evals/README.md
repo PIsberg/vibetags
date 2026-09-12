@@ -82,7 +82,18 @@ variable under measurement is the committed instruction stack of this repository
 `.github/workflows/instruction-evals.yml` runs the bank when a PR touches `CLAUDE.md`,
 `AGENTS.md`, `GEMINI.md`, or `.claude/**` - the merge gate for instruction edits - and on
 manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the workflow
-reports SKIPPED, which is not a pass. Results upload as an artifact.
+**fails**. Results upload as an artifact.
+
+That is a deliberate reversal (#632). It used to print "Skipped is not passed" and then exit 0, so
+the check went green having run nothing — and it had done exactly that on every run in recent
+history, the 1.3.3 and 1.3.4 release PRs included. A harness whose purpose is to let the
+instruction layer go red cannot be the one gate that never does, and a green tick that means
+"never ran" is worse than no check at all, because it is indistinguishable from a measurement.
+
+So: with no secret configured, every PR touching `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
+`.claude/**` or `evals/**` goes red here. Configure the secret, or delete the workflow and the
+claim that these rules are measured rather than assumed. To soften it back to a warning, change
+`exit 1` to `exit 0` in the "Fail when the key is absent" step.
 
 The CLI itself is pinned: `evals/package.json` names the version and
 `evals/package-lock.json` carries an integrity hash per tarball, so CI installs it with
