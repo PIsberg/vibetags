@@ -273,7 +273,7 @@ jobs:
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
-          expected=50
+          expected=53
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"
@@ -1002,7 +1002,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=51
+          expected=54
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"
