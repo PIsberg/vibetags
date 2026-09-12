@@ -91,7 +91,8 @@ public enum Platform {
     ANTIGRAVITY_GRANULAR("antigravity_granular"),
     AIASSISTANT_GRANULAR("aiassistant_granular"),
     AUGMENT_GRANULAR("augment_granular"),
-    ZENCODER_GRANULAR("zencoder_granular");
+    ZENCODER_GRANULAR("zencoder_granular"),
+    CLINE_GRANULAR("cline_granular");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

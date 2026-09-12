@@ -365,6 +365,8 @@ class AIGuardrailProcessorProcessTest {
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
             "cline", "junie", "kiro_granular",
+            // Cline's .clinerules/ directory form, at the same path as the file
+            "cline_granular",
             // Firebase AI
             "firebase",
             // Context-packer ignore files

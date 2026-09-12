@@ -5,8 +5,10 @@ import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AIDraft;
 import se.deversity.vibetags.annotations.AIKeepInSync;
 import se.deversity.vibetags.annotations.AILocked;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.validation.ArchitectureRule;
 import se.deversity.vibetags.processor.internal.validation.AttributeRule;
+import se.deversity.vibetags.processor.internal.validation.DuplicateYamlKeyRule;
 import se.deversity.vibetags.processor.internal.validation.PairRule;
 import se.deversity.vibetags.processor.internal.validation.ValidationContext;
 import se.deversity.vibetags.processor.internal.validation.ValidationRule;
@@ -23,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -409,5 +412,98 @@ class ValidationRuleUnitTest {
 
         assertTrue(recorder.messages.isEmpty(),
             "An element without the annotation must produce nothing: " + recorder.messages);
+    }
+
+    // ------------------------------------------------------------------ DuplicateYamlKeyRule
+
+    private static final String START = GuardrailFileWriter.MARKER_START_HASH;
+    private static final String END = GuardrailFileWriter.MARKER_END_HASH;
+
+    private static List<DuplicateYamlKeyRule.Finding> findRead(String content) {
+        return DuplicateYamlKeyRule.find(content, Set.of("read"), START, END);
+    }
+
+    /** Read off the renderers, not listed: a second list would be a twin of every YAML scaffold. */
+    @Test
+    void duplicateYamlKey_ownedKeysAreTheTopLevelKeysEachYamlRendererWrites() {
+        assertEquals(Set.of("read"), DuplicateYamlKeyRule.ownedKeys("aider_conf"));
+        assertEquals(Set.of("reviews"), DuplicateYamlKeyRule.ownedKeys("coderabbit"));
+        assertEquals(Set.of("version", "pr_review"), DuplicateYamlKeyRule.ownedKeys("ellipsis"));
+        assertEquals(Set.of("rules"), DuplicateYamlKeyRule.ownedKeys("sweep"));
+        assertEquals(Set.of("guardrails"), DuplicateYamlKeyRule.ownedKeys("plandex"));
+        assertEquals(Set.of("instructions"), DuplicateYamlKeyRule.ownedKeys("interpreter"));
+        assertEquals(Set.of("customModes"), DuplicateYamlKeyRule.ownedKeys("roo_modes"));
+        assertEquals(Set.of(), DuplicateYamlKeyRule.ownedKeys("not-a-service-key"));
+    }
+
+    @Test
+    void duplicateYamlKey_ignoresNestedAndCommentedOccurrences() {
+        String content = "settings:\n  read: nested\n# read: a comment\n- read: in a sequence\n"
+            + START + "\nread:\n  - CONVENTIONS.md\n" + END + "\n";
+
+        assertEquals(List.of(), findRead(content), "only a column-0 mapping key collides with another");
+    }
+
+    @Test
+    void duplicateYamlKey_matchesAQuotedKey_andReportsLinesOneBased() {
+        String content = "\"read\": [a.md]\n" + START + "\nread:\n  - CONVENTIONS.md\n" + END + "\n";
+
+        assertEquals(List.of(new DuplicateYamlKeyRule.Finding("read", 1, 3, 3)), findRead(content));
+    }
+
+    @Test
+    void duplicateYamlKey_isNotADuplicate_inASeparateYamlDocument() {
+        String content = START + "\nread:\n  - CONVENTIONS.md\n" + END + "\n---\nread:\n  - a.md\n";
+
+        assertEquals(List.of(), findRead(content), "a --- separator starts a new mapping");
+    }
+
+    /** The first build after opt-in: no block yet, and the one about to be appended will win. */
+    @Test
+    void duplicateYamlKey_withNoBlockYet_reportsTheGeneratedKeyAsPendingAndWinning() {
+        List<DuplicateYamlKeyRule.Finding> findings = findRead("model: x\nread:\n  - a.md\n");
+
+        assertEquals(List.of(new DuplicateYamlKeyRule.Finding("read", 2, 0, 0)), findings);
+        assertFalse(findings.get(0).handAuthoredWins());
+        String message = DuplicateYamlKeyRule.message(".aider.conf.yml", findings.get(0));
+        assertTrue(message.contains("in the VibeTags block this build writes"), message);
+        assertTrue(message.contains("aider reads the generated one and ignores yours"), message);
+    }
+
+    /** A block written before its renderer grew the key is rewritten in place, not appended. */
+    @Test
+    void duplicateYamlKey_belowABlockThatDoesNotCarryTheKeyYet_theHandAuthoredOneWins() {
+        String content = START + "\n# old block\n" + END + "\nread:\n  - a.md\n";
+
+        List<DuplicateYamlKeyRule.Finding> findings = findRead(content);
+
+        assertEquals(List.of(new DuplicateYamlKeyRule.Finding("read", 4, 0, 4)), findings);
+        assertTrue(findings.get(0).handAuthoredWins());
+    }
+
+    @Test
+    void duplicateYamlKey_countsLinesTheSameWay_inACrlfCheckout() {
+        String content = "read:\r\n  - a.md\r\n" + START + "\r\nread:\r\n  - CONVENTIONS.md\r\n" + END + "\r\n";
+
+        assertEquals(List.of(new DuplicateYamlKeyRule.Finding("read", 1, 4, 4)), findRead(content));
+    }
+
+    /** The writer treats an unclosed block as running to the end; so does the rule. */
+    @Test
+    void duplicateYamlKey_treatsEverythingAfterAnUnclosedStartMarkerAsTheBlock() {
+        String content = "read:\n  - a.md\n" + START + "\nread:\n  - CONVENTIONS.md\n";
+
+        assertEquals(List.of(new DuplicateYamlKeyRule.Finding("read", 1, 4, 4)), findRead(content));
+    }
+
+    /** Only aider's loader has been checked, so only aider is named. */
+    @Test
+    void duplicateYamlKey_messageDoesNotNameATool_whoseLoaderHasNotBeenChecked() {
+        String message = DuplicateYamlKeyRule.message(".coderabbit.yaml",
+            new DuplicateYamlKeyRule.Finding("reviews", 9, 3, 9));
+
+        assertTrue(message.contains("A loader that tolerates duplicate keys reads only yours, at line 9"), message);
+        assertTrue(message.contains("a strict one rejects the file"), message);
+        assertFalse(message.contains("PyYAML"), message);
     }
 }

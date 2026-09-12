@@ -43,6 +43,8 @@ public final class ServiceRegistry {
         "gemini_md", "antigravity_ignore",
         // v0.9.7 platforms
         "cline", "junie", "kiro_granular",
+        // Cline's .clinerules/ directory, mutually exclusive with the .clinerules file above
+        "cline_granular",
         // Firebase AI
         "firebase",
         // Claude Code local override, Skill, and granular rules; Copilot granular instructions
@@ -147,6 +149,9 @@ public final class ServiceRegistry {
         map.put("antigravity_ignore", root.resolve(".antigravityignore"));
         // v0.9.7 platforms
         map.put("cline",         root.resolve(".clinerules"));
+        // Cline's directory form, at the same path as the file. A path is one or the other, so
+        // isOptedIn lets exactly one of the two activate (issue #642).
+        map.put("cline_granular", root.resolve(".clinerules"));
         map.put("junie",         root.resolve(".junie/guidelines.md"));
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
@@ -255,7 +260,7 @@ public final class ServiceRegistry {
     public static Set<String> resolveActiveServices(Map<String, Path> allServiceFiles) {
         Set<String> active = new HashSet<>();
         allServiceFiles.forEach((key, path) -> {
-            if (OPT_IN_KEYS.contains(key) && optedIn(key, path)) {
+            if (OPT_IN_KEYS.contains(key) && isOptedIn(key, path)) {
                 active.add(key);
             }
         });
@@ -270,24 +275,36 @@ public final class ServiceRegistry {
     }
 
     /**
-     * True when {@code path} is the <em>kind</em> of filesystem entry the service writes.
+     * True when the service writes a directory of per-element rule files rather than a single file.
+     *
+     * <p>The one definition of that distinction, for everything that has to know which kind of entry
+     * a service's path is without looking at the disk: opt-in resolution below, the CLI's
+     * {@code init}, and the tests that count and fixture the outputs. The file name cannot answer it,
+     * because one path is both: {@code .clinerules} is the {@code cline} file and the
+     * {@code cline_granular} directory. The {@code _granular} suffix is already load-bearing
+     * elsewhere ({@code PlatformRendererRegistry} routes on it and {@code GuardrailContentBuilder}
+     * filters on it), so this names an existing convention rather than inventing a second one.
+     */
+    public static boolean writesDirectory(String key) {
+        return key.endsWith("_granular");
+    }
+
+    /**
+     * True when {@code path} is the <em>kind</em> of filesystem entry service {@code key} writes,
+     * i.e. when that entry is an opt-in to this service and not to another one at the same path.
      *
      * <p>This used to be a bare {@code Files.exists}, and the shape of that bug is worth keeping
-     * written down. Two platforms map a single-file service and a directory service to the same
-     * path, because the vendor changed which one it reads: Cline documents {@code .clinerules/} as
-     * a directory of rule files and no longer documents the single {@code .clinerules} file
-     * VibeTags wrote. A user following the current docs creates the directory, {@code exists()} is
-     * true for it, the file service activates, and the writer is handed a directory to write a
-     * regular file over.
+     * written down. Cline reads {@code .clinerules} as a directory of rule files (its current
+     * documented shape) and as a single file (the shape VibeTags wrote first, which its loader still
+     * reads). A user following the current docs created the directory, {@code exists()} was true for
+     * it, the single-file service activated, and the writer was handed a directory to write a regular
+     * file over.
      *
-     * <p>A path cannot be both, so the entry's type is an unambiguous signal for which of the two
-     * the user meant. Granular services write a directory; everything else writes a file. The
-     * {@code _granular} suffix is already load-bearing elsewhere — {@code PlatformRendererRegistry}
-     * routes on it and {@code GuardrailContentBuilder} filters on it — so this reads an existing
-     * convention rather than inventing a second one.
+     * <p>A path cannot be both, so the entry's type is an unambiguous signal for which of the two the
+     * user meant, and the two services at that path can never both be active.
      */
-    private static boolean optedIn(String key, Path path) {
-        return key.endsWith("_granular") ? Files.isDirectory(path) : Files.isRegularFile(path);
+    public static boolean isOptedIn(String key, Path path) {
+        return writesDirectory(key) ? Files.isDirectory(path) : Files.isRegularFile(path);
     }
 
     /**

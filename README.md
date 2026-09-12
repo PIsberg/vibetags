@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **59 config files** and **18 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **59 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -392,7 +392,7 @@ Generated configuration files work out-of-the-box with the [**43 AI platforms**]
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
 - **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
-- **Cline** (`.clinerules`)
+- **Cline** (`.clinerules`, or the `.clinerules/*.md` directory Cline now documents; one or the other, never both)
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
