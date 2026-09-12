@@ -235,6 +235,18 @@ Report the result honestly, per repository:
 The script leaves each repository on a sweep branch with the bump uncommitted, and commits,
 pushes and opens nothing. Leave it that way.
 
+## Step 5c — Re-check every platform path against its vendor
+
+Required. The build cannot notice that a vendor retired a product or stopped documenting a path,
+so this is the only check that does. Follow docs/RELEASING.md step 0b: list the paths with
+`python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java`,
+then confirm each against the vendor's own documentation, never a cross-tool round-up.
+
+Report per tool: still documented, renamed, retired, or **could not check**. A retired or
+undocumented output is deprecated through `DeprecatedServices` and the PLATFORMS.md table, never
+removed in a minor release. If this step finds something, say so in the release notes; if it
+could not run, say that instead of calling it clean.
+
 ## Step 6 — Commit and open the PR
 
 ```bash

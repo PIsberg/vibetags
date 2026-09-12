@@ -168,6 +168,33 @@ examples) have a newer stable release. Applying them is its own PR, before the r
 driven by the `bump-dependencies` skill; a release should not be the first build on a new
 plugin version.
 
+### 0b. Re-check the platform list against the vendors
+
+Every platform VibeTags writes names a file that some vendor documents, or did when it was added.
+Vendors rename paths, retire products and get acquired, and nothing in the build can notice: the
+file keeps being generated for a tool that no longer reads it. In the two platform sweeps so far,
+every path that was checked against the vendor's own docs instead of a cross-tool round-up turned
+out wrong or stale on at least one count (see [PLATFORMS.md](PLATFORMS.md)).
+
+List every path from the registry itself, so the list cannot drift from what the code writes:
+
+```bash
+python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java
+```
+
+For each tool, open the vendor's own documentation and confirm two things: the product still
+exists, and its docs still name that path. Where the docs are behind a login or render only in a
+browser, look for the file in real repositories on GitHub instead. Then act on what you find:
+
+- **Still documented.** Nothing to do.
+- **Renamed or superseded.** Open an issue to write the current path.
+- **Retired, or no longer documented.** Deprecate it, do not remove it: add a row to
+  `DeprecatedServices` and to the deprecated table in PLATFORMS.md, which warns every opted-in
+  build for at least one release, and add the file to the removal issue for the next major
+  version. Removing it in a minor release leaves consumers with a file that silently stops
+  regenerating.
+- **Could not check.** Say so in the release PR, by name. An unchecked row is not a confirmed one.
+
 ### 1. Prepare the release
 
 Create a new branch from `main` (or your default branch):

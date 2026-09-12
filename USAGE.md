@@ -463,8 +463,8 @@ mkdir -p .windsurf/rules                     # Granular rules (per-class .md)
 
 # --- Zed, Cody, Supermaven ---
 touch .rules                                 # Zed Editor
-touch .codyignore && mkdir -p .cody && touch .cody/config.json  # Sourcegraph Cody
-touch .supermavenignore                      # Supermaven
+touch .codyignore && mkdir -p .cody && touch .cody/config.json  # Sourcegraph Cody (deprecated, #645)
+touch .supermavenignore                      # Supermaven (deprecated, #645)
 
 # --- Continue, Tabnine, Amazon Q, Universal AI ---
 mkdir -p .continue/rules                     # Continue
@@ -503,7 +503,7 @@ touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list
 
 # --- Cline, JetBrains Junie ---
-touch .clinerules                            # Cline AI assistant (single file), OR:
+touch .clinerules                            # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                       # Cline (granular per-class rules). Same path: pick one
 #                                            # (Cline itself converts the file to the directory)
 touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
@@ -516,7 +516,7 @@ mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
 touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
-touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
+touch .aiexclude GEMINI.md                   # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
@@ -538,7 +538,6 @@ rm gemini_instructions.md   # permanently opt out of Gemini instructions
 Create one or more of the following files in your project root to opt in:
   .cursorrules
   CLAUDE.md
-  gemini_instructions.md
   .github/copilot-instructions.md
   .cursorignore
   .claudeignore

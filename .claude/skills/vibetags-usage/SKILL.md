@@ -132,7 +132,7 @@ mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
 touch replit.md                            # Replit Agent
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
-touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
+touch .aiexclude GEMINI.md                 # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
@@ -141,8 +141,8 @@ touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standar
 touch .windsurfrules                       # Windsurf IDE (traditional)
 mkdir -p .windsurf/rules                   # Windsurf IDE (granular per-class rules)
 touch .rules                               # Zed Editor
-mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody
-touch .supermavenignore                    # Supermaven
+mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody (deprecated, #645)
+touch .supermavenignore                    # Supermaven (deprecated, #645)
 mkdir -p .continue/rules                   # Continue (granular per-class rules)
 mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
 mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
@@ -156,7 +156,7 @@ mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # O
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
 touch .antigravityignore                   # Antigravity AI
-touch .clinerules                          # Cline AI assistant (single file), OR:
+touch .clinerules                          # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                     # Cline granular rules (same path: pick one)
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
@@ -1630,15 +1630,15 @@ tasks.withType(JavaCompile) {
 | `.roo/rules/*.md`, `.rooignore` | Roo Code |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
-| `gemini_instructions.md`, `GEMINI.md`, `.aiexclude` | Gemini |
+| `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
-| `.cody/config.json`, `.codyignore` | Sourcegraph Cody |
-| `.supermavenignore` | Supermaven |
+| `.cody/config.json`, `.codyignore` (deprecated) | Sourcegraph Cody |
+| `.supermavenignore` (deprecated) | Supermaven |
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
 | `.amazonq/rules/*.md` | Amazon Q (granular per-class rules) |
@@ -1652,7 +1652,7 @@ tasks.withType(JavaCompile) {
 | `.doubleignore` | Double.bot |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.codeiumignore` | Codeium |
-| `.clinerules` | Cline AI assistant (single file) |
+| `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |

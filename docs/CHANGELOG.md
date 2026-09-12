@@ -119,6 +119,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vibetags init --platforms cline_granular` reported a `.clinerules` file as "already active"; it
   now refuses and names the platform that file belongs to.
 
+### Deprecated
+
+- **`gemini_instructions.md`, `.cody/config.json`, `.codyignore`, `.supermavenignore` and the
+  single-file `.clinerules` are deprecated**, and stop being written in the next major version
+  (#645). They are still written in this release, and no generated content changes.
+
+  | Deprecated | Why | Use instead |
+  |---|---|---|
+  | `gemini_instructions.md` | No Google product documents reading it | `GEMINI.md` (Gemini CLI), `.gemini/styleguide.md` (Gemini Code Assist) |
+  | `.cody/config.json`, `.codyignore` | Sourcegraph retired Cody Free and Pro in July 2025 | `AGENTS.md`, read by its successor Amp |
+  | `.supermavenignore` | Standalone Supermaven discontinued in November 2025 | `.cursorignore`, read by Cursor Tab |
+  | `.clinerules` (file) | Cline's current docs describe only a `.clinerules/` directory | the `.clinerules/` directory; Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md` |
+
+  A build with any of them opted in now prints one compiler warning per compilation that names
+  each file, the reason, and the replacement, and `vibetags.log` gets a
+  `platform.deprecated key=... file=... replacement=...` event per file. The "no AI config files
+  found" note stops offering them to new projects, and names directory outputs with a trailing
+  `/`, since `.clinerules` is both the deprecated file and the current directory. To move off one, create the replacement, move
+  any hand-written content outside the markers across, and delete the deprecated file.
+
+  Why a warning rather than a removal: removing a service stops an opted-in consumer's file
+  regenerating, and the file then looks current while it drifts from the annotations. A release
+  of warnings makes the removal visible before it lands (#641). `DeprecatedServicesTest` was run
+  red against a stub table, and again with the warning call removed from `ServiceRegistry`.
+
+- The release process gains a step that re-checks every platform path against its vendor's own
+  documentation before a version is cut ([RELEASING.md](RELEASING.md)). Nothing in the build can
+  notice a vendor retiring a product, so until now the platform list was only as current as the
+  last time someone happened to look.
+
 ### Fixed
 
 - A `.clinerules/` **directory** no longer activates the single-file `cline` service. Cline's
