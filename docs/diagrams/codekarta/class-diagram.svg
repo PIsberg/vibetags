@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="3064" height="2100" viewBox="0 0 3064 2100">
+<svg xmlns="http://www.w3.org/2000/svg" width="3252" height="2190" viewBox="0 0 3252 2190">
 <defs>
 <style>
 svg { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -58,15 +58,15 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <path d="M0,0 L10,5 L0,10 Z" fill="#ffffff" stroke="#1d4ed8" stroke-width="1"/>
 </marker>
 </defs>
-<rect width="3064" height="2100" fill="#f9fafb"/>
-<rect width="3064" height="2100" fill="url(#dotGrid)"/>
-<rect class="group-rect" x="2810.0" y="100.0" width="208.0" height="398.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
-<text x="2816.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor</text>
+<rect width="3252" height="2190" fill="#f9fafb"/>
+<rect width="3252" height="2190" fill="url(#dotGrid)"/>
+<rect class="group-rect" x="2610.0" y="100.0" width="208.0" height="398.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<text x="2616.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor</text>
 <rect class="group-rect" x="1682.0" y="304.0" width="1008.0" height="848.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1688.0" y="317.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal</text>
 <rect class="group-rect" x="1058.0" y="304.0" width="608.0" height="743.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1064.0" y="317.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content</text>
-<rect class="group-rect" x="1234.0" y="958.0" width="1208.0" height="938.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<rect class="group-rect" x="1234.0" y="958.0" width="1208.0" height="1028.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1240.0" y="971.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.platforms</text>
 <rect class="group-rect" x="10.0" y="958.0" width="1208.0" height="820.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="971.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.annotations</text>
@@ -74,8 +74,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text x="440.0" y="317.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.validation</text>
 <rect class="group-rect" x="10.0" y="304.0" width="408.0" height="638.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="317.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.model</text>
-<path class="edge-line" data-source="VibeTagsLogger" data-target="ThreadLocal" data-type="HAS" d="M2824.0 231.5 Q1510.5 105.9 192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="VibeTagsLogger" data-target="ThreadLocal" data-type="HAS" x="1509.3" y="118.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">THREAD_PROJECT_ROOTS</text>
+<path class="edge-line" data-source="VibeTagsLogger" data-target="ThreadLocal" data-type="HAS" d="M2624.0 231.5 Q1410.7 106.1 192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="VibeTagsLogger" data-target="ThreadLocal" data-type="HAS" x="1409.3" y="118.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">THREAD_PROJECT_ROOTS</text>
 <path class="edge-line" data-source="LazyFileAppender" data-target="OutputStreamAppender" data-type="EXTENDS" d="M1696.0 405.5 Q1053.2 196.0 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-hollow-374151)"/>
 <text class="edge-label" data-source="LazyFileAppender" data-target="OutputStreamAppender" data-type="EXTENDS" x="1048.6" y="207.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">extends</text>
 <path class="edge-line" data-source="LazyFileAppender" data-target="DeferredFileStream" data-type="HAS" d="M1696.0 405.5 Q1154.5 197.1 592.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -216,10 +216,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="ZedRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1736.9" y="536.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
 <path class="edge-line" data-source="SweepRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 972.0 Q1579.5 675.9 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="SweepRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1564.8" y="679.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1422.0 Q1682.2 902.5 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1666.1" y="905.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" d="M2028.0 1472.0 Q2031.1 1529.8 2068.0 1574.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" x="2039.6" y="1520.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1512.0 Q1386.6 966.8 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="FirebaseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.3" y="960.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1562.0 Q1431.1 1619.8 1468.0 1664.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FirebaseRenderer" data-target="CursorRenderer" data-type="HAS" x="1439.6" y="1610.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="CodexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2048.0 1029.5 Q1775.9 675.9 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="CodexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1763.0" y="681.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="CodexRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2138.0 972.0 Q2054.9 525.6 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -242,74 +242,78 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="LlmsRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1565.5" y="725.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AnnotationSections" data-target="Section" data-type="HAS" d="M2138.0 1062.0 Q2155.0 578.7 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AnnotationSections" data-target="Section" data-type="HAS" x="2137.5" y="573.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">EMOJI_STYLE_NEWEST_ANNOTATIONS</text>
-<path class="edge-line" data-source="PlandexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1105.5 Q1874.1 711.2 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="PlandexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1862.0" y="718.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="InterpreterRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1152.0 Q1385.4 787.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="InterpreterRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1367.7" y="780.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="GeminiRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1152.0 Q1484.4 777.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="GeminiRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1467.2" y="775.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1538.0 1152.0 Q1755.0 637.1 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1737.5" y="625.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2158.0 1517.0 Q1790.4 946.5 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1775.2" y="951.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2158.0 1517.0 Q2066.8 800.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="2048.4" y="798.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2158.0 1517.0 Q2066.8 800.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="2048.4" y="798.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
-<path class="edge-line" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1512.0 Q1683.0 948.6 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1666.5" y="951.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" d="M2028.0 1562.0 Q2045.8 1575.5 2068.0 1574.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" x="2046.9" y="1565.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1152.0 Q1582.2 769.4 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1566.1" y="771.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1152.0 Q1678.9 763.3 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1664.5" y="768.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 1152.0 Q1775.8 758.6 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1762.9" y="766.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1602.0 Q1683.5 994.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1666.7" y="996.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" d="M2028.0 1659.5 Q2062.4 1623.8 2068.0 1574.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" x="2055.2" y="1614.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1209.5 Q1876.1 764.5 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1863.1" y="770.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2338.0 1152.0 Q2154.2 610.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="2137.1" y="611.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2338.0 1152.0 Q2154.2 610.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="2137.1" y="611.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
-<path class="edge-line" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1242.0 Q1385.9 832.0 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1367.9" y="825.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1692.0 Q1684.2 1040.5 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1667.1" y="1042.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" d="M2028.0 1742.0 Q2072.2 1664.0 2068.0 1574.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" x="2060.1" y="1655.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1782.0 Q1684.6 1086.3 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1667.3" y="1087.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1938.0 1782.0 Q2065.7 1733.0 2158.0 1632.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" x="2056.9" y="1714.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1242.0 Q1583.2 815.8 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1566.6" y="817.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="CodyRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1242.0 Q1680.4 809.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CodyRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1665.2" y="814.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeLocalRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1332.0 Q1485.5 869.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClaudeLocalRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1467.7" y="866.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" d="M1628.0 1382.0 Q1632.4 1401.1 1648.0 1413.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" x="1635.2" y="1393.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
-<path class="edge-line" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 1242.0 Q1777.3 805.3 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1763.6" y="812.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M2138.0 1242.0 Q2056.3 662.5 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="2038.2" y="660.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1307.0 Q1877.7 814.5 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1863.9" y="820.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" d="M2248.0 1307.0 Q1867.5 1039.5 1452.0 830.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" x="1858.8" y="1048.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
-<path class="edge-line" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1332.0 Q1582.9 862.4 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1566.4" y="863.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1332.0 Q1386.3 877.0 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.1" y="870.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1332.0 Q1681.3 856.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1665.7" y="860.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" d="M2028.0 1382.0 Q2021.7 1483.7 2068.0 1574.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" x="2034.8" y="1475.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="GeminiStyleguideRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1105.0 Q1874.1 711.0 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GeminiStyleguideRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1862.0" y="718.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="PlandexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1152.0 Q1385.4 787.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="PlandexRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1367.7" y="780.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="InterpreterRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1152.0 Q1484.6 777.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="InterpreterRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1467.3" y="775.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GeminiRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1152.0 Q1582.0 769.5 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GeminiRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1566.0" y="771.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1738.0 1152.0 Q1856.4 630.7 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GeminiRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1838.2" y="621.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1558.0 1607.0 Q1496.2 1007.5 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1478.1" y="1004.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1607.0 Q1766.7 860.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1748.3" y="850.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1558.0 1607.0 Q1766.7 860.9 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CursorRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1748.3" y="850.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
+<path class="edge-line" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1602.0 Q1386.8 1011.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.4" y="1005.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1652.0 Q1445.8 1665.5 1468.0 1664.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" x="1446.9" y="1655.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1152.0 Q1679.1 763.1 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1664.5" y="768.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 1152.0 Q1775.7 758.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1762.9" y="766.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AiderConfRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1209.5 Q1876.1 764.5 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AiderConfRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1863.1" y="770.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1242.0 Q1385.9 832.0 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="RooModesRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1367.9" y="825.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1692.0 Q1386.9 1056.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.4" y="1050.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1749.5 Q1462.4 1713.8 1468.0 1664.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ClaudeSkillRenderer" data-target="CursorRenderer" data-type="HAS" x="1455.2" y="1704.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1242.0 Q1484.7 823.6 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="QwenRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1467.4" y="821.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1538.0 1242.0 Q1755.3 681.2 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1737.6" y="669.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1538.0 1242.0 Q1755.3 681.2 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="QwenRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1737.6" y="669.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL_SECTIONS</text>
+<path class="edge-line" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1242.0 Q1583.2 815.8 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CodeRabbitRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1566.6" y="817.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1782.0 Q1387.2 1101.7 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClineRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.6" y="1095.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1832.0 Q1472.2 1754.0 1468.0 1664.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ClineRenderer" data-target="CursorRenderer" data-type="HAS" x="1460.1" y="1745.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1872.0 Q1387.4 1146.6 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GooseRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.7" y="1140.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" d="M1338.0 1872.0 Q1465.7 1823.0 1558.0 1722.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GooseRenderer" data-target="CursorRenderer" data-type="HAS" x="1456.9" y="1804.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 1242.0 Q1777.4 805.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1763.7" y="812.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="CodyRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2248.0 1285.0 Q1877.4 803.2 1452.0 369.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CodyRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1863.7" y="809.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClaudeLocalRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 1332.0 Q1681.3 856.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClaudeLocalRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1665.7" y="860.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" d="M2028.0 1382.0 Q2032.4 1401.1 2048.0 1413.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" x="2035.2" y="1393.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
+<path class="edge-line" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1332.0 Q1386.0 876.9 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.0" y="870.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1338.0 1332.0 Q1654.2 730.6 1902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1637.1" y="716.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1332.0 Q1485.0 869.2 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1467.5" y="866.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" d="M1538.0 1332.0 Q1480.4 1095.0 1362.0 881.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" x="1465.2" y="1094.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
+<path class="edge-line" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 1332.0 Q1778.0 852.1 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1764.0" y="858.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1332.0 Q1584.0 862.0 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1567.0" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 1422.0 Q1386.3 921.9 1362.0 420.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1368.2" y="915.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" d="M1428.0 1472.0 Q1421.7 1573.7 1468.0 1664.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" x="1434.8" y="1565.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" d="M1652.0 390.5 Q1948.5 250.3 2212.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" x="1940.3" y="230.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OVERRIDES</text>
 <path class="edge-line" data-source="AIPrivacyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1114.0 972.0 Q1171.8 736.4 1162.0 494.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -418,66 +422,70 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" x="738.0" y="614.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularOwners</text>
 <path class="edge-line" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" d="M1272.0 638.0 Q744.6 499.2 204.0 428.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" x="741.3" y="510.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" d="M1562.0 748.0 Q1832.6 1153.7 2158.0 1517.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" x="1846.3" y="1137.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" d="M1562.0 748.0 Q1621.1 1048.7 1738.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" x="1635.6" y="1038.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" d="M1562.0 748.0 Q1420.2 1028.6 1338.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" x="1435.1" y="1028.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AI_EXCLUDE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" d="M1562.0 748.0 Q1527.0 1177.3 1558.0 1607.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" x="1543.5" y="1171.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" d="M1562.0 748.0 Q1826.1 1063.6 2138.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" x="1838.1" y="1045.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" d="M1562.0 748.0 Q1619.8 1049.1 1738.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" x="1634.9" y="1038.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AI_EXCLUDE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodexRenderer" data-type="HAS" d="M1652.0 623.0 Q1826.9 848.7 2048.0 1029.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodexRenderer" data-type="HAS" x="1838.5" y="831.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODEX_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" d="M1562.0 748.0 Q1827.6 1021.1 2138.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" x="1838.8" y="1002.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">COPILOT_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" d="M1652.0 623.0 Q1925.9 940.8 2248.0 1209.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" x="1937.9" y="922.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">QWEN_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GeminiRenderer" data-type="HAS" d="M1562.0 748.0 Q1522.1 948.3 1538.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GeminiRenderer" data-type="HAS" x="1536.1" y="943.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GEMINI_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" d="M1562.0 748.0 Q1420.5 1028.7 1338.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" x="1435.2" y="1028.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">COPILOT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" d="M1562.0 748.0 Q1520.8 993.6 1538.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" x="1535.4" y="988.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">QWEN_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GeminiRenderer" data-type="HAS" d="M1562.0 748.0 Q1623.3 961.6 1738.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GeminiRenderer" data-type="HAS" x="1636.6" y="949.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GEMINI_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="LlmsRenderer" data-type="HAS" d="M1562.0 748.0 Q1625.5 918.7 1738.0 1062.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="LlmsRenderer" data-type="HAS" x="1637.8" y="905.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LLMS_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiderConventionsRenderer" data-type="HAS" d="M1652.0 623.0 Q1932.0 846.4 2248.0 1015.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiderConventionsRenderer" data-type="HAS" x="1941.0" y="826.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AIDER_CONVENTIONS_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="IgnoreFileRenderer" data-type="HAS" d="M1562.0 748.0 Q1623.0 961.8 1738.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="IgnoreFileRenderer" data-type="HAS" x="1636.5" y="949.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IGNORE_FILE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="IgnoreFileRenderer" data-type="HAS" d="M1562.0 748.0 Q1726.4 972.0 1938.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="IgnoreFileRenderer" data-type="HAS" x="1738.2" y="955.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IGNORE_FILE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="WindsurfRenderer" data-type="HAS" d="M1562.0 748.0 Q1426.9 888.6 1338.0 1062.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="WindsurfRenderer" data-type="HAS" x="1438.5" y="890.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">WINDSURF_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="ZedRenderer" data-type="HAS" d="M1562.0 748.0 Q1527.6 857.6 1538.0 972.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ZedRenderer" data-type="HAS" x="1538.8" y="852.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ZED_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" d="M1562.0 748.0 Q1724.0 1014.8 1938.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" x="1737.0" y="998.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODY_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" d="M1652.0 623.0 Q1923.6 988.0 2248.0 1307.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" x="1936.8" y="970.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MENTAT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" d="M1652.0 623.0 Q1924.0 977.4 2248.0 1285.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" x="1937.0" y="959.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODY_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" d="M1562.0 748.0 Q1519.8 1038.8 1538.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" x="1534.9" y="1033.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MENTAT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="SweepRenderer" data-type="HAS" d="M1562.0 748.0 Q1629.2 876.4 1738.0 972.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="SweepRenderer" data-type="HAS" x="1639.6" y="862.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SWEEP_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" d="M1652.0 623.0 Q1928.9 890.3 2248.0 1105.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" x="1939.4" y="871.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PLANDEX_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" d="M1562.0 748.0 Q1423.7 935.4 1338.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" x="1436.9" y="936.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">INTERPRETER_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" d="M1562.0 748.0 Q1718.0 1232.7 1938.0 1692.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" x="1734.0" y="1220.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLINE_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" d="M1562.0 748.0 Q1722.4 1057.8 1938.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" x="1736.2" y="1042.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">JUNIE_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" d="M1562.0 748.0 Q1721.0 1101.2 1938.0 1422.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" x="1735.5" y="1087.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FIREBASE_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" d="M1562.0 748.0 Q1519.2 1038.7 1538.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" x="1534.6" y="1033.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_LOCAL_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" d="M1562.0 748.0 Q1719.0 1188.6 1938.0 1602.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" x="1734.5" y="1175.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_SKILL_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" d="M1562.0 748.0 Q1421.7 982.2 1338.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" x="1435.9" y="982.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODERABBIT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" d="M1562.0 748.0 Q1423.7 935.4 1338.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" x="1436.9" y="936.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PLANDEX_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" d="M1562.0 748.0 Q1521.8 948.3 1538.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="InterpreterRenderer" data-type="HAS" x="1535.9" y="943.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">INTERPRETER_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" d="M1562.0 748.0 Q1416.4 1257.7 1338.0 1782.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClineRenderer" data-type="HAS" x="1433.2" y="1255.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLINE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" d="M1562.0 748.0 Q1419.3 1074.8 1338.0 1422.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="JunieRenderer" data-type="HAS" x="1434.6" y="1073.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">JUNIE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" d="M1562.0 748.0 Q1418.3 1120.7 1338.0 1512.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="FirebaseRenderer" data-type="HAS" x="1434.2" y="1119.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FIREBASE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" d="M1562.0 748.0 Q1722.4 1057.8 1938.0 1332.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeLocalRenderer" data-type="HAS" x="1736.2" y="1042.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_LOCAL_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" d="M1562.0 748.0 Q1417.1 1212.2 1338.0 1692.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeSkillRenderer" data-type="HAS" x="1433.6" y="1210.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_SKILL_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" d="M1562.0 748.0 Q1621.2 1005.3 1738.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodeRabbitRenderer" data-type="HAS" x="1635.6" y="994.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODERABBIT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="PrAgentRenderer" data-type="HAS" d="M1562.0 748.0 Q1524.7 903.1 1538.0 1062.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="PrAgentRenderer" data-type="HAS" x="1537.4" y="898.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PR_AGENT_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" d="M1562.0 748.0 Q1621.2 1005.3 1738.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" x="1635.6" y="994.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ELLIPSIS_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" d="M1562.0 748.0 Q1719.8 1144.9 1938.0 1512.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" x="1734.9" y="1131.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">VOID_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" d="M1652.0 623.0 Q1821.8 928.8 2048.0 1195.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" x="1835.9" y="913.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ROO_MODES_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" d="M1562.0 748.0 Q1726.6 971.8 1938.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" x="1738.3" y="954.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOCKS_REPORT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" d="M1562.0 748.0 Q1827.5 1021.2 2138.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="EllipsisRenderer" data-type="HAS" x="1838.7" y="1002.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ELLIPSIS_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" d="M1562.0 748.0 Q1417.6 1166.5 1338.0 1602.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="VoidRenderer" data-type="HAS" x="1433.8" y="1164.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">VOID_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" d="M1562.0 748.0 Q1421.7 982.2 1338.0 1242.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="RooModesRenderer" data-type="HAS" x="1435.9" y="982.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ROO_MODES_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" d="M1562.0 748.0 Q1830.2 978.2 2138.0 1152.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="LocksReportRenderer" data-type="HAS" x="1840.1" y="958.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOCKS_REPORT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" d="M1562.0 748.0 Q1432.2 842.2 1338.0 972.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="GranularRenderer" data-type="HAS" x="1441.1" y="845.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GRANULAR_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" d="M1562.0 748.0 Q1717.3 1276.9 1938.0 1782.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" x="1733.7" y="1264.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GOOSE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" d="M1562.0 748.0 Q1415.9 1303.2 1338.0 1872.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GooseRenderer" data-type="HAS" x="1432.9" y="1300.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GOOSE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GeminiStyleguideRenderer" data-type="HAS" d="M1652.0 623.0 Q1928.9 890.1 2248.0 1105.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GeminiStyleguideRenderer" data-type="HAS" x="1939.4" y="871.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GEMINI_STYLEGUIDE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiderConfRenderer" data-type="HAS" d="M1652.0 623.0 Q1925.9 940.8 2248.0 1209.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiderConfRenderer" data-type="HAS" x="1937.9" y="922.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AIDER_CONF_RENDERER</text>
 <path class="edge-line" data-source="EnforcementBaseline" data-target="ConcurrentMap" data-type="HAS" d="M2586.0 588.0 Q2770.6 360.2 2902.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="EnforcementBaseline" data-target="ConcurrentMap" data-type="HAS" x="2757.3" y="345.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ROOT_MONITORS</text>
 <path class="edge-line" data-source="WriteCache" data-target="Path" data-type="HAS" d="M2096.0 998.0 Q1567.7 498.8 992.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -500,10 +508,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="1782.1" y="614.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularUnits</text>
 <path class="edge-line" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" d="M2096.0 818.0 Q1790.3 606.2 1452.0 451.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="1782.1" y="614.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">moduleGranularUnits</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="FileMover" data-type="HAS" d="M2096.0 818.0 Q1156.3 446.7 192.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="FileMover" data-type="HAS" x="1150.1" y="458.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ATOMIC_REPLACE</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="AtomicLong" data-type="HAS" d="M2096.0 818.0 Q1257.5 447.4 392.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="AtomicLong" data-type="HAS" x="1250.7" y="458.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">TEMP_SEQUENCE</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="FileMover" data-type="HAS" d="M2276.0 818.0 Q2669.6 461.2 3012.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="FileMover" data-type="HAS" x="2656.8" y="442.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ATOMIC_REPLACE</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="AtomicLong" data-type="HAS" d="M2096.0 818.0 Q1156.3 446.7 192.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="AtomicLong" data-type="HAS" x="1150.1" y="458.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">TEMP_SEQUENCE</text>
 <path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M2186.0 678.0 Q2135.6 818.0 2186.0 958.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" x="2160.8" y="812.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FUTURE_VERSION</text>
 <path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M2186.0 678.0 Q2135.6 818.0 2186.0 958.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -522,14 +530,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AttributeRule" data-target="ValidationRule" data-type="IMPLEMENTS" x="657.2" y="690.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AttributeRule" data-target="Class" data-type="HAS" d="M628.0 750.5 Q1043.4 429.1 1412.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AttributeRule" data-target="Class" data-type="HAS" x="1031.7" y="409.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">scans</text>
-<path class="edge-line" data-source="AttributeRule" data-target="Check" data-type="HAS" d="M538.0 678.0 Q552.3 430.6 502.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AttributeRule" data-target="Check" data-type="HAS" x="536.2" y="425.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">body</text>
+<path class="edge-line" data-source="AttributeRule" data-target="Check" data-type="HAS" d="M538.0 678.0 Q450.2 418.5 302.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AttributeRule" data-target="Check" data-type="HAS" x="435.1" y="419.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">body</text>
 <path class="edge-line" data-source="ValidationContext" data-target="Messager" data-type="HAS" d="M828.0 443.0 Q1042.7 271.4 1212.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ValidationContext" data-target="Messager" data-type="HAS" x="1031.3" y="254.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">messager</text>
-<path class="edge-line" data-source="ValidationContext" data-target="RoundEnvironment" data-type="HAS" d="M738.0 318.0 Q737.3 248.2 702.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ValidationContext" data-target="RoundEnvironment" data-type="HAS" x="728.7" y="244.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roundEnv</text>
-<path class="edge-line" data-source="ValidationContext" data-target="ProcessingEnvironment" data-type="HAS" d="M738.0 318.0 Q835.3 272.3 902.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ValidationContext" data-target="ProcessingEnvironment" data-type="HAS" x="827.6" y="256.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">processingEnv</text>
+<path class="edge-line" data-source="ValidationContext" data-target="RoundEnvironment" data-type="HAS" d="M738.0 318.0 Q633.7 228.2 502.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ValidationContext" data-target="RoundEnvironment" data-type="HAS" x="626.8" y="234.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roundEnv</text>
+<path class="edge-line" data-source="ValidationContext" data-target="ProcessingEnvironment" data-type="HAS" d="M738.0 318.0 Q737.3 248.2 702.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ValidationContext" data-target="ProcessingEnvironment" data-type="HAS" x="728.7" y="244.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">processingEnv</text>
 <path class="edge-line" data-source="ValidationRules" data-target="ValidationRule" data-type="HAS" d="M538.0 768.0 Q659.1 751.9 758.0 680.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ValidationRules" data-target="ValidationRule" data-type="HAS" x="653.6" y="731.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PAIRS</text>
 <path class="edge-line" data-source="ValidationRules" data-target="ValidationRule" data-type="HAS" d="M538.0 768.0 Q659.1 751.9 758.0 680.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -538,14 +546,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="LockedOverrideRule" data-target="ValidationRule" data-type="IMPLEMENTS" x="635.4" y="544.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" d="M1876.0 960.5 Q1879.3 982.9 1896.0 998.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" x="1882.6" y="975.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
-<path class="edge-line" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" d="M1786.0 858.0 Q1469.2 497.3 1102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" x="1456.6" y="504.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FORMATS</text>
-<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M204.0 428.0 Q717.3 319.5 1212.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="712.6" y="297.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
+<path class="edge-line" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" d="M1696.0 960.5 Q1371.1 529.3 992.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" x="1357.6" y="535.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FORMATS</text>
+<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M204.0 428.0 Q619.0 317.9 1012.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="613.5" y="296.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
 <path class="edge-line" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" d="M204.0 638.0 Q231.5 593.1 224.0 541.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TaggedElement" data-target="ElementTag" data-type="HAS" x="222.7" y="585.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">kind</text>
-<path class="edge-line" data-source="TaggedElement" data-target="Annotation" data-type="HAS" d="M204.0 638.0 Q821.4 424.3 1412.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TaggedElement" data-target="Annotation" data-type="HAS" x="814.7" y="401.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">annotations</text>
+<path class="edge-line" data-source="TaggedElement" data-target="Annotation" data-type="HAS" d="M204.0 638.0 Q723.3 422.8 1212.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TaggedElement" data-target="Annotation" data-type="HAS" x="715.7" y="401.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">annotations</text>
 <path class="edge-line" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" d="M114.0 498.0 Q63.6 638.0 114.0 778.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" x="88.8" y="632.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">owner</text>
 <path class="edge-line" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" d="M114.0 599.7 Q66.3 732.2 114.0 864.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -554,65 +562,65 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" x="223.0" y="677.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
 <path class="edge-line" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" d="M204.0 732.2 Q201.3 771.2 224.0 803.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" x="207.6" y="763.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
-<path class="edge-line" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" d="M204.0 732.2 Q921.9 471.8 1612.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" x="914.9" y="449.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
-<path class="edge-line" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" d="M404.0 803.0 Q1123.3 506.8 1812.0 145.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" x="1115.7" y="484.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="TransitiveRule" data-target="Tier" data-type="HAS" d="M404.0 803.0 Q1221.8 507.8 2012.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TransitiveRule" data-target="Tier" data-type="HAS" x="1214.9" y="484.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">tier</text>
+<path class="edge-line" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" d="M204.0 732.2 Q823.6 470.6 1412.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModel" data-target="Comparator" data-type="HAS" x="815.8" y="448.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
+<path class="edge-line" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" d="M404.0 803.0 Q1025.1 505.5 1612.0 145.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="TransitiveRule" data-target="Comparable" data-type="IMPLEMENTS" x="1016.6" y="483.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="TransitiveRule" data-target="Tier" data-type="HAS" d="M404.0 803.0 Q1123.3 506.8 1812.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TransitiveRule" data-target="Tier" data-type="HAS" x="1115.7" y="484.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">tier</text>
 <path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M204.0 458.0 Q819.2 289.9 1412.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" x="813.6" y="267.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AbstractProcessor" data-type="EXTENDS" d="M2824.0 344.0 Q2620.4 217.6 2392.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-hollow-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AbstractProcessor" data-type="EXTENDS" x="2614.2" y="225.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">extends</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AtomicBoolean" data-type="HAS" d="M2824.0 344.0 Q2725.4 224.2 2592.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AtomicBoolean" data-type="HAS" x="2716.7" y="228.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">processed</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" d="M2824.0 344.0 Q2014.3 163.9 1192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" x="2011.2" y="175.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" d="M2824.0 344.0 Q2427.0 644.6 2076.0 998.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" x="2438.5" y="651.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" d="M2824.0 344.0 Q2330.8 622.8 1876.0 960.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" x="2340.4" y="631.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularWriter</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" d="M2824.0 344.0 Q2523.3 648.6 2276.0 998.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" x="2536.6" y="653.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M2824.0 344.0 Q1913.7 163.4 992.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1910.8" y="175.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">root</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="SourcePositionResolver" data-type="HAS" d="M2824.0 344.0 Q2442.9 395.5 2076.0 510.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="SourcePositionResolver" data-type="HAS" x="2446.5" y="405.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">positionResolver</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="MethodBodyGuardrailScanner" data-type="HAS" d="M2824.0 344.0 Q2546.2 348.5 2276.0 413.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="MethodBodyGuardrailScanner" data-type="HAS" x="2548.1" y="357.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">bodyScanner</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="ModuleIdentity" data-type="HAS" d="M2824.0 344.0 Q2544.2 367.7 2276.0 451.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="ModuleIdentity" data-type="HAS" x="2547.1" y="376.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">moduleIdentity</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="PartialRoundDetector" data-type="HAS" d="M2824.0 344.0 Q2736.9 384.0 2676.0 458.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="PartialRoundDetector" data-type="HAS" x="2743.4" y="386.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sourceLedger</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="TransitiveManifestReader" data-type="HAS" d="M2824.0 344.0 Q2339.9 458.5 1876.0 638.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="TransitiveManifestReader" data-type="HAS" x="2345.0" y="468.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveReader</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M2824.0 344.0 Q1913.7 163.4 992.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1910.8" y="175.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">manifestDir</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" d="M2824.0 344.0 Q2525.5 602.2 2276.0 908.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" x="2537.8" y="608.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2824.0 344.0 Q2835.4 240.1 2792.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2821.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedElements</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2824.0 344.0 Q2835.4 240.1 2792.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2821.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ignoreElements</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2824.0 344.0 Q2835.4 240.1 2792.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2821.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">auditElements</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AbstractProcessor" data-type="EXTENDS" d="M2624.0 344.0 Q2420.4 217.6 2192.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-hollow-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AbstractProcessor" data-type="EXTENDS" x="2414.2" y="225.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">extends</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AtomicBoolean" data-type="HAS" d="M2624.0 344.0 Q2525.4 224.2 2392.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AtomicBoolean" data-type="HAS" x="2516.7" y="228.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">processed</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" d="M2624.0 344.0 Q1915.1 164.5 1192.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" x="1911.5" y="176.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" d="M2624.0 344.0 Q2323.3 648.6 2076.0 998.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" x="2336.6" y="653.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" d="M2624.0 344.0 Q2227.9 625.4 1876.0 960.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" x="2238.9" y="632.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularWriter</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" d="M2714.0 484.0 Q2432.2 645.9 2186.0 858.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" x="2441.1" y="652.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M2624.0 344.0 Q1814.3 163.9 992.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1811.2" y="175.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">root</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="SourcePositionResolver" data-type="HAS" d="M2624.0 344.0 Q2341.1 397.9 2076.0 510.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="SourcePositionResolver" data-type="HAS" x="2345.5" y="406.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">positionResolver</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="MethodBodyGuardrailScanner" data-type="HAS" d="M2624.0 344.0 Q2444.8 352.4 2276.0 413.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="MethodBodyGuardrailScanner" data-type="HAS" x="2447.4" y="359.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">bodyScanner</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="ModuleIdentity" data-type="HAS" d="M2624.0 344.0 Q2442.1 371.7 2276.0 451.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="ModuleIdentity" data-type="HAS" x="2446.0" y="378.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">moduleIdentity</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="PartialRoundDetector" data-type="HAS" d="M2624.0 344.0 Q2629.5 410.4 2676.0 458.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="PartialRoundDetector" data-type="HAS" x="2639.7" y="399.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sourceLedger</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="TransitiveManifestReader" data-type="HAS" d="M2624.0 344.0 Q2237.9 460.3 1876.0 638.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="TransitiveManifestReader" data-type="HAS" x="2244.0" y="469.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveReader</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M2624.0 344.0 Q1814.3 163.9 992.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1811.2" y="175.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">manifestDir</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" d="M2714.0 484.0 Q2435.3 598.7 2186.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" x="2442.6" y="606.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2624.0 344.0 Q2635.4 240.1 2592.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2621.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedElements</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2624.0 344.0 Q2635.4 240.1 2592.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2621.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ignoreElements</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" d="M2624.0 344.0 Q2635.4 240.1 2592.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="Element" data-type="HAS" x="2621.7" y="236.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">auditElements</text>
 <g id="VibeTagsLogger">
   <title>VibeTagsLogger [CLASS]</title>
-  <rect class="node-rect" x="2824.0" y="114.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2914.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VibeTagsLogger</text>
-  <line x1="2824.0" y1="158.0" x2="3004.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2832.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">LOGGER_NAME: String</text>
-  <text x="2832.0" y="186.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_LOG_FILE: String</text>
-  <text x="2832.0" y="201.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_LOG_LEVEL: String</text>
-  <text x="2832.0" y="216.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">THREAD_PROJECT_ROOTS: ThreadLoc…</text>
-  <line x1="2824.0" y1="230.0" x2="3004.0" y2="230.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2832.0" y="243.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">shutdown(): void</text>
-  <text x="2832.0" y="258.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">shutdown(Path): void</text>
-  <text x="2832.0" y="273.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forRoot(Path): Logger</text>
-  <text x="2832.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentFor(Path): Logger</text>
-  <text x="2832.0" y="303.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getLoggerName(Path): String</text>
-  <text x="2832.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forRoot(Path, String, String): …</text>
-  <text x="2832.0" y="333.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
+  <rect class="node-rect" x="2624.0" y="114.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2714.0" y="136.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VibeTagsLogger</text>
+  <line x1="2624.0" y1="158.0" x2="2804.0" y2="158.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2632.0" y="171.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">LOGGER_NAME: String</text>
+  <text x="2632.0" y="186.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_LOG_FILE: String</text>
+  <text x="2632.0" y="201.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_LOG_LEVEL: String</text>
+  <text x="2632.0" y="216.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">THREAD_PROJECT_ROOTS: ThreadLoc…</text>
+  <line x1="2624.0" y1="230.0" x2="2804.0" y2="230.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2632.0" y="243.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">shutdown(): void</text>
+  <text x="2632.0" y="258.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">shutdown(Path): void</text>
+  <text x="2632.0" y="273.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forRoot(Path): Logger</text>
+  <text x="2632.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentFor(Path): Logger</text>
+  <text x="2632.0" y="303.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getLoggerName(Path): String</text>
+  <text x="2632.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forRoot(Path, String, String): …</text>
+  <text x="2632.0" y="333.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
 </g>
 <g id="ThreadLocal">
   <title>ThreadLocal [CLASS]</title>
@@ -1395,22 +1403,22 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="FirebaseRenderer">
   <title>FirebaseRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1422.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1444.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FirebaseRenderer</text>
-  <line x1="1848.0" y1="1466.0" x2="2028.0" y2="1466.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1479.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1848.0" y1="1493.0" x2="2028.0" y2="1493.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1506.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1512.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1534.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FirebaseRenderer</text>
+  <line x1="1248.0" y1="1556.0" x2="1428.0" y2="1556.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1569.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1583.0" x2="1428.0" y2="1583.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1596.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="CursorRenderer">
   <title>CursorRenderer [CLASS]</title>
-  <rect class="node-rect" x="2068.0" y="1517.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2158.0" y="1539.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CursorRenderer</text>
-  <line x1="2068.0" y1="1561.0" x2="2248.0" y2="1561.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2076.0" y="1574.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
-  <text x="2076.0" y="1589.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
-  <line x1="2068.0" y1="1603.0" x2="2248.0" y2="1603.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2076.0" y="1616.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1468.0" y="1607.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1558.0" y="1629.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CursorRenderer</text>
+  <line x1="1468.0" y1="1651.0" x2="1648.0" y2="1651.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1476.0" y="1664.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <text x="1476.0" y="1679.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
+  <line x1="1468.0" y1="1693.0" x2="1648.0" y2="1693.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1476.0" y="1706.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="GuardrailInstructionBlock">
   <title>GuardrailInstructionBlock [CLASS]</title>
@@ -1510,196 +1518,213 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <rect class="node-rect" x="2012.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="2102.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Section</text>
 </g>
-<g id="PlandexRenderer">
-  <title>PlandexRenderer [CLASS]</title>
-  <rect class="node-rect" x="2248.0" y="1062.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2338.0" y="1084.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">PlandexRenderer</text>
+<g id="GeminiStyleguideRenderer">
+  <title>GeminiStyleguideRenderer [CLASS]</title>
+  <rect class="node-rect" x="2248.0" y="1062.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2338.0" y="1084.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GeminiStyleguideRenderer</text>
   <line x1="2248.0" y1="1106.0" x2="2428.0" y2="1106.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2256.0" y="1119.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="2256.0" y="1134.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
 </g>
-<g id="InterpreterRenderer">
-  <title>InterpreterRenderer [CLASS]</title>
+<g id="PlandexRenderer">
+  <title>PlandexRenderer [CLASS]</title>
   <rect class="node-rect" x="1248.0" y="1152.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">InterpreterRenderer</text>
+  <text class="node-label" x="1338.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">PlandexRenderer</text>
   <line x1="1248.0" y1="1196.0" x2="1428.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1256.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
   <text x="1256.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
 </g>
+<g id="InterpreterRenderer">
+  <title>InterpreterRenderer [CLASS]</title>
+  <rect class="node-rect" x="1448.0" y="1152.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1538.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">InterpreterRenderer</text>
+  <line x1="1448.0" y1="1196.0" x2="1628.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1456.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="1456.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
+</g>
 <g id="GeminiRenderer">
   <title>GeminiRenderer [CLASS]</title>
-  <rect class="node-rect" x="1448.0" y="1152.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1538.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GeminiRenderer</text>
-  <line x1="1448.0" y1="1196.0" x2="1628.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1456.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
-  <line x1="1448.0" y1="1223.0" x2="1628.0" y2="1223.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1456.0" y="1236.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1648.0" y="1152.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1738.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GeminiRenderer</text>
+  <line x1="1648.0" y1="1196.0" x2="1828.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1656.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <line x1="1648.0" y1="1223.0" x2="1828.0" y2="1223.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1656.0" y="1236.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="VoidRenderer">
   <title>VoidRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1512.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1534.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VoidRenderer</text>
-  <line x1="1848.0" y1="1556.0" x2="2028.0" y2="1556.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1569.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1848.0" y1="1583.0" x2="2028.0" y2="1583.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1596.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1602.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1624.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">VoidRenderer</text>
+  <line x1="1248.0" y1="1646.0" x2="1428.0" y2="1646.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1659.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1673.0" x2="1428.0" y2="1673.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1686.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="IgnoreFileRenderer">
   <title>IgnoreFileRenderer [CLASS]</title>
-  <rect class="node-rect" x="1648.0" y="1152.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1738.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">IgnoreFileRenderer</text>
-  <line x1="1648.0" y1="1196.0" x2="1828.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1656.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="1656.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getPlatformSpecificName(Platfor…</text>
+  <rect class="node-rect" x="1848.0" y="1152.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1938.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">IgnoreFileRenderer</text>
+  <line x1="1848.0" y1="1196.0" x2="2028.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="1856.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getPlatformSpecificName(Platfor…</text>
 </g>
 <g id="LocksReportRenderer">
   <title>LocksReportRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1152.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">LocksReportRenderer</text>
-  <line x1="1848.0" y1="1196.0" x2="2028.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
-  <line x1="1848.0" y1="1223.0" x2="2028.0" y2="1223.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1236.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="2048.0" y="1152.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2138.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">LocksReportRenderer</text>
+  <line x1="2048.0" y1="1196.0" x2="2228.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
+  <line x1="2048.0" y1="1223.0" x2="2228.0" y2="1223.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1236.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+</g>
+<g id="AiderConfRenderer">
+  <title>AiderConfRenderer [CLASS]</title>
+  <rect class="node-rect" x="2248.0" y="1152.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2338.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AiderConfRenderer</text>
+  <line x1="2248.0" y1="1196.0" x2="2428.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2256.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">READ_CONVENTIONS: String</text>
+  <line x1="2248.0" y1="1223.0" x2="2428.0" y2="1223.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2256.0" y="1236.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="2256.0" y="1251.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
 </g>
 <g id="RooModesRenderer">
   <title>RooModesRenderer [CLASS]</title>
-  <rect class="node-rect" x="2048.0" y="1152.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2138.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RooModesRenderer</text>
-  <line x1="2048.0" y1="1196.0" x2="2228.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2056.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="2056.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
-</g>
-<g id="ClaudeSkillRenderer">
-  <title>ClaudeSkillRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1602.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1624.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeSkillRenderer</text>
-  <line x1="1848.0" y1="1646.0" x2="2028.0" y2="1646.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1659.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <text x="1856.0" y="1674.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FRONT_MATTER: String</text>
-  <line x1="1848.0" y1="1688.0" x2="2028.0" y2="1688.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1701.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-</g>
-<g id="QwenRenderer">
-  <title>QwenRenderer [CLASS]</title>
-  <rect class="node-rect" x="2248.0" y="1152.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2338.0" y="1174.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">QwenRenderer</text>
-  <line x1="2248.0" y1="1196.0" x2="2428.0" y2="1196.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2256.0" y="1209.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
-  <text x="2256.0" y="1224.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
-  <line x1="2248.0" y1="1238.0" x2="2428.0" y2="1238.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2256.0" y="1251.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-</g>
-<g id="CodeRabbitRenderer">
-  <title>CodeRabbitRenderer [CLASS]</title>
   <rect class="node-rect" x="1248.0" y="1242.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CodeRabbitRenderer</text>
+  <text class="node-label" x="1338.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RooModesRenderer</text>
   <line x1="1248.0" y1="1286.0" x2="1428.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1256.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
   <text x="1256.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
 </g>
-<g id="ClineRenderer">
-  <title>ClineRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1692.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1714.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClineRenderer</text>
-  <line x1="1848.0" y1="1736.0" x2="2028.0" y2="1736.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1749.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1848.0" y1="1763.0" x2="2028.0" y2="1763.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1776.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+<g id="ClaudeSkillRenderer">
+  <title>ClaudeSkillRenderer [CLASS]</title>
+  <rect class="node-rect" x="1248.0" y="1692.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1714.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeSkillRenderer</text>
+  <line x1="1248.0" y1="1736.0" x2="1428.0" y2="1736.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1749.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <text x="1256.0" y="1764.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FRONT_MATTER: String</text>
+  <line x1="1248.0" y1="1778.0" x2="1428.0" y2="1778.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1791.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
-<g id="GooseRenderer">
-  <title>GooseRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1782.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1804.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GooseRenderer</text>
-  <line x1="1848.0" y1="1826.0" x2="2028.0" y2="1826.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1839.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1848.0" y1="1853.0" x2="2028.0" y2="1853.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1866.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-</g>
-<g id="GranularIndexSection">
-  <title>GranularIndexSection [CLASS]</title>
-  <rect class="node-rect" x="1448.0" y="1242.0" width="180.0" height="162.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1538.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularIndexSection</text>
+<g id="QwenRenderer">
+  <title>QwenRenderer [CLASS]</title>
+  <rect class="node-rect" x="1448.0" y="1242.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1538.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">QwenRenderer</text>
   <line x1="1448.0" y1="1286.0" x2="1628.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1456.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">governingGranularKey(Platform):…</text>
-  <text x="1456.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">indexActive(Platform, Rendering…</text>
-  <text x="1456.0" y="1329.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedDir(Platform): String</text>
-  <text x="1456.0" y="1344.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedSuffix(Platform): String</text>
-  <text x="1456.0" y="1359.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedPath(Platform, TaggedElem…</text>
-  <text x="1456.0" y="1374.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendXmlIndex(StringBuilder, P…</text>
-  <text x="1456.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
+  <text x="1456.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <text x="1456.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL_SECTIONS: List&lt;AnnotationSe…</text>
+  <line x1="1448.0" y1="1328.0" x2="1628.0" y2="1328.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1456.0" y="1341.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
-<g id="EllipsisRenderer">
-  <title>EllipsisRenderer [CLASS]</title>
+<g id="CodeRabbitRenderer">
+  <title>CodeRabbitRenderer [CLASS]</title>
   <rect class="node-rect" x="1648.0" y="1242.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1738.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">EllipsisRenderer</text>
+  <text class="node-label" x="1738.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CodeRabbitRenderer</text>
   <line x1="1648.0" y1="1286.0" x2="1828.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1656.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
   <text x="1656.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
 </g>
+<g id="ClineRenderer">
+  <title>ClineRenderer [CLASS]</title>
+  <rect class="node-rect" x="1248.0" y="1782.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1804.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClineRenderer</text>
+  <line x1="1248.0" y1="1826.0" x2="1428.0" y2="1826.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1839.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1853.0" x2="1428.0" y2="1853.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1866.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+</g>
+<g id="GooseRenderer">
+  <title>GooseRenderer [CLASS]</title>
+  <rect class="node-rect" x="1248.0" y="1872.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1894.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GooseRenderer</text>
+  <line x1="1248.0" y1="1916.0" x2="1428.0" y2="1916.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1929.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1943.0" x2="1428.0" y2="1943.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1956.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+</g>
+<g id="GranularIndexSection">
+  <title>GranularIndexSection [CLASS]</title>
+  <rect class="node-rect" x="1848.0" y="1242.0" width="180.0" height="162.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1938.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularIndexSection</text>
+  <line x1="1848.0" y1="1286.0" x2="2028.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">governingGranularKey(Platform):…</text>
+  <text x="1856.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">indexActive(Platform, Rendering…</text>
+  <text x="1856.0" y="1329.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedDir(Platform): String</text>
+  <text x="1856.0" y="1344.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedSuffix(Platform): String</text>
+  <text x="1856.0" y="1359.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedPath(Platform, TaggedElem…</text>
+  <text x="1856.0" y="1374.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">conventionalPath(Platform, Tagg…</text>
+  <text x="1856.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+3 more)</text>
+</g>
+<g id="EllipsisRenderer">
+  <title>EllipsisRenderer [CLASS]</title>
+  <rect class="node-rect" x="2048.0" y="1242.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2138.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">EllipsisRenderer</text>
+  <line x1="2048.0" y1="1286.0" x2="2228.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="2056.0" y="1314.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShape(): YamlMergeShape</text>
+</g>
 <g id="CodyRenderer">
   <title>CodyRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1242.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CodyRenderer</text>
-  <line x1="1848.0" y1="1286.0" x2="2028.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="2248.0" y="1242.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2338.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CodyRenderer</text>
+  <line x1="2248.0" y1="1286.0" x2="2428.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2256.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="ClaudeLocalRenderer">
   <title>ClaudeLocalRenderer [CLASS]</title>
-  <rect class="node-rect" x="1448.0" y="1332.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1538.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeLocalRenderer</text>
-  <line x1="1448.0" y1="1376.0" x2="1628.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1456.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CLAUDE_RENDERER: ClaudeRenderer</text>
-  <line x1="1448.0" y1="1403.0" x2="1628.0" y2="1403.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1456.0" y="1416.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1848.0" y="1332.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1938.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeLocalRenderer</text>
+  <line x1="1848.0" y1="1376.0" x2="2028.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CLAUDE_RENDERER: ClaudeRenderer</text>
+  <line x1="1848.0" y1="1403.0" x2="2028.0" y2="1403.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1416.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="ClaudeRenderer">
   <title>ClaudeRenderer [CLASS]</title>
-  <rect class="node-rect" x="1648.0" y="1332.0" width="180.0" height="162.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1738.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeRenderer</text>
-  <line x1="1648.0" y1="1376.0" x2="1828.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1656.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="1656.0" y="1404.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendAuditSection(StringBuilde…</text>
-  <text x="1656.0" y="1419.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendIgnoreSection(StringBuild…</text>
-  <text x="1656.0" y="1434.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendPrivacySection(StringBuil…</text>
-  <text x="1656.0" y="1449.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendCoreSection(StringBuilder…</text>
-  <text x="1656.0" y="1464.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendSecureSection(StringBuild…</text>
-  <text x="1656.0" y="1479.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
+  <rect class="node-rect" x="2048.0" y="1332.0" width="180.0" height="162.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2138.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeRenderer</text>
+  <line x1="2048.0" y1="1376.0" x2="2228.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="2056.0" y="1404.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendAuditSection(StringBuilde…</text>
+  <text x="2056.0" y="1419.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendIgnoreSection(StringBuild…</text>
+  <text x="2056.0" y="1434.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendPrivacySection(StringBuil…</text>
+  <text x="2056.0" y="1449.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendCoreSection(StringBuilder…</text>
+  <text x="2056.0" y="1464.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendSecureSection(StringBuild…</text>
+  <text x="2056.0" y="1479.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
 </g>
 <g id="CopilotRenderer">
   <title>CopilotRenderer [CLASS]</title>
-  <rect class="node-rect" x="2048.0" y="1242.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2138.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CopilotRenderer</text>
-  <line x1="2048.0" y1="1286.0" x2="2228.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2056.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
-  <line x1="2048.0" y1="1313.0" x2="2228.0" y2="1313.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2056.0" y="1326.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1332.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CopilotRenderer</text>
+  <line x1="1248.0" y1="1376.0" x2="1428.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <line x1="1248.0" y1="1403.0" x2="1428.0" y2="1403.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1416.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="MentatRenderer">
   <title>MentatRenderer [CLASS]</title>
-  <rect class="node-rect" x="2248.0" y="1242.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2338.0" y="1264.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">MentatRenderer</text>
-  <line x1="2248.0" y1="1286.0" x2="2428.0" y2="1286.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2256.0" y="1299.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MERGE: WholeFileMerge</text>
-  <line x1="2248.0" y1="1313.0" x2="2428.0" y2="1313.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2256.0" y="1326.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="2256.0" y="1341.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
-  <text x="2256.0" y="1356.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendJsonSection(StringBuilder…</text>
+  <rect class="node-rect" x="1448.0" y="1332.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1538.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">MentatRenderer</text>
+  <line x1="1448.0" y1="1376.0" x2="1628.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1456.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MERGE: WholeFileMerge</text>
+  <line x1="1448.0" y1="1403.0" x2="1628.0" y2="1403.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1456.0" y="1416.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="1456.0" y="1431.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
+  <text x="1456.0" y="1446.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendJsonSection(StringBuilder…</text>
 </g>
 <g id="AiExcludeRenderer">
   <title>AiExcludeRenderer [CLASS]</title>
-  <rect class="node-rect" x="1248.0" y="1332.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1338.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AiExcludeRenderer</text>
-  <line x1="1248.0" y1="1376.0" x2="1428.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1256.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1648.0" y="1332.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1738.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AiExcludeRenderer</text>
+  <line x1="1648.0" y1="1376.0" x2="1828.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1656.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="JunieRenderer">
   <title>JunieRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="1332.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="1354.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">JunieRenderer</text>
-  <line x1="1848.0" y1="1376.0" x2="2028.0" y2="1376.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1389.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
-  <line x1="1848.0" y1="1403.0" x2="2028.0" y2="1403.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1416.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="1248.0" y="1422.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1338.0" y="1444.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">JunieRenderer</text>
+  <line x1="1248.0" y1="1466.0" x2="1428.0" y2="1466.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1479.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CURSOR_RENDERER: CursorRenderer</text>
+  <line x1="1248.0" y1="1493.0" x2="1428.0" y2="1493.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1256.0" y="1506.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="SectionCatalog">
   <title>SectionCatalog [CLASS]</title>
@@ -1901,7 +1926,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1480.0" y="600.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CODEX_RENDERER: CodexRenderer</text>
   <text x="1480.0" y="615.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">COPILOT_RENDERER: CopilotRender…</text>
   <text x="1480.0" y="630.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">QWEN_RENDERER: QwenRenderer</text>
-  <text x="1480.0" y="645.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+24 more)</text>
+  <text x="1480.0" y="645.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+26 more)</text>
   <line x1="1472.0" y1="659.0" x2="1652.0" y2="659.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1480.0" y="672.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getRenderer(Platform): Platform…</text>
   <text x="1480.0" y="687.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShapeFor(String): YamlMerg…</text>
@@ -2052,13 +2077,13 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="FileMover">
   <title>FileMover [CLASS]</title>
-  <rect class="node-rect" x="12.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FileMover</text>
+  <rect class="node-rect" x="3012.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="3102.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FileMover</text>
 </g>
 <g id="AtomicLong">
   <title>AtomicLong [CLASS]</title>
-  <rect class="node-rect" x="212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AtomicLong</text>
+  <rect class="node-rect" x="12.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AtomicLong</text>
 </g>
 <g id="PairRule">
   <title>PairRule [CLASS]</title>
@@ -2120,8 +2145,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="Check">
   <title>Check [CLASS]</title>
-  <rect class="node-rect" x="412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Check</text>
+  <rect class="node-rect" x="212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Check</text>
 </g>
 <g id="ValidationContext">
   <title>ValidationContext [CLASS]</title>
@@ -2144,13 +2169,13 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="RoundEnvironment">
   <title>RoundEnvironment [CLASS]</title>
-  <rect class="node-rect" x="612.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="702.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RoundEnvironment</text>
+  <rect class="node-rect" x="412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RoundEnvironment</text>
 </g>
 <g id="ProcessingEnvironment">
   <title>ProcessingEnvironment [CLASS]</title>
-  <rect class="node-rect" x="812.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="902.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ProcessingEnvironment</text>
+  <rect class="node-rect" x="612.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="702.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ProcessingEnvironment</text>
 </g>
 <g id="ModernJavaRules">
   <title>ModernJavaRules [CLASS]</title>
@@ -2217,8 +2242,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="GranularFormat">
   <title>GranularFormat [CLASS]</title>
-  <rect class="node-rect" x="1012.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularFormat</text>
+  <rect class="node-rect" x="812.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="902.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularFormat</text>
 </g>
 <g id="ElementSignature">
   <title>ElementSignature [CLASS]</title>
@@ -2243,8 +2268,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="Role">
   <title>Role [CLASS]</title>
-  <rect class="node-rect" x="1212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Role</text>
+  <rect class="node-rect" x="1012.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Role</text>
 </g>
 <g id="ContentHash">
   <title>ContentHash [CLASS]</title>
@@ -2264,24 +2289,24 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="Annotation">
   <title>Annotation [CLASS]</title>
-  <rect class="node-rect" x="1412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Annotation</text>
+  <rect class="node-rect" x="1212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Annotation</text>
 </g>
 <g id="Comparator">
   <title>Comparator [CLASS]</title>
-  <rect class="node-rect" x="1612.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1702.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparator</text>
+  <rect class="node-rect" x="1412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparator</text>
 </g>
 <g id="Comparable">
   <title>Comparable [INTERFACE]</title>
-  <rect class="node-rect" x="1812.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-INTERFACE)" stroke="#1d4ed8" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1902.0" y="132.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">«interface»</text>
-  <text class="node-label" x="1902.0" y="157.9" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparable</text>
+  <rect class="node-rect" x="1612.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-INTERFACE)" stroke="#1d4ed8" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1702.0" y="132.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">«interface»</text>
+  <text class="node-label" x="1702.0" y="157.9" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Comparable</text>
 </g>
 <g id="Tier">
   <title>Tier [CLASS]</title>
-  <rect class="node-rect" x="2012.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Tier</text>
+  <rect class="node-rect" x="1812.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1902.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Tier</text>
 </g>
 <g id="GuardrailAnnotations">
   <title>GuardrailAnnotations [CLASS]</title>
@@ -2294,48 +2319,48 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AIGuardrailProcessor">
   <title>AIGuardrailProcessor [CLASS]</title>
-  <rect class="node-rect" x="2824.0" y="204.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2914.0" y="226.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIGuardrailProcessor</text>
-  <line x1="2824.0" y1="248.0" x2="3004.0" y2="248.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2832.0" y="261.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">VERSION: String</text>
-  <text x="2832.0" y="276.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GITHUB_URL: String</text>
-  <text x="2832.0" y="291.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GENERATED_HEADER: String</text>
-  <text x="2832.0" y="306.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">processed: AtomicBoolean</text>
-  <text x="2832.0" y="321.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MAX_DUPLICATES_SHOWN: int</text>
-  <text x="2832.0" y="336.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">log: Logger</text>
-  <text x="2832.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+25 more)</text>
-  <line x1="2824.0" y1="365.0" x2="3004.0" y2="365.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2832.0" y="378.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSupportedSourceVersion(): So…</text>
-  <text x="2832.0" y="393.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSupportedAnnotationTypes(): …</text>
-  <text x="2832.0" y="408.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">init(ProcessingEnvironment): vo…</text>
-  <text x="2832.0" y="423.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">process(Set&lt;? extends TypeEleme…</text>
-  <text x="2832.0" y="438.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compilationRoot(): Path</text>
-  <text x="2832.0" y="453.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentRegionId(): String</text>
-  <text x="2832.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+43 more)</text>
+  <rect class="node-rect" x="2624.0" y="204.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2714.0" y="226.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIGuardrailProcessor</text>
+  <line x1="2624.0" y1="248.0" x2="2804.0" y2="248.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2632.0" y="261.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">VERSION: String</text>
+  <text x="2632.0" y="276.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GITHUB_URL: String</text>
+  <text x="2632.0" y="291.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GENERATED_HEADER: String</text>
+  <text x="2632.0" y="306.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">processed: AtomicBoolean</text>
+  <text x="2632.0" y="321.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MAX_DUPLICATES_SHOWN: int</text>
+  <text x="2632.0" y="336.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">log: Logger</text>
+  <text x="2632.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+25 more)</text>
+  <line x1="2624.0" y1="365.0" x2="2804.0" y2="365.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2632.0" y="378.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSupportedSourceVersion(): So…</text>
+  <text x="2632.0" y="393.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSupportedAnnotationTypes(): …</text>
+  <text x="2632.0" y="408.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">init(ProcessingEnvironment): vo…</text>
+  <text x="2632.0" y="423.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">process(Set&lt;? extends TypeEleme…</text>
+  <text x="2632.0" y="438.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compilationRoot(): Path</text>
+  <text x="2632.0" y="453.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentRegionId(): String</text>
+  <text x="2632.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+43 more)</text>
 </g>
 <g id="AbstractProcessor">
   <title>AbstractProcessor [CLASS]</title>
-  <rect class="node-rect" x="2212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AbstractProcessor</text>
+  <rect class="node-rect" x="2012.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2102.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AbstractProcessor</text>
 </g>
 <g id="AtomicBoolean">
   <title>AtomicBoolean [CLASS]</title>
-  <rect class="node-rect" x="2412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AtomicBoolean</text>
+  <rect class="node-rect" x="2212.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2302.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AtomicBoolean</text>
 </g>
 <g id="Element">
   <title>Element [CLASS]</title>
-  <rect class="node-rect" x="2612.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2702.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Element</text>
+  <rect class="node-rect" x="2412.0" y="102.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2502.0" y="145.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Element</text>
 </g>
-<rect x="2828.0" y="1942.0" width="220.0" height="124.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
-<text x="2844.0" y="1962.0" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
-<line x1="2844.0" y1="1986.0" x2="2880.0" y2="1986.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
-<text x="2888.0" y="1990.0" font-family="sans-serif" font-size="11" fill="#374151">has</text>
-<line x1="2844.0" y1="2010.0" x2="2880.0" y2="2010.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-hollow-374151)"/>
-<text x="2888.0" y="2014.0" font-family="sans-serif" font-size="11" fill="#374151">extends</text>
-<line x1="2844.0" y1="2034.0" x2="2880.0" y2="2034.0" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text x="2888.0" y="2038.0" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
+<rect x="3016.0" y="2032.0" width="220.0" height="124.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
+<text x="3032.0" y="2052.0" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
+<line x1="3032.0" y1="2076.0" x2="3068.0" y2="2076.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
+<text x="3076.0" y="2080.0" font-family="sans-serif" font-size="11" fill="#374151">has</text>
+<line x1="3032.0" y1="2100.0" x2="3068.0" y2="2100.0" stroke="#374151" stroke-width="2" marker-end="url(#marker-hollow-374151)"/>
+<text x="3076.0" y="2104.0" font-family="sans-serif" font-size="11" fill="#374151">extends</text>
+<line x1="3032.0" y1="2124.0" x2="3068.0" y2="2124.0" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text x="3076.0" y="2128.0" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
 <script type="text/javascript">
 <![CDATA[
 document.addEventListener('DOMContentLoaded', () => {
@@ -2401,6 +2426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 ]]>
 </script>
 <a class="diagram-attribution" href="https://github.com/PIsberg/codekarta" target="_blank" rel="noopener noreferrer">
-  <text x="3048.0" y="2084.0" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
+  <text x="3236.0" y="2174.0" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
 </a>
 </svg>
