@@ -50,6 +50,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
 | `.copilotignore` | GitHub Copilot | Glob patterns |
 | `CONVENTIONS.md` | Aider | Markdown |
+| `.aider.conf.yml` | Aider (loads `CONVENTIONS.md`) | YAML (`read:`) |
 | `.aiderignore` | Aider | Glob patterns |
 | `QWEN.md` | Qwen | Markdown |
 | `.qwenignore` | Qwen | Glob patterns |
@@ -92,6 +93,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
+| `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
 | `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
 | `.gitingestignore` | Gitingest (context packer) | Glob patterns |
@@ -146,3 +148,23 @@ these platforms, add the arm in its formatter and the name on its line in the sa
 - **Sweep** (`sweep.yaml`) carries: `@AIAudit`, `@AIBannedApi`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIFeatureFlag`, `@AIGenerated`, `@AIIdempotent`, `@AIKeepInSync`, `@AILoadBearing`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AISecure`, `@AITestDriven`, `@AIThreadAffinity`.
 - **Mentat** (`.mentatconfig.json`) carries: `@AIAudit`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIIgnore`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AITestDriven`.
 - **Plandex** (`.plandex.yaml`) carries: `@AIAudit`, `@AILocked`, `@AIPrivacy`.
+
+### The YAML key VibeTags writes for aider, and the one it refuses to write for Gemini
+
+`.aider.conf.yml` exists because aider does not load `CONVENTIONS.md` by itself. Its
+[conventions documentation](https://aider.chat/docs/usage/conventions.html) says the file has to be
+named with `/read CONVENTIONS.md`, `--read`, or a `read:` key in the config, so between v0.5.0 and
+this release VibeTags generated a conventions file that no aider session ever opened. The generated
+block is one `read:` entry; everything else in the file is yours.
+
+The cost is that `read:` is a top-level YAML key, and a hand-authored `read:` outside the VibeTags
+markers would be a duplicate. PyYAML, which aider uses, does not reject a duplicate key: it keeps
+the last one, so whichever of the two sits lower in the file silently wins. Opt in with an empty
+`.aider.conf.yml`, or move your own `read:` entries inside the generated block. Issue #635 tracks
+turning that into a validation warning rather than a caveat in prose.
+
+`.gemini/config.yaml` is deliberately **not** written, for the same reason with none of the
+upside. Its `ignore_patterns` key would collide the same way, and unlike aider's `read:` it buys
+nothing that `.gemini/styleguide.md` does not already deliver: the style guide is where Gemini Code
+Assist takes its review rules from, and it is Markdown, so the marker merge is clean. Issue #636
+records the decision.

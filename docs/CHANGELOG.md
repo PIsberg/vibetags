@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Gemini Code Assist** (`.gemini/styleguide.md`) and **aider's `.aider.conf.yml`**. 42 AI
+  platforms, 52 config files.
+
+  Gemini Code Assist reviews pull requests on GitHub and takes its per-repository rules from
+  `.gemini/styleguide.md`, which is a different product and a different file from the Gemini CLI's
+  `GEMINI.md`. The path is from
+  [Google's own docs](https://docs.cloud.google.com/gemini/docs/code-review/customize-repo-review),
+  not from a cross-tool round-up: the last sweep found three of those rows stale, so every path here
+  was read from the vendor.
+
+- `.aider.conf.yml` is a defect fix wearing a platform's clothes. aider does **not** load
+  `CONVENTIONS.md` on its own -- its
+  [conventions docs](https://aider.chat/docs/usage/conventions.html) say the file has to be named
+  with `/read`, `--read`, or a `read:` key in the config. VibeTags has generated `CONVENTIONS.md`
+  since v0.5.0, so for eleven releases the aider platform wrote a file no aider session ever opened.
+  Nothing failed, because the only thing anyone checked was that the file existed.
+
+  `GeminiCodeAssistAndAiderConfEndToEndTest.aiderConfNamesTheConventionsFile` is the assertion that
+  would have caught it, and it was confirmed red against a renderer that names a different file.
+
+  `.gemini/config.yaml` is deliberately not written: its `ignore_patterns` key would duplicate a
+  hand-authored one, and PyYAML resolves a duplicate top-level key by keeping the last, so one of
+  the two would be lost silently. The same hazard applies to `read:` in `.aider.conf.yml` and is
+  accepted there only because it is the difference between that platform working and not. Both are
+  documented in [PLATFORMS.md](PLATFORMS.md), with #635 and #636 tracking the follow-ups.
+
+- The README's own config-file count had drifted from itself: the project-facts line said 50 while
+  a link four lines below said 49. `ProjectFactsConsistencyTest` pinned the first and not the
+  second.
+
 ### Changed
 
 - `AtomicityValidator` now runs, in a surefire fork of its own (#629). The async detectors were

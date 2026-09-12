@@ -158,6 +158,10 @@ class ProcessorTestHarness {
         touch(".aiassistant/rules/.vibetags");
         touch(".augment/rules/.vibetags");
         touch(".goosehints");
+        // Gemini Code Assist's review style guide, and aider's config, which is the file that
+        // makes aider load the CONVENTIONS.md this harness already opts into.
+        touch(".gemini/styleguide.md");
+        touch(".aider.conf.yml");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");

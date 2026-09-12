@@ -507,10 +507,11 @@ touch .clinerules                            # Cline AI assistant
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
-touch CONVENTIONS.md .aiderignore            # Aider
+touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
 touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
+mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
