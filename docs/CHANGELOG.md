@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `LazyFileAppenderAsyncTest`: the lazy log-file open is now driven by more than one thread.
+  `LazyFileAppender` was the only class in `src/main` with concurrency primitives and no async test,
+  and its `DeferredFileStream.open()` is a double-checked lazy init guarded by a `volatile opened`
+  that `hasOpenedFile()` reads with no lock. The existing `VibeTagsLoggerAsyncTest` gives every
+  thread its own directory and its own appender, so it proved isolation and nothing about
+  contention. The new test drives a busy appender and an idle one together: the busy one must open
+  once and lose no event, the idle one must create nothing while its sibling is under load, which is
+  the #487 regression where merely configuring the logger dropped a zero-byte `vibetags.log` into a
+  consumer's working tree.
+
+### Changed
+
+- Every `@AsyncTest` now runs async-test-lib's detectors instead of only its threads. The six tests
+  set `threads`, `invocations` and `timeoutMs` and nothing else, so roughly 190 detectors shipped in
+  the dependency and none of them ran; the tests caught only what a JUnit assertion caught. They now
+  set `preset = Preset.ALL, failOn = FailOn.HIGH, minTrust = TrustTier.FACT,
+  useVirtualThreads = false`, and each class is now `@Isolated`.
+
+  The isolation is part of the same change, not tidying. Real platform threads plus detector
+  instrumentation, running concurrently with the javac-based end-to-end tests (JUnit executes
+  classes in parallel here), made `TransitiveGuardrailLifecycleE2ETest` fail three times on
+  `windows-latest` with `compilation reported failure with no ERROR diagnostic` out of
+  `buildLibraryJar` — a compilation that returned failure while reporting nothing, the shape of an
+  environmental failure rather than a source error. Linux passed and so did a sixteen-core local
+  Windows box; only the low-core runner saw it.
+
+  `useVirtualThreads = false` is the part that matters most. The runner reports `LivelockDetector`
+  and `DaemonThreadHygieneDetector` as **inert** under virtual threads, because `dumpAllThreads()`
+  does not see them: a clean report meant "not observed", not "no problem". `minTrust = FACT`
+  because at PROMPT the library labels its own findings "synchronization the library cannot see may
+  make this correct", and gating there fails the tests on their own harness. No defect was found in
+  the existing five; the change is that the gate now runs. `AtomicityValidator` remains not-run
+  pending the `async-test-agent` javaagent, and says so with `runner.agent.absent`.
+
 ### Changed
 
 - The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used

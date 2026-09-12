@@ -2,10 +2,14 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Uses async-test-lib to force real thread collisions and race-condition checks.
  */
 @Tag("e2e")
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class VibeTagsLoggerAsyncTest {
 
     @BeforeAll
@@ -25,7 +32,9 @@ class VibeTagsLoggerAsyncTest {
         LoggerFactory.getLogger(VibeTagsLoggerAsyncTest.class);
     }
 
-    @AsyncTest(threads = 20, invocations = 10, timeoutMs = 60_000)
+    @AsyncTest(threads = 20, invocations = 10, timeoutMs = 60_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void testLoggerIsolationUnderConcurrency(@TempDir Path tempDir) throws Exception {
         long threadId = Thread.currentThread().getId(); // Thread.threadId() is Java 19+; getId() works on 17+
         // Dynamic isolated subdirectory per thread to prevent cross-talk

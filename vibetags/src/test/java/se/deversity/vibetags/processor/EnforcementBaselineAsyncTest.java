@@ -3,7 +3,11 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.parallel.Isolated;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.EnforcementBaseline;
 
 import java.io.IOException;
@@ -39,6 +43,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * file created unique per writer (issue #554).
  */
 @Tag("e2e")
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class EnforcementBaselineAsyncTest {
 
     /**
@@ -84,7 +91,9 @@ class EnforcementBaselineAsyncTest {
     /** One record-and-verify pass is not enough: the workers must interleave a merge with a move. */
     private static final int CYCLES_PER_INVOCATION = 12;
 
-    @AsyncTest(threads = 6, invocations = 5, timeoutMs = 120_000)
+    @AsyncTest(threads = 6, invocations = 5, timeoutMs = 120_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void concurrentBaselineUpdatesKeepEverySiblingsApprovals() throws IOException {
         // One module per worker, all recording into one shared root — a parallel reactor's shape.
         String moduleId = "mod" + Thread.currentThread().threadId();

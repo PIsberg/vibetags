@@ -32,6 +32,44 @@ fingerprinting, multi-module reactors and mirroring, international characters, a
 loops. Those are exactly the areas where "it compiled and the file looked right" is not evidence, so
 run `-Pe2e` before pushing anything that touches them.
 
+**The async stress tests run async-test-lib's detectors, not just its threads.** Every
+`@AsyncTest` in this repo sets `preset = Preset.ALL, failOn = FailOn.HIGH, minTrust =
+TrustTier.FACT, useVirtualThreads = false`. Each of those is load-bearing:
+
+- Without `preset`, the annotation runs threads and nothing else. The ~190 detectors ship in the
+  dependency and sit idle, so the test catches only what a JUnit assertion catches.
+- `useVirtualThreads = false` because the library reports two detectors as **inert** under virtual
+  threads: `dumpAllThreads()` does not see them, so `LivelockDetector` and
+  `DaemonThreadHygieneDetector` observe nothing. Their silence would read as "clean" when it means
+  "not looked". The runner says so itself in a `runner.detector.inert` line.
+- `minTrust = TrustTier.FACT` because the tiers are ADVISORY < PROMPT < FACT < VERDICT, and at
+  PROMPT the library's own label is "a prompt to verify; synchronization the library cannot see may
+  make this correct". Gating at PROMPT fails these tests on their own harness: twelve workers plus
+  surefire's pool on a sixteen-core box make `LivelockDetector` report `async-test-worker-N` as
+  starved. Findings below FACT still print, so a real one is readable in the log.
+
+One detector is still **not run** rather than passing: `AtomicityValidator` needs the
+`async-test-agent` artifact attached with `-javaagent`, which this build does not wire up. It
+announces itself with `runner.agent.absent`. Tracked separately; do not read its silence as a clean
+bill.
+
+**The async stress classes are `@Isolated`, and that is not optional.** They hold real platform
+threads and run detector instrumentation that takes repeated thread dumps, while
+`junit-platform.properties` executes classes concurrently. Turning the detectors on without
+isolating them made `TransitiveGuardrailLifecycleE2ETest` fail three times on `windows-latest` with
+`compilation reported failure with no ERROR diagnostic` out of `buildLibraryJar` — a javac run that
+returned failure while reporting nothing, which is what an environmental failure looks like rather
+than a source error. Linux passed, and so did a sixteen-core local Windows box; only the low-core
+runner saw it. The stress classes now run alone, so their contention stays theirs.
+
+If you add an `@AsyncTest`, isolate the class. A stress test that shares a small runner with a
+compiler is testing the runner.
+
+**Reproducing an async flake.** The runner picks a fresh interleaving seed per round and logs it at
+DEBUG as `runner.round.start … seed=<n>`. To replay one, pass that value back:
+`@AsyncTest(replaySeed = <n>)`. Seeds are deliberately not pinned in committed tests — a fixed seed
+explores one interleaving forever — so replay is a debugging step, not the default.
+
 **The Gradle test worker's heap is pinned, and has to be.** Gradle defaults a test worker to
 `-Xmx512m`; surefire's fork inherits the JVM default, a quarter of RAM. Since
 `junit-platform.properties` runs the suite concurrently and most e2e classes drive an in-process
@@ -241,6 +279,7 @@ assumed.
 | `ModuleSidecarAsyncTest` | Concurrent `save()` + `readAll()` in one reactor root: no torn read (a body that was never saved) and no wrongful prune (a sibling's sidecar deleted as malformed mid-write) |
 | `ModuleSidecarResilienceTest` (truncation) | A sidecar cut short by seven bytes: `load` reports it unreadable rather than decoding a body that was never saved, `readAll` skips it, and nothing deletes it. Plus the rule the trailer depends on — an unrecognised `#` line is skipped, not parsed — which is what lets an older processor read a newer sidecar |
 | `ModuleSidecarLogContractTest` | Every sidecar the reader drops names why: `sidecar.prune reason=…` when the file is deleted, `sidecar.skip reason=…` when it is only left out of this build (a newer sibling's, or anything check mode sees). A module vanishing from the merged guardrails used to leave no trace at all, because the class held no logger |
+| `LazyFileAppenderAsyncTest` | The lazy log-file open under contention: one busy appender and one idle one, driven together. The busy one must open its file exactly once and lose no event; the idle one must create nothing while its sibling is under load, which is the #487 regression (configuring the logger dropped a zero-byte `vibetags.log` into a consumer's tree). Measured limits are in the class javadoc: touching the stream from `start()` fails it on all 300 invocations, but removing `synchronized` from `DeferredFileStream.open()` does **not** fail it, because Logback serialises `doAppend` and no consumer path reaches the lazy open concurrently |
 | `EnforcementBaselineAsyncTest` | Concurrent `update()` into one root-level `.vibetags-baseline`, the shape of `mvn -T` recording with `-Avibetags.baseline.update=true`: no lost sibling (a module's approvals erased by a writer that merged a snapshot from before it wrote) and no failed move (two writers sharing one temp name). Reverting the re-read in `update()` fails it within two seconds |
 | `ModuleFlattenedIntoRootTest` | The reverse move, and the case that keeps the rule honest: sources leave a subproject for the root while `app/` stays behind as a directory, so the module-path staleness check cannot retire its sidecar and the *nested* region is the leftover. Retiring the live root region there loses content rather than duplicating it — a sibling module's later build reverts the file to the departed module's frozen text with no diagnostic, which is what the third test drives. Plus the two properties the prune has to hold whatever it decides: repeating the same pair of rounds leaves the file byte-identical (a rule that flipped the surviving region round by round would rewrite everything on every build), and check mode, which reads the same sidecars through `peekAll`, agrees with what generation just wrote |
 | `SupersededAncestorRegionTest` | The boundaries of that rule at `readAll` level: a region fully covered by a fresher one is deleted, in both directions (a stale root retired by its subproject, a stale subproject retired by the root); a tie goes to the more specific module; an older ancestor never retires a fresher subproject; a region with an element of its own survives; siblings never supersede each other; coverage is transitive; both source sets of the winning region count; a sidecar with no element ids is left alone; and `peekAll` excludes without deleting |

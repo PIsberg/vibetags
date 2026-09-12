@@ -1,8 +1,12 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.BeforeEach;
 import se.deversity.asynctest.AsyncTest;
+import se.deversity.asynctest.FailOn;
+import se.deversity.asynctest.Preset;
+import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.WriteCache;
 
 import java.io.IOException;
@@ -16,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Concurrency stress test for {@link WriteCache} using async-test-lib.
  * Verifies that the cache is resilient under concurrent reads, writes, and invalidations.
  */
+// @Isolated: real platform threads plus detector instrumentation. Runs alone so that
+// pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
+@Isolated
 class WriteCacheAsyncTest {
 
     private WriteCache cache;
@@ -27,7 +34,9 @@ class WriteCacheAsyncTest {
         this.cache = new WriteCache(tempDir.resolve(".vibetags-cache"));
     }
 
-    @AsyncTest(threads = 10, invocations = 20, timeoutMs = 30_000)
+    @AsyncTest(threads = 10, invocations = 20, timeoutMs = 30_000,
+        useVirtualThreads = false, preset = Preset.ALL,
+        failOn = FailOn.HIGH, minTrust = TrustTier.FACT)
     void testConcurrentCacheOperations() throws IOException {
         String uniqueId = UUID.randomUUID().toString();
         Path file = rootDir.resolve("file-" + uniqueId + ".txt");
