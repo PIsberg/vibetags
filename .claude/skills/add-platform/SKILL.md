@@ -189,6 +189,25 @@ clean local suite:
    SpotBugs bind to `verify`, and PMD has caught `InefficientStringBuffering` in new renderer code
    before.
 
+## Two traps when regenerating an example
+
+**Clear `.vibetags-cache` first.** The write cache and fingerprint short-circuit mean an unchanged
+"no diff" is ambiguous: the processor may simply not have run. `rm -f .vibetags-cache` before
+rebuilding, or a stale fixture looks like a correct one.
+
+**Regenerate `examples/multimodule` with `mvn clean verify`, not `mvn clean compile`.** Its `tests`
+module has no main sources, so `compile` never shows the processor that module's annotated test
+sources and it contributes nothing. CI runs `verify`, sees the module, and the byte-for-byte drift
+gate goes red on a `VIBETAGS-MODULE: tests` block the local build never produced. The tell that the
+fixture is stale rather than the renderer wrong: every other aggregate in that reactor already
+carries a `tests` block. The Gradle reactor has the same shape — use `./gradlew clean build -x test`,
+not `compileJava`.
+
+Both reactors also assert a **hardcoded active-service count** in `.github/workflows/build.yml`
+(`expected=` appears twice, once per reactor). Adding an opt-in to either example moves it, and no
+Maven build checks either one. Rebuild the reactor and read the number out of its own
+`vibetags.log` rather than doing the arithmetic.
+
 ## Extend the multi-module examples too, when the shape calls for it
 
 `examples/basic` is the exhaustive fixture and `ExampleOptInCoverageTest` enforces it. The others
