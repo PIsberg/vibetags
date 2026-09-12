@@ -80,7 +80,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: preflight
     if: needs.preflight.outputs.has_key == 'true'
-    env:
     steps:
       # The agent lane runs sandboxed: ephemeral runner, the API key as its only secret,
       # egress BLOCKED except what the job demonstrably needs (Anthropic API, GitHub, npm
