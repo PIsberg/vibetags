@@ -383,7 +383,7 @@ class AIGuardrailProcessorProcessTest {
             // 2026-09 platform sweep
             "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
             // Gemini Code Assist review style guide; aider's config, which is what loads CONVENTIONS.md
-            "gemini_styleguide", "aider_conf",
+            "gemini_styleguide", "aider_conf", "greptile", "greptile_rules",
             // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent file
             "agents_skill", "zencoder_granular", "replit",
             // Lean indexed root aggregate opt-in (multi-module)

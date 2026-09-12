@@ -22,6 +22,7 @@ runs:
           .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
           .github/copilot-instructions.md llms.txt llms-full.txt \
           CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
+          .greptile/rules.md greptile.json \
           .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
           replit.md .agents/skills/vibetags-guardrails/SKILL.md \
           .zencoder/rules/com-example-payment-PaymentProcessor.md \
@@ -95,6 +96,15 @@ runs:
         # entry naming it is.
         grep -q "^  - CONVENTIONS.md$" .aider.conf.yml || { echo "FAIL .aider.conf.yml does not name CONVENTIONS.md, so aider never loads it"; exit 1; }
         grep -q "PaymentProcessor" .gemini/styleguide.md || { echo "FAIL Gemini Code Assist style guide carries no locked element"; exit 1; }
+        grep -q "PaymentProcessor" .greptile/rules.md || { echo "FAIL Greptile rules.md carries no locked element"; exit 1; }
+        # greptile.json is hand-configured in the example. Existing and non-empty were true of the
+        # whole-file overwrite that erased the user's settings, so assert both halves: the hand-set
+        # fields survived, and the guardrails arrived inside the shared values.
+        grep -q '"fileChangeLimit": 100' greptile.json || { echo "FAIL greptile.json lost a hand-set field"; exit 1; }
+        grep -q "This file is hand-configured" greptile.json || { echo "FAIL greptile.json lost the hand-written instructions"; exit 1; }
+        grep -q "PaymentProcessor" greptile.json || { echo "FAIL greptile.json instructions carry no locked element"; exit 1; }
+        grep -q 'GeneratedMetadata.java' greptile.json || { echo "FAIL greptile.json ignorePatterns carry no @AIIgnore glob"; exit 1; }
+        echo "OK Greptile rules.md and greptile.json"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

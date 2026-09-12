@@ -77,11 +77,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   marker-delimited, so the worst case is a stale block between two compiles rather than lost
   content.
 
-  `greptile.json` was **checked and deferred** (#639). It is real, current and carries an
-  `instructions` field, but `.json` gets no markers and is a whole-file overwrite, and real
-  `greptile.json` files in public repos carry up to thirty hand-set fields. Writing it would
-  destroy them. `.continuerules` was **refused**: it does not appear in Continue's current rules
+  `greptile.json` was **checked and deferred** here, and added in the entry below.
+  `.continuerules` was **refused**: it does not appear in Continue's current rules
   documentation, which documents `.continue/rules/` -- which VibeTags already writes.
+- **Greptile** (`.greptile/rules.md` and `greptile.json`), closing #639. 45 AI platforms, 59 config
+  files.
+
+  `greptile.json` needed a write mode VibeTags did not have. `.json` outputs carry no markers and
+  are whole-file overwrites, and a real `greptile.json` holds up to thirty hand-set review settings,
+  so opting in would have erased every one of them on the first compile. VibeTags now owns a
+  delimited span *inside* the `instructions` and `ignorePatterns` string values and nothing else:
+  the span is spliced into the original text, so every byte outside it survives, the user's own
+  text in either value is kept ahead of it, and a document that cannot be merged without guessing
+  (not strict JSON, a non-string or duplicated shared key, a start marker with no end) is left
+  untouched with a build warning. `GreptileEndToEndTest` was confirmed red against the whole-file
+  overwrite on a hand-configured document shaped like `NVIDIA/Megatron-LM`'s, then green.
+
+  The span's body carries annotation attributes, including ones copied out of dependency JARs, so
+  it is JSON-escaped and any line in it equal to a marker is defused. `JsonValueSpansTest` feeds it
+  quote-and-key injection, control characters, U+2028/U+2029 and forged end markers; with the
+  defusing removed, the forged-marker cases went red and showed the value growing a stale copy of
+  itself on every build.
+
+  `.greptile/rules.md` was added alongside because Greptile's docs, read before implementing, call
+  the `.greptile/` folder the recommended form and `greptile.json` the legacy one. It is plain
+  Markdown and needs none of the above. When both exist in the root, Greptile ignores
+  `greptile.json`; [PLATFORMS.md](PLATFORMS.md) says so.
 
 ### Fixed
 
