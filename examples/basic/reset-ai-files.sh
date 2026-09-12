@@ -25,6 +25,8 @@ AI_FILES=(
   ".copilotignore"
   "CONVENTIONS.md"
   ".aiderignore"
+  ".aider.conf.yml"
+  ".gemini/styleguide.md"
   ".windsurfrules"
   ".rules"
   ".cody/config.json"

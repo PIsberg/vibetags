@@ -59,6 +59,12 @@ public final class ServiceRegistry {
         "void", "roo_modes",
         // Machine-readable @AILocked report for CI diff guards
         "locks_report",
+        // Gemini Code Assist for GitHub: the review style guide is a separate product from the
+        // Gemini CLI's GEMINI.md, with its own path.
+        "gemini_styleguide",
+        // Aider's config file. Without a read: entry aider never loads the CONVENTIONS.md
+        // VibeTags already writes, so this is what makes that platform do anything at all.
+        "aider_conf",
         // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
         "root_index"
     );
@@ -100,6 +106,7 @@ public final class ServiceRegistry {
         map.put("llms_full",      root.resolve("llms-full.txt"));
         map.put("aider_conventions", root.resolve("CONVENTIONS.md"));
         map.put("aider_ignore",      root.resolve(".aiderignore"));
+        map.put("aider_conf",        root.resolve(".aider.conf.yml"));
         map.put("cursor_granular",   root.resolve(".cursor/rules"));
         map.put("roo_granular",      root.resolve(".roo/rules"));
         map.put("trae_granular",     root.resolve(".trae/rules"));
@@ -154,6 +161,8 @@ public final class ServiceRegistry {
         map.put("coderabbit",    root.resolve(".coderabbit.yaml"));
         map.put("pr_agent",      root.resolve(".pr_agent.toml"));
         map.put("ellipsis",      root.resolve("ellipsis.yaml"));
+        // Gemini Code Assist for GitHub (PR reviewer) — distinct from the Gemini CLI's GEMINI.md
+        map.put("gemini_styleguide", root.resolve(".gemini/styleguide.md"));
         // Editors & modes
         map.put("void",          root.resolve(".void/rules.md"));
         map.put("roo_modes",     root.resolve(".roomodes"));

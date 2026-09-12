@@ -126,9 +126,10 @@ touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
 mkdir -p .roo/rules                        # Roo Code (per-class rules)
-touch CONVENTIONS.md .aiderignore          # Aider
+touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what loads CONVENTIONS.md)
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude gemini_instructions.md GEMINI.md  # Gemini
+mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
@@ -1620,9 +1621,10 @@ tasks.withType(JavaCompile) {
 | `.windsurf/rules/*.md` | Windsurf IDE (granular per-class rules) |
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
 | `.roo/rules/*.md` | Roo Code |
-| `CONVENTIONS.md`, `.aiderignore` | Aider |
+| `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `gemini_instructions.md`, `GEMINI.md`, `.aiexclude` | Gemini |
+| `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |

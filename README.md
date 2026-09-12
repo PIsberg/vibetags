@@ -24,13 +24,13 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **41 AI platforms**, written as **50 config files** and **17 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **42 AI platforms**, written as **52 config files** and **17 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
 `.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
 
-- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [49 config files](#project-facts).
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [52 config files](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
 - **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 76 lines, with 271 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
@@ -389,7 +389,7 @@ The [44 annotations](#project-facts) group into six categories by intent. Within
 Generated configuration files work out-of-the-box with the [**41 AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
 
 #### Traditional / Single-file formats
-- **Aider** (`CONVENTIONS.md`, `.aiderignore`)
+- **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
 - **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
 - **Cline** (`.clinerules`)
@@ -399,6 +399,7 @@ Generated configuration files work out-of-the-box with the [**41 AI platforms**]
 - **Double.bot** (`.doubleignore`)
 - **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
+- **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
 - **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)

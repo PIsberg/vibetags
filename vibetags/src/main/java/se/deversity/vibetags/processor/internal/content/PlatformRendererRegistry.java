@@ -38,6 +38,8 @@ public final class PlatformRendererRegistry {
     private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
     private static final GooseRenderer GOOSE_RENDERER = new GooseRenderer();
+    private static final GeminiStyleguideRenderer GEMINI_STYLEGUIDE_RENDERER = new GeminiStyleguideRenderer();
+    private static final AiderConfRenderer AIDER_CONF_RENDERER = new AiderConfRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -118,6 +120,10 @@ public final class PlatformRendererRegistry {
                 return LLMS_RENDERER;
             case AIDER_CONVENTIONS:
                 return AIDER_CONVENTIONS_RENDERER;
+            case AIDER_CONF:
+                return AIDER_CONF_RENDERER;
+            case GEMINI_STYLEGUIDE:
+                return GEMINI_STYLEGUIDE_RENDERER;
             case AIDER_IGNORE:
             case CURSOR_IGNORE:
             case CLAUDE_IGNORE:

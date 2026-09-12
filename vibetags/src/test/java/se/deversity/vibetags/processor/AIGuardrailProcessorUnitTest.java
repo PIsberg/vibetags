@@ -239,6 +239,8 @@ class AIGuardrailProcessorUnitTest {
             "grok_granular",
             // 2026-09 platform sweep
             "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
+            // Gemini Code Assist review style guide; aider's config, which is what loads CONVENTIONS.md
+            "gemini_styleguide", "aider_conf",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

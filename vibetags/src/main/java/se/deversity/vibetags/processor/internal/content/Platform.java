@@ -61,6 +61,8 @@ public enum Platform {
     CODY("cody"),
     LOCKS_REPORT("locks_report"),
     GOOSE("goose"),
+    GEMINI_STYLEGUIDE("gemini_styleguide"),
+    AIDER_CONF("aider_conf"),
 
     // Granular rule platforms
     CURSOR_GRANULAR("cursor_granular"),
