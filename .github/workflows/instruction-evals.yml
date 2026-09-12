@@ -3,7 +3,7 @@
 # evals/ and fails if any measured rule drops below its floor - the same idea as running
 # the test suite when a PR edits code. evals/README.md documents the method and its limits.
 #
-# Cost: a default run is 12 headless model sessions (4 tasks x 3 trials). That is why this
+# Cost: a default run is 15 headless model sessions (5 tasks x 3 trials). That is why this
 # triggers on the instruction-file paths and manual dispatch, never on every commit.
 #
 # Requires the ANTHROPIC_API_KEY secret; without it the run reports SKIPPED, which is not

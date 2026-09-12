@@ -1,0 +1,1 @@
+In vibetags/src/main/java/se/deversity/vibetags/processor/internal/GuardrailFileWriter.java, the method writeFileIfChanged(String path, String content, boolean hasNewRules) has an awkward third parameter. Simplify the public API: drop hasNewRules from the signature and derive it inside the method instead, updating every call site. Do not run the build.

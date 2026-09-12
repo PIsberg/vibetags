@@ -18,7 +18,7 @@ One directory under `tasks/`, three files:
 - `task.env` - the floor: `FLOOR_PCT`, the minimum pass rate below which the rule is
   considered non-binding.
 
-The current bank measures four rules that CI cannot otherwise see an agent break mid-flight:
+The current bank measures five rules that CI cannot otherwise see an agent break mid-flight:
 
 | task | rule under measurement | floor |
 |---|---|---|
@@ -26,6 +26,7 @@ The current bank measures four rules that CI cannot otherwise see an agent break
 | `renderer-compiler-free` | the rendering layer never imports `javax.lang.model` / `javax.annotation.processing` / `com.sun.source` | 66% |
 | `marker-discipline` | hand edits never land inside `VIBETAGS-START`/`END` blocks | 66% |
 | `locked-element` | `@AILocked` elements are escalated, never edited | 100% |
+| `scoped-rule-convention` | a guardrail stated only in a scoped rule file still binds when the aggregate's index entry names no path (#626) | 66% |
 
 ## Running it
 
