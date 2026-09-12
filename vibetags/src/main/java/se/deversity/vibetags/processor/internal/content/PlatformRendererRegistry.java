@@ -40,6 +40,7 @@ public final class PlatformRendererRegistry {
     private static final GooseRenderer GOOSE_RENDERER = new GooseRenderer();
     private static final GeminiStyleguideRenderer GEMINI_STYLEGUIDE_RENDERER = new GeminiStyleguideRenderer();
     private static final AiderConfRenderer AIDER_CONF_RENDERER = new AiderConfRenderer();
+    private static final ReplitRenderer REPLIT_RENDERER = new ReplitRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -168,7 +169,10 @@ public final class PlatformRendererRegistry {
             case CLAUDE_LOCAL:
                 return CLAUDE_LOCAL_RENDERER;
             case CLAUDE_SKILL:
+            case AGENTS_SKILL:
                 return CLAUDE_SKILL_RENDERER;
+            case REPLIT:
+                return REPLIT_RENDERER;
             case CODERABBIT:
                 return CODERABBIT_RENDERER;
             case PR_AGENT:

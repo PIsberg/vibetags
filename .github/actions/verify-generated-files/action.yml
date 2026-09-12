@@ -23,6 +23,8 @@ runs:
           .github/copilot-instructions.md llms.txt llms-full.txt \
           CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
           .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
+          replit.md .agents/skills/vibetags-guardrails/SKILL.md \
+          .zencoder/rules/com-example-payment-PaymentProcessor.md \
           .cursor/rules/com-example-payment-PaymentProcessor.mdc \
           .cursor/rules/com-example-database-DatabaseConnector.mdc \
           .trae/rules/com-example-payment-PaymentProcessor.md \

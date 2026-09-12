@@ -505,6 +505,9 @@ touch .antigravityignore                     # Antigravity AI exclusion list
 # --- Cline, JetBrains Junie ---
 touch .clinerules                            # Cline AI assistant
 touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
+touch replit.md                              # Replit Agent
+mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
+mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---

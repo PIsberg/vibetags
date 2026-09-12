@@ -56,6 +56,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   documentation; `.clineignore` (514) because Cline's own page for it is titled "(deprecate soon)".
   Adoption is not the test -- a file can sit in hundreds of repositories and still be one no tool
   reads any more. [PLATFORMS.md](PLATFORMS.md) carries the table.
+- **The cross-client Agent Skills location** (`.agents/skills/vibetags-guardrails/SKILL.md`),
+  **Zencoder** (`.zencoder/rules/*.md`) and **Replit Agent** (`replit.md`). 44 AI platforms,
+  57 config files, 18 scoped-rule directories.
+
+  The skill is the cheapest of the three by a distance: VibeTags has rendered a `SKILL.md` since
+  v1.0.0 and wrote it only to `.claude/skills/`, which is the one directory only Claude Code scans.
+  `.agents/skills/` is the location clients scan to see each other's skills, so the same bytes at a
+  second path reach every client that does. `theAgentsSkillIsByteIdenticalToTheClaudeSkill` pins
+  that they stay the same artifact rather than becoming two that drift.
+
+  Zencoder's front matter is copied from Zencoder's own output, not inferred from its prose: its
+  Repo-Info Agent writes `.zencoder/rules/repo.md` carrying `description` and `alwaysApply`. The
+  generated rules declare `alwaysApply: true`, on the same reasoning as Augment Code in 1.3.3 --
+  a guardrail the model may decline to load is not a guardrail. VibeTags' orphan cleanup scrubs
+  only marker regions, so Zencoder's own `repo.md` in that directory is left alone.
+
+  `replit.md` is the one file VibeTags does not solely author: the Replit Agent writes to it as it
+  learns about a project. That is survivable only because it is Markdown and therefore
+  marker-delimited, so the worst case is a stale block between two compiles rather than lost
+  content.
+
+  `greptile.json` was **checked and deferred** (#639). It is real, current and carries an
+  `instructions` field, but `.json` gets no markers and is a whole-file overwrite, and real
+  `greptile.json` files in public repos carry up to thirty hand-set fields. Writing it would
+  destroy them. `.continuerules` was **refused**: it does not appear in Continue's current rules
+  documentation, which documents `.continue/rules/` -- which VibeTags already writes.
 
 ### Fixed
 

@@ -41,6 +41,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.claudeignore` | Claude | Glob patterns |
 | `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
+| `.agents/skills/vibetags-guardrails/SKILL.md` | Agent Skills (cross-client) | YAML front-matter + Markdown |
 | `.aiexclude` | Gemini | Glob patterns |
 | `AGENTS.md` | Codex CLI | Markdown |
 | `.codex/config.toml` | Codex CLI | TOML config |
@@ -84,12 +85,14 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.agents/rules/*.md` | Antigravity (granular, per element) | Markdown |
 | `.aiassistant/rules/*.md` | JetBrains AI Assistant (granular, per element) | Markdown |
 | `.augment/rules/*.md` | Augment Code (granular, per element) | Markdown |
+| `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
 | `.goosehints` | goose (Block) | Markdown |
 | `.antigravityignore` | Antigravity AI | Glob patterns |
 | `.clinerules` | Cline AI assistant | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `.void/rules.md` | Void Editor | Markdown |
+| `replit.md` | Replit Agent | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
