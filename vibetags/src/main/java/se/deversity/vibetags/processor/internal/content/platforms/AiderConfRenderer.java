@@ -42,6 +42,11 @@ public final class AiderConfRenderer implements PlatformRenderer {
      */
     @Override
     public YamlMergeShape mergeShape() {
-        return YamlMergeShape.appended("read:", 2, READ_CONVENTIONS.strip());
+        // stripTrailing, not strip: the leading two spaces are the declared indent, and the
+        // merge re-emits this verbatim when every module contributed the same entry. Stripping
+        // them dedents the sequence to column 0 in a reactor build. That still parses, but it
+        // makes the merged file disagree with the single-module one for no reason, and on a
+        // block-scalar platform the same mistake would break the document outright.
+        return YamlMergeShape.appended("read:", 2, READ_CONVENTIONS.stripTrailing());
     }
 }
