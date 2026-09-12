@@ -392,13 +392,13 @@ Generated configuration files work out-of-the-box with the [**43 AI platforms**]
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
 - **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
-- **Cline** (`.clinerules`, or the `.clinerules/*.md` directory Cline now documents; one or the other, never both)
+- **Cline** (the `.clinerules/*.md` directory Cline now documents, or the single `.clinerules` file, one or the other, never both). The single file is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`)
 - **Firebase AI** (`.idx/airules.md`)
-- **Gemini** (`gemini_instructions.md`, `GEMINI.md`, `.aiexclude`)
+- **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
 - **Greptile** (`.greptile/rules.md`, `greptile.json`) - AI PR reviewer; in `greptile.json` VibeTags writes only a delimited span inside `instructions` and `ignorePatterns`, and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
@@ -409,8 +409,8 @@ Generated configuration files work out-of-the-box with the [**43 AI platforms**]
 - **Plandex** (`.plandex.yaml`)
 - **Qwen** (`QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Replit Agent** (`replit.md`)
-- **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`)
-- **Supermaven** (`.supermavenignore`)
+- **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
+- **Supermaven** (`.supermavenignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
 - **Void Editor** (`.void/rules.md`)
 - **Windsurf IDE** (`.windsurfrules`)
