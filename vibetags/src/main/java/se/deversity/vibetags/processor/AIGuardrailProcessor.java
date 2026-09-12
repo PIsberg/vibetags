@@ -17,6 +17,7 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
@@ -414,6 +415,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // reasons: generateFiles() has a fingerprint short-circuit that would let an
                     // unchanged-inputs build skip the check silently, and its step order is locked.
                     enforceGuardrails();
+                    // Same placement, same two reasons: a hand-authored top-level key that
+                    // collides with a generated YAML block persists across unchanged builds, which
+                    // the short-circuit would silence (issue #635).
+                    warnAboutHandAuthoredYamlKeys();
                     // The cache keeps one set of run headers per module (issue #556). Bound here
                     // rather than in init(), where the cache is built: the module is known only
                     // once a round has shown the processor its sources. Same id the sidecar
@@ -493,6 +498,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return false; // allow other processors to see the same annotations
+    }
+
+    /**
+     * Warns about hand-authored YAML keys that collide with a generated block, in the VibeTags root
+     * and, in a reactor, in the compiling module's own directory, which gets module-scoped output
+     * under the same opt-in rule. The module condition is the one {@code generateFiles()} uses for
+     * that output; a single-module build has no second directory to check.
+     */
+    private void warnAboutHandAuthoredYamlKeys() {
+        Messager messager = getSafeMessager();
+        HandAuthoredYamlKeyWarner.warn(messager, log, root, ServiceRegistry.buildServiceFileMap(root));
+        Path compilationRoot = compilationRoot();
+        if (moduleIdentity != null && !compilationRoot.equals(root)) {
+            HandAuthoredYamlKeyWarner.warn(messager, log, root, ServiceRegistry.buildServiceFileMap(compilationRoot));
+        }
     }
 
     /**

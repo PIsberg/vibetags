@@ -8,7 +8,9 @@
  * and runs it — one {@code getElementsAnnotatedWith} query per annotation type, however many rules
  * share it.
  *
- * <p>Three families live here:
+ * <p>Three families of element rules live here, plus one check over files rather than elements,
+ * {@link se.deversity.vibetags.processor.internal.validation.DuplicateYamlKeyRule}, which reads an
+ * opted-in YAML output after the last round and is run by {@code HandAuthoredYamlKeyWarner}:
  *
  * <ul>
  *   <li>{@link se.deversity.vibetags.processor.internal.validation.PairRule} — two annotations that
