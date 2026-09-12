@@ -86,7 +86,7 @@ manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the work
 
 That is a deliberate reversal (#632). It used to print "Skipped is not passed" and then exit 0, so
 the check went green having run nothing — and it had done exactly that on every run in recent
-history, the 1.3.3 and 1.3.4 release PRs included. A harness whose purpose is to let the
+history, both of the most recent release PRs included. A harness whose purpose is to let the
 instruction layer go red cannot be the one gate that never does, and a green tick that means
 "never ran" is worse than no check at all, because it is indistinguishable from a measurement.
 
