@@ -218,6 +218,8 @@ class AIGuardrailProcessorUnitTest {
             // v0.8.0 platforms
             "pearai_granular", "mentat", "sweep", "plandex",
             "double_ignore", "interpreter", "codeium_ignore",
+            // Ignore files for Roo Code, Continue and Augment Code
+            "roo_ignore", "continue_ignore", "augment_ignore",
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms

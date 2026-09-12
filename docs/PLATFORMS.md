@@ -100,6 +100,9 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.gptignore` | GPT context packer | Glob patterns |
 | `.ghostcoderignore` | Ghostcoder | Glob patterns |
 | `.piecesignore` | Pieces for Developers | Glob patterns |
+| `.rooignore` | Roo Code | Glob patterns |
+| `.continueignore` | Continue | Glob patterns |
+| `.augmentignore` | Augment Code | Glob patterns |
 | `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
 | `.vibetags-root-index` | Reactor root, opt-in to the lean indexed aggregate ([MULTI-MODULE.md](MULTI-MODULE.md#lean-indexed-root-aggregate-vibetags-root-index)) | Marker file |
 
@@ -188,3 +191,26 @@ The lesson is the one #611 recorded from the other direction. A platform list is
 write once: the tools underneath it are renamed, acquired and retired, and a generated file
 outlives the product it was generated for. Nothing in the build can notice that, which is why it is
 checked by hand and written down here.
+### Three ignore files added, and three checked and refused
+
+`@AIIgnore` already drove fifteen exclusion files. Three more were added because each is the only
+exclusion mechanism its tool has, and VibeTags already writes that tool's rules directory:
+[`.rooignore`](https://docs.roocode.com/features/rooignore) (Roo Code: prevents reading and
+writing, the closest match to what `@AIIgnore` means),
+[`.continueignore`](https://docs.continue.dev/customize/deep-dives/codebase) and
+[`.augmentignore`](https://docs.augmentcode.com/setup-augment/workspace-indexing) (both exclude
+from indexing, which is the whole of what those tools offer).
+
+Three more were checked against the vendor's own documentation and refused. Adoption is not the
+test -- a file can sit in thousands of repositories and still be one a tool no longer reads, or one
+another file already covers:
+
+| File | In public repos | Why not |
+|---|---|---|
+| `.aiignore` | 820 | Redundant, in JetBrains' own words: "If your project already contains a `.cursorignore`, `.codeiumignore`, or `.aiexclude` file, there is no need to create a separate `.aiignore` file, as these files are also supported." VibeTags writes all three. |
+| `.cursorindexingignore` | 670 | Absent from [Cursor's current ignore-files documentation](https://cursor.com/docs/context/ignore-files), which describes only `.cursorignore`. Writing it would be adopting a path the vendor has stopped documenting. |
+| `.clineignore` | 514 | Cline's own documentation page is titled "`.clineignore` (deprecate soon)". Cline also honours `.cursorignore`-style rules files VibeTags already writes. |
+
+Counts are GitHub public code search, 2026-09-12. The pattern is the one #611 recorded: every row
+that was checked against the vendor rather than an aggregator turned up something the aggregator
+did not say.

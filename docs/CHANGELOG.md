@@ -38,6 +38,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The README's own config-file count had drifted from itself: the project-facts line said 50 while
   a link four lines below said 49. `ProjectFactsConsistencyTest` pinned the first and not the
   second.
+- Three more exclusion files driven by `@AIIgnore`: `.rooignore` (Roo Code), `.continueignore`
+  (Continue) and `.augmentignore` (Augment Code). 53 config files. Each is the only exclusion
+  mechanism its tool offers, and VibeTags already wrote that tool's rules directory, so the
+  guardrails were reaching the model and the exclusions were not.
+
+  `IgnoreFileFamilyEndToEndTest` asserts the glob, not the file. `AIIgnoreFormatter` switches on
+  the platform and its `default` arm writes nothing, so an ignore file wired through
+  `ServiceRegistry` and `PlatformRendererRegistry` but missed in the formatter is created, opted
+  into, and left holding a header with no globs under it, with nothing thrown and nothing logged.
+  The test was confirmed red against exactly that state.
+
+  Three further candidates were checked against the vendor's own docs and **refused**, which is the
+  part worth recording: `.aiignore` (820 public repos) because JetBrains states that a project with
+  `.cursorignore`, `.codeiumignore` or `.aiexclude` needs no `.aiignore` and VibeTags writes all
+  three; `.cursorindexingignore` (670) because it no longer appears in Cursor's ignore-files
+  documentation; `.clineignore` (514) because Cline's own page for it is titled "(deprecate soon)".
+  Adoption is not the test -- a file can sit in hundreds of repositories and still be one no tool
+  reads any more. [PLATFORMS.md](PLATFORMS.md) carries the table.
 
 ### Fixed
 

@@ -46,6 +46,9 @@ public final class IgnoreFileRenderer implements PlatformRenderer {
             case SUPERMAVEN_IGNORE:  return "Supermaven";
             case DOUBLE_IGNORE:      return "Double.bot";
             case CODEIUM_IGNORE:     return "Codeium";
+            case ROO_IGNORE:         return "Roo Code";
+            case CONTINUE_IGNORE:    return "Continue";
+            case AUGMENT_IGNORE:     return "Augment Code";
             case ANTIGRAVITY_IGNORE: return "Antigravity AI";
             case AIDER_IGNORE:       return "Aider";
             case REPOMIX_IGNORE:     return "Repomix";
