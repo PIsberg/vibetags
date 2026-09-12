@@ -951,13 +951,23 @@ jobs:
           # that would be buying a clean number with two minutes of CI, so the family is named and
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
+          # The deprecation warning (#641) is excluded too, and asserted present instead. This
+          # reactor opts into all five deprecated outputs on purpose, so they keep a fixture until
+          # the major version that removes them (#645), and a build that opts in is exactly the
+          # build that must print it.
+          #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
           ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
           unexpected=$(grep "warning: VibeTags" "$RUNNER_TEMP/gmm-build.log" \
-            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" | sort -u)
+            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" \
+            | grep -v "opted-in outputs are deprecated" | sort -u)
           if [ -n "$unexpected" ]; then
             echo "::error::a warm build of an in-sync reactor emitted unexpected processor warnings."
             echo "$unexpected"
+            exit 1
+          fi
+          if ! grep -q "5 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::the reactor opts into five deprecated outputs and was not warned about them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that

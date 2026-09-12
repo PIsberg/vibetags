@@ -46,7 +46,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `AGENTS.md` | Codex CLI | Markdown |
 | `.codex/config.toml` | Codex CLI | TOML config |
 | `.codex/rules/vibetags.rules` | Codex CLI | Starlark rules |
-| `gemini_instructions.md` | Gemini | Markdown |
+| `gemini_instructions.md` | Gemini (**deprecated**, see below) | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
 | `.copilotignore` | GitHub Copilot | Glob patterns |
@@ -64,9 +64,9 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.windsurfrules` | Windsurf IDE | Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE (granular) | YAML front-matter + Markdown |
 | `.rules` | Zed Editor | Markdown |
-| `.cody/config.json` | Sourcegraph Cody | JSON (custom commands) |
-| `.codyignore` | Sourcegraph Cody | Glob patterns |
-| `.supermavenignore` | Supermaven | Glob patterns |
+| `.cody/config.json` | Sourcegraph Cody (**deprecated**, see below) | JSON (custom commands) |
+| `.codyignore` | Sourcegraph Cody (**deprecated**, see below) | Glob patterns |
+| `.supermavenignore` | Supermaven (**deprecated**, see below) | Glob patterns |
 | `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
@@ -88,7 +88,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
 | `.goosehints` | goose (Block) | Markdown |
 | `.antigravityignore` | Antigravity AI | Glob patterns |
-| `.clinerules` | Cline AI assistant | Markdown |
+| `.clinerules` | Cline AI assistant (**deprecated**, see below) | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `.void/rules.md` | Void Editor | Markdown |
@@ -175,13 +175,23 @@ nothing that `.gemini/styleguide.md` does not already deliver: the style guide i
 Assist takes its review rules from, and it is Markdown, so the marker merge is clean. Issue #636
 records the decision.
 
-### Four outputs whose tool has moved on
+### Four deprecated outputs whose tool has moved on
 
-These are still written, and nothing about an existing project changes. They are recorded here
-because the file-presence opt-in model means a path VibeTags names is a path a user may create, and
-three of these four name a tool that no longer reads them. None is removed: removing a service stops
-an opted-in consumer's file regenerating, which is a silent staleness worse than a file nobody
-reads. Removal belongs to a major version, tracked in #641.
+These are deprecated. They are still written, and an existing project's output does not change, but
+they stop being written in the next major version, tracked in
+[#645](https://github.com/PIsberg/vibetags/issues/645). Three of the four name a tool that no longer
+reads them, and the file-presence opt-in model means a path VibeTags names is a path a user may
+create.
+
+They were not simply removed. Removing a service stops an opted-in consumer's file regenerating, and
+that file then sits in the repository looking current while it drifts from the annotations, which
+is worse than a file nobody reads. So a build that has one of them opted in gets one compiler
+warning per compilation naming each file and its replacement, and `vibetags.log` records a
+`platform.deprecated key=... file=... replacement=...` event per file. The "no AI config files
+found" note no longer offers them to a new project. The decision is recorded in #641.
+
+To move off one: create the replacement, move any hand-written content outside the VibeTags markers
+across, then delete the deprecated file.
 
 | Output | Status | Evidence |
 |---|---|---|
@@ -192,8 +202,10 @@ reads. Removal belongs to a major version, tracked in #641.
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file
-outlives the product it was generated for. Nothing in the build can notice that, which is why it is
-checked by hand and written down here.
+outlives the product it was generated for. Nothing in the build can notice that, which is why the
+release process now re-checks every platform path against its vendor before a version is cut
+([RELEASING.md](RELEASING.md)).
+
 ### Three ignore files added, and three checked and refused
 
 `@AIIgnore` already drove fifteen exclusion files. Three more were added because each is the only

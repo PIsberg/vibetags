@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIContext;
+import se.deversity.vibetags.processor.VibeTagsLogger;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -225,17 +226,35 @@ public final class ServiceRegistry {
                 + "to have VibeTags manage it.");
         }
 
+        // Deprecated outputs are still written; this is where an opted-in consumer hears that they
+        // will stop being written (#641). Raised here rather than in the processor because this
+        // method already runs exactly once per compilation for the root, in generateFiles() and in
+        // check mode alike, and generateFiles() is @AILocked.
+        DeprecatedServices.warnIfOptedIn(messager, VibeTagsLogger.currentFor(rootOf(allServiceFiles)), active);
+
         if (active.isEmpty()) {
             StringBuilder msg = new StringBuilder(
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
+            // A deprecated output is left off: this list is what a new user copies from.
             allServiceFiles.entrySet().stream()
-                .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey()))
+                .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey())
+                    && !DeprecatedServices.keys().contains(e.getKey()))
                 .forEach(e -> msg.append("  ").append(e.getValue().getFileName()).append('\n'));
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
 
         return active;
+    }
+
+    /**
+     * The root a service map was built for, recovered from {@code CLAUDE.md}, which
+     * {@link #buildServiceFileMap} always places directly under it. {@code null} for a hand-built
+     * map without that entry, which only costs the log line, never the warning.
+     */
+    private static @Nullable Path rootOf(Map<String, Path> allServiceFiles) {
+        Path claude = allServiceFiles.get("claude");
+        return claude == null ? null : claude.getParent();
     }
 
     /**
