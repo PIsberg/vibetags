@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `AtomicityValidator` now runs, in a surefire fork of its own (#629). The async detectors were
+  switched on earlier, but that one needs bytecode instrumentation and the build attached no
+  javaagent, so it reported `runner.agent.absent` and its silence read as a pass.
+
+  Attaching it is not one line, for two independent reasons, both measured rather than reasoned
+  about. Declaring `async-test-agent` as a test dependency costs 450 errors —
+  `NoClassDefFoundError: net/bytebuddy/jar/asmjdkbridge/JdkClassReader (wrong name:
+  se/deversity/asynctest/agent/shaded/…)` — because it ships a shaded ByteBuddy that collides with
+  Mockito's, and those failures land in the fork that is not even running the agent. Attaching it to
+  the whole suite costs 784 errors of 2331 — `NoClassDefFoundError:
+  se/deversity/asynctest/telemetry/TelemetryRegistry` — because `ProcessorTestHarness` runs javac
+  in-process and javac loads the processor in its own classloader, where async-test-lib is invisible.
+
+  What separates them is the test set: none of the six `*AsyncTest` classes drive javac. So the
+  agent jar is copied to `target/agents/` rather than depended on, and surefire runs `default-test`
+  excluding `**/*AsyncTest.java` plus an `async-tests` execution including only those, with the agent
+  attached. 2676 + 6 tests green, `runner.agent.attached args="fields=true"`, and JaCoCo appends both
+  forks to one `jacoco.exec` so coverage is unchanged.
+
+  Two limits stay documented in `docs/TESTS.md`: Gradle does not get the agent, because its test
+  worker uses a classloader the agent cannot see and splitting its test tasks would not change that;
+  and even under Maven the runner warns `runner.telemetry.unattributed`, so a clean atomicity report
+  covers the `@AsyncTest` workers only.
+
 ### Added
 
 - `LazyFileAppenderAsyncTest`: the lazy log-file open is now driven by more than one thread.

@@ -205,6 +205,44 @@
                     <!-- Empty in -Pe2e so CI runs everything. See the property comment. -->
                     <excludedGroups>${vibetags.test.excludedGroups}</excludedGroups>
                 </configuration>
+                <!-- Two forks, because the async-test field agent cannot be attached to the whole
+                     suite. It instruments VibeTags' own classes and injects references to
+                     async-test-lib's TelemetryRegistry; ProcessorTestHarness runs javac in-process
+                     and javac loads the annotation processor in its OWN classloader, where
+                     async-test-lib is not visible. Attaching the agent globally cost 784 errors out
+                     of 2331, all NoClassDefFoundError on that class, in tests that never touch
+                     async-test-lib (#629). includes/excludes cannot separate them: the classes the
+                     async tests need instrumented are exactly the ones the harness loads in
+                     isolation.
+
+                     None of the six *AsyncTest classes drive javac, so a fork that runs only them
+                     has no isolated classloader for the agent to trip over. JaCoCo appends both
+                     forks to one jacoco.exec, so coverage stays whole. -->
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*AsyncTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>async-tests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*AsyncTest.java</include>
+                            </includes>
+                            <!-- ${argLine} is JaCoCo's own -javaagent and must stay first, or
+                                 coverage silently reports nothing for this fork. -->
+                            <argLine>${argLine} -javaagent:${project.build.directory}/agents/async-test-agent.jar -Dasynctest.agent=fields=true -Dnet.bytebuddy.experimental=true -Dlicense.mock.mode=true</argLine>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -228,6 +266,37 @@
                 <!-- pmd-core/pmd-java are pinned by the parent's pluginManagement entry for this
                      plugin. Plugin-level <dependencies> do not take their versions from
                      pluginManagement, so they cannot be declared version-less here. -->
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <!-- copy, not properties, and deliberately NOT a <dependency>. The agent
+                             jar ships a shaded ByteBuddy whose classes carry different internal names
+                             than their paths, so putting it on the test classpath breaks Mockito with
+                             450 NoClassDefFoundError: net/bytebuddy/jar/asmjdkbridge/JdkClassReader
+                             (wrong name: se/deversity/asynctest/agent/shaded/...). It is an agent, not
+                             a library: it belongs on -javaagent and nowhere else. Copying it gives the
+                             path without a classpath entry. -->
+                        <id>copy-async-test-agent</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>se.deversity.async-test-lib</groupId>
+                                    <artifactId>async-test-agent</artifactId>
+                                    <version>${async-test-lib.version}</version>
+                                    <destFileName>async-test-agent.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}/agents</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
