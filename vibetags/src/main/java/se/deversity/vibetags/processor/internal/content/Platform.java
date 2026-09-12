@@ -68,6 +68,10 @@ public enum Platform {
     GOOSE("goose"),
     GEMINI_STYLEGUIDE("gemini_styleguide"),
     AIDER_CONF("aider_conf"),
+    // Greptile (AI PR reviewer): the legacy root greptile.json, merged by key, and the
+    // recommended .greptile/rules.md
+    GREPTILE("greptile"),
+    GREPTILE_RULES("greptile_rules"),
 
     // Granular rule platforms
     CURSOR_GRANULAR("cursor_granular"),

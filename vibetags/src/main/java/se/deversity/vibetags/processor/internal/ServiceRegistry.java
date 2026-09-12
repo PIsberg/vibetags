@@ -73,6 +73,10 @@ public final class ServiceRegistry {
         // Aider's config file. Without a read: entry aider never loads the CONVENTIONS.md
         // VibeTags already writes, so this is what makes that platform do anything at all.
         "aider_conf",
+        // Greptile's PR reviewer. greptile.json is the legacy single-file form, richly hand-configured
+        // in practice, so VibeTags owns only a delimited span inside two of its string values and
+        // leaves every other byte alone (#639). .greptile/rules.md is the recommended form.
+        "greptile", "greptile_rules",
         // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
         "root_index"
     );
@@ -183,6 +187,10 @@ public final class ServiceRegistry {
         map.put("ellipsis",      root.resolve("ellipsis.yaml"));
         // Gemini Code Assist for GitHub (PR reviewer) — distinct from the Gemini CLI's GEMINI.md
         map.put("gemini_styleguide", root.resolve(".gemini/styleguide.md"));
+        // Greptile (PR reviewer). When both exist in the root, Greptile reads .greptile/ and
+        // ignores greptile.json entirely; docs/PLATFORMS.md says so.
+        map.put("greptile",       root.resolve("greptile.json"));
+        map.put("greptile_rules", root.resolve(".greptile/rules.md"));
         // Editors & modes
         map.put("void",          root.resolve(".void/rules.md"));
         map.put("roo_modes",     root.resolve(".roomodes"));

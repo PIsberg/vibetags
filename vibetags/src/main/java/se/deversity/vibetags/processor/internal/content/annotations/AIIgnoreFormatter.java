@@ -114,6 +114,8 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case GPT_IGNORE:
             case GHOSTCODER_IGNORE:
             case PIECES_IGNORE:
+            // greptile.json's ignorePatterns is a .gitignore-syntax list inside a JSON string
+            case GREPTILE:
                 sb.append(globPattern);
                 break;
             default:

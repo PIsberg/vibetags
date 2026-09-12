@@ -518,6 +518,8 @@ touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
 touch .aiexclude GEMINI.md                   # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
+mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
+touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard

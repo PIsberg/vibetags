@@ -49,7 +49,7 @@ class MultiModuleWholeFileMergeTest {
     private static final String BETA = "com.example.beta.BetaService";
 
     /** Services whose file carries no markers and whose renderer emits per-element content. */
-    private static final List<String> MERGING_SERVICES = List.of("mentat", "pr_agent");
+    private static final List<String> MERGING_SERVICES = List.of("mentat", "pr_agent", "greptile");
 
     /** Services whose file carries no markers but whose renderer output is the same every time. */
     private static final List<String> STATIC_SERVICES = List.of("cody", "qwen_settings", "codex_config");
@@ -79,6 +79,25 @@ class MultiModuleWholeFileMergeTest {
             "the second module's guardrails must survive the merge:\n" + merged);
     }
 
+    /**
+     * greptile.json's rendering is not the file but the lines VibeTags owns in it. Two modules must
+     * union into one list per key, one preamble, no placeholder, and still parse.
+     */
+    @Test
+    void greptileOwnedLinesUnionPerKeyAcrossModules() {
+        String merged = mergeTwoModules("greptile");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parsed = (Map<String, Object>) parseJson(merged);
+        List<?> instructions = (List<?>) parsed.get("instructions");
+        String flattened = String.valueOf(instructions);
+        assertTrue(flattened.contains(ALPHA) && flattened.contains(BETA),
+            "both modules' guardrails must be in instructions:\n" + merged);
+        assertEquals(1, instructions.stream().filter(l -> String.valueOf(l).startsWith("Enforce the following")).count(),
+            "the preamble must appear once:\n" + merged);
+        assertTrue(instructions.stream().noneMatch(l -> String.valueOf(l).startsWith("No VibeTags guardrails")),
+            "the empty placeholder must not sit above real guardrails:\n" + merged);
+    }
+
     /** Both PR-Agent sections are fed from the same body; a merge must not update only one. */
     @Test
     void prAgentTomlMergesBothInstructionSections() {
@@ -105,7 +124,7 @@ class MultiModuleWholeFileMergeTest {
 
             String merged = merge(service, List.of(alpha, empty));
             assertTrue(merged.contains(ALPHA), service + ": an empty sibling displaced the contributor");
-            if ("mentat".equals(service)) {
+            if (!"pr_agent".equals(service)) {
                 parseJson(merged);
             }
         }
@@ -119,7 +138,7 @@ class MultiModuleWholeFileMergeTest {
                 sidecarFor("a", service, GuardrailModel.EMPTY),
                 sidecarFor("b", service, GuardrailModel.EMPTY)));
             assertTrue(!merged.isBlank(), service + ": merged to nothing");
-            if ("mentat".equals(service)) {
+            if (!"pr_agent".equals(service)) {
                 parseJson(merged);
             }
         }

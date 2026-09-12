@@ -28,6 +28,7 @@ The following elements are well-tested core components. Make changes with extrem
 ## 🔐 SECURITY-CRITICAL CODE
 The following elements are security-critical. AI must not weaken security properties. Any change must be reviewed for security impact.
 
+- `se.deversity.vibetags.processor.internal.JsonValueSpans`: Security-critical code [Splices annotation text, including attributes copied out of third-party dependency JARs, into greptile.json, a review configuration the user owns. The span body must stay Escape.json-encoded and marker-defused: without the first a dependency can close the string and add settings such as skipReview, and without the second it can end the span early so the value grows a copy of itself on every build.]. Do not weaken security properties. Flag any change for security review.
 - `se.deversity.vibetags.processor.internal.TransitiveManifestReader`: Security-critical code [Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer's always-loaded instruction files, so a dependency can put text in front of the consumer's agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.]. Do not weaken security properties. Flag any change for security review.
 - `se.deversity.vibetags.processor.internal.content.Escape`: Security-critical code [Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own <locked_files> or <rule> entries in a file the agent loads on every session.]. Do not weaken security properties. Flag any change for security review.
 
@@ -41,6 +42,7 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `se.deversity.vibetags.processor.internal.EnforcementBaseline`
 - `se.deversity.vibetags.processor.internal.GranularRulesWriter`
 - `se.deversity.vibetags.processor.internal.GuardrailFileWriter`
+- `se.deversity.vibetags.processor.internal.JsonValueSpans`
 - `se.deversity.vibetags.processor.internal.ModuleSidecar`
 - `se.deversity.vibetags.processor.internal.PartialRoundDetector`
 - `se.deversity.vibetags.processor.internal.ServiceRegistry`

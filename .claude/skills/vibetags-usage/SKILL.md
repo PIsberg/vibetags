@@ -134,6 +134,8 @@ touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 touch .aiexclude GEMINI.md                 # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
+mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
+touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
@@ -1632,6 +1634,8 @@ tasks.withType(JavaCompile) {
 | `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
+| `.greptile/rules.md` | Greptile (AI PR reviewer) |
+| `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |

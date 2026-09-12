@@ -41,6 +41,8 @@ public final class PlatformRendererRegistry {
     private static final GeminiStyleguideRenderer GEMINI_STYLEGUIDE_RENDERER = new GeminiStyleguideRenderer();
     private static final AiderConfRenderer AIDER_CONF_RENDERER = new AiderConfRenderer();
     private static final ReplitRenderer REPLIT_RENDERER = new ReplitRenderer();
+    private static final GreptileRenderer GREPTILE_RENDERER = new GreptileRenderer();
+    private static final GreptileRulesRenderer GREPTILE_RULES_RENDERER = new GreptileRulesRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -125,6 +127,10 @@ public final class PlatformRendererRegistry {
                 return AIDER_CONF_RENDERER;
             case GEMINI_STYLEGUIDE:
                 return GEMINI_STYLEGUIDE_RENDERER;
+            case GREPTILE:
+                return GREPTILE_RENDERER;
+            case GREPTILE_RULES:
+                return GREPTILE_RULES_RENDERER;
             case AIDER_IGNORE:
             case CURSOR_IGNORE:
             case CLAUDE_IGNORE:

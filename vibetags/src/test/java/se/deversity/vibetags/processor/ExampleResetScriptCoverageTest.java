@@ -51,7 +51,12 @@ class ExampleResetScriptCoverageTest {
         "AGENTS.md",
         "the sole-file fallback rule means VibeTags never regenerates AGENTS.md while this example "
             + "ships other AI config files, so clearing it would blank a pointer permanently. The "
-            + "script says so at the AI_FILES entry it is missing from.");
+            + "script says so at the AI_FILES entry it is missing from.",
+        "greptile.json",
+        "the file is the user's review configuration and VibeTags owns only a span inside two of "
+            + "its values. Emptying it would erase the hand-set fields the example exists to show "
+            + "surviving, and nothing stale can outlive a reset, because every compile replaces the "
+            + "span whole.");
 
     @Test
     void everyOptedInOutputIsClearedByTheResetScript() throws IOException {

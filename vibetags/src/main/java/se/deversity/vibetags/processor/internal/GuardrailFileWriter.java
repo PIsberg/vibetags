@@ -115,7 +115,8 @@ public final class GuardrailFileWriter {
     /**
      * Writes {@code content} to {@code path} only if the file's current content differs.
      * Honors marker-aware updates for .md/.mdc/llms*.txt, hash markers for rules/ignore files,
-     * and full overwrite for .json/.toml.
+     * a span inside shared string values for {@code greptile.json} (see {@link JsonValueSpans}),
+     * and full overwrite for every other .json/.toml.
      *
      * @return {@code true} if the file was actually written
      */
@@ -140,6 +141,15 @@ public final class GuardrailFileWriter {
             // the concrete file paths VibeTags constructs, but we guard for correctness.
             Path fileNamePath = filePath.getFileName();
             String fileName = fileNamePath != null ? fileNamePath.toString() : "";
+
+            // A JSON document the user owns and VibeTags shares two values of (greptile.json). It
+            // has no markers, but it is not a whole-file overwrite either, so it must not reach the
+            // size fast path below, which would replace the user's configuration with the rendering.
+            List<JsonValueSpans.SharedKey> sharedKeys = JsonValueSpans.sharedKeysFor(fileName);
+            if (sharedKeys != null) {
+                return writeSharedJsonValues(filePath, fileName, content, hasNewRules, sharedKeys);
+            }
+
             String[] markers = getMarkersFor(fileName);
             boolean supportsMarkers = markers != null;
 
@@ -365,6 +375,64 @@ public final class GuardrailFileWriter {
         }
     }
 
+    /**
+     * Writes a JSON document VibeTags shares with the user: only the delimited span inside each
+     * shared string value changes, and every other byte stays where it was (#639).
+     *
+     * <p>{@code content} is not the file. It is the renderer's owned-values document,
+     * {@code {"key": ["line", ...]}}, and the file is whatever the user has, with those lines spliced
+     * in. The cache records {@code content}, exactly as marker files record their body, so an edit to
+     * the file outside the span still invalidates the cache and gets merged into on the next build.
+     *
+     * <p>A document that cannot be merged without guessing (not strict JSON, a shared key holding a
+     * non-string or appearing twice, a start marker with no end) is left exactly as it is, with a
+     * build warning naming why. Writing nothing is recoverable; rewriting somebody's review
+     * configuration from a guess is not.
+     */
+    private boolean writeSharedJsonValues(Path filePath, String fileName, String content, boolean hasNewRules,
+                                          List<JsonValueSpans.SharedKey> sharedKeys) throws IOException {
+        String existing;
+        try {
+            existing = Files.readString(filePath, StandardCharsets.UTF_8);
+        } catch (NoSuchFileException e) {
+            existing = "";
+        }
+        java.util.Map<String, String> bodies = JsonValueSpans.bodiesFrom(content);
+        if (bodies == null) {
+            // The rendering is produced a few lines away by a renderer in this codebase, so this is a
+            // bug, not a user error; still no reason to take the user's file down with it.
+            if (log != null) {
+                log.warn("write.skip file={} reason=unreadable-rendering bytes={}", fileName, content.length());
+            }
+            return false;
+        }
+        JsonValueSpans.Outcome outcome = JsonValueSpans.merge(existing, sharedKeys, bodies);
+        String merged = outcome.document();
+        if (merged == null) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: left " + fileName + " untouched because " + outcome.detail()
+                    + ". Its guardrails are not being updated until that is fixed.");
+            if (log != null) {
+                log.warn("write.skip file={} reason={} detail={}", fileName, outcome.skipReason(), outcome.detail());
+            }
+            return false;
+        }
+        if (merged.equals(existing)) {
+            debug("write.skip file={} reason=identical-bytes bytes={} markers=json-values", fileName, merged.length());
+            noteCurrent(filePath, content);
+            return false;
+        }
+        if (!hasNewRules && !existing.isBlank()) {
+            skipUpdateMsg(fileName);
+            return false;
+        }
+        debug("write.update file={} reason=json-values-differ oldBytes={} newBytes={} markers=json-values",
+            fileName, existing.length(), merged.length());
+        writeAndCache(filePath, merged, content);
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+        return true;
+    }
+
     private boolean writeWithoutMarkers(Path filePath, String fileName, String content, String existing,
                                         boolean fileExists, long existingSize,
                                         boolean hasNewRules) throws IOException {
@@ -477,7 +545,9 @@ public final class GuardrailFileWriter {
 
     /**
      * Returns the appropriate marker pair for a file based on its extension.
-     * Returns {@code null} for JSON/TOML which are overwritten without markers.
+     * Returns {@code null} for JSON/TOML, which have nowhere to put a marker line. That includes
+     * {@code greptile.json}: its markers live inside string values instead, and
+     * {@link JsonValueSpans} handles it before this is consulted.
      */
     public static String @Nullable [] getMarkersFor(String fileName) {
         if (fileName.endsWith(".md") || fileName.endsWith(".mdc")
@@ -502,7 +572,7 @@ public final class GuardrailFileWriter {
      * <p>A zero-width space after the {@code <!--} / {@code #} keeps the text readable while making
      * the line no longer equal to a delimiter.
      */
-    private static String neutraliseMarkers(String body, String[] markers) {
+    static String neutraliseMarkers(String body, String[] markers) {
         String out = body;
         for (String marker : markers) {
             if (indexOfMarkerLine(out, marker, 0) < 0) continue;

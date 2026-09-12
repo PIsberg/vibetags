@@ -162,6 +162,9 @@ class ProcessorTestHarness {
         // makes aider load the CONVENTIONS.md this harness already opts into.
         touch(".gemini/styleguide.md");
         touch(".aider.conf.yml");
+        // Greptile's PR reviewer: the legacy root greptile.json and the recommended rules.md
+        touch("greptile.json");
+        touch(".greptile/rules.md");
         // Ignore files for three platforms whose rules directory is already opted in above
         touch(".rooignore");
         touch(".continueignore");

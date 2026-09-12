@@ -98,6 +98,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
 | `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
+| `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
+| `greptile.json` | Greptile (AI PR reviewer, legacy form) | JSON; a delimited span inside `instructions` and `ignorePatterns`, nothing else touched |
 | `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
 | `.gitingestignore` | Gitingest (context packer) | Glob patterns |
@@ -184,6 +186,42 @@ upside. Its `ignore_patterns` key would collide the same way, and unlike aider's
 nothing that `.gemini/styleguide.md` does not already deliver: the style guide is where Gemini Code
 Assist takes its review rules from, and it is Markdown, so the marker merge is clean. Issue #636
 records the decision.
+
+### Greptile, and the one JSON file VibeTags shares with you
+
+Greptile takes per-repository review configuration from two places, and VibeTags writes both.
+[Greptile's docs](https://www.greptile.com/docs/code-review/customization-overview) call the
+`.greptile/` folder the recommended form and the root `greptile.json` the legacy one; both are in
+use (160 and 315 public repositories respectively, GitHub code search, 2026-09-12).
+
+- **`.greptile/rules.md`** is plain Markdown that Greptile hands the reviewer with no parsing, so it
+  gets ordinary HTML-comment markers. Prefer it.
+- **`greptile.json`** is where the work was (#639). JSON has no comments, so it cannot carry a marker
+  line, and every other `.json` output is a whole-file overwrite. That is harmless for a file
+  VibeTags owns outright and destructive here: real `greptile.json` files carry up to thirty
+  hand-set review settings, and an overwrite would erase them on the first compile after opt-in.
+
+  So VibeTags never rewrites the document. It owns a delimited span *inside* two string values and
+  nothing else: `<!-- VIBETAGS-START -->` / `<!-- VIBETAGS-END -->` lines in `instructions`, and
+  `# VIBETAGS-START` / `# VIBETAGS-END` lines in `ignorePatterns`, where a `#` line is a
+  `.gitignore` comment and matches no file. Text you wrote in either value is kept, first, with the
+  span after it. Every byte outside the two spans stays exactly where it was, including key order,
+  whitespace and the spelling of your own escape sequences, because the span is spliced into the
+  original text rather than the document being parsed and re-serialised. A missing key is added
+  with the file's own indentation and line endings; `ignorePatterns` is not added at all when
+  nothing is `@AIIgnore`d.
+
+  When the file cannot be merged without guessing, VibeTags **writes nothing** and says so with a
+  build warning: the document is not strict JSON (a trailing comma, a comment), `instructions` or
+  `ignorePatterns` holds something other than a string, one of them appears twice, or a start marker
+  has no end marker after it. A stale span is recoverable; a guessed rewrite of your review settings
+  is not.
+
+**Do not opt into both unless you mean to.** When `.greptile/` and `greptile.json` both exist in
+the repository root, Greptile reads `.greptile/` and ignores `greptile.json` entirely, so creating
+`.greptile/rules.md` in a repository that relies on its `greptile.json` switches that configuration
+off. That is Greptile's precedence rule, not VibeTags', and VibeTags does not second-guess which of
+the two you meant.
 
 ### Four deprecated outputs whose tool has moved on
 

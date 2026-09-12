@@ -59,4 +59,15 @@ public interface WholeFileMerge {
     static WholeFileMerge tomlInstructions() {
         return TomlInstructionsMerge.INSTANCE;
     }
+
+    /**
+     * Unions the string lines inside each top-level array of a flat {@code {"key": ["line", ...]}}
+     * object — the owned-values shape {@code GreptileRenderer} hands the key-merging writer.
+     *
+     * @param placeholder the line a module with nothing to say renders instead; dropped when any
+     *                    module contributed real content
+     */
+    static WholeFileMerge jsonLineArrays(String placeholder) {
+        return new JsonLineArraysMerge(placeholder);
+    }
 }

@@ -119,6 +119,9 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 
 <rule>Elements listed in <core_elements> are well-tested core components. Make changes with extreme caution and verify comprehensive test coverage before proposing modifications.</rule>
   <security_elements>
+    <element path="se.deversity.vibetags.processor.internal.JsonValueSpans">
+      <aspect>Splices annotation text, including attributes copied out of third-party dependency JARs, into greptile.json, a review configuration the user owns. The span body must stay Escape.json-encoded and marker-defused: without the first a dependency can close the string and add settings such as skipReview, and without the second it can end the span early so the value grows a copy of itself on every build.</aspect>
+    </element>
     <element path="se.deversity.vibetags.processor.internal.TransitiveManifestReader">
       <aspect>Trust boundary. Manifests read here are authored by third-party dependency JARs, and their rules are merged into the consumer&#39;s always-loaded instruction files, so a dependency can put text in front of the consumer&#39;s agent. Treat every value as untrusted input: keep the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list, and route interpolation through Escape rather than widening what a manifest may contain.</aspect>
     </element>
@@ -137,6 +140,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
     <element path="se.deversity.vibetags.processor.internal.EnforcementBaseline"/>
     <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter"/>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
+    <element path="se.deversity.vibetags.processor.internal.JsonValueSpans"/>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
     <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector"/>
     <element path="se.deversity.vibetags.processor.internal.ServiceRegistry"/>
