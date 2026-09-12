@@ -48,10 +48,45 @@ TrustTier.FACT, useVirtualThreads = false`. Each of those is load-bearing:
   surefire's pool on a sixteen-core box make `LivelockDetector` report `async-test-worker-N` as
   starved. Findings below FACT still print, so a real one is readable in the log.
 
-One detector is still **not run** rather than passing: `AtomicityValidator` needs the
-`async-test-agent` artifact attached with `-javaagent`, which this build does not wire up. It
-announces itself with `runner.agent.absent`. Tracked separately; do not read its silence as a clean
-bill.
+**`AtomicityValidator` runs, in its own surefire fork.** It needs bytecode instrumentation; without
+it the runner prints `runner.agent.absent` and the silence reads as a pass. The agent cannot simply
+be attached to the whole suite, for two independent reasons, both measured:
+
+- **It must not reach the test classpath.** Declaring `async-test-agent` as a test dependency — the
+  obvious move — costs 450 errors of the form
+  `NoClassDefFoundError: net/bytebuddy/jar/asmjdkbridge/JdkClassReader (wrong name:
+  se/deversity/asynctest/agent/shaded/bytebuddy/…)`. It ships a shaded ByteBuddy whose class files
+  carry different internal names than their archive paths, and it collides with the ByteBuddy
+  Mockito uses. Those failures appear in the fork that is *not* running the agent, which makes them
+  confusing to attribute. `maven-dependency-plugin:copy` puts the jar in `target/agents/` instead,
+  so `-javaagent` can name it and nothing is on the classpath.
+- **It must not run where javac does.** Attached to the whole suite it costs 784 errors of 2331,
+  `NoClassDefFoundError: se/deversity/asynctest/telemetry/TelemetryRegistry`, in tests with no
+  connection to async-test-lib. The agent instruments VibeTags' own classes and injects references
+  to that class; `ProcessorTestHarness` runs javac in-process, and javac loads the annotation
+  processor in its **own** classloader, where async-test-lib is not visible. The same classes get
+  loaded twice, and the injected reference resolves in only one of them.
+
+`includes`/`excludes` on the agent cannot separate those, because the classes the async tests need
+instrumented are exactly the ones the harness loads in isolation. What does separate them is the
+test set: **none of the six `*AsyncTest` classes drive javac**. So surefire runs two executions —
+`default-test` excluding `**/*AsyncTest.java`, and `async-tests` including only those with the agent
+attached. Confirmed: `runner.agent.attached args="fields=true"`, 2676 + 6 tests green, and JaCoCo
+appends both forks to one `jacoco.exec` so coverage stays whole (`WriteCache` 97%,
+`ModuleSidecar` 94%, `LazyFileAppender` 89%).
+
+**Gradle does not get the agent, and that is the one asymmetry.** Wired the same way, every Gradle
+test worker died with the `TelemetryRegistry` error and Gradle restarted one per test up to executor
+267. Surefire puts the test classpath on the system classloader, so an agent there can see
+async-test-lib; Gradle's test worker deliberately uses a separate loader, so it cannot. Splitting
+Gradle into a second test task would not help — the loader boundary is the problem, not the test
+set. **Run the async tests under Maven when the atomicity evidence matters**; a Gradle run of the
+same suite has that detector off and says so in its own log.
+
+**Read the atomicity report narrowly even under Maven.** The runner warns
+`runner.telemetry.unattributed`: field accesses on threads the round did not start carry no
+atomicity evidence, so a clean report covers the `@AsyncTest` workers only.
+
 
 **The async stress classes are `@Isolated`, and that is not optional.** They hold real platform
 threads and run detector instrumentation that takes repeated thread dumps, while
