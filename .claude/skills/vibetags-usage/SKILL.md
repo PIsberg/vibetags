@@ -149,7 +149,7 @@ mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody (depre
 touch .supermavenignore                    # Supermaven (deprecated, #645)
 mkdir -p .continue/rules                   # Continue (granular per-class rules)
 mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
-mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
+mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules; deprecated, #645)
 mkdir -p .ai/rules                         # Universal AI standard (granular; deprecated, #645)
 mkdir -p .pearai/rules                     # PearAI (granular per-class rules; deprecated, #645)
 touch .mentatconfig.json                   # Mentat (deprecated, #645)
@@ -1400,7 +1400,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.roo/rules/*.md`, `.rooignore` | Roo Code | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q | Markdown |
+| `.amazonq/rules/*.md` | Amazon Q (deprecated) | Markdown |
 | `.ai/rules/*.md` | Universal AI standard (deprecated) | Markdown |
 | `.pearai/rules/*.md` | PearAI (deprecated) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
@@ -1412,7 +1412,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
-mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules
+mkdir -p .continue/rules .tabnine/guidelines
 mkdir -p .kiro/steering .grok/rules
 mkdir -p .agents/rules .aiassistant/rules .augment/rules
 mkdir -p .claude/rules .github/instructions
@@ -1648,7 +1648,7 @@ tasks.withType(JavaCompile) {
 | `.supermavenignore` (deprecated) | Supermaven |
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
-| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules) |
+| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules; deprecated) |
 | `.ai/rules/*.md` | Universal AI standard (granular; deprecated) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |

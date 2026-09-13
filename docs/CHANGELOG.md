@@ -19,15 +19,21 @@ until you do. The consumer sweep for this release built all five downstream repo
 and saw exactly that diff, 1 to 7 files per repository, and no other content change.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
-documentation, and each finding was then confirmed at the vendor before anything changed (#664 to
-#677). The Cody and Supermaven deprecation notices were rewritten to claim only what Sourcegraph's
-and Supermaven's own posts say (#677). Void's `.void/rules.md` is deprecated: Void is deprecated, and its source
-read `.voidrules`, never this path (#665). All eight long-tail outputs in #666 were confirmed at
-their vendor as retired or never read, and are deprecated. `.claudeignore` is deprecated because
-Claude Code's documentation never mentions it, and the `@AIIgnore` orphan warning stops telling
-Claude projects to create it (#667). `.copilotignore` is deprecated on the same grounds, since
-GitHub configures Copilot content exclusion in settings, and loses its orphan warning too (#668), and `.antigravityignore`, which none of Antigravity's
-documentation pages mentions (#670). Everything this batch deprecates is listed under Deprecated.
+documentation, and each finding was confirmed at the vendor before anything changed (#664 to
+#677). This release acts on all of them, and the table under Deprecated lists every output:
+
+- Void is deprecated, and its source read `.voidrules`, never `.void/rules.md`, which is
+  deprecated (#665).
+- The eight long-tail outputs in #666 were each confirmed retired or never read, and are
+  deprecated.
+- `.claudeignore` (#667), `.copilotignore` (#668) and `.antigravityignore` (#670) appear nowhere in
+  their vendors' documentation, which names a different mechanism each time. They are deprecated,
+  and the `@AIIgnore` orphan warning stops telling projects to create the first two.
+- Firebase Studio's `.idx/airules.md` and Amazon Q's `.amazonq/rules/` still work, but the vendors
+  have announced end dates (22 March 2027 and 30 April 2027), so both are deprecated a release
+  ahead of them (#676).
+- The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
+  Sourcegraph's and Supermaven's own posts (#677).
 
 ### Added
 
@@ -315,6 +321,8 @@ documentation pages mentions (#670). Everything this batch deprecates is listed 
   | `.claudeignore` | Claude Code's documentation never mentions it (#667) | `Read` deny rules under `permissions.deny` in `.claude/settings.json` |
   | `.copilotignore` | GitHub's Copilot documentation never mentions it; exclusion is a repository, organization or enterprise setting (#668) | Settings, Copilot, Content exclusion |
   | `.antigravityignore` | Antigravity's documentation never mentions it (#670) | `read_file` Deny permission rules, or `.gitignore` with Respect .gitignore on |
+  | `.idx/airules.md` | Google is sunsetting Firebase Studio on 22 March 2027; new workspaces disabled since 22 June 2026 (#676) | `.agents/rules/`, for Google Antigravity, which Google names as a migration target |
+  | `.amazonq/rules/` | AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027 (#676) | `.kiro/steering/`, for Kiro, which AWS names |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

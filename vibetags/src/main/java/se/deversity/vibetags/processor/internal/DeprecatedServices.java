@@ -148,6 +148,18 @@ public final class DeprecatedServices {
             "Antigravity keeps files from its agent with read_file Deny permission rules, or with"
                 + " .gitignore and its Respect .gitignore setting",
             ".gitignore"));
+        // Announced end dates, from the vendors' own pages, so opted-in builds get at least one
+        // release of warning before the product ends (#676).
+        m.put("firebase", new Notice(".idx/airules.md",
+            "Google is sunsetting Firebase Studio on 22 March 2027, and new workspaces have been"
+                + " disabled since 22 June 2026",
+            "Google points users to Google AI Studio or Google Antigravity, whose .agents/rules/"
+                + " directory VibeTags writes",
+            ".agents/rules/"));
+        m.put("amazonq_granular", new Notice(".amazonq/rules/",
+            "AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027",
+            "AWS points users to Kiro, whose .kiro/steering/ directory VibeTags writes",
+            ".kiro/steering/"));
         return Collections.unmodifiableMap(m);
     }
 

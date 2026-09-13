@@ -95,6 +95,9 @@ class DeprecatedServicesTest {
         m.put("copilot_ignore", List.of(".copilotignore", "Content exclusion"));
         // Antigravity's docs name .gitignore and read_file permissions, never this file (#670)
         m.put("antigravity_ignore", List.of(".antigravityignore", "read_file", ".gitignore"));
+        // Announced end dates, carried in the notice (#676)
+        m.put("firebase", List.of(".idx/airules.md", "22 March 2027", ".agents/rules/"));
+        m.put("amazonq_granular", List.of(".amazonq/rules/", "30 April 2027", ".kiro/steering/"));
         return m;
     }
 

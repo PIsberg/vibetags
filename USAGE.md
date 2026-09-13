@@ -469,7 +469,7 @@ touch .supermavenignore                      # Supermaven (deprecated, #645)
 # --- Continue, Tabnine, Amazon Q, Universal AI ---
 mkdir -p .continue/rules                     # Continue
 mkdir -p .tabnine/guidelines                 # Tabnine
-mkdir -p .amazonq/rules                      # Amazon Q
+mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #645: Kiro's .kiro/steering/ replaces it)
 mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
 
 # --- Trae, Roo Code ---

@@ -397,7 +397,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Double.bot** (`.doubleignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Double documents no ignore file
-- **Firebase AI** (`.idx/airules.md`)
+- **Firebase AI** (`.idx/airules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Firebase Studio sunsets on 22 March 2027
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
 - **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
@@ -428,7 +428,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Pieces for Developers** (`.piecesignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Pieces documents no ignore file
 
 #### Granular / Directory-based formats
-- **Amazon Q** (`.amazonq/rules/*.md`)
+- **Amazon Q** (`.amazonq/rules/*.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027; use Kiro's `.kiro/steering/`
 - **Claude** (`.claude/rules/*.md` — YAML front-matter (`paths:`) + Markdown)
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown, plus `.continueignore`)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
