@@ -100,6 +100,33 @@ runner saw it. The stress classes now run alone, so their contention stays their
 If you add an `@AsyncTest`, isolate the class. A stress test that shares a small runner with a
 compiler is testing the runner.
 
+**Tests run on plain threads, never on ForkJoinPool workers (#659).** The same message kept coming
+back on `windows-latest` after the stress classes were isolated, and its cause turned out to be the
+test executor, not contention. The processor's write phase ends in `pool.submit(...).get()` on a pool
+of its own. On a thread that is a worker of *another* ForkJoinPool, `ForkJoinTask.get()` does not
+park: it runs that pool's queued tasks while it waits, and under JUnit's default `fork_join_pool`
+executor every queued task is another test. One `mvn test -Pe2e` run on a 16-core Windows host,
+instrumented with an extension that inspected the stack at each test start, started **92 tests
+inside another test's `generateFiles`**, nested up to **14 deep**, with 808 frames already on the
+stack before the nested test compiled anything.
+
+Deep enough, javac overflows. It catches the `StackOverflowError` itself, prints
+`An exception has occurred in the compiler ... java.lang.StackOverflowError` to stderr, and returns
+`false` from `CompilationTask.call()` with no ERROR diagnostic, which the harness reports as
+`compilation reported failure with no ERROR diagnostic`. Reproduced deterministically by compiling
+after pre-filling a 1 MB thread's stack (5000 frames: `call()` false, zero errors; 4900: success),
+and found verbatim in the failed Windows run's surefire report on JDK 21. Surefire capturing that
+printed trace on the same nearly-full stack is the second signature, a `StackOverflowError` inside
+its own stderr capture.
+
+`junit-platform.properties` therefore sets
+`junit.jupiter.execution.parallel.config.executor-service = worker_thread_pool`, whose test threads
+are plain threads: `get()` parks and nothing is stolen. `TestExecutorThreadTest` fails if a test ever
+runs on a ForkJoinPool worker again. No consumer build has been shown to take the same path, which
+needs javac itself to run on a ForkJoinPool worker. A build tool that did would expose it, and the
+join sits in the `@AILocked` `generateFiles()`, so that is tracked in #660 rather than
+changed here.
+
 **Reproducing an async flake.** The runner picks a fresh interleaving seed per round and logs it at
 DEBUG as `runner.round.start … seed=<n>`. To replay one, pass that value back:
 `@AsyncTest(replaySeed = <n>)`. Seeds are deliberately not pinned in committed tests — a fixed seed
@@ -346,6 +373,7 @@ assumed.
 | `NewAnnotationsV6EndToEndTest` | End-to-end content for the evidence-based wave — asserts the *wording* each annotation exists to produce (the `@AIGenerated` redirect, the "do not add locks" warning on `@AIThreadAffinity`) across CLAUDE.md's XML blocks, `.cursorrules`, `llms-full.txt`, and granular rules |
 | `NewAnnotationsV6ValidationTest` | The 11 new validation warnings, plus clean fixtures asserting each stays silent when its condition is not met |
 | `AIGuardrailProcessorIntegrationTest` | Full workflow. Self-contained via `ProcessorTestHarness`. Tagged `@Tag("e2e")` (13.63s), so it needs `mvn test -Pe2e` — the older `-Drun.integration.tests=true` gate was dropped in 2026-04 and is not what tags it now |
+| `TestExecutorThreadTest` | That no test runs on a `ForkJoinWorkerThread`, which is what lets the processor's blocking write-phase join run other tests nested inside a compilation until javac overflows the stack (#659) |
 | `TestTagVocabularyTest` | The fast/e2e split itself: every `@Tag` value is one the build files filter on, and `pom.xml` and `build.gradle` still exclude the same tag |
 | `BuildToolchainParityTest` | That all three compiling modules (`vibetags`, `vibetags-annotations`, `vibetags-cli`) run the same static-analysis stack: identical Error Prone/NullAway settings, SpotBugs with Find Security Bugs, PMD and CPD against the shared `pmd-ruleset.xml`, Checkstyle against the shared config, and byte-identical `.mvn/jvm.config` — without which Error Prone silently does not run rather than failing |
 | `ServiceRegistryKeyParityTest` | That every `ServiceRegistry.optInKeys()` entry has a path in `buildServiceFileMap`. The two lists are hand-maintained; a key in one and not the other turns `vibetags init --platforms <key>` into an NPE on valid user input |
