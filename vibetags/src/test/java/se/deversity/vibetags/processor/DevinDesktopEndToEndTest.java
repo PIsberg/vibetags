@@ -152,21 +152,107 @@ class DevinDesktopEndToEndTest {
 
     /**
      * Both directories opted in duplicate the guardrails: the Devin CLI docs say "Rule files in
-     * .devin/rules/ and .windsurf/rules/ are both loaded". Pinned so the PLATFORMS.md advice to
-     * pick one stays true: the bodies are the same and only the front matter differs.
+     * .devin/rules/ and .windsurf/rules/ are both loaded" and that the .devin/rules/ files "use the
+     * same frontmatter as .windsurf/rules/*.md". Pinned so the PLATFORMS.md advice to pick one
+     * stays true: the two files are the same file, front matter included (#683).
      */
     @Test
-    void bothRuleDirectoriesCarryTheSameBody(@TempDir Path root) throws IOException {
+    void bothRuleDirectoriesCarryTheSameFile(@TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(".windsurf/rules"));
         Files.createDirectories(root.resolve(".devin/rules"));
         h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE_V1);
         h.compile();
 
-        String windsurf = h.readFile(WINDSURF_RULE);
-        String devin = h.readFile(DEVIN_RULE);
-        assertFalse(windsurf.contains("trigger:"), "the Windsurf header is unchanged:\n" + windsurf);
-        assertEquals(bodyAfterFrontMatter(windsurf), bodyAfterFrontMatter(devin));
+        assertEquals(h.readFile(DEVIN_RULE), h.readFile(WINDSURF_RULE));
+    }
+
+    /**
+     * Windsurf's rule schema is {@code trigger:} (#683). docs.devin.ai lists "Trigger values:
+     * always_on, manual, model_decision, agent, glob" under the Windsurf accordion, and its glob
+     * example is {@code trigger: glob} with a {@code globs:} pattern; the
+     * {@code description}/{@code globs}/{@code alwaysApply} table on the same page is Cursor's.
+     * A rule with no trigger has no documented activation mode at all.
+     */
+    @Test
+    void aWindsurfRuleCarriesTheDocumentedGlobTriggerFrontMatter(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE_V1);
+        h.compile();
+
+        String rule = h.readFile(WINDSURF_RULE);
+        assertTrue(rule.startsWith("---\ntrigger: glob\nglobs: **/PaymentProcessor.java\n---\n\n"),
+            "the front matter docs.devin.ai documents for a glob rule, and nothing else:\n" + rule);
+        assertFalse(rule.contains("alwaysApply"), "Cursor's key has no meaning to Windsurf:\n" + rule);
+        assertTrue(rule.contains("<!-- VIBETAGS-START -->") && rule.contains("first reason"), rule);
+    }
+
+    @Test
+    void aWindsurfRoleFileJoinsItsGlobsWithCommas(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        Files.writeString(root.resolve(".vibetags-roles"), "web = **/*Controller.java, **/*Endpoint.java\n");
+        h.addSource("com.example.web.OrderController",
+            "package com.example.web;\n@se.deversity.vibetags.annotations.AILocked(reason = \"r\")\npublic class OrderController {}\n");
+        h.addSource("com.example.web.OrderEndpoint",
+            "package com.example.web;\n@se.deversity.vibetags.annotations.AILocked(reason = \"r\")\npublic class OrderEndpoint {}\n");
+        h.compile();
+
+        String role = h.readFile(".windsurf/rules/web.md");
+        assertTrue(role.startsWith("---\ntrigger: glob\nglobs: **/*Controller.java,**/*Endpoint.java\n---\n\n"), role);
+    }
+
+    /**
+     * A project upgrading from an earlier release has Cursor-shaped headers committed. The first
+     * build must replace that header rather than stack the new one above it, and must keep what a
+     * person wrote outside the markers.
+     */
+    @Test
+    void anUpgradeReplacesTheCursorShapedWindsurfHeader(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        Files.writeString(root.resolve(WINDSURF_RULE),
+            "---\ndescription: \"AI rules for com.example.payment.PaymentProcessor\"\n"
+                + "globs: [\"**/PaymentProcessor.java\"]\nalwaysApply: false\n---\n\n"
+                + "Hand-written note the team keeps here.\n\n"
+                + "<!-- VIBETAGS-START -->\n# Rules for PaymentProcessor\n\nstale\n<!-- VIBETAGS-END -->\n");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE_V1);
+        h.compile();
+
+        String rule = h.readFile(WINDSURF_RULE);
+        assertTrue(rule.startsWith("---\ntrigger: glob\nglobs: **/PaymentProcessor.java\n---\n\n"), rule);
+        assertEquals(1, rule.split("globs:", -1).length - 1, "exactly one header:\n" + rule);
+        assertFalse(rule.contains("alwaysApply") || rule.contains("description:"), rule);
+        assertTrue(rule.contains("Hand-written note the team keeps here."), rule);
+        assertTrue(rule.contains("first reason") && !rule.contains("stale"), rule);
+    }
+
+    /**
+     * Cursor's rules keep the header they had: the Windsurf fix must not reach the format the two
+     * used to share. Pinned whole, for a per-element file and a role file.
+     */
+    @Test
+    void cursorRuleFrontMatterIsUnchanged(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".cursor/rules"));
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        Files.writeString(root.resolve(".vibetags-roles"), "web = **/*Controller.java, **/*Endpoint.java\n");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE_V1);
+        h.addSource("com.example.web.OrderController",
+            "package com.example.web;\n@se.deversity.vibetags.annotations.AILocked(reason = \"r\")\npublic class OrderController {}\n");
+        h.compile();
+
+        String element = h.readFile(".cursor/rules/com-example-payment-PaymentProcessor.mdc");
+        assertTrue(element.startsWith(
+            "---\ndescription: \"AI rules for com.example.payment.PaymentProcessor\"\n"
+                + "globs: [\"**/PaymentProcessor.java\"]\nalwaysApply: false\n---\n\n"
+                + "<!-- VIBETAGS-START -->\n# Rules for PaymentProcessor\n"), element);
+        String role = h.readFile(".cursor/rules/web.mdc");
+        assertTrue(role.startsWith(
+            "---\ndescription: \"AI rules for role web\"\n"
+                + "globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]\nalwaysApply: false\n---\n\n"
+                + "<!-- VIBETAGS-START -->\n# Rules for web\n"), role);
     }
 
     private static String read(Path root, String relative) throws IOException {
@@ -177,9 +263,5 @@ class DevinDesktopEndToEndTest {
         try (Stream<Path> files = Files.list(dir)) {
             return files.map(p -> p.getFileName().toString()).sorted().toList();
         }
-    }
-
-    private static String bodyAfterFrontMatter(String content) {
-        return content.substring(content.indexOf("\n---\n") + 5);
     }
 }

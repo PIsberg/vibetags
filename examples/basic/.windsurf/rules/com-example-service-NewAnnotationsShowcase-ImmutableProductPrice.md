@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NewAnnotationsShowcase.ImmutableProductPrice"
-globs: ["**/ImmutableProductPrice.java"]
-alwaysApply: false
+trigger: glob
+globs: **/ImmutableProductPrice.java
 ---
 
 <!-- VIBETAGS-START -->

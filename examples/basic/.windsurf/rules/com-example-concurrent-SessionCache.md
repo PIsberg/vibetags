@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.concurrent.SessionCache"
-globs: ["**/SessionCache.java"]
-alwaysApply: false
+trigger: glob
+globs: **/SessionCache.java
 ---
 
 <!-- VIBETAGS-START -->

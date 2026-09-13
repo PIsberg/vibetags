@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.internal.GeneratedMetadata"
-globs: ["**/GeneratedMetadata.java"]
-alwaysApply: false
+trigger: glob
+globs: **/GeneratedMetadata.java
 ---
 
 <!-- VIBETAGS-START -->

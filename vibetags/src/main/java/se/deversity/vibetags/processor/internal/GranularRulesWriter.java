@@ -601,6 +601,20 @@ public final class GranularRulesWriter {
         return "---\npaths: " + arr(globs) + "\n---\n\n";
     }
 
+    /**
+     * {@code trigger: glob} and a bare {@code globs:} pattern: the front matter docs.devin.ai gives a
+     * glob rule in both {@code .devin/rules/} and {@code .windsurf/rules/} (#671, #683), so loading
+     * follows the file being read or edited rather than the model's judgement. Its trigger values
+     * are {@code always_on}, {@code manual}, {@code model_decision}, {@code agent} and {@code glob};
+     * the {@code description}/{@code alwaysApply} table on the same page is Cursor's. The docs show
+     * one pattern per rule and no list form, so a role file with several joins them with commas, as
+     * Copilot's {@code applyTo:} does. No {@code description}: the vendor's glob example has none,
+     * and only a {@code model_decision} rule is documented as reading one.
+     */
+    private static String fmTriggerGlob(String desc, List<String> globs) {
+        return "---\ntrigger: glob\nglobs: " + String.join(",", globs) + "\n---\n\n";
+    }
+
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
         new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
@@ -608,7 +622,8 @@ public final class GranularRulesWriter {
             (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
             n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        // Windsurf (now Devin Desktop) reads the trigger schema, not Cursor's (#683): see fmTriggerGlob.
+        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
         new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
@@ -645,12 +660,8 @@ public final class GranularRulesWriter {
         // that context includes files Cline is about to edit, so a locked class's rule arrives before
         // the edit. Loading is decided by the glob, not left to the model.
         new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
-        // Devin Desktop, formerly Windsurf (#671). docs.devin.ai gives a glob rule's front matter as
-        // "trigger: glob" and a bare "globs:" pattern, so loading follows the file being read or
-        // edited rather than the model's judgement. The docs show one pattern per rule and no list
-        // form; a role file with several joins them with commas, as Copilot's applyTo: does.
-        new GranularFormat("devin_granular", ".md",
-            (desc, globs) -> "---\ntrigger: glob\nglobs: " + String.join(",", globs) + "\n---\n\n",
-            n -> "# Rules for " + n + "\n\n")
+        // Devin Desktop, formerly Windsurf (#671): the preferred directory, with the same front matter
+        // as the .windsurf/rules/ fallback above.
+        new GranularFormat("devin_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n")
     );
 }

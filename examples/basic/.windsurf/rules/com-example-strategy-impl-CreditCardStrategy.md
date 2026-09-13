@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.strategy.impl.CreditCardStrategy"
-globs: ["**/CreditCardStrategy.java"]
-alwaysApply: false
+trigger: glob
+globs: **/CreditCardStrategy.java
 ---
 
 <!-- VIBETAGS-START -->

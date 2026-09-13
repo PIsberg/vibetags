@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.utils.I18nMessageHelper"
-globs: ["**/I18nMessageHelper.java"]
-alwaysApply: false
+trigger: glob
+globs: **/I18nMessageHelper.java
 ---
 
 <!-- VIBETAGS-START -->

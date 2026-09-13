@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.security.SecurityConfig"
-globs: ["**/SecurityConfig.java"]
-alwaysApply: false
+trigger: glob
+globs: **/SecurityConfig.java
 ---
 
 <!-- VIBETAGS-START -->

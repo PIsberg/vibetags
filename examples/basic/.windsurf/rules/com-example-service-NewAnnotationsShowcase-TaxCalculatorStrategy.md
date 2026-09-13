@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy"
-globs: ["**/TaxCalculatorStrategy.java"]
-alwaysApply: false
+trigger: glob
+globs: **/TaxCalculatorStrategy.java
 ---
 
 <!-- VIBETAGS-START -->

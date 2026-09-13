@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.metrics.OrderMetrics"
-globs: ["**/OrderMetrics.java"]
-alwaysApply: false
+trigger: glob
+globs: **/OrderMetrics.java
 ---
 
 <!-- VIBETAGS-START -->

@@ -18,7 +18,10 @@ regenerated files together with the version bump; a `-Avibetags.check=true` buil
 until you do. The consumer sweep for this release built all five downstream repositories against it
 and saw exactly that diff, 1 to 7 files per repository, and no other content change. With
 `.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under Changed); that
-change came after the sweep, so the sweep's diff does not include it.
+change came after the sweep, so the sweep's diff does not include it. With `.windsurf/rules/` opted
+in, the front matter of every rule file in it changes from Cursor's `description`/`globs`/`alwaysApply`
+header to `trigger: glob` and `globs:` (#683, under Fixed). That change also came after the sweep,
+so the sweep's diff does not include it either.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
@@ -46,8 +49,9 @@ vendor before anything changed, and the table under Deprecated lists every depre
   legacy file without a deprecation warning (#673, under Added).
 - Windsurf is now Devin Desktop, which prefers `.devin/rules/` over the `.windsurf/rules/` fallback,
   still reads `.windsurfrules`, and added `.devinignore` beside the legacy `.codeiumignore`.
-  VibeTags now writes `.devin/rules/` and `.devinignore` and keeps every Windsurf output unchanged
-  (#671, under Added).
+  VibeTags now writes `.devin/rules/` and `.devinignore` and keeps writing every Windsurf output
+  (#671, under Added). The same docs give `.windsurf/rules/` a `trigger:` front matter that VibeTags
+  had never written, and its rule files now carry it (#683, under Fixed).
 - The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
   Sourcegraph's and Supermaven's own posts (#677).
 - Open Interpreter's profiles moved to TOML, and its config loader strips `profiles` from a
@@ -66,9 +70,9 @@ vendor before anything changed, and the table under Deprecated lists every depre
   rule file opens with the front matter the docs give a glob rule, `trigger: glob` and `globs:`, so
   it loads when a matching file is read or edited. `.devinignore` takes "the same syntax as
   `.gitignore`" and gets the `@AIIgnore` globs. `.windsurfrules`, `.windsurf/rules/` and
-  `.codeiumignore` are still written, byte for byte as before. The Devin CLI docs say rule files in
-  both directories are loaded, and VibeTags writes the same body into each, so a project should opt
-  into one; PLATFORMS.md quotes what the vendor says. `.windsurfrules` still collapses to an index
+  `.codeiumignore` are still written, and adding `.devin/rules/` changes none of them. The Devin CLI
+  docs say rule files in both directories are loaded, and VibeTags writes the same file into each,
+  so a project should opt into one; PLATFORMS.md quotes what the vendor says. `.windsurfrules` still collapses to an index
   only for `.windsurf/rules/`.
 
   `DevinDesktopEndToEndTest` was run first against the code without either service, and all 5 of
@@ -449,6 +453,22 @@ vendor before anything changed, and the table under Deprecated lists every depre
   each class in its own fork; `-Dtest=NoSuchTest` and `-Dtest=NoSuchAsyncTest` still fail.
   `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
   to ignore `!` entries turns one of its cases red.
+
+- **`.windsurf/rules/` rule files carry Windsurf's `trigger:` front matter** (#683). They were
+  written with Cursor's `description`, `globs` and `alwaysApply` keys. The vendor's page
+  (docs.devin.ai, checked 2026-09-14) gives Windsurf rules a `trigger` field whose values are
+  `always_on`, `manual`, `model_decision`, `agent` and `glob`, and its glob example is
+  `trigger: glob` with `globs: **/*.test.ts`; the `alwaysApply` table on that page belongs to Cursor.
+  A rule with no `trigger` has no documented activation mode, so a guardrail could sit in the
+  directory and never reach Cascade. Every rule file VibeTags writes there, per element or per
+  `.vibetags-roles` role, now opens with `trigger: glob` and its glob, the same front matter
+  `.devin/rules/` uses, from the same renderer; a role with several globs joins them with commas.
+  An existing Cursor-shaped header is replaced on the next build, and text outside the markers is
+  kept. Cursor's `.cursor/rules/*.mdc` headers are unchanged.
+
+  The Windsurf cases in `DevinDesktopEndToEndTest` and `NewPlatformsEndToEndTest` failed against
+  the previous renderer (5 failures) and pass with the change; a pinned Cursor header case passed
+  on both.
 
 - **Opting into `QWEN.md` no longer overwrites `.qwen/settings.json`** (#650). That file is Qwen
   Code's own project settings file, and VibeTags wrote it as a whole-file overwrite on every compile,

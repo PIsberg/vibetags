@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.PublicPaymentController"
-globs: ["**/PublicPaymentController.java"]
-alwaysApply: false
+trigger: glob
+globs: **/PublicPaymentController.java
 ---
 
 <!-- VIBETAGS-START -->

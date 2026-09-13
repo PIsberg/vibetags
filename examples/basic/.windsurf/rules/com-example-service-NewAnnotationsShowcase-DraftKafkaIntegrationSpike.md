@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike"
-globs: ["**/DraftKafkaIntegrationSpike.java"]
-alwaysApply: false
+trigger: glob
+globs: **/DraftKafkaIntegrationSpike.java
 ---
 
 <!-- VIBETAGS-START -->

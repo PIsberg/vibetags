@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NotificationService"
-globs: ["**/NotificationService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/NotificationService.java
 ---
 
 <!-- VIBETAGS-START -->

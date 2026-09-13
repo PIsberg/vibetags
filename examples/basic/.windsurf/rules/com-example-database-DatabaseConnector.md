@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.database.DatabaseConnector"
-globs: ["**/DatabaseConnector.java"]
-alwaysApply: false
+trigger: glob
+globs: **/DatabaseConnector.java
 ---
 
 <!-- VIBETAGS-START -->

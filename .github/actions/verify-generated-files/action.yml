@@ -117,13 +117,16 @@ runs:
         grep -q 'GeneratedMetadata.java' .greptile/config.json || { echo "FAIL .greptile/config.json ignorePatterns carry no @AIIgnore glob"; exit 1; }
         if grep -q 'PaymentProcessor' .greptile/config.json; then echo "FAIL .greptile/config.json carries guardrail prose, which belongs in rules.md"; exit 1; fi
         echo "OK Greptile rules.md, greptile.json and .greptile/config.json"
-        # Devin Desktop, formerly Windsurf (#671). The rule must carry the trigger front matter the
-        # vendor documents, which the .windsurf/rules/ header does not, and the ignore file a glob:
-        # a header alone is what a missed AIIgnoreFormatter case leaves behind.
+        # Devin Desktop, formerly Windsurf (#671). Both rule directories must carry the trigger front
+        # matter the vendor documents; .windsurf/rules/ had Cursor's alwaysApply header until #683,
+        # and a rule without a trigger has no documented activation mode. The ignore file needs a
+        # glob: a header alone is what a missed AIIgnoreFormatter case leaves behind.
         [ "$(sed -n 2p .devin/rules/com-example-payment-PaymentProcessor.md)" = "trigger: glob" ] || { echo "FAIL .devin/rules rule lacks trigger: glob front matter"; exit 1; }
+        [ "$(sed -n 2p .windsurf/rules/com-example-payment-PaymentProcessor.md)" = "trigger: glob" ] || { echo "FAIL .windsurf/rules rule lacks trigger: glob front matter"; exit 1; }
+        if grep -l '^alwaysApply:' .windsurf/rules/*.md; then echo "FAIL .windsurf/rules carries Cursor's alwaysApply key"; exit 1; fi
         grep -q 'Tied to legacy database schema' .devin/rules/com-example-payment-PaymentProcessor.md || { echo "FAIL .devin/rules rule carries no locked reason"; exit 1; }
         grep -q 'GeneratedMetadata.java' .devinignore || { echo "FAIL .devinignore carries no @AIIgnore glob"; exit 1; }
-        echo "OK Devin Desktop .devin/rules/ front matter and .devinignore glob"
+        echo "OK Devin Desktop .devin/rules/ and .windsurf/rules/ front matter and .devinignore glob"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

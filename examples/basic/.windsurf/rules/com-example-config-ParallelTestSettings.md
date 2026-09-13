@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.config.ParallelTestSettings"
-globs: ["**/ParallelTestSettings.java"]
-alwaysApply: false
+trigger: glob
+globs: **/ParallelTestSettings.java
 ---
 
 <!-- VIBETAGS-START -->

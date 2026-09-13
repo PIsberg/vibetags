@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.config.AsyncTestConfig"
-globs: ["**/AsyncTestConfig.java"]
-alwaysApply: false
+trigger: glob
+globs: **/AsyncTestConfig.java
 ---
 
 <!-- VIBETAGS-START -->

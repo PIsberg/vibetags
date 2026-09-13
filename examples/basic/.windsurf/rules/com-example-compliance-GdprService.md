@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.compliance.GdprService"
-globs: ["**/GdprService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/GdprService.java
 ---
 
 <!-- VIBETAGS-START -->

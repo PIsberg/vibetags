@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.legacy.OldPaymentApi"
-globs: ["**/OldPaymentApi.java"]
-alwaysApply: false
+trigger: glob
+globs: **/OldPaymentApi.java
 ---
 
 <!-- VIBETAGS-START -->

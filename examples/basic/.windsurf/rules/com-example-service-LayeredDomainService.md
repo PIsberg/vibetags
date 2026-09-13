@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.LayeredDomainService"
-globs: ["**/LayeredDomainService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/LayeredDomainService.java
 ---
 
 <!-- VIBETAGS-START -->

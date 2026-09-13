@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.OrderService"
-globs: ["**/OrderService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/OrderService.java
 ---
 
 <!-- VIBETAGS-START -->

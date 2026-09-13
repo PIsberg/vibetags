@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.database.UserEntity"
-globs: ["**/UserEntity.java"]
-alwaysApply: false
+trigger: glob
+globs: **/UserEntity.java
 ---
 
 <!-- VIBETAGS-START -->

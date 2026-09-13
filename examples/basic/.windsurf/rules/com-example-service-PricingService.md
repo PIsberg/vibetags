@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.PricingService"
-globs: ["**/PricingService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/PricingService.java
 ---
 
 <!-- VIBETAGS-START -->

@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.EvidenceBasedShowcase"
-globs: ["**/EvidenceBasedShowcase.java"]
-alwaysApply: false
+trigger: glob
+globs: **/EvidenceBasedShowcase.java
 ---
 
 <!-- VIBETAGS-START -->

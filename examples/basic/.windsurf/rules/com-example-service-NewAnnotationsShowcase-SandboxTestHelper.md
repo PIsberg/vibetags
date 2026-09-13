@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NewAnnotationsShowcase.SandboxTestHelper"
-globs: ["**/SandboxTestHelper.java"]
-alwaysApply: false
+trigger: glob
+globs: **/SandboxTestHelper.java
 ---
 
 <!-- VIBETAGS-START -->

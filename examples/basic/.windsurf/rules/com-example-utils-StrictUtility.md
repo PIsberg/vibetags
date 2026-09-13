@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.utils.StrictUtility"
-globs: ["**/StrictUtility.java"]
-alwaysApply: false
+trigger: glob
+globs: **/StrictUtility.java
 ---
 
 <!-- VIBETAGS-START -->

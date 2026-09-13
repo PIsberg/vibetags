@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.utils.StringParser"
-globs: ["**/StringParser.java"]
-alwaysApply: false
+trigger: glob
+globs: **/StringParser.java
 ---
 
 <!-- VIBETAGS-START -->

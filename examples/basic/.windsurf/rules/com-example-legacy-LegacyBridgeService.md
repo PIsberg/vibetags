@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.legacy.LegacyBridgeService"
-globs: ["**/LegacyBridgeService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/LegacyBridgeService.java
 ---
 
 <!-- VIBETAGS-START -->

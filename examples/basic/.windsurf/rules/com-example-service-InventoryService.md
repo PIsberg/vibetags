@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.InventoryService"
-globs: ["**/InventoryService.java"]
-alwaysApply: false
+trigger: glob
+globs: **/InventoryService.java
 ---
 
 <!-- VIBETAGS-START -->

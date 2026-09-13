@@ -1,7 +1,6 @@
 ---
-description: "AI rules for com.example.service.NewAnnotationsShowcase"
-globs: ["**/NewAnnotationsShowcase.java"]
-alwaysApply: false
+trigger: glob
+globs: **/NewAnnotationsShowcase.java
 ---
 
 <!-- VIBETAGS-START -->
