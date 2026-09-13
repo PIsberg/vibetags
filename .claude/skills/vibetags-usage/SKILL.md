@@ -132,6 +132,7 @@ mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
 touch replit.md                            # Replit Agent
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
+mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (own opt-in)
 touch .aiexclude GEMINI.md                 # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
@@ -1631,7 +1632,7 @@ tasks.withType(JavaCompile) {
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
 | `.roo/rules/*.md`, `.rooignore` | Roo Code |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
-| `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
+| `QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |

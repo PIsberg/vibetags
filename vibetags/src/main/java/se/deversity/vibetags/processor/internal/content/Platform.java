@@ -61,7 +61,6 @@ public enum Platform {
     ROO_MODES("roo_modes"),
     CODEX_CONFIG("codex_config"),
     CODEX_RULES("codex_rules"),
-    QWEN_SETTINGS("qwen_settings"),
     QWEN_REFACTOR("qwen_refactor"),
     CODY("cody"),
     LOCKS_REPORT("locks_report"),

@@ -27,6 +27,8 @@ public final class ServiceRegistry {
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+        // Qwen's /refactor command: opted into by its own presence, not implied by QWEN.md (#655)
+        "qwen_refactor",
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full", "aider_conventions", "aider_ignore",
         "cursor_granular", "roo_granular", "trae_granular",
@@ -112,7 +114,8 @@ public final class ServiceRegistry {
         map.put("qwen_ignore",    root.resolve(".qwenignore"));
         map.put("codex_config",   root.resolve(".codex/config.toml"));
         map.put("codex_rules",    root.resolve(".codex/rules/vibetags.rules"));
-        map.put("qwen_settings",  root.resolve(".qwen/settings.json"));
+        // .qwen/settings.json is deliberately not mapped (#650): it is Qwen Code's own project
+        // settings file, and a whole-file write erased the user's MCP servers and permissions.
         map.put("qwen_refactor",  root.resolve(".qwen/commands/refactor.md"));
         map.put("llms",           root.resolve("llms.txt"));
         map.put("llms_full",      root.resolve("llms-full.txt"));

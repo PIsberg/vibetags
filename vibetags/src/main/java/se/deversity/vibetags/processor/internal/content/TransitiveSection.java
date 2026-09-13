@@ -40,7 +40,7 @@ public final class TransitiveSection {
      *
      * <p>All markdown or free text. Deliberately excludes the structured-config platforms
      * ({@code coderabbit}, {@code sweep}, {@code mentat}, {@code cody}, {@code interpreter},
-     * {@code codex_config}, {@code qwen_settings}, and the rest), the ignore-file family, and
+     * {@code codex_config}, and the rest), the ignore-file family, and
      * {@code llms} — whose whole shape is a terse link index that a prose block would spoil.
      */
     public static final Set<Platform> PLATFORMS = EnumSet.of(

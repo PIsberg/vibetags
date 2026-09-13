@@ -112,7 +112,6 @@ public final class PlatformRendererRegistry {
             case COPILOT:
                 return COPILOT_RENDERER;
             case QWEN:
-            case QWEN_SETTINGS:
             case QWEN_REFACTOR:
                 return QWEN_RENDERER;
             case GEMINI:

@@ -237,7 +237,7 @@ character-escaping) proof for the three YAML block-scalar platforms (CodeRabbit,
 Interpreter) that a later element's bullet line stays indented rather than dedenting into a bare
 top-level key — the one property those three actually depend on, since a block scalar has no quote to
 escape. `.vibetags-locks` is JSON too but already covered separately by `LocksReportEndToEndTest`. The
-remaining ~60 constants render no interpolated value (Cody, `.qwen/settings.json`,
+remaining ~60 constants render no interpolated value (Cody,
 `.codex/config.toml`, `.codex/rules/vibetags.rules`, the Qwen refactor command) or are plain
 Markdown/ignore-glob lists with no document structure to break out of — verified per-renderer, not
 assumed.
@@ -274,6 +274,8 @@ assumed.
 | `NewPlatformsV2EndToEndTest` | PearAI, Mentat, Sweep, Plandex, Double.bot, Open Interpreter, Codeium |
 | `QwenEndToEndTest` | Qwen-specific output |
 | `QwenProcessorUnitTest` | Qwen processor options |
+| `QwenRefactorCommandOptInEndToEndTest` (`e2e`) | `.qwen/commands/refactor.md` is a file-presence opt-in (#655): `QWEN.md` alone creates neither the file nor `.qwen/commands/`, an existing one keeps regenerating with hand-written text outside the markers kept, and no command file is deleted |
+| `QwenSettingsUntouchedEndToEndTest` (`e2e`) | `.qwen/settings.json` is the user's Qwen Code settings file (#650): a hand-written one is byte-for-byte unchanged after two compiles, the file is never created, and a copy an older VibeTags generated is kept rather than deleted |
 | `VibeTagsLoggerUnitTest` | File logging |
 | `VibeTagsLoggerAsyncTest` | Async/background logging behaviour |
 | `VibeTagsLoggerConcurrencyTest` | Logger thread-safety under concurrent writes |

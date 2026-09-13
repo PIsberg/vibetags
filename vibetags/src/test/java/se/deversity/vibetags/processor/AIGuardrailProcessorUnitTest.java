@@ -195,7 +195,7 @@ class AIGuardrailProcessorUnitTest {
         // present it is treated as a pointer and left untouched (sole-file fallback rule). So is
         // "cline_granular": .clinerules is a file here, and a path is one service or the other.
         Set<String> expected = Set.of(
-            "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen",
+            "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen", "qwen_refactor",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",

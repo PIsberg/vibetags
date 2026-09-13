@@ -338,8 +338,6 @@ class Coverage1dot0GapTest {
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
-        assertFalse(result.contentByService.containsKey("qwen_settings"),
-            "qwen_settings must not appear when qwen is not active");
         assertFalse(result.contentByService.containsKey("qwen_refactor"),
             "qwen_refactor must not appear when qwen is not active");
     }
@@ -409,17 +407,21 @@ class Coverage1dot0GapTest {
     }
 
     @Test
-    void guardrailContentBuilder_qwenActive_settingsAndRefactorIncluded() {
-        // qwen active → implicit qwen_settings and qwen_refactor entries are generated (L195-203)
+    void guardrailContentBuilder_qwenActive_noImplicitQwenOutputs() {
+        // qwen active implies nothing: .qwen/settings.json is never generated (#650), and
+        // .qwen/commands/refactor.md renders only when qwen_refactor is itself opted in (#655)
         AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("qwen");
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-            collector, services, "Project", "# header\n");
-        GuardrailContentBuilder.Result result = builder.build();
-        assertTrue(result.contentByService.containsKey("qwen_settings"),
-            "qwen active → qwen_settings must appear in result");
-        assertTrue(result.contentByService.containsKey("qwen_refactor"),
-            "qwen active → qwen_refactor must appear in result");
+        GuardrailContentBuilder.Result qwenOnly = new GuardrailContentBuilder(
+            collector, Set.of("qwen"), "Project", "# header\n").build();
+        assertFalse(qwenOnly.contentByService.containsKey("qwen_settings"),
+            "qwen active must not produce .qwen/settings.json content (#650)");
+        assertFalse(qwenOnly.contentByService.containsKey("qwen_refactor"),
+            "qwen active alone must not produce refactor.md content (#655)");
+
+        GuardrailContentBuilder.Result refactorOnly = new GuardrailContentBuilder(
+            collector, Set.of("qwen_refactor"), "Project", "# header\n").build();
+        assertTrue(refactorOnly.contentByService.containsKey("qwen_refactor"),
+            "an opted-in qwen_refactor renders without QWEN.md");
     }
 
     @Test

@@ -516,6 +516,7 @@ mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
 touch CLAUDE.md .claudeignore                # Claude
 touch QWEN.md .qwenignore                   # Qwen
+mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (its own opt-in)
 touch .aiexclude GEMINI.md                   # Gemini
 mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub PR reviewer)
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
@@ -629,21 +630,16 @@ VibeTags generates comprehensive Qwen configuration files:
 * `com.example.GeneratedMetadata`
 ```
 
-**.qwen/settings.json** - Qwen model configuration:
-```json
-{
-  "project": {
-    "model": "qwen3-coder-plus",
-    "mcp": {
-      "enabled": true
-    }
-  }
-}
-```
-
-**.qwen/commands/refactor.md** - Custom `/refactor` command for code refactoring
+**.qwen/commands/refactor.md** - Custom `/refactor` command for code refactoring. Written only when
+the file already exists: `QWEN.md` alone no longer creates it (#655). Text outside the VibeTags
+markers, such as your own YAML front matter, is kept.
 
 **.qwenignore** - Glob patterns for files to exclude from Qwen's context
+
+VibeTags does not write `.qwen/settings.json`. It is Qwen Code's own project settings file (MCP
+servers, model, permissions), and `QWEN.md` loads without it. Earlier versions overwrote it
+whenever `QWEN.md` was opted in (#650); a copy left behind by one of those versions is not deleted
+and is safe to remove, since none of its keys is a setting Qwen Code reads.
 
 ### 🌐 llms.txt Standard (Windsurf Cascade & LLM Agents)
 

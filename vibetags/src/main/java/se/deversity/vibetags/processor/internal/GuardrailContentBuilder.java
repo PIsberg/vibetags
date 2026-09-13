@@ -112,7 +112,7 @@ public final class GuardrailContentBuilder {
             }
         }
 
-        // Implicit platform activations for Codex and Qwen configurations
+        // Implicit platform activations: the Codex sidecar, the one documented exception to invariant 1
         if (activeServices.contains("codex")) {
             String configContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_CONFIG).render(model, Platform.CODEX_CONFIG, context);
             if (configContent != null) {
@@ -123,16 +123,9 @@ public final class GuardrailContentBuilder {
                 contentByService.put("codex_rules", rulesContent);
             }
         }
-        if (activeServices.contains("qwen")) {
-            String settingsContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_SETTINGS).render(model, Platform.QWEN_SETTINGS, context);
-            if (settingsContent != null) {
-                contentByService.put("qwen_settings", settingsContent);
-            }
-            String refactorContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_REFACTOR).render(model, Platform.QWEN_REFACTOR, context);
-            if (refactorContent != null) {
-                contentByService.put("qwen_refactor", refactorContent);
-            }
-        }
+        // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file and is
+        // never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered by the loop
+        // above only when the file exists (#655).
         if (activeServices.contains("cody")) {
             String codyContent = PlatformRendererRegistry.getRenderer(Platform.CODY).render(model, Platform.CODY, context);
             if (codyContent != null) {

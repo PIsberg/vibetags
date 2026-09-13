@@ -14,7 +14,6 @@ AI_FILES=(
   # never regenerates it — clearing it here would permanently blank the pointer.
   "QWEN.md"
   ".qwenignore"
-  ".qwen/settings.json"
   ".qwen/commands/refactor.md"
   "gemini_instructions.md"
   ".github/copilot-instructions.md"

@@ -106,7 +106,6 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
-        assertTrue(harness.fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
     }
 
     @Test
@@ -251,12 +250,6 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(content.contains("PaymentProcessor"), "Should mention PaymentProcessor");
         assertTrue(content.contains("memory usage"), "Should contain focus");
         assertTrue(content.contains("MANDATORY SECURITY AUDITS"), "Should have audit section");
-    }
-
-    @Test
-    void testQwenSettingsHasDefaults() throws Exception {
-        String content = harness.readFile(".qwen/settings.json");
-        assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should have default Qwen model");
     }
 
     // --- Coverage: empty @AIAudit checkFor (continue branch at line 307) ---

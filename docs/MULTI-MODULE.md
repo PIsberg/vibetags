@@ -83,7 +83,7 @@ two JSON documents is not JSON. They parse only VibeTags' own output, whose shap
 renderer in the same package, and return `null` rather than guessing when a document is not that
 shape, leaving the caller with the previous behaviour.
 
-The static configs (`.cody/config.json`, `.qwen/settings.json`, `.codex/config.toml`) declare no
+The static configs (`.cody/config.json`, `.codex/config.toml`) declare no
 merge: their content does not vary with the annotations, so every module renders the same bytes.
 They still benefit from the refresh fix — without it, upgrading VibeTags never updated them in a
 reactor.

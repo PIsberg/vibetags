@@ -432,17 +432,6 @@ so the output stays deterministic (byte-stable) for the fingerprint short-circui
   - Required Checks: SQL Injection, Thread Safety
 ```
 
-**.qwen/settings.json** - JSON Configuration:
-```json
-{
-  "project": {
-    "model": "qwen3-coder-plus",
-    "mcp": {
-      "enabled": true
-    }
-  }
-}
-```
 
 **.qwenignore** - Glob Patterns:
 ```
@@ -1114,11 +1103,11 @@ Build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `exa
 
 ### Qwen
 
-**Files:** `QWEN.md` + `.qwen/settings.json` + `.qwen/commands/refactor.md` + `.qwenignore`
+**Files:** `QWEN.md` + `.qwen/commands/refactor.md` + `.qwenignore`
 
-**Behavior:** Qwen reads `QWEN.md` as comprehensive project context, including locked files, contextual rules, security audit requirements, and ignored elements. The `.qwen/settings.json` configures the model (typically `qwen3-coder-plus`) and enables MCP (Model Context Protocol) for enhanced capabilities.
+**Behavior:** Qwen reads `QWEN.md` as comprehensive project context, including locked files, contextual rules, security audit requirements, and ignored elements. `.qwen/settings.json` is Qwen Code's own settings file and is deliberately not written (#650). `.qwen/commands/refactor.md` is its own opt-in, regenerated only when it exists (#655).
 
-Sample `QWEN.md` / `.qwen/settings.json` output and the `.qwen/commands/refactor.md` / `.qwenignore` roles are documented in one place: [USAGE.md § Qwen Configuration](../USAGE.md#-qwen-configuration).
+Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` roles are documented in one place: [USAGE.md § Qwen Configuration](../USAGE.md#-qwen-configuration).
 
 ### Cursor
 
