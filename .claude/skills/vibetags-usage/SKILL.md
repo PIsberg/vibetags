@@ -162,7 +162,7 @@ touch GEMINI.md                            # Gemini (official markdown)
 touch .antigravityignore                   # Antigravity AI (deprecated, #645)
 touch .clinerules                          # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                     # Cline granular rules (same path: pick one)
-mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
+mkdir -p .junie && touch .junie/AGENTS.md  # JetBrains Junie (current; legacy .junie/guidelines.md also written)
 mkdir -p .kiro/steering                    # Amazon Kiro (granular per-class rules)
 mkdir -p .grok/rules                       # Grok Build (granular per-class rules)
 mkdir -p .agents/rules                     # Antigravity (granular per-class rules)
@@ -1661,7 +1661,8 @@ tasks.withType(JavaCompile) {
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (written with the directory: the always-loaded safety tier, no front matter) |
-| `.junie/guidelines.md` | JetBrains Junie |
+| `.junie/AGENTS.md` | JetBrains Junie (checked first; not the root `AGENTS.md`) |
+| `.junie/guidelines.md` | JetBrains Junie (legacy, still supported) |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `.grok/rules/*.md` | Grok Build (granular per-class rules) |
 | `.agents/rules/*.md` | Antigravity (granular per-class rules) |

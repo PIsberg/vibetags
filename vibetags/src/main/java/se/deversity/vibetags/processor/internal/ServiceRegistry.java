@@ -46,6 +46,9 @@ public final class ServiceRegistry {
         "gemini_md", "antigravity_ignore",
         // v0.9.7 platforms
         "cline", "junie", "kiro_granular",
+        // Junie's current file, checked before .junie/guidelines.md. Not the root AGENTS.md: a
+        // separate key, so the sole-file rule treats it like any other opt-in (#673)
+        "junie_agents",
         // Cline's .clinerules/ directory, mutually exclusive with the .clinerules file above
         "cline_granular",
         // Firebase AI
@@ -177,6 +180,7 @@ public final class ServiceRegistry {
         // codex_config under codex, so it has no opt-in key of its own.
         map.put("cline_safety", root.resolve(".clinerules").resolve(CLINE_SAFETY_FILE));
         map.put("junie",         root.resolve(".junie/guidelines.md"));
+        map.put("junie_agents",  root.resolve(".junie/AGENTS.md"));
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI
         map.put("firebase",      root.resolve(".idx/airules.md"));

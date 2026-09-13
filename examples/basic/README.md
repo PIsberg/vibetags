@@ -166,7 +166,7 @@ mkdir -p .cody && touch .cody/config.json && touch .codyignore
 touch .supermavenignore .mentatconfig.json sweep.yaml .plandex.yaml
 touch .doubleignore .codeiumignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
-mkdir -p .junie && touch .junie/guidelines.md
+mkdir -p .junie && touch .junie/guidelines.md .junie/AGENTS.md
 mkdir -p .idx && touch .idx/airules.md
 
 # AI PR reviewers, context packers, and editors

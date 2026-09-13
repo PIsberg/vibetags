@@ -90,7 +90,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-two-shapes-at-one-path)) | Markdown, no front matter |
-| `.junie/guidelines.md` | JetBrains Junie | Markdown |
+| `.junie/AGENTS.md` | JetBrains Junie (read first; not the root `AGENTS.md`, see [below](#junie-reads-junieagentsmd-first)) | Markdown |
+| `.junie/guidelines.md` | JetBrains Junie (legacy, still supported, not deprecated) | Markdown |
 | `.idx/airules.md` | Firebase AI (**deprecated**, see below) | Markdown |
 | `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
@@ -393,6 +394,33 @@ in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for ste
 the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
 it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
 file inside the directory is a file of its own and is counted as one config file.
+
+### Junie reads `.junie/AGENTS.md` first
+
+JetBrains Junie's [guidelines page](https://junie.jetbrains.com/docs/guidelines-and-memory.html)
+(checked 2026-09-14) says that when Junie CLI starts a task, "it looks for guidelines in the
+following order": first "`.junie/AGENTS.md` file in the project root", then the root "`AGENTS.md`
+file in the project root, combined with `.junie/playbook.md` and every `.junie/rules/*.md` file, if
+present", then `.junie/guidelines.md` or the `.junie/guidelines/` folder, "Junie's legacy format for
+guidelines (still supported)". VibeTags writes both Junie files with the same rendering (#673).
+`.junie/guidelines.md` is not deprecated, because the vendor still documents it as supported.
+
+- **Both files present.** The page gives an order and does not say whether Junie reads a later
+  entry once it has found an earlier one. File presence is the opt-in, so a project with both
+  files gets both, with identical content. If Junie stops at the first file it finds,
+  `.junie/guidelines.md` is never read; if it reads both, the same guardrails arrive twice. Either
+  way the second file adds nothing, so a new project should create `.junie/AGENTS.md` only.
+- **It is not the root `AGENTS.md`.** The root file is the Codex service, written only when it is
+  the sole AI config file or already carries a marker pair (invariant 4). `.junie/AGENTS.md` has its
+  own service key, `junie_agents`, and to that rule it is one more opt-in, exactly as
+  `.junie/guidelines.md` always was. One consequence changes behaviour: before #673 no service
+  claimed `.junie/AGENTS.md`, so a root `AGENTS.md` whose only companion was `.junie/AGENTS.md`
+  counted as the sole AI config file and had the Codex rendering written into it. It is now left
+  untouched unless it carries a marker pair. `JunieAgentsMdEndToEndTest` pins both sides.
+- **Junie may have created the file already.** The same page says that when Junie CLI finds other
+  agents' guidelines files on first opening a project, "it will suggest importing the instructions
+  into .junie/AGENTS.md". An imported file is hand-written content: the next build adds the VibeTags
+  block between markers and keeps everything else.
 
 ### Three ignore files added, and three checked and refused
 

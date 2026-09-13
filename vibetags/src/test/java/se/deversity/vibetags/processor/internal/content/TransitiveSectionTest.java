@@ -162,7 +162,7 @@ class TransitiveSectionTest {
                 Platform.CLAUDE, Platform.CLAUDE_LOCAL, Platform.CURSOR, Platform.CODEX,
                 Platform.GEMINI, Platform.GEMINI_MD, Platform.COPILOT, Platform.QWEN,
                 Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.WINDSURF, Platform.ZED,
-                Platform.CLINE, Platform.JUNIE, Platform.FIREBASE, Platform.VOID),
+                Platform.CLINE, Platform.JUNIE, Platform.JUNIE_AGENTS, Platform.FIREBASE, Platform.VOID),
             Set.copyOf(TransitiveSection.PLATFORMS));
     }
 

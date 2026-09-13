@@ -23,7 +23,7 @@ change came after the sweep, so the sweep's diff does not include it.
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
 vendor before anything changed, and the table under Deprecated lists every deprecated output.
-#671 and #673 stay open:
+#671 stays open:
 
 - Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
   `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
@@ -42,6 +42,9 @@ vendor before anything changed, and the table under Deprecated lists every depre
   load automatically and tells the agent to open them (#669, under Changed).
 - Cursor calls `.cursorrules` legacy and says it "will be deprecated", but not that it stopped
   reading it, and Cline reads it too. PLATFORMS.md now says so; it is not deprecated (#672).
+- Junie checks `.junie/AGENTS.md` first and calls `.junie/guidelines.md` its "legacy format for
+  guidelines (still supported)". VibeTags now writes `.junie/AGENTS.md` too, and keeps writing the
+  legacy file without a deprecation warning (#673, under Added).
 - The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
   Sourcegraph's and Supermaven's own posts (#677).
 - Open Interpreter's profiles moved to TOML, and its config loader strips `profiles` from a
@@ -54,6 +57,19 @@ vendor before anything changed, and the table under Deprecated lists every depre
   docs do and do not pin (#675).
 
 ### Added
+
+- **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
+  order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,
+  which it calls legacy and still supported. The new file gets the same rendering as
+  `.junie/guidelines.md`, which is still written and not deprecated. It is a separate service
+  (`junie_agents`), not the root `AGENTS.md`: that file is still written only as the sole AI config
+  file or with a marker pair. One project shape changes: a root `AGENTS.md` whose only companion
+  was `.junie/AGENTS.md` used to count as the sole config file and receive the Codex rendering, and
+  is now left untouched unless it carries a marker pair. PLATFORMS.md records what Junie's page does
+  not say, whether it reads both files when both exist.
+
+  `JunieAgentsMdEndToEndTest` was run first against the code without the service: 4 of its 6 cases
+  failed, including the root pointer gaining a Codex block beside `.junie/AGENTS.md`.
 
 - **Cline's `.clinerules/` directory now gets an always-loaded safety tier** (#648), in
   `.clinerules/+vibetags-safety.md`. Every rule file in the directory carries `paths:` front matter

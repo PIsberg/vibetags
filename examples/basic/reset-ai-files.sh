@@ -53,6 +53,7 @@ AI_FILES=(
   # v0.9.7 platforms
   ".clinerules"
   ".junie/guidelines.md"
+  ".junie/AGENTS.md"
   # Firebase AI
   ".idx/airules.md"
   # Context-packer ignore files

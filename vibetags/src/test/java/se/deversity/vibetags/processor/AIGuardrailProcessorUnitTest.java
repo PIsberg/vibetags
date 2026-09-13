@@ -213,7 +213,7 @@ class AIGuardrailProcessorUnitTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie", "kiro_granular",
+            "cline", "junie", "junie_agents", "kiro_granular",
             // Firebase AI
             "firebase",
             // Context-packer ignore files

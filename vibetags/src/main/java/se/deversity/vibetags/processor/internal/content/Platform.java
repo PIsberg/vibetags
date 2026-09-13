@@ -41,6 +41,8 @@ public enum Platform {
     ANTIGRAVITY_IGNORE("antigravity_ignore"),
     CLINE("cline"),
     JUNIE("junie"),
+    // Junie's current guidelines file, .junie/AGENTS.md, checked before the legacy guidelines.md (#673)
+    JUNIE_AGENTS("junie_agents"),
     FIREBASE("firebase"),
     CLAUDE_LOCAL("claude_local"),
     CLAUDE_SKILL("claude_skill"),

@@ -172,6 +172,7 @@ public final class PlatformRendererRegistry {
             case CLINE_SAFETY:
                 return CLINE_SAFETY_RENDERER;
             case JUNIE:
+            case JUNIE_AGENTS:
                 return JUNIE_RENDERER;
             case FIREBASE:
                 return FIREBASE_RENDERER;

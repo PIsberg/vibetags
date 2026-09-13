@@ -525,7 +525,7 @@ touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
-mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
+mkdir -p .junie && touch .junie/AGENTS.md    # JetBrains Junie (current; legacy .junie/guidelines.md also written)
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
