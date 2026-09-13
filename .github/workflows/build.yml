@@ -135,7 +135,7 @@ jobs:
           fi
 
       # The repo dogfoods its own guardrails but never verified them, so the committed
-      # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
+      # CLAUDE.md / GEMINI.md / .claude/rules could drift from what the
       # processor writes and nothing said so — which is exactly what happened, and is only
       # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
       # this and fails on any would-be write, so a stale committed guardrail is now a red

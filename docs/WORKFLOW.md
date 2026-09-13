@@ -58,7 +58,7 @@ carries NullAway with it — nullability is checked at `ERROR` on every matrix J
 
 6b. **Verify VibeTags' Own Guardrails Are Current** — `mvn clean compile -Pself-annotate
 `-Dvibetags.selfcheck=true`, JDK 21 only. The repo dogfoods its own guardrails, and until now
-nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claudeignore` / `.claude/rules`
+nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claude/rules`
 matched what the processor writes. They had drifted. The flag turns the self-annotate profile into
 check mode, which fails on any would-be write, so the drift is a red build rather than something
 the next person to run the profile by hand discovers. JDK 21 only because it compares file content,

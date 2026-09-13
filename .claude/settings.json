@@ -10,5 +10,21 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(/examples/basic/**)",
+      "Read(/examples/multimodule/**)",
+      "Read(/examples/multimodule-indexed/**)",
+      "Read(/load-tests/results/**)",
+      "Read(oss-fuzz/**)",
+      "Read(node_modules/**)",
+      "Read(.vibetags-mod-*)",
+      "Read(.vibetags-cache)",
+      "Read(vibetags.log)",
+      "Read(target/**)",
+      "Read(build/**)",
+      "Read(pitest-report-*/**)"
+    ]
   }
 }
