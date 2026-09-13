@@ -149,6 +149,19 @@ final class GranularIndexSection {
     }
 
     /**
+     * Whether the tool that reads {@code platform}'s aggregate loads a scoped rule file by itself once
+     * a matching source file is in play, which is what the index note promises. Claude Code, Cursor,
+     * Windsurf and Copilot do. Gemini CLI does not (#669): it loads {@code GEMINI.md} files, the
+     * hierarchy plus just-in-time ones in a directory a tool touches, and its source never names
+     * {@code .gemini/rules/}. An agent told a rule is already loaded does not go and read it, so the
+     * Gemini note sends the agent to the file instead. {@code @file} imports in {@code GEMINI.md}
+     * would not help: they are expanded when the file loads, which would undo the collapse.
+     */
+    private static boolean loadsScopedFilesOnOpen(Platform platform) {
+        return platform != Platform.GEMINI_MD;
+    }
+
+    /**
      * Appends the XML {@code <scoped_rules>} index (CLAUDE.md format). Attribute values are
      * XML-escaped for consistency with the rest of the Claude output. Emits nothing when there are
      * no owners.
@@ -184,10 +197,15 @@ final class GranularIndexSection {
         if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
+        boolean loadsItself = loadsScopedFilesOnOpen(platform);
         sb.append("\n## Scoped Rules Index\n")
-            .append("Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file.")
+            .append(loadsItself
+                ? "Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file."
+                : "Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own.")
             .append(conventionNote(platform))
-            .append(" Consult the file before modifying an element:\n\n");
+            .append(loadsItself
+                ? " Consult the file before modifying an element:\n\n"
+                : " Before modifying an element listed below, open its file with read_file and apply the guardrails there:\n\n");
         for (TaggedElement owner : owners) {
             String path = scopedPath(platform, owner, context);
             sb.append("- `").append(owner.toString()).append('`');

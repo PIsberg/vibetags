@@ -16,7 +16,9 @@ restated rule-file path, and the index note states the naming convention once in
 Changed). The `.vibetags-mod-*` sidecars that carry that content change with it. Commit the
 regenerated files together with the version bump; a `-Avibetags.check=true` build reports drift
 until you do. The consumer sweep for this release built all five downstream repositories against it
-and saw exactly that diff, 1 to 7 files per repository, and no other content change.
+and saw exactly that diff, 1 to 7 files per repository, and no other content change. With
+`.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under Changed); that
+change came after the sweep, so the sweep's diff does not include it.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation, and each finding was confirmed at the vendor before anything changed (#664 to
@@ -35,6 +37,8 @@ documentation, and each finding was confirmed at the vendor before anything chan
 - Firebase Studio's `.idx/airules.md` and Amazon Q's `.amazonq/rules/` still work, but the vendors
   have announced end dates (22 March 2027 and 30 April 2027), so both are deprecated a release
   ahead of them (#676).
+- No Google product reads `.gemini/rules/`, so `GEMINI.md`'s index note stops saying those files
+  load automatically and tells the agent to open them (#669, under Changed).
 - The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
   Sourcegraph's and Supermaven's own posts (#677).
 
@@ -287,6 +291,17 @@ documentation, and each finding was confirmed at the vendor before anything chan
   make this correct", and gating there fails the tests on their own harness. No defect was found in
   the existing five; the change is that the gate now runs. `AtomicityValidator` remains not-run
   pending the `async-test-agent` javaagent, and says so with `runner.agent.absent`.
+
+- `GEMINI.md`'s scoped-rules index note no longer says the rule files "load automatically when you
+  open the matching source file" (#669). Gemini CLI never loads `.gemini/rules/`: its
+  [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) name
+  only `GEMINI.md` files, the hierarchy plus just-in-time ones in a directory a tool touches, and a
+  search of `google-gemini/gemini-cli` finds no `.gemini/rules`. An agent told a rule is already
+  loaded has no reason to open it, so the detail the index moved out of `GEMINI.md` could reach the
+  model only by chance. The note now says Gemini CLI does not load the files and tells the agent to
+  open the element's file with `read_file` before modifying it. The safety tier stays inline, and
+  the other four platforms' notes are unchanged. `GranularIndexEndToEndTest` was red on the
+  unchanged renderer, then green.
 
 - The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used
   to print the element twice: once as the fully qualified name in `path=`, and once as the
