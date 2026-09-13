@@ -103,6 +103,19 @@ vendor before anything changed, and the table under Deprecated lists every depre
   directory. With the file rendered and the merge unchanged, both reactor cases still failed on a
   second `trigger:` line inside a module sub-marker.
 
+- **A build warning when a generated `.devin/rules/` or `.windsurf/rules/` file passes 12,000
+  characters** (#695). Devin Desktop's docs limit a workspace rule file to "12,000 characters per
+  file" without saying whether the rest is cut or the file dropped, and a role grouping many
+  elements or a safety file with many safety annotations could pass that with the build reporting
+  success. Every file VibeTags writes into either directory, `+vibetags-safety.md` included, is now
+  measured as the build leaves it, on a build the fingerprint short-circuit skips and in check mode
+  as well, and each one over the cap is named with its length. Characters are UTF-16 code units.
+  `.windsurfrules` is not measured, because the docs name no cap for it.
+
+  `RuleFileLengthEndToEndTest` was written first and all 7 cases failed with no warning emitted;
+  with the check placed before generation, as the YAML duplicate-key warning is, 5 still failed,
+  because that measures the previous build's file.
+
 - **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
   order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,
   which it calls legacy and still supported. The new file gets the same rendering as

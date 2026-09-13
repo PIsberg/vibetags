@@ -508,8 +508,20 @@ docs document for it (#683):
     inside its sub-marker and left a file created by the merge with no trigger at the top. The merge
     now writes a front matter every module shares once, above the module sections. The Claude
     skill's `SKILL.md` had the same repeated header in reactor builds and loses it the same way.
-  - Memories & Rules limits a workspace rule file to 12,000 characters. VibeTags does not measure the
-    safety file against that limit, and a project with enough safety annotations can exceed it.
+- **A rule file over 12,000 characters gets a build warning** (#695). The Memories & Rules page
+  gives `.devin/rules/*.md` and `.windsurf/rules/*.md` "Limited to 12,000 characters per file" and
+  does not say whether a longer file is cut or dropped. After generation, and on a build the
+  fingerprint short-circuit skips or a check-mode build, VibeTags measures every file in either
+  directory that carries its markers, `+vibetags-safety.md` included, and warns for each one over the
+  cap, naming the file and its length (`validation.rule-file-over-limit` in `vibetags.log`). A file
+  of exactly 12,000 characters is within the cap. A character is a UTF-16 code unit, what
+  `String.length()` and a JavaScript string's `length` both count; the docs do not define one, and
+  this count is never below the code point count, so a disagreement errs toward warning. A rule
+  file with no VibeTags markers is its author's and is not measured. Role files grow with their
+  role, so splitting the role in `.vibetags-roles` shortens them; the safety file shrinks to a
+  pointer when `.windsurfrules` is opted in. The page gives the single-file global rules 6,000
+  characters, a file VibeTags does not write, and names no cap for `.windsurfrules`, so neither is
+  measured.
 - **Opt into one rule directory, not both.** The same CLI page: "`.devin/` is the preferred location
   and takes precedence over `.windsurf/`. If both `.devin/global_rules.md` and
   `.windsurf/global_rules.md` exist, Devin CLI loads only `.devin/global_rules.md`. Rule files in
