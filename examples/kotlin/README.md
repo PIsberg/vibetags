@@ -61,7 +61,7 @@ the manifest's two advisory rules and drops the other, which the build reports a
 ## Kotlin-specific limitations
 
 kapt runs annotation processors over generated **Java stubs**, not the Kotlin sources.
-Two consequences, both cosmetic for typical use:
+Four consequences. The first two are cosmetic for typical use; the third loses guardrails:
 
 - **Method-body-scoped annotations are invisible.** Stubs carry no method bodies, so an
   `@AI*` annotation on a local declaration inside a function body is never seen by the
@@ -69,7 +69,15 @@ Two consequences, both cosmetic for typical use:
 - **Source positions refer to the stubs.** The `.vibetags-locks` report's line ranges
   would describe the generated stub, not the `.kt` file, so this example does not opt in
   to the locks report.
+- **Functions with a value class in their JVM signature are not in the stub.** `AccountLedger.kt`
+  shows it on purpose: `balanceFor(AccountId)` has an `@AILocked` that appears in no generated file,
+  while `settle(Result<Long>)` renders as `settle(java.lang.Object)`. An explicit `@JvmName` on the
+  function brings it back.
+- **An `internal` function's path contains the Kotlin module name**, derived from this project's
+  `group` and name: `AccountLedger.reconcile$se_deversity_vibetags_example_vibetags_example_kotlin(java.lang.String)`.
+
+The CI step that builds this example asserts all three `AccountLedger` outcomes, so a kapt release
+that changes any of them fails the build (#681). Details: [docs/JVM-LANGUAGES.md](../../docs/JVM-LANGUAGES.md#kotlin).
 
 KSP is not supported: VibeTags is a JSR 269 processor, and KSP does not run JSR 269
-processors. kapt is the supported route for Kotlin, and it is in maintenance mode but
-fully functional on Kotlin 2.x.
+processors. kapt is the supported route for Kotlin; this example builds with Kotlin 2.4.10.

@@ -26,7 +26,7 @@ were prose that nobody had run, and one of the claims was wrong for several rele
 | Language | Rating | What reaches the processor | Verified by |
 |---|---|---|---|
 | Java | **Supported** | javac runs the processor directly | `corpus/run-corpus.sh`, six libraries, 15,683 members |
-| Kotlin | **Supported, one level lost** (package) | kapt generates Java stubs and runs the processor over them | `kotlin-obd-api`, 15 of 15 guardrails rendered |
+| Kotlin | **Supported, one level lost** (package) | kapt generates Java stubs and runs the processor over them; functions with a value class in their JVM signature are left out | `kotlin-obd-api`, 15 of 15 guardrails rendered; `examples/kotlin` pins the value-class loss |
 | Groovy | **Supported, one level lost** (field) | groovyc stubs, but only with `javaAnnotationProcessing` on | `nf-boost`, 13 of 13 expected, 2 field guardrails absent |
 | Scala | **Partial by construction** | the Java sources of a mixed module; never `.scala` | `splain`, 17 from the Java half, 0 from the Scala half |
 | Clojure | **Not possible** | nothing | n/a |
@@ -64,6 +64,22 @@ were written.
 - **The package level.** Kotlin has no `package-info.kt`, so there is no compilation unit for a
   package annotation to live on. Thirteen annotations accept `ElementType.PACKAGE` and none of them
   can be used from Kotlin. There is no workaround; put the guardrail on the types instead.
+- **Functions with a value class in their JVM signature.** A function that takes or returns a
+  `@JvmInline value class` gets a mangled JVM name (`balanceFor-oKSF6Yo`), and kapt leaves every
+  such function out of the Java stub. An `@AI*` annotation on the function, or on any of its
+  parameters, reaches no processor: nothing is generated and nothing is logged. That covers your own
+  value classes and the standard library's (`UInt`, `ULong`, `kotlin.time.Duration`). Measured on
+  Kotlin 2.4.10: `AccountLedger.balanceFor(AccountId)` in `examples/kotlin`, and a function returning
+  `Duration`, were absent from the stub and from every generated file. The #496 spike lost the same
+  shape on `UserId`, `UserId?` and `ULong` parameters, a `UserId` return type and a parameter-level
+  `@AIInputSanitized`. Two look-alikes are not affected: a `kotlin.Result` parameter is not mangled
+  and renders as `settle(java.lang.Object)`, and a value class used only as a type argument
+  (`List<AccountId>`) leaves the name alone. **What to do instead:** give the function an explicit
+  `@JvmName`. kapt then emits it, and the guardrail renders under that name with the value class
+  erased to its underlying type, `closeAccount(java.lang.String)` (measured). Or put the guardrail on
+  the enclosing type. The `examples/kotlin` CI step fails if `balanceFor` ever appears in a generated
+  file, so a kapt release that starts emitting these functions forces this bullet to be rewritten
+  (#681).
 - **Method-body-scoped annotations.** Stubs carry no method bodies, so an annotation on a local
   declaration inside a function is never seen. Class-level and function-level annotations, which is
   the normal usage, work fully.
@@ -82,6 +98,43 @@ declaring only `ElementType.FIELD` should be written with the `@field:` target:
 @field:AIPrivacy(reason = "Billing email identifies a natural person; never log it")
 private var billingEmail: String? = null
 ```
+
+### The path of an `internal` function names the Kotlin module
+
+An `internal` function's JVM name carries the Kotlin module name, and VibeTags' element path is the
+JVM name, so the module name is part of every path for it:
+
+```
+com.example.kotlin.AccountLedger.reconcile$se_deversity_vibetags_example_vibetags_example_kotlin(java.lang.String)
+```
+
+The Kotlin Gradle plugin builds that name from the project's `group` and name, with dots and hyphens
+turned into `_`. Changing either renames the path: with `group = "com.acme"` and the project renamed
+`ledger`, the same function renders as `reconcile$com_acme_ledger(java.lang.String)`. The path
+appears in the aggregates, in the function's `.vibetags-locks` entry and inside its class's granular
+rule file. The rule file's name is per class and does not change: none of the #496 spike's 36 rule
+filenames carried the suffix. Measured on Kotlin 2.4.10; the `examples/kotlin` CI step pins the
+suffixed path (#681).
+
+To keep the path stable, give the function an explicit `@JvmName` (`replayBatch(java.lang.String)`,
+measured), or pin the module name with `kotlin { compilerOptions { moduleName.set("...") } }` (the
+#496 spike set it to `shapes` and got `internalFun$shapes`). Otherwise commit the regenerated files
+together with the rename.
+
+### Why VibeTags cannot warn about the lost functions
+
+The processor sees only the stub, so the omitted function is not there to warn about. Its one trace
+is the `@kotlin.Metadata` annotation kapt copies onto the stub class, whose string table does list
+`balanceFor-oKSF6Yo`. That cannot carry a warning, because it cannot say whether the function had a
+guardrail. Metadata records `hasAnnotations` only for annotations kept in the binary, and every
+`@AI*` annotation has `SOURCE` retention. Read with `kotlin-metadata-jvm` 2.4.10 from the #496
+spike's compiled `Methods` class, 36 of its 38 `@AILocked` functions report `hasAnnotations=false`;
+the 2 that report `true` also carry `@JvmName` or `@JvmOverloads`. A metadata-based check could
+therefore only say "this class has value-class functions", which is true of every function taking a
+`UInt` or a `Duration`, annotated or not, and it would put a protobuf decoder for an undocumented
+format into the processor every consumer runs. Not built. The CI step above pins the loss instead,
+and a source-reading check in `vibetags doctor`, the route the Groovy field loss took (#494), is
+tracked in #688.
 
 ### The strategic risk, stated plainly
 
@@ -284,7 +337,9 @@ Full detail, including the assertion table:
 Stated so that nobody mistakes silence for evidence:
 
 - **Kotlin is verified on one Kotlin version.** The corpus member is on Kotlin 2.3.10 and
-  `examples/kotlin` on 2.4.10. Nothing here sweeps a range of Kotlin releases.
+  `examples/kotlin` on 2.4.10. Nothing here sweeps a range of Kotlin releases. The value-class
+  omission and the `internal` module suffix were measured on 2.4.10 only; the corpus member was not
+  checked for either.
 - **One kapt diagnostic is unattributed.** kapt reports `vibetags.root` as an unrecognised
   processor option even though `AIGuardrailProcessor` declares it in `@SupportedOptions` and
   demonstrably receives it. It appears on 2.3.10 and not on 2.4.10. Tracked as an open question,

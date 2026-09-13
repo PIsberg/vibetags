@@ -104,7 +104,7 @@ kapt {
 Processor options (`vibetags.log.path`, `vibetags.check`, …) are passed through the same
 `kapt { arguments { ... } }` block, without the `-A` prefix.
 
-Three kapt-specific caveats, the first two consequences of kapt processing generated Java stubs
+Five kapt-specific caveats, the first four consequences of kapt processing generated Java stubs
 rather than the Kotlin sources:
 
 - **Method-body-scoped annotations are invisible.** Stubs carry no method bodies, so an
@@ -113,6 +113,15 @@ rather than the Kotlin sources:
 - **Source positions describe the stub.** The `.vibetags-locks` report's line ranges would
   point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
   the locks report.
+- **A function with a value class in its JVM signature loses its guardrails.** kapt leaves out of
+  the stub every function that takes or returns a `@JvmInline value class` (your own, `UInt`,
+  `ULong`, `kotlin.time.Duration`), so an `@AI*` annotation on it or its parameters generates
+  nothing and logs nothing. `kotlin.Result` parameters and `List<SomeValueClass>` are not affected.
+  Add an explicit `@JvmName` and kapt emits the function. Measured on Kotlin 2.4.10 (#681).
+- **An `internal` function's path contains the Kotlin module name**, which Gradle derives from the
+  project's `group` and name: `reconcile$com_acme_ledger(java.lang.String)`. Renaming the project
+  renames the path in every generated file and in `.vibetags-locks`. An explicit `@JvmName`, or a
+  pinned `compilerOptions.moduleName`, keeps it stable.
 - **Some builds print `warning: The following options were not recognized by any processor:
   '[vibetags.root, kapt.kotlin.generated]'`. It is harmless and it is kapt's, not yours.** kapt
   forwards its option map to its embedded javac without registering any processor's

@@ -373,6 +373,31 @@ or removed in this release on the strength of that check; each finding is tracke
   the planted worktree and clone files alongside the real one), and removing the root exemption
   from the fix turns it and two existing cases red.
 
+- **Two silent Kotlin losses are now documented and pinned** (#681). kapt leaves out of its Java
+  stubs every function whose JVM name is mangled because it takes or returns a `@JvmInline value
+  class` (your own, `UInt`, `ULong`, `kotlin.time.Duration`), so an `@AI*` annotation on such a
+  function, or on one of its parameters, generated nothing and logged nothing, and
+  `docs/JVM-LANGUAGES.md`, the page that exists to list what each language loses, did not say so.
+  Separately, an `internal` function's path embeds the Kotlin module name, which the Kotlin Gradle
+  plugin derives from the project's `group` and name, so renaming the project renamed its
+  `.vibetags-locks` entry and its path in every generated file. Both are now in
+  `docs/JVM-LANGUAGES.md`, `USAGE.md` and the Kotlin example's README, with the `@JvmName`
+  workaround for each; nothing in the processor changed.
+
+  `examples/kotlin` gains `AccountLedger.kt`, and its CI step asserts all three outcomes on Kotlin
+  2.4.10: `balanceFor(AccountId)` is in no generated file, `settle(Result<Long>)` renders as
+  `settle(java.lang.Object)`, and `reconcile` carries the
+  `$se_deversity_vibetags_example_vibetags_example_kotlin` suffix. Each assertion was flipped once
+  and the step went red. A processor warning was not built: the processor sees only the stub, and
+  the stub's `@kotlin.Metadata` records `hasAnnotations` only for binary-retention annotations (36
+  of the #496 spike's 38 `@AILocked` functions report `false`), so it cannot tell an annotated
+  function from an unannotated one. A `vibetags doctor` source check is tracked in #688.
+
+  The same change fixes the Groovy and Scala example steps, whose `! grep` absence checks on
+  `CLAUDE.md` could never fail: `bash -e` does not stop on a negated command, so only the last line
+  of each step was live. They now use `if grep ...; then exit 1; fi`, which fails when a planted
+  match is present, where the old form exited 0.
+
 ## [1.3.4] - 2026-09-10
 
 ### Fixed
