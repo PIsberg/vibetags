@@ -22,6 +22,9 @@ and saw exactly that diff, 1 to 7 files per repository, and no other content cha
 documentation, and each finding was confirmed at the vendor before anything changed (#664 to
 #677). This release acts on all of them, and the table under Deprecated lists every output:
 
+- Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
+  `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
+  Zoo Code for those outputs, and nothing Roo-related is deprecated (#664).
 - Void is deprecated, and its source read `.voidrules`, never `.void/rules.md`, which is
   deprecated (#665).
 - The eight long-tail outputs in #666 were each confirmed retired or never read, and are

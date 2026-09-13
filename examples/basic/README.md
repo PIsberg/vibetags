@@ -222,7 +222,7 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `.pearai/rules/*.md` | PearAI (granular, per-class) |
 | `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml` | AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis) |
 | `.void/rules.md` | Void Editor |
-| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
+| `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode |
 | *(and more)* | |
 
 See the [main README](../../README.md#supported-ai-platforms) for the complete list of supported platforms.

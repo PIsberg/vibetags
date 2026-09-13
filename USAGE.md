@@ -11,7 +11,7 @@
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
-- [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
+- [Granular Rules (Cursor, Trae, Zoo Code)](#-granular-rules-cursor-trae-zoo-code)
 - [Qwen Configuration](#-qwen-configuration)
 - [llms.txt Standard](#-llmstxt-standard-windsurf-cascade--llm-agents)
 - [Orphaned Annotation Warnings](#️-orphaned-annotation-warnings)
@@ -36,7 +36,7 @@ For the full annotation table, processor options, and output-file formats, see a
 - **Compile-time Validation** — proactive warnings for contradictory or empty annotations
 - **Configurable Logging** — full control over log file path and level, including turning it off
 - **Granular Rules Support** — automatic generation of `.mdc` and `.md` files with YAML front-matter for precise AI scoping
-- **Expanded Tool Support** — built-in support for Aider, Roo Code, and Trae
+- **Expanded Tool Support** — built-in support for Aider, Roo Code (now its fork Zoo Code), and Trae
 
 ### Logging Configuration
 
@@ -472,9 +472,9 @@ mkdir -p .tabnine/guidelines                 # Tabnine
 mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #645: Kiro's .kiro/steering/ replaces it)
 mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
 
-# --- Trae, Roo Code ---
+# --- Trae, Zoo Code ---
 mkdir -p .trae/rules                         # Trae IDE
-mkdir -p .roo/rules                          # Roo Code
+mkdir -p .roo/rules                          # Zoo Code (fork of the retired Roo Code; reads the same paths)
 
 # --- PearAI ---
 mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #645)
@@ -506,7 +506,7 @@ touch .antigravityignore                     # Antigravity AI exclusion list (de
 touch .clinerules                            # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                       # Cline (granular per-class rules). Same path: pick one
 #                                            # (Cline itself converts the file to the directory)
-touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
+touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
@@ -591,7 +591,7 @@ mvn clean compile      # or touch any source file, then compile
 `reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path
 (see [Logging Configuration](#logging-configuration)).
 
-### 🧩 Granular Rules (Cursor, Trae, Roo Code)
+### 🧩 Granular Rules (Cursor, Trae, Zoo Code)
 
 For modern AI IDEs like **Cursor** and **Trae**, VibeTags supports a granular rule system. Instead of one giant configuration file, VibeTags generates specific files for each annotated element.
 
@@ -746,7 +746,7 @@ Critical Vulnerabilities to Prevent:
 > **`AGENTS.md` is generated only when it is the sole AI config file in the project.** It is
 > the most widely read agent-instructions file there is (Codex, Amp, OpenCode, Jules, Factory
 > Droid, Devin, Ona, Mistral Vibe and Pi read it, and so do Cursor, Windsurf, Gemini CLI, Qwen,
-> Roo, Zed, Kilo, Warp and Copilot's coding agent alongside their own files), and it is also
+> Zoo Code, Zed, Kilo, Warp and Copilot's coding agent alongside their own files), and it is also
 > the file people most often hand-write. VibeTags will not overwrite your prose, so if any
 > other AI config file exists it leaves `AGENTS.md` alone entirely.
 >

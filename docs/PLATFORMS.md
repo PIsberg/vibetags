@@ -57,7 +57,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.qwenignore` | Qwen | Glob patterns |
 | `.qwen/commands/refactor.md` | Qwen (`/refactor` command; its own opt-in, not implied by `QWEN.md`) | Markdown command template |
 | `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
-| `.roo/rules/*.md` | Roo Code (granular) | Markdown |
+| `.roo/rules/*.md` | Zoo Code (fork of the retired Roo Code; reads the same paths), granular | Markdown |
 | `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
 | `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
 | `.windsurfrules` | Windsurf IDE | Markdown |
@@ -101,13 +101,13 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
 | `.greptile/config.json` | Greptile (AI PR reviewer, `@AIIgnore` paths) | JSON; a delimited span inside `ignorePatterns`, nothing else touched |
 | `greptile.json` | Greptile (AI PR reviewer, legacy form) | JSON; a delimited span inside `instructions` and `ignorePatterns`, nothing else touched |
-| `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
+| `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), custom "VibeTags Architect" mode | YAML |
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
 | `.gitingestignore` | Gitingest (context packer) | Glob patterns |
 | `.gptignore` | GPT context packer | Glob patterns |
 | `.ghostcoderignore` | Ghostcoder (**deprecated**, see below) | Glob patterns |
 | `.piecesignore` | Pieces for Developers (**deprecated**, see below) | Glob patterns |
-| `.rooignore` | Roo Code | Glob patterns |
+| `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Glob patterns |
 | `.continueignore` | Continue | Glob patterns |
 | `.augmentignore` | Augment Code | Glob patterns |
 | `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
@@ -115,7 +115,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Zoo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
 Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
@@ -178,7 +178,7 @@ skips, VibeTags reads each opted-in YAML file and warns about any top-level key 
 writes that also appears outside it, naming both line numbers and which one a last-wins loader
 reads. That covers every YAML platform, not only aider: the keys come from the renderers
 themselves, so CodeRabbit's `reviews:`, Ellipsis's `version:` and `pr_review:`, Sweep's `rules:`,
-Plandex's `guardrails:`, Open Interpreter's `instructions:` and Roo Code's `customModes:` are
+Plandex's `guardrails:`, Open Interpreter's `instructions:` and Zoo Code's `customModes:` (`.roomodes`) are
 checked the same way. `reviews:` is the one most likely to bite, since it is where CodeRabbit keeps
 every review setting.
 
@@ -304,6 +304,31 @@ outlives the product it was generated for. Nothing in the build can notice that,
 release process now re-checks every platform path against its vendor before a version is cut
 ([RELEASING.md](RELEASING.md)).
 
+### Roo Code shut down, and Zoo Code reads the same files
+
+`.roo/rules/`, `.roomodes` and `.rooignore` are written for Zoo Code, and none of them is
+deprecated (#664).
+
+Roo Code, the extension these paths were added for, is gone. Its
+[README](https://github.com/RooCodeInc/Roo-Code) says "The Roo Code Extension was shut down on May
+15th", `RooCodeInc/Roo-Code` was archived that day (2026-05-15), and the same notice points users to
+"[ZooCode](https://github.com/Zoo-Code-Org/Zoo-Code/) (a fork started by the Roo Code community)"
+and to Cline. [Zoo Code](https://github.com/Zoo-Code-Org/Zoo-Code) is maintained (last push
+2026-09-13) and kept Roo Code's file names, so a project opted into any of the three keeps working
+under Zoo Code with no change. Its own documentation and source were checked for each path on
+2026-09-13:
+
+| Output | Zoo Code's documentation | Zoo Code's source |
+|---|---|---|
+| `.roo/rules/` | [Custom Instructions](https://docs.zoocode.dev/features/custom-instructions): "Preferred Method: Directory (`.roo/rules/`)" | `src/core/prompts/sections/custom-instructions.ts`: `path.join(rooDir, "rules")` |
+| `.roomodes` | [Custom Modes](https://docs.zoocode.dev/features/custom-modes): "Edit the `.roomodes` file (which can be YAML or JSON) in your project root." | `src/core/config/CustomModesManager.ts`: `const ROOMODES_FILENAME = ".roomodes"` |
+| `.rooignore` | [.rooignore](https://docs.zoocode.dev/features/rooignore): "Create a file named `.rooignore` in the root directory of your VS Code workspace." | `src/core/ignore/RooIgnoreController.ts`: `path.join(this.cwd, ".rooignore")` |
+
+Zoo Code's source has no `.zooignore` or `.zoomodes`. The service keys (`roo_granular`,
+`roo_modes`, `roo_ignore`) and the generated file headers keep the Roo Code name: a key is what
+`vibetags init --platforms` takes, so renaming one would break a working command, and the paths it
+names did not change.
+
 ### Cline's two shapes at one path
 
 Cline reads `.clinerules` as either a single file or a directory of rule files, and VibeTags writes
@@ -353,7 +378,7 @@ file inside the directory is a file of its own and is counted as one config file
 
 `@AIIgnore` already drove fifteen exclusion files. Three more were added because each is the only
 exclusion mechanism its tool has, and VibeTags already writes that tool's rules directory:
-[`.rooignore`](https://docs.roocode.com/features/rooignore) (Roo Code: prevents reading and
+[`.rooignore`](https://docs.zoocode.dev/features/rooignore) (Zoo Code, the fork of the retired Roo Code: prevents reading and
 writing, the closest match to what `@AIIgnore` means),
 [`.continueignore`](https://docs.continue.dev/customize/deep-dives/codebase) and
 [`.augmentignore`](https://docs.augmentcode.com/setup-augment/workspace-indexing) (both exclude

@@ -125,9 +125,9 @@ mkdir -p .claude/skills/vibetags-guardrails && touch .claude/skills/vibetags-gua
 touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
-mkdir -p .roo/rules                        # Roo Code (per-class rules)
+mkdir -p .roo/rules                        # Zoo Code (fork of the retired Roo Code; reads the same paths), per-class rules
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what loads CONVENTIONS.md)
-touch .rooignore .continueignore .augmentignore  # Roo / Continue / Augment exclusion lists
+touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
 touch replit.md                            # Replit Agent
 touch CONVENTIONS.md .aiderignore          # Aider
@@ -173,7 +173,7 @@ touch DESIGN.md                            # AI design agents (Cursor, Claude, C
 touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
 touch .repomixignore .gitingestignore .gptignore  # Context packers (.ghostcoderignore and .piecesignore are deprecated, #645)
 mkdir -p .void && touch .void/rules.md     # Void Editor (deprecated, #645)
-touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
+touch .roomodes                            # Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
@@ -1397,7 +1397,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
-| `.roo/rules/*.md`, `.rooignore` | Roo Code | Markdown |
+| `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q (deprecated) | Markdown |
@@ -1629,9 +1629,8 @@ tasks.withType(JavaCompile) {
 | `.windsurfrules` | Windsurf IDE (traditional) |
 | `.windsurf/rules/*.md` | Windsurf IDE (granular per-class rules) |
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
-| `.roo/rules/*.md` | Roo Code |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
-| `.roo/rules/*.md`, `.rooignore` | Roo Code |
+| `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
@@ -1674,7 +1673,7 @@ tasks.withType(JavaCompile) {
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) |
-| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
+| `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode |
 | `.repomixignore` | Repomix (context packer) |
 | `.gitingestignore` | Gitingest (context packer) |
 | `.gptignore` | GPT context packer |
