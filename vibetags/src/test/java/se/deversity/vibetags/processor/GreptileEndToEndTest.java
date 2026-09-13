@@ -15,9 +15,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -222,6 +224,32 @@ class GreptileEndToEndTest {
     // ---------------------------------------------------------------------------------------
 
     /** Strict parse: JSON is YAML 1.2, and duplicate keys are rejected rather than last-wins. */
+    /**
+     * The mask must not need stack in proportion to the value it skips (#661). An alternation under a
+     * greedy star recurses once per matched character in java.util.regex, so masking a long
+     * instructions value overflowed a 256 KB thread stack, the headroom #659 showed the Windows runner
+     * can run short of. Mixes plain characters and escaped quotes so both branches of the literal run.
+     */
+    @Test
+    void maskingALongOwnedValueFitsASmallThreadStack() throws InterruptedException {
+        String value = "ab\\\"".repeat(25_000);
+        String json = "{\"instructions\": \"" + value + "\", \"strictness\": 3}";
+        AtomicReference<StackOverflowError> overflow = new AtomicReference<>();
+        AtomicReference<String> masked = new AtomicReference<>();
+        Thread small = new Thread(null, () -> {
+            try {
+                masked.set(withoutOwnedValues(json));
+            } catch (StackOverflowError e) {
+                overflow.set(e);
+            }
+        }, "greptile-mask-small-stack", 256L * 1024);
+        small.start();
+        small.join();
+
+        assertNull(overflow.get(), "masking a 100,000-character value must not overflow a 256 KB stack");
+        assertEquals("{\"instructions\": <owned>, \"strictness\": 3}", masked.get());
+    }
+
     static Map<String, Object> parse(String json) {
         LoaderOptions options = new LoaderOptions();
         options.setAllowDuplicateKeys(false);
@@ -232,9 +260,14 @@ class GreptileEndToEndTest {
         return map;
     }
 
-    /** The document with the two owned string literals replaced by a fixed token. */
+    /**
+     * The document with the two owned string literals replaced by a fixed token. The quantifiers are
+     * possessive: a JSON string literal never needs backtracking, and a greedy star over an
+     * alternation recurses once per character, which a long value turns into a StackOverflowError
+     * on a small thread stack (#661).
+     */
     static String withoutOwnedValues(String json) {
-        String literal = "\"(?:[^\"\\\\]|\\\\.)*\"";
+        String literal = "\"(?:[^\"\\\\]++|\\\\.)*+\"";
         return json
             .replaceFirst("(\"instructions\"\\s*:\\s*)" + literal, "$1<owned>")
             .replaceFirst("(\"ignorePatterns\"\\s*:\\s*)" + literal, "$1<owned>");
