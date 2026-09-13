@@ -49,6 +49,7 @@ public final class IgnoreFileRenderer implements PlatformRenderer {
             case ROO_IGNORE:         return "Roo Code";
             case CONTINUE_IGNORE:    return "Continue";
             case AUGMENT_IGNORE:     return "Augment Code";
+            case DEVIN_IGNORE:       return "Devin Desktop";
             case ANTIGRAVITY_IGNORE: return "Antigravity AI";
             case AIDER_IGNORE:       return "Aider";
             case REPOMIX_IGNORE:     return "Repomix";

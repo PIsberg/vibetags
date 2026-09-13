@@ -175,6 +175,10 @@ class ProcessorTestHarness {
         touch(".agents/skills/vibetags-guardrails/SKILL.md");
         touch(".zencoder/rules/.vibetags");
         touch("replit.md");
+        // Devin Desktop (formerly Windsurf): .devin/rules/ has no VibeTags aggregate sibling, so
+        // opting it in by default collapses nothing; .devinignore is its ignore file (#671)
+        touch(".devin/rules/.vibetags");
+        touch(".devinignore");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");

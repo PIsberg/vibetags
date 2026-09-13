@@ -644,6 +644,13 @@ public final class GranularRulesWriter {
         // matter and activates a rule when a paths: glob matches a file in the task's context, and
         // that context includes files Cline is about to edit, so a locked class's rule arrives before
         // the edit. Loading is decided by the glob, not left to the model.
-        new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n")
+        new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
+        // Devin Desktop, formerly Windsurf (#671). docs.devin.ai gives a glob rule's front matter as
+        // "trigger: glob" and a bare "globs:" pattern, so loading follows the file being read or
+        // edited rather than the model's judgement. The docs show one pattern per rule and no list
+        // form; a role file with several joins them with commas, as Copilot's applyTo: does.
+        new GranularFormat("devin_granular", ".md",
+            (desc, globs) -> "---\ntrigger: glob\nglobs: " + String.join(",", globs) + "\n---\n\n",
+            n -> "# Rules for " + n + "\n\n")
     );
 }

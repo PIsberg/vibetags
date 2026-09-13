@@ -472,9 +472,11 @@ Create an empty placeholder file for the service you want to support, then compi
 touch .cursorrules .cursorignore             # Traditional + ignore
 mkdir -p .cursor/rules                       # Granular rules (per-class .mdc)
 
-# --- Windsurf ---
-touch .windsurfrules                         # Traditional .windsurfrules
-mkdir -p .windsurf/rules                     # Granular rules (per-class .md)
+# --- Devin Desktop (formerly Windsurf) ---
+touch .windsurfrules                         # Traditional .windsurfrules (legacy, still read)
+mkdir -p .devin/rules                        # Granular rules, preferred directory (per-class .md, trigger: glob)
+# mkdir -p .windsurf/rules                   # Granular rules, fallback directory. Devin CLI loads both: pick one
+touch .devinignore                           # Indexing exclusion list (.codeiumignore is the legacy name)
 
 # --- Zed, Cody, Supermaven ---
 touch .rules                                 # Zed Editor

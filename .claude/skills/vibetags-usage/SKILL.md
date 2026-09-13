@@ -142,8 +142,10 @@ touch AGENTS.md                            # Codex CLI (see note below — only 
 mkdir -p .github && touch .github/copilot-instructions.md  # Copilot (.copilotignore is deprecated, #645)
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
-touch .windsurfrules                       # Windsurf IDE (traditional)
-mkdir -p .windsurf/rules                   # Windsurf IDE (granular per-class rules)
+touch .windsurfrules                       # Devin Desktop, formerly Windsurf (traditional, legacy)
+mkdir -p .devin/rules                      # Devin Desktop (granular per-class rules, preferred directory)
+# mkdir -p .windsurf/rules                 # Devin Desktop (granular, fallback directory; both load, pick one)
+touch .devinignore                         # Devin Desktop exclusion list
 touch .rules                               # Zed Editor
 mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody (deprecated, #645)
 touch .supermavenignore                    # Supermaven (deprecated, #645)
@@ -1395,7 +1397,8 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.claude/rules/*.md` | Claude Code | YAML front-matter (`paths:`) + Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot | YAML front-matter (`applyTo:`) + Markdown |
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
-| `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
+| `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (fallback directory) | YAML front-matter + Markdown |
+| `.devin/rules/*.md` | Devin Desktop (preferred directory) | YAML front-matter (`trigger: glob`) + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
@@ -1411,7 +1414,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 
 Enable by creating the directories:
 ```bash
-mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
+mkdir -p .cursor/rules .devin/rules .trae/rules .roo/rules
 mkdir -p .continue/rules .tabnine/guidelines
 mkdir -p .kiro/steering .grok/rules
 mkdir -p .agents/rules .aiassistant/rules .augment/rules
@@ -1626,8 +1629,10 @@ tasks.withType(JavaCompile) {
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |
 | `.cursorrules`, `.cursorignore` | Cursor (traditional) |
 | `.cursor/rules/*.mdc` | Cursor (granular per-class rules) |
-| `.windsurfrules` | Windsurf IDE (traditional) |
-| `.windsurf/rules/*.md` | Windsurf IDE (granular per-class rules) |
+| `.windsurfrules` | Devin Desktop, formerly Windsurf (traditional, legacy) |
+| `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (granular per-class rules, fallback directory) |
+| `.devin/rules/*.md` | Devin Desktop (granular per-class rules, preferred directory, `trigger: glob`) |
+| `.devinignore` | Devin Desktop (exclusion list) |
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) |
@@ -1657,7 +1662,7 @@ tasks.withType(JavaCompile) {
 | `.plandex.yaml` | Plandex (deprecated) |
 | `.doubleignore` | Double.bot (deprecated) |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter (deprecated) |
-| `.codeiumignore` | Codeium |
+| `.codeiumignore` | Codeium (Devin Desktop reads it under this legacy name) |
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (written with the directory: the always-loaded safety tier, no front matter) |

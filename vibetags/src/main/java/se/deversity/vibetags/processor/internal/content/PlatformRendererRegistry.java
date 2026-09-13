@@ -146,6 +146,7 @@ public final class PlatformRendererRegistry {
             case ROO_IGNORE:
             case CONTINUE_IGNORE:
             case AUGMENT_IGNORE:
+            case DEVIN_IGNORE:
             case ANTIGRAVITY_IGNORE:
             case REPOMIX_IGNORE:
             case GITINGEST_IGNORE:

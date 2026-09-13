@@ -39,7 +39,7 @@ runs:
           .mentatconfig.json sweep.yaml .plandex.yaml \
           .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
           GEMINI.md .antigravityignore \
-          .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore \
+          .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore .devinignore \
           .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
           .clinerules .junie/guidelines.md .junie/AGENTS.md .idx/airules.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
@@ -49,6 +49,7 @@ runs:
           .agents/rules/com-example-payment-PaymentProcessor.md \
           .aiassistant/rules/com-example-payment-PaymentProcessor.md \
           .augment/rules/com-example-payment-PaymentProcessor.md \
+          .devin/rules/com-example-payment-PaymentProcessor.md \
           .goosehints; do
           if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
           if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
@@ -116,6 +117,13 @@ runs:
         grep -q 'GeneratedMetadata.java' .greptile/config.json || { echo "FAIL .greptile/config.json ignorePatterns carry no @AIIgnore glob"; exit 1; }
         if grep -q 'PaymentProcessor' .greptile/config.json; then echo "FAIL .greptile/config.json carries guardrail prose, which belongs in rules.md"; exit 1; fi
         echo "OK Greptile rules.md, greptile.json and .greptile/config.json"
+        # Devin Desktop, formerly Windsurf (#671). The rule must carry the trigger front matter the
+        # vendor documents, which the .windsurf/rules/ header does not, and the ignore file a glob:
+        # a header alone is what a missed AIIgnoreFormatter case leaves behind.
+        [ "$(sed -n 2p .devin/rules/com-example-payment-PaymentProcessor.md)" = "trigger: glob" ] || { echo "FAIL .devin/rules rule lacks trigger: glob front matter"; exit 1; }
+        grep -q 'Tied to legacy database schema' .devin/rules/com-example-payment-PaymentProcessor.md || { echo "FAIL .devin/rules rule carries no locked reason"; exit 1; }
+        grep -q 'GeneratedMetadata.java' .devinignore || { echo "FAIL .devinignore carries no @AIIgnore glob"; exit 1; }
+        echo "OK Devin Desktop .devin/rules/ front matter and .devinignore glob"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

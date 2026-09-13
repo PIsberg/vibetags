@@ -237,6 +237,8 @@ class AIGuardrailProcessorUnitTest {
             "greptile", "greptile_rules", "greptile_config",
             // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent file
             "agents_skill", "zencoder_granular", "replit",
+            // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
+            "devin_granular", "devin_ignore",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

@@ -64,6 +64,9 @@ public final class ServiceRegistry {
         "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
         // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent context file
         "agents_skill", "zencoder_granular", "replit",
+        // Devin Desktop, formerly Windsurf (#671). Its preferred rules directory, beside the
+        // Windsurf paths it still reads, and its ignore file. Neither collapses .windsurfrules.
+        "devin_granular", "devin_ignore",
         // Context-packer ignore files
         "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
         // AI pull-request reviewers
@@ -200,6 +203,9 @@ public final class ServiceRegistry {
         map.put("aiassistant_granular", root.resolve(".aiassistant/rules"));
         map.put("augment_granular",     root.resolve(".augment/rules"));
         map.put("zencoder_granular",    root.resolve(".zencoder/rules"));
+        // Devin Desktop, formerly Windsurf (#671)
+        map.put("devin_granular",       root.resolve(".devin/rules"));
+        map.put("devin_ignore",         root.resolve(".devinignore"));
         map.put("replit",               root.resolve("replit.md"));
         map.put("goose",                root.resolve(".goosehints"));
         // Context-packer ignore files
