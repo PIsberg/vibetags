@@ -559,6 +559,18 @@ jobs:
             grep -qF "VIBETAGS-START" ".clinerules/$f.md" \
               || { echo ".clinerules/$f.md carries no generated rules (#642)"; exit 1; }
           done
+          # The directory has no aggregate beside it, so its safety tier lives in one file inside it
+          # (#648). Cline loads a rule with no front matter on every request, and one with front
+          # matter only when its globs match, so assert both the missing front matter and the
+          # guardrail: a @AILocked class and a @AIPrivacy field from different modules.
+          safety=".clinerules/+vibetags-safety.md"
+          test -f "$safety" || { echo "MISSING $safety: Cline has no always-loaded safety tier (#648)"; exit 1; }
+          head -n 1 "$safety" | grep -qv '^---' \
+            || { echo "$safety starts with front matter, so Cline only loads it on a glob match (#648)"; exit 1; }
+          grep -qF "com.example.indexed.core.DocumentModel" "$safety" \
+            || { echo "$safety lost the @AILocked DocumentModel (#648)"; exit 1; }
+          grep -qF "com.example.indexed.core.DocumentRetention.ownerEmail" "$safety" \
+            || { echo "$safety lost the @AIPrivacy ownerEmail field (#648)"; exit 1; }
           # A module with nothing locked must not repeat an empty heading once per module.
           test "$(grep -c '^## Locked Files' .github/copilot-instructions.md)" = "1" \
             || { echo "empty Locked Files heading repeated per module (#319)"; exit 1; }

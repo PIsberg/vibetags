@@ -359,6 +359,7 @@ assumed.
 | `NewPlatformsV4EndToEndTest` | AI PR reviewers (`.coderabbit.yaml`, `.pr_agent.toml`, `ellipsis.yaml`), context-packer ignore files (`.repomixignore`, `.gitingestignore`, `.gptignore`, `.ghostcoderignore`, `.piecesignore`), Void (`.void/rules.md`), and Roo modes (`.roomodes`) |
 | `ClineEndToEndTest` | `.clinerules` generation for Cline AI assistant (v0.9.7) |
 | `ClineDirectoryOptInTest` | One path, two services: a `.clinerules/` directory activates exactly `cline_granular`, a `.clinerules` file exactly `cline` (#643, #642) |
+| `ClineSafetyTierEndToEndTest` | A `.clinerules/`-only project gets `.clinerules/+vibetags-safety.md` with no front matter carrying the safety tier and not the verbose tier; the orphan sweep leaves it alone; hand text outside markers survives; removing the last safety annotation retires its guardrail; no element or role stem can take its name; the single `.clinerules` file gets no safety file; a reactor merges every module into it; check mode agrees (#648) |
 | `ClineRulesDirectoryEndToEndTest` | Cline's `.clinerules/*.md` directory form: per-element rules carry `paths:` front matter; a hand-written rule in the directory stays byte-identical; Cline's own file-to-directory conversion keeps the hand text in `default-rules.md` and sweeps the stale VibeTags block (#642) |
 | `JunieEndToEndTest` | `.junie/guidelines.md` generation for JetBrains Junie (v0.9.7) |
 | `KiroGranularEndToEndTest` | `.kiro/steering/` granular rule generation for Amazon Kiro (v0.9.7) |

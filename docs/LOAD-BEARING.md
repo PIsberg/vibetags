@@ -64,6 +64,8 @@ Five platforms have both an always-loaded aggregate file and a glob-scoped granu
 
 Gating is per platform via `GranularIndexSection.governingGranularKey` — `CLAUDE_LOCAL` maps to `claude_granular` (so `CLAUDE.local.md` mirrors `CLAUDE.md`), while renderers that reuse the Cursor/Claude format but read no scoped directory (Cline, Firebase, Junie, Void, the Claude skill) map to `null` and always render in full. Single-opt-in output is unchanged. The owner set is computed once in `GuardrailContentBuilder.build()` and passed on `RenderingContext.granularOwners()`.
 
+Cline's directory form is the one granular platform whose aggregate cannot sit beside it, because `.clinerules` is the file and the directory at once. It keeps invariant 6 through a file inside the directory instead: `cline_safety` (`.clinerules/+vibetags-safety.md`, no front matter, always loaded by Cline) is implicitly rendered whenever `cline_granular` is active, by `ClineSafetyRenderer`, from the same indexed preamble and inline safety sections `.cursorrules` uses. It is an aggregate-path service, so the marker merge and the reactor merge apply unchanged; `GranularRulesWriter.cleanupAll` excludes every file another service writes inside a granular directory, which is what stops the orphan sweep scrubbing it (#648).
+
 **This repo dogfoods it**: the block at the bottom of this file is a scoped-rules index; the per-element detail lives in `.claude/rules/`, which your tooling loads on demand by glob.
 
 ### Annotations
@@ -179,15 +181,20 @@ and this section seem to disagree, the enforcing test decides.
 
 - **File presence is the opt-in.** The processor regenerates only files that already exist, and
   deleting one deactivates that platform permanently. Never "helpfully" create an output file.
-  One documented exception: activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
-  `.codex/rules/vibetags.rules`), creating `.codex/` if absent. There is no other: `QWEN.md` used
-  to imply `.qwen/settings.json` and `.qwen/commands/refactor.md`, and neither is implied any more
-  (#650, #655).
+  Two documented exceptions. Activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
+  `.codex/rules/vibetags.rules`), creating `.codex/` if absent. And an opted-in granular directory is
+  filled as needed: the per-element rule files, plus, for Cline's `.clinerules/`, the always-loaded
+  `+vibetags-safety.md` (#648), because that directory has no aggregate beside it to carry the safety
+  buckets. The directory is the opt-in; the files in it are VibeTags' to create. There is no other
+  exception: `QWEN.md` used to imply `.qwen/settings.json` and `.qwen/commands/refactor.md`, and
+  neither is implied any more (#650, #655).
 - **`process()` returns `false`** so other processors still see the annotations; all writing happens
   on `processingOver()`.
 - **Hand-authored content outside the markers must never be lost.** Generated content is written
-  strictly between `VIBETAGS-START` / `VIBETAGS-END` (HTML or hash form per file type); JSON and TOML
-  configs are whole-file overwrites.
+  strictly between `VIBETAGS-START` / `VIBETAGS-END` (HTML or hash form per file type). JSON and TOML
+  configs VibeTags owns outright are whole-file overwrites; `greptile.json` and
+  `.greptile/config.json`, which users configure by hand, get a delimited span inside their shared
+  string values instead and every other byte is kept (#639, #651).
 - **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
   already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
   Worth knowing what this now costs: `AGENTS.md` has become the default rules file for 20+ tools,

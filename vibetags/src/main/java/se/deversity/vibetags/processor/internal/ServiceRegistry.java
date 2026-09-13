@@ -84,6 +84,22 @@ public final class ServiceRegistry {
         "root_index"
     );
 
+    /**
+     * The always-loaded safety file inside Cline's {@code .clinerules/} directory (issue #648).
+     *
+     * <p>Every per-element rule file there carries {@code paths:} front matter and loads only when a
+     * matching file is in the task's context, and Cline's aggregate and its directory are one path,
+     * so a directory-only project had nowhere to keep the six safety buckets always loaded
+     * (invariant 6). This file carries them with no front matter, which Cline treats as always
+     * active.
+     *
+     * <p>The leading {@code +} is load-bearing. Element stems are {@code [A-Za-z0-9-]}
+     * ({@code ElementNaming.granularQName}) and role stems {@code [A-Za-z0-9._-]}
+     * ({@code RoleConfig.sanitize}), so no rule file in the directory can ever share this name, and
+     * the orphan sweep's exclusion of it can never shelter a stale rule file.
+     */
+    public static final String CLINE_SAFETY_FILE = "+vibetags-safety.md";
+
     private ServiceRegistry() {}
 
     /**
@@ -157,6 +173,9 @@ public final class ServiceRegistry {
         // Cline's directory form, at the same path as the file. A path is one or the other, so
         // isOptedIn lets exactly one of the two activate (issue #642).
         map.put("cline_granular", root.resolve(".clinerules"));
+        // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
+        // codex_config under codex, so it has no opt-in key of its own.
+        map.put("cline_safety", root.resolve(".clinerules").resolve(CLINE_SAFETY_FILE));
         map.put("junie",         root.resolve(".junie/guidelines.md"));
         map.put("kiro_granular", root.resolve(".kiro/steering"));
         // Firebase AI

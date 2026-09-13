@@ -9,7 +9,7 @@ invariant below: [docs/LOAD-BEARING.md](docs/LOAD-BEARING.md#the-invariants-stat
 
 Each line names its enforcing check; run it, do not just read this list.
 
-1. File presence is the only platform opt-in; never create an output file (sole exception: the codex sidecar). `GuardrailLifecycleEndToEndTest`
+1. File presence is the only platform opt-in; never create an output file (exceptions: the codex sidecar, and files inside an opted-in granular directory). `GuardrailLifecycleEndToEndTest`
 2. Hand-authored content outside `VIBETAGS-START`/`END` markers must never be lost. `GuardrailFileRecoveryEndToEndTest`, `MarkerInjectionTest`
 3. `process()` returns `false`; all writing happens on `processingOver()`. `AIGuardrailProcessorProcessTest`
 4. `AGENTS.md` is written only as the sole AI config file, or with an existing marker pair. `AgentsMdSoleFallbackTest`

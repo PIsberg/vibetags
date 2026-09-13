@@ -132,6 +132,15 @@ public final class GuardrailContentBuilder {
                 contentByService.put("cody", codyContent);
             }
         }
+        // Cline's .clinerules/ directory has no aggregate beside it, because its aggregate is the
+        // same path, so the always-loaded safety tier gets a file inside the directory (issue #648).
+        if (activeServices.contains("cline_granular")) {
+            String safetyContent = PlatformRendererRegistry.getRenderer(Platform.CLINE_SAFETY)
+                .render(model, Platform.CLINE_SAFETY, context);
+            if (safetyContent != null) {
+                contentByService.put("cline_safety", safetyContent);
+            }
+        }
 
         // Special case for AIExclude platform, which has strict activation criteria
         if (activeServices.contains("aiexclude") && (activeServices.contains("gemini") || activeServices.contains("codex"))) {

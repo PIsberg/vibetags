@@ -464,10 +464,42 @@ public final class GranularRulesWriter {
         for (GranularFormat f : FORMATS) {
             Path dir = serviceFiles.get(f.serviceKey);
             if (dir != null && activeServices.contains(f.serviceKey)) {
-                removed.addAll(fileWriter.cleanupGranularDirectory(dir, f.extension, excludeQNames));
+                removed.addAll(fileWriter.cleanupGranularDirectory(dir, f.extension,
+                    withFilesOtherServicesWriteIn(dir, f.extension, serviceFiles, excludeQNames)));
             }
         }
         return removed;
+    }
+
+    /**
+     * {@code excludeQNames} plus the stem of every file another service writes directly inside
+     * {@code dir}.
+     *
+     * <p>Such a file is not a per-element rule, so it can never be an orphan of the directory. Cline's
+     * always-loaded safety file (issue #648) is the case: it sits among the rule files in
+     * {@code .clinerules/}, is written by its own service in the aggregate phase, and without this
+     * the sweep that runs afterwards read it as a rule file nothing had claimed and scrubbed it in
+     * the same round. Derived from the service map rather than naming the file, so the sweep and the
+     * registry cannot disagree about it. Every other directory has no such file and gets
+     * {@code excludeQNames} back unchanged.
+     */
+    static Set<String> withFilesOtherServicesWriteIn(Path dir, String extension,
+                                                    Map<String, Path> serviceFiles,
+                                                    Set<String> excludeQNames) {
+        Set<String> exclude = new LinkedHashSet<>();
+        for (Path file : serviceFiles.values()) {
+            Path name = file.getFileName();
+            if (name == null || !dir.equals(file.getParent()) || !name.toString().endsWith(extension)) {
+                continue;
+            }
+            String fileName = name.toString();
+            exclude.add(fileName.substring(0, fileName.length() - extension.length()));
+        }
+        if (exclude.isEmpty()) {
+            return excludeQNames;
+        }
+        exclude.addAll(excludeQNames);
+        return exclude;
     }
 
     /**

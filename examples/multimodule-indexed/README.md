@@ -40,7 +40,8 @@ without them the processor emits a NOTE saying the annotation is used but no ign
 cannot carry it, because it carries the single `.clinerules` file at the same path, so this reactor
 is the fixture for it (`ExampleOptInCoverageTest` checks that). Both modules write into the one
 shared directory, the same cross-module merge `.github/instructions/` exercises, and Cline has no
-aggregate here, so nothing collapses to an index for it.
+aggregate here, so nothing collapses to an index for it. The safety tier instead lands in
+`.clinerules/+vibetags-safety.md`, one always-loaded file with both modules merged into it (#648).
 
 ## Build
 

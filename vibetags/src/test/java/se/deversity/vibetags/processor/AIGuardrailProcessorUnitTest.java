@@ -260,6 +260,9 @@ class AIGuardrailProcessorUnitTest {
                 if (Files.exists(p)) {
                     return; // claimed by the other service at this path
                 }
+                if (p.getParent() != null && Files.isRegularFile(p.getParent())) {
+                    return; // inside .clinerules/, which the cline file service claimed as a file
+                }
                 if (ServiceRegistry.writesDirectory(key)) {
                     Files.createDirectories(p);
                     Files.createFile(p.resolve(".vibetags"));

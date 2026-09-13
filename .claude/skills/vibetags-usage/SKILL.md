@@ -1661,6 +1661,7 @@ tasks.withType(JavaCompile) {
 | `.codeiumignore` | Codeium |
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
+| `.clinerules/+vibetags-safety.md` | Cline AI assistant (written with the directory: the always-loaded safety tier, no front matter) |
 | `.junie/guidelines.md` | JetBrains Junie |
 | `.kiro/steering/*.md` | Amazon Kiro (granular per-class rules) |
 | `.grok/rules/*.md` | Grok Build (granular per-class rules) |
