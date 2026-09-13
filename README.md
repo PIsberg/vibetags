@@ -402,7 +402,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
 - **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
-- **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`). `.copilotignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): GitHub configures Copilot content exclusion in settings, not in a file
 - **JetBrains Junie** (`.junie/guidelines.md`)
 - **Mentat** (`.mentatconfig.json`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): the CLI is archived and read `.mentat_config.json`
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)

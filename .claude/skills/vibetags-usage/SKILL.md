@@ -139,7 +139,7 @@ mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, r
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
+mkdir -p .github && touch .github/copilot-instructions.md  # Copilot (.copilotignore is deprecated, #645)
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
 touch .windsurfrules                       # Windsurf IDE (traditional)
@@ -1641,7 +1641,7 @@ tasks.withType(JavaCompile) {
 | `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
 | `.antigravityignore` | Antigravity AI |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
-| `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
+| `.github/copilot-instructions.md`, `.copilotignore` (deprecated) | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
 | `.cody/config.json`, `.codyignore` (deprecated) | Sourcegraph Cody |

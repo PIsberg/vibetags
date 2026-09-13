@@ -89,7 +89,6 @@ class OrphanWarnerTest {
             Set.of("cursor", "claude", "copilot", "qwen", "gemini"), false, true, false);
 
         assertTrue(messager.mentions(".cursorignore"), messager.warnings.toString());
-        assertTrue(messager.mentions(".copilotignore"), messager.warnings.toString());
         assertTrue(messager.mentions(".qwenignore"), messager.warnings.toString());
         assertTrue(messager.mentions(".aiexclude"), messager.warnings.toString());
     }

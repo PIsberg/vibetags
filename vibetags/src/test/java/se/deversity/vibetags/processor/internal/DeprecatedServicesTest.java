@@ -91,6 +91,8 @@ class DeprecatedServicesTest {
         m.put("ai_rules_granular", List.of(".ai/rules/", "AGENTS.md"));
         // Claude Code's docs never mention .claudeignore; Read deny rules are its mechanism (#667)
         m.put("claude_ignore", List.of(".claudeignore", "permissions.deny", ".claude/settings.json"));
+        // GitHub's Copilot docs configure content exclusion in settings, never in a file (#668)
+        m.put("copilot_ignore", List.of(".copilotignore", "Content exclusion"));
         return m;
     }
 

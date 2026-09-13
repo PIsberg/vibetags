@@ -1135,9 +1135,9 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### GitHub Copilot
 
-**Files:** `.github/copilot-instructions.md` + `.copilotignore`
+**Files:** `.github/copilot-instructions.md` + `.copilotignore` (deprecated, #668)
 
-**Behavior:** Copilot uses the instructions file to guide its completions and respects `.copilotignore` (standard glob format) to exclude specific files from being used as context.
+**Behavior:** Copilot uses the instructions file to guide its completions and VibeTags writes `.copilotignore` (standard glob format), a file GitHub's Copilot documentation does not describe; Copilot's documented exclusion is the Content exclusion setting.
 
 ### Windsurf Cascade & LLM Agents (llms.txt Standard)
 

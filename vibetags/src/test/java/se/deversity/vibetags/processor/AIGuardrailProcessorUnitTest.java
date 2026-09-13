@@ -162,7 +162,7 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("GEMINI.md"), "Note should list the Gemini file (gemini_instructions.md is deprecated, #641)");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
         assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
-        assertTrue(note.contains(".copilotignore"), "Note should list copilot ignore file");
+        assertFalse(note.contains(".copilotignore"), "Note must not offer the deprecated copilot ignore file (#668)");
     }
 
     @Test

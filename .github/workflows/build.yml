@@ -990,8 +990,8 @@ jobs:
             echo "$unexpected"
             exit 1
           fi
-          if ! grep -q "15 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
-            echo "::error::the reactor opts into 15 deprecated outputs and was not warned about all of them."
+          if ! grep -q "16 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::the reactor opts into 16 deprecated outputs and was not warned about all of them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that

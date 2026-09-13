@@ -228,7 +228,7 @@ class AIGuardrailProcessorProcessTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void checkOrphanedAnnotations_copilotActiveNoIgnore_emitsWarning() {
+    void checkOrphanedAnnotations_copilotActiveNoIgnore_doesNotSuggestTheDeprecatedFile() {
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
@@ -236,8 +236,10 @@ class AIGuardrailProcessorProcessTest {
         Set<String> active = Set.of("copilot");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        assertTrue(warnings.stream().anyMatch(w -> w.contains(".copilotignore")),
-            "Should warn about missing .copilotignore when copilot is active");
+        // .copilotignore is deprecated (#668): Copilot excludes content in settings, so a Copilot
+        // project is no longer told to create the file.
+        assertTrue(warnings.stream().noneMatch(w -> w.contains(".copilotignore")),
+            "Should not suggest the deprecated .copilotignore: " + warnings);
     }
 
     @Test

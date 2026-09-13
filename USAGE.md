@@ -522,7 +522,7 @@ mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub 
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
+mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot (.copilotignore is deprecated, #645: use Content exclusion settings)
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
 
@@ -544,7 +544,6 @@ Create one or more of the following files in your project root to opt in:
   CLAUDE.md
   .github/copilot-instructions.md
   .cursorignore
-  .copilotignore
   .qwenignore
 ```
 

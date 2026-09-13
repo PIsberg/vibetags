@@ -23,8 +23,7 @@ public final class OrphanWarner {
             // No .claudeignore warning: that file is deprecated (#667), and advising a user to create
             // it would opt them into an output the same build warns is going away. CLAUDE.md already
             // carries @AIIgnore inline in its always-loaded safety tier.
-            warn(messager, log, active.contains("copilot") && !active.contains("copilot_ignore"),
-                "VibeTags: @AIIgnore used but .copilotignore is missing for Copilot support. Consider creating it.");
+            // No .copilotignore warning either: deprecated (#668), Copilot excludes content in settings.
             warn(messager, log, active.contains("qwen") && !active.contains("qwen_ignore"),
                 "VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.");
             warn(messager, log, (active.contains("gemini") || active.contains("codex")) && !active.contains("aiexclude"),

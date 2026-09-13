@@ -49,7 +49,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `gemini_instructions.md` | Gemini (**deprecated**, see below) | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
-| `.copilotignore` | GitHub Copilot | Glob patterns |
+| `.copilotignore` | GitHub Copilot (**deprecated**, see below) | Glob patterns |
 | `CONVENTIONS.md` | Aider | Markdown |
 | `.aider.conf.yml` | Aider (loads `CONVENTIONS.md`) | YAML (`read:`) |
 | `.aiderignore` | Aider | Glob patterns |
@@ -293,6 +293,7 @@ across, then delete the deprecated file or directory.
 | `.piecesignore` | **Never documented.** Pieces' `llms-full.txt` (708 KB) has 0 mentions of `.piecesignore`; the exclusions it does document are per application, in the app's settings (#666). | [Pieces full docs](https://docs.pieces.app/llms-full.txt) |
 | `.ai/rules/` | **No vendor, no specification.** No tool or published convention checked reads this directory: the Agent Rules community standard is `AGENTS.md`, Block's `ai-rules` tool keeps its sources in `ai-rules/` (no dot), and aicodingrules.org lists per-tool paths only. This is a negative finding and would be overturned by one tool that reads the path (#666). | [agent-rules](https://github.com/agent-rules/agent-rules), [block/ai-rules](https://github.com/block/ai-rules) |
 | `.claudeignore` | **Not documented by the vendor.** `code.claude.com/docs/llms-full.txt` (9.2 MB, fetched 2026-09-13) has 0 mentions of `.claudeignore`. Claude Code's [permissions page](https://code.claude.com/docs/en/permissions) says: "To block Claude's file tools from reading a file or directory, add a `Read` deny rule for its path, such as `Read(./.env)` or `Read(./secrets/**)`", with a paste-ready example under [Exclude sensitive files](https://code.claude.com/docs/en/settings-reference#exclude-sensitive-files). The release re-check counted about 3,900 public repositories carrying a `.claudeignore` (not re-measured); whatever reads it there is not Claude Code as documented. This repository dogfoods the file, so its own build prints the warning. The `@AIIgnore` orphan warning no longer tells a Claude project to create the file (#667). | [Claude Code permissions](https://code.claude.com/docs/en/permissions) |
+| `.copilotignore` | **Not documented by the vendor.** GitHub's [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) configures exclusions under the repository's Settings, Copilot, Content exclusion (or at organization and enterprise level), for Copilot Business and Enterprise plans, and the page has 0 mentions of `.copilotignore`; the GitHub Docs search API returns 0 hits for the name (2026-09-13). The release re-check counted about 1,000 public repositories carrying it (not re-measured). The `@AIIgnore` orphan warning no longer tells a Copilot project to create it (#668). | [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file

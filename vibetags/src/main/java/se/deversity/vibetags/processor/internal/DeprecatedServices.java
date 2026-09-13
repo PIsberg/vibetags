@@ -132,6 +132,14 @@ public final class DeprecatedServices {
             "Claude Code keeps files from Claude with Read deny rules under permissions.deny in"
                 + " .claude/settings.json",
             ".claude/settings.json"));
+        // Copilot: docs.github.com's "Excluding content from GitHub Copilot" configures exclusions in
+        // repository, organization or enterprise settings, and the docs search finds no
+        // .copilotignore (#668).
+        m.put("copilot_ignore", new Notice(".copilotignore",
+            "GitHub's Copilot documentation never mentions this file; exclusions are configured in"
+                + " settings, on Copilot Business and Enterprise",
+            "set the paths under the repository's Settings, Copilot, Content exclusion",
+            "none"));
         return Collections.unmodifiableMap(m);
     }
 
