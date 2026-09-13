@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **58 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **59 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -400,7 +400,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
-- **Greptile** (`.greptile/rules.md`, `greptile.json`) - AI PR reviewer; in `greptile.json` VibeTags writes only a delimited span inside `instructions` and `ignorePatterns`, and every other field stays yours
+- **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)

@@ -1,0 +1,7 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "fileChangeLimit": 50,
+  "instructions": "Hand-configured. The guardrails live in rules.md beside this file; VibeTags adds only to ignorePatterns here.",
+  "ignorePatterns": "target/**\n\n# VIBETAGS-START\n**/GeneratedMetadata.java\n# VIBETAGS-END"
+}

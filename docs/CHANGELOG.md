@@ -117,6 +117,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Markdown and needs none of the above. When both exist in the root, Greptile ignores
   `greptile.json`; [PLATFORMS.md](PLATFORMS.md) says so.
 
+- **Greptile's `.greptile/config.json`**, closing #651. 60 config files. In the `.greptile/` form,
+  file exclusions live in `config.json` under `ignorePatterns`, so a project on that form got
+  `@AIIgnore` elements only as prose in `rules.md`: the reviewer was told to disregard them and
+  still reviewed them. VibeTags now owns a span inside that one value, with the same merge as
+  `greptile.json`, and leaves the file's own `instructions` and every other setting alone. Greptile's
+  config reference was read before implementing: `ignorePatterns` is a newline-separated string
+  there too, which is what makes the span merge apply at all.
+
+  The merge used to be chosen by file name, and `config.json` is far too common a name for that:
+  `.cody/config.json` is also a VibeTags output. It is now keyed on the `.greptile` folder as well.
+  `GreptileConfigEndToEndTest` was confirmed red on the unchanged processor (5 of 7), then green,
+  and with the folder check removed its Cody case went red on Cody's config losing its rendering.
+  Opting into `config.json` alone is allowed: it carries the exclusions and creates no other file.
+
 - **Cline's `.clinerules/` directory** (`.clinerules/*.md`, #642). 19 scoped-rule directories; the
   config-file count stays 57. Cline documents only the directory now, so a user following its docs
   got no Cline-specific output at all. The single `.clinerules` file keeps working for projects that

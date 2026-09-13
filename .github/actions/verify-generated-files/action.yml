@@ -22,7 +22,7 @@ runs:
           .qwen/commands/refactor.md gemini_instructions.md \
           .github/copilot-instructions.md llms.txt llms-full.txt \
           CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
-          .greptile/rules.md greptile.json \
+          .greptile/rules.md .greptile/config.json greptile.json \
           .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
           replit.md .agents/skills/vibetags-guardrails/SKILL.md \
           .zencoder/rules/com-example-payment-PaymentProcessor.md \
@@ -104,7 +104,13 @@ runs:
         grep -q "This file is hand-configured" greptile.json || { echo "FAIL greptile.json lost the hand-written instructions"; exit 1; }
         grep -q "PaymentProcessor" greptile.json || { echo "FAIL greptile.json instructions carry no locked element"; exit 1; }
         grep -q 'GeneratedMetadata.java' greptile.json || { echo "FAIL greptile.json ignorePatterns carry no @AIIgnore glob"; exit 1; }
-        echo "OK Greptile rules.md and greptile.json"
+        # .greptile/config.json is hand-configured too, and VibeTags owns only a span in ignorePatterns.
+        grep -q '"fileChangeLimit": 50' .greptile/config.json || { echo "FAIL .greptile/config.json lost a hand-set field"; exit 1; }
+        grep -q 'guardrails live in rules.md' .greptile/config.json || { echo "FAIL .greptile/config.json lost its hand-written instructions"; exit 1; }
+        grep -q 'target/\*\*' .greptile/config.json || { echo "FAIL .greptile/config.json lost the hand-written ignore pattern"; exit 1; }
+        grep -q 'GeneratedMetadata.java' .greptile/config.json || { echo "FAIL .greptile/config.json ignorePatterns carry no @AIIgnore glob"; exit 1; }
+        if grep -q 'PaymentProcessor' .greptile/config.json; then echo "FAIL .greptile/config.json carries guardrail prose, which belongs in rules.md"; exit 1; fi
+        echo "OK Greptile rules.md, greptile.json and .greptile/config.json"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

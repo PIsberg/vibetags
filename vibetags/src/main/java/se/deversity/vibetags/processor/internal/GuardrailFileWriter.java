@@ -142,10 +142,10 @@ public final class GuardrailFileWriter {
             Path fileNamePath = filePath.getFileName();
             String fileName = fileNamePath != null ? fileNamePath.toString() : "";
 
-            // A JSON document the user owns and VibeTags shares two values of (greptile.json). It
+            // A JSON document the user owns and VibeTags shares values of (greptile.json, .greptile/config.json). It
             // has no markers, but it is not a whole-file overwrite either, so it must not reach the
             // size fast path below, which would replace the user's configuration with the rendering.
-            List<JsonValueSpans.SharedKey> sharedKeys = JsonValueSpans.sharedKeysFor(fileName);
+            List<JsonValueSpans.SharedKey> sharedKeys = JsonValueSpans.sharedKeysFor(filePath);
             if (sharedKeys != null) {
                 return writeSharedJsonValues(filePath, fileName, content, hasNewRules, sharedKeys);
             }

@@ -164,6 +164,7 @@ class ProcessorTestHarness {
         // Greptile's PR reviewer: the legacy root greptile.json and the recommended rules.md
         touch("greptile.json");
         touch(".greptile/rules.md");
+        touch(".greptile/config.json");
         // Ignore files for three platforms whose rules directory is already opted in above
         touch(".rooignore");
         touch(".continueignore");

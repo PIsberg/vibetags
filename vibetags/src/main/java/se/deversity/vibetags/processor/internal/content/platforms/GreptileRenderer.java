@@ -66,17 +66,7 @@ public final class GreptileRenderer implements PlatformRenderer {
             }
         }
 
-        StringBuilder globs = new StringBuilder();
-        for (TaggedElement e : model.ignore()) {
-            FormatterRegistry.ignore().format(e, globs, Platform.GREPTILE);
-        }
-        List<String> patterns = new ArrayList<>();
-        for (String line : globs.toString().split("\n", -1)) {
-            if (!line.isBlank() && !patterns.contains(line.strip())) {
-                patterns.add(line.strip());
-            }
-        }
-
+        List<String> patterns = ignorePatterns(model, Platform.GREPTILE);
         StringBuilder sb = new StringBuilder(1024).append("{\n");
         appendArray(sb, INSTRUCTIONS_KEY, instructions);
         sb.append(",\n");
@@ -94,7 +84,26 @@ public final class GreptileRenderer implements PlatformRenderer {
         return MERGE;
     }
 
-    private static void appendArray(StringBuilder sb, String key, List<String> lines) {
+    /**
+     * The {@code .gitignore}-syntax patterns for every {@code @AIIgnore} element, in first-seen order
+     * without repeats. Shared with {@link GreptileConfigRenderer}, whose {@code ignorePatterns} must
+     * say exactly what this file's does.
+     */
+    static List<String> ignorePatterns(GuardrailModel model, Platform platform) {
+        StringBuilder globs = new StringBuilder();
+        for (TaggedElement e : model.ignore()) {
+            FormatterRegistry.ignore().format(e, globs, platform);
+        }
+        List<String> patterns = new ArrayList<>();
+        for (String line : globs.toString().split("\n", -1)) {
+            if (!line.isBlank() && !patterns.contains(line.strip())) {
+                patterns.add(line.strip());
+            }
+        }
+        return patterns;
+    }
+
+    static void appendArray(StringBuilder sb, String key, List<String> lines) {
         sb.append("  \"").append(key).append("\": [");
         if (lines.isEmpty()) {
             sb.append(']');

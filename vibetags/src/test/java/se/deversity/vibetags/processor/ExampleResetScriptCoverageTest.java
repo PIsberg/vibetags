@@ -56,7 +56,10 @@ class ExampleResetScriptCoverageTest {
         "the file is the user's review configuration and VibeTags owns only a span inside two of "
             + "its values. Emptying it would erase the hand-set fields the example exists to show "
             + "surviving, and nothing stale can outlive a reset, because every compile replaces the "
-            + "span whole.");
+            + "span whole.",
+        ".greptile/config.json",
+        "the same reason as greptile.json: hand-set review settings, with VibeTags owning only a span "
+            + "inside its ignorePatterns value (#651).");
 
     @Test
     void everyOptedInOutputIsClearedByTheResetScript() throws IOException {

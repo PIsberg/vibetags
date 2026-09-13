@@ -98,6 +98,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) | YAML (`pr_review.rules`) |
 | `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
+| `.greptile/config.json` | Greptile (AI PR reviewer, `@AIIgnore` paths) | JSON; a delimited span inside `ignorePatterns`, nothing else touched |
 | `greptile.json` | Greptile (AI PR reviewer, legacy form) | JSON; a delimited span inside `instructions` and `ignorePatterns`, nothing else touched |
 | `.roomodes` | Roo Code (custom "VibeTags Architect" mode) | YAML |
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
@@ -215,6 +216,22 @@ use (160 and 315 public repositories respectively, GitHub code search, 2026-09-1
   `ignorePatterns` holds something other than a string, one of them appears twice, or a start marker
   has no end marker after it. A stale span is recoverable; a guessed rewrite of your review settings
   is not.
+- **`.greptile/config.json`** is the `.greptile/` form's settings file, and where its file exclusions
+  live (#651). Greptile's [config reference](https://www.greptile.com/docs/code-review/greptile-config-reference)
+  types `ignorePatterns` as a newline-separated `.gitignore`-syntax string, the same shape as in
+  `greptile.json`, so it gets the same merge with one shared key instead of two: VibeTags owns a
+  `# VIBETAGS-START` / `# VIBETAGS-END` span inside `ignorePatterns` and nothing else. The file's
+  own `instructions` setting stays entirely yours, because in this form the guardrails go to
+  `rules.md`. Without it, a project on the `.greptile/` form got `@AIIgnore` elements only as prose
+  in `rules.md`, which tells the reviewer to disregard a file rather than skipping it.
+
+  Opting into `config.json` alone is a valid configuration: `touch .greptile/config.json` gets you
+  the exclusions and no guardrail prose, and creates no `rules.md`. The merge is keyed on the folder
+  as well as the file name, since `config.json` is far too common a name to key on alone (Cody's
+  `.cody/config.json` is also a VibeTags output, rendered whole). In a reactor, each module's
+  `ignorePatterns` span lists every module's exclusions. Greptile treats `ignorePatterns` as a
+  setting that a child `.greptile/` folder overrides rather than adds to, so a module folder that
+  sets its own replaces the root's for that subtree.
 
 **Do not opt into both unless you mean to.** When `.greptile/` and `greptile.json` both exist in
 the repository root, Greptile reads `.greptile/` and ignores `greptile.json` entirely, so creating
