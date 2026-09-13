@@ -1631,7 +1631,7 @@ tasks.withType(JavaCompile) {
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
 | `.roo/rules/*.md`, `.rooignore` | Roo Code |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
-| `QWEN.md`, `.qwen/settings.json`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
+| `QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |

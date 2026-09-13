@@ -112,7 +112,8 @@ public final class ServiceRegistry {
         map.put("qwen_ignore",    root.resolve(".qwenignore"));
         map.put("codex_config",   root.resolve(".codex/config.toml"));
         map.put("codex_rules",    root.resolve(".codex/rules/vibetags.rules"));
-        map.put("qwen_settings",  root.resolve(".qwen/settings.json"));
+        // .qwen/settings.json is deliberately not mapped (#650): it is Qwen Code's own project
+        // settings file, and a whole-file write erased the user's MCP servers and permissions.
         map.put("qwen_refactor",  root.resolve(".qwen/commands/refactor.md"));
         map.put("llms",           root.resolve("llms.txt"));
         map.put("llms_full",      root.resolve("llms-full.txt"));

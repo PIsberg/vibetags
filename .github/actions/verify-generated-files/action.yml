@@ -19,7 +19,7 @@ runs:
         echo "Checking generated files exist and contain content..."
         for f in \
           .cursorrules CLAUDE.md .aiexclude QWEN.md .qwenignore \
-          .qwen/settings.json .qwen/commands/refactor.md gemini_instructions.md \
+          .qwen/commands/refactor.md gemini_instructions.md \
           .github/copilot-instructions.md llms.txt llms-full.txt \
           CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
           .greptile/rules.md greptile.json \

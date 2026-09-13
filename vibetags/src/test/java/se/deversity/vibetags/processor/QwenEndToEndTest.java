@@ -36,7 +36,8 @@ class QwenEndToEndTest {
     void testQwenFilesExist() {
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
         assertTrue(harness.fileExists(".qwenignore"), ".qwenignore should exist");
-        assertTrue(harness.fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
+        assertFalse(harness.fileExists(".qwen/settings.json"),
+            ".qwen/settings.json is the user's Qwen Code settings file and is never created (#650)");
         assertTrue(harness.fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
     }
 
@@ -99,17 +100,6 @@ class QwenEndToEndTest {
             "Should have ignored elements section");
         assertTrue(content.contains("GeneratedMetadata"),
             "Should mention GeneratedMetadata (ignored class)");
-    }
-
-    @Test
-    void testQwenSettingsJsonIsValid() throws IOException {
-        String content = harness.readFile(".qwen/settings.json");
-
-        assertFalse(content.isEmpty(), "Settings file should not be empty");
-        assertTrue(content.contains("\"model\""), "Should specify model");
-        assertTrue(content.contains("qwen3-coder-plus"), "Should use qwen3-coder-plus model");
-        assertTrue(content.contains("\"mcp\""), "Should have MCP configuration");
-        assertTrue(content.contains("\"enabled\": true"), "Should have MCP enabled");
     }
 
     @Test
@@ -190,13 +180,6 @@ class QwenEndToEndTest {
         String content = harness.readFile("QWEN.md");
         assertFalse(content.isEmpty(), "QWEN.md should not be empty");
         assertTrue(content.length() > 100, "QWEN.md should have substantial content");
-    }
-
-    @Test
-    void testQwenSettingsContentIsNotEmpty() throws IOException {
-        String content = harness.readFile(".qwen/settings.json");
-        assertFalse(content.isEmpty(), ".qwen/settings.json should not be empty");
-        assertTrue(content.length() > 50, "Settings file should have meaningful content");
     }
 
     @Test

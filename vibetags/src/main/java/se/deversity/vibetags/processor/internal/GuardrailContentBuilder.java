@@ -123,11 +123,9 @@ public final class GuardrailContentBuilder {
                 contentByService.put("codex_rules", rulesContent);
             }
         }
+        // No .qwen/settings.json (#650): it is Qwen Code's project settings file, it belongs to the
+        // user, and nothing VibeTags could put in it derives from an annotation.
         if (activeServices.contains("qwen")) {
-            String settingsContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_SETTINGS).render(model, Platform.QWEN_SETTINGS, context);
-            if (settingsContent != null) {
-                contentByService.put("qwen_settings", settingsContent);
-            }
             String refactorContent = PlatformRendererRegistry.getRenderer(Platform.QWEN_REFACTOR).render(model, Platform.QWEN_REFACTOR, context);
             if (refactorContent != null) {
                 contentByService.put("qwen_refactor", refactorContent);

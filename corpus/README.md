@@ -218,7 +218,8 @@ asserts that a real parser accepts it. A YAML renderer emitting an unquoted valu
 cannot be loaded by the tool it was written for. Ten files carry a structured format
 (`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
 `.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
-`sweep.yaml`) and all ten parse.
+`sweep.yaml`) and all ten parse. (`.qwen/settings.json` is no longer written since #650, so a
+current run has nine to parse; not re-measured.)
 
 Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
 switches. `.vibetags-root-index` is excluded from the emptiness rule by name, because its presence

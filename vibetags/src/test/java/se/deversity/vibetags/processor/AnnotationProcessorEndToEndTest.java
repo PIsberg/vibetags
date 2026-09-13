@@ -52,7 +52,6 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
-        assertTrue(harness.fileExists(".qwen/settings.json"), ".qwen/settings.json should exist");
         assertTrue(harness.fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
         assertTrue(harness.fileExists(".aiexclude"), ".aiexclude should exist");
         assertTrue(harness.fileExists("llms.txt"), "llms.txt should exist");
@@ -388,13 +387,6 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(content.contains("CONTEXTUAL RULES"), "Should have contextual rules section");
         assertTrue(content.contains("MANDATORY SECURITY AUDITS"), "Should have audit section");
         assertTrue(content.contains("IGNORED ELEMENTS"), "Should have ignored elements section");
-    }
-
-    @Test
-    void testQwenSettingsHasCorrectFormat() throws IOException {
-        String content = harness.readFile(".qwen/settings.json");
-        assertTrue(content.contains("\"model\": \"qwen3-coder-plus\""), "Should specify Qwen model");
-        assertTrue(content.contains("\"mcp\": {"), "Should have MCP settings");
     }
 
     // -----------------------------------------------------------------------

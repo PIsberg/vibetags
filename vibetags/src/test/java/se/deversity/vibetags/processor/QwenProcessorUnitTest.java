@@ -42,13 +42,13 @@ class QwenProcessorUnitTest {
         // Verify all Qwen-related files are in the service file map
         assertTrue(serviceFiles.containsKey("qwen"), "Should have 'qwen' service key");
         assertTrue(serviceFiles.containsKey("qwen_ignore"), "Should have 'qwen_ignore' service key");
-        assertTrue(serviceFiles.containsKey("qwen_settings"), "Should have 'qwen_settings' service key");
+        assertFalse(serviceFiles.containsKey("qwen_settings"),
+            ".qwen/settings.json belongs to the user and is not a VibeTags output (#650)");
         assertTrue(serviceFiles.containsKey("qwen_refactor"), "Should have 'qwen_refactor' service key");
 
         // Verify paths
         assertEquals(tempDir.resolve("QWEN.md"), serviceFiles.get("qwen"));
         assertEquals(tempDir.resolve(".qwenignore"), serviceFiles.get("qwen_ignore"));
-        assertEquals(tempDir.resolve(".qwen/settings.json"), serviceFiles.get("qwen_settings"));
         assertEquals(tempDir.resolve(".qwen/commands/refactor.md"), serviceFiles.get("qwen_refactor"));
     }
 
@@ -152,30 +152,6 @@ class QwenProcessorUnitTest {
     }
 
     @Test
-    void testWriteFileIfChanged_qwenSettings_writesSuccessfully(@TempDir Path tempDir) throws IOException {
-        Path settingsJson = tempDir.resolve(".qwen/settings.json");
-        Files.createDirectories(settingsJson.getParent());
-        Files.createFile(settingsJson);
-
-        String content = "{\n" +
-            "  \"project\": {\n" +
-            "    \"model\": \"qwen3-coder-plus\",\n" +
-            "    \"mcp\": {\n" +
-            "      \"enabled\": true\n" +
-            "    }\n" +
-            "  }\n" +
-            "}\n";
-
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        boolean changed = processor.writeFileIfChanged(settingsJson.toString(), content, true);
-
-        assertTrue(changed, "Settings file should be written");
-        String writtenContent = Files.readString(settingsJson);
-        assertTrue(writtenContent.contains("qwen3-coder-plus"));
-        assertTrue(writtenContent.contains("\"mcp\""));
-    }
-
-    @Test
     void testWriteFileIfChanged_qwenIgnore_writesSuccessfully(@TempDir Path tempDir) throws IOException {
         Path qwenIgnore = tempDir.resolve(".qwenignore");
         Files.createFile(qwenIgnore);
@@ -253,33 +229,6 @@ class QwenProcessorUnitTest {
     }
 
     @Test
-    void testQwenSettingsJson_validJson(@TempDir Path tempDir) throws IOException {
-        Path settingsJson = tempDir.resolve(".qwen/settings.json");
-        Files.createDirectories(settingsJson.getParent());
-        Files.createFile(settingsJson);
-
-        String content = "{\n" +
-            "  \"project\": {\n" +
-            "    \"model\": \"qwen3-coder-plus\",\n" +
-            "    \"mcp\": {\n" +
-            "      \"enabled\": true\n" +
-            "    }\n" +
-            "  }\n" +
-            "}\n";
-
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        processor.writeFileIfChanged(settingsJson.toString(), content, true);
-
-        // Verify it contains valid JSON structure by checking key elements
-        String writtenContent = Files.readString(settingsJson);
-        assertTrue(writtenContent.contains("\"project\""), "Should have project key");
-        assertTrue(writtenContent.contains("\"model\""), "Should have model key");
-        assertTrue(writtenContent.contains("qwen3-coder-plus"), "Should specify qwen3-coder-plus");
-        assertTrue(writtenContent.contains("\"mcp\""), "Should have mcp key");
-        assertTrue(writtenContent.contains("\"enabled\""), "Should have enabled key");
-    }
-
-    @Test
     void testQwenIgnoreFile_globPatternFormat(@TempDir Path tempDir) throws IOException {
         Path qwenIgnore = tempDir.resolve(".qwenignore");
         Files.createFile(qwenIgnore);
@@ -324,11 +273,8 @@ class QwenProcessorUnitTest {
         Path tempDir = java.nio.file.Paths.get(System.getProperty("java.io.tmpdir"));
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
 
-        // Verify Qwen settings path
-        Path settingsPath = serviceFiles.get("qwen_settings");
-        assertNotNull(settingsPath, "qwen_settings path should be defined");
-        assertTrue(settingsPath.endsWith(Paths.get(".qwen/settings.json")),
-            "Settings should be in .qwen/settings.json");
+        // No settings path: .qwen/settings.json is the user's own file (#650)
+        assertFalse(serviceFiles.containsKey("qwen_settings"), "qwen_settings must not be mapped");
 
         // Verify Qwen refactor command path
         Path refactorPath = serviceFiles.get("qwen_refactor");

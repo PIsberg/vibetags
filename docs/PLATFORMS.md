@@ -55,7 +55,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.aiderignore` | Aider | Glob patterns |
 | `QWEN.md` | Qwen | Markdown |
 | `.qwenignore` | Qwen | Glob patterns |
-| `.qwen/settings.json` | Qwen | JSON config |
 | `.qwen/commands/refactor.md` | Qwen | Markdown command template |
 | `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
 | `.roo/rules/*.md` | Roo Code (granular) | Markdown |
@@ -222,6 +221,19 @@ the repository root, Greptile reads `.greptile/` and ignores `greptile.json` ent
 `.greptile/rules.md` in a repository that relies on its `greptile.json` switches that configuration
 off. That is Greptile's precedence rule, not VibeTags', and VibeTags does not second-guess which of
 the two you meant.
+
+### `.qwen/settings.json` is not written
+
+Until #650, opting into `QWEN.md` also wrote `.qwen/settings.json`, as a whole-file overwrite, with
+a fixed `project.model` / `project.mcp` document (#650). That file is Qwen Code's project settings
+file, which users fill by hand with MCP servers, model choice and permissions, so every compile
+erased them. None of what VibeTags wrote was a real setting either: the settings schema in
+[`packages/cli/src/config/settingsSchema.ts`](https://github.com/QwenLM/qwen-code/blob/00d86315c8e89921945588148ab766ef1f75bd1f/packages/cli/src/config/settingsSchema.ts)
+has no top-level `project` key (the model is `model.name`; MCP is `mcp.allowed` / `mcp.excluded`),
+and `QWEN.md` is loaded by default through `context.fileName`. The file carried nothing derived
+from an annotation, so it is no longer written at all rather than merged. A copy an older version
+left behind is kept, because VibeTags never deletes a file in the user's tree.
+`QwenSettingsUntouchedEndToEndTest` pins all three behaviours.
 
 ### Four deprecated outputs whose tool has moved on
 

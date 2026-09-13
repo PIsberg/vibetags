@@ -118,7 +118,6 @@ class ProcessorTestHarness {
         touch(".qwenignore");
         touch(".codex/config.toml");
         touch(".codex/rules/vibetags.rules");
-        touch(".qwen/settings.json");
         touch(".qwen/commands/refactor.md");
         touch("CONVENTIONS.md");
         touch(".aiderignore");

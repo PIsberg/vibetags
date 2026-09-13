@@ -49,7 +49,7 @@ class UnsetMemberRenderingTest {
 
     private static final RenderingContext CONTEXT = new RenderingContext(
         "Test Project", "# Generated Header\n",
-        Set.of("llms", "llms_full", "mentat", "pr_agent", "cody", "qwen_settings",
+        Set.of("llms", "llms_full", "mentat", "pr_agent", "cody",
                "codex_config", "sweep", "plandex", "interpreter", "aider_conventions"));
 
     /**

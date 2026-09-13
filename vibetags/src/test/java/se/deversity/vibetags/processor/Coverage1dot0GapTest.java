@@ -338,8 +338,6 @@ class Coverage1dot0GapTest {
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
-        assertFalse(result.contentByService.containsKey("qwen_settings"),
-            "qwen_settings must not appear when qwen is not active");
         assertFalse(result.contentByService.containsKey("qwen_refactor"),
             "qwen_refactor must not appear when qwen is not active");
     }
@@ -409,15 +407,16 @@ class Coverage1dot0GapTest {
     }
 
     @Test
-    void guardrailContentBuilder_qwenActive_settingsAndRefactorIncluded() {
-        // qwen active → implicit qwen_settings and qwen_refactor entries are generated (L195-203)
+    void guardrailContentBuilder_qwenActive_refactorIncludedButNeverSettings() {
+        // qwen active → the implicit qwen_refactor entry is generated; .qwen/settings.json is the
+        // user's Qwen Code settings file and is never generated (#650)
         AnnotationCollector collector = new AnnotationCollector();
         Set<String> services = Set.of("qwen");
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
-        assertTrue(result.contentByService.containsKey("qwen_settings"),
-            "qwen active → qwen_settings must appear in result");
+        assertFalse(result.contentByService.containsKey("qwen_settings"),
+            "qwen active must not produce .qwen/settings.json content (#650)");
         assertTrue(result.contentByService.containsKey("qwen_refactor"),
             "qwen active → qwen_refactor must appear in result");
     }

@@ -349,7 +349,7 @@ class AIGuardrailProcessorProcessTest {
         Set<String> expectedKeys = Set.of(
             "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-            "codex_config", "codex_rules", "qwen_settings", "qwen_refactor",
+            "codex_config", "codex_rules", "qwen_refactor",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
@@ -424,7 +424,6 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(root.resolve(".qwenignore"),                       map.get("qwen_ignore"));
         assertEquals(root.resolve(".codex/config.toml"),                map.get("codex_config"));
         assertEquals(root.resolve(".codex/rules/vibetags.rules"),       map.get("codex_rules"));
-        assertEquals(root.resolve(".qwen/settings.json"),               map.get("qwen_settings"));
         assertEquals(root.resolve(".qwen/commands/refactor.md"),        map.get("qwen_refactor"));
         assertEquals(root.resolve("llms.txt"),                          map.get("llms"));
         assertEquals(root.resolve("llms-full.txt"),                     map.get("llms_full"));
@@ -759,7 +758,7 @@ class AIGuardrailProcessorProcessTest {
 
     @Test
     void writeFileIfChanged_jsonFile_completeOverwrite(@TempDir Path tempDir) throws IOException {
-        Path jsonFile = tempDir.resolve(".qwen/settings.json");
+        Path jsonFile = tempDir.resolve("nested/settings.json");
         Files.createDirectories(jsonFile.getParent());
         Files.writeString(jsonFile, "{\"old\": true}");
 
@@ -1096,7 +1095,7 @@ class AIGuardrailProcessorProcessTest {
 
     @Test
     void writeFileIfChanged_nonMarkdownHasNewRulesFalse_skips(@TempDir Path tempDir) throws IOException {
-        Path jsonFile = tempDir.resolve(".qwen/settings.json");
+        Path jsonFile = tempDir.resolve("nested/settings.json");
         Files.createDirectories(jsonFile.getParent());
         Files.writeString(jsonFile, "{\"existing\": true}");
 
@@ -1392,7 +1391,7 @@ class AIGuardrailProcessorProcessTest {
      */
     @Test
     void writeFileIfChanged_nonMarkerFreshFile_writesWithoutPriorContent(@TempDir Path tempDir) throws IOException {
-        Path settings = tempDir.resolve(".qwen/settings.json");
+        Path settings = tempDir.resolve("nested/settings.json");
         // Parent doesn't exist either — exercises the createDirectories path
 
         AIGuardrailProcessor processor = new AIGuardrailProcessor();

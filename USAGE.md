@@ -629,21 +629,14 @@ VibeTags generates comprehensive Qwen configuration files:
 * `com.example.GeneratedMetadata`
 ```
 
-**.qwen/settings.json** - Qwen model configuration:
-```json
-{
-  "project": {
-    "model": "qwen3-coder-plus",
-    "mcp": {
-      "enabled": true
-    }
-  }
-}
-```
-
 **.qwen/commands/refactor.md** - Custom `/refactor` command for code refactoring
 
 **.qwenignore** - Glob patterns for files to exclude from Qwen's context
+
+VibeTags does not write `.qwen/settings.json`. It is Qwen Code's own project settings file (MCP
+servers, model, permissions), and `QWEN.md` loads without it. Earlier versions overwrote it
+whenever `QWEN.md` was opted in (#650); a copy left behind by one of those versions is not deleted
+and is safe to remove, since none of its keys is a setting Qwen Code reads.
 
 ### 🌐 llms.txt Standard (Windsurf Cascade & LLM Agents)
 

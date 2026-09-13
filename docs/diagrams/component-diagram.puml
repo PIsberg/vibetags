@@ -61,7 +61,6 @@ package "Generated AI Config Files" {
   note right of QwenFiles
     QWEN.md
     .qwenignore
-    .qwen/settings.json
     .qwen/commands/refactor.md
   end note
 
