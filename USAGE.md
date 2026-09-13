@@ -432,7 +432,13 @@ that resolves the Maven coordinate.
   applies, whether every active marker file still carries a balanced
   `VIBETAGS-START` / `VIBETAGS-END` pair, and — when the project has `.groovy` sources — which
   field-level guardrails groovyc will silently drop, by file, line and annotation (the build
-  itself cannot warn; see the Groovy section above). Exit code 0 means healthy, 1 means at
+  itself cannot warn; see the Groovy section above), and, when the project has `.kt` sources,
+  which Kotlin functions kapt will leave out of its stubs because a value class mangles their JVM
+  name, with the guardrails each one loses and the `@JvmName` that keeps it. The Kotlin check is
+  a heuristic source scan: it cannot see value classes declared in another module or a
+  dependency, so a clean run there is not proof that nothing is lost
+  ([docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds)
+  lists what it misses). Exit code 0 means healthy, 1 means at
   least one finding needs action — usable as a cheap CI step. Either command exits 2 on a
   usage error: an argument it does not understand, or a `--dir` that is not a directory.
 - **`--dir <path>`** points either command at another project root.

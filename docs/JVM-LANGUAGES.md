@@ -83,6 +83,57 @@ declaring only `ElementType.FIELD` should be written with the `@field:` target:
 private var billingEmail: String? = null
 ```
 
+### Functions with a value class in their signature, and what `vibetags doctor` finds
+
+A function that takes or returns a `@JvmInline value class` gets a mangled JVM name
+(`balanceFor-oKSF6Yo`), and kapt leaves every such function out of its Java stubs. An `@AI*`
+annotation on the function, or on one of its parameters, reaches no processor: nothing is generated
+and nothing is logged. Measured on Kotlin 2.4.10 with `AccountLedger.balanceFor(AccountId)` and a
+function returning `kotlin.time.Duration` (#681). The processor cannot warn: the function is not in
+the stub it sees, and the stub's `@kotlin.Metadata` does not record `SOURCE`-retention annotations.
+**What to do instead:** give the function an explicit `@JvmName`, which switches mangling off and
+makes kapt emit it, or put the guardrail on the enclosing type.
+
+`vibetags doctor` reads the `.kt` sources and reports each such function as a finding: file and
+line, the guardrails it loses, the value class responsible, and the `@JvmName` workaround (#688).
+It is a heuristic over source text, not a compiler, and it is built to miss rather than to report
+something that is not lost:
+
+- **Value classes it knows.** Every `value class` (or `inline class`) declared under the scanned
+  directory, plus five from the standard library: `UByte`, `UShort`, `UInt` and `ULong` ("Unsigned
+  numbers are implemented as inline classes",
+  [Kotlin docs](https://kotlinlang.org/docs/unsigned-integer-types.html)) and
+  `kotlin.time.Duration` (declared `@JvmInline value class`,
+  [API reference](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-duration/)). A type
+  name is resolved through the file's package and imports, so `java.time.Duration`, or an ordinary
+  class sharing a value class's simple name, is not a hit.
+- **What it reports.** A function with an `@AI*` annotation, or with an `@AI*`-annotated parameter,
+  whose parameter or return type is one of those value classes, nullable forms included.
+- **What it skips, because it was measured to survive** on Kotlin 2.4.10: a `kotlin.Result`
+  parameter (`settle(java.lang.Object)`), a value class used only as a type argument
+  (`List<AccountId>`), and any function with an explicit `@JvmName`.
+- **Where it stays silent because nothing was measured.** `@JvmExposeBoxed` and the
+  `-Xjvm-expose-boxed` compiler option add a boxed, unmangled variant of value-class functions
+  ([Kotlin docs](https://kotlinlang.org/docs/java-to-kotlin-interop.html)), and whether kapt's stub
+  then carries the function is unknown. A `.kt` file mentioning `@JvmExposeBoxed` contributes no
+  value classes and no findings, and a `pom.xml` or `build.gradle[.kts]` under the directory that
+  passes `-Xjvm-expose-boxed` skips the check, with a line saying so. The option set anywhere
+  else, a precompiled `*.gradle.kts` convention plugin for example, is not seen, and there the
+  findings may be wrong.
+
+Known misses, every one a false negative, so a clean doctor run is not proof that nothing is lost:
+
+- Value classes declared outside the scanned directory, in another module or a dependency. Running
+  doctor from a reactor root scans every module under it.
+- A value class reached through a `typealias`, a nested one written as `Outer.Id`, a name declared
+  both as a value class and as an ordinary type in the same package, and standard-library value
+  classes not on the list above (the unsigned array types, for example).
+- Shapes never measured against kapt: an extension receiver (`fun AccountId.describe()`), `vararg`
+  parameters, a `suspend` function's return type, properties and constructors, and members declared
+  inside a value class.
+- A guardrail written through an import alias (`import ...AILocked as Locked`), and source the text
+  heuristics misread, such as string templates that nest quotes.
+
 ### The strategic risk, stated plainly
 
 Kotlin support rests entirely on kapt. This page previously called kapt "in maintenance mode",
