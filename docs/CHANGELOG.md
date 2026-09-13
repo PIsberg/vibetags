@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-09-13
+
+**Upgrading changes committed files.** If a granular directory is opted in (for example
+`.claude/rules/` or `.gemini/rules/`), the scoped-rules index in the matching aggregate
+(`CLAUDE.md`, `GEMINI.md` and the others) is rewritten on the first build: each entry drops its
+restated rule-file path, and the index note states the naming convention once instead (#626, under
+Changed). The `.vibetags-mod-*` sidecars that carry that content change with it. Commit the
+regenerated files together with the version bump; a `-Avibetags.check=true` build reports drift
+until you do. The consumer sweep for this release built all five downstream repositories against it
+and saw exactly that diff, 1 to 7 files per repository, and no other content change.
+
+**Platform re-check.** Release step 0b checked every generated path against its vendor's own
+documentation. Two products VibeTags writes for have archived repositories: Roo Code (archived
+2026-05-15; `.roo/rules/`, `.roomodes`, and `.rooignore`, which is new in this release) and Void
+(`.void/rules.md`). Several more paths are legacy, renamed or undocumented. Nothing is deprecated
+or removed in this release on the strength of that check; each finding is tracked in #664 to #677.
+
 ### Added
 
 - **Cline's `.clinerules/` directory now gets an always-loaded safety tier** (#648), in
@@ -175,6 +192,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `vibetags init --platforms cline_granular` reported a `.clinerules` file as "already active"; it
   now refuses and names the platform that file belongs to.
 
+- `LazyFileAppenderAsyncTest`: the lazy log-file open is now driven by more than one thread.
+  `LazyFileAppender` was the only class in `src/main` with concurrency primitives and no async test,
+  and its `DeferredFileStream.open()` is a double-checked lazy init guarded by a `volatile opened`
+  that `hasOpenedFile()` reads with no lock. The existing `VibeTagsLoggerAsyncTest` gives every
+  thread its own directory and its own appender, so it proved isolation and nothing about
+  contention. The new test drives a busy appender and an idle one together: the busy one must open
+  once and lose no event, the idle one must create nothing while its sibling is under load, which is
+  the #487 regression where merely configuring the logger dropped a zero-byte `vibetags.log` into a
+  consumer's working tree.
+
+- `@AISecure` on `Escape` and `TransitiveManifestReader`, the two ends of the path by which text
+  authored outside the project reaches an agent's always-loaded instructions. A dependency JAR's
+  manifest is read by the latter and merged into the consumer's aggregate; the former is what stops
+  a value in it closing a tag and forging its own `<locked_files>` or `<rule>` entries. Both facts
+  were in the classes' javadoc, where an agent that never opens the file cannot see them; as
+  `@AISecure` they render inline in every aggregate. This also gives the repo's own output its first
+  `security_elements` section, so the always-inline safety path is now dogfooded rather than only
+  tested.
+
+### Changed
+
+- Four generated outputs are now documented as naming a tool that has moved on, in
+  [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
+  (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`
+  (Cody Free and Pro retired 23 July 2025; the successor Amp reads `AGENTS.md`),
+  `.supermavenignore` (standalone product discontinued November 2025; the technology is in Cursor
+  Tab and VibeTags writes `.cursorignore`), and the single-file `.clinerules`.
+
+  Removing a service stops an opted-in consumer's file regenerating, which leaves it looking current
+  while drifting from the annotations -- worse than a file nobody reads. Removal is a breaking
+  change and belongs to a major version; #641 holds the decision and the steps.
+
+
+- `AtomicityValidator` now runs, in a surefire fork of its own (#629). The async detectors were
+  switched on earlier, but that one needs bytecode instrumentation and the build attached no
+  javaagent, so it reported `runner.agent.absent` and its silence read as a pass.
+
+  Attaching it is not one line, for two independent reasons, both measured rather than reasoned
+  about. Declaring `async-test-agent` as a test dependency costs 450 errors —
+  `NoClassDefFoundError: net/bytebuddy/jar/asmjdkbridge/JdkClassReader (wrong name:
+  se/deversity/asynctest/agent/shaded/…)` — because it ships a shaded ByteBuddy that collides with
+  Mockito's, and those failures land in the fork that is not even running the agent. Attaching it to
+  the whole suite costs 784 errors of 2331 — `NoClassDefFoundError:
+  se/deversity/asynctest/telemetry/TelemetryRegistry` — because `ProcessorTestHarness` runs javac
+  in-process and javac loads the processor in its own classloader, where async-test-lib is invisible.
+
+  What separates them is the test set: none of the six `*AsyncTest` classes drive javac. So the
+  agent jar is copied to `target/agents/` rather than depended on, and surefire runs `default-test`
+  excluding `**/*AsyncTest.java` plus an `async-tests` execution including only those, with the agent
+  attached. 2676 + 6 tests green, `runner.agent.attached args="fields=true"`, and JaCoCo appends both
+  forks to one `jacoco.exec` so coverage is unchanged.
+
+  Two limits stay documented in `docs/TESTS.md`: Gradle does not get the agent, because its test
+  worker uses a classloader the agent cannot see and splitting its test tasks would not change that;
+  and even under Maven the runner warns `runner.telemetry.unattributed`, so a clean atomicity report
+  covers the `@AsyncTest` workers only.
+
+- Every `@AsyncTest` now runs async-test-lib's detectors instead of only its threads. The six tests
+  set `threads`, `invocations` and `timeoutMs` and nothing else, so roughly 190 detectors shipped in
+  the dependency and none of them ran; the tests caught only what a JUnit assertion caught. They now
+  set `preset = Preset.ALL, failOn = FailOn.HIGH, minTrust = TrustTier.FACT,
+  useVirtualThreads = false`, and each class is now `@Isolated`.
+
+  The isolation is part of the same change, not tidying. Real platform threads plus detector
+  instrumentation, running concurrently with the javac-based end-to-end tests (JUnit executes
+  classes in parallel here), made `TransitiveGuardrailLifecycleE2ETest` fail three times on
+  `windows-latest` with `compilation reported failure with no ERROR diagnostic` out of
+  `buildLibraryJar` — a compilation that returned failure while reporting nothing, the shape of an
+  environmental failure rather than a source error. Linux passed and so did a sixteen-core local
+  Windows box; only the low-core runner saw it.
+
+  `useVirtualThreads = false` is the part that matters most. The runner reports `LivelockDetector`
+  and `DaemonThreadHygieneDetector` as **inert** under virtual threads, because `dumpAllThreads()`
+  does not see them: a clean report meant "not observed", not "no problem". `minTrust = FACT`
+  because at PROMPT the library labels its own findings "synchronization the library cannot see may
+  make this correct", and gating there fails the tests on their own harness. No defect was found in
+  the existing five; the change is that the gate now runs. `AtomicityValidator` remains not-run
+  pending the `async-test-agent` javaagent, and says so with `runner.agent.absent`.
+
+- The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used
+  to print the element twice: once as the fully qualified name in `path=`, and once as the
+  dot-to-dash transform of that same name in `rules=`. `ElementNaming.granularQName` is a pure
+  transform of the FQN and the directory and suffix are fixed per platform, so in the ordinary case
+  the whole `rules=` value was derivable from the line it sat on. Because the aggregate is loaded on
+  every session, that is context spent on nothing: measured across this repo's own aggregates it was
+  117 of 127 entries and 8,219 bytes, between 10.5% and 23.5% of each file. `GranularIndexSection`
+  now states the naming convention once in the index note and emits a path only for an element whose
+  file deviates from it, which is what a `.vibetags-roles` config does when it groups several
+  elements onto one role file. `examples/basic/CLAUDE.md` fell from 10,934 to 8,954 bytes and its
+  `.cursorrules` from 8,537 to 6,646.
+
 ### Deprecated
 
 - **`gemini_instructions.md`, `.cody/config.json`, `.codyignore`, `.supermavenignore` and the
@@ -250,105 +358,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   `ClineDirectoryOptInTest` was written first and confirmed red against `main`. The directory form
   itself is written since #642, above under Added.
-
-### Changed
-
-- Four generated outputs are now documented as naming a tool that has moved on, in
-  [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
-  (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`
-  (Cody Free and Pro retired 23 July 2025; the successor Amp reads `AGENTS.md`),
-  `.supermavenignore` (standalone product discontinued November 2025; the technology is in Cursor
-  Tab and VibeTags writes `.cursorignore`), and the single-file `.clinerules`.
-
-  Removing a service stops an opted-in consumer's file regenerating, which leaves it looking current
-  while drifting from the annotations -- worse than a file nobody reads. Removal is a breaking
-  change and belongs to a major version; #641 holds the decision and the steps.
-
-
-- `AtomicityValidator` now runs, in a surefire fork of its own (#629). The async detectors were
-  switched on earlier, but that one needs bytecode instrumentation and the build attached no
-  javaagent, so it reported `runner.agent.absent` and its silence read as a pass.
-
-  Attaching it is not one line, for two independent reasons, both measured rather than reasoned
-  about. Declaring `async-test-agent` as a test dependency costs 450 errors —
-  `NoClassDefFoundError: net/bytebuddy/jar/asmjdkbridge/JdkClassReader (wrong name:
-  se/deversity/asynctest/agent/shaded/…)` — because it ships a shaded ByteBuddy that collides with
-  Mockito's, and those failures land in the fork that is not even running the agent. Attaching it to
-  the whole suite costs 784 errors of 2331 — `NoClassDefFoundError:
-  se/deversity/asynctest/telemetry/TelemetryRegistry` — because `ProcessorTestHarness` runs javac
-  in-process and javac loads the processor in its own classloader, where async-test-lib is invisible.
-
-  What separates them is the test set: none of the six `*AsyncTest` classes drive javac. So the
-  agent jar is copied to `target/agents/` rather than depended on, and surefire runs `default-test`
-  excluding `**/*AsyncTest.java` plus an `async-tests` execution including only those, with the agent
-  attached. 2676 + 6 tests green, `runner.agent.attached args="fields=true"`, and JaCoCo appends both
-  forks to one `jacoco.exec` so coverage is unchanged.
-
-  Two limits stay documented in `docs/TESTS.md`: Gradle does not get the agent, because its test
-  worker uses a classloader the agent cannot see and splitting its test tasks would not change that;
-  and even under Maven the runner warns `runner.telemetry.unattributed`, so a clean atomicity report
-  covers the `@AsyncTest` workers only.
-
-### Added
-
-- `LazyFileAppenderAsyncTest`: the lazy log-file open is now driven by more than one thread.
-  `LazyFileAppender` was the only class in `src/main` with concurrency primitives and no async test,
-  and its `DeferredFileStream.open()` is a double-checked lazy init guarded by a `volatile opened`
-  that `hasOpenedFile()` reads with no lock. The existing `VibeTagsLoggerAsyncTest` gives every
-  thread its own directory and its own appender, so it proved isolation and nothing about
-  contention. The new test drives a busy appender and an idle one together: the busy one must open
-  once and lose no event, the idle one must create nothing while its sibling is under load, which is
-  the #487 regression where merely configuring the logger dropped a zero-byte `vibetags.log` into a
-  consumer's working tree.
-
-### Changed
-
-- Every `@AsyncTest` now runs async-test-lib's detectors instead of only its threads. The six tests
-  set `threads`, `invocations` and `timeoutMs` and nothing else, so roughly 190 detectors shipped in
-  the dependency and none of them ran; the tests caught only what a JUnit assertion caught. They now
-  set `preset = Preset.ALL, failOn = FailOn.HIGH, minTrust = TrustTier.FACT,
-  useVirtualThreads = false`, and each class is now `@Isolated`.
-
-  The isolation is part of the same change, not tidying. Real platform threads plus detector
-  instrumentation, running concurrently with the javac-based end-to-end tests (JUnit executes
-  classes in parallel here), made `TransitiveGuardrailLifecycleE2ETest` fail three times on
-  `windows-latest` with `compilation reported failure with no ERROR diagnostic` out of
-  `buildLibraryJar` — a compilation that returned failure while reporting nothing, the shape of an
-  environmental failure rather than a source error. Linux passed and so did a sixteen-core local
-  Windows box; only the low-core runner saw it.
-
-  `useVirtualThreads = false` is the part that matters most. The runner reports `LivelockDetector`
-  and `DaemonThreadHygieneDetector` as **inert** under virtual threads, because `dumpAllThreads()`
-  does not see them: a clean report meant "not observed", not "no problem". `minTrust = FACT`
-  because at PROMPT the library labels its own findings "synchronization the library cannot see may
-  make this correct", and gating there fails the tests on their own harness. No defect was found in
-  the existing five; the change is that the gate now runs. `AtomicityValidator` remains not-run
-  pending the `async-test-agent` javaagent, and says so with `runner.agent.absent`.
-
-### Changed
-
-- The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used
-  to print the element twice: once as the fully qualified name in `path=`, and once as the
-  dot-to-dash transform of that same name in `rules=`. `ElementNaming.granularQName` is a pure
-  transform of the FQN and the directory and suffix are fixed per platform, so in the ordinary case
-  the whole `rules=` value was derivable from the line it sat on. Because the aggregate is loaded on
-  every session, that is context spent on nothing: measured across this repo's own aggregates it was
-  117 of 127 entries and 8,219 bytes, between 10.5% and 23.5% of each file. `GranularIndexSection`
-  now states the naming convention once in the index note and emits a path only for an element whose
-  file deviates from it, which is what a `.vibetags-roles` config does when it groups several
-  elements onto one role file. `examples/basic/CLAUDE.md` fell from 10,934 to 8,954 bytes and its
-  `.cursorrules` from 8,537 to 6,646.
-
-### Added
-
-- `@AISecure` on `Escape` and `TransitiveManifestReader`, the two ends of the path by which text
-  authored outside the project reaches an agent's always-loaded instructions. A dependency JAR's
-  manifest is read by the latter and merged into the consumer's aggregate; the former is what stops
-  a value in it closing a tag and forging its own `<locked_files>` or `<rule>` entries. Both facts
-  were in the classes' javadoc, where an agent that never opens the file cannot see them; as
-  `@AISecure` they render inline in every aggregate. This also gives the repo's own output its first
-  `security_elements` section, so the always-inline safety path is now dogfooded rather than only
-  tested.
 
 ## [1.3.4] - 2026-09-10
 
@@ -4475,7 +4484,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/PIsberg/vibetags/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/PIsberg/vibetags/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PIsberg/vibetags/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PIsberg/vibetags/compare/v1.3.1...v1.3.2
