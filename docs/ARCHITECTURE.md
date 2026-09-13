@@ -947,7 +947,12 @@ Tests are run fully concurrently at both the class and method levels. This is co
 junit.jupiter.execution.parallel.enabled = true
 junit.jupiter.execution.parallel.mode.default = concurrent
 junit.jupiter.execution.parallel.mode.classes.default = concurrent
+junit.jupiter.execution.parallel.config.executor-service = worker_thread_pool
 ```
+
+The last line is load-bearing (#659): under JUnit's default `fork_join_pool` executor, the
+processor's blocking `ForkJoinTask.get()` ran other queued tests inside a test's compilation on the
+same thread, until javac overflowed the stack. [TESTS.md](TESTS.md) has the measurement.
 
 #### 2. Thread-Isolated Logger Contexts
 Because tests initialize compiler environments dynamically, multiple threads compile and write logs concurrently. To prevent parallel threads from overwriting each other's Logback appenders or locking file handles, VibeTags partitions logging context using **absolute path hashing**:
