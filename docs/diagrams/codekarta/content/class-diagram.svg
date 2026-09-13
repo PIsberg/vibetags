@@ -213,10 +213,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="VoidRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1844.3" y="713.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" d="M1828.0 1358.0 Q1846.7 1369.0 1868.0 1365.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="VoidRenderer" data-target="CursorRenderer" data-type="HAS" x="1847.3" y="1359.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
-<path class="edge-line" data-source="GreptileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 768.0 Q2057.3 436.1 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="GreptileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2041.7" y="435.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="GreptileRenderer" data-target="WholeFileMerge" data-type="HAS" d="M2138.0 768.0 Q2249.4 649.9 2314.0 501.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GreptileRenderer" data-target="WholeFileMerge" data-type="HAS" x="2237.7" y="636.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
+<path class="edge-line" data-source="GreptileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 768.0 Q2057.1 436.2 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GreptileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2041.5" y="435.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GreptileRenderer" data-target="WholeFileMerge" data-type="HAS" d="M2138.0 768.0 Q2249.1 649.7 2314.0 501.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GreptileRenderer" data-target="WholeFileMerge" data-type="HAS" x="2237.5" y="636.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
 <path class="edge-line" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2338.0 768.0 Q2156.2 427.0 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="IgnoreFileRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2141.1" y="431.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="LocksReportRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1338.0 858.0 Q1654.9 514.7 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -253,18 +253,22 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="ClaudeLocalRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1641.7" y="585.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" d="M1428.0 1088.0 Q1432.4 1107.1 1448.0 1119.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ClaudeLocalRenderer" data-target="ClaudeRenderer" data-type="HAS" x="1435.2" y="1099.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
-<path class="edge-line" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 948.0 Q1861.0 544.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.5" y="534.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1648.0 998.0 Q1042.0 497.3 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1031.0" y="505.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
-<path class="edge-line" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 948.0 Q1961.0 536.0 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1943.5" y="530.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" d="M1938.0 948.0 Q2152.2 746.5 2314.0 501.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" x="2139.1" y="729.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
+<path class="edge-line" data-source="GreptileConfigRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 948.0 Q1860.7 544.4 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="GreptileConfigRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.4" y="534.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="GreptileConfigRenderer" data-target="WholeFileMerge" data-type="HAS" d="M1828.0 1005.5 Q2054.0 743.7 2224.0 442.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GreptileConfigRenderer" data-target="WholeFileMerge" data-type="HAS" x="2040.0" y="727.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
+<path class="edge-line" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1938.0 948.0 Q1961.6 536.0 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="CopilotRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1943.8" y="530.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" d="M1848.0 998.0 Q1140.0 495.7 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CopilotRenderer" data-target="AnnotationSections.Section" data-type="HAS" x="1130.0" y="505.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTIONS</text>
+<path class="edge-line" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 948.0 Q2060.1 527.7 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="MentatRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2043.0" y="526.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" d="M2138.0 948.0 Q2255.9 736.3 2314.0 501.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="MentatRenderer" data-target="WholeFileMerge" data-type="HAS" x="2241.0" y="724.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MERGE</text>
 <path class="edge-line" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1538.0 1038.0 Q1758.9 595.6 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="ClaudeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1742.4" y="582.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2138.0 948.0 Q2060.9 527.5 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2043.4" y="526.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M2338.0 948.0 Q2158.6 520.2 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AiExcludeRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="2142.3" y="522.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" d="M1738.0 1038.0 Q1861.5 588.8 1914.0 126.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="JunieRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1843.7" y="579.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="JunieRenderer" data-target="CursorRenderer" data-type="HAS" d="M1738.0 1138.0 Q1828.8 1247.8 1958.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -381,12 +385,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="CursorRenderer" data-type="HAS" x="1820.0" y="879.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CURSOR_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" d="M1714.0 454.0 Q1597.1 737.3 1538.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ClaudeRenderer" data-type="HAS" x="1611.6" y="735.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CLAUDE_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" d="M1714.0 454.0 Q1900.9 722.6 2138.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" x="1913.4" y="705.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AI_EXCLUDE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" d="M1714.0 454.0 Q2004.3 728.4 2338.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiExcludeRenderer" data-type="HAS" x="2015.1" y="708.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AI_EXCLUDE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodexRenderer" data-type="HAS" d="M1804.0 329.0 Q1902.1 505.7 2048.0 645.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodexRenderer" data-type="HAS" x="1914.0" y="490.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODEX_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" d="M1714.0 454.0 Q1696.5 702.4 1738.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" x="1711.2" y="695.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">COPILOT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" d="M1714.0 454.0 Q1798.0 713.7 1938.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="CopilotRenderer" data-type="HAS" x="1812.0" y="701.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">COPILOT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" d="M1714.0 454.0 Q1800.3 670.3 1938.0 858.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="QwenRenderer" data-type="HAS" x="1813.1" y="657.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">QWEN_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GeminiRenderer" data-type="HAS" d="M1714.0 454.0 Q1802.6 627.7 1938.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -403,8 +407,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ZedRenderer" data-type="HAS" x="1618.5" y="505.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ZED_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" d="M1714.0 454.0 Q1597.2 690.7 1538.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="CodyRenderer" data-type="HAS" x="1611.6" y="689.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CODY_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" d="M1714.0 454.0 Q1798.5 713.4 1938.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" x="1812.3" y="701.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MENTAT_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" d="M1714.0 454.0 Q1901.4 722.1 2138.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="MentatRenderer" data-type="HAS" x="1913.7" y="705.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MENTAT_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="SweepRenderer" data-type="HAS" d="M1714.0 454.0 Q1708.3 524.2 1738.0 588.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="SweepRenderer" data-type="HAS" x="1717.2" y="516.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SWEEP_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="PlandexRenderer" data-type="HAS" d="M1714.0 454.0 Q1505.5 586.4 1338.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -443,10 +447,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="AiderConfRenderer" data-type="HAS" x="1612.8" y="644.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AIDER_CONF_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="ReplitRenderer" data-type="HAS" d="M1714.0 454.0 Q1693.5 837.0 1738.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="ReplitRenderer" data-type="HAS" x="1709.7" y="830.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">REPLIT_RENDERER</text>
-<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GreptileRenderer" data-type="HAS" d="M1714.0 454.0 Q1907.6 635.9 2138.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GreptileRenderer" data-type="HAS" x="1916.8" y="617.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GreptileRenderer" data-type="HAS" d="M1714.0 454.0 Q1907.7 635.7 2138.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GreptileRenderer" data-type="HAS" x="1916.9" y="617.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE_RENDERER</text>
 <path class="edge-line" data-source="PlatformRendererRegistry" data-target="GreptileRulesRenderer" data-type="HAS" d="M1714.0 454.0 Q1601.5 597.3 1538.0 768.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformRendererRegistry" data-target="GreptileRulesRenderer" data-type="HAS" x="1613.8" y="598.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE_RULES_RENDERER</text>
+<path class="edge-line" data-source="PlatformRendererRegistry" data-target="GreptileConfigRenderer" data-type="HAS" d="M1714.0 454.0 Q1696.8 702.4 1738.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="PlatformRendererRegistry" data-target="GreptileConfigRenderer" data-type="HAS" x="1711.4" y="695.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE_CONFIG_RENDERER</text>
 <path class="edge-line" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" d="M2204.0 359.0 Q2199.0 404.4 2224.0 442.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" x="2206.5" y="396.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <g id="FormatterRegistry">
@@ -1013,7 +1019,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="GreptileRenderer">
   <title>GreptileRenderer [CLASS]</title>
-  <rect class="node-rect" x="2048.0" y="768.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="2048.0" y="768.0" width="180.0" height="205.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="2138.0" y="790.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GreptileRenderer</text>
   <line x1="2048.0" y1="812.0" x2="2228.0" y2="812.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2056.0" y="825.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">INSTRUCTIONS_KEY: String</text>
@@ -1024,7 +1030,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <line x1="2048.0" y1="899.0" x2="2228.0" y2="899.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="2056.0" y="912.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
   <text x="2056.0" y="927.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
-  <text x="2056.0" y="942.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendArray(StringBuilder, Stri…</text>
+  <text x="2056.0" y="942.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ignorePatterns(GuardrailModel, …</text>
+  <text x="2056.0" y="957.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendArray(StringBuilder, Stri…</text>
 </g>
 <g id="IgnoreFileRenderer">
   <title>IgnoreFileRenderer [CLASS]</title>
@@ -1157,32 +1164,42 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1456.0" y="1170.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendSecureSection(StringBuild…</text>
   <text x="1456.0" y="1185.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
 </g>
-<g id="CopilotRenderer">
-  <title>CopilotRenderer [CLASS]</title>
-  <rect class="node-rect" x="1648.0" y="948.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1738.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CopilotRenderer</text>
+<g id="GreptileConfigRenderer">
+  <title>GreptileConfigRenderer [CLASS]</title>
+  <rect class="node-rect" x="1648.0" y="948.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1738.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GreptileConfigRenderer</text>
   <line x1="1648.0" y1="992.0" x2="1828.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1656.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <text x="1656.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MERGE: WholeFileMerge</text>
   <line x1="1648.0" y1="1019.0" x2="1828.0" y2="1019.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1656.0" y="1032.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="1656.0" y="1047.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
+</g>
+<g id="CopilotRenderer">
+  <title>CopilotRenderer [CLASS]</title>
+  <rect class="node-rect" x="1848.0" y="948.0" width="180.0" height="100.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1938.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CopilotRenderer</text>
+  <line x1="1848.0" y1="992.0" x2="2028.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTIONS: List&lt;AnnotationSectio…</text>
+  <line x1="1848.0" y1="1019.0" x2="2028.0" y2="1019.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1856.0" y="1032.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="MentatRenderer">
   <title>MentatRenderer [CLASS]</title>
-  <rect class="node-rect" x="1848.0" y="948.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1938.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">MentatRenderer</text>
-  <line x1="1848.0" y1="992.0" x2="2028.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MERGE: WholeFileMerge</text>
-  <line x1="1848.0" y1="1019.0" x2="2028.0" y2="1019.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1856.0" y="1032.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
-  <text x="1856.0" y="1047.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
-  <text x="1856.0" y="1062.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendJsonSection(StringBuilder…</text>
+  <rect class="node-rect" x="2048.0" y="948.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2138.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">MentatRenderer</text>
+  <line x1="2048.0" y1="992.0" x2="2228.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MERGE: WholeFileMerge</text>
+  <line x1="2048.0" y1="1019.0" x2="2228.0" y2="1019.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2056.0" y="1032.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <text x="2056.0" y="1047.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFileMerge(): WholeFileMerge</text>
+  <text x="2056.0" y="1062.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendJsonSection(StringBuilder…</text>
 </g>
 <g id="AiExcludeRenderer">
   <title>AiExcludeRenderer [CLASS]</title>
-  <rect class="node-rect" x="2048.0" y="948.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="2138.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AiExcludeRenderer</text>
-  <line x1="2048.0" y1="992.0" x2="2228.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="2056.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
+  <rect class="node-rect" x="2248.0" y="948.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="2338.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AiExcludeRenderer</text>
+  <line x1="2248.0" y1="992.0" x2="2428.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="2256.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(GuardrailModel, Platform…</text>
 </g>
 <g id="JunieRenderer">
   <title>JunieRenderer [CLASS]</title>
@@ -1365,7 +1382,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1632.0" y="306.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">CODEX_RENDERER: CodexRenderer</text>
   <text x="1632.0" y="321.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">COPILOT_RENDERER: CopilotRender…</text>
   <text x="1632.0" y="336.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">QWEN_RENDERER: QwenRenderer</text>
-  <text x="1632.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+29 more)</text>
+  <text x="1632.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+30 more)</text>
   <line x1="1624.0" y1="365.0" x2="1804.0" y2="365.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1632.0" y="378.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getRenderer(Platform): Platform…</text>
   <text x="1632.0" y="393.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeShapeFor(String): YamlMerg…</text>

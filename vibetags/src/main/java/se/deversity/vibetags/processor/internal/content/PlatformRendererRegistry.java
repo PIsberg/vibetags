@@ -43,6 +43,7 @@ public final class PlatformRendererRegistry {
     private static final ReplitRenderer REPLIT_RENDERER = new ReplitRenderer();
     private static final GreptileRenderer GREPTILE_RENDERER = new GreptileRenderer();
     private static final GreptileRulesRenderer GREPTILE_RULES_RENDERER = new GreptileRulesRenderer();
+    private static final GreptileConfigRenderer GREPTILE_CONFIG_RENDERER = new GreptileConfigRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -130,6 +131,8 @@ public final class PlatformRendererRegistry {
                 return GREPTILE_RENDERER;
             case GREPTILE_RULES:
                 return GREPTILE_RULES_RENDERER;
+            case GREPTILE_CONFIG:
+                return GREPTILE_CONFIG_RENDERER;
             case AIDER_IGNORE:
             case CURSOR_IGNORE:
             case CLAUDE_IGNORE:

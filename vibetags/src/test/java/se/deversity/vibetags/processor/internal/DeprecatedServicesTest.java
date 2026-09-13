@@ -131,10 +131,10 @@ class DeprecatedServicesTest {
 
         assertEquals(1, notes.size(), "one opt-in note: " + notes);
         String note = notes.get(0);
-        // Matched per line: the note lists bare file names, and a substring check would trip over
+        // Matched per line: the note lists root-relative paths, and a substring check would trip over
         // .mentatconfig.json for Cody's config.json.
         List<String> offered = note.lines().map(String::strip).toList();
-        for (String file : List.of("gemini_instructions.md", "config.json", ".codyignore",
+        for (String file : List.of("gemini_instructions.md", ".cody/config.json", ".codyignore",
                 ".supermavenignore", ".clinerules")) {
             assertFalse(offered.contains(file), "does not offer " + file + ":\n" + note);
         }
@@ -144,6 +144,11 @@ class DeprecatedServicesTest {
         // trailing slash tells a new user which one to create.
         assertTrue(offered.contains(".clinerules/"),
             "offers Cline's directory, marked as a directory:\n" + note);
+        // .greptile/config.json and the deprecated .cody/config.json share a file name (#651), so the
+        // note names paths, not bare file names, or the current output reads as the deprecated one.
+        assertTrue(offered.contains(".greptile/config.json"),
+            "offers Greptile's config by its path:\n" + note);
+        assertFalse(offered.contains("config.json"), "no ambiguous bare config.json:\n" + note);
     }
 
     @Test

@@ -30,6 +30,8 @@ AI_FILES=(
   # NOTE: greptile.json is intentionally NOT reset. It is the example's hand-configured review
   # settings, which is what it exists to demonstrate VibeTags leaving alone; VibeTags owns only a
   # span inside two of its values, and every compile rewrites that span whole.
+  # .greptile/config.json is NOT reset for the same reason: hand-set review settings, with
+  # VibeTags owning only a span inside its ignorePatterns value (#651).
   ".windsurfrules"
   ".rules"
   ".cody/config.json"

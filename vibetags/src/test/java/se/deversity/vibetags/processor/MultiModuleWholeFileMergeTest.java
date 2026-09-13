@@ -4,13 +4,16 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import se.deversity.vibetags.annotations.AIAudit;
+import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -96,6 +99,47 @@ class MultiModuleWholeFileMergeTest {
             "the preamble must appear once:\n" + merged);
         assertTrue(instructions.stream().noneMatch(l -> String.valueOf(l).startsWith("No VibeTags guardrails")),
             "the empty placeholder must not sit above real guardrails:\n" + merged);
+    }
+
+    /**
+     * .greptile/config.json carries one owned key, ignorePatterns (#651). In a reactor each module
+     * ignores its own classes, and the file must list all of them, once, rather than the last
+     * module's. A lone module's rendering must pass through unchanged, and all-empty must still parse.
+     */
+    @Test
+    void greptileConfigIgnorePatternsUnionAcrossModules() {
+        String merged = merge("greptile_config", List.of(
+            sidecarFor("alpha", "greptile_config", ignoring(ALPHA)),
+            sidecarFor("beta", "greptile_config", ignoring(BETA)),
+            sidecarFor("again", "greptile_config", ignoring(ALPHA))));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parsed = (Map<String, Object>) parseJson(merged);
+        assertEquals(Set.of("ignorePatterns"), parsed.keySet(), merged);
+        List<?> patterns = (List<?>) parsed.get("ignorePatterns");
+        assertEquals(2, patterns.size(), "one pattern per ignored class, no repeats:\n" + merged);
+        String flattened = String.valueOf(patterns);
+        assertTrue(flattened.contains("AlphaService") && flattened.contains("BetaService"),
+            "both modules' exclusions must be in ignorePatterns:\n" + merged);
+
+        String lone = render("greptile_config", ignoring(ALPHA));
+        assertEquals(lone, merge("greptile_config", List.of(sidecarFor("only", "greptile_config", ignoring(ALPHA)))),
+            "a lone module's output must not change");
+        parseJson(merge("greptile_config", List.of(
+            sidecarFor("a", "greptile_config", GuardrailModel.EMPTY),
+            sidecarFor("b", "greptile_config", GuardrailModel.EMPTY))));
+    }
+
+    private static GuardrailModel ignoring(String qualifiedName) {
+        String simple = qualifiedName.substring(qualifiedName.lastIndexOf('.') + 1);
+        TaggedElement element = TaggedElement.builder(qualifiedName)
+            .names(qualifiedName, simple, qualifiedName, qualifiedName)
+            .kind(ElementTag.CLASS)
+            .annotation(AIIgnore.class, new AIIgnore() {
+                @Override public String reason() { return "Generated"; }
+                @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return AIIgnore.class; }
+            })
+            .build();
+        return GuardrailModel.builder().add(AIIgnore.class, element).build();
     }
 
     /** Both PR-Agent sections are fed from the same body; a merge must not update only one. */

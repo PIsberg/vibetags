@@ -5,6 +5,7 @@ import se.deversity.vibetags.annotations.AILoadBearing;
 import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.processor.internal.content.Escape;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -15,7 +16,8 @@ import java.util.Map;
  * Writes VibeTags' guardrails into a JSON document the user owns, by splicing a delimited span into
  * named top-level string values and leaving every other byte of the document where it was.
  *
- * <p>This exists for {@code greptile.json} (#639). Every other output format either has a comment
+ * <p>This exists for {@code greptile.json} (#639), and {@code .greptile/config.json} reuses it (#651). Every
+ * other output format either has a comment
  * syntax to hang {@code VIBETAGS-START} / {@code VIBETAGS-END} markers on, or is a file VibeTags owns
  * outright. {@code greptile.json} is neither: it has no comments, and in practice it carries thirty-odd
  * hand-set review settings, so the whole-file overwrite every other {@code .json} output gets would
@@ -43,7 +45,8 @@ import java.util.Map;
  * </ul>
  */
 @AISecure(aspect = "Splices annotation text, including attributes copied out of third-party dependency JARs, "
-    + "into greptile.json, a review configuration the user owns. The span body must stay Escape.json-encoded "
+    + "into greptile.json and .greptile/config.json, review configurations the user owns. The span body must "
+    + "stay Escape.json-encoded "
     + "and marker-defused: without the first a dependency can close the string and add settings such as "
     + "skipReview, and without the second it can end the span early so the value grows a copy of itself on "
     + "every build.")
@@ -70,6 +73,13 @@ public final class JsonValueSpans {
             GuardrailFileWriter.MARKER_START_HASH, GuardrailFileWriter.MARKER_END_HASH));
 
     /**
+     * The shared key of Greptile's {@code .greptile/config.json} (#651): {@code ignorePatterns} only.
+     * That file also has an {@code instructions} setting, but in the {@code .greptile/} form the
+     * guardrails go to {@code rules.md}, so {@code instructions} stays entirely the user's.
+     */
+    public static final List<SharedKey> GREPTILE_CONFIG = List.of(GREPTILE.get(1));
+
+    /**
      * The result of a merge: either the merged document, or the reason nothing may be written.
      *
      * @param document   the merged document, or {@code null} when declined
@@ -93,11 +103,26 @@ public final class JsonValueSpans {
     private JsonValueSpans() {}
 
     /**
-     * The shared keys for the output file called {@code fileName}, or {@code null} when that file is
-     * not merged this way.
+     * The shared keys for the output file at {@code file}, or {@code null} when that file is not merged
+     * this way.
+     *
+     * <p>Keyed on the parent directory as well as the name, because {@code config.json} is far too
+     * common a name to key on alone: {@code .cody/config.json} is also a VibeTags output, one rendered
+     * whole, and routed through here it would keep stale bytes and grow a span. Greptile reads a
+     * {@code .greptile/} folder in any directory, so no deeper path is required.
      */
-    public static @Nullable List<SharedKey> sharedKeysFor(String fileName) {
-        return "greptile.json".equals(fileName) ? GREPTILE : null;
+    public static @Nullable List<SharedKey> sharedKeysFor(Path file) {
+        Path name = file.getFileName();
+        if (name == null) {
+            return null;
+        }
+        if ("greptile.json".equals(name.toString())) {
+            return GREPTILE;
+        }
+        Path parent = file.getParent();
+        Path parentName = parent == null ? null : parent.getFileName();
+        boolean inGreptileFolder = parentName != null && ".greptile".equals(parentName.toString());
+        return inGreptileFolder && "config.json".equals(name.toString()) ? GREPTILE_CONFIG : null;
     }
 
     /**

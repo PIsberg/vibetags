@@ -400,7 +400,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
-- **Greptile** (`.greptile/rules.md`, `greptile.json`) - AI PR reviewer; in `greptile.json` VibeTags writes only a delimited span inside `instructions` and `ignorePatterns`, and every other field stays yours
+- **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)

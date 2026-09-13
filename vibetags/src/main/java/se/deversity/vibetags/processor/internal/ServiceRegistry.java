@@ -77,8 +77,9 @@ public final class ServiceRegistry {
         "aider_conf",
         // Greptile's PR reviewer. greptile.json is the legacy single-file form, richly hand-configured
         // in practice, so VibeTags owns only a delimited span inside two of its string values and
-        // leaves every other byte alone (#639). .greptile/rules.md is the recommended form.
-        "greptile", "greptile_rules",
+        // leaves every other byte alone (#639). .greptile/rules.md is the recommended form, and
+        // .greptile/config.json carries its exclusions: VibeTags owns a span in ignorePatterns only (#651).
+        "greptile", "greptile_rules", "greptile_config",
         // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
         "root_index"
     );
@@ -194,6 +195,7 @@ public final class ServiceRegistry {
         // ignores greptile.json entirely; docs/PLATFORMS.md says so.
         map.put("greptile",       root.resolve("greptile.json"));
         map.put("greptile_rules", root.resolve(".greptile/rules.md"));
+        map.put("greptile_config", root.resolve(".greptile/config.json"));
         // Editors & modes
         map.put("void",          root.resolve(".void/rules.md"));
         map.put("roo_modes",     root.resolve(".roomodes"));
@@ -255,15 +257,32 @@ public final class ServiceRegistry {
             // A deprecated output is left off: this list is what a new user copies from. A directory
             // service carries a trailing '/', because .clinerules is both a deprecated file and a
             // current directory, and a bare name would have a new user touch the deprecated one.
+            // Paths are root-relative for the same reason: .greptile/config.json and the deprecated
+            // .cody/config.json share a file name.
+            Path root = rootOf(allServiceFiles);
             allServiceFiles.entrySet().stream()
                 .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey())
                     && !DeprecatedServices.keys().contains(e.getKey()))
-                .forEach(e -> msg.append("  ").append(e.getValue().getFileName())
+                .forEach(e -> msg.append("  ").append(optInName(root, e.getValue()))
                     .append(writesDirectory(e.getKey()) ? "/" : "").append('\n'));
             messager.printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
 
         return active;
+    }
+
+    /**
+     * How the opt-in note names {@code path}: relative to the root, with {@code /} separators, so
+     * {@code .greptile/config.json} is not listed as a bare {@code config.json} that reads like
+     * Cody's, and the two {@code SKILL.md} entries are told apart. Falls back to the file name for a
+     * hand-built map with no root to relativise against.
+     */
+    private static String optInName(@Nullable Path root, Path path) {
+        if (root != null && path.startsWith(root)) {
+            return root.relativize(path).toString().replace('\\', '/');
+        }
+        Path name = path.getFileName();
+        return name == null ? path.toString() : name.toString();
     }
 
     /**

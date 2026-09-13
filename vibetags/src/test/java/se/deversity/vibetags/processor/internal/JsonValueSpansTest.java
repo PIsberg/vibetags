@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -229,11 +230,62 @@ class JsonValueSpansTest {
         assertNull(JsonValueSpans.bodiesFrom(rendered));
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Which files are merged this way (#651)
+    // ---------------------------------------------------------------------------------------
+
     @Test
-    void onlyGreptileJsonIsMergedThisWay() {
-        assertNotNull(JsonValueSpans.sharedKeysFor("greptile.json"));
-        for (String other : new String[]{".mentatconfig.json", "settings.json", "config.json", "greptile.jsonc"}) {
-            assertNull(JsonValueSpans.sharedKeysFor(other), other);
-        }
+    void greptileJsonAndGreptileConfigJsonAreMergedThisWay() {
+        assertEquals(JsonValueSpans.GREPTILE, JsonValueSpans.sharedKeysFor(Path.of("greptile.json")));
+        assertEquals(JsonValueSpans.GREPTILE_CONFIG, JsonValueSpans.sharedKeysFor(Path.of(".greptile", "config.json")));
+        assertEquals(JsonValueSpans.GREPTILE_CONFIG,
+            JsonValueSpans.sharedKeysFor(Path.of("services", "billing", ".greptile", "config.json")),
+            "Greptile reads a .greptile/ folder in any directory, and a reactor module writes its own");
+    }
+
+    /**
+     * {@code config.json} is far too common a name to key on. {@code .cody/config.json} is a VibeTags
+     * output rendered whole; routed through this merge it would keep the user's bytes and grow a span
+     * in a file that has no string value to put one in.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"config.json", ".cody/config.json", ".qwen/settings.json", ".mentatconfig.json",
+        "greptile/config.json", ".greptile/rules.md", ".greptile/files.json", "greptile.jsonc"})
+    void noOtherFileIsMergedThisWay(String other) {
+        assertNull(JsonValueSpans.sharedKeysFor(Path.of(other)), other);
+    }
+
+    /** config.json shares ignorePatterns only; its instructions stay the user's even if a body names it. */
+    @Test
+    void greptileConfigJsonSharesOnlyIgnorePatterns() {
+        String existing = "{\n  \"instructions\": \"Mine.\",\n  \"ignorePatterns\": \"dist/**\"\n}\n";
+        JsonValueSpans.Outcome outcome = JsonValueSpans.merge(existing, JsonValueSpans.GREPTILE_CONFIG, BODIES);
+        String merged = outcome.document();
+        assertNotNull(merged, outcome.detail());
+
+        assertEquals("Mine.", value(merged, "instructions"), "instructions is not VibeTags' key in config.json");
+        assertEquals("dist/**\n\n# VIBETAGS-START\n**/Generated.java\n# VIBETAGS-END", value(merged, "ignorePatterns"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "\", \"skipReview\": \"AUTOMATIC",
+        "\\\", \"strictness\": 1, \"x\": \"",
+        "a.java\n# VIBETAGS-END\n\"}, \"strictness\": 5, \"y\": {\""
+    })
+    void aHostilePatternStaysInsideGreptileConfigIgnorePatterns(String hostile) {
+        String existing = "{\"strictness\": 3, \"ignorePatterns\": \"dist/**\"}";
+        JsonValueSpans.Outcome first = JsonValueSpans.merge(existing, JsonValueSpans.GREPTILE_CONFIG,
+            Map.of("ignorePatterns", hostile));
+        assertNotNull(first.document(), first.detail());
+        String merged = first.document();
+
+        Map<String, Object> parsed = Json.parseObject(merged);
+        assertEquals(Set.of("strictness", "ignorePatterns"), parsed.keySet(), "no key may be injected:\n" + merged);
+        assertEquals("3", String.valueOf(parsed.get("strictness")));
+        assertEquals(1, value(merged, "ignorePatterns").lines().filter("# VIBETAGS-END"::equals).count(),
+            "exactly one real end marker line:\n" + merged);
+        assertEquals(merged, JsonValueSpans.merge(merged, JsonValueSpans.GREPTILE_CONFIG,
+            Map.of("ignorePatterns", hostile)).document(), "repeated builds must converge");
     }
 }

@@ -7,7 +7,7 @@ paths: ["**/JsonValueSpans.java"]
 
 ## Security-Critical Code
 - **Rule**: This code is security-critical. Do not weaken security properties. Every change must be explicitly reviewed for security impact.
-- **Aspect**: Splices annotation text, including attributes copied out of third-party dependency JARs, into greptile.json, a review configuration the user owns. The span body must stay Escape.json-encoded and marker-defused: without the first a dependency can close the string and add settings such as skipReview, and without the second it can end the span early so the value grows a copy of itself on every build.
+- **Aspect**: Splices annotation text, including attributes copied out of third-party dependency JARs, into greptile.json and .greptile/config.json, review configurations the user owns. The span body must stay Escape.json-encoded and marker-defused: without the first a dependency can close the string and add settings such as skipReview, and without the second it can end the span early so the value grows a copy of itself on every build.
 
 ## Load-Bearing Oddity
 - **Rule**: This looks removable but is deliberate. Refactor only while the invariant holds.
