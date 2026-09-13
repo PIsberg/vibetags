@@ -101,6 +101,8 @@ class DeprecatedServicesTest {
         // Open Interpreter drops profiles from project config and reads AGENTS.md instead (#674)
         m.put("interpreter", List.of(".interpreter/profiles/vibetags.yaml", ".openinterpreter/config.toml",
             "AGENTS.md"));
+        // Ellipsis documents only .ellipsis/code_review.yaml, a pipeline of reviewer agents (#675)
+        m.put("ellipsis", List.of("ellipsis.yaml", ".ellipsis/code_review.yaml"));
         return m;
     }
 

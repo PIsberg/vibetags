@@ -23,7 +23,7 @@ change came after the sweep, so the sweep's diff does not include it.
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
 vendor before anything changed, and the table under Deprecated lists every deprecated output.
-#671, #673 and #675 stay open:
+#671 and #673 stay open:
 
 - Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
   `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
@@ -48,6 +48,10 @@ vendor before anything changed, and the table under Deprecated lists every depre
   project's `.openinterpreter/config.toml`, so there is no project-level profile to write.
   `.interpreter/profiles/vibetags.yaml` is deprecated in favour of `AGENTS.md`, which Open
   Interpreter documents as its project instruction file and VibeTags already writes (#674).
+- Ellipsis's documentation never mentions `ellipsis.yaml`, which is deprecated. Its current
+  `.ellipsis/code_review.yaml` is not written: it has no rules field, only reviewer agents, and
+  declaring the review stage replaces Ellipsis's built-in reviewer. PLATFORMS.md records what the
+  docs do and do not pin (#675).
 
 ### Added
 
@@ -349,6 +353,7 @@ vendor before anything changed, and the table under Deprecated lists every depre
   | `.idx/airules.md` | Google is sunsetting Firebase Studio on 22 March 2027; new workspaces disabled since 22 June 2026 (#676) | `.agents/rules/`, for Google Antigravity, which Google names as a migration target |
   | `.amazonq/rules/` | AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027 (#676) | `.kiro/steering/`, for Kiro, which AWS names |
   | `.interpreter/profiles/vibetags.yaml` | Open Interpreter reads no YAML profile, and ignores `[profiles.*]` tables in a project's `.openinterpreter/config.toml` (#674) | `AGENTS.md`, Open Interpreter's documented project instruction file |
+  | `ellipsis.yaml` | Ellipsis's documentation never mentions it (#675) | a reviewer prompt in `.ellipsis/code_review.yaml`, written by hand; VibeTags does not write that file |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

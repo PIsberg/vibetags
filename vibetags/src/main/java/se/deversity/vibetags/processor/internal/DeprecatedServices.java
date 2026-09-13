@@ -170,6 +170,17 @@ public final class DeprecatedServices {
                 + " project's .openinterpreter/config.toml",
             "Open Interpreter reads project instructions from AGENTS.md",
             "AGENTS.md"));
+        // Ellipsis: ellipsis.dev/llms-full.txt (2026-09-13) never mentions ellipsis.yaml or
+        // pr_review, and the old docs.ellipsis.dev/config page is 404. Reviews are configured in
+        // .ellipsis/code_review.yaml, whose only place for text is a reviewer agent's prompt, and
+        // declaring the review stage replaces Ellipsis's built-in reviewer, so VibeTags does not
+        // write it (#675).
+        m.put("ellipsis", new Notice("ellipsis.yaml",
+            "Ellipsis's documentation never mentions this file; it configures reviews in"
+                + " .ellipsis/code_review.yaml, as a pipeline of reviewer agents",
+            "VibeTags does not write that file, because declaring a review stage replaces Ellipsis's"
+                + " built-in reviewer, so put the guardrails in a reviewer prompt there by hand",
+            ".ellipsis/code_review.yaml"));
         return Collections.unmodifiableMap(m);
     }
 

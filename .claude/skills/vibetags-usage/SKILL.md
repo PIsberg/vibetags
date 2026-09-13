@@ -170,7 +170,7 @@ mkdir -p .aiassistant/rules                # JetBrains AI Assistant (granular pe
 mkdir -p .augment/rules                    # Augment Code (granular per-class rules)
 touch .goosehints                          # goose (Block)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
-touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis; ellipsis.yaml deprecated, #645)
 touch .repomixignore .gitingestignore .gptignore  # Context packers (.ghostcoderignore and .piecesignore are deprecated, #645)
 mkdir -p .void && touch .void/rules.md     # Void Editor (deprecated, #645)
 touch .roomodes                            # Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode
@@ -1672,7 +1672,7 @@ tasks.withType(JavaCompile) {
 | `.void/rules.md` | Void Editor (deprecated) |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
-| `ellipsis.yaml` | Ellipsis (AI PR reviewer) |
+| `ellipsis.yaml` | Ellipsis (AI PR reviewer; deprecated) |
 | `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode |
 | `.repomixignore` | Repomix (context packer) |
 | `.gitingestignore` | Gitingest (context packer) |

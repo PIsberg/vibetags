@@ -418,7 +418,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 #### AI pull-request reviewers
 - **CodeRabbit** (`.coderabbit.yaml`) — `reviews.path_instructions` that flag PRs violating guardrails
 - **Qodo / Codium PR-Agent** (`.pr_agent.toml`) — `extra_instructions` for the reviewer and code-suggestion tools
-- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail
+- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Ellipsis's docs never mention it, and configure reviews in `.ellipsis/code_review.yaml`
 
 #### Context packers (ignore files)
 - **Repomix** (`.repomixignore`)
