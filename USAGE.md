@@ -500,7 +500,7 @@ touch .plandex.yaml                          # Plandex AI coding agent (deprecat
 touch .doubleignore                          # Double.bot exclusion list (deprecated, #645)
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
-touch .antigravityignore                     # Antigravity AI exclusion list
+touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #645)
 
 # --- Cline, JetBrains Junie ---
 touch .clinerules                            # Cline AI assistant (single file, deprecated #645), OR:

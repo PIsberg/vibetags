@@ -159,7 +159,7 @@ touch .doubleignore                        # Double.bot (deprecated, #645)
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
-touch .antigravityignore                   # Antigravity AI
+touch .antigravityignore                   # Antigravity AI (deprecated, #645)
 touch .clinerules                          # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                     # Cline granular rules (same path: pick one)
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
@@ -1639,7 +1639,7 @@ tasks.withType(JavaCompile) {
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |
 | `.greptile/config.json` | Greptile (`@AIIgnore` paths; VibeTags owns only a span inside `ignorePatterns`) |
 | `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
-| `.antigravityignore` | Antigravity AI |
+| `.antigravityignore` | Antigravity AI (deprecated) |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md`, `.copilotignore` (deprecated) | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |

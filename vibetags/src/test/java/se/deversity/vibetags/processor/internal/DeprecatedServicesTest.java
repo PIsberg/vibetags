@@ -93,6 +93,8 @@ class DeprecatedServicesTest {
         m.put("claude_ignore", List.of(".claudeignore", "permissions.deny", ".claude/settings.json"));
         // GitHub's Copilot docs configure content exclusion in settings, never in a file (#668)
         m.put("copilot_ignore", List.of(".copilotignore", "Content exclusion"));
+        // Antigravity's docs name .gitignore and read_file permissions, never this file (#670)
+        m.put("antigravity_ignore", List.of(".antigravityignore", "read_file", ".gitignore"));
         return m;
     }
 

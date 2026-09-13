@@ -390,7 +390,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
-- **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
+- **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`). `.antigravityignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Antigravity's docs never mention it
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`). `.claudeignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Claude Code's docs never mention it, and its own mechanism is `Read` deny rules in `.claude/settings.json`
 - **Cline** (the `.clinerules/*.md` directory Cline now documents, or the single `.clinerules` file, one or the other, never both). The single file is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)

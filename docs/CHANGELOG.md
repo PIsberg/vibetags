@@ -26,8 +26,8 @@ read `.voidrules`, never this path (#665). All eight long-tail outputs in #666 w
 their vendor as retired or never read, and are deprecated. `.claudeignore` is deprecated because
 Claude Code's documentation never mentions it, and the `@AIIgnore` orphan warning stops telling
 Claude projects to create it (#667). `.copilotignore` is deprecated on the same grounds, since
-GitHub configures Copilot content exclusion in settings, and loses its orphan warning too (#668).
-Everything this batch deprecates is listed under Deprecated.
+GitHub configures Copilot content exclusion in settings, and loses its orphan warning too (#668), and `.antigravityignore`, which none of Antigravity's
+documentation pages mentions (#670). Everything this batch deprecates is listed under Deprecated.
 
 ### Added
 
@@ -314,6 +314,7 @@ Everything this batch deprecates is listed under Deprecated.
   | `.ai/rules/` | No tool or published convention reads this directory (#666) | `AGENTS.md` |
   | `.claudeignore` | Claude Code's documentation never mentions it (#667) | `Read` deny rules under `permissions.deny` in `.claude/settings.json` |
   | `.copilotignore` | GitHub's Copilot documentation never mentions it; exclusion is a repository, organization or enterprise setting (#668) | Settings, Copilot, Content exclusion |
+  | `.antigravityignore` | Antigravity's documentation never mentions it (#670) | `read_file` Deny permission rules, or `.gitignore` with Respect .gitignore on |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

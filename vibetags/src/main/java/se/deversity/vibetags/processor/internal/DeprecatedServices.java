@@ -140,6 +140,14 @@ public final class DeprecatedServices {
                 + " settings, on Copilot Business and Enterprise",
             "set the paths under the repository's Settings, Copilot, Content exclusion",
             "none"));
+        // Antigravity: none of the 90 pages in antigravity.google/llms.txt mentions this file; its
+        // IDE settings page documents "Respect .gitignore", and its permissions page read_file Deny
+        // rules (#670).
+        m.put("antigravity_ignore", new Notice(".antigravityignore",
+            "Antigravity's documentation never mentions this file",
+            "Antigravity keeps files from its agent with read_file Deny permission rules, or with"
+                + " .gitignore and its Respect .gitignore setting",
+            ".gitignore"));
         return Collections.unmodifiableMap(m);
     }
 
