@@ -498,7 +498,7 @@ touch .plandex.yaml                          # Plandex AI coding agent (deprecat
 
 # --- Double.bot, Open Interpreter, Codeium, Antigravity ---
 touch .doubleignore                          # Double.bot exclusion list (deprecated, #645)
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #645)
 touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #645)
 

@@ -156,7 +156,7 @@ touch .mentatconfig.json                   # Mentat (deprecated, #645)
 touch sweep.yaml                           # Sweep (GitHub App; deprecated, #645)
 touch .plandex.yaml                        # Plandex (deprecated, #645)
 touch .doubleignore                        # Double.bot (deprecated, #645)
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #645)
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
 touch .antigravityignore                   # Antigravity AI (deprecated, #645)
@@ -1656,7 +1656,7 @@ tasks.withType(JavaCompile) {
 | `sweep.yaml` | Sweep (GitHub App; deprecated) |
 | `.plandex.yaml` | Plandex (deprecated) |
 | `.doubleignore` | Double.bot (deprecated) |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
+| `.interpreter/profiles/vibetags.yaml` | Open Interpreter (deprecated) |
 | `.codeiumignore` | Codeium |
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |

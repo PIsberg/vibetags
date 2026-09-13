@@ -405,7 +405,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`). `.copilotignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): GitHub configures Copilot content exclusion in settings, not in a file
 - **JetBrains Junie** (`.junie/guidelines.md`)
 - **Mentat** (`.mentatconfig.json`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): the CLI is archived and read `.mentat_config.json`
-- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
+- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Open Interpreter reads no YAML profile, and reads project instructions from `AGENTS.md`
 - **Plandex** (`.plandex.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Plandex never reads it
 - **Qwen** (`QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Replit Agent** (`replit.md`)

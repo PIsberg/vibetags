@@ -98,6 +98,9 @@ class DeprecatedServicesTest {
         // Announced end dates, carried in the notice (#676)
         m.put("firebase", List.of(".idx/airules.md", "22 March 2027", ".agents/rules/"));
         m.put("amazonq_granular", List.of(".amazonq/rules/", "30 April 2027", ".kiro/steering/"));
+        // Open Interpreter drops profiles from project config and reads AGENTS.md instead (#674)
+        m.put("interpreter", List.of(".interpreter/profiles/vibetags.yaml", ".openinterpreter/config.toml",
+            "AGENTS.md"));
         return m;
     }
 

@@ -160,6 +160,16 @@ public final class DeprecatedServices {
             "AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027",
             "AWS points users to Kiro, whose .kiro/steering/ directory VibeTags writes",
             ".kiro/steering/"));
+        // Open Interpreter: its source (openinterpreter/openinterpreter, codex-rs) reads no YAML
+        // profile. Profiles are [profiles.<name>] tables, config/src/loader/mod.rs removes "profiles"
+        // from a project's .openinterpreter/config.toml (PROJECT_LOCAL_CONFIG_DENYLIST), and a
+        // profile has no field for instruction text anyway. docs/agents_md.md names AGENTS.md as the
+        // project instruction file, so there is no project-level profile to move to (#674).
+        m.put("interpreter", new Notice(".interpreter/profiles/vibetags.yaml",
+            "Open Interpreter reads no YAML profiles; its profiles are TOML tables, which it ignores in a"
+                + " project's .openinterpreter/config.toml",
+            "Open Interpreter reads project instructions from AGENTS.md",
+            "AGENTS.md"));
         return Collections.unmodifiableMap(m);
     }
 
