@@ -393,6 +393,8 @@ class AIGuardrailProcessorProcessTest {
             "agents_skill", "zencoder_granular", "replit",
             // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
             "devin_granular", "devin_ignore",
+            // The always-on safety files inside .windsurf/rules/ and .devin/rules/ (#684)
+            "windsurf_safety", "devin_safety",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

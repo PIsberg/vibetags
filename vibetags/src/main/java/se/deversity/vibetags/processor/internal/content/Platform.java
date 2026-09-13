@@ -98,6 +98,10 @@ public enum Platform {
     ZENCODER_GRANULAR("zencoder_granular"),
     // Devin Desktop's preferred rules directory; .windsurf/rules/ is its fallback (#671)
     DEVIN_GRANULAR("devin_granular"),
+    // The always-on safety files inside .windsurf/rules/ and .devin/rules/, implicitly activated by
+    // their directories (#684)
+    WINDSURF_SAFETY("windsurf_safety"),
+    DEVIN_SAFETY("devin_safety"),
     CLINE_GRANULAR("cline_granular"),
     // The always-loaded safety file inside .clinerules/, implicitly activated by cline_granular (#648)
     CLINE_SAFETY("cline_safety");

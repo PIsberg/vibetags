@@ -155,6 +155,8 @@ public final class PlatformRendererRegistry {
             case PIECES_IGNORE:
                 return IGNORE_FILE_RENDERER;
             case WINDSURF:
+            case WINDSURF_SAFETY:
+            case DEVIN_SAFETY:
                 return WINDSURF_RENDERER;
             case ZED:
                 return ZED_RENDERER;

@@ -50,6 +50,7 @@ runs:
           .aiassistant/rules/com-example-payment-PaymentProcessor.md \
           .augment/rules/com-example-payment-PaymentProcessor.md \
           .devin/rules/com-example-payment-PaymentProcessor.md \
+          .devin/rules/+vibetags-safety.md .windsurf/rules/+vibetags-safety.md \
           .goosehints; do
           if [ ! -f "$f" ]; then echo "FAIL $f missing"; exit 1; fi
           if [ ! -s "$f" ]; then echo "FAIL $f empty"; exit 1; fi
@@ -127,6 +128,16 @@ runs:
         grep -q 'Tied to legacy database schema' .devin/rules/com-example-payment-PaymentProcessor.md || { echo "FAIL .devin/rules rule carries no locked reason"; exit 1; }
         grep -q 'GeneratedMetadata.java' .devinignore || { echo "FAIL .devinignore carries no @AIIgnore glob"; exit 1; }
         echo "OK Devin Desktop .devin/rules/ and .windsurf/rules/ front matter and .devinignore glob"
+        # The always-on safety file in each rules directory (#684). This example also opts into
+        # .windsurfrules, which Devin Desktop loads on every message and which keeps the safety tier
+        # inline, so each safety file must be always_on and name it rather than repeat the tier.
+        for f in .devin/rules/+vibetags-safety.md .windsurf/rules/+vibetags-safety.md; do
+          [ "$(sed -n 2p "$f")" = "trigger: always_on" ] || { echo "FAIL $f lacks trigger: always_on front matter (#684)"; exit 1; }
+          grep -q 'are in .windsurfrules' "$f" || { echo "FAIL $f does not name .windsurfrules as the safety tier's carrier (#684)"; exit 1; }
+          if grep -q 'Tied to legacy database schema' "$f"; then echo "FAIL $f repeats the safety tier .windsurfrules already loads (#684)"; exit 1; fi
+        done
+        grep -q 'Tied to legacy database schema' .windsurfrules || { echo "FAIL .windsurfrules lost the inline locked reason the safety files defer to"; exit 1; }
+        echo "OK Devin Desktop always-on safety files defer to .windsurfrules"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

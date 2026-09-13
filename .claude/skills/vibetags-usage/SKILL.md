@@ -1632,6 +1632,7 @@ tasks.withType(JavaCompile) {
 | `.windsurfrules` | Devin Desktop, formerly Windsurf (traditional, legacy) |
 | `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (granular per-class rules, fallback directory) |
 | `.devin/rules/*.md` | Devin Desktop (granular per-class rules, preferred directory, `trigger: glob`) |
+| `.devin/rules/+vibetags-safety.md`, `.windsurf/rules/+vibetags-safety.md` | Devin Desktop (written with each directory: the always-on safety tier, `trigger: always_on`) |
 | `.devinignore` | Devin Desktop (exclusion list) |
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |

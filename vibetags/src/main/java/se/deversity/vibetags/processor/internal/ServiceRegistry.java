@@ -91,20 +91,25 @@ public final class ServiceRegistry {
     );
 
     /**
-     * The always-loaded safety file inside Cline's {@code .clinerules/} directory (issue #648).
+     * The always-loaded safety file inside a granular directory whose rule files load only on a
+     * glob match: Cline's {@code .clinerules/} (issue #648), and Devin Desktop's
+     * {@code .devin/rules/} and {@code .windsurf/rules/} (issue #684).
      *
-     * <p>Every per-element rule file there carries {@code paths:} front matter and loads only when a
-     * matching file is in the task's context, and Cline's aggregate and its directory are one path,
-     * so a directory-only project had nowhere to keep the six safety buckets always loaded
-     * (invariant 6). This file carries them with no front matter, which Cline treats as always
-     * active.
+     * <p>Every per-element rule file there loads only when a matching file is in the task's
+     * context, so a project on the directory alone had nowhere to keep the six safety buckets always
+     * loaded (invariant 6). This file carries them in the shape each tool loads on every request: no
+     * front matter for Cline, {@code trigger: always_on} for Devin Desktop.
      *
      * <p>The leading {@code +} is load-bearing. Element stems are {@code [A-Za-z0-9-]}
-     * ({@code ElementNaming.granularQName}) and role stems {@code [A-Za-z0-9._-]}
-     * ({@code RoleConfig.sanitize}), so no rule file in the directory can ever share this name, and
-     * the orphan sweep's exclusion of it can never shelter a stale rule file.
+     * ({@code ElementNaming.granularQName}), role stems {@code [A-Za-z0-9._-]}
+     * ({@code RoleConfig.sanitize}) and mirrored stems start with {@code mirrored-}, the same in
+     * every granular directory, so no rule file can ever share this name, and the orphan sweep's
+     * exclusion of it can never shelter a stale rule file.
      */
-    public static final String CLINE_SAFETY_FILE = "+vibetags-safety.md";
+    public static final String SAFETY_TIER_FILE = "+vibetags-safety.md";
+
+    /** Cline's safety file, {@link #SAFETY_TIER_FILE} inside {@code .clinerules/} (issue #648). */
+    public static final String CLINE_SAFETY_FILE = SAFETY_TIER_FILE;
 
     private ServiceRegistry() {}
 
@@ -155,6 +160,9 @@ public final class ServiceRegistry {
         map.put("cody_ignore",       root.resolve(".codyignore"));
         map.put("supermaven_ignore", root.resolve(".supermavenignore"));
         map.put("windsurf_granular", root.resolve(".windsurf/rules"));
+        // Inside that directory: the safety tier as a trigger: always_on rule (issue #684). Implicit,
+        // like cline_safety, so it has no opt-in key of its own.
+        map.put("windsurf_safety",   root.resolve(".windsurf/rules").resolve(SAFETY_TIER_FILE));
         map.put("continue_granular", root.resolve(".continue/rules"));
         map.put("tabnine_granular",  root.resolve(".tabnine/guidelines"));
         map.put("amazonq_granular",  root.resolve(".amazonq/rules"));
@@ -205,6 +213,8 @@ public final class ServiceRegistry {
         map.put("zencoder_granular",    root.resolve(".zencoder/rules"));
         // Devin Desktop, formerly Windsurf (#671)
         map.put("devin_granular",       root.resolve(".devin/rules"));
+        // The same always-on safety file in the preferred directory (issue #684)
+        map.put("devin_safety",         root.resolve(".devin/rules").resolve(SAFETY_TIER_FILE));
         map.put("devin_ignore",         root.resolve(".devinignore"));
         map.put("replit",               root.resolve("replit.md"));
         map.put("goose",                root.resolve(".goosehints"));

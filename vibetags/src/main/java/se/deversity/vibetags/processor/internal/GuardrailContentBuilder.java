@@ -141,6 +141,15 @@ public final class GuardrailContentBuilder {
                 contentByService.put("cline_safety", safetyContent);
             }
         }
+        // Devin Desktop's rules directories load every rule file on a glob match, so each gets an
+        // always-on safety file of its own (issue #684). Rendered whenever the directory is active;
+        // the renderer decides whether the tier is in it or already loaded from another file.
+        if (activeServices.contains("windsurf_granular")) {
+            putRendered(contentByService, "windsurf_safety", Platform.WINDSURF_SAFETY, model, context);
+        }
+        if (activeServices.contains("devin_granular")) {
+            putRendered(contentByService, "devin_safety", Platform.DEVIN_SAFETY, model, context);
+        }
 
         // Special case for AIExclude platform, which has strict activation criteria
         if (activeServices.contains("aiexclude") && (activeServices.contains("gemini") || activeServices.contains("codex"))) {
@@ -154,6 +163,14 @@ public final class GuardrailContentBuilder {
         // (granular owner set + elementRules are computed above, before the render loop)
 
         return new Result(contentByService, elementRules);
+    }
+
+    private static void putRendered(Map<String, String> contentByService, String serviceKey,
+                                    Platform platform, GuardrailModel model, RenderingContext context) {
+        String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
+        if (content != null) {
+            contentByService.put(serviceKey, content);
+        }
     }
 
     /**

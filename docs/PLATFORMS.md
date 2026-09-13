@@ -63,6 +63,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.windsurfrules` | Devin Desktop, formerly Windsurf (legacy single file, still read; see [below](#windsurf-is-now-devin-desktop)) | Markdown |
 | `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (granular, the fallback directory) | YAML front-matter + Markdown |
 | `.devin/rules/*.md` | Devin Desktop (granular, the preferred directory) | YAML front-matter (`trigger: glob`) + Markdown |
+| `.windsurf/rules/+vibetags-safety.md` | Devin Desktop, formerly Windsurf (the always-on safety tier, written whenever `.windsurf/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
+| `.devin/rules/+vibetags-safety.md` | Devin Desktop (the always-on safety tier, written whenever `.devin/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
 | `.rules` | Zed Editor | Markdown |
 | `.cody/config.json` | Sourcegraph Cody (**deprecated**, see below) | JSON (custom commands) |
 | `.codyignore` | Sourcegraph Cody (**deprecated**, see below) | Glob patterns |
@@ -452,19 +454,45 @@ docs document for it (#683):
   arrives with the file it protects rather than when the model judges it relevant. Until #683 the
   `.windsurf/rules/` files carried Cursor's header and no `trigger`, a mode the docs do not define;
   the next build replaces that header and keeps text outside the markers.
-- **How each Windsurf case maps to a trigger.** Only `glob` is used, and where the docs leave a gap
-  the choice is VibeTags':
+- **How each Windsurf case maps to a trigger.** Only `glob` and `always_on` are used, and where the
+  docs leave a gap the choice is VibeTags':
 
   | What VibeTags writes into `.windsurf/rules/` | Front matter | Basis |
   |---|---|---|
   | One file per annotated element | `trigger: glob`, `globs:` its class or package glob | The vendor's glob example |
   | A `.vibetags-roles` role file, or a file several reactor modules or case-colliding stems merge into | `trigger: glob`, `globs:` every glob joined with commas | VibeTags' choice: the docs show one pattern per rule and no list form, so the join is the one Copilot's `applyTo:` uses |
-  | The safety guardrails (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) | No separate file: they are in each element's glob file with its other rules | VibeTags' choice: no `always_on` rule file is written. With `.windsurfrules` also opted in, the collapsed index keeps them inline there, and the CLI rules page says `.windsurfrules` contents "are loaded as always-on rules" |
+  | The safety guardrails (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) | `+vibetags-safety.md`: `trigger: always_on`, no `globs:` | The Desktop activation table: an `always_on` rule's "Full rule content is included in the system prompt on every message." They also stay in each element's glob file. The next bullet says when the file only points elsewhere |
 
   No `description` key is written: the glob example has none, and the Desktop activation table says
   only a `model_decision` rule uses it. `manual`, `model_decision` and `agent` are never written,
   because each leaves loading to a person or to the model's judgement, and neither page says
   what `agent` does.
+- **The safety tier is always on, from a file of its own** (#684). A `trigger: glob` rule loads only
+  once a matching file is read or edited, so a project on a rules directory alone had no file that
+  kept the six safety buckets in front of the agent up front, which invariant 6 exists to prevent.
+  VibeTags therefore writes `+vibetags-safety.md` into `.devin/rules/` and `.windsurf/rules/`
+  whenever that directory is opted in. Its front matter is `trigger: always_on` and nothing else,
+  the shape of the vendor's own sample
+  ([Windsurf-Samples/cascade-customizations-catalog](https://github.com/Windsurf-Samples/cascade-customizations-catalog/blob/main/.windsurf/rules/always-on-rule-format.md)),
+  and its body is the safety sections `.windsurfrules` keeps inline when it collapses to an index.
+  It is written even when the safety tier is empty, so the last removed `@AILocked` leaves a file
+  loaded on every message. The `+` keeps the name out of reach of every element, role and mirrored
+  stem, as it does for Cline.
+  - **Not repeated when another always-loaded file carries it.** With `.windsurfrules` opted in, each
+    directory's safety file holds only a sentence naming `.windsurfrules`: Memories & Rules says
+    "The legacy single-file `.windsurfrules` at the workspace root is also still read", and the CLI
+    rules page says its contents "are loaded as always-on rules", so the tier would otherwise be in
+    the system prompt twice. With both directories and no `.windsurfrules`, the `.windsurf/rules/`
+    file names `.devin/rules/+vibetags-safety.md` instead, because the CLI loads the rule files of
+    both directories and Desktop prefers `.devin/`. Neither page says whether Desktop reads a
+    same-named file from both directories; either way one copy of the tier is loaded.
+  - **In a reactor the header is written once.** Every module renders the file with its own front
+    matter, and the reactor merge used to stack whole renderings, which put each module's header
+    inside its sub-marker and left a file created by the merge with no trigger at the top. The merge
+    now writes a front matter every module shares once, above the module sections. The Claude
+    skill's `SKILL.md` had the same repeated header in reactor builds and loses it the same way.
+  - Memories & Rules limits a workspace rule file to 12,000 characters. VibeTags does not measure the
+    safety file against that limit, and a project with enough safety annotations can exceed it.
 - **Opt into one rule directory, not both.** The same CLI page: "`.devin/` is the preferred location
   and takes precedence over `.windsurf/`. If both `.devin/global_rules.md` and
   `.windsurf/global_rules.md` exist, Devin CLI loads only `.devin/global_rules.md`. Rule files in

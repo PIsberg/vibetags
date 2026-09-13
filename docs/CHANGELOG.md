@@ -21,7 +21,10 @@ and saw exactly that diff, 1 to 7 files per repository, and no other content cha
 change came after the sweep, so the sweep's diff does not include it. With `.windsurf/rules/` opted
 in, the front matter of every rule file in it changes from Cursor's `description`/`globs`/`alwaysApply`
 header to `trigger: glob` and `globs:` (#683, under Fixed). That change also came after the sweep,
-so the sweep's diff does not include it either.
+so the sweep's diff does not include it either. With `.devin/rules/` or `.windsurf/rules/` opted in,
+the first build adds `+vibetags-safety.md` to that directory, and in a reactor
+`.claude/skills/vibetags-guardrails/SKILL.md` loses the copy of its front matter repeated inside
+each module's section (#684, under Added); neither is in the sweep's diff.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
@@ -78,6 +81,27 @@ vendor before anything changed, and the table under Deprecated lists every depre
   `DevinDesktopEndToEndTest` was run first against the code without either service, and all 5 of
   its original cases failed; its `.devinignore` case also went red with only the
   `AIIgnoreFormatter` arm removed.
+
+- **Devin Desktop's rule directories now get an always-on safety tier** (#684), in
+  `.devin/rules/+vibetags-safety.md` and `.windsurf/rules/+vibetags-safety.md`. Every rule VibeTags
+  writes there is `trigger: glob` and loads only when a matching file is read or edited, so a
+  project on a rules directory alone kept no `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit` or `@AISecure` guardrail in front of the agent up front. The new file opens with
+  `trigger: always_on`, which the docs say includes the "Full rule content ... in the system prompt
+  on every message", and carries the safety sections `.windsurfrules` keeps inline as an index. It
+  follows #648's shape: an implicit service per directory that takes the marker merge, write cache
+  and check mode from the aggregate path, is exempt from the orphan sweep, and is rendered even
+  when the tier is empty. With `.windsurfrules` opted in, which Devin Desktop still reads and loads
+  always on, the file names it instead of repeating the tier; with both directories, the
+  `.windsurf/rules/` file names the `.devin/rules/` one. The reactor merge now writes a front
+  matter every module shares once, above the module sections. It used to repeat it inside each
+  module's section, which left a file created by the merge with no trigger at the top, and gave
+  the Claude skill's `SKILL.md` a repeated header in reactor builds that it now loses.
+
+  `DevinSafetyTierEndToEndTest` was written first: 15 of its 16 cases failed against the branch
+  with no safety file written; the one that passed guards that the aggregate alone creates no
+  directory. With the file rendered and the merge unchanged, both reactor cases still failed on a
+  second `trigger:` line inside a module sub-marker.
 
 - **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
   order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,

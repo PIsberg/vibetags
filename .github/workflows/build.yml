@@ -294,6 +294,10 @@ jobs:
           # Granular directories are populated per class, not with a single file.
           test "$(ls -1 .kiro/steering/ | wc -l)" -gt 10 \
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
+          # A front-matter file is merged under one header, not one per module inside the module
+          # sub-markers, where no tool reads it (#684). The Claude skill is this reactor's case.
+          test "$(grep -c '^name: vibetags-guardrails' .claude/skills/vibetags-guardrails/SKILL.md)" = "1" \
+            || { echo "SKILL.md repeats its front matter per module (#684)"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
       - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
