@@ -396,7 +396,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
-- **Double.bot** (`.doubleignore`)
+- **Double.bot** (`.doubleignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Double documents no ignore file
 - **Firebase AI** (`.idx/airules.md`)
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
@@ -404,14 +404,14 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
 - **JetBrains Junie** (`.junie/guidelines.md`)
-- **Mentat** (`.mentatconfig.json`)
+- **Mentat** (`.mentatconfig.json`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): the CLI is archived and read `.mentat_config.json`
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
-- **Plandex** (`.plandex.yaml`)
+- **Plandex** (`.plandex.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Plandex never reads it
 - **Qwen** (`QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Replit Agent** (`replit.md`)
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Supermaven** (`.supermavenignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
-- **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
+- **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Sweep is now a JetBrains assistant
 - **Void Editor** (`.void/rules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Void is deprecated, and it read `.voidrules`, not this file
 - **Windsurf IDE** (`.windsurfrules`)
 
@@ -424,8 +424,8 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Repomix** (`.repomixignore`)
 - **Gitingest** (`.gitingestignore`)
 - **GPT context packer** (`.gptignore`)
-- **Ghostcoder** (`.ghostcoderignore`)
-- **Pieces for Developers** (`.piecesignore`)
+- **Ghostcoder** (`.ghostcoderignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): no tool reads it
+- **Pieces for Developers** (`.piecesignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Pieces documents no ignore file
 
 #### Granular / Directory-based formats
 - **Amazon Q** (`.amazonq/rules/*.md`)
@@ -438,12 +438,12 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Zencoder** (`.zencoder/rules/*.md`)
 - **Antigravity AI** (`.agents/rules/*.md`)
 - **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
-- **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
+- **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): PearAI documents no rules directory
 - **Amazon Kiro** (`.kiro/steering/*.md`)
 - **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`, `.rooignore`, plus a `.roomodes` "VibeTags Architect" custom mode)
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
-- **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
+- **Universal AI** (`.ai/rules/*.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): no tool or published convention reads it
 - **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
 
 > † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because

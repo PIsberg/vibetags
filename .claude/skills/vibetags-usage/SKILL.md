@@ -150,12 +150,12 @@ touch .supermavenignore                    # Supermaven (deprecated, #645)
 mkdir -p .continue/rules                   # Continue (granular per-class rules)
 mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
 mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
-mkdir -p .ai/rules                         # Universal AI standard (granular)
-mkdir -p .pearai/rules                     # PearAI (granular per-class rules)
-touch .mentatconfig.json                   # Mentat
-touch sweep.yaml                           # Sweep (GitHub App)
-touch .plandex.yaml                        # Plandex
-touch .doubleignore                        # Double.bot
+mkdir -p .ai/rules                         # Universal AI standard (granular; deprecated, #645)
+mkdir -p .pearai/rules                     # PearAI (granular per-class rules; deprecated, #645)
+touch .mentatconfig.json                   # Mentat (deprecated, #645)
+touch sweep.yaml                           # Sweep (GitHub App; deprecated, #645)
+touch .plandex.yaml                        # Plandex (deprecated, #645)
+touch .doubleignore                        # Double.bot (deprecated, #645)
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
@@ -171,7 +171,7 @@ mkdir -p .augment/rules                    # Augment Code (granular per-class ru
 touch .goosehints                          # goose (Block)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
-touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
+touch .repomixignore .gitingestignore .gptignore  # Context packers (.ghostcoderignore and .piecesignore are deprecated, #645)
 mkdir -p .void && touch .void/rules.md     # Void Editor (deprecated, #645)
 touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
 ```
@@ -1401,8 +1401,8 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q | Markdown |
-| `.ai/rules/*.md` | Universal AI standard | Markdown |
-| `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
+| `.ai/rules/*.md` | Universal AI standard (deprecated) | Markdown |
+| `.pearai/rules/*.md` | PearAI (deprecated) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
 | `.grok/rules/*.md` | Grok Build | Markdown |
 | `.agents/rules/*.md` | Antigravity | Markdown |
@@ -1412,7 +1412,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
-mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
+mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules
 mkdir -p .kiro/steering .grok/rules
 mkdir -p .agents/rules .aiassistant/rules .augment/rules
 mkdir -p .claude/rules .github/instructions
@@ -1649,14 +1649,14 @@ tasks.withType(JavaCompile) {
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
 | `.amazonq/rules/*.md` | Amazon Q (granular per-class rules) |
-| `.ai/rules/*.md` | Universal AI standard (granular) |
+| `.ai/rules/*.md` | Universal AI standard (granular; deprecated) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
-| `.pearai/rules/*.md` | PearAI (granular per-class rules) |
-| `.mentatconfig.json` | Mentat |
-| `sweep.yaml` | Sweep (GitHub App) |
-| `.plandex.yaml` | Plandex |
-| `.doubleignore` | Double.bot |
+| `.pearai/rules/*.md` | PearAI (granular per-class rules; deprecated) |
+| `.mentatconfig.json` | Mentat (deprecated) |
+| `sweep.yaml` | Sweep (GitHub App; deprecated) |
+| `.plandex.yaml` | Plandex (deprecated) |
+| `.doubleignore` | Double.bot (deprecated) |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
 | `.codeiumignore` | Codeium |
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
@@ -1678,5 +1678,5 @@ tasks.withType(JavaCompile) {
 | `.repomixignore` | Repomix (context packer) |
 | `.gitingestignore` | Gitingest (context packer) |
 | `.gptignore` | GPT context packer |
-| `.ghostcoderignore` | Ghostcoder |
-| `.piecesignore` | Pieces for Developers |
+| `.ghostcoderignore` | Ghostcoder (deprecated) |
+| `.piecesignore` | Pieces for Developers (deprecated) |

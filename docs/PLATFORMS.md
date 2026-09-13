@@ -69,13 +69,13 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q (granular) | Markdown |
-| `.ai/rules/*.md` | Universal AI standard (granular) | Markdown |
-| `.pearai/rules/*.md` | PearAI (granular) | YAML front-matter + Markdown |
+| `.ai/rules/*.md` | Universal AI standard (granular, **deprecated**, see below) | Markdown |
+| `.pearai/rules/*.md` | PearAI (granular, **deprecated**, see below) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro (granular) | Markdown |
-| `.mentatconfig.json` | Mentat | JSON config |
-| `sweep.yaml` | Sweep (GitHub App) | YAML rules list |
-| `.plandex.yaml` | Plandex | YAML guardrails |
-| `.doubleignore` | Double.bot | Glob patterns |
+| `.mentatconfig.json` | Mentat (**deprecated**, see below) | JSON config |
+| `sweep.yaml` | Sweep (GitHub App, **deprecated**, see below) | YAML rules list |
+| `.plandex.yaml` | Plandex (**deprecated**, see below) | YAML guardrails |
+| `.doubleignore` | Double.bot (**deprecated**, see below) | Glob patterns |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter | YAML profile |
 | `.codeiumignore` | Codeium | Glob patterns |
 | `GEMINI.md` | Google Gemini (official markdown) | Markdown |
@@ -105,8 +105,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
 | `.gitingestignore` | Gitingest (context packer) | Glob patterns |
 | `.gptignore` | GPT context packer | Glob patterns |
-| `.ghostcoderignore` | Ghostcoder | Glob patterns |
-| `.piecesignore` | Pieces for Developers | Glob patterns |
+| `.ghostcoderignore` | Ghostcoder (**deprecated**, see below) | Glob patterns |
+| `.piecesignore` | Pieces for Developers (**deprecated**, see below) | Glob patterns |
 | `.rooignore` | Roo Code | Glob patterns |
 | `.continueignore` | Continue | Glob patterns |
 | `.augmentignore` | Augment Code | Glob patterns |
@@ -284,6 +284,14 @@ across, then delete the deprecated file or directory.
 | `.supermavenignore` | **Product sunset, autocomplete kept for existing users.** Supermaven's own post of 21 November 2025, "Sunsetting Supermaven", refunds subscribers, ends agent conversations, recommends existing VS Code users move to Cursor, and keeps free autocomplete inference running for existing JetBrains and Neovim customers "for the foreseeable future". So the plugin still completes code for some users; what ended is the product as something to adopt. Cursor's 2024 acquisition post said the plugin "will remain maintained", which the 2025 post supersedes. Cursor Tab reads `.cursorignore`, which VibeTags writes. 5 public repositories. | [Sunsetting Supermaven](https://supermaven.com/blog/sunsetting-supermaven) (#677) |
 | `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags now writes the directory form as well (see [Cline's two shapes at one path](#clines-two-shapes-at-one-path)), so the file is kept for projects that already have it rather than as the recommended opt-in. |
 | `.void/rules.md` | **Product deprecated, and the path was never Void's.** The `voideditor/void` README opens "Void is now deprecated" and says the project is "no longer accepting contributions"; the repository was archived with its last push on 2026-06-02. It names no successor, only a list of community forks. Separately, Void's own `convertToLLMMessageService.ts` reads a `.voidrules` file from each workspace folder and nothing under `.void/`, so this output was not read by Void even while it was maintained. The log event records `replacement=none` (#665). | [Void README](https://github.com/voideditor/void), [`convertToLLMMessageService.ts`](https://github.com/voideditor/void/blob/main/src/vs/workbench/contrib/void/browser/convertToLLMMessageService.ts) |
+| `.mentatconfig.json` | **CLI archived, and the path was never Mentat's.** `AbanteAI/mentat` returns 404; the CLI lives on as the archived `AbanteAI/archive-old-cli-mentat` (last push 2025-01-07). Its `mentat/config.py` loads `.mentat_config.json`, and its configuration docs name the same file, so this output was never read (#666). | [`mentat/config.py`](https://github.com/AbanteAI/archive-old-cli-mentat/blob/HEAD/mentat/config.py) |
+| `sweep.yaml` | **Product changed.** The `sweepai/sweep` README now reads "We're now building an AI coding assistant for JetBrains", sweep.dev describes only the JetBrains plugin, and docs.sweep.dev returns HTTP 402. `sweep.yaml` configured the GitHub App the README no longer describes. Search summaries say the JetBrains plugin reads a `SWEEP.md` and falls back to `CLAUDE.md` and `AGENTS.md`, but the vendor docs that would confirm it did not load, so no replacement is named (#666). | [Sweep README](https://github.com/sweepai/sweep) |
+| `.plandex.yaml` | **Never read.** GitHub code search over `plandex-ai/plandex` finds no `.plandex.yaml` (the same search does find the `.plandex-v2` state directory, so the repository is indexed), and the README says Plandex Cloud is "Winding down as of 10/3/2025". Plandex loads context explicitly with `plandex load` (#666). | [Plandex README](https://github.com/plandex-ai/plandex) |
+| `.pearai/rules/` | **Never documented.** `trypear/pearai-app`, `pearai-submodule` and `PearAI-Roo-Code` are archived. PearAI's docs repository mentions `.pearaiignore` and the `~/.pearai/` index, and no rules directory; a clone of `pearai-submodule` has no reference to `.pearai/rules` (#666). | [PearAI docs source](https://github.com/trypear/pearai-documentation) |
+| `.ghostcoderignore` | **No tool reads it.** `aorwall/ghostcoder` redirects (HTTP 301) to `aorwall/moatless-tools`, a research project whose tree has no such file and whose code search finds no reference; every public hit for the name is in this repository (#666). | [moatless-tools](https://github.com/aorwall/moatless-tools) |
+| `.doubleignore` | **Never documented.** The 12 feature, pricing, changelog and blog pages listed in Double's `llms.txt` (43 KB in total; the changelog was last updated February 2025) mention no ignore or exclude mechanism (#666). | [Double docs index](https://docs.double.bot/llms.txt) |
+| `.piecesignore` | **Never documented.** Pieces' `llms-full.txt` (708 KB) has 0 mentions of `.piecesignore`; the exclusions it does document are per application, in the app's settings (#666). | [Pieces full docs](https://docs.pieces.app/llms-full.txt) |
+| `.ai/rules/` | **No vendor, no specification.** No tool or published convention checked reads this directory: the Agent Rules community standard is `AGENTS.md`, Block's `ai-rules` tool keeps its sources in `ai-rules/` (no dot), and aicodingrules.org lists per-tool paths only. This is a negative finding and would be overturned by one tool that reads the path (#666). | [agent-rules](https://github.com/agent-rules/agent-rules), [block/ai-rules](https://github.com/block/ai-rules) |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file

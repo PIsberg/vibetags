@@ -21,8 +21,9 @@ and saw exactly that diff, 1 to 7 files per repository, and no other content cha
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation, and each finding was then confirmed at the vendor before anything changed (#664 to
 #677). The Cody and Supermaven deprecation notices were rewritten to claim only what Sourcegraph's
-and Supermaven's own posts say (#677). Void's `.void/rules.md` is deprecated: Void is deprecated,
-and its source read `.voidrules`, never this path (#665). Everything this batch deprecates is
+and Supermaven's own posts say (#677). Void's `.void/rules.md` is deprecated: Void is deprecated, and its source
+read `.voidrules`, never this path (#665). All eight long-tail outputs in #666 were confirmed at
+their vendor as retired or never read, and are deprecated. Everything this batch deprecates is
 listed under Deprecated.
 
 ### Added
@@ -300,6 +301,14 @@ listed under Deprecated.
   | `.supermavenignore` | Supermaven announced its sunset on 21 November 2025, keeping free autocomplete only for existing JetBrains and Neovim users | `.cursorignore`, read by Cursor Tab |
   | `.clinerules` (file) | Cline's current docs describe only a `.clinerules/` directory | the `.clinerules/` directory; Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md` |
   | `.void/rules.md` | Void's README says it is deprecated and its repository is archived, and Void itself read `.voidrules`, not this file (#665) | none named by the vendor |
+  | `.mentatconfig.json` | The Mentat CLI is archived, and it read `.mentat_config.json`, not this file (#666) | none: nothing read it |
+  | `sweep.yaml` | Sweep's README now describes a JetBrains assistant, not the GitHub App that read this file, and the app's docs no longer load (#666) | none documented |
+  | `.plandex.yaml` | Plandex's source never names it, and Plandex Cloud has been winding down since 3 October 2025 (#666) | `plandex load` with the guardrail file, such as `AGENTS.md` |
+  | `.pearai/rules/` | PearAI's app repositories are archived and its docs name only `.pearaiignore` (#666) | none documented |
+  | `.ghostcoderignore` | The Ghostcoder repository redirects to `moatless-tools`, which names no such file (#666) | none: nothing reads it |
+  | `.doubleignore` | Double's documentation describes no ignore file (#666) | none documented |
+  | `.piecesignore` | Pieces' documentation describes no ignore file; it excludes applications in its settings (#666) | Pieces' application exclusions |
+  | `.ai/rules/` | No tool or published convention reads this directory (#666) | `AGENTS.md` |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

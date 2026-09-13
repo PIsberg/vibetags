@@ -470,14 +470,14 @@ touch .supermavenignore                      # Supermaven (deprecated, #645)
 mkdir -p .continue/rules                     # Continue
 mkdir -p .tabnine/guidelines                 # Tabnine
 mkdir -p .amazonq/rules                      # Amazon Q
-mkdir -p .ai/rules                           # Universal .ai/rules standard
+mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
 
 # --- Trae, Roo Code ---
 mkdir -p .trae/rules                         # Trae IDE
 mkdir -p .roo/rules                          # Roo Code
 
 # --- PearAI ---
-mkdir -p .pearai/rules                       # PearAI granular rules (per-class .md)
+mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #645)
 
 # --- Amazon Kiro ---
 mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
@@ -492,12 +492,12 @@ mkdir -p .augment/rules                      # Augment Code workspace rules (per
 touch .goosehints                            # goose project hints
 
 # --- Mentat, Sweep, Plandex ---
-touch .mentatconfig.json                     # Mentat AI assistant
-touch sweep.yaml                             # Sweep AI code review (GitHub App)
-touch .plandex.yaml                          # Plandex AI coding agent
+touch .mentatconfig.json                     # Mentat AI assistant (deprecated, #645)
+touch sweep.yaml                             # Sweep AI code review (GitHub App; deprecated, #645)
+touch .plandex.yaml                          # Plandex AI coding agent (deprecated, #645)
 
 # --- Double.bot, Open Interpreter, Codeium, Antigravity ---
-touch .doubleignore                          # Double.bot exclusion list
+touch .doubleignore                          # Double.bot exclusion list (deprecated, #645)
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
 touch .codeiumignore                         # Codeium exclusion list
 touch .antigravityignore                     # Antigravity AI exclusion list

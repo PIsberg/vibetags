@@ -85,6 +85,46 @@ public final class DeprecatedServices {
             "Void names no successor, only a list of community forks; move the guardrails to the file"
                 + " of the editor you use now",
             "none"));
+        // Long-tail outputs, each confirmed at the vendor before deprecating (#666). Where the
+        // vendor offers no file-based replacement the log event records replacement=none.
+        m.put("mentat", new Notice(".mentatconfig.json",
+            "the Mentat CLI repository is archived (AbanteAI/archive-old-cli-mentat), and it read"
+                + " .mentat_config.json, not this file",
+            "no tool reads this file, so there is nothing to move to",
+            "none"));
+        m.put("sweep", new Notice("sweep.yaml",
+            "Sweep's README now describes a JetBrains assistant rather than the GitHub App that read"
+                + " sweep.yaml, and the app's docs no longer load",
+            "Sweep documents no replacement for this file",
+            "none"));
+        m.put("plandex", new Notice(".plandex.yaml",
+            "Plandex's source never names this file, and Plandex Cloud has been winding down since"
+                + " 3 October 2025",
+            "load guardrail files into a plan explicitly, for example with plandex load AGENTS.md",
+            "AGENTS.md"));
+        m.put("pearai_granular", new Notice(".pearai/rules/",
+            "PearAI's app repositories are archived, and its docs name only .pearaiignore, never this"
+                + " directory",
+            "PearAI documents no rules directory to move to",
+            "none"));
+        m.put("ghostcoder_ignore", new Notice(".ghostcoderignore",
+            "the Ghostcoder repository now redirects to moatless-tools, a research project that names"
+                + " no such file",
+            "no tool reads this file, so there is nothing to move to",
+            "none"));
+        m.put("double_ignore", new Notice(".doubleignore",
+            "Double's documentation describes no ignore file",
+            "Double offers no file-based exclusion to move to",
+            "none"));
+        m.put("pieces_ignore", new Notice(".piecesignore",
+            "Pieces' full documentation describes no ignore file; it excludes applications in its"
+                + " settings",
+            "use the application exclusions in Pieces' own settings",
+            "none"));
+        m.put("ai_rules_granular", new Notice(".ai/rules/",
+            "no tool or published convention reads this directory",
+            "the cross-tool file that tools do read is AGENTS.md",
+            "AGENTS.md"));
         return Collections.unmodifiableMap(m);
     }
 

@@ -80,6 +80,15 @@ class DeprecatedServicesTest {
         m.put("cline", List.of(".clinerules", ".clinerules/"));
         // Void is deprecated and archived, and its source read .voidrules, not this path (#665)
         m.put("void", List.of(".void/rules.md", ".voidrules"));
+        // Long-tail outputs no vendor reads, each confirmed at the vendor (#666)
+        m.put("mentat", List.of(".mentatconfig.json", ".mentat_config.json"));
+        m.put("sweep", List.of("sweep.yaml", "JetBrains"));
+        m.put("plandex", List.of(".plandex.yaml", "plandex load"));
+        m.put("pearai_granular", List.of(".pearai/rules/", ".pearaiignore"));
+        m.put("ghostcoder_ignore", List.of(".ghostcoderignore", "moatless-tools"));
+        m.put("double_ignore", List.of(".doubleignore", "no ignore file"));
+        m.put("pieces_ignore", List.of(".piecesignore", "no ignore file"));
+        m.put("ai_rules_granular", List.of(".ai/rules/", "AGENTS.md"));
         return m;
     }
 
