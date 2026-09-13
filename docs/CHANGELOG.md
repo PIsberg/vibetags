@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cline's `.clinerules/` directory now gets an always-loaded safety tier** (#648), in
+  `.clinerules/+vibetags-safety.md`. Every rule file in the directory carries `paths:` front matter
+  and loads only once a file matching its glob is in the task's context, and Cline's aggregate is
+  the directory's own path, so a project on the directory form had no file that kept `@AILocked`,
+  `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit` or `@AISecure` in front of the agent up front. A
+  `@AIPrivacy` field was invisible to Cline until its class was already in context. Invariant 6
+  exists to prevent exactly that on every other platform.
+
+  The new file carries what `.cursorrules` keeps inline when its granular directory is opted in,
+  with no front matter, which Cline treats as always active (`rule-conditionals.ts` evaluates only
+  the conditions a rule declares; the docs: "Rules without frontmatter are always active"). It is an
+  implicit service under `cline_granular`, so it takes the marker merge, the reactor merge, the write
+  cache and check mode from the aggregate path rather than new code, and the orphan sweep now skips
+  any file another service writes inside a granular directory. The leading `+` keeps the name out of
+  reach of every element and role stem. It is rendered even when the safety tier is empty, because a
+  file that went quiet would keep the last removed `@AILocked` loaded with nothing to retire it.
+  60 config files.
+
+  `ClineSafetyTierEndToEndTest` was written first: five of its seven cases failed against `main`
+  with no safety file written, and the multi-module case was added before the merge was relied on.
+
 - **A warning when a hand-authored top-level key collides with a generated YAML block** (#635).
   VibeTags keeps text outside its markers, as it must, so a user's own `read:` in `.aider.conf.yml`
   survives next to the generated one and the document declares the key twice. PyYAML keeps the

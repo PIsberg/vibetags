@@ -89,6 +89,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.antigravityignore` | Antigravity AI | Glob patterns |
 | `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
+| `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-two-shapes-at-one-path)) | Markdown, no front matter |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
 | `.void/rules.md` | Void Editor | Markdown |
@@ -118,7 +119,7 @@ Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Roo Code, PearAI, Amazon Ki
 
 Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
-**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together.)
+**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together. The directory gets the safety buckets another way, in one always-loaded file inside it; see [Cline's two shapes at one path](#clines-two-shapes-at-one-path).)
 
 **Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
 
@@ -303,6 +304,26 @@ from Cline's source rather than its prose: `rule-helpers.ts` parses each file's 
 activates a rule when a `paths:` glob matches a file in the task's context, and that context includes
 files Cline is about to edit. A rule without front matter would load on every request instead.
 
+**The safety tier is always loaded, from a file of its own.** Every other platform with a granular
+directory keeps the six safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+`@AIAudit`, `@AISecure`) inline in its aggregate, so they reach the agent before it opens the file
+they protect. Cline's aggregate is the directory's own path, so a project on the directory had no
+such file, and a `@AIPrivacy` field reached Cline only once a file matching its class glob was in
+context (#648). VibeTags therefore writes one more file whenever `.clinerules/` is opted in:
+`.clinerules/+vibetags-safety.md`, carrying exactly what `.cursorrules` keeps inline when its own
+granular directory is opted in, and no front matter. Cline's `rule-conditionals.ts` evaluates only
+the conditions a rule declares, so a rule with none always passes, and its docs say so: "Rules
+without frontmatter are always active."
+
+- **The `+` is there on purpose.** Element rule files are named from `[A-Za-z0-9-]` and role files
+  from `[A-Za-z0-9._-]`, so no rule file can ever take this name, and the orphan sweep, which is
+  told to leave it alone, can never shelter a stale rule file by mistake.
+- **It is written even when there is nothing in the safety tier.** It is then a header and one
+  sentence. The alternative, writing nothing, leaves the last removed `@AILocked` in a file Cline
+  loads on every request, with nothing left to retire it.
+- In a reactor with `.clinerules/` at the root, every module's safety tier is merged into the one
+  file under per-module markers, the same merge `.cursorrules` gets.
+
 **Cline converts the file for you, and nothing is lost when it does.** Creating a workspace rule from
 Cline's UI while a `.clinerules` file exists turns the file into a directory and moves its content
 into `.clinerules/default-rules.md`. The next build sees a directory, switches to the directory form,
@@ -311,7 +332,8 @@ in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for ste
 
 **How the README counts it.** `.clinerules` is counted once among the config files and once among
 the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
-it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there.
+it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
+file inside the directory is a file of its own and is counted as one config file.
 
 ### Three ignore files added, and three checked and refused
 

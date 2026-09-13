@@ -92,7 +92,9 @@ public enum Platform {
     AIASSISTANT_GRANULAR("aiassistant_granular"),
     AUGMENT_GRANULAR("augment_granular"),
     ZENCODER_GRANULAR("zencoder_granular"),
-    CLINE_GRANULAR("cline_granular");
+    CLINE_GRANULAR("cline_granular"),
+    // The always-loaded safety file inside .clinerules/, implicitly activated by cline_granular (#648)
+    CLINE_SAFETY("cline_safety");
 
     private static final Map<String, Platform> BY_SERVICE_KEY = new HashMap<>();
 

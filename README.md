@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **58 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **60 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 

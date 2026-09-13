@@ -26,6 +26,7 @@ public final class PlatformRendererRegistry {
     private static final PlandexRenderer PLANDEX_RENDERER = new PlandexRenderer();
     private static final InterpreterRenderer INTERPRETER_RENDERER = new InterpreterRenderer();
     private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
+    private static final ClineSafetyRenderer CLINE_SAFETY_RENDERER = new ClineSafetyRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
     private static final ClaudeLocalRenderer CLAUDE_LOCAL_RENDERER = new ClaudeLocalRenderer();
@@ -168,6 +169,8 @@ public final class PlatformRendererRegistry {
                 return INTERPRETER_RENDERER;
             case CLINE:
                 return CLINE_RENDERER;
+            case CLINE_SAFETY:
+                return CLINE_SAFETY_RENDERER;
             case JUNIE:
                 return JUNIE_RENDERER;
             case FIREBASE:
