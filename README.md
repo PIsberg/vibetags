@@ -412,7 +412,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Supermaven** (`.supermavenignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Void Editor** (`.void/rules.md`)
+- **Void Editor** (`.void/rules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Void is deprecated, and it read `.voidrules`, not this file
 - **Windsurf IDE** (`.windsurfrules`)
 
 #### AI pull-request reviewers

@@ -172,7 +172,7 @@ touch .goosehints                          # goose (Block)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
 touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
 touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
-mkdir -p .void && touch .void/rules.md     # Void Editor
+mkdir -p .void && touch .void/rules.md     # Void Editor (deprecated, #645)
 touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
 ```
 
@@ -1670,7 +1670,7 @@ tasks.withType(JavaCompile) {
 | `.augment/rules/*.md` | Augment Code (granular per-class rules) |
 | `.goosehints` | goose (Block) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
-| `.void/rules.md` | Void Editor |
+| `.void/rules.md` | Void Editor (deprecated) |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer) |

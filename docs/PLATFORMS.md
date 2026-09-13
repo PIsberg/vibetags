@@ -92,7 +92,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-two-shapes-at-one-path)) | Markdown, no front matter |
 | `.junie/guidelines.md` | JetBrains Junie | Markdown |
 | `.idx/airules.md` | Firebase AI | Markdown |
-| `.void/rules.md` | Void Editor | Markdown |
+| `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
@@ -259,13 +259,13 @@ implicitly by `QWEN.md`, adding a `/refactor` command to projects that never ask
 an ordinary file-presence opt-in: regenerated when it exists, never created.
 `QwenRefactorCommandOptInEndToEndTest` pins it.
 
-### Four deprecated outputs whose tool has moved on
+### Deprecated outputs whose tool has moved on
 
 These are deprecated. They are still written, and an existing project's output does not change, but
 they stop being written in the next major version, tracked in
-[#645](https://github.com/PIsberg/vibetags/issues/645). Three of the four name a tool that no longer
-reads them, and the file-presence opt-in model means a path VibeTags names is a path a user may
-create.
+[#645](https://github.com/PIsberg/vibetags/issues/645). Each names a tool that has been retired, or a
+file its vendor does not document, and the file-presence opt-in model means a path VibeTags names is
+a path a user may create. Every row was confirmed at the vendor, not taken from a round-up.
 
 They were not simply removed. Removing a service stops an opted-in consumer's file regenerating, and
 that file then sits in the repository looking current while it drifts from the annotations, which
@@ -275,7 +275,7 @@ warning per compilation naming each file and its replacement, and `vibetags.log`
 found" note no longer offers them to a new project. The decision is recorded in #641.
 
 To move off one: create the replacement, move any hand-written content outside the VibeTags markers
-across, then delete the deprecated file.
+across, then delete the deprecated file or directory.
 
 | Output | Status | Evidence |
 |---|---|---|
@@ -283,6 +283,7 @@ across, then delete the deprecated file.
 | `.cody/config.json`, `.codyignore` | **Plans retired, files undocumented.** Sourcegraph's announcement (25 June 2025) ended Cody Free and Pro on 23 July 2025 and names Amp, which reads `AGENTS.md`, as the path forward for those users. It also says Cody Enterprise is "not affected" and "remains fully supported, actively developed", so the product itself is not retired. The deprecation rests on the second half: Sourcegraph's docs repository (`sourcegraph/docs`, checked 2026-09-13) names neither file. Enterprise excludes content through admin-set Context Filters, custom commands moved to the Prompt Library, and the only ignore file the docs ever mention is an experimental `.cody/ignore` in the technical changelog. 4 and 3 public repositories. | [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans), [Context Filters](https://sourcegraph.com/docs/cody/capabilities/ignore-context) (#677) |
 | `.supermavenignore` | **Product sunset, autocomplete kept for existing users.** Supermaven's own post of 21 November 2025, "Sunsetting Supermaven", refunds subscribers, ends agent conversations, recommends existing VS Code users move to Cursor, and keeps free autocomplete inference running for existing JetBrains and Neovim customers "for the foreseeable future". So the plugin still completes code for some users; what ended is the product as something to adopt. Cursor's 2024 acquisition post said the plugin "will remain maintained", which the 2025 post supersedes. Cursor Tab reads `.cursorignore`, which VibeTags writes. 5 public repositories. | [Sunsetting Supermaven](https://supermaven.com/blog/sunsetting-supermaven) (#677) |
 | `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags now writes the directory form as well (see [Cline's two shapes at one path](#clines-two-shapes-at-one-path)), so the file is kept for projects that already have it rather than as the recommended opt-in. |
+| `.void/rules.md` | **Product deprecated, and the path was never Void's.** The `voideditor/void` README opens "Void is now deprecated" and says the project is "no longer accepting contributions"; the repository was archived with its last push on 2026-06-02. It names no successor, only a list of community forks. Separately, Void's own `convertToLLMMessageService.ts` reads a `.voidrules` file from each workspace folder and nothing under `.void/`, so this output was not read by Void even while it was maintained. The log event records `replacement=none` (#665). | [Void README](https://github.com/voideditor/void), [`convertToLLMMessageService.ts`](https://github.com/voideditor/void/blob/main/src/vs/workbench/contrib/void/browser/convertToLLMMessageService.ts) |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file

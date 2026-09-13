@@ -21,7 +21,9 @@ and saw exactly that diff, 1 to 7 files per repository, and no other content cha
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation, and each finding was then confirmed at the vendor before anything changed (#664 to
 #677). The Cody and Supermaven deprecation notices were rewritten to claim only what Sourcegraph's
-and Supermaven's own posts say (#677). Everything this batch deprecates is listed under Deprecated.
+and Supermaven's own posts say (#677). Void's `.void/rules.md` is deprecated: Void is deprecated,
+and its source read `.voidrules`, never this path (#665). Everything this batch deprecates is
+listed under Deprecated.
 
 ### Added
 
@@ -287,9 +289,9 @@ and Supermaven's own posts say (#677). Everything this batch deprecates is liste
 
 ### Deprecated
 
-- **`gemini_instructions.md`, `.cody/config.json`, `.codyignore`, `.supermavenignore` and the
-  single-file `.clinerules` are deprecated**, and stop being written in the next major version
-  (#645). They are still written in this release, and no generated content changes.
+- **Outputs whose tool has moved on are deprecated**, and stop being written in the next major
+  version (#645). They are still written in this release, and no generated content changes. Each
+  row was confirmed at the vendor (#641, #664 to #677).
 
   | Deprecated | Why | Use instead |
   |---|---|---|
@@ -297,6 +299,7 @@ and Supermaven's own posts say (#677). Everything this batch deprecates is liste
   | `.cody/config.json`, `.codyignore` | Sourcegraph ended Cody Free and Pro on 23 July 2025 and its docs name neither file; Cody Enterprise continues | `AGENTS.md`, read by Amp, where Sourcegraph points Free and Pro users |
   | `.supermavenignore` | Supermaven announced its sunset on 21 November 2025, keeping free autocomplete only for existing JetBrains and Neovim users | `.cursorignore`, read by Cursor Tab |
   | `.clinerules` (file) | Cline's current docs describe only a `.clinerules/` directory | the `.clinerules/` directory; Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md` |
+  | `.void/rules.md` | Void's README says it is deprecated and its repository is archived, and Void itself read `.voidrules`, not this file (#665) | none named by the vendor |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

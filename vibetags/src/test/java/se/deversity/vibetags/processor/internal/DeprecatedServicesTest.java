@@ -66,7 +66,7 @@ class DeprecatedServicesTest {
 
     /**
      * Every deprecated output, keyed by service key: the path the warning names (a directory with a
-     * trailing '/'), then each replacement it must name. One row per notice, so a deprecation that
+     * trailing '/'), then each replacement, or vendor fact where there is no replacement, it must name. One row per notice, so a deprecation that
      * is announced in the docs but missing from {@code DeprecatedServices} fails here by name.
      */
     private static final Map<String, List<String>> EXPECTED = expected();
@@ -78,6 +78,8 @@ class DeprecatedServicesTest {
         m.put("cody_ignore", List.of(".codyignore", "AGENTS.md"));
         m.put("supermaven_ignore", List.of(".supermavenignore", ".cursorignore"));
         m.put("cline", List.of(".clinerules", ".clinerules/"));
+        // Void is deprecated and archived, and its source read .voidrules, not this path (#665)
+        m.put("void", List.of(".void/rules.md", ".voidrules"));
         return m;
     }
 

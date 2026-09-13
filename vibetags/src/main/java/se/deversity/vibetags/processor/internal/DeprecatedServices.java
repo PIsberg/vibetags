@@ -76,6 +76,15 @@ public final class DeprecatedServices {
             "Cline's current docs describe a .clinerules/ directory, not this single file",
             "use the .clinerules/ directory; Cline also reads .cursorrules, .windsurfrules and AGENTS.md",
             ".clinerules/"));
+        // Void: the README of voideditor/void opens "Void is now deprecated", and the repository is
+        // archived (last push 2026-06-02). Its convertToLLMMessageService read .voidrules, so this path was
+        // never Void's own (#665).
+        m.put("void", new Notice(".void/rules.md",
+            "Void's README says it is deprecated and its repository is archived, and Void itself read .voidrules,"
+                + " not this file",
+            "Void names no successor, only a list of community forks; move the guardrails to the file"
+                + " of the editor you use now",
+            "none"));
         return Collections.unmodifiableMap(m);
     }
 
