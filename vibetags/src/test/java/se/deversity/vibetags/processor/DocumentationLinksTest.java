@@ -186,6 +186,10 @@ class DocumentationLinksTest {
      * and deleting inside. A file that vanished between the directory listing and the visit then
      * surfaced as {@code UncheckedIOException: NoSuchFileException} and failed a test about links
      * in documentation, on CI, roughly one Gradle run in three. Pruning is also the faster walk.
+     *
+     * <p>A directory below the root that is its own git checkout, such as an agent worktree under
+     * {@code .claude/worktrees/}, is pruned the same way: its Markdown belongs to another branch
+     * ({@link NestedCheckouts}, issue #678).
      */
     private List<Path> markdownFiles() throws IOException {
         List<Path> found = new ArrayList<>();
@@ -193,7 +197,10 @@ class DocumentationLinksTest {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                 Path name = dir.getFileName();
-                return name != null && SKIP_DIRS.contains(name.toString())
+                if (name != null && SKIP_DIRS.contains(name.toString())) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                return NestedCheckouts.isNestedCheckout(REPO_ROOT, dir)
                     ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
             }
 

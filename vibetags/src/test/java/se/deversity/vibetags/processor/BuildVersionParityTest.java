@@ -1,20 +1,22 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -105,29 +107,51 @@ class BuildVersionParityTest {
 
     @Test
     void gradleBuildsAgreeWithTheParentOnEveryManagedCoordinate() {
-        Map<String, String> managed = managedVersions();
-        String revision = properties().get("revision");
-        List<String> problems = new ArrayList<>();
-
-        for (String file : gradleFiles()) {
-            String text = read(repoRoot().resolve(file));
-            Matcher m = GRADLE_COORD.matcher(text);
-            while (m.find()) {
-                String key = m.group(1) + ":" + m.group(2);
-                String actual = m.group(3);
-                String expected = key.startsWith("se.deversity.vibetags:")
-                    ? revision                       // VibeTags' own artifacts follow ${revision}
-                    : managed.get(key);
-                if (expected != null && !expected.equals(actual)) {
-                    problems.add(file + ": " + key + " is " + actual
-                        + " but vibetags-parent declares " + expected);
-                }
-            }
-        }
+        List<String> problems = coordinateMismatches(repoRoot(), gradleFiles(), managedVersions(),
+            properties().get("revision"));
         assertTrue(problems.isEmpty(),
             "Gradle cannot inherit from the parent POM, so these had to be kept in step by hand and "
                 + "were not. CI builds Maven and Gradle, so this fails only in the Gradle job:\n  "
                 + String.join("\n  ", problems));
+    }
+
+    /**
+     * A directory below the root that is its own git checkout belongs to another branch, not to
+     * this build (issue #678).
+     *
+     * <p>Agent worktrees under {@code .claude/worktrees/} are untracked full checkouts of older
+     * branches. The walk used to read their build files too, so a local {@code verify} during a
+     * version bump reported 171 mismatches, every one of them inside a worktree and none in the
+     * real tree, and stopped the build before PMD, CPD and SpotBugs ran. A clean CI checkout has
+     * no such directory, which is why only developer machines went red.
+     *
+     * <p>The root is a checkout too, with a {@code .git} directory in a clone and a {@code .git}
+     * file in a worktree, so the stale file at the root must still be reported: a rule that skipped
+     * every directory holding a {@code .git} would skip the whole repository and pass vacuously.
+     */
+    @Test
+    void aNestedGitCheckoutIsNotPartOfThisBuild(@TempDir Path root) throws IOException {
+        String stalePin = "implementation 'se.deversity.vibetags:vibetags-annotations:8.8.8'\n";
+        Files.writeString(root.resolve(".git"), "gitdir: /elsewhere/.git/worktrees/this\n");
+        plant(root.resolve("vibetags/build.gradle"), stalePin);
+
+        Path worktree = root.resolve(".claude/worktrees/agent-stale");
+        plant(worktree.resolve(".git"), "gitdir: /elsewhere/.git/worktrees/agent-stale\n");
+        plant(worktree.resolve("vibetags/build.gradle"), stalePin);
+
+        Path clone = root.resolve("corpus/some-clone");
+        Files.createDirectories(clone.resolve(".git"));
+        plant(clone.resolve("build.gradle"), stalePin);
+
+        assertEquals(
+            List.of("vibetags/build.gradle: se.deversity.vibetags:vibetags-annotations is 8.8.8"
+                + " but vibetags-parent declares 9.9.9"),
+            coordinateMismatches(root, discoverGradleFiles(root), Map.of(), "9.9.9"));
+    }
+
+    private static void plant(Path file, String content) throws IOException {
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, content);
     }
 
     /**
@@ -311,25 +335,74 @@ class BuildVersionParityTest {
      */
     private static List<String> gradleFiles() {
         Path root = repoRoot();
-        List<String> found = new ArrayList<>();
-        try (Stream<Path> walk = Files.walk(root)) {
-            walk.filter(Files::isRegularFile)
-                .filter(path -> {
-                    String name = path.getFileName().toString();
-                    return name.endsWith(".gradle") || name.endsWith(".gradle.kts");
-                })
-                .map(path -> root.relativize(path).toString().replace('\\', '/'))
-                .filter(rel -> Arrays.stream(rel.split("/")).noneMatch(NON_SOURCE_DIRS::contains))
-                .sorted()
-                .forEach(found::add);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        List<String> found = discoverGradleFiles(root);
         List<String> missing = GRADLE_ANCHORS.stream().filter(a -> !found.contains(a)).toList();
         assertTrue(missing.isEmpty(),
             "The walk over " + root + " did not find Gradle build files known to exist, so every "
                 + "assertion reading it is checking less than it claims: " + missing);
         return found;
+    }
+
+    /**
+     * The Gradle build files under {@code root}, as sorted root-relative paths with forward slashes.
+     *
+     * <p>The walk is pruned rather than filtered: it never enters a build-output directory, and it
+     * never enters a directory below the root that is its own git checkout, such as an agent
+     * worktree carrying an older branch's build files ({@link NestedCheckouts}).
+     */
+    static List<String> discoverGradleFiles(Path root) {
+        List<String> found = new ArrayList<>();
+        try {
+            Files.walkFileTree(root, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    Path name = dir.getFileName();
+                    if (name != null && NON_SOURCE_DIRS.contains(name.toString())) {
+                        return FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return NestedCheckouts.isNestedCheckout(root, dir)
+                        ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    String name = file.getFileName().toString();
+                    if (attrs.isRegularFile()
+                            && (name.endsWith(".gradle") || name.endsWith(".gradle.kts"))) {
+                        found.add(root.relativize(file).toString().replace('\\', '/'));
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        found.sort(null);
+        return found;
+    }
+
+    /**
+     * Every coordinate in {@code files} whose version disagrees with {@code managed}, or, for
+     * VibeTags' own artifacts, with {@code revision}. One line per mismatch.
+     */
+    static List<String> coordinateMismatches(Path root, List<String> files,
+                                             Map<String, String> managed, String revision) {
+        List<String> problems = new ArrayList<>();
+        for (String file : files) {
+            Matcher m = GRADLE_COORD.matcher(read(root.resolve(file)));
+            while (m.find()) {
+                String key = m.group(1) + ":" + m.group(2);
+                String actual = m.group(3);
+                String expected = key.startsWith("se.deversity.vibetags:")
+                    ? revision                       // VibeTags' own artifacts follow ${revision}
+                    : managed.get(key);
+                if (expected != null && !expected.equals(actual)) {
+                    problems.add(file + ": " + key + " is " + actual
+                        + " but vibetags-parent declares " + expected);
+                }
+            }
+        }
+        return problems;
     }
 
     private static Path repoRoot() {

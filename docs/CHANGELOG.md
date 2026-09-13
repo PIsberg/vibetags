@@ -359,6 +359,20 @@ or removed in this release on the strength of that check; each finding is tracke
   `ClineDirectoryOptInTest` was written first and confirmed red against `main`. The directory form
   itself is written since #642, above under Added.
 
+- **`BuildVersionParityTest` no longer reads build files from nested git checkouts** (#678). Its
+  Gradle discovery walked the whole directory tree, including agent worktrees under
+  `.claude/worktrees/`, each an untracked checkout of an older branch. Preparing this release, a
+  local `mvn -B clean verify -Pe2e` failed on 171 mismatches, all inside worktrees and none in the
+  real tree, and stopped before PMD, CPD and SpotBugs ran. CI was unaffected because a clean
+  checkout has no such directory. The walk now prunes any directory below the root that holds a
+  `.git` file or directory; the root itself is still walked, and the named-anchor guard still
+  fails a walk that finds nothing. `DocumentationLinksTest` and `DocumentedCommandsTest` walked the
+  tree the same way and now prune by the same rule. Test-only change; nothing ships.
+
+  The new `aNestedGitCheckoutIsNotPartOfThisBuild` case was red against the old walk (it reported
+  the planted worktree and clone files alongside the real one), and removing the root exemption
+  from the fix turns it and two existing cases red.
+
 ## [1.3.4] - 2026-09-10
 
 ### Fixed
