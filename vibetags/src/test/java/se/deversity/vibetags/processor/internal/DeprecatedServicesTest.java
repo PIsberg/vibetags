@@ -93,6 +93,28 @@ class DeprecatedServicesTest {
     }
 
     @Test
+    @DisplayName("each notice claims no more than its vendor's own statement says (#677)")
+    void noticesMatchTheirPrimarySource(@TempDir Path root) throws IOException {
+        touch(root, "CLAUDE.md");
+        touch(root, ".cody/config.json");
+        touch(root, ".supermavenignore");
+        List<String> warnings = new ArrayList<>();
+
+        ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
+            ServiceRegistry.buildServiceFileMap(root));
+
+        String warning = String.join("\n", warnings);
+        // supermaven.com/blog/sunsetting-supermaven (21 November 2025) keeps free autocomplete for
+        // existing JetBrains and Neovim users, so "discontinued" overstated it.
+        assertTrue(warning.contains("21 November 2025") && warning.contains("JetBrains and Neovim"),
+            "the Supermaven notice cites the sunset post and what it keeps running:\n" + warning);
+        assertFalse(warning.contains("discontinued"), "no discontinuation claim:\n" + warning);
+        // Sourcegraph's announcement ended Cody Free and Pro only; Cody Enterprise continues.
+        assertTrue(warning.contains("23 July 2025") && warning.contains("Cody Enterprise"),
+            "the Cody notice says which plans ended and that Enterprise did not:\n" + warning);
+    }
+
+    @Test
     @DisplayName("a project with no deprecated output opted in gets no deprecation warning")
     void currentOutputsDoNotWarn(@TempDir Path root) throws IOException {
         touch(root, "CLAUDE.md");

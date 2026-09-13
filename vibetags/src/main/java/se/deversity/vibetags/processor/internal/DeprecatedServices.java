@@ -52,17 +52,24 @@ public final class DeprecatedServices {
             "no Google product documents reading this file",
             "use GEMINI.md for the Gemini CLI or .gemini/styleguide.md for Gemini Code Assist",
             "GEMINI.md,.gemini/styleguide.md"));
+        // Cody: Sourcegraph ended Free and Pro only, and Cody Enterprise is still supported (#677),
+        // so the notice rests on that plus the file being absent from Sourcegraph's docs.
         m.put("cody", new Notice(".cody/config.json",
-            "Sourcegraph retired Cody Free and Pro in July 2025",
-            "its successor, Amp, reads AGENTS.md",
+            "Sourcegraph ended Cody Free and Pro on 23 July 2025, and its docs do not describe this file;"
+                + " Cody Enterprise continues, and its docs replace custom commands with the Prompt Library",
+            "Sourcegraph points Free and Pro users to Amp, which reads AGENTS.md",
             "AGENTS.md"));
         m.put("cody_ignore", new Notice(".codyignore",
-            "Sourcegraph retired Cody Free and Pro in July 2025",
-            "its successor, Amp, reads AGENTS.md",
+            "Sourcegraph ended Cody Free and Pro on 23 July 2025, and its docs do not describe this file;"
+                + " Cody Enterprise excludes content through admin Context Filters",
+            "Sourcegraph points Free and Pro users to Amp, which reads AGENTS.md",
             "AGENTS.md"));
+        // Supermaven: the sunset post keeps free autocomplete running for existing JetBrains and
+        // Neovim users, so "discontinued" would overstate it (#677).
         m.put("supermaven_ignore", new Notice(".supermavenignore",
-            "the standalone Supermaven product was discontinued in November 2025",
-            "its technology ships in Cursor Tab, which reads .cursorignore",
+            "Supermaven announced its sunset on 21 November 2025, keeping only free autocomplete for"
+                + " existing JetBrains and Neovim users",
+            "it recommends VS Code users move to Cursor, whose Tab reads .cursorignore",
             ".cursorignore"));
         m.put("cline", new Notice(".clinerules",
             "Cline's current docs describe a .clinerules/ directory, not this single file",

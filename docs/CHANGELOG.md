@@ -19,10 +19,9 @@ until you do. The consumer sweep for this release built all five downstream repo
 and saw exactly that diff, 1 to 7 files per repository, and no other content change.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
-documentation. Two products VibeTags writes for have archived repositories: Roo Code (archived
-2026-05-15; `.roo/rules/`, `.roomodes`, and `.rooignore`, which is new in this release) and Void
-(`.void/rules.md`). Several more paths are legacy, renamed or undocumented. Nothing is deprecated
-or removed in this release on the strength of that check; each finding is tracked in #664 to #677.
+documentation, and each finding was then confirmed at the vendor before anything changed (#664 to
+#677). The Cody and Supermaven deprecation notices were rewritten to claim only what Sourcegraph's
+and Supermaven's own posts say (#677). Everything this batch deprecates is listed under Deprecated.
 
 ### Added
 
@@ -216,9 +215,12 @@ or removed in this release on the strength of that check; each finding is tracke
 - Four generated outputs are now documented as naming a tool that has moved on, in
   [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
   (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`
-  (Cody Free and Pro retired 23 July 2025; the successor Amp reads `AGENTS.md`),
-  `.supermavenignore` (standalone product discontinued November 2025; the technology is in Cursor
-  Tab and VibeTags writes `.cursorignore`), and the single-file `.clinerules`.
+  (Cody Free and Pro ended 23 July 2025, Sourcegraph points those users to Amp, which reads
+  `AGENTS.md`, and Sourcegraph's docs name neither file; Cody Enterprise continues),
+  `.supermavenignore` (Supermaven announced its sunset on 21 November 2025, keeping free
+  autocomplete only for existing JetBrains and Neovim users; Cursor Tab reads `.cursorignore`), and
+  the single-file `.clinerules`. Both notices were first written from search summaries and claimed
+  more than the vendors said; they now quote the vendors' own posts (#677).
 
   Removing a service stops an opted-in consumer's file regenerating, which leaves it looking current
   while drifting from the annotations -- worse than a file nobody reads. Removal is a breaking
@@ -292,8 +294,8 @@ or removed in this release on the strength of that check; each finding is tracke
   | Deprecated | Why | Use instead |
   |---|---|---|
   | `gemini_instructions.md` | No Google product documents reading it | `GEMINI.md` (Gemini CLI), `.gemini/styleguide.md` (Gemini Code Assist) |
-  | `.cody/config.json`, `.codyignore` | Sourcegraph retired Cody Free and Pro in July 2025 | `AGENTS.md`, read by its successor Amp |
-  | `.supermavenignore` | Standalone Supermaven discontinued in November 2025 | `.cursorignore`, read by Cursor Tab |
+  | `.cody/config.json`, `.codyignore` | Sourcegraph ended Cody Free and Pro on 23 July 2025 and its docs name neither file; Cody Enterprise continues | `AGENTS.md`, read by Amp, where Sourcegraph points Free and Pro users |
+  | `.supermavenignore` | Supermaven announced its sunset on 21 November 2025, keeping free autocomplete only for existing JetBrains and Neovim users | `.cursorignore`, read by Cursor Tab |
   | `.clinerules` (file) | Cline's current docs describe only a `.clinerules/` directory | the `.clinerules/` directory; Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md` |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
