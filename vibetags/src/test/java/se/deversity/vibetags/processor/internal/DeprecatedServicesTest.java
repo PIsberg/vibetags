@@ -89,6 +89,8 @@ class DeprecatedServicesTest {
         m.put("double_ignore", List.of(".doubleignore", "no ignore file"));
         m.put("pieces_ignore", List.of(".piecesignore", "no ignore file"));
         m.put("ai_rules_granular", List.of(".ai/rules/", "AGENTS.md"));
+        // Claude Code's docs never mention .claudeignore; Read deny rules are its mechanism (#667)
+        m.put("claude_ignore", List.of(".claudeignore", "permissions.deny", ".claude/settings.json"));
         return m;
     }
 

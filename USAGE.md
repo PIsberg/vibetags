@@ -514,7 +514,7 @@ mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
-touch CLAUDE.md .claudeignore                # Claude
+touch CLAUDE.md                              # Claude (.claudeignore is deprecated, #645: use Read deny rules in .claude/settings.json)
 touch QWEN.md .qwenignore                   # Qwen
 mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (its own opt-in)
 touch .aiexclude GEMINI.md                   # Gemini
@@ -544,7 +544,6 @@ Create one or more of the following files in your project root to opt in:
   CLAUDE.md
   .github/copilot-instructions.md
   .cursorignore
-  .claudeignore
   .copilotignore
   .qwenignore
 ```

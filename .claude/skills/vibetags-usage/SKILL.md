@@ -118,7 +118,7 @@ If that first line is not your project root, that is the whole bug.
 VibeTags **never creates files** — it only updates files that already exist. Create empty placeholder files for each platform you want to support:
 
 ```bash
-touch CLAUDE.md .claudeignore              # Claude / Claude Code
+touch CLAUDE.md                            # Claude / Claude Code (.claudeignore is deprecated, #645)
 touch CLAUDE.local.md                      # Claude Code (local override)
 mkdir -p .claude/rules                     # Claude Code (granular per-class rules)
 mkdir -p .claude/skills/vibetags-guardrails && touch .claude/skills/vibetags-guardrails/SKILL.md  # Claude Code (Skill)
@@ -1620,7 +1620,7 @@ tasks.withType(JavaCompile) {
 
 | File(s) | Platform |
 |---|---|
-| `CLAUDE.md`, `.claudeignore` | Claude / Claude Code |
+| `CLAUDE.md`, `.claudeignore` (deprecated) | Claude / Claude Code |
 | `CLAUDE.local.md` | Claude Code (local override) |
 | `.claude/rules/*.md` | Claude Code (granular per-class rules) |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |

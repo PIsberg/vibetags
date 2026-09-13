@@ -1142,8 +1142,9 @@ class AIGuardrailProcessorProcessTest {
 
     @Test
     void warn_withNonNullLog_executesLogWarn(@TempDir Path tempDir) throws IOException {
-        // Signal file: claude is active, but .claudeignore is absent → warning fires
-        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        // Signal file: cursor is active, but .cursorignore is absent → warning fires. (Claude used to
+        // be the signal here; .claudeignore is deprecated and no longer suggested, #667.)
+        Files.createFile(tempDir.resolve(".cursorrules"));
 
         List<String> warnings = new ArrayList<>();
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
@@ -1185,8 +1186,8 @@ class AIGuardrailProcessorProcessTest {
             VibeTagsLogger.shutdown();
         }
 
-        assertTrue(warnings.stream().anyMatch(w -> w.contains(".claudeignore")),
-            "Should emit a WARNING about missing .claudeignore when @AIIgnore is used and claude is active");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains(".cursorignore")),
+            "Should emit a WARNING about missing .cursorignore when @AIIgnore is used and cursor is active");
     }
 
     // -----------------------------------------------------------------------

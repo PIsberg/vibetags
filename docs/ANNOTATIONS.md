@@ -171,7 +171,7 @@ rather than to VibeTags:
 - `@AIThreadAffinity` with a blank `marshalVia` — advisory; a caller on the wrong thread is told "no" with no way to comply
 - `@AIKeepInSync` with empty `mirrors[]` — no-op; nothing is kept in sync
 - `@AIKeepInSync` + `@AIContract` on the same element — NOTE; verify the mirrors track something other than the frozen signature
-- `@AIIgnore` present but no `.cursorignore` / `.claudeignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation
+- `@AIIgnore` present but no `.cursorignore` / `.copilotignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation (no warning names a deprecated file, so `.claudeignore` is not suggested, #667)
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
 
 **Modern-Java detectors:**

@@ -38,7 +38,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.cursorignore` | Cursor IDE | Glob patterns |
 | `CLAUDE.md` | Claude | XML + Markdown |
 | `CLAUDE.local.md` | Claude Code (local override) | XML + Markdown |
-| `.claudeignore` | Claude | Glob patterns |
+| `.claudeignore` | Claude (**deprecated**, see below) | Glob patterns |
 | `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
 | `.agents/skills/vibetags-guardrails/SKILL.md` | Agent Skills (cross-client) | YAML front-matter + Markdown |
@@ -292,6 +292,7 @@ across, then delete the deprecated file or directory.
 | `.doubleignore` | **Never documented.** The 12 feature, pricing, changelog and blog pages listed in Double's `llms.txt` (43 KB in total; the changelog was last updated February 2025) mention no ignore or exclude mechanism (#666). | [Double docs index](https://docs.double.bot/llms.txt) |
 | `.piecesignore` | **Never documented.** Pieces' `llms-full.txt` (708 KB) has 0 mentions of `.piecesignore`; the exclusions it does document are per application, in the app's settings (#666). | [Pieces full docs](https://docs.pieces.app/llms-full.txt) |
 | `.ai/rules/` | **No vendor, no specification.** No tool or published convention checked reads this directory: the Agent Rules community standard is `AGENTS.md`, Block's `ai-rules` tool keeps its sources in `ai-rules/` (no dot), and aicodingrules.org lists per-tool paths only. This is a negative finding and would be overturned by one tool that reads the path (#666). | [agent-rules](https://github.com/agent-rules/agent-rules), [block/ai-rules](https://github.com/block/ai-rules) |
+| `.claudeignore` | **Not documented by the vendor.** `code.claude.com/docs/llms-full.txt` (9.2 MB, fetched 2026-09-13) has 0 mentions of `.claudeignore`. Claude Code's [permissions page](https://code.claude.com/docs/en/permissions) says: "To block Claude's file tools from reading a file or directory, add a `Read` deny rule for its path, such as `Read(./.env)` or `Read(./secrets/**)`", with a paste-ready example under [Exclude sensitive files](https://code.claude.com/docs/en/settings-reference#exclude-sensitive-files). The release re-check counted about 3,900 public repositories carrying a `.claudeignore` (not re-measured); whatever reads it there is not Claude Code as documented. This repository dogfoods the file, so its own build prints the warning. The `@AIIgnore` orphan warning no longer tells a Claude project to create the file (#667). | [Claude Code permissions](https://code.claude.com/docs/en/permissions) |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file

@@ -93,10 +93,12 @@ class AIGuardrailProcessorUnitTest {
         Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        assertEquals(3, warnings.size(), "Should have 3 warnings (cursor, claude, and qwen ignore missing)");
+        // Claude is active but gets no warning: .claudeignore is deprecated (#667), so suggesting it
+        // would opt the project into an output the same build warns about.
+        assertEquals(2, warnings.size(), "Should have 2 warnings (cursor and qwen ignore missing): " + warnings);
         assertTrue(warnings.get(0).contains(".cursorignore"));
-        assertTrue(warnings.get(1).contains(".claudeignore"));
-        assertTrue(warnings.get(2).contains(".qwenignore"));
+        assertTrue(warnings.get(1).contains(".qwenignore"));
+        assertFalse(warnings.stream().anyMatch(w -> w.contains(".claudeignore")), warnings.toString());
     }
 
     @Test

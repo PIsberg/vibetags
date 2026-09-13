@@ -23,8 +23,9 @@ documentation, and each finding was then confirmed at the vendor before anything
 #677). The Cody and Supermaven deprecation notices were rewritten to claim only what Sourcegraph's
 and Supermaven's own posts say (#677). Void's `.void/rules.md` is deprecated: Void is deprecated, and its source
 read `.voidrules`, never this path (#665). All eight long-tail outputs in #666 were confirmed at
-their vendor as retired or never read, and are deprecated. Everything this batch deprecates is
-listed under Deprecated.
+their vendor as retired or never read, and are deprecated. `.claudeignore` is deprecated because
+Claude Code's documentation never mentions it, and the `@AIIgnore` orphan warning stops telling
+Claude projects to create it (#667). Everything this batch deprecates is listed under Deprecated.
 
 ### Added
 
@@ -309,6 +310,7 @@ listed under Deprecated.
   | `.doubleignore` | Double's documentation describes no ignore file (#666) | none documented |
   | `.piecesignore` | Pieces' documentation describes no ignore file; it excludes applications in its settings (#666) | Pieces' application exclusions |
   | `.ai/rules/` | No tool or published convention reads this directory (#666) | `AGENTS.md` |
+  | `.claudeignore` | Claude Code's documentation never mentions it (#667) | `Read` deny rules under `permissions.deny` in `.claude/settings.json` |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a

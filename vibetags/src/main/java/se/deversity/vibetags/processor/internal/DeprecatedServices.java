@@ -125,6 +125,13 @@ public final class DeprecatedServices {
             "no tool or published convention reads this directory",
             "the cross-tool file that tools do read is AGENTS.md",
             "AGENTS.md"));
+        // Claude Code: code.claude.com/docs/llms-full.txt has no mention of .claudeignore; the
+        // permissions page documents Read deny rules as the way to keep a path from Claude (#667).
+        m.put("claude_ignore", new Notice(".claudeignore",
+            "Claude Code's documentation never mentions this file",
+            "Claude Code keeps files from Claude with Read deny rules under permissions.deny in"
+                + " .claude/settings.json",
+            ".claude/settings.json"));
         return Collections.unmodifiableMap(m);
     }
 

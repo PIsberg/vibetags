@@ -1117,7 +1117,7 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### Claude
 
-**Files:** `CLAUDE.md` + `.claudeignore`
+**Files:** `CLAUDE.md` + `.claudeignore` (deprecated, #667)
 
 **Behavior:** Claude treats `CLAUDE.md` as foundational context. XML tags appeal to Claude's parsing strengths. Enforces `<rule>` elements strictly.
 
