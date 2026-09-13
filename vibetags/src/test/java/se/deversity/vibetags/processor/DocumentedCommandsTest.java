@@ -342,7 +342,10 @@ class DocumentedCommandsTest {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                 Path name = dir.getFileName();
-                return name != null && SKIP_DIRS.contains(name.toString())
+                if (name != null && SKIP_DIRS.contains(name.toString())) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                return NestedCheckouts.isNestedCheckout(REPO_ROOT, dir)
                     ? FileVisitResult.SKIP_SUBTREE
                     : FileVisitResult.CONTINUE;
             }
