@@ -33,7 +33,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 
 | File | Platform | Format |
 |---|---|---|
-| `.cursorrules` | Cursor IDE | Markdown |
+| `.cursorrules` | Cursor IDE (legacy, still written, not deprecated; see [below](#cursorrules-is-legacy-and-not-deprecated)) | Markdown |
 | `.cursor/rules/*.mdc` | Cursor IDE (granular) | YAML front-matter + Markdown |
 | `.cursorignore` | Cursor IDE | Glob patterns |
 | `CLAUDE.md` | Claude | XML + Markdown |
@@ -328,6 +328,24 @@ Zoo Code's source has no `.zooignore` or `.zoomodes`. The service keys (`roo_gra
 `roo_modes`, `roo_ignore`) and the generated file headers keep the Roo Code name: a key is what
 `vibetags init --platforms` takes, so renaming one would break a working command, and the paths it
 names did not change.
+
+### `.cursorrules` is legacy, and not deprecated
+
+Cursor calls the single `.cursorrules` file legacy. Its
+[help page on rules](https://cursor.com/help/customization/rules) says "The `.cursorrules` file in
+your project root is legacy and will be deprecated", and tells users to copy its content into a
+rule under `.cursor/rules/` set to Always Apply. The [rules documentation](https://cursor.com/docs/rules)
+no longer mentions the file: "Project rules live in `.cursor/rules` as `.mdc` files". Neither page
+says Cursor has stopped reading `.cursorrules` (both checked 2026-09-13). `.cursor/rules/` is the
+current form, and VibeTags writes it.
+
+VibeTags keeps writing `.cursorrules` with no deprecation warning (#672). "Will be deprecated" is
+an intent with no date, and the rows above are for outputs whose tool has retired them or never
+read them. The file also reaches past Cursor: Cline's loader reads it (see the `.clinerules` row
+above), so a warning would tell projects to drop a file another tool still uses. A new project on
+Cursor should opt into `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules`
+collapses to the scoped-rules index and keeps only the safety tier inline. The file gets a
+`DeprecatedServices` notice when Cursor says it no longer reads it.
 
 ### Cline's two shapes at one path
 

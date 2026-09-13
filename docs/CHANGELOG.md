@@ -21,8 +21,9 @@ and saw exactly that diff, 1 to 7 files per repository, and no other content cha
 change came after the sweep, so the sweep's diff does not include it.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
-documentation, and each finding was confirmed at the vendor before anything changed (#664 to
-#677). This release acts on all of them, and the table under Deprecated lists every output:
+documentation (#664 to #677). This release acts on the findings below, each confirmed at the
+vendor before anything changed, and the table under Deprecated lists every deprecated output.
+#671 and #673 to #675 stay open:
 
 - Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
   `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
@@ -39,6 +40,8 @@ documentation, and each finding was confirmed at the vendor before anything chan
   ahead of them (#676).
 - No Google product reads `.gemini/rules/`, so `GEMINI.md`'s index note stops saying those files
   load automatically and tells the agent to open them (#669, under Changed).
+- Cursor calls `.cursorrules` legacy and says it "will be deprecated", but not that it stopped
+  reading it, and Cline reads it too. PLATFORMS.md now says so; it is not deprecated (#672).
 - The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
   Sourcegraph's and Supermaven's own posts (#677).
 
