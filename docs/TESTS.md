@@ -163,8 +163,8 @@ failed with the `TelemetryRegistry` error above: `BUILD FAILURE` for a passing t
 profile now gives each execution its own `<test>`: `default-test` appends `!**/*AsyncTest`,
 `async-tests` appends a `%regex` exclusion of every other class. Whether an execution fails when
 the pattern matches nothing in it is computed from the pattern by `build-helper:regex-properties`:
-`async-tests` insists on a match only if a non-negated entry names an `AsyncTest`, `default-test`
-unless every entry does. A mixed `-Dtest=A,BAsyncTest` runs each class in its own fork, and a
+`async-tests` insists on a match only if a non-negated entry mentions `Async`, `default-test`
+unless every entry does (so `-Dtest=VibeTagsLoggerAsync*` counts as async). A mixed `-Dtest=A,BAsyncTest` runs each class in its own fork, and a
 typo such as `-Dtest=NoSuchTest` still fails with `No tests matching pattern`.
 `NamedTestExecutionRoutingTest` evaluates that wiring against a case table; Gradle has no second
 execution and needs none of it.

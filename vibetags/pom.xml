@@ -521,7 +521,9 @@
                  async-tests drops everything else. That can leave one execution with nothing to
                  run, which failIfNoSpecifiedTests would report as a failure, so each execution's
                  flag is computed from the pattern: async-tests insists on a match only when a
-                 non-negated entry names an AsyncTest, default-test unless every entry does.
+                 non-negated entry mentions Async, default-test unless every entry does. "Async",
+                 not "AsyncTest", so a shortened glob such as VibeTagsLoggerAsync* counts as
+                 async; no ordinary test class has Async in its name.
                  A typo therefore still fails the build instead of running nothing green.
                  regex-properties keeps the input value when a regex does not match, so the
                  *.raw step yields "true"/"false" or the pattern itself, and the second step
@@ -544,14 +546,14 @@
                                         <regexPropertySetting>
                                             <name>vibetags.test.async.failIfNoSpecifiedTests.raw</name>
                                             <value>${test}</value>
-                                            <regex>^(?:.*,)?\s*+(?!!)[^,]*AsyncTest.*$</regex>
+                                            <regex>^(?:.*,)?\s*+(?!!)[^,]*Async.*$</regex>
                                             <replacement>true</replacement>
                                             <failIfNoMatch>false</failIfNoMatch>
                                         </regexPropertySetting>
                                         <regexPropertySetting>
                                             <name>vibetags.test.default.failIfNoSpecifiedTests.raw</name>
                                             <value>${test}</value>
-                                            <regex>^\s*+(?:![^,]*|[^,]*AsyncTest[^,]*)(?:,\s*+(?:![^,]*|[^,]*AsyncTest[^,]*))*$</regex>
+                                            <regex>^\s*+(?:![^,]*|[^,]*Async[^,]*)(?:,\s*+(?:![^,]*|[^,]*Async[^,]*))*$</regex>
                                             <replacement>false</replacement>
                                             <failIfNoMatch>false</failIfNoMatch>
                                         </regexPropertySetting>

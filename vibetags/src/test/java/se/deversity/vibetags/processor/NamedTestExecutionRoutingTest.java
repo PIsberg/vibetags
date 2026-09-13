@@ -64,6 +64,7 @@ class NamedTestExecutionRoutingTest {
         "NoSuchAsyncTest | false | true",
         "VibeTagsLoggerAsyncTest#someMethod | false | true",
         "*AsyncTest | false | true",
+        "VibeTagsLoggerAsync* | false | true",
         "AnnotationMirrorAnchorTest,VibeTagsLoggerAsyncTest | true | true",
         "'VibeTagsLoggerAsyncTest, WriteCacheAsyncTest' | false | true",
         "*Writer* | true | false",
@@ -103,6 +104,10 @@ class NamedTestExecutionRoutingTest {
             "found no *AsyncTest classes under vibetags/src/test/java");
         for (String testClass : classes) {
             boolean async = testClass.endsWith(ASYNC_SUFFIX);
+            assertTrue(async || !testClass.contains("Async"),
+                testClass + " has Async in its name but is not an *AsyncTest. The profile treats any"
+                    + " -Dtest entry mentioning Async as an async-tests entry, so naming this class"
+                    + " would no longer fail default-test on a typo; rename it or narrow the regex");
             assertEquals(!async, excluded.matcher(testClass).matches(),
                 async
                     ? "async-tests would exclude its own test " + testClass
