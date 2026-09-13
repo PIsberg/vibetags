@@ -154,8 +154,7 @@ class ProjectFactsConsistencyTest {
         List<String> drifted = new ArrayList<>();
         for (Path doc : markdownFilesUnder(REPO_ROOT)) {
             String rel = REPO_ROOT.relativize(doc).toString().replace('\\', '/');
-            if (rel.contains("/target/") || rel.contains("/node_modules/")
-                || rel.startsWith("target/") || HISTORICAL_DOCS.contains(rel)) {
+            if (!isScanned(rel) || HISTORICAL_DOCS.contains(rel)) {
                 continue;
             }
             String text;
@@ -185,6 +184,122 @@ class ProjectFactsConsistencyTest {
                 + "meant to link to it rather than restate it — restating is how \"all 15 Java "
                 + "annotations\" survived six lines below the pinned figure:\n  "
                 + String.join("\n  ", drifted));
+    }
+
+    /**
+     * Docs that are dated records rather than live references. A survey that says "37 supported"
+     * was true on the day it was taken, and rewriting it would falsify the record; docs/README.md
+     * puts the archive, analyses and proposals outside the maintained tier for the same reason.
+     */
+    private static final List<String> DATED_DOC_PREFIXES = List.of(
+        "docs/CHANGELOG.md", "docs/archive/", "docs/analysis/", "docs/proposals/",
+        "docs/vibetags-in-practice.md");
+
+    /**
+     * A restated platform, config-file or scoped-rule-directory count, one capturing group each,
+     * in that order.
+     *
+     * <p>Broader than {@link #PROSE_COUNT} on purpose: in these docs "N platforms" is a claim about
+     * the whole set far more often than a finding about a subset, and the restatements that drifted
+     * (#652) were bare: "37 platforms, 49 files" in docs/TESTS.md and the same pair in CLAUDE.md.
+     * The two subset shapes the docs do use, "the other N platforms" and "more than N platforms",
+     * are excluded by lookbehind; anything else that is genuinely a subset takes
+     * {@link #NOT_A_TOTAL_MARKER}. A version ("v0.9.7 platforms") and an estimate ("~40") are not
+     * counts.
+     */
+    private static final Pattern OUTPUT_COUNT = Pattern.compile(
+        "(?<![\\d.~])(?<!other )(?<!than )(\\d+)(?:\\*\\*)?\\s+(?:AI\\s+|supported\\s+)?platforms\\b"
+            + "|(?<![\\d.~])(\\d+)(?:\\*\\*)?\\s+(?:generated\\s+)?config(?:uration)?\\s+(?:files|formats)\\b"
+            + "|(?<![\\d.~])(\\d+)(?:\\*\\*)?\\s+scoped-rule\\s+directories\\b");
+
+    /**
+     * The platform, config-file and scoped-rule-directory figures are pinned on the README facts
+     * line by the tests below, but a doc that restates one of them was checked by nothing. Three
+     * had drifted at once (#652): the README's own platform-list intro said 43 while the facts
+     * line above it said 44, and docs/TESTS.md and CLAUDE.md still quoted 37 platforms and 49 files
+     * from a release long gone. Expected values are derived, not hardcoded, so adding a platform
+     * fails here only where a doc restates the old number.
+     */
+    @Test
+    void noDocRestatesADifferentPlatformOrOutputCount() throws IOException {
+        Path readme = REPO_ROOT.resolve("README.md");
+        assumeTrue(Files.isRegularFile(readme), "README not reachable; skipping");
+        Map<String, Path> services = ServiceRegistry.buildServiceFileMap(Paths.get("."));
+        long directories = services.keySet().stream().filter(ServiceRegistry::writesDirectory).count();
+        long[] actual = {
+            distinctPlatformsInList(Files.readString(readme, StandardCharsets.UTF_8)),
+            services.size() - directories,
+            directories};
+        String[] noun = {"platforms", "config files", "scoped-rule directories"};
+
+        List<String> drifted = new ArrayList<>();
+        for (Path doc : markdownFilesUnder(REPO_ROOT)) {
+            String rel = REPO_ROOT.relativize(doc).toString().replace('\\', '/');
+            if (!isScanned(rel) || DATED_DOC_PREFIXES.stream().anyMatch(rel::startsWith)) {
+                continue;
+            }
+            String text;
+            try {
+                text = Files.readString(doc, StandardCharsets.UTF_8);
+            } catch (IOException notText) {
+                continue;
+            }
+            Matcher m = OUTPUT_COUNT.matcher(text);
+            while (m.find()) {
+                for (int g = 1; g <= actual.length; g++) {
+                    if (m.group(g) == null || Long.parseLong(m.group(g)) == actual[g - 1]
+                            || lineOf(text, m.start()).contains(NOT_A_TOTAL_MARKER)) {
+                        continue;
+                    }
+                    int line = (int) text.substring(0, m.start()).chars()
+                        .filter(c -> c == '\n').count() + 1;
+                    drifted.add(rel + ":" + line + " says \"" + m.group().strip() + "\" but there are "
+                        + actual[g - 1] + " " + noun[g - 1]);
+                }
+            }
+        }
+
+        assertTrue(drifted.isEmpty(),
+            "These docs restate a platform or output count that no longer holds. Link to the README "
+                + "project-facts line (README.md#project-facts) instead of restating the number, so "
+                + "the next platform does not drift them again:\n  "
+                + String.join("\n  ", drifted));
+    }
+
+    /** {@link #OUTPUT_COUNT} is pinned against synthetic text, since correct live docs prove nothing. */
+    @Test
+    void theOutputCountPatternRecognisesEveryRestatementShapeThatDrifted() {
+        Map<String, Integer> statesATotal = Map.of(
+            "works with the [**12 AI platforms**](#project-facts) below", 1,
+            "the test-enforced project facts (44 annotations, 12 platforms, 49 config files; pinned", 1,
+            "12 AI platforms across 49 generated config files, both pinned", 1,
+            "guardrails written as **12 config files** and **7 scoped-rule directories**", 2,
+            "copy-pasting across [12 config files](#project-facts)", 2,
+            "written as 12 scoped-rule directories", 3);
+        statesATotal.forEach((claim, group) -> {
+            Matcher m = OUTPUT_COUNT.matcher(claim);
+            assertTrue(m.find(), "OUTPUT_COUNT misses a restated count: " + claim);
+            assertEquals("12", m.group(group), "wrong number or wrong kind captured in: " + claim);
+        });
+
+        for (String subset : List.of(
+                "the other 12 platforms carry every annotation",
+                "nobody has opted into more than 12 platforms",
+                "// v0.9.7 platforms",
+                "any of the other ~40 supported platforms")) {
+            assertFalse(OUTPUT_COUNT.matcher(subset).find(),
+                "OUTPUT_COUNT treats a subset, a version or an estimate as a total: " + subset);
+        }
+    }
+
+    /**
+     * Build output and third-party trees are not this project's docs, and neither are the agent
+     * worktrees under .claude/worktrees/: each is a full checkout of some older branch, so scanning
+     * them from the main checkout reports that branch's numbers as drift.
+     */
+    private static boolean isScanned(String rel) {
+        return !(rel.contains("/target/") || rel.contains("/node_modules/") || rel.startsWith("target/")
+            || rel.startsWith(".claude/worktrees/"));
     }
 
     @Test
