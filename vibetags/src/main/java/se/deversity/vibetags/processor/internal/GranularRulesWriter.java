@@ -607,12 +607,94 @@ public final class GranularRulesWriter {
      * follows the file being read or edited rather than the model's judgement. Its trigger values
      * are {@code always_on}, {@code manual}, {@code model_decision}, {@code agent} and {@code glob};
      * the {@code description}/{@code alwaysApply} table on the same page is Cursor's. The docs show
-     * one pattern per rule and no list form, so a role file with several joins them with commas, as
-     * Copilot's {@code applyTo:} does. No {@code description}: the vendor's glob example has none,
-     * and only a {@code model_decision} rule is documented as reading one.
+     * one pattern per rule; the vendor's own sample repository writes several as one comma-separated
+     * value, so a file with several globs joins them with commas, through {@link #commaFreeGlobs} so
+     * that every comma separates two whole globs (#685). No {@code description}: the vendor's glob
+     * example has none, and only a {@code model_decision} rule is documented as reading one.
      */
     private static String fmTriggerGlob(String desc, List<String> globs) {
-        return "---\ntrigger: glob\nglobs: " + String.join(",", globs) + "\n---\n\n";
+        return "---\ntrigger: glob\nglobs: " + String.join(",", commaFreeGlobs(globs)) + "\n---\n\n";
+    }
+
+    /**
+     * {@code globs} rewritten so none contains a comma, for a header that separates globs with
+     * commas (#685).
+     *
+     * <p>A {@code .vibetags-roles} glob may use brace alternation, {@code **}{@code /*.{java,kt}},
+     * and a reader splitting the value on commas would cut it into two patterns that match neither
+     * file type. Each brace group is expanded into one glob per alternative, nested groups included,
+     * which matches the same files. A comma no balanced group explains, possible only in a
+     * {@code .vibetags-mirror} glob line, becomes {@code ?}, which still matches the comma and keeps
+     * the pattern whole. Duplicates are dropped, first occurrence kept. A glob with no comma and no
+     * brace comes back unchanged, so single-glob headers are byte-identical to before.
+     */
+    private static List<String> commaFreeGlobs(List<String> globs) {
+        Set<String> out = new LinkedHashSet<>();
+        for (String glob : globs) {
+            for (String expanded : expandBraces(glob)) {
+                out.add(expanded.replace(',', '?'));
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    /**
+     * Every alternative of {@code glob}'s brace groups, left to right. A glob whose first brace has
+     * no matching close is returned as it is.
+     */
+    private static List<String> expandBraces(String glob) {
+        int open = glob.indexOf('{');
+        if (open < 0) {
+            return List.of(glob);
+        }
+        int close = matchingBrace(glob, open);
+        if (close < 0) {
+            return List.of(glob);
+        }
+        String prefix = glob.substring(0, open);
+        String suffix = glob.substring(close + 1);
+        List<String> expanded = new ArrayList<>();
+        for (String alternative : topLevelAlternatives(glob.substring(open + 1, close))) {
+            expanded.addAll(expandBraces(prefix + alternative + suffix));
+        }
+        return expanded;
+    }
+
+    /** Index of the brace closing the one at {@code open}, or {@code -1} when it is never closed. */
+    private static int matchingBrace(String glob, int open) {
+        int depth = 0;
+        for (int i = open; i < glob.length(); i++) {
+            char c = glob.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /** {@code body} split on the commas that are not inside a nested brace group. */
+    private static List<String> topLevelAlternatives(String body) {
+        List<String> alternatives = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+            } else if (c == ',' && depth == 0) {
+                alternatives.add(body.substring(start, i));
+                start = i + 1;
+            }
+        }
+        alternatives.add(body.substring(start));
+        return alternatives;
     }
 
     // Order = historical per-class write order.

@@ -4,8 +4,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -90,7 +93,7 @@ class DevinDesktopEndToEndTest {
         assertTrue(rule.contains("second reason") && !rule.contains("first reason"), rule);
     }
 
-    /** A role file with several globs: the docs show no list form, so they are joined with commas. */
+    /** A role file with several globs joins them with commas, as the vendor's sample rule does (#685). */
     @Test
     void aRoleFileJoinsItsGlobsWithCommas(@TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
@@ -253,6 +256,60 @@ class DevinDesktopEndToEndTest {
             "---\ndescription: \"AI rules for role web\"\n"
                 + "globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]\nalwaysApply: false\n---\n\n"
                 + "<!-- VIBETAGS-START -->\n# Rules for web\n"), role);
+    }
+
+    /**
+     * A multi-glob value is comma-joined, the form of the vendor's own sample rule
+     * (the always-on and glob samples in Windsurf-Samples/cascade-customizations-catalog), so a
+     * comma inside a brace group would read as a separator and cut a Java-or-Kotlin glob into two
+     * broken halves. Braces are expanded into comma-free globs instead, nested groups included, so
+     * every comma in the header separates two whole globs (#685).
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {".devin/rules", ".windsurf/rules"})
+    void aBraceGlobIsExpandedSoEveryCommaSeparatesWholeGlobs(String dir, @TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(dir));
+        Files.writeString(root.resolve(".vibetags-roles"), "web = **/{api,web}/*.{java,kt}, **/*Endpoint.java\n");
+        h.addSource("com.example.web.OrderController",
+            "package com.example.web;\n@se.deversity.vibetags.annotations.AILocked(reason = \"r\")\npublic class OrderController {}\n");
+        h.compile();
+
+        String role = h.readFile(dir + "/web.md");
+        assertTrue(role.startsWith("---\ntrigger: glob\n"
+                + "globs: **/api/*.java,**/api/*.kt,**/web/*.java,**/web/*.kt,**/*Endpoint.java\n---\n\n"),
+            "each brace alternative becomes a glob of its own, in order:\n" + role);
+        String cursor = "---\ndescription: \"AI rules for role web\"\n"
+            + "globs: [\"**/{api,web}/*.{java,kt}\", \"**/*Endpoint.java\"]\n";
+        Files.createDirectories(root.resolve(".cursor/rules"));
+        VibeTagsLogger.shutdown();
+        h.compile();
+        assertTrue(h.readFile(".cursor/rules/web.mdc").startsWith(cursor),
+            "Cursor's quoted list has no such ambiguity and keeps the glob as written:\n"
+                + h.readFile(".cursor/rules/web.mdc"));
+    }
+
+    /**
+     * A {@code .vibetags-mirror} glob is a whole line, so it can hold a comma no brace group
+     * explains. Written as is, a comma-splitting reader would scope the rule to two unrelated
+     * patterns; a {@code ?} matches the comma and keeps the pattern one glob (#685).
+     */
+    @Test
+    void aLiteralCommaInAMirrorGlobCannotSplitTheGlob(@TempDir Path reactorRoot) throws IOException {
+        Files.createDirectories(reactorRoot.resolve("app-tests/.devin/rules"));
+        Files.writeString(reactorRoot.resolve("app-tests/.vibetags-mirror"), "glob = **/app,tests/**/*.java\n",
+            StandardCharsets.UTF_8);
+        Files.createDirectories(reactorRoot.resolve("app-core"));
+        Files.writeString(reactorRoot.resolve("app-core/pom.xml"),
+            "<project><artifactId>app-core</artifactId></project>", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(reactorRoot, false);
+        h.writeSourceFile("app-core/src/main/java/com/example/payment/PaymentProcessor.java", LOCKED_SOURCE_V1);
+        h.compile();
+
+        String mirrored = read(reactorRoot,
+            "app-tests/.devin/rules/mirrored-app-core-com-example-payment-PaymentProcessor.md");
+        assertTrue(mirrored.startsWith("---\ntrigger: glob\nglobs: **/PaymentProcessor.java,**/app?tests/**/*.java\n---\n"),
+            "the only comma left separates the rule's own glob from the mirror glob:\n" + mirrored);
     }
 
     private static String read(Path root, String relative) throws IOException {

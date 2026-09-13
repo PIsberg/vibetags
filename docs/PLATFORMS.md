@@ -460,13 +460,30 @@ docs document for it (#683):
   | What VibeTags writes into `.windsurf/rules/` | Front matter | Basis |
   |---|---|---|
   | One file per annotated element | `trigger: glob`, `globs:` its class or package glob | The vendor's glob example |
-  | A `.vibetags-roles` role file, or a file several reactor modules or case-colliding stems merge into | `trigger: glob`, `globs:` every glob joined with commas | VibeTags' choice: the docs show one pattern per rule and no list form, so the join is the one Copilot's `applyTo:` uses |
-  | The safety guardrails (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) | `+vibetags-safety.md`: `trigger: always_on`, no `globs:` | The Desktop activation table: an `always_on` rule's "Full rule content is included in the system prompt on every message." They also stay in each element's glob file. The next bullet says when the file only points elsewhere |
+  | A `.vibetags-roles` role file, a mirrored file, or a file several reactor modules or case-colliding stems merge into | `trigger: glob`, `globs:` every glob joined with commas, with brace groups expanded so no glob contains a comma | The vendor's sample repository writes several globs as one comma-separated value; see the next bullet |
+  | The safety guardrails (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) | `+vibetags-safety.md`: `trigger: always_on`, no `globs:` | The Desktop activation table: an `always_on` rule's "Full rule content is included in the system prompt on every message." They also stay in each element's glob file. The safety-tier bullet below says when the file only points elsewhere |
 
   No `description` key is written: the glob example has none, and the Desktop activation table says
   only a `model_decision` rule uses it. `manual`, `model_decision` and `agent` are never written,
   because each leaves loading to a person or to the model's judgement, and neither page says
   what `agent` does.
+- **Several globs are comma-joined, and no glob keeps a comma of its own** (#685). Neither docs page
+  shows a `globs:` value with more than one pattern, and no Windsurf or Devin Desktop source was
+  found to show how the value is parsed. The only multi-glob example from the vendor is in the
+  Windsurf team's sample repository, whose
+  [glob-rule-format.md](https://github.com/Windsurf-Samples/cascade-customizations-catalog/blob/main/.windsurf/rules/glob-rule-format.md)
+  opens with `trigger: glob` and `globs: *.js, src/*.js`. A GitHub code search for `"trigger: glob"
+  path:.windsurf/rules` on 2026-09-14 returned 598 files, whose `globs:` lines read: 265
+  comma-joined, 198 a single glob, 63 a bracketed `[...]` list, 26 a brace glob such as
+  `**/*.{ts,tsx}`, 14 a YAML block list, 2 space-separated, and 30 with no `globs:` line near the
+  top. Those are what users write, not evidence of what the tool accepts. So VibeTags keeps the
+  vendor's comma join and makes it unambiguous: a comma inside a brace group, which a
+  comma-splitting reader would treat as a separator, cannot appear, because each brace group is
+  expanded into one glob per alternative (`**/*.{java,kt}` is written as `**/*.java,**/*.kt`). Globs
+  come from three places: an element's own `**/Name.java` or package glob, which never contains a
+  brace or comma; a `.vibetags-roles` line, which may use braces; and a `.vibetags-mirror` glob line,
+  taken whole, where a comma no brace group explains is written as `?`, which still matches it.
+  Cursor's quoted list form is unaffected and keeps the glob as written.
 - **The safety tier is always on, from a file of its own** (#684). A `trigger: glob` rule loads only
   once a matching file is read or edited, so a project on a rules directory alone had no file that
   kept the six safety buckets in front of the agent up front, which invariant 6 exists to prevent.

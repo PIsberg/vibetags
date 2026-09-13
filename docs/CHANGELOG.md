@@ -478,6 +478,18 @@ vendor before anything changed, and the table under Deprecated lists every depre
   `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
   to ignore `!` entries turns one of its cases red.
 
+- **A brace glob no longer splits into broken halves in `.devin/rules/` and `.windsurf/rules/`**
+  (#685). Several globs are written as one comma-joined `globs:` value, the form of the vendor's
+  own sample rule (`globs: *.js, src/*.js`), so a `.vibetags-roles` glob such as `**/*.{java,kt}`
+  reads as `**/*.{java` and `kt}` to a reader that splits on commas, which would load the rule for
+  neither file type. How Devin Desktop parses the value is not documented. Brace groups are now expanded into one glob per alternative, nested groups included,
+  and a literal comma in a `.vibetags-mirror` glob line is written as `?`. Headers without braces
+  or commas, which is every per-element file, are unchanged. PLATFORMS.md records what was and was
+  not found about how the value is parsed.
+
+  `DevinDesktopEndToEndTest` gained three cases first, and all three failed against the plain
+  join with the ambiguous header in the failure output.
+
 - **`.windsurf/rules/` rule files carry Windsurf's `trigger:` front matter** (#683). They were
   written with Cursor's `description`, `globs` and `alwaysApply` keys. The vendor's page
   (docs.devin.ai, checked 2026-09-14) gives Windsurf rules a `trigger` field whose values are
