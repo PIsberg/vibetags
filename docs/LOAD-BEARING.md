@@ -56,7 +56,7 @@ YAML front-matter in `.mdc`/`.md` files sits before the markers. A header is rec
 
 ### Output files
 
-37 AI platforms across 49 generated config files, both counts pinned by `ProjectFactsConsistencyTest` against `README.md` (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, …). Full file/platform/format table: `docs/PLATFORMS.md`.
+Every supported AI platform (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, granular per-class rules, AI PR reviewers, context packers, …) and every generated config file is counted on the [README project-facts line](../README.md#project-facts), pinned by `ProjectFactsConsistencyTest`. Full file/platform/format table: `docs/PLATFORMS.md`.
 
 ### Aggregate ↔ granular de-duplication (scoped-rules index)
 

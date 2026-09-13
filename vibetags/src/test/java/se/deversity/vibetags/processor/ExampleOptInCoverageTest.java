@@ -48,7 +48,7 @@ class ExampleOptInCoverageTest {
             + "examples/multimodule-indexed is the fixture for it",
         "locks_report",
         ".vibetags-locks is an enforcement baseline for a CI diff guard rather than a platform "
-            + "file, and examples/enforcing is the fixture that exercises it",
+            + "file, and examples/multimodule is the committed fixture that carries it",
         "cline_granular",
         "Cline's .clinerules/ directory is the same path as the .clinerules file basic/ carries, and "
             + "a path is a file or a directory, never both. The file stays here because basic/'s "
@@ -56,11 +56,13 @@ class ExampleOptInCoverageTest {
             + "examples/multimodule-indexed carries the directory, checked below");
 
     /**
-     * The exemptions above that exist only because two services share one path, and the example
-     * that carries the one basic/ cannot. {@link #everyMutuallyExclusivePlatformIsOptedIntoTheExampleItsExemptionNames}
-     * checks each, so the exemption cannot outlive its fixture.
+     * Every exemption above whose reason names the example that covers it, with that example.
+     * {@link #everyMutuallyExclusivePlatformIsOptedIntoTheExampleItsExemptionNames} checks each, so
+     * an exemption cannot outlive its fixture or name one that never carried it.
      */
     private static final Map<String, String> COVERED_ELSEWHERE = Map.of(
+        "root_index", "examples/multimodule-indexed",
+        "locks_report", "examples/multimodule",
         "cline_granular", "examples/multimodule-indexed");
 
     @Test

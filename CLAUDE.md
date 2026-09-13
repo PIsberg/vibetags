@@ -72,7 +72,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 - [docs/LOGGING.md](docs/LOGGING.md) — the logging contract behind invariant 15.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — deep dive: system diagram, data flow, design decisions, limitations, repository layout notes, design history.
 - [USAGE.md](USAGE.md) — consumer-facing usage (how to add VibeTags to a project).
-- [README.md](README.md) — the test-enforced project facts (44 annotations, 37 platforms, 49 config files; pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
+- [README.md](README.md) — the test-enforced project facts (the annotation, platform, config-file and scoped-rule-directory counts, pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — what CI actually runs, step by step, and why each verification exists.
 - [docs/RELEASING.md](docs/RELEASING.md) — the release process.
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — what each release changed and why.

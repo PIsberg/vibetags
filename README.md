@@ -30,7 +30,7 @@
 
 `.cursorrules`, `CLAUDE.md`, and similar files are hand-edited by each developer, grow inconsistent across the team, and go stale the moment the code changes. VibeTags makes your AI configuration **source-controlled and compile-enforced**:
 
-- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [59 config files](#project-facts).
+- **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [every generated config file](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
 - **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 80 lines, with 287 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
@@ -386,7 +386,7 @@ The [44 annotations](#project-facts) group into six categories by intent. Within
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with the [**43 AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
+Generated configuration files work out-of-the-box with the [**AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)

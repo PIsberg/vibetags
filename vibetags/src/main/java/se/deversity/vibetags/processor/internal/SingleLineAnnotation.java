@@ -12,9 +12,9 @@ import java.lang.reflect.Proxy;
  * <p>The string members are prose, and a Java text block is the natural way to write a long
  * reason. Every Markdown platform appends the value straight after a bullet, so a line break in it
  * ended the bullet and left the rest as a bare paragraph; the XML block carried the raw newline.
- * Normalising here, where the collector records the annotation, reaches all 37 platforms, the
+ * Normalising here, where the collector records the annotation, reaches every platform, the
  * granular files and the fingerprint through the one accessor they share,
- * {@code TaggedElement.annotation}, rather than through forty-four formatters.
+ * {@code TaggedElement.annotation}, rather than through one formatter per annotation.
  *
  * <p>The rule: every line break, together with the indentation after it, becomes a single space,
  * and blank lines add nothing. A value with no line break is handed back as the very same

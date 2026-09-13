@@ -148,8 +148,8 @@ Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquot
 ### The review platforms carry a subset
 
 Sweep, Mentat and Plandex are code-review tools, not editors. Their formatters carry an arm for
-the annotations a reviewer can act on from a diff, and nothing else; the other 34 platforms carry
-all 44. The three lists below are the declaration, and `ReviewPlatformSubsetClaimTest` derives
+the annotations a reviewer can act on from a diff, and nothing else; every other platform carries
+every annotation. The three lists below are the declaration, and `ReviewPlatformSubsetClaimTest` derives
 each set from the formatters and holds these lines to it in both directions, so an arm added or
 removed without the matching name here fails the build. To carry one more annotation on one of
 these platforms, add the arm in its formatter and the name on its line in the same commit.

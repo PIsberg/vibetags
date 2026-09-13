@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code @AIIgnore(reason = "...")} has to reach the file, like every other annotation's reason.
  *
  * <p>{@code AIIgnoreFormatter} never called {@code element.annotation(AIIgnore.class)} at all, so
- * the reason a developer wrote went nowhere on any of the 37 platforms. The annotation itself
+ * the reason a developer wrote went nowhere, on every platform. The annotation itself
  * rendered — the element was listed as excluded — which is what made this invisible: the file looked
  * right, and only the explanation was missing. An exclusion without its reason is the one an agent
  * cannot evaluate and a reviewer cannot audit.
