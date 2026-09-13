@@ -180,7 +180,9 @@ and this section seem to disagree, the enforcing test decides.
 - **File presence is the opt-in.** The processor regenerates only files that already exist, and
   deleting one deactivates that platform permanently. Never "helpfully" create an output file.
   One documented exception: activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
-  `.codex/rules/vibetags.rules`), creating `.codex/` if absent.
+  `.codex/rules/vibetags.rules`), creating `.codex/` if absent. There is no other: `QWEN.md` used
+  to imply `.qwen/settings.json` and `.qwen/commands/refactor.md`, and neither is implied any more
+  (#650, #655).
 - **`process()` returns `false`** so other processors still see the annotations; all writing happens
   on `processingOver()`.
 - **Hand-authored content outside the markers must never be lost.** Generated content is written

@@ -274,6 +274,7 @@ assumed.
 | `NewPlatformsV2EndToEndTest` | PearAI, Mentat, Sweep, Plandex, Double.bot, Open Interpreter, Codeium |
 | `QwenEndToEndTest` | Qwen-specific output |
 | `QwenProcessorUnitTest` | Qwen processor options |
+| `QwenRefactorCommandOptInEndToEndTest` (`e2e`) | `.qwen/commands/refactor.md` is a file-presence opt-in (#655): `QWEN.md` alone creates neither the file nor `.qwen/commands/`, an existing one keeps regenerating with hand-written text outside the markers kept, and no command file is deleted |
 | `QwenSettingsUntouchedEndToEndTest` (`e2e`) | `.qwen/settings.json` is the user's Qwen Code settings file (#650): a hand-written one is byte-for-byte unchanged after two compiles, the file is never created, and a copy an older VibeTags generated is kept rather than deleted |
 | `VibeTagsLoggerUnitTest` | File logging |
 | `VibeTagsLoggerAsyncTest` | Async/background logging behaviour |

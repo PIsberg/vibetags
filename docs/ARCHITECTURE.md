@@ -1105,7 +1105,7 @@ Build order is `vibetags-annotations` → `vibetags` → `vibetags-bom` → `exa
 
 **Files:** `QWEN.md` + `.qwen/commands/refactor.md` + `.qwenignore`
 
-**Behavior:** Qwen reads `QWEN.md` as comprehensive project context, including locked files, contextual rules, security audit requirements, and ignored elements. `.qwen/settings.json` is Qwen Code's own settings file and is deliberately not written (#650).
+**Behavior:** Qwen reads `QWEN.md` as comprehensive project context, including locked files, contextual rules, security audit requirements, and ignored elements. `.qwen/settings.json` is Qwen Code's own settings file and is deliberately not written (#650). `.qwen/commands/refactor.md` is its own opt-in, regenerated only when it exists (#655).
 
 Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` roles are documented in one place: [USAGE.md § Qwen Configuration](../USAGE.md#-qwen-configuration).
 

@@ -27,6 +27,8 @@ public final class ServiceRegistry {
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+        // Qwen's /refactor command: opted into by its own presence, not implied by QWEN.md (#655)
+        "qwen_refactor",
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full", "aider_conventions", "aider_ignore",
         "cursor_granular", "roo_granular", "trae_granular",

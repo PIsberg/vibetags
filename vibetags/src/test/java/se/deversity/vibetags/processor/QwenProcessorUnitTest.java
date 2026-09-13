@@ -64,6 +64,18 @@ class QwenProcessorUnitTest {
     }
 
     @Test
+    void testResolveActiveServices_refactorCommandExists_onlyQwenRefactorIsActive(@TempDir Path tempDir) throws IOException {
+        Files.createDirectories(tempDir.resolve(".qwen/commands"));
+        Files.createFile(tempDir.resolve(".qwen/commands/refactor.md"));
+
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
+        Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
+
+        assertEquals(Set.of("qwen_refactor"), active,
+            "refactor.md is its own opt-in (#655), independent of QWEN.md");
+    }
+
+    @Test
     void testResolveActiveServices_qwenIgnoreFileExists_onlyQwenIgnoreIsActive(@TempDir Path tempDir) throws IOException {
         // Create only .qwenignore
         Files.createFile(tempDir.resolve(".qwenignore"));

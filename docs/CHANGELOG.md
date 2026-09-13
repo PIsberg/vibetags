@@ -188,6 +188,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `QwenSettingsUntouchedEndToEndTest` was red against the unchanged processor on two of its three
   cases (the third, which keeps an old generated copy, guards against a fix that deletes it).
 
+- **`.qwen/commands/refactor.md` is now an ordinary opt-in** (#655). Opting into `QWEN.md` used to
+  create it, and `.qwen/commands/` with it, which registered a `/refactor` slash command in every Qwen
+  project that never asked for one: an undocumented second exception to "file presence is the only
+  opt-in". It is now regenerated only when the file exists, with or without `QWEN.md`.
+
+  **If you already have the file:** nothing changes; it keeps updating, and text outside the
+  markers is kept. **New projects** that want the command create it:
+  `mkdir -p .qwen/commands && touch .qwen/commands/refactor.md`. Nothing is deleted. A reactor that
+  carries the file now counts one more active service in its `Active services` log line.
+
+  `QwenRefactorCommandOptInEndToEndTest` was red on all three cases against the #650 fix, before
+  this change.
+
 - A `.clinerules/` **directory** no longer activates the single-file `cline` service. Cline's
   current documentation describes `.clinerules/` as a directory of rule files and does not mention
   the single file VibeTags writes, so a user following those docs created a directory at exactly the

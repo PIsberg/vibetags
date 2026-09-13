@@ -55,7 +55,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.aiderignore` | Aider | Glob patterns |
 | `QWEN.md` | Qwen | Markdown |
 | `.qwenignore` | Qwen | Glob patterns |
-| `.qwen/commands/refactor.md` | Qwen | Markdown command template |
+| `.qwen/commands/refactor.md` | Qwen (`/refactor` command; its own opt-in, not implied by `QWEN.md`) | Markdown command template |
 | `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
 | `.roo/rules/*.md` | Roo Code (granular) | Markdown |
 | `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
@@ -234,6 +234,12 @@ and `QWEN.md` is loaded by default through `context.fileName`. The file carried 
 from an annotation, so it is no longer written at all rather than merged. A copy an older version
 left behind is kept, because VibeTags never deletes a file in the user's tree.
 `QwenSettingsUntouchedEndToEndTest` pins all three behaviours.
+
+The same change of rule applies to `.qwen/commands/refactor.md` (#655), for a different reason. It is
+a real Qwen Code command file, Markdown with markers, so it is kept, but it was also created
+implicitly by `QWEN.md`, adding a `/refactor` command to projects that never asked for one. It is now
+an ordinary file-presence opt-in: regenerated when it exists, never created.
+`QwenRefactorCommandOptInEndToEndTest` pins it.
 
 ### Four deprecated outputs whose tool has moved on
 
