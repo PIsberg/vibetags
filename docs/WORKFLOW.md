@@ -399,8 +399,13 @@ committed artifacts (`CLAUDE.md` guardrails, `.claude/rules/`, `docs/LOAD-BEARIN
 stated conventions), and its output contract is a structured gripe — target, violated rule,
 file:line evidence, explanation, executable remediation — or a one-line ALL CLEAR. The verdict
 gate is deliberately dumb bash over files the reviewer writes: the model never decides its own
-exit code. Runs only when the `ANTHROPIC_API_KEY` secret exists; otherwise every step skips and
-the summary says SKIPPED, which is not a pass. The model is pinned by exact ID in the workflow;
+exit code. Runs only when the `ANTHROPIC_API_KEY` secret exists. A small preflight job ("Check
+for the review key") turns the secret's presence into a job output, because a job-level `if:`
+cannot read `secrets`; without the key the `Adversarial Review` job is skipped, so the check reads
+Skipped in the PR and the preflight summary says SKIPPED. Until #697 the job gated each step
+instead, which skipped every step and still reported the job as a green pass. Branch protection
+treats a skipped job as satisfying a required check, so promoting this one to required also means
+making a missing key fail rather than skip. The model is pinned by exact ID in the workflow;
 changing it is a reviewed commit like any other change to an enforcer. Not yet in the
 required-checks set — it blocks nothing until its verdict record earns that promotion.
 
