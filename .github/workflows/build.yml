@@ -947,8 +947,9 @@ jobs:
           # opt-in (invariant 1), and this is where a regression would show first.
           test ! -d app/.claude
           # And every committed file must match what the build just produced. Scoped to the whole
-          # example directory, not a file list: this reactor now opts into 51 services, and a list
-          # is the thing that goes stale.
+          # example directory, not a file list: this reactor opts into every service (the count is
+          # pinned by expected= in "Verify Every AI Service Is Generated in a Gradle Reactor"), and a
+          # list is the thing that goes stale.
           if [ -n "$(git status --porcelain -- .)" ]; then
             echo "::error::examples/gradle-multimodule/ guardrail files are out of date."
             git status --porcelain -- .
@@ -974,9 +975,10 @@ jobs:
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
           # The deprecation warning (#641) is excluded too, and asserted present instead. This
-          # reactor opts into all five deprecated outputs on purpose, so they keep a fixture until
-          # the major version that removes them (#645), and a build that opts in is exactly the
-          # build that must print it.
+          # reactor opts into every deprecated output it has a fixture for, on purpose, so they keep
+          # a fixture until the major version that removes them (#645), and a build that opts in is
+          # exactly the build that must print it. The number is the count of DeprecatedServices rows
+          # this reactor opts into; DeprecatedServicesTest pins the line's shape.
           #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
           ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
@@ -989,7 +991,7 @@ jobs:
             exit 1
           fi
           if ! grep -q "5 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
-            echo "::error::the reactor opts into five deprecated outputs and was not warned about them."
+            echo "::error::the reactor opts into 5 deprecated outputs and was not warned about all of them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that

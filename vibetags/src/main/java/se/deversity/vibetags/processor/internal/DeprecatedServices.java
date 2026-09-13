@@ -34,7 +34,8 @@ public final class DeprecatedServices {
     /**
      * One deprecated output.
      *
-     * @param file        the path as the user sees it, relative to the root; pinned against
+     * @param file        the path as the user sees it, relative to the root, a directory with a
+     *                    trailing {@code /}; pinned against
      *                    {@link ServiceRegistry#buildServiceFileMap} by DeprecatedServicesTest
      * @param why         the vendor fact, as one clause
      * @param advice      what to do instead, as one clause naming the replacement
@@ -121,6 +122,6 @@ public final class DeprecatedServices {
                 + " deprecated. VibeTags still writes " + (one ? "it" : "them")
                 + ", and will stop in the next major version:" + lines
                 + "\n  To keep the guardrails, create the replacement, move any hand-written content"
-                + " across, and delete the deprecated file. The evidence is in docs/PLATFORMS.md.");
+                + " across, and delete the deprecated file or directory. The evidence is in docs/PLATFORMS.md.");
     }
 }

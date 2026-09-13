@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Four outputs name a tool that has moved on (#641). They are still written, because removing a
- * service silently freezes an opted-in consumer's file, but a consumer who opted in has to be told
+ * Some outputs name a tool that has moved on (#641, #664 to #677). They are still written, because
+ * removing a service silently freezes an opted-in consumer's file, but a consumer who opted in has to be told
  * before the next major version stops writing them. These tests pin that telling: one warning, the
  * file, the replacement, and a {@code platform.deprecated} log event per file.
  *
@@ -63,33 +64,66 @@ class DeprecatedServicesTest {
         appender.stop();
     }
 
+    /**
+     * Every deprecated output, keyed by service key: the path the warning names (a directory with a
+     * trailing '/'), then each replacement it must name. One row per notice, so a deprecation that
+     * is announced in the docs but missing from {@code DeprecatedServices} fails here by name.
+     */
+    private static final Map<String, List<String>> EXPECTED = expected();
+
+    private static Map<String, List<String>> expected() {
+        Map<String, List<String>> m = new LinkedHashMap<>();
+        m.put("gemini", List.of("gemini_instructions.md", "GEMINI.md", ".gemini/styleguide.md"));
+        m.put("cody", List.of(".cody/config.json", "AGENTS.md"));
+        m.put("cody_ignore", List.of(".codyignore", "AGENTS.md"));
+        m.put("supermaven_ignore", List.of(".supermavenignore", ".cursorignore"));
+        m.put("cline", List.of(".clinerules", ".clinerules/"));
+        return m;
+    }
+
     @Test
     @DisplayName("every deprecated output that is opted in is named in one warning, with its replacement")
     void oneWarningNamesEachFileAndItsReplacement(@TempDir Path root) throws IOException {
         touch(root, "CLAUDE.md");
-        touch(root, "gemini_instructions.md");
-        touch(root, ".cody/config.json");
-        touch(root, ".codyignore");
-        touch(root, ".supermavenignore");
-        touch(root, ".clinerules");
+        for (Map.Entry<String, List<String>> e : EXPECTED.entrySet()) {
+            optIn(root, e.getKey(), e.getValue().get(0));
+        }
         List<String> warnings = new ArrayList<>();
 
         ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
             ServiceRegistry.buildServiceFileMap(root));
 
         assertEquals(1, warnings.size(),
-            "five deprecated files are one warning, not five lines of build output: " + warnings);
+            EXPECTED.size() + " deprecated outputs are one warning, not one line each: " + warnings);
         String warning = warnings.get(0);
-        for (String file : List.of("gemini_instructions.md", ".cody/config.json", ".codyignore",
-                ".supermavenignore", ".clinerules")) {
-            assertTrue(warning.contains(file), "names " + file + ":\n" + warning);
-        }
-        for (String replacement : List.of("GEMINI.md", ".gemini/styleguide.md", "AGENTS.md",
-                ".cursorignore", ".clinerules/")) {
-            assertTrue(warning.contains(replacement), "names the replacement " + replacement + ":\n" + warning);
+        assertTrue(warning.startsWith("VibeTags: " + EXPECTED.size() + " opted-in outputs are deprecated"),
+            "the count build.yml's gradle-multimodule gate matches on:\n" + warning);
+        for (List<String> row : EXPECTED.values()) {
+            assertTrue(warning.contains(row.get(0)), "names " + row.get(0) + ":\n" + warning);
+            for (String replacement : row.subList(1, row.size())) {
+                assertTrue(warning.contains(replacement), "names the replacement " + replacement + ":\n" + warning);
+            }
         }
         assertTrue(warning.contains("next major version"),
             "says when the file stops being written, which is what makes it actionable:\n" + warning);
+    }
+
+    @Test
+    @DisplayName("each deprecated output opted in on its own is warned about by name")
+    void eachDeprecatedOutputWarnsOnItsOwn(@TempDir Path parent) throws IOException {
+        for (Map.Entry<String, List<String>> e : EXPECTED.entrySet()) {
+            Path root = Files.createDirectories(parent.resolve(e.getKey()));
+            touch(root, "CLAUDE.md");
+            optIn(root, e.getKey(), e.getValue().get(0));
+            List<String> warnings = new ArrayList<>();
+
+            ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
+                ServiceRegistry.buildServiceFileMap(root));
+
+            assertEquals(1, warnings.size(), e.getKey() + " alone is one warning: " + warnings);
+            assertTrue(warnings.get(0).contains(e.getValue().get(0)),
+                "names " + e.getValue().get(0) + ":\n" + warnings.get(0));
+        }
     }
 
     @Test
@@ -156,9 +190,8 @@ class DeprecatedServicesTest {
         // Matched per line: the note lists root-relative paths, and a substring check would trip over
         // .mentatconfig.json for Cody's config.json.
         List<String> offered = note.lines().map(String::strip).toList();
-        for (String file : List.of("gemini_instructions.md", ".cody/config.json", ".codyignore",
-                ".supermavenignore", ".clinerules")) {
-            assertFalse(offered.contains(file), "does not offer " + file + ":\n" + note);
+        for (List<String> row : EXPECTED.values()) {
+            assertFalse(offered.contains(row.get(0)), "does not offer " + row.get(0) + ":\n" + note);
         }
         assertTrue(offered.contains("GEMINI.md") && offered.contains("AGENTS.md"),
             "still offers the replacements:\n" + note);
@@ -212,12 +245,12 @@ class DeprecatedServicesTest {
     void everyDeprecatedKeyIsAnOptInKey(@TempDir Path root) {
         assertTrue(ServiceRegistry.optInKeys().containsAll(DeprecatedServices.keys()),
             "a deprecated key that is not an opt-in key can never be active: " + DeprecatedServices.keys());
-        assertEquals(Set.of("gemini", "cody", "cody_ignore", "supermaven_ignore", "cline"),
-            DeprecatedServices.keys());
+        assertEquals(EXPECTED.keySet(), DeprecatedServices.keys());
         Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
         DeprecatedServices.files().forEach((key, file) -> assertEquals(
-            root.relativize(map.get(key)).toString().replace('\\', '/'), file,
-            "the warning names the file the user created, so it has to be the mapped path for " + key));
+            root.relativize(map.get(key)).toString().replace('\\', '/')
+                + (ServiceRegistry.writesDirectory(key) ? "/" : ""), file,
+            "the warning names the path the user created, a directory with its '/', for " + key));
     }
 
     private boolean logged(String fragment) {
@@ -226,6 +259,15 @@ class DeprecatedServicesTest {
 
     private String dump() {
         return String.join("\n", appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList());
+    }
+
+    /** Creates the entry that opts into {@code key}: a directory for a granular service, else a file. */
+    private static void optIn(Path root, String key, String relative) throws IOException {
+        if (ServiceRegistry.writesDirectory(key)) {
+            Files.createDirectories(root.resolve(relative));
+        } else {
+            touch(root, relative);
+        }
     }
 
     private static void touch(Path root, String relative) throws IOException {
