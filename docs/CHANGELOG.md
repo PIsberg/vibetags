@@ -437,6 +437,32 @@ vendor before anything changed, and the table under Deprecated lists every depre
   #692 measured on them: a function taking an exposed value class is reported, and a top-level
   function under `-Xjvm-expose-boxed` is not.
 
+- **`vibetags doctor` reports the Kotlin shapes #692 had not built, from a second measurement**
+  (#713). Doctor stayed silent on every shape never built through kapt, so each was a possible
+  guardrail loss with nothing reported. The #692 fixture gained 54 guardrails on the missing shapes,
+  built on Kotlin 2.4.10 and JDK 21 with and without `-Xjvm-expose-boxed` and read back from
+  `CLAUDE.md`: 34 were lost by default and 20 with the option, and every #692 result was unchanged.
+
+  Newly reported: an extension property's `@get:` with a value-class receiver, its `@set:` and
+  `@setparam:` with a value-class receiver or type, and a member extension getter returning one;
+  every guardrail in an object expression, an enum entry's body or a local class, and on the local
+  class and its constructors, which kapt's stubs never carry, with the option or without; every
+  `suspend` function inside a value class; an `override` inside a value class whose signature uses
+  one; a value class's primary constructor and an `@param:` on its property; and an `@param:` on a
+  constructor `val` of a value-class type. One #692 finding was false: a plain `override` inside a
+  value class keeps an instance bridge, so `override val current: String` with `@get:` kept its
+  guardrail, and doctor reported it. Measured kept and silent: a top-level extension getter with a
+  plain receiver, setters and secondary constructors of a class carrying `@JvmExposeBoxed`, and a
+  bare `@AIInputSanitized` on a constructor property, which renders on the field. No `@AI*`
+  annotation targets `PARAMETER` without `FIELD`, so that shape cannot be written.
+
+  Against the rebuilt fixture doctor reports every measured loss except the four it cannot see yet
+  (a `UIntArray` parameter without `kotlin-stdlib` on `--classpath`, and three nested value classes,
+  #714), and no kept guardrail; under `-Xjvm-expose-boxed` its 36 findings are exactly the 36
+  losses. Six new `DoctorCommandTest` cases, each running doctor with and without the option and
+  asserting the finding count. Five were red against the #692 scanner; the sixth pins the
+  `@JvmExposeBoxed` setters and constructors the old scanner already kept silent.
+
 - Four generated outputs are now documented as naming a tool that has moved on, in
   [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
   (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`

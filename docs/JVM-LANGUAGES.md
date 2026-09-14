@@ -85,8 +85,11 @@ were written.
   file, so a kapt release that starts emitting these functions forces this bullet to be rewritten
   (#681).
 - **Method-body-scoped annotations.** Stubs carry no method bodies, so an annotation on a local
-  declaration inside a function is never seen. Class-level and function-level annotations, which is
-  the normal usage, work fully.
+  declaration inside a function is never seen. Neither is any guardrail inside an object expression
+  (`object : Lookup { ... }`, even one that initialises a property), an enum entry's body, or a local
+  class, nor one on the local class itself: all were absent from `CLAUDE.md` and from kapt's stubs,
+  with and without `-Xjvm-expose-boxed` (#713), and `vibetags doctor` reports them. Class-level and
+  function-level annotations on named declarations, which is the normal usage, work fully.
 - **Source positions describe the stub.** The `.vibetags-locks` report's line ranges would point
   into the generated stub rather than the `.kt` file, so do not opt a pure-Kotlin module into the
   locks report.
@@ -152,7 +155,10 @@ The same mechanism reaches further than functions. #692 built one fixture throug
 `@AILocked` (or, on parameters, `@AIInputSanitized`) on every shape below, 103 guardrails in all,
 then built it again with `-Xjvm-expose-boxed`, and read each guardrail back from the generated `CLAUDE.md`:
 54 lost by default, 16 with the option. Kotlin 2.4.10, kapt, JDK 21. "Lost" means absent from
-`CLAUDE.md`; no lost `@AILocked` reason appears anywhere in `build/tmp/kapt3/stubs` either.
+`CLAUDE.md`; no lost `@AILocked` reason appears anywhere in `build/tmp/kapt3/stubs` either. #713
+added the shapes #692 had not built to the same fixture, 54 more guardrails on Kotlin 2.4.10 and
+JDK 21, read back the same way: 34 lost by default, 20 with the option. The rebuild left every #692
+result unchanged.
 
 | Guardrail on | Default | `-Xjvm-expose-boxed` | Doctor |
 |---|---|---|---|
@@ -170,19 +176,34 @@ then built it again with `-Xjvm-expose-boxed`, and read each guardrail back from
 | Member `@get:`, `@set:` or `@setparam:` (class, object, companion, constructor `val`) | lost | kept | reports |
 | Interface, `open` or `abstract` member `@get:` | lost | lost | reports |
 | `@get:JvmName` or `@set:JvmName` on the property | kept | kept | silent |
+| Extension property `@get:` with a value-class receiver (`val AccountId.label`, `AccountId?`), top-level or member | lost | kept | reports |
+| Extension property `@set:` or `@setparam:` with a value-class receiver or type, top-level or member | lost | kept | reports |
+| Top-level extension property `@get:` with a plain receiver returning one (`val String.asId: AccountId`) | kept | kept | silent |
+| Member extension property `@get:` with a plain receiver returning one | lost | kept | reports |
+| Extension property on `List<AccountId>`, or of plain types | kept | kept | silent |
+| Any guardrail in an object expression (initialising a top-level or member property, or returned from a function), an enum entry's body or a local class, and on the local class and its constructors, whatever the signature | lost | lost | reports |
 | Constructor taking one, primary or secondary, or a plain parameter of it | lost | kept | reports |
+| `@param:` on a constructor `val` of a value-class type | lost | kept | reports |
+| `@param:` on a plain-typed constructor `val`; bare `@AIInputSanitized` on a constructor `val` or `var` of a value-class type (renders on the field) | kept | kept | silent |
+| A guardrail targeting `PARAMETER` but not `FIELD` | none exists: `AIInputSanitized`, `AISecureLogging` and `AILoadBearing` target both | | |
 | Secondary constructor without one, in the same class | kept | kept | silent |
 | The value class itself, and `@get:` on its underlying property | kept | kept | silent |
-| Function or `@get:` property declared inside a value class, whatever its signature (`describe-impl`) | lost | kept | reports |
+| Function or `@get:` property declared inside a value class, not an override, whatever its signature (`describe-impl`) | lost | kept | reports |
+| Plain `override` inside a value class: function, `@get:`, `toString()` (each keeps an instance bridge) | kept | kept | silent |
+| `override` inside a value class whose signature takes or returns one, function or `@get:` | lost | kept | reports |
+| `suspend` function inside a value class, any signature, including one carrying `@JvmExposeBoxed` | lost | lost | reports |
+| Guardrail on a value class's primary constructor, or `@param:` on its property (`constructor-impl`) | lost | kept | reports |
+| Bare `@AIInputSanitized` on a value class's property (renders on the field), or `@JvmExposeBoxed` on the value class | kept | kept | silent |
 | Secondary constructor declared inside a value class (`constructor-impl`) | lost | lost | reports |
 | Companion of a value class: a plain function / a function returning one | kept / lost | kept / kept | follows the member rows |
 | `@JvmExposeBoxed` on the function or constructor (top-level, member, value-class member) | kept | kept | silent |
 | Function elsewhere taking a value class that carries `@JvmExposeBoxed` | lost | kept | reports |
 | Direct member of a class or value class carrying `@JvmExposeBoxed` (function, getter, constructor) | kept | kept | silent |
+| ...its `@set:` or `@setparam:`, or a secondary constructor of it, with or without a value class or a parameter guardrail | kept | kept | silent |
 | ...its `suspend` member, or a member of a class nested inside it | lost | lost / kept | reports |
 | `@JvmExposeBoxed` on an interface member | does not compile: "cannot expose functions which are open or abstract, or member of an interface" | | |
 | Function taking a value class declared in another Gradle module | lost | kept | reports when the module is under `--dir`, or its jar is on `--classpath` |
-| Function taking a standard-library value class not in the built-in list (`UIntArray`) | lost | not built | reports when `kotlin-stdlib` is on `--classpath` |
+| Function taking a standard-library value class not in the built-in list (`UIntArray`) | lost | kept | reports when `kotlin-stdlib` is on `--classpath` |
 
 Two results overturn what #688 assumed. A return type mangles only a member: a top-level
 `fun makeId(): AccountId` keeps its guardrail, and doctor reported it until #692. And
@@ -193,9 +214,16 @@ check under it: it keeps final, non-suspend declarations and nothing else.
 line, the guardrails it loses, the value class responsible, and a remedy that the table shows to
 work (`@JvmName`, `@get:JvmName`, `@field:`, `@JvmExposeBoxed` on a constructor, or the guardrail
 on the enclosing type or the value class). It follows the Doctor column: a shape measured as kept produces
-nothing, and so does a shape that was not built, with one inference: an `open` or `abstract` member
+nothing, and so does a shape that was not built, with two inferences. An `open` or `abstract` member
 of a class carrying `@JvmExposeBoxed` is reported, because the compiler's own error says it cannot
-expose those. It is a heuristic over source text, not a compiler, and it is
+expose those. And in an object expression, an enum entry's body or a local class, `@field:`,
+`@setparam:` and parameter guardrails are reported alongside the measured shapes, because the stub
+carries none of those declarations at all. The rebuilt fixture also holds five guardrails measured
+for nested and deprecated `inline` value classes (#714), all lost by default and kept with the option,
+so it loses 94 (55 + 34 + 5) by default and 36 (16 + 20) with the option. With the `model` module's
+classes on `--classpath`, doctor reports 91 by default: the losses, less the `UIntArray` parameter
+(`kotlin-stdlib` was not passed) and the three that name a nested value class, plus `examples/kotlin`'s
+`balanceFor`. Under `-Xjvm-expose-boxed` it reports exactly the 36. No finding names a kept guardrail. It is a heuristic over source text, not a compiler, and it is
 built to miss rather than to report something that is not lost:
 
 - **Value classes it knows.** Every `value class` (or `inline class`) declared under the scanned
@@ -240,9 +268,9 @@ Known misses, every one a false negative, so a clean doctor run is not proof tha
 - A value class reached through a `typealias`, a nested one written as `Outer.Id`, a name declared
   both as a value class and as an ordinary type in the same package, and standard-library value
   classes not on the list above (the unsigned array types, for example).
-- Shapes not built in #692: extension properties, members of anonymous objects and local classes,
-  an `override` or `suspend` member inside a value class, setters and secondary constructors of a
-  class carrying `@JvmExposeBoxed`, and a `@param:` guardrail on a constructor property.
+- Shapes still not built (#713 built the rest): a declaration one level further inside an object
+  expression or a local class, a local class's constructor-property accessors, an `override suspend`
+  member or a setter inside a value class, and guardrails on local functions.
 - A guardrail written through an import alias (`import ...AILocked as Locked`), and source the text
   heuristics misread, such as string templates that nest quotes.
 

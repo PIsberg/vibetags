@@ -956,6 +956,401 @@ class DoctorCommandTest {
         assertFalse(out().contains("AppLookup.kt"), out());
     }
 
+    // ------------------------------------------------ shapes #692 did not build (#713)
+    //
+    // One more kapt build of the #692 fixture (Kotlin 2.4.10, JDK 21), with and without
+    // -Xjvm-expose-boxed, read back from CLAUDE.md; the table is in docs/JVM-LANGUAGES.md. Each test
+    // runs doctor both ways and asserts the number of findings, so a kept shape that starts being
+    // reported fails as surely as a lost one that goes silent.
+
+    private static final String EXPOSE_BOXED_BUILD = """
+        kotlin { compilerOptions { freeCompilerArgs.add("-Xjvm-expose-boxed") } }
+        """;
+
+    /** "File.kt:N" for the first line of {@code source} containing {@code text}. */
+    private static String at(String file, String source, String text) {
+        int index = source.indexOf(text);
+        assertTrue(index >= 0, "the source must contain " + text);
+        return file + ":" + (source.substring(0, index).chars().filter(c -> c == 10).count() + 1);
+    }
+
+    private void assertFindingCount(int count) {
+        assertTrue(out().contains(count == 0
+                ? "no guardrails found"
+                : "; " + count + " declaration(s) whose guardrails kapt will drop"),
+            "expected " + count + " finding(s): " + out());
+    }
+
+    /** Runs doctor again with the project compiled under -Xjvm-expose-boxed. */
+    private int doctorWithExposeBoxed() throws Exception {
+        Files.writeString(dir.resolve("build.gradle.kts"), EXPOSE_BOXED_BUILD);
+        stdout.reset();
+        return doctor();
+    }
+
+    @Test
+    void kotlinExtensionProperties_followTheAccessorRules() throws Exception {
+        // A receiver is the accessor's parameter: getLabel-VBQJbmA and every setter were left out,
+        // top-level and member. A top-level getter with a plain receiver returning a value class kept
+        // getAsId(java.lang.String), as a top-level getter does; the member one did not. A type
+        // argument receiver (getFirstRaw(java.util.List)) and plain types kept theirs. Under
+        // -Xjvm-expose-boxed all twelve were kept.
+        kotlinProject();
+        String file = "ExtProps.kt";
+        String source = """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AILocked
+
+            @get:AILocked(reason = "receiver mangles the getter")
+            val AccountId.label: String get() = raw
+
+            @get:AILocked(reason = "nullable receiver")
+            val AccountId?.labelOrEmpty: String get() = this?.raw ?: ""
+
+            @set:AILocked(reason = "receiver mangles the setter")
+            var AccountId.alias: String
+                get() = raw
+                set(value) { check(value.isNotEmpty()) }
+
+            @setparam:AIInputSanitized(AIInputSanitized.SanitizerType.XSS)
+            var AccountId.note: String
+                get() = raw
+                set(value) { check(value.isNotEmpty()) }
+
+            @set:AILocked(reason = "value type mangles the setter")
+            var String.assignedId: AccountId
+                get() = AccountId(this)
+                set(value) { check(value.raw.isNotEmpty()) }
+
+            @get:AILocked(reason = "a top-level getter's return type does not mangle")
+            val String.asId: AccountId get() = AccountId(this)
+
+            @get:AILocked(reason = "a type argument does not mangle")
+            val List<AccountId>.firstRaw: String get() = first().raw
+
+            @get:AILocked(reason = "plain")
+            val String.size: Int get() = length
+
+            class Formatter {
+                @get:AILocked(reason = "member extension getter")
+                val AccountId.memberLabel: String get() = raw
+
+                @get:AILocked(reason = "member getter returning a value class")
+                val String.memberId: AccountId get() = AccountId(this)
+
+                @set:AILocked(reason = "member extension setter")
+                var AccountId.memberAlias: String
+                    get() = raw
+                    set(value) { check(value.isNotEmpty()) }
+
+                @get:AILocked(reason = "plain")
+                val String.memberSize: Int get() = length
+            }
+            """;
+        sourceFile("src/main/kotlin/com/example/ledger/" + file, source);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains(at(file, source, ".label:") + " @get:AILocked on property label:"), out());
+        assertTrue(out().contains(at(file, source, ".labelOrEmpty") + " @get:AILocked on property labelOrEmpty"), out());
+        assertTrue(out().contains(at(file, source, ".alias") + " @set:AILocked on property alias"), out());
+        assertTrue(out().contains(at(file, source, ".note") + " @setparam:AIInputSanitized on property note"), out());
+        assertTrue(out().contains(at(file, source, ".assignedId") + " @set:AILocked on property assignedId"), out());
+        assertTrue(out().contains(at(file, source, ".memberLabel") + " @get:AILocked on property memberLabel"), out());
+        assertTrue(out().contains(at(file, source, ".memberId") + " @get:AILocked on property memberId"), out());
+        assertTrue(out().contains(at(file, source, ".memberAlias") + " @set:AILocked on property memberAlias"), out());
+        assertTrue(out().contains("its getter uses value class com.example.ledger.AccountId"), out());
+        for (String kept : new String[]{"property asId", "property firstRaw", "property size", "property memberSize"}) {
+            assertFalse(out().contains(kept), kept + " keeps its guardrail: " + out());
+        }
+        assertFindingCount(8);
+
+        assertEquals(0, doctorWithExposeBoxed(), out());
+        assertFindingCount(0);
+    }
+
+    @Test
+    void kotlinAnonymousObjectsEnumEntryBodiesAndLocalClasses_loseEveryGuardrail() throws Exception {
+        // None of these reaches kapt's stubs, whatever the signature: every guardrail in an object
+        // expression (at top level, in a member property), an enum entry's body and a local class,
+        // and on the local class itself and its constructors, was absent from CLAUDE.md with and
+        // without -Xjvm-expose-boxed. A named class's own plain member kept its guardrail.
+        kotlinProject();
+        String file = "Local.kt";
+        String source = """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            interface Finder {
+                fun find(id: AccountId): String
+                fun label(): String
+                val current: String
+            }
+
+            val topFinder: Finder = object : Finder {
+                @AILocked(reason = "anonymous override taking a value class")
+                override fun find(id: AccountId): String = id.raw
+
+                @AILocked(reason = "anonymous override, plain")
+                override fun label(): String = "a"
+
+                @get:AILocked(reason = "anonymous getter")
+                override val current: String get() = "c"
+
+                @AILocked(reason = "anonymous extra member")
+                fun extra(): String = "e"
+
+                @AILocked(reason = "anonymous stored property")
+                val stored: String = "s"
+
+                @set:AILocked(reason = "anonymous setter")
+                var mutable: String = "m"
+            }
+
+            class Service {
+                private val finder = object : Finder {
+                    @AILocked(reason = "anonymous object in a member property")
+                    override fun label(): String = "b"
+
+                    override fun find(id: AccountId): String = id.raw
+                    override val current: String get() = "c"
+                }
+
+                @AILocked(reason = "a named class's own member is kept")
+                fun plain(): String = finder.label()
+
+                fun build(): String {
+                    @AILocked(reason = "local class")
+                    class Local @AILocked(reason = "local primary constructor") constructor(val raw: String) {
+                        @AILocked(reason = "local member")
+                        fun take(): String = raw
+
+                        @AILocked(reason = "local stored property")
+                        val kept: String = raw
+
+                        @AILocked(reason = "local secondary constructor")
+                        constructor(n: Int) : this(n.toString())
+                    }
+                    return Local(1).take()
+                }
+            }
+
+            enum class Kind {
+                FIRST {
+                    @AILocked(reason = "enum entry body")
+                    override fun describe(): String = "first"
+                };
+
+                abstract fun describe(): String
+            }
+            """;
+        sourceFile("src/main/kotlin/com/example/ledger/" + file, source);
+
+        for (boolean exposeBoxed : new boolean[]{false, true}) {
+            assertEquals(1, exposeBoxed ? doctorWithExposeBoxed() : doctor(), out());
+            assertTrue(out().contains(at(file, source, "fun find(id: AccountId): String = id.raw") + " @AILocked on fun find"), out());
+            assertTrue(out().contains(at(file, source, "String = \"a\"") + " @AILocked on fun label"), out());
+            assertTrue(out().contains(at(file, source, "val current: String get()") + " @get:AILocked on property current"), out());
+            assertTrue(out().contains(at(file, source, "fun extra") + " @AILocked on fun extra"), out());
+            assertTrue(out().contains(at(file, source, "val stored") + " @AILocked on property stored"), out());
+            assertTrue(out().contains(at(file, source, "var mutable") + " @set:AILocked on property mutable"), out());
+            assertTrue(out().contains(at(file, source, "String = \"b\"") + " @AILocked on fun label"), out());
+            assertTrue(out().contains(at(file, source, "class Local") + " @AILocked on class Local"), out());
+            assertTrue(out().contains(at(file, source, "class Local") + " @AILocked on constructor Local"), out());
+            assertTrue(out().contains(at(file, source, "fun take") + " @AILocked on fun take"), out());
+            assertTrue(out().contains(at(file, source, "val kept") + " @AILocked on property kept"), out());
+            assertTrue(out().contains(at(file, source, "constructor(n: Int)") + " @AILocked on constructor Local"), out());
+            assertTrue(out().contains(at(file, source, "String = \"first\"") + " @AILocked on fun describe"), out());
+            assertTrue(out().contains("anonymous object"), out());
+            assertFalse(out().contains("fun plain"), out());
+            assertFindingCount(13);
+        }
+    }
+
+    @Test
+    void kotlinOverrideAndSuspendMembersInsideValueClass_areReportedOnlyWhenMeasuredLost() throws Exception {
+        // A plain override inside a value class keeps an instance bridge, and label(), getCurrent()
+        // and toString() kept their guardrails. An override whose signature uses a value class was
+        // left out (find-..., make-..., getCurrentId-...), and so was every suspend member, even
+        // with no value class in its signature; under -Xjvm-expose-boxed the overrides were kept
+        // and the suspend members, including one in a value class carrying @JvmExposeBoxed, were not.
+        kotlinProject();
+        String file = "FinderId.kt";
+        String source = """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            interface Finder {
+                fun find(id: AccountId): String
+                fun label(): String
+                val current: String
+                fun make(): AccountId
+                val currentId: AccountId
+            }
+
+            @JvmInline
+            value class FinderId(val raw: String) : Finder {
+                @AILocked(reason = "override taking a value class")
+                override fun find(id: AccountId): String = id.raw
+
+                @AILocked(reason = "plain override keeps its bridge")
+                override fun label(): String = raw
+
+                @get:AILocked(reason = "plain override getter keeps its bridge")
+                override val current: String get() = raw
+
+                @AILocked(reason = "toString keeps its bridge")
+                override fun toString(): String = raw
+
+                @AILocked(reason = "override returning a value class")
+                override fun make(): AccountId = AccountId(raw)
+
+                @get:AILocked(reason = "override getter returning a value class")
+                override val currentId: AccountId get() = AccountId(raw)
+
+                @AILocked(reason = "suspend, plain")
+                suspend fun fetch(): String = raw
+
+                @AILocked(reason = "suspend taking a value class")
+                suspend fun fetchFor(id: AccountId): String = id.raw
+            }
+
+            @JvmExposeBoxed
+            @JvmInline
+            value class ExposedId(val raw: String) {
+                @AILocked(reason = "suspend is not exposed")
+                suspend fun later(): String = raw
+            }
+            """;
+        sourceFile("src/main/kotlin/com/example/ledger/" + file, source);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains(at(file, source, "override fun find") + " @AILocked on fun find"), out());
+        assertTrue(out().contains(at(file, source, "override fun make") + " @AILocked on fun make"), out());
+        assertTrue(out().contains(at(file, source, "override val currentId") + " @get:AILocked on property currentId"), out());
+        assertTrue(out().contains(at(file, source, "suspend fun fetch()") + " @AILocked on fun fetch"), out());
+        assertTrue(out().contains(at(file, source, "suspend fun fetchFor") + " @AILocked on fun fetchFor"), out());
+        assertTrue(out().contains(at(file, source, "suspend fun later") + " @AILocked on fun later"), out());
+        for (String kept : new String[]{"fun label", "property current:", "fun toString"}) {
+            assertFalse(out().contains(kept), kept + " keeps its guardrail: " + out());
+        }
+        assertFindingCount(6);
+
+        assertEquals(1, doctorWithExposeBoxed(), out());
+        assertTrue(out().contains(at(file, source, "suspend fun fetch()") + " @AILocked on fun fetch"), out());
+        assertTrue(out().contains(at(file, source, "suspend fun fetchFor") + " @AILocked on fun fetchFor"), out());
+        assertTrue(out().contains(at(file, source, "suspend fun later") + " @AILocked on fun later"), out());
+        assertFindingCount(3);
+    }
+
+    @Test
+    void kotlinExposeBoxedClass_keepsItsSettersAndSecondaryConstructors() throws Exception {
+        // setId(AccountId), its @setparam:, ExposedSetters(AccountId) and a guardrail on that
+        // constructor's parameter all reached CLAUDE.md under their boxed names.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/ExposedSetters.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AILocked
+
+            @JvmExposeBoxed
+            class ExposedSetters {
+                @set:AILocked(reason = "exposed setter")
+                var id: AccountId = AccountId("s")
+
+                @setparam:AIInputSanitized(AIInputSanitized.SanitizerType.XSS)
+                var incoming: AccountId = AccountId("s")
+
+                constructor()
+
+                @AILocked(reason = "exposed secondary constructor")
+                constructor(id: AccountId) {
+                    this.id = id
+                }
+
+                constructor(@AIInputSanitized(AIInputSanitized.SanitizerType.XSS) other: AccountId, flag: Boolean) {
+                    this.id = if (flag) other else id
+                }
+            }
+            """);
+
+        assertEquals(0, doctor(), out());
+        assertFindingCount(0);
+    }
+
+    @Test
+    void kotlinParameterGuardrailOnConstructorProperty_isReportedWhenTheConstructorIsMangled() throws Exception {
+        // @param: puts the guardrail on the constructor parameter only, and a constructor taking a
+        // value class is left out, so ParamA's was lost (kept under -Xjvm-expose-boxed). A bare
+        // AIInputSanitized, which targets PARAMETER and FIELD, rendered on the field (ParamC.id,
+        // ParamD.id), and @field: and a plain-typed @param: kept theirs.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Params.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AIInputSanitized.SanitizerType
+
+            class ParamA(@param:AIInputSanitized(SanitizerType.XSS) val id: AccountId)
+
+            class ParamB(@param:AIInputSanitized(SanitizerType.XSS) val raw: String)
+
+            class ParamC(@AIInputSanitized(SanitizerType.XSS) val id: AccountId)
+
+            class ParamD(@AIInputSanitized(SanitizerType.XSS) var id: AccountId)
+
+            class ParamE(@field:AIInputSanitized(SanitizerType.XSS) val id: AccountId)
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Params.kt:6 @param:AIInputSanitized (parameter id) on constructor ParamA"), out());
+        assertFindingCount(1);
+
+        assertEquals(0, doctorWithExposeBoxed(), out());
+        assertFindingCount(0);
+    }
+
+    @Test
+    void kotlinValueClassPrimaryConstructorGuardrails_areReportedAsLost() throws Exception {
+        // A value class's primary constructor compiles to a private constructor plus a static
+        // constructor-impl: the guardrail on GuardedId's constructor and on ParamId's @param: were
+        // lost, a bare one rendered on the field (FieldId.raw), and @JvmExposeBoxed on the class or
+        // -Xjvm-expose-boxed kept the constructor's.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Ids.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AIInputSanitized.SanitizerType
+            import se.deversity.vibetags.annotations.AILocked
+
+            @JvmInline
+            value class GuardedId @AILocked(reason = "primary constructor") constructor(val raw: String)
+
+            @JvmInline
+            value class ParamId(@param:AIInputSanitized(SanitizerType.XSS) val raw: String)
+
+            @JvmInline
+            value class FieldId(@AIInputSanitized(SanitizerType.XSS) val raw: String)
+
+            @JvmExposeBoxed
+            @JvmInline
+            value class ExposedGuardedId @AILocked(reason = "exposed primary constructor") constructor(val raw: String)
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Ids.kt:8 @AILocked on constructor GuardedId"), out());
+        assertTrue(out().contains("Ids.kt:11 @param:AIInputSanitized (parameter raw) on constructor ParamId"), out());
+        assertTrue(out().contains("constructor-impl"), out());
+        assertFindingCount(2);
+
+        assertEquals(0, doctorWithExposeBoxed(), out());
+        assertFindingCount(0);
+    }
     // ------------------------------------------------ value classes from other modules and dependencies
     //
     // #691. A value class declared outside the scanned sources mangles a function the same way: in the

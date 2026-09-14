@@ -31,19 +31,28 @@ import java.util.regex.Pattern;
  * {@code docs/JVM-LANGUAGES.md}):
  * <ul>
  *   <li>Top level: a function with a value class as a parameter or extension receiver, and a
- *       property's {@code @set:} or {@code @setparam:} guardrail. A top-level return type does not
- *       mangle, so {@code fun makeId(): AccountId} and a top-level {@code @get:} are kept.</li>
+ *       property's {@code @set:} or {@code @setparam:} guardrail, or its {@code @get:} when the
+ *       property's extension receiver is a value class. A top-level return type does not mangle, so
+ *       {@code fun makeId(): AccountId} and {@code @get:} on {@code val String.asId: AccountId}
+ *       are kept.</li>
  *   <li>Members of a class, object, companion or interface: a value class as a parameter, receiver
  *       or return type, suspend included; a property's {@code @get:}, {@code @set:} or
- *       {@code @setparam:}; a constructor (primary or secondary) taking one.</li>
- *   <li>Directly inside a value class: every function, {@code @get:} property and secondary
- *       constructor, whatever its signature, because they compile to static {@code -impl}
- *       functions.</li>
+ *       {@code @setparam:}, extension properties included; a constructor (primary or secondary)
+ *       taking one, and an {@code @param:} guardrail on such a constructor's {@code val}.</li>
+ *   <li>Directly inside a value class: every function and {@code @get:} property that is not an
+ *       override, and every constructor, primary or secondary, whatever its signature, because they
+ *       compile to static {@code -impl} functions; every suspend function; and an override only when
+ *       its own signature uses a value class, since an override keeps an instance bridge
+ *       ({@code toString()} was kept).</li>
+ *   <li>Every guardrail in an anonymous object, an enum entry's body or a local class, and on the
+ *       local class itself: kapt's stubs carry none of them, whatever their signature
+ *       (<a href="https://github.com/PIsberg/vibetags/issues/713">#713</a>).</li>
  *   <li>{@code @JvmName} (or {@code @get:}/{@code @set:JvmName}) and {@code @JvmExposeBoxed} on the
  *       declaration keep it. {@code @JvmExposeBoxed} on a class, or {@code -Xjvm-expose-boxed} on
  *       the module ({@link Source#exposeBoxedModule()}), keeps what they expose; what they do not
  *       expose is still reported: suspend functions, open, abstract and interface members, a value
- *       class's secondary constructors, and members of a class nested inside the annotated one.</li>
+ *       class's secondary constructors, members of a class nested inside the annotated one, and
+ *       every local declaration above.</li>
  * </ul>
  *
  * <p>This is a heuristic over source text, not a compiler, so a doubt produces a miss rather than a
@@ -51,8 +60,8 @@ import java.util.regex.Pattern;
  * value class declared in the scanned sources, found in a class file on doctor's
  * {@code --classpath} ({@link JvmInlineClasses}), or one of {@link #STDLIB_VALUE_CLASSES}. Only the
  * head of a type counts ({@code List<AccountId>} is not mangled), {@code kotlin.Result} is never a
- * hit, and declarations inside function bodies, anonymous objects and extension properties are not
- * reported.
+ * hit, and a declaration nested inside an anonymous object or a local class, one level further in,
+ * is not reported.
  */
 final class KotlinValueClassScan {
 
@@ -74,6 +83,9 @@ final class KotlinValueClassScan {
     private static final String DROPPED = "; the guardrail is dropped before any processor sees it. ";
     private static final String ENCLOSING_TYPE = "Put the guardrail on the enclosing type";
     private static final String ON_VALUE_CLASS = "Put the guardrail on the value class itself";
+    private static final String LOCAL = "declarations in an anonymous object, an enum entry's body or a "
+        + "local class are not in kapt's Java stubs, whatever their signature" + DROPPED
+        + "Put the guardrail on a named class or a top-level declaration";
 
     /** Words that may sit between a declaration's annotations and its keyword. */
     private static final Set<String> MODIFIERS = Set.of(
@@ -97,6 +109,10 @@ final class KotlinValueClassScan {
         Set.copyOf(DoctorCommand.guardrailsTargeting(ElementType.PARAMETER));
     private static final Set<String> CONSTRUCTOR_GUARDRAILS =
         Set.copyOf(DoctorCommand.guardrailsTargeting(ElementType.CONSTRUCTOR));
+    private static final Set<String> TYPE_GUARDRAILS =
+        Set.copyOf(DoctorCommand.guardrailsTargeting(ElementType.TYPE));
+    private static final Set<String> FIELD_GUARDRAILS =
+        Set.copyOf(DoctorCommand.guardrailsTargeting(ElementType.FIELD));
 
     /**
      * A Kotlin source file as doctor read it: the name to print, its text, and whether a build file
@@ -141,8 +157,12 @@ final class KotlinValueClassScan {
         }
     }
 
-    /** The kind of body a declaration sits directly in. */
-    private enum Body { TOP, CLASS, INTERFACE, VALUE_CLASS, OTHER }
+    /**
+     * The kind of body a declaration sits directly in. {@code LOCAL} is an anonymous object, an enum
+     * entry's body or a local class; {@code OTHER} is a function body, a lambda or anything else whose
+     * declarations are not reported.
+     */
+    private enum Body { TOP, CLASS, INTERFACE, VALUE_CLASS, LOCAL, OTHER }
 
     /**
      * One body on the scope stack: its kind, the name of the class that opened it, whether that
@@ -152,6 +172,7 @@ final class KotlinValueClassScan {
     }
 
     private static final Scope OTHER_SCOPE = new Scope(Body.OTHER, "", false, false);
+    private static final Scope ENUM_ENTRY_SCOPE = new Scope(Body.LOCAL, "", false, false);
 
     /** A declaration: its file, the body it sits in, what was written before it, and where it starts. */
     private record Decl(FileContext file, Scope scope, List<Ann> annotations, Set<String> modifiers,
@@ -273,6 +294,9 @@ final class KotlinValueClassScan {
         String code = file.code();
         Deque<Scope> scopes = new ArrayDeque<>();
         scopes.push(new Scope(Body.TOP, "", false, false));
+        // Per open body: whether it is an enum class body still in its entry list, before the ';'.
+        Deque<Boolean> entryLists = new ArrayDeque<>();
+        entryLists.push(false);
         List<Ann> pending = new ArrayList<>();
         Set<String> modifiers = new HashSet<>();
         Scope armed = null;
@@ -322,13 +346,26 @@ final class KotlinValueClassScan {
                 continue;
             }
             if (c == '{') {
-                scopes.push(armed != null && parens == armedAt ? armed : OTHER_SCOPE);
+                Scope opened;
+                if (armed != null && parens == armedAt) {
+                    opened = armed;
+                } else if (scopes.element().enumClass() && entryLists.element()) {
+                    opened = ENUM_ENTRY_SCOPE;   // FIRST { ... }: an anonymous class
+                } else {
+                    opened = OTHER_SCOPE;
+                }
+                scopes.push(opened);
+                entryLists.push(opened.enumClass());
                 armed = null;
             } else if (c == '}') {
                 if (scopes.size() > 1) {
                     scopes.pop();
+                    entryLists.pop();
                 }
                 armed = null;
+            } else if (c == ';' && scopes.element().enumClass() && entryLists.element()) {
+                entryLists.pop();
+                entryLists.push(false);
             } else if (c == '(') {
                 parens++;
             } else if (c == ')') {
@@ -361,16 +398,24 @@ final class KotlinValueClassScan {
         boolean named = j < code.length() && Character.isJavaIdentifierStart(code.charAt(j));
         String name = named ? code.substring(j, identifierEnd(code, j)) : "";
         Body body;
-        if (decl.scope().body() == Body.OTHER) {
-            body = Body.OTHER;   // a local class: nothing in one was measured
+        if (decl.scope().body() == Body.LOCAL) {
+            body = Body.OTHER;   // nested inside a local declaration: not measured
+        } else if (decl.scope().body() == Body.OTHER) {
+            body = Body.LOCAL;   // a local class, or an object expression in a function body
         } else if ("interface".equals(keyword)) {
             body = Body.INTERFACE;
         } else if ("object".equals(keyword)) {
-            body = named || mods.contains("companion") ? Body.CLASS : Body.OTHER;
+            body = named || mods.contains("companion") ? Body.CLASS : Body.LOCAL;
         } else {
             body = mods.contains("value") || mods.contains("inline") ? Body.VALUE_CLASS : Body.CLASS;
         }
         Scope scope = new Scope(body, name, decl.annotated(EXPOSE_BOXED, ""), mods.contains("enum"));
+        if (body == Body.LOCAL && named) {
+            List<String> lost = guardrails(decl.annotations(), "", TYPE_GUARDRAILS, "");
+            if (!lost.isEmpty()) {
+                findings.add(finding(decl, lost, keyword + " " + name, LOCAL));
+            }
+        }
         if (!named) {
             return new Header(from, scope);
         }
@@ -407,7 +452,8 @@ final class KotlinValueClassScan {
         if (close >= code.length()) {
             return new Header(k, scope);
         }
-        if (body == Body.CLASS && "class".equals(keyword) && !scope.enumClass()) {
+        boolean constructs = body == Body.CLASS || body == Body.VALUE_CLASS || body == Body.LOCAL;
+        if (constructs && "class".equals(keyword) && !scope.enumClass()) {
             Decl ctor = new Decl(decl.file(), scope, List.copyOf(ctorAnnotations), Set.copyOf(ctorModifiers), ctorAt);
             constructor(ctor, p, close, true, known, findings);
         }
@@ -438,7 +484,8 @@ final class KotlinValueClassScan {
         }
         boolean jvmName = decl.annotations().stream()
             .anyMatch(a -> JVM_NAME.equals(a.simpleName()) && !"file".equals(a.useSiteTarget()));
-        if (decl.scope().body() == Body.OTHER || jvmName || decl.annotated(EXPOSE_BOXED, "")) {
+        Body body = decl.scope().body();
+        if (body == Body.OTHER || (body != Body.LOCAL && (jvmName || decl.annotated(EXPOSE_BOXED, "")))) {
             return close + 1;
         }
 
@@ -472,18 +519,15 @@ final class KotlinValueClassScan {
     /** Why a guardrailed function is lost, as the rest of its finding, or empty when it is kept. */
     private static Optional<String> functionLoss(Decl decl, String name, Set<String> takes, Set<String> returns) {
         Body body = decl.scope().body();
-        if (body == Body.VALUE_CLASS) {
-            // Members of a value class compile to static describe-impl functions. An override also
-            // keeps an instance bridge (toString()), which was not measured, so it stays silent.
-            boolean silent = decl.exposedByContext() || decl.modifiers().contains("suspend")
-                || decl.modifiers().contains("override");
-            return silent ? Optional.empty() : Optional.of("a value class's members compile to static "
-                + "functions with mangled names (" + name + "-impl), and kapt leaves them out of the Java "
-                + "stubs" + DROPPED + ON_VALUE_CLASS);
+        if (body == Body.LOCAL) {
+            return Optional.of(LOCAL);
         }
         Set<String> mangledBy = new TreeSet<>(takes);
         if (body != Body.TOP) {
             mangledBy.addAll(returns);   // a top-level return type does not mangle (#692)
+        }
+        if (body == Body.VALUE_CLASS) {
+            return valueClassMemberLoss(decl, name + "-impl", mangledBy);
         }
         if (mangledBy.isEmpty()) {
             return Optional.empty();
@@ -497,6 +541,32 @@ final class KotlinValueClassScan {
             : "Add @JvmName(\"" + name + "\") to the function to keep it";
         return Optional.of(uses + ", so its JVM name is mangled and kapt leaves it out of the Java stubs"
             + DROPPED + remedy);
+    }
+
+    /**
+     * Why a function or getter declared directly inside a value class is lost, or empty. Members
+     * compile to static functions with mangled names ({@code describe-impl}), and kapt left every one
+     * out, suspend ones even under {@code -Xjvm-expose-boxed}. An override keeps an instance bridge
+     * as well ({@code label()}, {@code toString()} and {@code getCurrent()} were kept), which is itself
+     * mangled, and left out, only when the override's signature uses a value class (#713).
+     */
+    private static Optional<String> valueClassMemberLoss(Decl decl, String implName, Set<String> mangledBy) {
+        if (decl.modifiers().contains("override")) {
+            if (mangledBy.isEmpty() || decl.exposedByContext()) {
+                return Optional.empty();
+            }
+            return Optional.of("it overrides from inside a value class and its signature uses value class "
+                + String.join(", ", mangledBy) + ", so both the static " + implName + " and its instance "
+                + "bridge are mangled and kapt leaves them out of the Java stubs" + DROPPED + ENCLOSING_TYPE);
+        }
+        if (decl.modifiers().contains("suspend")) {
+            return Optional.of("it is a suspend function inside a value class, which compiles to a static "
+                + implName + " that -Xjvm-expose-boxed and @JvmExposeBoxed do not expose, so kapt leaves it "
+                + "out of the Java stubs" + DROPPED + ON_VALUE_CLASS);
+        }
+        return decl.exposedByContext() ? Optional.empty() : Optional.of("a value class's members compile to "
+            + "static functions with mangled names (" + implName + "), and kapt leaves them out of the Java "
+            + "stubs" + DROPPED + ON_VALUE_CLASS);
     }
 
     /** The finding for a declaration a boxed variant would have kept, had it been exposable. */
@@ -534,7 +604,7 @@ final class KotlinValueClassScan {
             return from;
         }
         Body body = decl.scope().body();
-        if ((body == Body.CLASS || body == Body.VALUE_CLASS) && !decl.scope().enumClass()) {
+        if ((body == Body.CLASS || body == Body.VALUE_CLASS || body == Body.LOCAL) && !decl.scope().enumClass()) {
             constructor(decl, open, close, false, known, findings);
         }
         return close + 1;
@@ -544,8 +614,11 @@ final class KotlinValueClassScan {
      * A constructor whose parameter list spans {@code (open, close)}. A class's constructor taking a
      * value class compiles to a private constructor plus a synthetic public one, and kapt's stub
      * carries neither with its guardrails; a value class's secondary constructor compiles to a static
-     * {@code constructor-impl}. A primary constructor's {@code val}/{@code var} parameters are
-     * properties, whose accessor guardrails follow the property rules.
+     * {@code constructor-impl}, and so does its primary constructor. A primary constructor's
+     * {@code val}/{@code var} parameters are properties, whose accessor guardrails follow the property
+     * rules; an {@code @param:} guardrail on one stays on the constructor and is lost with it (#713).
+     * A bare guardrail on one that also targets {@code FIELD} (every guardrail targeting
+     * {@code PARAMETER} does) rendered on the field and is kept.
      */
     private static void constructor(Decl ctor, int open, int close, boolean primary, Known known,
                                      List<String> findings) {
@@ -570,17 +643,30 @@ final class KotlinValueClassScan {
             }
             Optional<String> type = typeHead(p.type()).flatMap(head -> resolve(file, head, known));
             type.ifPresent(takes::add);
-            if (primary) {
+            lost.addAll(guardrails(p.annotations(), "param", PARAMETER_GUARDRAILS, " (parameter " + p.name() + ")"));
+            if (primary && ctor.scope().body() != Body.VALUE_CLASS) {
+                // A value class's underlying property keeps its @get: guardrail (#692).
                 Decl property = new Decl(file, ctor.scope(), p.annotations(), p.modifiers(), p.keywordOffset());
-                accessorFindings(property, p.name(), type, findings);
+                accessorFindings(property, p.name(), type, List.of(), findings);
             }
         }
-        if (lost.isEmpty() || ctor.annotated(EXPOSE_BOXED, "")) {
+        if (lost.isEmpty()) {
             return;
         }
         String what = "constructor " + ctor.scope().name();
+        if (ctor.scope().body() == Body.LOCAL) {
+            findings.add(finding(ctor, lost, what, LOCAL));
+            return;
+        }
+        if (ctor.annotated(EXPOSE_BOXED, "")) {
+            return;
+        }
         if (ctor.scope().body() == Body.VALUE_CLASS) {
-            if (!ctor.scope().exposed()) {
+            if (primary && !ctor.exposedByContext()) {
+                findings.add(finding(ctor, lost, what, "a value class's primary constructor compiles to a "
+                    + "private constructor plus a static constructor-impl, and kapt leaves both out of the Java "
+                    + "stubs" + DROPPED + ON_VALUE_CLASS + ", or add @JvmExposeBoxed to the value class"));
+            } else if (!primary && !ctor.scope().exposed()) {
                 findings.add(finding(ctor, lost, what, "a value class's secondary constructors compile to "
                     + "static constructor-impl functions, and kapt leaves them out of the Java stubs"
                     + DROPPED + ON_VALUE_CLASS));
@@ -597,33 +683,88 @@ final class KotlinValueClassScan {
 
     /**
      * Parses the property whose {@code val}/{@code var} keyword ends at {@code from}, reports the
-     * accessor guardrails kapt drops, and returns where scanning resumes. Extension properties are
-     * skipped: none was measured.
+     * accessor guardrails kapt drops, and returns where scanning resumes. An extension property's
+     * receiver ({@code val AccountId.label}) is a parameter of each accessor, so it counts like the
+     * receiver of an extension function (#713).
      */
     private static int property(Decl decl, int from, Known known, List<String> findings) {
         FileContext file = decl.file();
         String code = file.code();
         int j = skipWhitespace(code, from);
+        if (j < code.length() && code.charAt(j) == '<') {
+            j = skipWhitespace(code, closing(code, j, '<', '>') + 1);
+        }
         if (decl.scope().body() == Body.OTHER || j >= code.length()
                 || !Character.isJavaIdentifierStart(code.charAt(j))) {
             return from;
         }
-        int nameEnd = identifierEnd(code, j);
-        int k = skipWhitespace(code, nameEnd);
-        if (k < code.length() && (code.charAt(k) == '.' || code.charAt(k) == '<')) {
+        int end = propertyHeaderEnd(code, j);
+        String header = code.substring(j, end);
+        int dot = lastTopLevelDot(header);
+        String name = header.substring(dot + 1);
+        if (name.isEmpty() || !Character.isJavaIdentifierStart(name.charAt(0))
+                || identifierEnd(name, 0) != name.length()) {
             return from;
         }
+        List<String> receiver = dot < 0 ? List.of()
+            : typeHead(header.substring(0, dot)).flatMap(head -> resolve(file, head, known)).stream().toList();
+        int k = skipWhitespace(code, end);
         Optional<String> type = Optional.empty();
         if (k < code.length() && code.charAt(k) == ':') {
             type = typeHead(code.substring(k + 1, Math.min(code.length(), k + 1 + 512)))
                 .flatMap(head -> resolve(file, head, known));
         }
-        accessorFindings(decl, code.substring(j, nameEnd), type, findings);
-        return nameEnd;
+        if (decl.scope().body() == Body.LOCAL) {
+            List<String> lost = new ArrayList<>(guardrails(decl.annotations(), "", FIELD_GUARDRAILS, ""));
+            lost.addAll(guardrails(decl.annotations(), "field", FIELD_GUARDRAILS, ""));
+            lost.addAll(guardrails(decl.annotations(), "get", FUNCTION_GUARDRAILS, ""));
+            lost.addAll(guardrails(decl.annotations(), "set", FUNCTION_GUARDRAILS, ""));
+            lost.addAll(guardrails(decl.annotations(), "setparam", PARAMETER_GUARDRAILS, ""));
+            if (!lost.isEmpty()) {
+                findings.add(finding(decl, lost, "property " + name, LOCAL));
+            }
+            return end;
+        }
+        accessorFindings(decl, name, type, receiver, findings);
+        return end;
+    }
+
+    /**
+     * End of a property header starting at {@code from}: a name, or a receiver type, a dot and a
+     * name, with type arguments and {@code ?} allowed in the receiver.
+     */
+    private static int propertyHeaderEnd(String code, int from) {
+        int i = from;
+        while (i < code.length()) {
+            char c = code.charAt(i);
+            if (c == '<') {
+                i = closing(code, i, '<', '>') + 1;
+            } else if (Character.isJavaIdentifierPart(c) || c == '.' || c == '?') {
+                i++;
+            } else {
+                break;
+            }
+        }
+        return Math.min(i, code.length());
+    }
+
+    /**
+     * The guardrails among {@code annotations} written with this use-site target ("" for none), each
+     * as {@code @target:Name} followed by {@code suffix}.
+     */
+    private static List<String> guardrails(List<Ann> annotations, String target, Set<String> names, String suffix) {
+        List<String> lost = new ArrayList<>();
+        for (Ann a : annotations) {
+            if (target.equals(a.useSiteTarget()) && isGuardrail(a, names)) {
+                lost.add("@" + (target.isEmpty() ? "" : target + ":") + a.simpleName() + suffix);
+            }
+        }
+        return lost;
     }
 
     /** Reports each {@code @get:}, {@code @set:} and {@code @setparam:} guardrail kapt drops from a property. */
-    private static void accessorFindings(Decl decl, String name, Optional<String> type, List<String> findings) {
+    private static void accessorFindings(Decl decl, String name, Optional<String> type, List<String> receiver,
+                                         List<String> findings) {
         String capitalized = Character.toUpperCase(name.charAt(0)) + name.substring(1);
         for (String target : new String[]{"get", "set", "setparam"}) {
             Set<String> names = "setparam".equals(target) ? PARAMETER_GUARDRAILS : FUNCTION_GUARDRAILS;
@@ -635,7 +776,7 @@ final class KotlinValueClassScan {
             }
             String accessor = "get".equals(target) ? "get" : "set";
             if (!lost.isEmpty() && !decl.annotated(JVM_NAME, accessor)) {
-                accessorLoss(decl, accessor, capitalized, type)
+                accessorLoss(decl, accessor, capitalized, type, receiver)
                     .ifPresent(why -> findings.add(finding(decl, lost, "property " + name, why)));
             }
         }
@@ -643,27 +784,36 @@ final class KotlinValueClassScan {
 
     /** Why an accessor guardrail is lost, as the rest of its finding, or empty when it is kept. */
     private static Optional<String> accessorLoss(Decl decl, String accessor, String capitalized,
-                                                 Optional<String> type) {
+                                                 Optional<String> type, List<String> receiver) {
         Body body = decl.scope().body();
         boolean getter = "get".equals(accessor);
+        Set<String> mangledBy = new TreeSet<>(receiver);
+        // A top-level getter's return type does not mangle it (getTopIdGet() in #692,
+        // getAsId(String) in #713); a receiver does, and every setter is mangled by its value.
+        if (body != Body.TOP || !getter) {
+            type.ifPresent(mangledBy::add);
+        }
         if (body == Body.VALUE_CLASS) {
-            return getter && !decl.exposedByContext()
-                ? Optional.of("a value class's properties compile to static getters with mangled names (get"
-                    + capitalized + "-impl), and kapt leaves them out of the Java stubs" + DROPPED + ON_VALUE_CLASS)
-                : Optional.empty();
+            if (!getter) {
+                return Optional.empty();
+            }
+            return decl.modifiers().contains("override")
+                ? valueClassMemberLoss(decl, "get" + capitalized + "-impl", mangledBy)
+                : decl.exposedByContext() ? Optional.empty()
+                : Optional.of("a value class's properties compile to static getters with mangled names (get"
+                    + capitalized + "-impl), and kapt leaves them out of the Java stubs" + DROPPED + ON_VALUE_CLASS);
         }
-        // A top-level getter keeps its name (getTopIdGet() in #692); only its setter is mangled.
-        if (type.isEmpty() || body == Body.OTHER || (body == Body.TOP && getter)) {
-            return Optional.empty();
+        if (mangledBy.isEmpty() || body == Body.OTHER || body == Body.LOCAL) {
+            return Optional.empty();   // a local class's constructor properties were not measured
         }
-        String uses = "its " + (getter ? "getter" : "setter") + " uses value class " + type.get();
+        String uses = "its " + (getter ? "getter" : "setter") + " uses value class " + String.join(", ", mangledBy);
         if (decl.exposedByContext()) {
             return body == Body.TOP ? Optional.empty() : unexposed(decl, uses);
         }
         String remedy = decl.overridable()
             ? ENCLOSING_TYPE
             : "Add @" + accessor + ":JvmName(\"" + accessor + capitalized + "\") to keep it"
-                + (getter ? ", or use @field: when the property has a backing field" : "");
+                + (getter && receiver.isEmpty() ? ", or use @field: when the property has a backing field" : "");
         return Optional.of(uses + ", so its JVM name is mangled and kapt leaves it out of the Java stubs"
             + DROPPED + remedy);
     }
