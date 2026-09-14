@@ -507,7 +507,9 @@ vibetags/
 
 `vibetags init --platforms claude,cursor` creates the opt-in files whose presence the processor
 honours (the processor itself never creates them), and `vibetags doctor` reports project health:
-build-tool wiring, active platforms, and `VIBETAGS-START`/`END` marker integrity. Run it without
+build-tool wiring, active platforms, `VIBETAGS-START`/`END` marker integrity, and the guardrails
+that groovyc (field-level) and kapt (functions mangled by a value class) drop without a word. Run it
+without
 installing anything:
 
 ```bash

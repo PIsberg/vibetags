@@ -45,6 +45,7 @@ final class DoctorCommand {
         Set<String> active = checkActivePlatforms();
         checkMarkers(active);
         checkGroovyFieldGuardrails();
+        checkKotlinValueClassGuardrails();
 
         out.println();
         if (problems.isEmpty()) {
@@ -198,13 +199,70 @@ final class DoctorCommand {
         problems.addAll(dropped);
     }
 
+    /**
+     * Kotlin functions whose JVM name a value class mangles are left out of kapt's Java stubs, so
+     * their guardrails, and their parameters' guardrails, generate nothing while the build stays
+     * green (<a href="https://github.com/PIsberg/vibetags/issues/681">#681</a>). The processor cannot
+     * warn, for the same reason as the Groovy fields above. {@link KotlinValueClassScan} reads the
+     * {@code .kt} sources instead, as a heuristic that prefers a miss to a false finding, and doctor
+     * says so on every run so that "none found" is not read as "none lost"
+     * (<a href="https://github.com/PIsberg/vibetags/issues/688">#688</a>).
+     */
+    private void checkKotlinValueClassGuardrails() {
+        List<Path> files = sources(".kt");
+        if (files.isEmpty()) {
+            return;
+        }
+        // -Xjvm-expose-boxed gives every value-class function a boxed, unmangled variant. What kapt's
+        // stubs make of that was never measured, so every finding could be wrong: skip, and say so.
+        List<Path> buildFiles = new ArrayList<>(sources("pom.xml"));
+        buildFiles.addAll(sources("build.gradle"));
+        buildFiles.addAll(sources("build.gradle.kts"));
+        Optional<Path> exposeBoxed = buildFiles.stream()
+            .filter(p -> tryRead(p).map(text -> text.contains("-Xjvm-expose-boxed")).orElse(false))
+            .findFirst();
+        if (exposeBoxed.isPresent()) {
+            out.println("kotlin sources:  " + files.size() + " file(s); value-class check skipped: "
+                + dir.relativize(exposeBoxed.get()) + " passes -Xjvm-expose-boxed, whose effect on "
+                + "kapt's stubs was not measured");
+            return;
+        }
+        List<KotlinValueClassScan.Source> readable = new ArrayList<>();
+        for (Path file : files) {
+            Optional<String> read = tryRead(file);
+            if (read.isEmpty()) {
+                problems.add("could not read " + dir.relativize(file)
+                    + " (permissions? not UTF-8?): cannot check it for guardrails on value-class functions");
+                continue;
+            }
+            readable.add(new KotlinValueClassScan.Source(dir.relativize(file).toString(), read.get()));
+        }
+        KotlinValueClassScan.Report report = KotlinValueClassScan.scan(readable);
+        List<String> lost = report.findings();
+        out.println("kotlin sources:  " + files.size() + " file(s), " + report.declaredValueClasses()
+            + " value class(es) declared; "
+            + (lost.isEmpty()
+                ? "no guardrails found on value-class functions"
+                : lost.size() + " function(s) whose guardrails kapt will drop"));
+        out.println("note: the Kotlin value-class check is a heuristic source scan. It sees value "
+            + "classes declared under this directory plus UByte, UShort, UInt, ULong and "
+            + "kotlin.time.Duration; one from another module or a dependency, or reached through a "
+            + "typealias, is not seen, so no finding here is not proof that nothing is lost");
+        problems.addAll(lost);
+    }
+
     /** Developer-authored {@code .groovy} files: everything outside build output directories. */
     private List<Path> groovySources() {
+        return sources(".groovy");
+    }
+
+    /** Developer-authored files with the given extension, outside build output directories. */
+    private List<Path> sources(String extension) {
         List<Path> sources = new ArrayList<>();
         Set<String> buildDirs = Set.of("build", "target", ".gradle", ".git");
         try (var walk = Files.walk(dir)) {
             walk.filter(Files::isRegularFile)
-                .filter(p -> String.valueOf(p.getFileName()).endsWith(".groovy"))
+                .filter(p -> String.valueOf(p.getFileName()).endsWith(extension))
                 .filter(p -> {
                     for (Path part : dir.relativize(p)) {
                         if (buildDirs.contains(part.toString())) {
@@ -215,7 +273,7 @@ final class DoctorCommand {
                 })
                 .forEach(sources::add);
         } catch (IOException e) {
-            problems.add("could not walk " + dir + " for .groovy sources: " + e.getMessage());
+            problems.add("could not walk " + dir + " for " + extension + " sources: " + e.getMessage());
         }
         sources.sort(java.util.Comparator.comparing(Path::toString));
         return sources;
@@ -225,7 +283,7 @@ final class DoctorCommand {
         List<String> lines = text.lines().toList();
         java.util.regex.Pattern annotation = java.util.regex.Pattern.compile(
             "@(?:se\\.deversity\\.vibetags\\.annotations\\.)?(" +
-                String.join("|", fieldTargetedAnnotationNames()) + ")\\b");
+                String.join("|", guardrailsTargeting(java.lang.annotation.ElementType.FIELD)) + ")\\b");
         for (int i = 0; i < lines.size(); i++) {
             String stripped = lines.get(i).strip();
             if (stripped.startsWith("//") || stripped.startsWith("*") || stripped.startsWith("/*")) {
@@ -246,8 +304,8 @@ final class DoctorCommand {
         }
     }
 
-    /** Simple names of every guardrail annotation that can sit on a field. */
-    private static List<String> fieldTargetedAnnotationNames() {
+    /** Simple names of every guardrail annotation that can sit on the given kind of element. */
+    static List<String> guardrailsTargeting(java.lang.annotation.ElementType elementType) {
         List<String> names = new ArrayList<>();
         for (Class<? extends java.lang.annotation.Annotation> type
                 : se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL) {
@@ -257,7 +315,7 @@ final class DoctorCommand {
                 continue;
             }
             for (java.lang.annotation.ElementType t : target.value()) {
-                if (t == java.lang.annotation.ElementType.FIELD) {
+                if (t == elementType) {
                     names.add(type.getSimpleName());
                     break;
                 }

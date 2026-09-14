@@ -76,6 +76,30 @@ vendor before anything changed, and the table under Deprecated lists every depre
   `ClineSafetyTierEndToEndTest` was written first: five of its seven cases failed against `main`
   with no safety file written, and the multi-module case was added before the merge was relied on.
 
+- **`vibetags doctor` reports the Kotlin guardrails kapt drops on value-class functions** (#688).
+  kapt leaves out of its Java stubs every function whose JVM name is mangled because it takes or
+  returns a `@JvmInline value class`, so an `@AI*` annotation on it, or on one of its parameters,
+  generated nothing and logged nothing (#681). The processor cannot warn, since it sees only the
+  stub, but doctor can read the `.kt` sources. It now reports each such function with its file and
+  line, the guardrails it loses, the value class responsible and the `@JvmName` that keeps it, the
+  same route the Groovy field check took (#494).
+
+  It is a heuristic source scan and says so on every run. It knows the value classes declared under
+  the scanned directory plus `UByte`, `UShort`, `UInt`, `ULong` and `kotlin.time.Duration`, resolves
+  type names through each file's package and imports (so `java.time.Duration` is not a hit), and
+  skips the three shapes measured to survive on Kotlin 2.4.10: a `kotlin.Result` parameter, a value
+  class used only as a type argument, and a function with `@JvmName`. It misses value classes from
+  other modules or dependencies, type aliases, and shapes never measured against kapt, such as
+  extension receivers; `docs/JVM-LANGUAGES.md` lists them. Where it cannot tell, it stays silent: a
+  file mentioning `@JvmExposeBoxed` is skipped, and a build file passing `-Xjvm-expose-boxed` skips
+  the check with a line saying why, because neither boxed variant was measured against kapt.
+
+  Eleven new `DoctorCommandTest` cases. Seven failed before the code they pin existed: the three
+  reporting cases, the unreadable file, the summary line the `Result` case asserts, and the two
+  `@JvmExposeBoxed` cases. The four negatives cannot fail against a doctor that has no check, so
+  each exclusion, plus import resolution, was broken once on purpose and turned exactly its own
+  test red.
+
 - **A warning when a hand-authored top-level key collides with a generated YAML block** (#635).
   VibeTags keeps text outside its markers, as it must, so a user's own `read:` in `.aider.conf.yml`
   survives next to the generated one and the document declares the key twice. PyYAML keeps the
@@ -469,7 +493,7 @@ vendor before anything changed, and the table under Deprecated lists every depre
   and the step went red. A processor warning was not built: the processor sees only the stub, and
   the stub's `@kotlin.Metadata` records `hasAnnotations` only for binary-retention annotations (36
   of the #496 spike's 38 `@AILocked` functions report `false`), so it cannot tell an annotated
-  function from an unannotated one. A `vibetags doctor` source check is tracked in #688.
+  function from an unannotated one. `vibetags doctor` checks the sources instead (#688, under Added).
 
   The same change fixes the Groovy and Scala example steps, whose `! grep` absence checks on
   `CLAUDE.md` could never fail: `bash -e` does not stop on a negated command, so only the last line
