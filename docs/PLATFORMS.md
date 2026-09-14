@@ -150,8 +150,8 @@ documents a list whose entries are matched whole, the glob is kept as written. C
 | Platform | Header | Documented list syntax | Expanded |
 |----------|--------|------------------------|----------|
 | GitHub Copilot | `applyTo: "..."` | "You can specify multiple patterns by separating them with commas", `applyTo: "**/*.ts,**/*.tsx"` ([docs.github.com](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions)). VS Code's reader skips commas inside braces; the GitHub.com reader is not public | yes |
-| Cursor | `globs: [...]` | `docs/**/*.md, docs/**/*.mdx` matches ".md and .mdx files under docs/ (comma-separated)" ([cursor.com/docs/rules](https://cursor.com/docs/rules)) | yes |
-| Trae | `globs: [...]` | several patterns "中间用 `,` 分隔" (separated by `,`), synced to the `globs` field ([docs.trae.cn](https://docs.trae.cn/ide/rules)) | yes |
+| Cursor | `globs: a,b` | `docs/**/*.md, docs/**/*.mdx` matches ".md and .mdx files under docs/ (comma-separated)" ([cursor.com/docs/rules](https://cursor.com/docs/rules)) | yes |
+| Trae | `globs: a,b` | several patterns "中间用 `,` 分隔" (separated by `,`), synced to the `globs` field ([docs.trae.cn](https://docs.trae.cn/ide/rules)) | yes |
 | Devin Desktop, Windsurf | `globs: a,b` | no multi-glob example in the docs; the vendor sample writes `globs: *.js, src/*.js` | yes (#685) |
 | Claude Code | `paths: [...]` | a YAML list, with "brace expansion to match multiple extensions in one pattern" ([code.claude.com](https://code.claude.com/docs/en/memory)) | no |
 | Cline | `paths: [...]` | "`paths` is the supported conditional. It takes an array of glob patterns", with `packages/{web,api}/**` in the docs ([docs.cline.bot](https://docs.cline.bot/features/cline-rules/conditional-rules)) | no |
@@ -159,9 +159,9 @@ documents a list whose entries are matched whole, the glob is kept as written. C
 | PearAI | `globs: [...]` | none found; the header is Continue's, which PearAI forked | no |
 
 Kiro, Augment, Zencoder, JetBrains AI Assistant, Grok, Gemini, Antigravity, Amazon Q, Tabnine, Roo
-Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. Whether Cursor and
-Trae read the bracketed, quoted list VibeTags writes at all, when their docs show a bare
-comma-separated value, is a separate question the expansion does not settle (#699).
+Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. Cursor and Trae
+read the value as a string, not a YAML list, which is why their headers are bare rather than
+bracketed; see [Cursor and Trae read `globs:` as a comma-separated string](#cursor-and-trae-read-globs-as-a-comma-separated-string) (#699).
 
 **Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
 
@@ -378,6 +378,57 @@ above), so a warning would tell projects to drop a file another tool still uses.
 Cursor should opt into `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules`
 collapses to the scoped-rules index and keeps only the safety tier inline. The file gets a
 `DeprecatedServices` notice when Cursor says it no longer reads it.
+
+### Cursor and Trae read `globs:` as a comma-separated string
+
+Until this change VibeTags wrote the globs of Cursor's `.cursor/rules/*.mdc` and Trae's
+`.trae/rules/*.md` as a bracketed, quoted list, `globs: ["**/PaymentProcessor.java"]`. Neither tool
+reads that as a list, so no rule VibeTags wrote into either directory attached by its glob (#699).
+Both headers now write the value bare, several globs joined with commas and brace groups expanded
+as in the table under [Granular rules](#granular-rules): `globs: **/*Controller.java,**/*Endpoint.java`.
+The first build after upgrading rewrites the header of every committed rule file in both
+directories and keeps what a person wrote outside the markers (`CursorTraeGlobsFormEndToEndTest`).
+
+What the vendors say (checked 2026-09-14):
+
+- Cursor's [rules documentation](https://cursor.com/docs/rules) shows only the bare form: the front
+  matter example `globs: src/components/**/*.tsx`, and `docs/**/*.md, docs/**/*.mdx` in the pattern
+  table as ".md and .mdx files under docs/ (comma-separated)". A Cursor staff reply on the
+  [forum](https://forum.cursor.com/t/rule-frontmatter-format/146274), 2025-12-16, answering a user
+  whose bracketed and quoted globs failed: "The format is frontmatter with globs being comma
+  separated values, no brackets or quotes."
+- Trae's [rules documentation](https://docs.trae.ai/ide/rules) says several wildcards can be
+  configured "separated by `,`" and that the setting "will be automatically synchronized to the
+  `globs` field". The page has no front matter example with a `globs:` line.
+
+What the shipped code does. Neither tool is open source and neither was run for this check; the
+verdict rests on the vendor statements above and on reading each tool's own bundled JavaScript.
+
+- **Cursor 3.20.17**, the stable Linux `.deb` from `downloads.cursor.com` (commit `0c32194e`),
+  `extensions/cursor-agent-exec/dist/main.js`. A `.mdc` file is read by a line parser, not a YAML
+  library. For `globs:` it keeps the text after the colon, removing one pair of quotes only when
+  they surround the whole value, and a later step splits that string on the commas outside a brace
+  group and trims each piece. A block list, `globs:` followed by `  - pattern` lines, is also
+  accepted; a flow list in brackets is not. A rule with any glob is filed as glob-attached and
+  matched with minimatch, so its `description` does not bring it in either. The parser functions,
+  copied byte for byte out of the bundle and run under Node with minimatch 3.1.2 standing in for
+  the bundled copy, turned `globs: ["**/NotificationService.java"]` into the single pattern
+  `["**/NotificationService.java"]`, which matched none of three Java paths, while
+  `globs: **/NotificationService.java` and `globs: **/api/*.java,**/*Endpoint.java`, with or
+  without a space after the comma, matched the files they name.
+- **Trae 2.3.33256**, the Linux `.deb` from `lf-cdn.trae.ai` built 2026-05-28, the build the AUR
+  `trae-bin` package pins (its SHA-256 matched), `out/vs/workbench/workbench.desktop.main.js`.
+  `MultiRuleService.parseMetadata` sets `globs` to the text after the colon split on every comma,
+  each piece trimmed, with no quote or bracket handling, and Trae's own serializer writes
+  `globs: ` followed by the globs joined with `,`. Before matching, a pattern that starts with
+  neither `/` nor `**/` gets `**/` in front, so the bracketed value becomes
+  `**/["**/PaymentProcessor.java"]`, and the matcher, VS Code's `glob.ts` bundled into the
+  workbench, reads the bracketed part as one character class matching a single character. That
+  last step was read from the source of `glob.ts`, not executed. Whether 2.3.33256 is Trae's newest build was not checked.
+
+What would add to this: a project opened in current Cursor and Trae with one rule written each way,
+recording which one attaches when a matching file is opened. Continue and PearAI keep the list,
+which Continue documents; see the table under [Granular rules](#granular-rules).
 
 ### Cline's two shapes at one path
 

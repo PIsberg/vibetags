@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.PublicPaymentController"
-globs: ["**/PublicPaymentController.java"]
+globs: **/PublicPaymentController.java
 alwaysApply: false
 ---
 

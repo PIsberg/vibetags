@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/gmm/core/**", "**/gmm/app/**"]
+globs: **/gmm/core/**,**/gmm/app/**
 description: "AI rules for role reactor-spine"
 ---
 

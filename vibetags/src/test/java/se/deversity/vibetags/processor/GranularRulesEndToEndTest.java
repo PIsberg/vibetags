@@ -55,7 +55,7 @@ class GranularRulesEndToEndTest {
         String content = harness.readFile(".cursor/rules/com-example-payment-PaymentProcessor.mdc");
         assertTrue(content.startsWith("---"));
         assertTrue(content.contains("description: \"AI rules for com.example.payment.PaymentProcessor\""));
-        assertTrue(content.contains("globs: [\"**/PaymentProcessor.java\"]"));
+        assertTrue(content.contains("globs: **/PaymentProcessor.java\n"));
         assertTrue(content.contains("## Locked Status"));
         assertTrue(content.contains("VIBETAGS-START"));
     }
@@ -70,7 +70,7 @@ class GranularRulesEndToEndTest {
         String content = harness.readFile(".trae/rules/com-example-payment-PaymentProcessor.md");
         assertTrue(content.startsWith("---"));
         assertTrue(content.contains("alwaysApply: false"));
-        assertTrue(content.contains("globs: [\"**/PaymentProcessor.java\"]"));
+        assertTrue(content.contains("globs: **/PaymentProcessor.java\n"));
     }
 
     @Test

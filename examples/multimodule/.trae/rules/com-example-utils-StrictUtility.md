@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/StrictUtility.java"]
+globs: **/StrictUtility.java
 description: "AI rules for com.example.utils.StrictUtility"
 ---
 

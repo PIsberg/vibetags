@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/UserEntity.java"]
+globs: **/UserEntity.java
 description: "AI rules for com.example.database.UserEntity"
 ---
 

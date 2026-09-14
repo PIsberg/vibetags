@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/SecurityConfig.java"]
+globs: **/SecurityConfig.java
 description: "AI rules for com.example.security.SecurityConfig"
 ---
 

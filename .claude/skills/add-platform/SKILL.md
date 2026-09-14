@@ -127,7 +127,8 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
    - add `boolean xGranular = activeServices.contains("x_granular");` and OR it into the early
      `if (!cursorGranular && ... ) return writtenQNames;` gate
    - inside `elementRules.forEach(...)`, add a write branch building the file's front-matter
-     shape — YAML `globs:`/`description:`/`alwaysApply:` (Cursor/Trae/Continue/PearAI),
+     shape — YAML `globs:`/`description:`/`alwaysApply:` (Cursor/Trae/Continue/PearAI; Cursor and
+     Trae read `globs:` as a bare comma-separated string, not a list, #699),
      YAML `trigger: glob` + `globs:` (Devin Desktop and Windsurf), YAML `paths:` (Claude), a single-string `applyTo:` (Copilot), or no front-matter at all
      (Roo/Tabnine/AmazonQ/Kiro/`.ai/rules`) — then
      `fileWriter.writeFileIfChanged(serviceFiles.get("x_granular").resolve(qName +

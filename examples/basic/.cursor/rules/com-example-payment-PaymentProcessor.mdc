@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.payment.PaymentProcessor"
-globs: ["**/PaymentProcessor.java"]
+globs: **/PaymentProcessor.java
 alwaysApply: false
 ---
 
