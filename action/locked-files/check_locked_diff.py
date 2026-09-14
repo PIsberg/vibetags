@@ -18,7 +18,10 @@ before this script), lists the changed files against the merge base with
 Checks 2 and 3 read the base revision. A Java, Kotlin or Groovy source is lexed there, so
 ``@AILocked`` text inside a string literal, text block, char literal or comment is not an
 annotation (#708, #709). A source that does not lex keeps the plain substring match, which errs
-toward failing; a Groovy source does not lex wherever a slashy string could start. So does
+toward failing; a Groovy source does not lex wherever a slashy string could start. A Kotlin or
+Groovy source also counts the aliases that sources elsewhere at the base declare for the lock, a
+``typealias`` or an ``@AnnotationCollector`` (#716); while a source that may declare one does not
+lex, every annotation in that language counts. So does
 anything else the guard cannot read: an unknown diff status, an unparseable record, or a file
 whose diff does not map to one section.
 
@@ -47,6 +50,8 @@ HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # regenerated report and so invisible to any report-based check. A base-side report would not
 # do either: a consumer's committed report can be stale, and a source cannot.
 SOURCE_EXTS = (".java", ".kt", ".kts", ".groovy")
+LOCK_NAME = "AILocked"
+COLLECTOR_NAME = "AnnotationCollector"
 
 
 def is_lock_carrying_source(path):
@@ -222,7 +227,7 @@ def _scan_java(chars, name):
     return lines
 
 
-def kotlin_annotation_lines(text, name="AILocked"):
+def kotlin_annotation_lines(text, name=LOCK_NAME, aliases=(), any_annotation=False):
     """The lines holding a real ``@name`` annotation in a Kotlin source, or None when unsure.
 
     Kotlin nests code inside strings: ``"${ ... }"`` and ``\"\"\"${ ... }\"\"\"`` hold arbitrary
@@ -233,14 +238,18 @@ def kotlin_annotation_lines(text, name="AILocked"):
     multi-dollar ``$$"..."`` prefix changes what a template is), a ``$`` before a backtick in a
     string, a raw string closed by more than three quotes, a backslash in code, a lone carriage
     return. None sends the caller back to the substring match, which errs toward failing.
+
+    ``aliases`` are further names for the lock, declared in other files (#716);
+    ``any_annotation`` counts every annotation, for when such a declaration could not be read.
     """
     try:
-        return _script_annotation_lines(_lex_script(text, kotlin=True), name)
+        return _script_annotation_lines(_lex_script(text, kotlin=True), {name, *aliases},
+                                        any_annotation)
     except _Unlexable:
         return None
 
 
-def groovy_annotation_lines(text, name="AILocked"):
+def groovy_annotation_lines(text, name=LOCK_NAME, aliases=(), any_annotation=False):
     """The lines holding a real ``@name`` annotation in a Groovy source, or None when unsure.
 
     Groovy's quoted strings (``'``, ``"``, ``'''``, ``\"\"\"``) and comments are lexed, with
@@ -249,10 +258,12 @@ def groovy_annotation_lines(text, name="AILocked"):
     make a real annotation look quoted, so a ``/`` in code that does not start a comment makes
     the whole file unsure. So does any unicode escape (Groovy may translate one before lexing,
     as javac does), a ``$`` in a template string that starts neither a name nor ``${``, and
-    anything the Kotlin lexer also gives up on.
+    anything the Kotlin lexer also gives up on. ``aliases`` and ``any_annotation`` are as for
+    ``kotlin_annotation_lines``.
     """
     try:
-        return _script_annotation_lines(_lex_script(text, kotlin=False), name)
+        return _script_annotation_lines(_lex_script(text, kotlin=False), {name, *aliases},
+                                        any_annotation)
     except _Unlexable:
         return None
 
@@ -412,51 +423,157 @@ def _lex_script(text, kotlin):
     return tokens
 
 
-def _script_annotation_lines(tokens, name):
+# A Groovy type that can be an @AnnotationCollector. Kotlin's only cross-file alias is a typealias.
+TYPE_KEYWORDS = ("class", "interface", "trait", "enum", "record")
+
+
+def _tok(tokens, k, kind, value=None):
+    return k < len(tokens) and tokens[k][0] == kind and (value is None or tokens[k][1] == value)
+
+
+def _chain_end(tokens, k):
+    """The index of the last name in a dotted name starting at k."""
+    while _tok(tokens, k + 1, "punct", ".") and _tok(tokens, k + 2, "ident"):
+        k += 2
+    return k
+
+
+def _type_name_end(tokens, k):
+    """The index of the last name of the type starting at k, past parentheses and type
+    annotations, or None when no name starts there."""
+    while True:
+        if _tok(tokens, k, "punct", "("):
+            k += 1
+        elif _tok(tokens, k, "punct", "@") and _tok(tokens, k + 1, "ident"):
+            k = _chain_end(tokens, k + 1) + 1
+            if _tok(tokens, k, "punct", "("):
+                depth = 0
+                while k < len(tokens):
+                    depth += _tok(tokens, k, "punct", "(") - _tok(tokens, k, "punct", ")")
+                    k += 1
+                    if depth == 0:
+                        break
+        elif _tok(tokens, k, "ident"):
+            return _chain_end(tokens, k)
+        else:
+            return None
+
+
+def _declared_type(tokens, t):
+    """The index of the name a type declaration starting at t declares, or None."""
+    if _tok(tokens, t, "punct", "@") and _tok(tokens, t + 1, "ident", "interface"):
+        return t + 2 if _tok(tokens, t + 2, "ident") else None
+    if (_tok(tokens, t, "ident") and tokens[t][1] in TYPE_KEYWORDS and _tok(tokens, t + 1, "ident")
+            and tokens[t + 1][1] not in TYPE_KEYWORDS
+            and not (_tok(tokens, t - 1, "punct", "@") or _tok(tokens, t - 1, "punct", "."))):
+        return t + 1
+    return None
+
+
+def _header_names(tokens, t, in_import):
+    """The names written before the declaration at t, back to the statement or block before it.
+
+    That covers every annotation on the declaration, with its arguments, so a collector's
+    ``@AILocked`` and an ``@AnnotationCollector([AILocked])`` list are both in it. It can also take
+    in a script statement ahead of the declaration, which only widens what counts.
+    """
+    names, depth, k = set(), 0, t - 1
+    while k >= 0:
+        kind, value, _ = tokens[k]
+        if kind == "punct" and value in ")]":
+            depth += 1
+        elif kind == "punct" and value in "([":
+            if depth == 0:
+                break
+            depth -= 1
+        elif kind == "punct" and value in ";{}" and depth == 0:
+            break
+        elif kind == "ident" and k not in in_import:
+            names.add(value)
+        k -= 1
+    return names
+
+
+def _script_names(tokens, names):
+    """The lock names one Kotlin or Groovy file sees, and the ones it declares for other files.
+
+    Returns ``(local, declared, in_import)``. ``local`` is ``names`` plus every name this file
+    gives one of them: an ``import ... as``, a ``typealias`` (plain, qualified, nested, with type
+    parameters, or naming another alias) and an ``@AnnotationCollector`` type whose annotations
+    name one, followed through each other until nothing grows. ``declared`` is the part another
+    file can use, the typealiases and collectors. ``in_import`` holds the token indexes inside
+    import statements. Both languages get both rules: neither keyword means anything else in the
+    other language, so a stray match can only widen what counts.
+    """
+    count = len(tokens)
+    imports, typealiases, types, in_import = [], [], [], set()
+    for t in range(count):
+        if _tok(tokens, t, "ident", "import") and _tok(tokens, t + 1, "ident"):
+            k = t + 2 if tokens[t + 1][1] == "static" and _tok(tokens, t + 2, "ident") else t + 1
+            end = _chain_end(tokens, k)
+            in_import.update(range(k, end + 1))
+            if _tok(tokens, end + 1, "ident", "as") and _tok(tokens, end + 2, "ident"):
+                imports.append((tokens[end][1], tokens[end + 2][1]))
+                in_import.update((end + 1, end + 2))
+        elif _tok(tokens, t, "ident", "typealias") and _tok(tokens, t + 1, "ident"):
+            k = t + 2  # past any type parameters, which cannot hold an "="
+            while k < count and not (_tok(tokens, k, "punct", "=")
+                                     or _tok(tokens, k, "ident", "typealias")):
+                k += 1
+            end = _type_name_end(tokens, k + 1) if _tok(tokens, k, "punct", "=") else None
+            if end is not None:
+                typealiases.append((tokens[end][1], tokens[t + 1][1]))
+        else:
+            declared_at = _declared_type(tokens, t)
+            if declared_at is not None:
+                types.append((declared_at, t))
+    types = [(tokens[at][1], _header_names(tokens, t, in_import)) for at, t in types]
+    collectors = {COLLECTOR_NAME} | {alias for target, alias in imports if target == COLLECTOR_NAME}
+
+    local, declared, grown = set(names), set(), True
+    while grown:
+        grown = False
+        for target, alias in imports + typealiases:
+            if target in local and alias not in local:
+                local.add(alias)
+                grown = True
+        for target, alias in typealiases:
+            if target in local:
+                declared.add(alias)
+        for name, header in types:
+            if name not in declared and header & collectors and header & local:
+                declared.add(name)
+                local.add(name)
+                grown = True
+    return local, declared, in_import
+
+
+def _script_annotation_lines(tokens, names, any_annotation=False):
     """Lines that carry a lock, from Kotlin or Groovy code tokens.
 
     Deliberately wider than an annotation: every line from an ``@`` to a lock name after it
     (a use-site target such as ``@field:``, a qualified name, or a ``@[...]`` group), and every
     other code token naming the lock, such as a ``typealias`` right-hand side or a class
-    reference, counts. Names brought in by ``import ... as`` and ``typealias`` count as the lock
-    too. Only the import statement itself does not, so removing an unused import passes. A
-    wider answer can only fail a pull request that would otherwise pass.
+    reference, counts. ``names`` holds the lock and the aliases other files declare for it, and the
+    names this file gives any of them count as the lock too (see ``_script_names``). A name counts
+    wherever it is declared, so a same-named local class never hides an alias. Only an import
+    statement itself does not count, so removing an unused import passes. With
+    ``any_annotation``, every annotation counts. A wider answer can only fail a pull request that
+    would otherwise pass.
     """
     count = len(tokens)
+    local, _, in_import = _script_names(tokens, names)
 
     def tok(k, kind, value=None):
-        return k < count and tokens[k][0] == kind and (value is None or tokens[k][1] == value)
+        return _tok(tokens, k, kind, value)
 
-    def chain_end(k):
-        """The index of the last name in a dotted name starting at k."""
-        while tok(k + 1, "punct", ".") and tok(k + 2, "ident"):
-            k += 2
-        return k
-
-    names, aliases, in_import = {name}, [], set()
-    for t in range(count):
-        if tok(t, "ident", "import") and tok(t + 1, "ident"):
-            k = t + 2 if tokens[t + 1][1] == "static" and tok(t + 2, "ident") else t + 1
-            end = chain_end(k)
-            in_import.update(range(k, end + 1))
-            if tok(end + 1, "ident", "as") and tok(end + 2, "ident"):
-                aliases.append((tokens[end][1], tokens[end + 2][1]))
-                in_import.update((end + 1, end + 2))
-        elif (tok(t, "ident", "typealias") and tok(t + 1, "ident") and tok(t + 2, "punct", "=")
-              and tok(t + 3, "ident")):
-            aliases.append((tokens[chain_end(t + 3)][1], tokens[t + 1][1]))
-    grown = True
-    while grown:
-        grown = False
-        for target, alias in aliases:
-            if target in names and alias not in names:
-                names.add(alias)
-                grown = True
+    def counts(name):
+        return any_annotation or name in local
 
     lines = set()
     for t in range(count):
         kind, value, line = tokens[t]
-        if kind == "ident" and value in names and t not in in_import:
+        if kind == "ident" and value in local and t not in in_import:
             lines.add(line)
         if not (kind == "punct" and value == "@"):
             continue
@@ -474,48 +591,211 @@ def _script_annotation_lines(tokens, name):
                     depth -= 1
                     if depth == 0:
                         break
-                elif tok(j, "ident") and tokens[j][1] in names:
+                elif tok(j, "ident") and counts(tokens[j][1]):
                     lines.update(range(line, tokens[j][2] + 1))
                 j += 1
         elif tok(k, "ident"):
-            end = chain_end(k)
-            if tokens[end][1] in names:
+            end = _chain_end(tokens, k)
+            if counts(tokens[end][1]):
                 lines.update(range(line, tokens[end][2] + 1))
     return lines
 
-def lock_lines(path, text):
-    """Lines of ``text`` that carry a lock, or None when only a substring match can tell.
 
-    Java, Kotlin and Groovy each have their own lexer, and each answers None whenever it cannot
-    be sure where code ends and a literal or comment begins (#708, #709).
-    """
-    if path.endswith(".java"):
-        return java_annotation_lines(text)
-    if path.endswith((".kt", ".kts")):
-        return kotlin_annotation_lines(text)
-    if path.endswith(".groovy"):
-        return groovy_annotation_lines(text)
+def script_language(path):
+    """"kotlin" or "groovy" for a source whose annotations those lexers read, else None."""
+    if path is not None and path.endswith((".kt", ".kts")):
+        return "kotlin"
+    if path is not None and path.endswith(".groovy"):
+        return "groovy"
     return None
 
 
-def strips_a_lock(path, base_text, removed):
+LANGUAGE_LABELS = {"kotlin": "Kotlin", "groovy": "Groovy"}
+
+
+class BaseAliases:
+    """Lock aliases declared across the base revision's Kotlin and Groovy sources (#716).
+
+    ``names[language]`` holds every alias another file can use. ``unsure[language]`` lists the
+    sources that may declare one but do not lex; while one is listed, every annotation in that
+    language counts, because the alias it declares cannot be named.
+    """
+
+    def __init__(self, names=None, unsure=None):
+        self.names = {"kotlin": frozenset(), "groovy": frozenset(), **(names or {})}
+        self.unsure = {"kotlin": (), "groovy": (), **(unsure or {})}
+
+    def names_for(self, path):
+        return self.names.get(script_language(path), frozenset())
+
+    def unsure_for(self, path):
+        return self.unsure.get(script_language(path), ())
+
+
+NO_ALIASES = BaseAliases()
+
+
+def lock_lines(path, text, aliases=NO_ALIASES, any_annotation=False):
+    """Lines of ``text`` that carry a lock, or None when only a substring match can tell.
+
+    Java, Kotlin and Groovy each have their own lexer, and each answers None whenever it cannot
+    be sure where code ends and a literal or comment begins (#708, #709). A Kotlin or Groovy
+    source also counts the aliases other files declare (#716).
+    """
+    if path.endswith(".java"):
+        return java_annotation_lines(text)
+    language = script_language(path)
+    if language == "kotlin":
+        return kotlin_annotation_lines(text, aliases=aliases.names_for(path),
+                                       any_annotation=any_annotation)
+    if language == "groovy":
+        return groovy_annotation_lines(text, aliases=aliases.names_for(path),
+                                       any_annotation=any_annotation)
+    return None
+
+
+def text_holds_a_lock(path, text, aliases=NO_ALIASES, any_annotation=False):
+    """The substring match a source that does not lex falls back to, erring toward failing.
+
+    Java keeps ``@AILocked``. A Kotlin or Groovy text matches when it holds an ``@`` and a lock
+    name anywhere, which a use-site target (``@field:AILocked``), a qualified name and an alias
+    declared in another file all do; with ``any_annotation`` an ``@`` alone matches.
+    """
+    if script_language(path) is None:
+        return "@AILocked" in text
+    if "@" not in text:
+        return False
+    return any_annotation or any(name in text for name in {LOCK_NAME, *aliases.names_for(path)})
+
+
+def strips_a_lock(path, base_text, removed, aliases=NO_ALIASES, any_annotation=False):
     """Whether the removed base lines, ``(line number, text)`` pairs, held a real ``@AILocked``.
 
     Falls back to the substring match on the removed text whenever the base cannot be read or
     lexed, so an unsure answer fails the guard rather than passing it.
     """
-    annotated = lock_lines(path, base_text) if base_text is not None else None
+    annotated = (lock_lines(path, base_text, aliases, any_annotation)
+                 if base_text is not None else None)
     if annotated is None:
-        return any("@AILocked" in body for _, body in removed)
+        return any(text_holds_a_lock(path, body, aliases, any_annotation) for _, body in removed)
     return any(number in annotated for number, _ in removed)
 
 
-def holds_a_lock(path, base_text):
+def holds_a_lock(path, base_text, aliases=NO_ALIASES, any_annotation=False):
     """Whether a deleted file carried a real ``@AILocked``, with the same fallback."""
-    annotated = lock_lines(path, base_text)
+    annotated = lock_lines(path, base_text, aliases, any_annotation)
     if annotated is None:
-        return "@AILocked" in base_text
+        return text_holds_a_lock(path, base_text, aliases, any_annotation)
     return bool(annotated)
+
+
+# The word a source must hold to declare an alias another file can use: a Kotlin typealias, or a
+# Groovy collector, which names AnnotationCollector through an import, an import alias, a star
+# import's simple name or its qualified name.
+ALIAS_KEYWORDS = {"kotlin": "typealias", "groovy": COLLECTOR_NAME}
+_ASCII_IGNORABLE = re.compile("[\x00-\x08\x0e-\x1b\x7f]")
+_UNICODE_ESCAPE = re.compile(r"\\u+([0-9a-fA-F]{4})")
+
+
+def _may_name(text, word, language):
+    """Whether ``word`` could be written in ``text``, read before lexing and erring toward yes.
+
+    An identifier-ignorable character inside the word does not hide it, and neither does a Groovy
+    unicode escape, which is translated first. Translating one that a preceding backslash escapes
+    can only find more. Measured on 998 Groovy files: counting any escape as a possible spelling
+    made three files unsure for an escaped emoji or line separator in a literal.
+    """
+    if word in text:
+        return True
+    if language == "groovy" and "\\u" in text:
+        text = _UNICODE_ESCAPE.sub(lambda match: chr(int(match.group(1), 16)), text)
+        if word in text:
+            return True
+    if text.isascii() and not _ASCII_IGNORABLE.search(text):
+        return False
+    return word in "".join(ch for ch in text if not _java_ignorable(ch))
+
+
+def base_script_sources(ref):
+    """Every Kotlin and Groovy blob at ``ref`` as ``(path, text)``, read by two git processes.
+
+    ``git ls-tree -r -z`` lists them and a single ``git cat-file --batch`` reads them all, so a
+    tree of thousands of sources does not start a process per file. Raises ValueError when git's
+    output cannot be read; the caller fails the guard.
+    """
+    wanted = []
+    for record in run_git_bytes("ls-tree", "-r", "-z", "--full-tree", ref).split(bytes([0])):
+        if not record:
+            continue
+        meta, tab, raw_path = record.partition(b"\t")
+        parts = meta.split(b" ")
+        if not tab or len(parts) != 3:
+            raise ValueError(f"unexpected ls-tree record {record[:80]!r}")
+        path = os.fsdecode(raw_path)
+        if parts[1] == b"blob" and script_language(path):
+            wanted.append((path, parts[2]))
+    if not wanted:
+        return []
+    batch = subprocess.run(["git", "cat-file", "--batch"], capture_output=True,
+                           input=b"".join(sha + b"\n" for _, sha in wanted))
+    if batch.returncode != 0:
+        sys.stderr.write(batch.stderr.decode("utf-8", errors="replace"))
+        raise SystemExit(f"git cat-file --batch failed with exit code {batch.returncode}")
+    out, pos, sources = batch.stdout, 0, []
+    for path, sha in wanted:
+        end = out.find(b"\n", pos)
+        header = out[pos:end].split(b" ") if end >= 0 else []
+        if len(header) != 3 or header[0] != sha or header[1] != b"blob":
+            raise ValueError(f"unexpected cat-file header for {path!r}")
+        start, size = end + 1, int(header[2])
+        if len(out) < start + size + 1:
+            raise ValueError(f"truncated cat-file output for {path!r}")
+        sources.append((path, out[start:start + size].decode("utf-8", errors="replace")))
+        pos = start + size + 1
+    return sources
+
+
+def collect_base_aliases(sources):
+    """The lock aliases declared across ``(path, text)`` sources at the base revision (#716).
+
+    Only a source that holds ``typealias`` (Kotlin) or ``AnnotationCollector`` (Groovy) can
+    declare one, so only those are lexed. Aliases of aliases are followed across files until
+    nothing grows. A candidate that does not lex cannot have its alias named; it is recorded as
+    unsure when it also holds the lock's name or a known alias, the only way it could alias the
+    lock, and an unsure language counts every annotation (see ``BaseAliases``).
+    """
+    lexed = {"kotlin": [], "groovy": []}
+    unlexable = {"kotlin": [], "groovy": []}
+    for path, text in sources:
+        language = script_language(path)
+        if language is None or not _may_name(text, ALIAS_KEYWORDS[language], language):
+            continue
+        try:
+            lexed[language].append(_lex_script(text, kotlin=language == "kotlin"))
+        except _Unlexable:
+            unlexable[language].append((path, text))
+    names, unsure = {}, {}
+    for language, token_lists in lexed.items():
+        known, grown = {LOCK_NAME}, True
+        while grown:
+            grown = False
+            for tokens in token_lists:
+                declared = _script_names(tokens, known)[1]
+                if not declared <= known:
+                    known |= declared
+                    grown = True
+        names[language] = frozenset(known - {LOCK_NAME})
+        unsure[language] = tuple(path for path, text in unlexable[language]
+                                 if any(_may_name(text, name, language) for name in known))
+    return BaseAliases(names, unsure)
+
+
+def unsure_note(path, aliases):
+    """Why every annotation counts in ``path``'s language, for a violation message."""
+    paths = aliases.unsure_for(path)
+    others = f" and {len(paths) - 1} other source(s)" if len(paths) > 1 else ""
+    return (f"{paths[0]}{others} may declare an alias of @AILocked but could not be lexed at the "
+            "base revision")
 
 
 def run_git(*args):
@@ -771,7 +1051,8 @@ GITLINK_MODE = "160000"
 CHECKED_STATUSES = ("A", "C", "D", "M", "R", "T")
 
 
-def entry_violations(entry, merge_base, head_locks, base_locks, established):
+def entry_violations(entry, merge_base, head_locks, base_locks, established,
+                     aliases=NO_ALIASES):
     """Violations for one changed file, as (path, line or None, message) triples."""
     status, old_mode, new_mode, old, new = entry
     paths = list(dict.fromkeys(p for p in (old, new) if p))
@@ -814,8 +1095,11 @@ def entry_violations(entry, merge_base, head_locks, base_locks, established):
                 yield (old, None, "Cannot read the base revision of a removed source file; "
                                   "failing closed")
                 return
-            if holds_a_lock(old, base_text):
+            if holds_a_lock(old, base_text, aliases):
                 held = f"{what} contained @AILocked code"
+            elif aliases.unsure_for(old) and holds_a_lock(old, base_text, aliases, True):
+                held = (f"{what} held an annotation, and {unsure_note(old, aliases)}; "
+                        "failing closed")
         if held is None and base_here:
             held = f"{what} held locked element {base_here[0].get('element', '?')}"
         if held is not None:
@@ -846,9 +1130,12 @@ def entry_violations(entry, merge_base, head_locks, base_locks, established):
     # base side, because a stripped lock is absent from the regenerated report.
     if source and removed:
         base_text = git_show_text(merge_base, old)
-        if strips_a_lock(old, base_text, removed):
+        if strips_a_lock(old, base_text, removed, aliases):
             yield (new, None, "A line containing @AILocked was removed -- "
                               "removing a lock requires explicit human review")
+        elif aliases.unsure_for(old) and strips_a_lock(old, base_text, removed, aliases, True):
+            yield (new, None, "A line holding an annotation was removed, and "
+                              f"{unsure_note(old, aliases)}; failing closed")
 
     # 1. Changed lines intersect a locked range at HEAD. A lock absent from the base report is
     # one this diff introduces and is exempt: adding @AILocked to existing code is itself a
@@ -905,13 +1192,30 @@ def main():
         message = f"VibeTags locked-files guard: cannot read the diff ({err}); failing closed"
         print(f"::{kind}::{annotation_message(message)}")
         return 0 if warn_only else 1
+    # Aliases of the lock can be declared in any Kotlin or Groovy source, not only a changed one, so
+    # a diff that removes one of those sources' lines reads them all at the base first (#716).
+    aliases = NO_ALIASES
+    if any(script_language(old) for _, _, _, old, _ in entries):
+        try:
+            aliases = collect_base_aliases(base_script_sources(merge_base))
+        except ValueError as err:
+            message = (f"VibeTags locked-files guard: cannot read the base sources ({err}); "
+                       "failing closed")
+            print(f"::{kind}::{annotation_message(message)}")
+            return 0 if warn_only else 1
+        for language, unsure in aliases.unsure.items():
+            if unsure:
+                print(f"VibeTags locked-files guard: {len(unsure)} {LANGUAGE_LABELS[language]} "
+                      "source(s) at the base may declare an alias of @AILocked but do not lex, "
+                      f"so every annotation in a {LANGUAGE_LABELS[language]} source counts "
+                      f"(first: {annotation_message(unsure[0])})")
     base_locks = lock_entries_at(merge_base, reports, repo_root)
     established = {lock_key(lock) for lock in base_locks}
     violations = 0
 
     for entry in entries:
         for path, line, message in entry_violations(entry, merge_base, locks, base_locks,
-                                                    established):
+                                                    established, aliases):
             violations += 1
             where = f"file={annotation_property(path)}"
             if line is not None:

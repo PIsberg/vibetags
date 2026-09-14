@@ -711,6 +711,231 @@ class GroovyAnnotationTextIsNotALockTest(SourceFixture, unittest.TestCase):
         self.change({}, delete=[self.SRC])
         self.assertEqual(self.run_guard(), 1)
 
+KT_ALIASES = ("package com.example.locks\n\n"
+              "import se.deversity.vibetags.annotations.AILocked\n\n"
+              "typealias Frozen = AILocked\n")
+KT_ALIAS_USE = ("package com.example.app\n\n"
+                "import com.example.locks.Frozen\n\n"
+                '@Frozen(reason = "class")\n'
+                "class Ledger {\n"
+                '    @Frozen(reason = "function")\n'
+                "    fun settle(): Int = 1\n"
+                "}\n")
+GROOVY_COLLECTOR_HEADER = ("package com.example.locks\n\n"
+                           "import groovy.transform.AnnotationCollector\n"
+                           "import se.deversity.vibetags.annotations.AILocked\n\n")
+GROOVY_COLLECTOR_USE = ("package com.example.app\n\n"
+                        "import com.example.locks.Frozen\n\n"
+                        "class Ledger {\n"
+                        "    @Frozen\n"
+                        "    String settle() { 'x' }\n"
+                        "}\n")
+
+
+class CrossFileAliasTest(SourceFixture, unittest.TestCase):
+    """A lock alias declared in one file and used in another is still a lock (#716).
+
+    Measured with Kotlin 2.4.10 (kapt) and Groovy 5.1.0 on JDK 21: the processor lists an element
+    locked through a ``typealias`` declared in another file (plain, qualified, nested, or an alias
+    of an alias) and one locked through an ``@AnnotationCollector`` from another file (bundling
+    ``@AILocked``, listing it, applied under an import alias, or collecting another collector).
+    The report records the stub kapt or groovyc compiled, though, not the ``.kt`` or ``.groovy``
+    file, so no range check ever matches a Kotlin or Groovy diff. Removing the aliased annotation
+    had only the lock-stripping check to catch it, and that check read one file at a time: it
+    passed.
+    """
+
+    ALIASES = "src/main/kotlin/com/example/locks/Aliases.kt"
+    USE = "src/main/kotlin/com/example/app/Ledger.kt"
+    COLLECTOR = "src/main/groovy/com/example/locks/Frozen.groovy"
+    GROOVY_USE = "src/main/groovy/com/example/app/Ledger.groovy"
+
+    def strip(self, files, rel, removed):
+        """The guard's exit code when ``removed`` is taken out of ``rel`` in a fresh repository."""
+        self.init_repo()
+        self.assertIn(removed, files[rel])
+        self.establish(files)
+        self.change({rel: files[rel].replace(removed, "", 1)})
+        return self.run_guard()
+
+    # --- aliases declared elsewhere: stripping a use must fail ---------------------------
+
+    def test_stripping_a_typealias_declared_in_another_file_fails(self):
+        for target, removed in (("function", '    @Frozen(reason = "function")\n'),
+                                ("class", '@Frozen(reason = "class")\n')):
+            with self.subTest(target=target):
+                files = {self.ALIASES: KT_ALIASES, self.USE: KT_ALIAS_USE}
+                self.assertEqual(self.strip(files, self.USE, removed), 1)
+
+    def test_stripping_a_qualified_typealias_declared_in_another_file_fails(self):
+        aliases = ("package com.example.locks\n\n"
+                   "typealias Frozen = se.deversity.vibetags.annotations.AILocked\n")
+        files = {self.ALIASES: aliases, self.USE: KT_ALIAS_USE}
+        self.assertEqual(self.strip(files, self.USE, '    @Frozen(reason = "function")\n'), 1)
+
+    def test_stripping_a_nested_or_chained_typealias_fails(self):
+        """The chain is declared in a file git lists before the alias it names."""
+        forms = {  # form: (declaring files, annotation as written at the use)
+            "nested": ({"src/main/kotlin/com/example/locks/Holder.kt":
+                        "package com.example.locks\n\nclass Holder {\n"
+                        "    typealias Nested = se.deversity.vibetags.annotations.AILocked\n}\n"},
+                       '@Holder.Nested(reason = "n")'),
+            "alias of an alias": ({self.ALIASES: KT_ALIASES,
+                                   "src/main/kotlin/com/example/cold/Cold.kt":
+                                   "package com.example.cold\n\n"
+                                   "import com.example.locks.Frozen\n\ntypealias Cold = Frozen\n"},
+                                  '@Cold(reason = "c")'),
+            "alias of an import alias": ({"src/main/kotlin/com/example/locks/Aliases.kt":
+                                          "package com.example.locks\n\n"
+                                          "import se.deversity.vibetags.annotations.AILocked as L\n\n"
+                                          "typealias Frozen = L\n"},
+                                         '@Frozen(reason = "i")'),
+            "with a type parameter": ({self.ALIASES: "package com.example.locks\n\n"
+                                       "typealias Frozen<T> = se.deversity.vibetags.annotations.AILocked\n"},
+                                      '@Frozen<String>(reason = "g")'),
+        }
+        for form, (declarations, annotation) in forms.items():
+            with self.subTest(form=form):
+                use = f"package com.example.app\n\nclass Use {{\n    {annotation}\n    fun f(): Int = 1\n}}\n"
+                files = dict(declarations)
+                files[self.USE] = use
+                self.assertEqual(self.strip(files, self.USE, f"    {annotation}\n"), 1)
+
+    def test_stripping_a_groovy_collector_declared_in_another_file_fails(self):
+        forms = {  # form: declaring files
+            "bundling the lock": {self.COLLECTOR: GROOVY_COLLECTOR_HEADER
+                                  + "@AILocked(reason = 'bundled')\n@AnnotationCollector\n"
+                                  "@interface Frozen {}\n"},
+            "listing the lock": {self.COLLECTOR: GROOVY_COLLECTOR_HEADER
+                                 + "@AnnotationCollector([AILocked])\n@interface Frozen {}\n"},
+            "under an import alias": {self.COLLECTOR: "package com.example.locks\n\n"
+                                      "import groovy.transform.AnnotationCollector as Bundle\n"
+                                      "import se.deversity.vibetags.annotations.AILocked\n\n"
+                                      "@AILocked(reason = 'aliased')\n@Bundle\n@interface Frozen {}\n"},
+            "collecting another collector": {
+                "src/main/groovy/com/example/cold/Cold.groovy":
+                    "package com.example.cold\n\nimport groovy.transform.AnnotationCollector\n\n"
+                    "@AILocked(reason = 'chained')\n@AnnotationCollector\n@interface Cold {}\n",
+                self.COLLECTOR: "package com.example.locks\n\n"
+                                "import groovy.transform.AnnotationCollector\n"
+                                "import com.example.cold.Cold\n\n"
+                                "@Cold\n@AnnotationCollector\n@interface Frozen {}\n"},
+        }
+        for form, declarations in forms.items():
+            with self.subTest(form=form):
+                files = dict(declarations)
+                files[self.GROOVY_USE] = GROOVY_COLLECTOR_USE
+                self.assertEqual(self.strip(files, self.GROOVY_USE, "    @Frozen\n"), 1)
+
+    def test_deleting_a_file_that_uses_an_alias_from_another_file_fails(self):
+        self.establish({self.ALIASES: KT_ALIASES, self.USE: KT_ALIAS_USE})
+        self.change({}, delete=[self.USE])
+        self.assertEqual(self.run_guard(), 1)
+
+    def test_retargeting_the_alias_itself_fails(self):
+        files = {self.ALIASES: KT_ALIASES, self.USE: KT_ALIAS_USE}
+        self.establish(files)
+        self.change({self.ALIASES: KT_ALIASES.replace("= AILocked", "= Deprecated")})
+        self.assertEqual(self.run_guard(), 1)
+
+    # --- anything else: must still pass --------------------------------------------------
+
+    def test_unrelated_edits_next_to_an_alias_pass(self):
+        other = "src/main/kotlin/com/example/app/Other.kt"
+        other_src = ('package com.example.app\n\nclass Other {\n    @Deprecated("old")\n'
+                     "    fun f(): Int = 1\n}\n")
+        groovy_other = "src/main/groovy/com/example/app/Other.groovy"
+        groovy_other_src = ("package com.example.app\n\nclass Other {\n    @Deprecated\n"
+                            "    String f() { 'x' }\n}\n")
+        cases = {  # case: (files, file changed, text removed)
+            "removing an unrelated Kotlin annotation":
+                ({self.ALIASES: KT_ALIASES, self.USE: KT_ALIAS_USE, other: other_src},
+                 other, '    @Deprecated("old")\n'),
+            "editing the body under an aliased lock":
+                ({self.ALIASES: KT_ALIASES, self.USE: KT_ALIAS_USE}, self.USE, " = 1"),
+            "removing a use of an alias of another annotation":
+                ({self.ALIASES: KT_ALIASES.replace("= AILocked", "= Deprecated"),
+                  self.USE: KT_ALIAS_USE}, self.USE, '    @Frozen(reason = "function")\n'),
+            "removing an unrelated Groovy annotation":
+                ({self.COLLECTOR: GROOVY_COLLECTOR_HEADER
+                  + "@AILocked(reason = 'bundled')\n@AnnotationCollector\n@interface Frozen {}\n",
+                  self.GROOVY_USE: GROOVY_COLLECTOR_USE, groovy_other: groovy_other_src},
+                 groovy_other, "    @Deprecated\n"),
+        }
+        for case, (files, rel, removed) in cases.items():
+            with self.subTest(case=case):
+                self.assertEqual(self.strip(files, rel, removed), 0)
+
+    # --- when the pass cannot read a declaration: fail rather than pass -----------------
+
+    def test_an_alias_declared_in_a_file_that_does_not_lex_fails_safe(self):
+        """The alias name cannot be read, so any removed annotation in that language fails.
+
+        A ``$`` in Kotlin code and a ``/`` in Groovy code each make a file unsure. Only a file that
+        also names ``typealias`` (or ``AnnotationCollector``) and the lock or a known alias switches
+        the fallback on, so an unsure file that declares nothing leaves unrelated removals passing.
+        """
+        kt_unsure = KT_ALIASES + 'val label = $$"cost: $$amount"\n'
+        groovy_unsure = (GROOVY_COLLECTOR_HEADER
+                         + "@AILocked(reason = 'bundled')\n@AnnotationCollector\n"
+                         "@interface Frozen {}\n\nclass Half { int of(int n) { n / 2 } }\n")
+        other = "src/main/kotlin/com/example/app/Other.kt"
+        other_src = ('package com.example.app\n\nclass Other {\n    @Deprecated("old")\n'
+                     "    fun f(): Int = 1\n}\n")
+        cases = {  # case: (files, file changed, text removed, expected exit code)
+            "Kotlin alias use": ({self.ALIASES: kt_unsure, self.USE: KT_ALIAS_USE},
+                                 self.USE, '    @Frozen(reason = "function")\n', 1),
+            "Groovy collector use": ({self.COLLECTOR: groovy_unsure,
+                                      self.GROOVY_USE: GROOVY_COLLECTOR_USE},
+                                     self.GROOVY_USE, "    @Frozen\n", 1),
+            "any Kotlin annotation while the declaration is unreadable":
+                ({self.ALIASES: kt_unsure, self.USE: KT_ALIAS_USE, other: other_src},
+                 other, '    @Deprecated("old")\n', 1),
+            "a Groovy collector spelled with a unicode escape":
+                ({self.COLLECTOR: GROOVY_COLLECTOR_HEADER.replace("import groovy.transform.AnnotationCollector\n", "")
+                  + "@AILocked(reason = 'escaped')\n@groovy.transform.Annotation\\u0043ollector\n"
+                  "@interface Frozen {}\n",
+                  self.GROOVY_USE: GROOVY_COLLECTOR_USE},
+                 self.GROOVY_USE, "    @Frozen\n", 1),
+            "a Groovy file whose only escape is in a string":
+                ({self.COLLECTOR: "package com.example.locks\n\n"
+                                  "class Smile { String s = '\\uD83D\\uDE03' }\n",
+                  self.GROOVY_USE: "package com.example.app\n\nclass Ledger {\n    @Deprecated\n"
+                                   "    String settle() { 'x' }\n}\n"},
+                 self.GROOVY_USE, "    @Deprecated\n", 0),
+            "an unsure file whose typealias names no lock":
+                ({self.ALIASES: 'package com.example.locks\n\ntypealias Price = Int\n'
+                                'val label = $$"cost: $$amount"\n',
+                  self.USE: KT_ALIAS_USE, other: other_src},
+                 other, '    @Deprecated("old")\n', 0),
+            "an unsure file that declares no alias":
+                ({self.ALIASES: 'package com.example.locks\n\nval label = $$"cost: $$amount"\n',
+                  self.USE: KT_ALIAS_USE, other: other_src},
+                 other, '    @Deprecated("old")\n', 0),
+        }
+        for case, (files, rel, removed, expected) in cases.items():
+            with self.subTest(case=case):
+                self.assertEqual(self.strip(files, rel, removed), expected)
+
+    def test_a_same_named_local_declaration_does_not_hide_the_alias(self):
+        """Which ``Frozen`` a use means depends on imports the guard does not resolve, so any
+        declaration of the name counts as the lock rather than shadowing it."""
+        kt_use = ("package com.example.app\n\nannotation class Frozen(val reason: String)\n\n"
+                  'class Ledger {\n    @Frozen(reason = "function")\n    fun settle(): Int = 1\n}\n')
+        groovy_use = ("package com.example.app\n\n@interface Frozen {}\n\n"
+                      "class Ledger {\n    @Frozen\n    String settle() { 'x' }\n}\n")
+        cases = {
+            "Kotlin": ({self.ALIASES: KT_ALIASES, self.USE: kt_use},
+                       self.USE, '    @Frozen(reason = "function")\n'),
+            "Groovy": ({self.COLLECTOR: GROOVY_COLLECTOR_HEADER
+                        + "@AnnotationCollector([AILocked])\n@interface Frozen {}\n",
+                        self.GROOVY_USE: groovy_use}, self.GROOVY_USE, "    @Frozen\n"),
+        }
+        for case, (files, rel, removed) in cases.items():
+            with self.subTest(case=case):
+                self.assertEqual(self.strip(files, rel, removed), 1)
+
+
 class KotlinAnnotationLinesTest(unittest.TestCase):
     """The Kotlin lexer that decides which base lines carry a real ``@AILocked``."""
 
