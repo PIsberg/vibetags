@@ -18,7 +18,10 @@ import java.util.Set;
  *
  * <p>This catalog intentionally does not normalize or unify wording across platforms: every
  * override below reproduces, verbatim, text that already existed in a renderer prior to this
- * class's extraction, so that generated output stays byte-identical.
+ * class's extraction, so that generated output stayed byte-identical. The deliberate changes since
+ * are whitespace (#723): every header opens with a newline, which Gemini's IGNORE, DRAFT and
+ * PRIVACY headers did not, and Gemini's audit header no longer ends in a blank line, because each
+ * Gemini audit block now opens with one.
  */
 public final class SectionCatalog {
 
@@ -230,11 +233,16 @@ public final class SectionCatalog {
         codexOverrides.put(Key.SECURE, "\n## 🔐 SECURITY-CRITICAL CODE\nDo not weaken security properties of these elements. Review every change for security impact:\n\n");
         OVERRIDES.put(Platform.CODEX, codexOverrides);
 
+        // Every Gemini heading opens with its own blank line and no section ends with one, so
+        // whatever section comes before, exactly one blank line separates the two. IGNORE, DRAFT
+        // and PRIVACY used to omit the newline and lean on the audit block's trailing blank line,
+        // which glued them under any other list and doubled the gap after an audit block (#723).
+        // The audit heading ends without a blank line because each audit block opens with one.
         Map<Key, String> geminiOverrides = new EnumMap<>(Key.class);
-        geminiOverrides.put(Key.AUDIT, "\n## CONTINUOUS AUDIT REQUIREMENTS\nYou are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:\n\n");
-        geminiOverrides.put(Key.IGNORE, "## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
-        geminiOverrides.put(Key.DRAFT, "## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
-        geminiOverrides.put(Key.PRIVACY, "## PII / PRIVACY GUARDRAILS\nThe following elements handle Personally Identifiable Information (PII).\nNever include their runtime values in logs, console output, external API calls,\ntest fixtures, mock data, or code suggestions.\n\n");
+        geminiOverrides.put(Key.AUDIT, "\n## CONTINUOUS AUDIT REQUIREMENTS\nYou are acting as a Senior Staff Engineer. Whenever you write code for the files listed below, you must ensure your completions and chat responses strictly prevent the listed vulnerabilities:\n");
+        geminiOverrides.put(Key.IGNORE, "\n## IGNORED ELEMENTS\nThe following elements must be completely excluded from AI context and completions:\n\n");
+        geminiOverrides.put(Key.DRAFT, "\n## IMPLEMENTATION TASKS\nThe following elements are drafts that need implementation:\n\n");
+        geminiOverrides.put(Key.PRIVACY, "\n## PII / PRIVACY GUARDRAILS\nThe following elements handle Personally Identifiable Information (PII).\nNever include their runtime values in logs, console output, external API calls,\ntest fixtures, mock data, or code suggestions.\n\n");
         geminiOverrides.put(Key.CORE, "\n## CORE FUNCTIONALITY (EXTREME CAUTION)\nThe following elements are well-tested core components. Make changes with extreme caution:\n\n");
         geminiOverrides.put(Key.PERFORMANCE, "\n## PERFORMANCE CONSTRAINTS (HOT PATH)\nNever introduce O(n²) complexity into these elements. Always reason about complexity before proposing changes:\n\n");
         geminiOverrides.put(Key.CONTRACT, "\n## CONTRACT-FROZEN SIGNATURES\nInternal implementation may be changed, but MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions:\n\n");

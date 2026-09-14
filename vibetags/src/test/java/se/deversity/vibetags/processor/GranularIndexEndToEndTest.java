@@ -267,6 +267,76 @@ class GranularIndexEndToEndTest {
             "no heading may be glued onto the end of the line before it:\n" + gemini);
     }
 
+    /**
+     * Every Gemini render sets each section off by exactly one blank line (issue #723).
+     *
+     * <p>Gemini's spacing was carried in two places. Most headings brought their own leading
+     * newline, but {@code IGNORE}, {@code DRAFT} and {@code PRIVACY} did not, and relied on the
+     * audit block's trailing blank line instead. After any other list those three sat on the line
+     * directly under the last bullet, and after an audit block every heading that did carry its
+     * newline got two blank lines, as did the first heading under the generated header. Asserted on
+     * all three shapes that print this wording: the full {@code GEMINI.md}, the full
+     * {@code gemini_instructions.md}, and the collapsed {@code GEMINI.md}.
+     */
+    @Test
+    void geminiRenders_setEverySectionOffByExactlyOneBlankLine(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness full = new ProcessorTestHarness(dir.resolve("full"), false);
+        full.touchOptIn("GEMINI.md");
+        full.touchOptIn("gemini_instructions.md");
+        addEverySpacingNeighbour(full);
+        full.compile();
+        String fullGemini = full.readFile("GEMINI.md");
+        String instructions = full.readFile("gemini_instructions.md");
+        VibeTagsLogger.shutdown();
+
+        ProcessorTestHarness collapsed = new ProcessorTestHarness(dir.resolve("collapsed"), false);
+        collapsed.touchOptIn("GEMINI.md");
+        collapsed.touchOptIn(".gemini/rules/.vibetags");
+        addEverySpacingNeighbour(collapsed);
+        collapsed.compile();
+        String collapsedGemini = collapsed.readFile("GEMINI.md");
+
+        assertTrue(fullGemini.contains("## IMPLEMENTATION TASKS") && fullGemini.contains("## CONTEXTUAL RULES"),
+            "precondition: the full render prints the draft and context sections:\n" + fullGemini);
+        assertTrue(collapsedGemini.contains("## Scoped Rules Index"),
+            "precondition: GEMINI.md collapsed:\n" + collapsedGemini);
+
+        for (var render : List.of(
+                java.util.Map.entry("full GEMINI.md", fullGemini),
+                java.util.Map.entry("gemini_instructions.md", instructions),
+                java.util.Map.entry("collapsed GEMINI.md", collapsedGemini))) {
+            String text = render.getValue();
+            assertFalse(text.contains("\n\n\n"),
+                render.getKey() + " must never print two blank lines in a row:\n" + text);
+            List<String> lines = text.lines().toList();
+            for (int i = 1; i < lines.size(); i++) {
+                String line = lines.get(i);
+                if (line.startsWith("## ") || line.startsWith("File: `")) {
+                    assertTrue(lines.get(i - 1).isEmpty(),
+                        render.getKey() + ": '" + line + "' sits directly under '" + lines.get(i - 1)
+                            + "' with no blank line:\n" + text);
+                }
+            }
+        }
+    }
+
+    private static void addEverySpacingNeighbour(ProcessorTestHarness h) {
+        addEverySafetyBucket(h);
+        h.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.*;\n"
+                + "@AIContext(focus = \"double-entry invariants\")\n"
+                + "@AIAudit(checkFor = {\"SQL Injection\", \"Rounding errors\"})\n"
+                + "public class Ledger {\n"
+                + "    @AIIgnore(reason = \"cache\")\n"
+                + "    private String cache;\n"
+                + "    @AIPrivacy(reason = \"IBAN\")\n"
+                + "    private String iban;\n"
+                + "    @AIDraft(instructions = \"reconcile nightly\")\n"
+                + "    public void reconcile() {}\n"
+                + "}\n");
+    }
+
     private static void addEverySafetyBucket(ProcessorTestHarness h) {
         h.addSource("com.example.Vault",
             "package com.example;\n"

@@ -90,12 +90,14 @@ public final class GeminiRenderer implements PlatformRenderer {
      * The opening both shapes of the file share: the Gemini title, then the locked files under
      * Gemini's heading, the heading omitted when nothing is locked. The collapsed file used to open
      * with the shared {@code # AUTO-GENERATED AI RULES} preamble instead, so adding
-     * {@code .gemini/rules/} renamed the title and the locked heading along with the moved buckets,
-     * and left Gemini's {@code IGNORE} heading, which has no leading newline, with no blank line
-     * after the preamble (#721).
+     * {@code .gemini/rules/} renamed the title and the locked heading along with the moved buckets
+     * (#721).
+     *
+     * <p>No blank line follows the generated header: every section that can come next opens with
+     * its own, and a second one here printed two blank lines above the first heading (#723).
      */
     private static void renderTitleAndLocked(StringBuilder sb, GuardrailModel model, Platform platform, RenderingContext context) {
-        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append('\n');
+        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader());
 
         if (!model.locked().isEmpty()) {
             StringBuilder sec = new StringBuilder();
