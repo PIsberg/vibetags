@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI runs `doctor` against `examples/kotlin`.** `doctor --dir examples/kotlin` must exit 1 and
+  report `AccountLedger.kt:26 @AILocked on fun balanceFor` with its `@JvmName("balanceFor")` remedy,
+  and must not report `settle` or `reconcile`, whose guardrails kapt keeps. The Kotlin value-class
+  check was exercised only by `DoctorCommandTest`, so a path, encoding or line-ending difference in a
+  real checkout would have gone unnoticed; this is the Kotlin half of what #533 does for Groovy. (#693)
+
 ## [1.3.5] - 2026-09-13
 
 **Upgrading changes committed files.** If a granular directory is opted in (for example
