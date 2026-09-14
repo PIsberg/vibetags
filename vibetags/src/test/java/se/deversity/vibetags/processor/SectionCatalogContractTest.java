@@ -64,4 +64,20 @@ class SectionCatalogContractTest {
             "Windsurf has no SANDBOX_ONLY override and must fall back to the shared default: "
                 + windsurf);
     }
+
+    @Test
+    @DisplayName("GEMINI.md and gemini_instructions.md look up the same wording for every section")
+    void bothGeminiFilesShareOneWording() {
+        // GEMINI.md's full render asks for Platform.GEMINI and its collapsed render for
+        // Platform.GEMINI_MD; when only the first was registered, the collapsed file printed the
+        // shared headings (#721).
+        for (SectionCatalog.Key key : SectionCatalog.Key.values()) {
+            assertEquals(SectionCatalog.header(Platform.GEMINI, key), SectionCatalog.header(Platform.GEMINI_MD, key),
+                key + ": the two Gemini platforms must not drift apart");
+        }
+        String audit = SectionCatalog.header(Platform.GEMINI_MD, SectionCatalog.Key.AUDIT);
+        assertNotNull(audit);
+        assertTrue(audit.startsWith("\n## CONTINUOUS AUDIT REQUIREMENTS\n"),
+            "GEMINI_MD must resolve Gemini's override, not the shared default: " + audit);
+    }
 }
