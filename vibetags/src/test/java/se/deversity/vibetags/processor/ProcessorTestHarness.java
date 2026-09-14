@@ -108,7 +108,6 @@ class ProcessorTestHarness {
         touch(".aiexclude");
         touch("AGENTS.md");
         touch("QWEN.md");
-        touch("gemini_instructions.md");
         touch(".github/copilot-instructions.md");
         touch("llms.txt");
         touch("llms-full.txt");
@@ -126,9 +125,6 @@ class ProcessorTestHarness {
         // New platforms
         touch(".windsurfrules");
         touch(".rules");
-        touch(".cody/config.json");
-        touch(".codyignore");
-        touch(".supermavenignore");
         touch(".continue/rules/.vibetags");
         touch(".tabnine/guidelines/.vibetags");
         touch(".amazonq/rules/.vibetags");
@@ -145,7 +141,6 @@ class ProcessorTestHarness {
         touch("GEMINI.md");
         touch(".antigravityignore");
         // v0.9.7 platforms
-        touch(".clinerules");
         touch(".junie/guidelines.md");
         touch(".junie/AGENTS.md");
         touch(".kiro/steering/.vibetags");

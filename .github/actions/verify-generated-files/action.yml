@@ -19,11 +19,11 @@ runs:
         echo "Checking generated files exist and contain content..."
         for f in \
           .cursorrules CLAUDE.md .aiexclude QWEN.md .qwenignore \
-          .qwen/commands/refactor.md gemini_instructions.md \
+          .qwen/commands/refactor.md \
           .github/copilot-instructions.md llms.txt llms-full.txt \
           CONVENTIONS.md .aiderignore .aider.conf.yml .gemini/styleguide.md \
           .greptile/rules.md .greptile/config.json greptile.json \
-          .windsurfrules .rules .cody/config.json .codyignore .supermavenignore \
+          .windsurfrules .rules \
           replit.md .agents/skills/vibetags-guardrails/SKILL.md \
           .zencoder/rules/com-example-payment-PaymentProcessor.md \
           .cursor/rules/com-example-payment-PaymentProcessor.mdc \
@@ -41,7 +41,8 @@ runs:
           GEMINI.md .antigravityignore \
           .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore .devinignore \
           .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
-          .clinerules .junie/guidelines.md .junie/AGENTS.md .idx/airules.md \
+          .clinerules/com-example-payment-PaymentProcessor.md .clinerules/+vibetags-safety.md \
+          .junie/guidelines.md .junie/AGENTS.md .idx/airules.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
           .claude/rules/com-example-payment-PaymentProcessor.md \
           .github/instructions/com-example-payment-PaymentProcessor.instructions.md \
@@ -67,12 +68,11 @@ runs:
         echo "OK Cursor audit section"
         grep -q "audit_requirements" CLAUDE.md || { echo "FAIL Claude audit requirements missing"; exit 1; }
         echo "OK Claude audit requirements"
-        grep -q "CONTINUOUS AUDIT REQUIREMENTS" gemini_instructions.md || { echo "FAIL Gemini audit requirements missing"; exit 1; }
-        echo "OK Gemini audit requirements"
         # GEMINI.md renders the COLLAPSED shape here, because this example opts into both it
         # and .gemini/rules/ (tier-1 invariant 6). The audit bucket is a safety bucket, so it
         # stays inline under the shared heading rather than Gemini's full-render
-        # "CONTINUOUS AUDIT REQUIREMENTS" one, which is what this check used to look for.
+        # "CONTINUOUS AUDIT REQUIREMENTS" one. That full render was checked in gemini_instructions.md
+        # until 2.0.0 removed the file (#645); NewPlatformsV3EndToEndTest pins it for GEMINI.md now.
         # Both halves are asserted: safety inline AND per-element detail moved out. Nothing
         # in CI pinned that pair before the example opted in.
         grep -q "MANDATORY SECURITY AUDITS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
@@ -138,6 +138,12 @@ runs:
         done
         grep -q 'Tied to legacy database schema' .windsurfrules || { echo "FAIL .windsurfrules lost the inline locked reason the safety files defer to"; exit 1; }
         echo "OK Devin Desktop always-on safety files defer to .windsurfrules"
+        # Cline's .clinerules/ directory, the replacement for the single .clinerules file 2.0.0 removed
+        # (#645). A rule without paths: front matter loads on every request; the safety file carries the
+        # locked reason with no front matter, so Cline loads it every time (#648).
+        [ "$(sed -n 2p .clinerules/com-example-payment-PaymentProcessor.md)" = 'paths: ["**/PaymentProcessor.java"]' ] || { echo "FAIL .clinerules rule lacks paths: front matter (#642)"; exit 1; }
+        grep -q 'Tied to legacy database schema' .clinerules/+vibetags-safety.md || { echo "FAIL .clinerules/+vibetags-safety.md carries no locked reason (#648)"; exit 1; }
+        echo "OK Cline .clinerules/ rule front matter and safety file"
         echo "OK Aider conventions audit section"
         grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
         echo "OK sweep.yaml audit rule"

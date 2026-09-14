@@ -79,7 +79,7 @@ package "Generated AI Config Files" {
 
   rectangle "Gemini Files" as GeminiFiles
   note right of GeminiFiles
-    gemini_instructions.md
+    GEMINI.md
     .aiexclude
   end note
 

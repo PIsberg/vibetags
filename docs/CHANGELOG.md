@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - Unreleased
+
+For the next major version. Not to be released before 1.3.5 has shipped the deprecation warnings
+(#641) that announce these removals.
+
+### Removed
+
+- **Four deprecated platform outputs are no longer written** (#645). Each was deprecated in 1.3.5
+  with a compiler warning naming the file and its replacement; this is the removal that warning
+  announced. Their keys are gone from the opt-in list, so an existing file is neither regenerated
+  nor warned about: it is left byte-identical, no longer tracking the annotations. Move any
+  hand-written content to the replacement and delete the file.
+  - `gemini_instructions.md`, replaced by `GEMINI.md` (Gemini CLI) or `.gemini/styleguide.md`
+    (Gemini Code Assist). No Google product documents reading it; a last look before removal
+    (GitHub code search of the `google-gemini` and `googleapis` organisations, and a web search)
+    found no vendor source either.
+  - `.cody/config.json` and `.codyignore`, replaced by `AGENTS.md`, which Amp reads. Sourcegraph
+    ended Cody Free and Pro on 23 July 2025, and its docs describe neither file.
+  - `.supermavenignore`, replaced by `.cursorignore`, which Cursor Tab reads. Supermaven announced
+    its sunset on 21 November 2025.
+  - `.clinerules` as a single file, replaced by the `.clinerules/` directory, which VibeTags already
+    writes with an always-loaded `+vibetags-safety.md`. Cline's current docs describe only the
+    directory. A leftover file activates nothing, and `vibetags init --platforms cline_granular`
+    refuses to replace it.
+
+  `CodyRenderer` and `ClineRenderer` are deleted with their `Platform` constants (`GEMINI`, `CODY`,
+  `CODY_IGNORE`, `SUPERMAVEN_IGNORE`, `CLINE`), and `vibetags init --list` no longer offers the five
+  keys. The README counts drop to 43 platforms and 59 config files. `examples/basic`,
+  `examples/multimodule` and `examples/gradle-multimodule` lose the fixtures, and `examples/basic`
+  now opts into the `.clinerules/` directory instead. `RemovedPlatformOutputsTest` pins the removal;
+  all 8 of its cases failed against 1.3.5's processor.
+
+### Changed
+
+- **`.aiexclude` is written beside `GEMINI.md`** (#645). It used to need `gemini_instructions.md` or
+  an active `AGENTS.md` beside it, so a Gemini user who followed the deprecation notice to `GEMINI.md`
+  would have lost `.aiexclude` regeneration without a word. The orphan warning that suggests creating
+  `.aiexclude` follows the same pairing, so a project with `GEMINI.md`, `@AIIgnore` or `@AILocked`,
+  and no `.aiexclude` now gets that warning.
+
 ## [Unreleased]
 
 ### Fixed

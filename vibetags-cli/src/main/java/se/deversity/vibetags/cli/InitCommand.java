@@ -95,9 +95,9 @@ final class InitCommand {
                 continue;
             }
             if (Files.exists(path)) {
-                // The entry is there as the other kind. .clinerules is the cline file and the
-                // cline_granular directory, so this is a different platform already opted in, not
-                // this one; reporting it active would tell the user they got the form they asked for.
+                // The entry is there as the other kind: a .clinerules file where cline_granular writes a
+                // directory, left over from the single-file service 2.0.0 removed (#645). Reporting it
+                // active would tell the user they got the form they asked for.
                 err.println("error: refusing " + key + " — " + dir.relativize(path) + " already exists as a "
                     + (Files.isDirectory(path) ? "directory" : "file") + ", but " + key + " writes a "
                     + (ServiceRegistry.writesDirectory(key) ? "directory" : "file")
@@ -191,7 +191,7 @@ final class InitCommand {
         // TreeMap: stable, scannable order for humans and for tests.
         new TreeMap<>(serviceFiles).forEach((key, path) -> {
             if (optIn.contains(key)) {
-                // By kind, not existence: a .clinerules/ directory is cline_granular, not cline.
+                // By kind, not existence: a leftover .clinerules file does not make cline_granular active.
                 String marker = ServiceRegistry.isOptedIn(key, path) ? "  [active]" : "";
                 out.println("  " + key + " -> " + dir.relativize(path) + marker);
             }

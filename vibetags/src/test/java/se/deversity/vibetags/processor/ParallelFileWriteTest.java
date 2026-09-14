@@ -64,12 +64,12 @@ class ParallelFileWriteTest {
     }
 
     @Test
-    void parallelWrites_clinerulesMirrorsContent() throws IOException {
-        String cline = harness.readFile(".clinerules");
+    void parallelWrites_windsurfrulesMirrorsContent() throws IOException {
+        String windsurf = harness.readFile(".windsurfrules");
         String cursor = harness.readFile(".cursorrules");
         // Both are written in parallel — they should both contain the same locked entry
-        assertTrue(cline.contains("com.example.payment.PaymentProcessor"),
-            ".clinerules must not be corrupted or empty after parallel write");
+        assertTrue(windsurf.contains("com.example.payment.PaymentProcessor"),
+            ".windsurfrules must not be corrupted or empty after parallel write");
         assertTrue(cursor.contains("com.example.payment.PaymentProcessor"),
             ".cursorrules must not be corrupted or empty after parallel write");
     }
@@ -81,7 +81,7 @@ class ParallelFileWriteTest {
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md must exist after parallel write");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md must exist after parallel write");
         assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md must exist after parallel write");
-        assertTrue(harness.fileExists(".clinerules"), ".clinerules must exist after parallel write");
+        assertTrue(harness.fileExists(".windsurfrules"), ".windsurfrules must exist after parallel write");
         assertTrue(harness.fileExists(".junie/guidelines.md"), ".junie/guidelines.md must exist after parallel write");
     }
 }

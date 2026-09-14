@@ -98,7 +98,7 @@ file changed and you expected it not to, or the reverse:
 sidecar.save id=core region=core bodies=29 moduleBodies=1 stems=2 elements=2
 sidecar.read count=4 regions=4 ids=[cli, core, engine, showcase]
 merge.wholefile service=mentat contributions=4 bytes=10782
-merge.skip service=cody reason=no-whole-file-merger file=config.json
+merge.skip service=codex_config reason=no-whole-file-merger file=config.toml
 write.skip file=CLAUDE.md reason=cache-unchanged bytes=2481
 ```
 

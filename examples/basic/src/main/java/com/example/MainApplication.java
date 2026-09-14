@@ -24,7 +24,7 @@ import java.util.Map;
  * - CLAUDE.md (for Claude)
  * - .aiexclude (for Gemini)
  * - AGENTS.md (for Codex CLI)
- * - gemini_instructions.md (for Gemini)
+ * - GEMINI.md (for Gemini)
  */
 public class MainApplication {
 

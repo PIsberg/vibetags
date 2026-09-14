@@ -75,7 +75,6 @@ class RendererBranchCoverageTest {
 
     @Test
     void platformRendererRegistry_clineAndJunie_returnNonNullRenderer() {
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CLINE));
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.JUNIE));
     }
 

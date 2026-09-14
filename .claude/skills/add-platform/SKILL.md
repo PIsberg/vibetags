@@ -28,7 +28,8 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
   what people have.
 - Check the product is alive, at the vendor, not in a round-up. Cody Free and Pro ended 2025-07-23
   while Cody Enterprise continued; Supermaven announced its sunset 2025-11-21 but kept autocomplete
-  for existing JetBrains and Neovim users (#677). Quote what the source says, no more. Nothing in the
+  for existing JetBrains and Neovim users (#677); both outputs were removed in 2.0.0 (#645). Quote
+  what the source says, no more. Nothing in the
   build can notice a vendor sunsetting a product (#641).
 - If the path is reached by a file VibeTags already writes (`AGENTS.md`, `.cursorrules`,
   `CLAUDE.md`), a second copy of the same content is not reach, it is duplication. Say so and stop.
@@ -50,7 +51,7 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
 - **Byte-identical output to an existing renderer**? → delegate, don't reimplement (see
   `FirebaseRenderer`, which wraps a shared `CursorRenderer` instance).
 - **Implicitly-activated sidecar of another service** (`codex_config`/`codex_rules` under
-  `codex`, `cody` under `cody`)? → do **not** add
+  `codex`)? → do **not** add
   its own key to `ServiceRegistry.OPT_IN_KEYS`; wire it into the special-case block at the bottom
   of `GuardrailContentBuilder.build()` instead.
 

@@ -38,7 +38,6 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", constraint)).append('\n');
                 break;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", constraint)).append('\n');
                 break;

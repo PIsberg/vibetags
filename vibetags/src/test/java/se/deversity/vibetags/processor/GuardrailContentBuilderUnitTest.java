@@ -697,7 +697,7 @@ class GuardrailContentBuilderUnitTest {
 
     @Test
     void aiexclude_withoutGeminiOrCodex_notEmittedToContentMap() {
-        // L1272: if (contains("aiexclude") && (contains("gemini") || contains("codex")))
+        // if (contains("aiexclude") && (contains("gemini_md") || contains("codex")))
         // When aiexclude is active but neither gemini nor codex is active, the false branch
         // is taken and contentByService must NOT contain an "aiexclude" entry.
         GuardrailContentBuilder builder = new GuardrailContentBuilder(

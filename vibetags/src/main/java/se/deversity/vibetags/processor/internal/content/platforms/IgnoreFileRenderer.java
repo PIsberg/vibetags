@@ -42,8 +42,6 @@ public final class IgnoreFileRenderer implements PlatformRenderer {
             case CLAUDE_IGNORE:      return "Claude";
             case COPILOT_IGNORE:     return "Copilot";
             case QWEN_IGNORE:        return "Qwen";
-            case CODY_IGNORE:        return "Cody";
-            case SUPERMAVEN_IGNORE:  return "Supermaven";
             case DOUBLE_IGNORE:      return "Double.bot";
             case CODEIUM_IGNORE:     return "Codeium";
             case ROO_IGNORE:         return "Roo Code";

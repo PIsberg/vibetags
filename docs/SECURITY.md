@@ -34,7 +34,7 @@ Two considerations are specific to this kind of tool and worth understanding:
   (`.mentatconfig.json`, `.vibetags-locks`), and **double-quoted YAML** (`sweep.yaml`,
   `.plandex.yaml`, `ellipsis.yaml`). The literal-block-scalar configs (`.coderabbit.yaml`,
   `.roomodes`, the interpreter profile) embed text as indented literal blocks where there is no
-  structure to break, and the JSON config file that *does* exist statically (`.cody/config.json`)
+  structure to break, and the static TOML config (`.codex/config.toml`)
   interpolates no annotation values. Output file paths are fixed relative paths,
   and per-class file names are sanitised to `[A-Za-z0-9-]`, so a hostile class name cannot cause
   path traversal. Writes are staged through a securely-created random temp file (`O_EXCL`) in the

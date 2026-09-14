@@ -12,53 +12,54 @@ import se.deversity.vibetags.processor.internal.content.SectionCatalog;
 import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.section;
 
 /**
- * PlatformRenderer for generating `GEMINI.md` and `gemini_instructions.md`.
+ * PlatformRenderer for generating `GEMINI.md`. It also rendered `gemini_instructions.md` until that
+ * output was removed in 2.0.0 (#645).
  */
 public final class GeminiRenderer implements PlatformRenderer {
 
     private static final List<AnnotationSections.Section> SECTIONS = List.of(
-        section(Platform.GEMINI, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),
-        section(Platform.GEMINI, SectionCatalog.Key.IGNORE, GuardrailModel::ignore, FormatterRegistry.ignore()),
-        section(Platform.GEMINI, SectionCatalog.Key.DRAFT, GuardrailModel::draft, FormatterRegistry.draft()),
-        section(Platform.GEMINI, SectionCatalog.Key.PRIVACY, GuardrailModel::privacy, FormatterRegistry.privacy()),
-        section(Platform.GEMINI, SectionCatalog.Key.CORE, GuardrailModel::core, FormatterRegistry.core()),
-        section(Platform.GEMINI, SectionCatalog.Key.PERFORMANCE, GuardrailModel::performance, FormatterRegistry.performance()),
-        section(Platform.GEMINI, SectionCatalog.Key.CONTRACT, GuardrailModel::contract, FormatterRegistry.contract()),
-        section(Platform.GEMINI, SectionCatalog.Key.TEST_DRIVEN, GuardrailModel::testDriven, FormatterRegistry.testDriven()),
-        section(Platform.GEMINI, SectionCatalog.Key.THREAD_SAFE, GuardrailModel::threadSafe, FormatterRegistry.threadSafe()),
-        section(Platform.GEMINI, SectionCatalog.Key.IMMUTABLE, GuardrailModel::immutable, FormatterRegistry.immutable()),
-        section(Platform.GEMINI, SectionCatalog.Key.DEPRECATED, GuardrailModel::deprecated, FormatterRegistry.deprecated()),
-        section(Platform.GEMINI, SectionCatalog.Key.OBSERVABILITY, GuardrailModel::observability, FormatterRegistry.observability()),
-        section(Platform.GEMINI, SectionCatalog.Key.REGULATION, GuardrailModel::regulation, FormatterRegistry.regulation()),
-        section(Platform.GEMINI, SectionCatalog.Key.PARALLEL_TESTS, GuardrailModel::parallelTests, FormatterRegistry.parallelTests()),
-        section(Platform.GEMINI, SectionCatalog.Key.LEGACY_BRIDGE, GuardrailModel::legacyBridge, FormatterRegistry.legacyBridge()),
-        section(Platform.GEMINI, SectionCatalog.Key.ARCHITECTURE, GuardrailModel::architecture, FormatterRegistry.architecture()),
-        section(Platform.GEMINI, SectionCatalog.Key.PUBLIC_API, GuardrailModel::publicApi, FormatterRegistry.publicApi()),
-        section(Platform.GEMINI, SectionCatalog.Key.STRICT_EXCEPTIONS, GuardrailModel::strictExceptions, FormatterRegistry.strictExceptions()),
-        section(Platform.GEMINI, SectionCatalog.Key.STRICT_TYPES, GuardrailModel::strictTypes, FormatterRegistry.strictTypes()),
-        section(Platform.GEMINI, SectionCatalog.Key.INTERNATIONALIZED, GuardrailModel::internationalized, FormatterRegistry.internationalized()),
-        section(Platform.GEMINI, SectionCatalog.Key.STRICT_CLASSPATH, GuardrailModel::strictClasspath, FormatterRegistry.strictClasspath()),
-        section(Platform.GEMINI, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
-        section(Platform.GEMINI, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
-        section(Platform.GEMINI, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
-        section(Platform.GEMINI, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
-        section(Platform.GEMINI, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.GEMINI, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.GEMINI, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.GEMINI, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
-        section(Platform.GEMINI, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.GEMINI, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
-        section(Platform.GEMINI, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.GEMINI, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.GEMINI, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
-        section(Platform.GEMINI, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
-        section(Platform.GEMINI, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
-        section(Platform.GEMINI, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
-        section(Platform.GEMINI, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
-        section(Platform.GEMINI, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.GEMINI, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.GEMINI, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.GEMINI, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.GEMINI_MD, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.IGNORE, GuardrailModel::ignore, FormatterRegistry.ignore()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.DRAFT, GuardrailModel::draft, FormatterRegistry.draft()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PRIVACY, GuardrailModel::privacy, FormatterRegistry.privacy()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.CORE, GuardrailModel::core, FormatterRegistry.core()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PERFORMANCE, GuardrailModel::performance, FormatterRegistry.performance()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.CONTRACT, GuardrailModel::contract, FormatterRegistry.contract()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.TEST_DRIVEN, GuardrailModel::testDriven, FormatterRegistry.testDriven()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.THREAD_SAFE, GuardrailModel::threadSafe, FormatterRegistry.threadSafe()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.IMMUTABLE, GuardrailModel::immutable, FormatterRegistry.immutable()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.DEPRECATED, GuardrailModel::deprecated, FormatterRegistry.deprecated()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.OBSERVABILITY, GuardrailModel::observability, FormatterRegistry.observability()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.REGULATION, GuardrailModel::regulation, FormatterRegistry.regulation()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PARALLEL_TESTS, GuardrailModel::parallelTests, FormatterRegistry.parallelTests()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.LEGACY_BRIDGE, GuardrailModel::legacyBridge, FormatterRegistry.legacyBridge()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.ARCHITECTURE, GuardrailModel::architecture, FormatterRegistry.architecture()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PUBLIC_API, GuardrailModel::publicApi, FormatterRegistry.publicApi()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.STRICT_EXCEPTIONS, GuardrailModel::strictExceptions, FormatterRegistry.strictExceptions()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.STRICT_TYPES, GuardrailModel::strictTypes, FormatterRegistry.strictTypes()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.INTERNATIONALIZED, GuardrailModel::internationalized, FormatterRegistry.internationalized()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.STRICT_CLASSPATH, GuardrailModel::strictClasspath, FormatterRegistry.strictClasspath()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
+        section(Platform.GEMINI_MD, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
     );
 
     @Override
@@ -68,7 +69,7 @@ public final class GeminiRenderer implements PlatformRenderer {
             // Both the aggregate and .gemini/rules/ are opted in, so only the always-loaded
             // safety buckets stay inline and every other bucket moves to the scoped files (#320).
             AnnotationSections.renderIndexedPreamble(sb, model, platform, context.getGeneratedHeader());
-            AnnotationSections.renderInlineSafetySections(sb, model, platform);
+            AnnotationSections.renderInlineSafetySectionsInDefaultWording(sb, model, platform);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
             return sb.toString();
         }

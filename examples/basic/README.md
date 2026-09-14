@@ -150,7 +150,7 @@ VibeTags uses a **file-existence opt-in** model — it only generates content fo
 cd examples/basic
 
 # Core platforms
-touch CLAUDE.md .cursorrules AGENTS.md QWEN.md gemini_instructions.md
+touch CLAUDE.md .cursorrules AGENTS.md QWEN.md GEMINI.md
 touch .aiexclude .cursorignore .claudeignore .copilotignore .qwenignore
 mkdir -p .github && touch .github/copilot-instructions.md
 touch llms.txt llms-full.txt CONVENTIONS.md .aiderignore
@@ -162,8 +162,8 @@ mkdir -p .ai/rules .pearai/rules
 
 # Additional platforms
 touch .windsurfrules .rules
-mkdir -p .cody && touch .cody/config.json && touch .codyignore
-touch .supermavenignore .mentatconfig.json sweep.yaml .plandex.yaml
+touch .mentatconfig.json sweep.yaml .plandex.yaml
+mkdir -p .clinerules
 touch .doubleignore .codeiumignore .devinignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
 mkdir -p .junie && touch .junie/guidelines.md .junie/AGENTS.md
@@ -208,12 +208,11 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `CLAUDE.md` | Claude |
 | `AGENTS.md` | Codex CLI |
 | `QWEN.md` | Qwen |
-| `gemini_instructions.md` | Gemini |
+| `GEMINI.md` | Gemini |
 | `.github/copilot-instructions.md` | GitHub Copilot |
 | `.windsurfrules` | Devin Desktop (formerly Windsurf) |
 | `.rules` | Zed Editor |
 | `llms.txt` / `llms-full.txt` | All LLM agents (llms.txt standard) |
-| `.cody/config.json` | Sourcegraph Cody |
 | `.mentatconfig.json` | Mentat |
 | `sweep.yaml` | Sweep (GitHub App) |
 | `.plandex.yaml` | Plandex |
@@ -280,7 +279,7 @@ public class GeneratedMetadata {
 
 **Difference from `@AILocked`:** `@AILocked` says "you can see this but cannot modify it". `@AIIgnore` says "this does not exist — never mention it, never reference it, never include it in suggestions."
 
-**Generated ignore files:** Elements annotated with `@AIIgnore` are added as glob patterns to `.cursorignore`, `.claudeignore`, `.copilotignore`, `.qwenignore`, `.codyignore`, `.supermavenignore`, `.doubleignore`, `.codeiumignore`, `.aiderignore`, and `.aiexclude`.
+**Generated ignore files:** Elements annotated with `@AIIgnore` are added as glob patterns to `.cursorignore`, `.claudeignore`, `.copilotignore`, `.qwenignore`, `.doubleignore`, `.codeiumignore`, `.aiderignore`, and `.aiexclude`.
 
 **Smart Validation:** If you apply `@AIPrivacy` to an element already marked with `@AIIgnore`, the compiler warns you — `@AIIgnore` already hides the element entirely, making `@AIPrivacy` redundant.
 

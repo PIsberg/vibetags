@@ -490,23 +490,21 @@ mkdir -p .devin/rules                        # Granular rules, preferred directo
 # mkdir -p .windsurf/rules                   # Granular rules, fallback directory. Devin CLI loads both: pick one
 touch .devinignore                           # Indexing exclusion list (.codeiumignore is the legacy name)
 
-# --- Zed, Cody, Supermaven ---
+# --- Zed ---
 touch .rules                                 # Zed Editor
-touch .codyignore && mkdir -p .cody && touch .cody/config.json  # Sourcegraph Cody (deprecated, #645)
-touch .supermavenignore                      # Supermaven (deprecated, #645)
 
 # --- Continue, Tabnine, Amazon Q, Universal AI ---
 mkdir -p .continue/rules                     # Continue
 mkdir -p .tabnine/guidelines                 # Tabnine
-mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #645: Kiro's .kiro/steering/ replaces it)
-mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
+mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #720: Kiro's .kiro/steering/ replaces it)
+mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #720)
 
 # --- Trae, Zoo Code ---
 mkdir -p .trae/rules                         # Trae IDE
 mkdir -p .roo/rules                          # Zoo Code (fork of the retired Roo Code; reads the same paths)
 
 # --- PearAI ---
-mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #645)
+mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #720)
 
 # --- Amazon Kiro ---
 mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
@@ -521,20 +519,18 @@ mkdir -p .augment/rules                      # Augment Code workspace rules (per
 touch .goosehints                            # goose project hints
 
 # --- Mentat, Sweep, Plandex ---
-touch .mentatconfig.json                     # Mentat AI assistant (deprecated, #645)
-touch sweep.yaml                             # Sweep AI code review (GitHub App; deprecated, #645)
-touch .plandex.yaml                          # Plandex AI coding agent (deprecated, #645)
+touch .mentatconfig.json                     # Mentat AI assistant (deprecated, #720)
+touch sweep.yaml                             # Sweep AI code review (GitHub App; deprecated, #720)
+touch .plandex.yaml                          # Plandex AI coding agent (deprecated, #720)
 
 # --- Double.bot, Open Interpreter, Codeium, Antigravity ---
-touch .doubleignore                          # Double.bot exclusion list (deprecated, #645)
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #645)
+touch .doubleignore                          # Double.bot exclusion list (deprecated, #720)
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #720)
 touch .codeiumignore                         # Codeium exclusion list
-touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #645)
+touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #720)
 
 # --- Cline, JetBrains Junie ---
-touch .clinerules                            # Cline AI assistant (single file, deprecated #645), OR:
-# mkdir -p .clinerules                       # Cline (granular per-class rules). Same path: pick one
-#                                            # (Cline itself converts the file to the directory)
+mkdir -p .clinerules                         # Cline (granular per-class rules, plus an always-loaded +vibetags-safety.md)
 touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
@@ -543,7 +539,7 @@ mkdir -p .junie && touch .junie/AGENTS.md    # JetBrains Junie (current; legacy 
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
-touch CLAUDE.md                              # Claude (.claudeignore is deprecated, #645: use Read deny rules in .claude/settings.json)
+touch CLAUDE.md                              # Claude (.claudeignore is deprecated, #720: use Read deny rules in .claude/settings.json)
 touch QWEN.md .qwenignore                   # Qwen
 mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (its own opt-in)
 touch .aiexclude GEMINI.md                   # Gemini
@@ -551,7 +547,7 @@ mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub 
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
-mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot (.copilotignore is deprecated, #645: use Content exclusion settings)
+mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot (.copilotignore is deprecated, #720: use Content exclusion settings)
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
 
@@ -561,7 +557,7 @@ mvn compile                                  # VibeTags populates all opted-in f
 **Removing a service:** delete its file — it will never come back.
 
 ```bash
-rm gemini_instructions.md   # permanently opt out of Gemini instructions
+rm .qwenignore             # permanently opt out of Qwen's ignore file
 ```
 
 **If no files are present**, VibeTags logs a NOTE during compilation listing exactly which files you can create:
@@ -761,7 +757,7 @@ public class DatabaseConnector {
 </audit_requirements>
 ```
 
-**Gemini (gemini_instructions.md):**
+**Gemini (GEMINI.md):**
 ```markdown
 # CONTINUOUS AUDIT REQUIREMENTS
 File: `com.example.database.DatabaseConnector`

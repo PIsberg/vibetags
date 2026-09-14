@@ -20,12 +20,10 @@ public final class PlatformRendererRegistry {
     private static final IgnoreFileRenderer IGNORE_FILE_RENDERER = new IgnoreFileRenderer();
     private static final WindsurfRenderer WINDSURF_RENDERER = new WindsurfRenderer();
     private static final ZedRenderer ZED_RENDERER = new ZedRenderer();
-    private static final CodyRenderer CODY_RENDERER = new CodyRenderer();
     private static final MentatRenderer MENTAT_RENDERER = new MentatRenderer();
     private static final SweepRenderer SWEEP_RENDERER = new SweepRenderer();
     private static final PlandexRenderer PLANDEX_RENDERER = new PlandexRenderer();
     private static final InterpreterRenderer INTERPRETER_RENDERER = new InterpreterRenderer();
-    private static final ClineRenderer CLINE_RENDERER = new ClineRenderer();
     private static final ClineSafetyRenderer CLINE_SAFETY_RENDERER = new ClineSafetyRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final FirebaseRenderer FIREBASE_RENDERER = new FirebaseRenderer();
@@ -116,7 +114,6 @@ public final class PlatformRendererRegistry {
             case QWEN:
             case QWEN_REFACTOR:
                 return QWEN_RENDERER;
-            case GEMINI:
             case GEMINI_MD:
                 return GEMINI_RENDERER;
             case LLMS:
@@ -139,8 +136,6 @@ public final class PlatformRendererRegistry {
             case CLAUDE_IGNORE:
             case COPILOT_IGNORE:
             case QWEN_IGNORE:
-            case CODY_IGNORE:
-            case SUPERMAVEN_IGNORE:
             case DOUBLE_IGNORE:
             case CODEIUM_IGNORE:
             case ROO_IGNORE:
@@ -160,8 +155,6 @@ public final class PlatformRendererRegistry {
                 return WINDSURF_RENDERER;
             case ZED:
                 return ZED_RENDERER;
-            case CODY:
-                return CODY_RENDERER;
             case MENTAT:
                 return MENTAT_RENDERER;
             case SWEEP:
@@ -170,8 +163,6 @@ public final class PlatformRendererRegistry {
                 return PLANDEX_RENDERER;
             case INTERPRETER:
                 return INTERPRETER_RENDERER;
-            case CLINE:
-                return CLINE_RENDERER;
             case CLINE_SAFETY:
                 return CLINE_SAFETY_RENDERER;
             case JUNIE:

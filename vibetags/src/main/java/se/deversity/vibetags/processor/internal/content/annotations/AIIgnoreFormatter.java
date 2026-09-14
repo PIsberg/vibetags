@@ -66,7 +66,6 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
@@ -100,8 +99,6 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case CLAUDE_IGNORE:
             case COPILOT_IGNORE:
             case QWEN_IGNORE:
-            case CODY_IGNORE:
-            case SUPERMAVEN_IGNORE:
             case DOUBLE_IGNORE:
             case CODEIUM_IGNORE:
             case ROO_IGNORE:

@@ -730,7 +730,7 @@ vibetags/
 ```java
 static Set<String> resolveActiveServices(Messager messager, Map<String, Path> allServiceFiles) {
     Set<String> optInKeys = Set.of(
-        "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+        "cursor", "claude", "aiexclude", "codex", "gemini_md", "copilot", "qwen",
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full"
     );
@@ -910,7 +910,7 @@ Cache-hit cost is bounded by the single stat syscall — flat curves regardless 
 | `StreamingByteCompareTest` | 8 | (0.7.1) `GuardrailFileWriter.fileBytesEqual`: exact match, first-/last-byte mismatch, empty file, 256 KB random, 64 KB with one bit flipped, multi-byte UTF-8, exact 8 KB buffer-boundary |
 | `GuardrailFileWriterCoverageTest` | 4 | (0.7.1) Streaming-cache hit records cache entry; size match + byte mismatch + `!hasNewRules` skips; same with `hasNewRules=true` writes; all four `noopMessager` overloads return silently |
 | `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
+| `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
 | `AnnotationProcessorEndToEndTest` | 76 | End-to-end snapshot net: compiles annotated fixture sources in-memory via `ProcessorTestHarness`, verifies all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) <!-- not-a-total --> |
 | `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
 | `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
@@ -1123,9 +1123,9 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### Gemini
 
-**Files:** `.aiexclude` + `gemini_instructions.md`
+**Files:** `.aiexclude` + `GEMINI.md` (`gemini_instructions.md` until 2.0.0, #645)
 
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail), written beside `GEMINI.md` or an active `AGENTS.md`. `GEMINI.md` provides detailed persona and audit guidance.
 
 ### Codex CLI
 
