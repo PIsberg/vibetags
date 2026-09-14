@@ -22,7 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   blank line (affecting Aider's `CONVENTIONS.md` and `llms-full.txt`). Now `LlmsRenderer` does not prepend a
   newline to section headings in full mode, `CopilotRenderer` and `JunieRenderer` omit the locked files
   heading when no elements are locked, and `withTransitiveAppendix` avoids doubling the blank line before
-  inherited guardrails.
+  inherited guardrails. A fifth cause reached Copilot, Junie and every other renderer that walks
+  `AnnotationSections` or reuses one that does (Cursor, Windsurf, Zed, Codex, Qwen, Gemini, and through them
+  Cline, Firebase, Goose, Replit, Void and the Claude skill): a bare `@AIAudit` names no
+  checks and renders no entry by design, but its section heading and description were still printed,
+  leaving an empty section followed by two blank lines. `AnnotationSections.render` now rolls back a
+  headed section whose elements all render nothing, so **projects with a bare `@AIAudit` also lose that
+  empty audit heading** from those files. `AggregateBlankLineContractTest` renders all 44 annotations
+  (populated, bare, and with only optional members unset, plus a model with nothing locked) through
+  `llms-full.txt`, `CONVENTIONS.md`, Copilot and both Junie files and fails on two blank lines in a row
+  or on a heading directly under the previous line; `GuardrailContentBuilderUnitTest` asserts exactly
+  one blank line above the inherited-guardrail heading on every platform that carries it.
 
 - **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
   **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change

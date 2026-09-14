@@ -49,15 +49,26 @@ final class AnnotationSections {
         return header == null ? Section.headerless(accessor, formatter) : Section.of(header, accessor, formatter);
     }
 
+    /**
+     * Walks {@code sections} in order. A headed section whose elements all format to nothing is
+     * rolled back, heading included: a bare {@code @AIAudit} names no checks and renders no entry,
+     * and its heading and description alone printed an empty section followed by two blank lines
+     * (#726).
+     */
     static void render(StringBuilder sb, GuardrailModel model, Platform platform, List<Section> sections) {
         for (Section s : sections) {
             Set<TaggedElement> elements = s.accessor().apply(model);
+            int sectionStart = sb.length();
             if (s.header() != null) {
                 if (elements.isEmpty()) continue;
                 sb.append(s.header());
             }
+            int bodyStart = sb.length();
             for (TaggedElement e : elements) {
                 s.formatter().format(e, sb, platform);
+            }
+            if (s.header() != null && sb.length() == bodyStart) {
+                sb.setLength(sectionStart);
             }
         }
     }
