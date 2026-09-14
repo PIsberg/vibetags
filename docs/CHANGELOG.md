@@ -153,6 +153,19 @@ vendor before anything changed, and the table under Deprecated lists every depre
   with the check placed before generation, as the YAML duplicate-key warning is, 5 still failed,
   because that measures the previous build's file.
 
+- **The 12,000-character rule file warning covers Antigravity's `.agents/rules/`** (#701).
+  [Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says "Rules files are
+  limited to 12,000 characters each.", the same cap and the same silent-loss shape as #695, which
+  covered only Devin Desktop and Windsurf. A generated `.agents/rules/` file over the cap now gets the
+  same warning and the same `validation.rule-file-over-limit` log event, worded for Antigravity and
+  without the `.windsurfrules` remedy, which does not apply there. The vendor docs of every other
+  granular directory were checked for a per-file cap and none documents one; PLATFORMS.md quotes
+  what was found, including Augment's combined cap, which is not measured.
+
+  The `.agents/rules/` cases in `RuleFileLengthEndToEndTest` and `RuleFileLengthWarnerTest` were
+  written first: all 3 failed with no warning emitted, and pass with `antigravity_granular` added to
+  `RuleFileLengthRule.CAPPED_DIRECTORIES`.
+
 - **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
   order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,
   which it calls legacy and still supported. The new file gets the same rendering as

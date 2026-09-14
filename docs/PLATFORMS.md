@@ -163,6 +163,29 @@ Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. C
 read the value as a string, not a YAML list, which is why their headers are bare rather than
 bracketed; see [Cursor and Trae read `globs:` as a comma-separated string](#cursor-and-trae-read-globs-as-a-comma-separated-string) (#699).
 
+**A per-file length cap.** Devin Desktop and Antigravity document a character cap on a single rule
+file, and VibeTags warns when a file it generated in one of their directories passes it
+(`validation.rule-file-over-limit` in `vibetags.log`). Devin Desktop gives `.devin/rules/` and
+`.windsurf/rules/` "Limited to 12,000 characters per file" (#695; see
+[Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop)).
+[Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says of `.agents/rules/`
+"Rules files are limited to 12,000 characters each." (#701). Neither page says whether a longer file
+is cut or dropped. Antigravity has no always-on safety file, so its warning suggests splitting the
+role in `.vibetags-roles` or shortening the annotation text, never `.windsurfrules`. No other granular
+directory's vendor documents a per-file cap (checked 2026-09-14): Grok Build says "Files are loaded
+in full, with no size cap" ([docs.x.ai](https://docs.x.ai/build/features/project-rules)); Claude
+Code's 4 MiB limit is stated for `CLAUDE.md`, not for `.claude/rules/`
+([code.claude.com](https://code.claude.com/docs/en/memory)); GitHub removed the limit under which
+"Copilot code review would stop reading `copilot-instructions.md` and `*.instructions.md` files ...
+once the file reached 4000 characters in size"
+([changelog, 2026-06-12](https://github.blog/changelog/2026-06-12-copilot-code-review-new-configurations-and-controls/));
+Augment's "Workspace Guidelines + Rules are limited to a maximum of 49,512 characters" is a combined
+cap, which no single file VibeTags writes decides, so it is not measured
+([docs.augmentcode.com](https://docs.augmentcode.com/setup-augment/guidelines)); Cursor ("Keep rules
+under 500 lines") and Tabnine (a `guidelines.md` of "500 lines or less") give guidance, not a cap;
+Roo Code, Trae, Continue, Amazon Q, Kiro, Gemini, JetBrains AI Assistant, Zencoder and Cline name
+none; and no PearAI documentation of `.pearai/rules/` was found to check.
+
 **Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
 
 **Repeated rule sentences collapse.** Within one granular file, a section covering two or more elements states its constant `- **Rule**:` sentence once (pluralized) and keeps only each element's varying detail beneath — elements whose whole stanza is shared collapse into an `- **Applies to**:` list. A section covering a single element is emitted exactly as before.
@@ -598,7 +621,8 @@ docs document for it (#683):
   role, so splitting the role in `.vibetags-roles` shortens them; the safety file shrinks to a
   pointer when `.windsurfrules` is opted in. The page gives the single-file global rules 6,000
   characters, a file VibeTags does not write, and names no cap for `.windsurfrules`, so neither is
-  measured.
+  measured. Antigravity's `.agents/rules/` gets the same warning (#701); see
+  [Granular rules](#granular-rules).
 - **Opt into one rule directory, not both.** The same CLI page: "`.devin/` is the preferred location
   and takes precedence over `.windsurf/`. If both `.devin/global_rules.md` and
   `.windsurf/global_rules.md` exist, Devin CLI loads only `.devin/global_rules.md`. Rule files in

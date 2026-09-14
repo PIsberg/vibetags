@@ -30,7 +30,8 @@ Write events, not positions:
   pins `platform.deprecated key= file= replacement=`, the WARN a build with a deprecated output
   opted in writes once per file (`replacement=none` where the vendor names no successor), and
   `RuleFileLengthWarnerTest` pins `validation.rule-file-over-limit file= chars= limit=`, the WARN for
-  a generated `.devin/rules/` or `.windsurf/rules/` file over Devin Desktop's per-file cap, with
+  a generated `.devin/rules/`, `.windsurf/rules/` or `.agents/rules/` file over the per-file cap
+  Devin Desktop and Antigravity document, with
   `validation.skip check=rule-file-length reason=no-markers` for a rule file VibeTags did not write;
   renaming one of those events is a breaking change, not a cleanup.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.

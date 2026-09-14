@@ -17,14 +17,17 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Devin Desktop, formerly Windsurf, caps a workspace rule file at 12,000 characters (issue #695).
+ * Devin Desktop, formerly Windsurf, caps a workspace rule file at 12,000 characters (issue #695), and
+ * Antigravity caps a rules file at the same length (issue #701).
  *
  * <p>docs.devin.ai, Memories &amp; Rules: "{@code .devin/rules/*.md} (preferred) or
  * {@code .windsurf/rules/*.md} (fallback) | One file per rule ... Limited to 12,000 characters per
- * file." The page does not say whether a longer file is cut or dropped, and either way the build
+ * file." antigravity.google/docs/rules-workflows: "Rules files are limited to 12,000 characters
+ * each." Neither page says whether a longer file is cut or dropped, and either way the build
  * used to report success, so the guardrails past the cap went missing with nothing said. A role
  * grouping many elements, a long annotation text, or the always-on safety file of a project with
  * many safety annotations can each pass the cap.
@@ -63,7 +66,7 @@ class RuleFileLengthEndToEndTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {".devin/rules", ".windsurf/rules"})
+    @ValueSource(strings = {".devin/rules", ".windsurf/rules", ".agents/rules"})
     void aRuleFileOverTheCapWarnsWithItsNameAndLength(String dir, @TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(dir));
@@ -75,6 +78,26 @@ class RuleFileLengthEndToEndTest {
         assertTrue(length > LIMIT, "the fixture must be over the cap, was " + length);
         assertTrue(anyMentions(warnings, dir + RULE + " is " + length + " characters"),
             "the warning names the file and its length, got: " + warnings);
+    }
+
+    /**
+     * Antigravity documents the same cap for {@code .agents/rules/} (#701), and the warning names the
+     * tool whose cap it is. The Devin Desktop and Windsurf wording, and the {@code .windsurfrules}
+     * remedy, do not apply there.
+     */
+    @Test
+    void anAntigravityRuleNamesAntigravityAndNoWindsurfRemedy(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".agents/rules"));
+        h.addSource("com.example.web.Big", draftSource(LIMIT + 500));
+
+        List<String> warnings = lengthWarnings(h.compileReturningDiagnostics());
+
+        assertEquals(1, warnings.size(), "one warning, for the one oversized file: " + warnings);
+        String warning = warnings.get(0);
+        assertTrue(warning.contains("Antigravity"), warning);
+        assertFalse(warning.contains("Devin") || warning.contains("Windsurf") || warning.contains(".windsurfrules"),
+            warning);
     }
 
     /**
