@@ -437,6 +437,36 @@ hand-authored rules outside the markers.
 
 ---
 
+## A lock written through an alias
+
+Kotlin can name an annotation through a `typealias`, and Groovy through an `@AnnotationCollector`
+type that stands for the annotations on it. Either can be declared in one file and used in another.
+Both stub generators expand the alias, so the processor sees the annotation itself and nothing is
+lost. Measured on copies of `examples/kotlin` (Kotlin 2.4.10, kapt) and `examples/groovy` (Groovy
+5.1.0), built on JDK 21 with `.vibetags-locks` opted in (#716). Every use below was declared in a
+different file from its alias, and each element appeared in `.vibetags-locks`, `CLAUDE.md` and
+`.cursorrules` with the reason given where the alias was written:
+
+| Used as | Declared as |
+|---|---|
+| `@Frozen` on a class and on a function | `typealias Frozen = AILocked` |
+| `@FrozenQualified` on a function | `typealias FrozenQualified = se.deversity.vibetags.annotations.AILocked` |
+| `@Cold` | `typealias Cold = Frozen` |
+| `@AliasHolder.Nested` | `typealias Nested = se.deversity.vibetags.annotations.AILocked` inside `class AliasHolder` |
+| `@GenericFrozen<String>` | `typealias GenericFrozen<T> = se.deversity.vibetags.annotations.AILocked` |
+| `@FrozenCollector` on a class and on a method | `@AILocked(reason = '...') @AnnotationCollector @interface FrozenCollector {}` |
+| `@FrozenListCollector(reason = '...')` | `@AnnotationCollector([AILocked]) @interface FrozenListCollector {}` |
+| `@AliasedCollector` | `@AILocked(reason = '...') @Bundle @interface AliasedCollector {}`, with `import groovy.transform.AnnotationCollector as Bundle` |
+| `@ChainedCollector` | `@FrozenCollector @AnnotationCollector @interface ChainedCollector {}` |
+
+The collector type is listed as well, as an `ANNOTATION_TYPE`, since `@AILocked` sits on it. The
+report's line ranges describe the stub, as for any Kotlin or Groovy element, so the locked-files
+guard does not match these elements by range; it reads the base revision's sources for aliases
+instead, and a removed use fails its lock-stripping check
+([action/locked-files/README.md](../action/locked-files/README.md#aliases-declared-in-another-file)).
+
+---
+
 ## One trap that applies to every language
 
 **The compiling JDK must be 21 or newer, and a Gradle toolchain overrides the JDK you launched

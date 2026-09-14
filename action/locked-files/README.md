@@ -27,18 +27,52 @@ freely. A real annotation still counts however the compiler allows it to be writ
 
 - **Java:** spaced from the `@`, qualified, split by a comment, or spelled with a unicode escape.
 - **Kotlin:** also with a use-site target (`@field:AILocked`), in a `@[...]` group, backtick-quoted,
-  inside a `${...}` string template, or under a name that an `import ... as` or a `typealias` in
-  the same file gives it. Any other code token naming the lock, outside an import, counts too.
-- **Groovy:** also inside a `${...}` string template, or under an `import ... as` name.
+  inside a `${...}` string template, under a name that an `import ... as` in the same file gives
+  it, or under a `typealias` declared in any Kotlin source. Any other code token naming the lock or
+  an alias of it, outside an import, counts too.
+- **Groovy:** also inside a `${...}` string template, under an `import ... as` name, or under an
+  `@AnnotationCollector` type, declared in any Groovy source, that collects the lock.
 
 When the guard cannot tell code from text it fails rather than passes: a source that does not lex
-(an unterminated or unbalanced literal, comment, template or brace) keeps the plain substring
-match. So does a Kotlin source with a `$` outside a string, which is how a multi-dollar `$$"..."`
+(an unterminated or unbalanced literal, comment, template or brace) keeps a substring match:
+`@AILocked` in a Java line, and in a Kotlin or Groovy line an `@` together with the lock's name or
+an alias anywhere on it, which a use-site target and a qualified name also satisfy. So does a Kotlin source with a `$` outside a string, which is how a multi-dollar `$$"..."`
 string starts, and a Groovy source with a `/` in code that does not start a comment, because a
 slashy string (`/.../`, `$/.../$`) cannot be told from a division without parsing: a Groovy file
-that divides gets the substring match. An alias declared in another file is not followed, by
-either match. No directory is exempt, test sources included, because javac runs the processor
-over test sources too.
+that divides gets the substring match. No directory is exempt, test sources included, because javac
+runs the processor over test sources too.
+
+### Aliases declared in another file
+
+A Kotlin `typealias` and a Groovy `@AnnotationCollector` are declared once and used anywhere, so the
+changed file alone cannot say that `@Frozen` is a lock. The processor does see such a lock, because
+kapt and groovyc expand the alias into the stub it compiles, but the report's ranges point into that
+stub, so no range check ever matches the source: the lock-stripping check is what catches a removed
+use ([measured](../../docs/JVM-LANGUAGES.md#a-lock-written-through-an-alias)).
+
+When the diff changes a Kotlin or Groovy source, the guard first reads every `.kt`, `.kts` and
+`.groovy` file at the base revision, with one `git ls-tree -r -z` and one `git cat-file --batch`,
+lexes the ones that contain `typealias` or `AnnotationCollector`, and collects the names that alias
+the lock: a `typealias` to `AILocked` (qualified, nested in a class, with type parameters, or naming
+another alias), and a collector type whose annotations include `@AILocked` or list `AILocked`
+(including one applied under an import alias, and one collecting another collector). Aliases of
+aliases are followed across files until nothing grows. Each alias then counts as the lock in every
+source of its language, whichever package declares it. The guard does not resolve imports, so a
+same-named class elsewhere makes a removal fail rather than pass.
+
+A source that may declare an alias but does not lex cannot have its alias named: one that contains
+`typealias` or `AnnotationCollector`, and also the lock's name or an alias already found. While such
+a source exists, removing any annotation line from a source in that language fails, and the message
+names it. Narrowing that to the unreadable source's package and its importers would mean reading
+the package and imports out of text the lexer has already given up on, so the check fails wide
+instead. A Groovy source that divides does not lex, so a collector declared next to a division
+switches this on for every Groovy source; a collector in a file of its own does not.
+
+Measured on 8418 Kotlin and Groovy files (16.7 MB) found on the development machine, committed to
+one repository: reading them took 0.31 s and collecting aliases 0.28 s, because only the 26 that
+contain `typealias` or `AnnotationCollector` were lexed (lexing every file takes 5.6 s). A whole
+guard run removing an annotation from one of them took 0.74 to 0.82 s, against 0.15 to 0.24 s
+without the pass. A diff that changes no Kotlin or Groovy source skips it.
 
 Violations surface as inline GitHub error annotations on the offending file and line.
 

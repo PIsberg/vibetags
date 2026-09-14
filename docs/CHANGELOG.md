@@ -664,6 +664,30 @@ vendor before anything changed, and the table under Deprecated lists every depre
   failing, and the target, qualified, bracketed, backtick and alias strips passing), and each lexer
   rule, disabled on its own, turned at least one test red.
 
+- **The locked-files guard follows a lock alias declared in another file** (#716). Since #709 a
+  Kotlin `typealias Frozen = AILocked` made `@Frozen` a lock only in the file that declared it, and
+  a Groovy `@AnnotationCollector` bundling `@AILocked` was not recognised at all, so removing
+  `@Frozen` from any other file passed. The processor does see these locks: on copies of
+  `examples/kotlin` (Kotlin 2.4.10, kapt) and `examples/groovy` (Groovy 5.1.0) built on JDK 21, a
+  cross-file typealias on a class and on a function, a qualified, nested, generic and chained one,
+  and a collector that bundles or lists `AILocked`, is applied under an import alias or collects
+  another collector, all reached `.vibetags-locks` and `CLAUDE.md`. The report's ranges describe the
+  kapt or groovyc stub, though, so no range check covers a Kotlin or Groovy source and the
+  lock-stripping check was the only one left. When a diff changes a Kotlin or Groovy source, the
+  guard now reads every `.kt`, `.kts` and `.groovy` blob at the base with one `git ls-tree` and one
+  `git cat-file --batch`, lexes those that contain `typealias` or `AnnotationCollector`, follows
+  aliases across files, and counts each alias as the lock in every source of its language, so a
+  same-named local class makes a removal fail rather than hide the alias. If a source that may
+  declare an alias does not lex, removing any annotation line in that language fails. A Kotlin or
+  Groovy source that does not lex now matches a removed line holding an `@` and a lock name
+  anywhere, instead of the substring `@AILocked`, which `@field:AILocked` and a qualified name never
+  contained. On 8418 Kotlin and Groovy files a guard run took 0.74 to 0.82 s instead of 0.15 to
+  0.24 s. Against the #709 guard the new cases gave 18 failures (every cross-file strip, the
+  deletion, the shadowing and the fail-safe cases passing), and each new rule, broken on its own in
+  a scratch copy, turned at least one test red. A first cut treated any Groovy unicode escape as a
+  possible spelling of `AnnotationCollector`, which made 3 of the 998 Groovy files on the
+  development machine switch the fail-wide fallback on; escapes are now translated first.
+
 - **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
   two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
   ran in `async-tests` under the async-test agent. A class that drives javac passed in
