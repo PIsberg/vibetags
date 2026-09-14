@@ -4,10 +4,12 @@
 # committed rule is violated. The gating is deliberately dumb bash over files the reviewer
 # writes; the model never decides its own exit code.
 #
-# Runs only when the ANTHROPIC_API_KEY secret exists; otherwise every step is skipped and
-# the summary says SKIPPED, which is not a pass. The job is intentionally not in the
+# Runs only when the ANTHROPIC_API_KEY secret exists. Without it the review job is SKIPPED,
+# so the check reads "Skipped" in the PR instead of a green tick it did not earn (#697); the
+# preflight job below says why that takes two jobs. The job is intentionally not in the
 # required-checks set while it earns trust; promote it once its verdict record justifies
-# blocking merges (docs/WORKFLOW.md tracks that decision).
+# blocking merges (docs/WORKFLOW.md tracks that decision). Branch protection counts a skipped
+# job as satisfying a required check, so promoting it also means making a missing key fail.
 #
 # Each run is a fresh context: no conversation history, no session memory. That separation
 # is the point, not an accident. Model pinned by exact ID below; upgrades to it should be
@@ -26,14 +28,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Exists only so the review job can be SKIPPED rather than reporting a result it did not earn.
+  # `jobs.<id>.if` cannot read the `secrets` context - only github, needs, vars and inputs - so the
+  # answer has to arrive as a job output. Gating each step on a job-level env instead (what this
+  # workflow did until #697) skips every step and still concludes the job as success, a green tick
+  # indistinguishable from a review that ran and passed its verdict gate. Same shape as the
+  # instruction-evals preflight (#632).
+  preflight:
+    name: Check for the review key
+    runs-on: ubuntu-latest
+    outputs:
+      has_key: ${{ steps.check.outputs.has_key }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Note when the key is absent
+        id: check
+        env:
+          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          echo "has_key=$HAVE_KEY" >> "$GITHUB_OUTPUT"
+          if [ "$HAVE_KEY" != "true" ]; then
+            echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; no review ran." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Inquisitor skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
+          fi
+
   inquisitor:
     name: Adversarial Review
     runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.has_key == 'true'
     permissions:
       contents: read
       id-token: write
-    env:
-      HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     steps:
       # The agent lane runs sandboxed: ephemeral runner, no ambient secrets beyond its own
       # API key, and egress BLOCKED except the endpoints the job demonstrably needs. If a
@@ -54,19 +84,11 @@ jobs:
             raw.githubusercontent.com:443
             registry.npmjs.org:443
 
-      - name: Note when the key is absent
-        if: env.HAVE_KEY != 'true'
-        run: |
-          echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; no review ran." >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Inquisitor skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.HAVE_KEY == 'true'
         with:
           fetch-depth: 0
 
       - name: Run the Inquisitor
-        if: env.HAVE_KEY == 'true'
         uses: anthropics/claude-code-action@5ccc3a35a6367cdb8e6fbd0728287467540ecfe2 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -80,7 +102,6 @@ jobs:
             --allowedTools "Read,Grep,Glob,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
 
       - name: Publish the verdict (deterministic gate)
-        if: env.HAVE_KEY == 'true'
         run: |
           if [ ! -f inquisitor-report.md ]; then
             echo "::error::The Inquisitor produced no report. That is a harness failure, not an all-clear."
