@@ -202,10 +202,12 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 100%
 - **Frameworks**: JUNIT_5, ASSERTJ
+
 #### TEST-DRIVEN: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 95%
 - **Frameworks**: JUNIT_5, MOCKITO
+
 #### THREAD-SAFE: com.example.concurrent.SessionCache
 - **Strategy**: LOCK_FREE
 - **Note**: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
@@ -359,7 +361,6 @@ This file contains project-specific coding conventions and AI guardrails extract
 
 #### SECURITY AUDIT: com.example.gmm.app.App
 - **Required Checks**: Path Traversal
-
 
 ## Inherited Guardrails (dependencies)
 

@@ -355,4 +355,29 @@ class AllAnnotationsAllPlatformsEndToEndTest {
                 "CONVENTIONS.md must render the " + header + " section");
         }
     }
+
+    @Test
+    void aiderConventions_noHeadingDirectlyFollowsNonBlankLine() throws IOException {
+        String conventions = harness.readFile("CONVENTIONS.md");
+        java.util.List<String> lines = conventions.lines().toList();
+        for (int i = 1; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.startsWith("#### ")) {
+                assertTrue(lines.get(i - 1).isEmpty(),
+                    "CONVENTIONS.md: '" + line + "' sits directly under '" + lines.get(i - 1)
+                        + "' with no blank line:\n" + conventions);
+            }
+        }
+    }
+
+    @Test
+    void noDoubleBlankLinesInRenderedOutputs() throws IOException {
+        for (String file : java.util.List.of("llms-full.txt", ".github/copilot-instructions.md", "CONVENTIONS.md")) {
+            if (harness.fileExists(file)) {
+                String content = harness.readFile(file);
+                assertFalse(content.contains("\n\n\n"),
+                    file + " must never contain double blank lines (\\n\\n\\n):\n" + content);
+            }
+        }
+    }
 }

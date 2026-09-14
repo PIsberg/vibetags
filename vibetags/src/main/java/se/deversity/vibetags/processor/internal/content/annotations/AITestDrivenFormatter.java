@@ -78,7 +78,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n")
-                    .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr));
+                    .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr)).append('\n');
                 break;
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');

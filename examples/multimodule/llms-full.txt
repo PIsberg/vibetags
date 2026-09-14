@@ -8,10 +8,8 @@ This document contains the full set of AI guardrail rules for this project. AI t
 ## Locked Files (Do Not Edit)
 The following files are locked. AI tools MUST NOT propose modifications to them.
 
-
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
-
 
 ## Mandatory Security Audit Requirements
 When writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.
@@ -19,13 +17,11 @@ When writing or modifying the following files, perform a security audit for the 
 ### com.example.multimodule.cli.MultiModuleCli
 - **Required Checks**: Path Traversal
 
-
 ## 🔐 Contract-Frozen Signatures
 The following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.
 
 ### com.example.multimodule.cli.MultiModuleCli.run(java.lang.String[])
 - **Reason**: Public CLI surface; flags are documented downstream
-
 
 ## 🧪 Test-Driven Requirements
 The following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.
@@ -35,7 +31,6 @@ The following elements require a matching test update whenever their logic is mo
 - **Frameworks**: JUNIT_5
 - **Test Location**: src/test/java/com/example/multimodule/cli
 
-
 ## ♻️ Idempotency Guarantees
 These operations are idempotent — calling multiple times must produce the same result as calling once.
 
@@ -43,13 +38,11 @@ These operations are idempotent — calling multiple times must produce the same
 - Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.
 - **Reason**: Derives output path from inputs only
 
-
 ## Deterministic Pure Functions
 The following elements must remain pure functions without side effects or mutations.
 
 ### com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)
 - **Requirement**: Mathematically pure function. No side effects.
-
 
 ## Inherited Guardrails (dependencies)
 
@@ -78,14 +71,12 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ### com.example.multimodule.core.IrNode
 - **Reason**: Core IR node: structural changes break every downstream module
 
-
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
 
 ### com.example.multimodule.core
 - **Focus**: Immutable IR data model shared across every module of the reactor.
 - **Avoid**: Adding mutable state, framework annotations, or a dependency on any sibling module.
-
 
 ## 🧵 Thread-Safe by Design
 These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
@@ -94,13 +85,11 @@ These elements are explicitly designed to be thread-safe via the named strategy.
 - **Strategy**: IMMUTABLE
 - **Note**: Every type in this package is safe to publish across threads without synchronization.
 
-
 ## ❄️ Immutable Types
 The following types are immutable. Never introduce non-final fields, setters, or mutating methods.
 
 ### com.example.multimodule.core.IrGraph
 - Immutable type — never introduce non-final fields, setters, or mutating methods.
-
 
 ## 🔐 Security-Critical Code
 These elements are security-critical. Do not weaken security properties. Every change requires security review.
@@ -108,7 +97,6 @@ These elements are security-critical. Do not weaken security properties. Every c
 ### com.example.multimodule.core
 - Security-critical code (aspect: Node identity is a security boundary: never build an IrNode from unvalidated external input, and never expose its raw id in a URL or log line.).
 - Never weaken security properties. Every change requires explicit security review.
-
 
 ## Framework-Free Domain Entities
 The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
@@ -125,10 +113,8 @@ This document contains the full set of AI guardrail rules for this project. AI t
 ## Locked Files (Do Not Edit)
 The following files are locked. AI tools MUST NOT propose modifications to them.
 
-
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
-
 
 ## 🧵 Thread-Safe by Design
 These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
@@ -137,13 +123,11 @@ These elements are explicitly designed to be thread-safe via the named strategy.
 - **Strategy**: SYNCHRONIZED
 - **Note**: Stateless; safe to share across render threads
 
-
 ## open-closed Extension Patterns
 The following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.
 
 ### com.example.multimodule.engine.LayoutEngine
 - **Extension Design**: STRATEGY_PATTERN. Use polymorphism.
-
 
 ## Inherited Guardrails (dependencies)
 
@@ -196,7 +180,6 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ### com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)
 - **Reason**: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
 
-
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
 
@@ -228,13 +211,11 @@ These files have specific context and focus areas for AI assistance.
 - **Focus**: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
 - **Avoid**: java.util.regex, String.split(), StringBuilder in loops
 
-
 ## Mandatory Security Audit Requirements
 When writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.
 
 ### com.example.database.DatabaseConnector
 - **Required Checks**: SQL Injection, Thread Safety issues
-
 
 ## Ignored Elements
 The following elements must be completely excluded from AI context. Treat them as non-existent.
@@ -242,7 +223,6 @@ The following elements must be completely excluded from AI context. Treat them a
 ### com.example.internal.GeneratedMetadata
 - Excluded from AI context entirely - treat as non-existent
 - Reason: Auto-generated at build time. Manual edits are overwritten on every build.
-
 
 ## Implementation Tasks
 The following elements are in draft mode and need implementation.
@@ -292,7 +272,6 @@ The following elements are in draft mode and need implementation.
 ### com.example.strategy.impl.CreditCardStrategy.validatePaymentMethod()
 - **Instructions**: Implement Luhn algorithm validation for card number, expiry date validation (must be future date), and CVV format check (3-4 digits). Return true only if all validations pass.
 
-
 ## PII / Privacy Guardrails
 Never include runtime values of the following elements in logs, console output, external API calls, test fixtures, or mock data.
 
@@ -323,7 +302,6 @@ Never include runtime values of the following elements in logs, console output, 
 ### com.example.strategy.impl.CreditCardStrategy.expiryDate
 - **Reason**: PCI-DSS cardholder data - never log or expose in suggestions
 
-
 ## 🧠 Core Functionality
 The following elements are well-tested core functionality. Make changes with extreme caution.
 
@@ -338,7 +316,6 @@ The following elements are well-tested core functionality. Make changes with ext
 ### com.example.service.InventoryService.reserveStock(java.lang.String,int,java.lang.String)
 - **Sensitivity**: Critical
 - **Note**: Reservation logic handles concurrent requests via optimistic locking. Took 18 months to get right under high load — do not refactor without running the full concurrency test suite.
-
 
 ## ⚡ Performance Constraints
 The following elements are on a hot-path and have strict time/space complexity constraints.
@@ -355,7 +332,6 @@ The following elements are on a hot-path and have strict time/space complexity c
 ### com.example.service.PricingService.calculatePrice(java.lang.String,int,java.lang.String)
 - **Constraint**: Must complete in <5ms p99. Called on every cart update.
 
-
 ## 🔐 Contract-Frozen Signatures
 The following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.
 
@@ -367,7 +343,6 @@ The following elements have frozen public API signatures. Internal implementatio
 
 ### com.example.service.PricingService.getBulkPricing(java.util.List<java.lang.String>,int)
 - **Reason**: B2B portal contract v1.2 — the List<Map<String,Object>> structure is serialized directly to JSON. Changing the return type breaks portal parsing.
-
 
 ## 🧪 Test-Driven Requirements
 The following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.
@@ -383,7 +358,6 @@ The following elements require a matching test update whenever their logic is mo
 - **Test Location**: src/test/java/com/example/service/OrderServiceTest.java
 - **Mock Policy**: Mock OrderRepository and EventPublisher; use real state machine logic
 
-
 ## 🧵 Thread-Safe by Design
 These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
 
@@ -391,14 +365,12 @@ These elements are explicitly designed to be thread-safe via the named strategy.
 - **Strategy**: LOCK_FREE
 - **Note**: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
 
-
 ## ❄️ Immutable Types
 The following types are immutable. Never introduce non-final fields, setters, or mutating methods.
 
 ### com.example.config.AsyncTestConfig
 - Immutable type — never introduce non-final fields, setters, or mutating methods.
 - **Note**: Used by every test runner; safe to share across threads without copies.
-
 
 ## ⚠️ Deprecated Elements
 The following elements are deprecated. Suggest migration to the named replacement for any caller and do not extend them.
@@ -408,7 +380,6 @@ The following elements are deprecated. Suggest migration to the named replacemen
 - **Migration**: Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.
 - **Deadline**: v2.0 (2026-Q4)
 
-
 ## 📡 Observability Instrumentation
 The following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on.
 
@@ -417,7 +388,6 @@ The following elements emit metrics, traces, or log statements that downstream d
 - **Traces**: order.place
 - **Logs**: OrderPlaced, OrderPlacementFailed
 - **Note**: Watched by the Orders SLO dashboard (https://grafana.internal/d/orders-slo).
-
 
 ## 📜 Regulatory Compliance
 The following elements implement specific regulatory clauses. Document compliance impact for every change and never weaken the requirement.
@@ -432,20 +402,17 @@ The following elements implement specific regulatory clauses. Document complianc
 - **Clause**: Art. 20
 - **Description**: Right to data portability — exports the user's data in a machine-readable format.
 
-
 ## Strict Test Isolation
 AI tools must enforce strict isolation when generating or modifying tests for these elements.
 
 ### com.example.config.ParallelTestSettings
 - Enforce strict test isolation and thread safety. Do not share mutable state between parallel test cases.
 
-
 ## Legacy Compatibility Bridge
 These elements are legacy or compatibility bridges. Do not restructure or modernize them.
 
 ### com.example.legacy.LegacyBridgeService
 - Legacy compatibility bridge. Do not refactor structural patterns. Only modify internal business logic as explicitly requested.
-
 
 ## Architectural Boundary Constraints
 Strict architectural layering must be respected. No illegal references or imports.
@@ -454,13 +421,11 @@ Strict architectural layering must be respected. No illegal references or import
 - **Belongs to Layer**: domain
 - **Prohibited References**: infrastructure, ui
 
-
 ## Public API Surface Protection
 These elements expose public API surfaces. Preserve signatures, Javadocs, and backward compatibility.
 
 ### com.example.service.PublicPaymentController
 - Public API surface. Preserve signature, Javadoc, and behavior without breaking backwards compatibility.
-
 
 ## Strict Exception Handling
 Precise and robust exception handling must be enforced. No catching or throwing generic Exception.
@@ -468,13 +433,11 @@ Precise and robust exception handling must be enforced. No catching or throwing 
 ### com.example.service.TransactionalPaymentService
 - Enforce precise exception handling. Prohibit catching or throwing generic Exceptions/Throwables. Use specific or custom exceptions.
 
-
 ## Strict Type Safety
 Type safety must be strictly preserved. Loose or erased types are prohibited.
 
 ### com.example.payment.PaymentDetails
 - Prohibit loose typing. Use strongly-typed transfer objects or domain models instead of Object or Map<String, Object>.
-
 
 ## Internationalization Mandate
 User-facing strings must not be hardcoded; resolve them via localized resources.
@@ -482,20 +445,17 @@ User-facing strings must not be hardcoded; resolve them via localized resources.
 ### com.example.utils.I18nMessageHelper
 - Internationalization mandate. Prohibit hardcoding user-facing strings; all user-visible text must be localized.
 
-
 ## Strict Classpath Integrity
 Dynamic runtime class loading and reflections are strictly prohibited.
 
 ### com.example.utils.StrictUtility
 - Strict classpath integrity. Prohibit dynamic runtime class loading, reflections, or external JAR injection.
 
-
 ## Schema & Serialization Safety
 Schema and serialization compatibility must be strictly preserved.
 
 ### com.example.database.UserEntity
 - Schema and serialization safety. Restrict changing serialization formats, database fields, or API models without a migration path.
-
 
 ## ♻️ Idempotency Guarantees
 These operations are idempotent — calling multiple times must produce the same result as calling once.
@@ -504,14 +464,12 @@ These operations are idempotent — calling multiple times must produce the same
 - Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.
 - **Reason**: Deleting a user's data multiple times must produce the same result as deleting once — must not throw on second invocation.
 
-
 ## 🚩 Feature Flag Gated Code
 These elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.
 
 ### com.example.service.InventoryService.sendLowStockAlert(java.lang.String,int)
 - Feature flag: 'inventory.push-alerts.enabled' (default: false)
 - Preserve the flag check. Never assume the flag is always active. Test both enabled and disabled code paths.
-
 
 ## 🔐 Security-Critical Code
 These elements are security-critical. Do not weaken security properties. Every change requires security review.
@@ -520,13 +478,11 @@ These elements are security-critical. Do not weaken security properties. Every c
 - Security-critical code (aspect: authentication).
 - Never weaken security properties. Every change requires explicit security review.
 
-
 ## Access Limitations
 The following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.
 
 ### com.example.service.NewAnnotationsShowcase.executeSecureDatabaseWipe()
 - **Allowed Callers**: com.example.service.PricingService, com.example.payment.PaymentProcessor
-
 
 ## Sandbox & Test Exclusion
 The following elements are strictly sandbox/test code. Production code must never import or reference them.
@@ -534,20 +490,17 @@ The following elements are strictly sandbox/test code. Production code must neve
 ### com.example.service.NewAnnotationsShowcase.SandboxTestHelper
 - **Scope**: Sandbox/testing environments only. Never use in production.
 
-
 ## Memory Allocation Budgets
 The following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.
 
 ### com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
 - **Memory Policy**: ZERO_ALLOCATION
 
-
 ## Deterministic Pure Functions
 The following elements must remain pure functions without side effects or mutations.
 
 ### com.example.service.NewAnnotationsShowcase.calculateFastFibonacci(int)
 - **Requirement**: Mathematically pure function. No side effects.
-
 
 ## Framework-Free Domain Entities
 The following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.
@@ -556,20 +509,17 @@ The following elements are pure Domain Models. Do not import Spring, JPA/Hiberna
 - **Domain Boundary**: Framework-agnostic Domain Entity.
 - **Allowed Packages**: java.math.BigDecimal
 
-
 ## open-closed Extension Patterns
 The following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.
 
 ### com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy
 - **Extension Design**: STRATEGY_PATTERN. Use polymorphism.
 
-
 ## Mandatory Input Sanitization
 The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
 
 ### com.example.service.NewAnnotationsShowcase.executeDatabaseQuery(java.lang.String)#sqlRawInput
 - **Sanitization Requirement**: SQL_INJECTION
-
 
 ## Secure Logging Masking
 The following sensitive elements must be masked, hashed, or omitted from log/stdout streams.
@@ -580,20 +530,17 @@ The following sensitive elements must be masked, hashed, or omitted from log/std
 ### com.example.service.NewAnnotationsShowcase.registerUserSession(java.lang.String,java.lang.String,java.lang.String)#passwordRaw
 - **Secure Logging Policy**: HASH
 
-
 ## Required Chain-of-Thought Explanations
 Any change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.
 
 ### com.example.service.NewAnnotationsShowcase.runComplexMatrixMath(double[][],double[][])
 - **Explanation Needed**: Yes, Chain-of-Thought (Complexity: HIGH)
 
-
 ## Experimental Prototype Stubs
 Strict QA constraints and tests are relaxed for these elements, but production classes must never import them.
 
 ### com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike
 - **Scope**: Experimental Prototype. Bypasses strict validation rules.
-
 
 ## Sunset Deprecated APIs
 Strictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.
@@ -603,14 +550,12 @@ Strictly sunset under deprecation. Introducing *new* references or calls to thes
 - **JIRA Ticket**: DEBT-742
 - **Replacement**: com.example.service.PricingService
 
-
 ## Temporary Code Workarounds
 Temporary stubs or hacks that must be refactored or removed before their expiration limit.
 
 ### com.example.service.NewAnnotationsShowcase.temporaryUpstreamBypass()
 - **Temporal Expiration**: 2028-12-31
 - **Reason**: Hotfix workaround until upstream payment provider updates their API.
-
 
 ## Generated Code — Edit The Source
 These elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them.
@@ -622,7 +567,6 @@ These elements are machine-generated and hand edits are silently overwritten. Re
 - Regenerate with: `mvn generate-sources`
 - Still read this element to understand behaviour — only never write it.
 
-
 ## Load-Bearing Oddities
 These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
 
@@ -633,7 +577,6 @@ These look wrong, redundant, or over-defensive and are deliberate. Refactoring i
 - Audit tooling should stop reporting this element — the oddity is by design.
 - Edits are allowed as long as the invariant survives.
 
-
 ## Banned APIs
 The following APIs compile at these elements but are prohibited there. Use the sanctioned replacement.
 
@@ -642,7 +585,6 @@ The following APIs compile at these elements but are prohibited there. Use the s
 - **Sanctioned route**: the injected org.slf4j.Logger, java.time.Instant, and java.math.BigDecimal
 - **Reason**: Console output bypasses structured logging; Date and Double are unsafe for money and time
 - These symbols compile, so the compiler will not stop you. The ban is a project rule.
-
 
 ## Thread Affinity (Not Thread-Safe)
 These elements are safe on exactly one thread. Do not add locks — marshal the call onto the required thread instead.
@@ -653,7 +595,6 @@ These elements are safe on exactly one thread. Do not add locks — marshal the 
 - Do NOT add synchronization to "fix" this — move the call, do not lock it.
 - **Marshal via**: CheckoutDispatcher.runOnUiThread
 - **Symptom if violated**: Cart totals render stale under load; no exception is thrown
-
 
 ## Mirrored Elements
 These are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.
@@ -676,10 +617,8 @@ This document contains the full set of AI guardrail rules for this project. AI t
 ## Locked Files (Do Not Edit)
 The following files are locked. AI tools MUST NOT propose modifications to them.
 
-
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
-
 
 ## Inherited Guardrails (dependencies)
 

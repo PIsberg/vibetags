@@ -20,7 +20,11 @@ import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.TransitiveSection;
+import se.deversity.vibetags.processor.model.TransitiveRule;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -902,5 +906,42 @@ class GuardrailContentBuilderUnitTest {
                     + entry.getValue() + "' — missing means that annotation type's "
                     + "appendSection(...) call never fired");
         }
+    }
+
+    /**
+     * The inherited-guardrail appendix opens with its own blank line, and several platforms already
+     * close with one (Aider's entries, every {@code llms-full.txt} entry), which printed two blank
+     * lines above {@code ## Inherited Guardrails (dependencies)} (#726). Asserted at the seam for
+     * every platform that carries the appendix, on a module with every annotation and on a module
+     * whose only rules are inherited, since the two end their own content differently.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("transitivePlatforms")
+    void transitiveAppendix_isSetOffByExactlyOneBlankLine(Platform platform) {
+        for (boolean ownAnnotations : new boolean[]{true, false}) {
+            AnnotationCollector collector = ownAnnotations ? buildAllAnnotationTypes() : new AnnotationCollector();
+            collector.addTransitiveRules(java.util.List.of(new TransitiveRule(
+                "com.acme:crypto-core:2.4.0", "com.acme.api", "@AISecure",
+                TransitiveRule.Tier.SAFETY, Map.of("note", "use the factory"))));
+            GuardrailContentBuilder.Result result = assertDoesNotThrow(
+                new GuardrailContentBuilder(collector, Set.of(platform.getServiceKey()), "Test", "")::build);
+            String content = result.contentByService.get(platform.getServiceKey());
+            if (content == null) {
+                // A renderer that writes nothing for this model has no seam to get wrong.
+                continue;
+            }
+            String label = platform + (ownAnnotations ? " (every annotation)" : " (inherited rules only)");
+            int heading = content.indexOf("## Inherited Guardrails (dependencies)");
+            assertTrue(heading > 0, label + " must carry the appendix:\n" + content);
+            String before = content.substring(0, heading);
+            assertTrue(before.endsWith("\n\n"),
+                label + ": the appendix heading sits directly under the previous line:\n" + content);
+            assertFalse(before.endsWith("\n\n\n"),
+                label + ": the appendix heading has two blank lines above it:\n" + content);
+        }
+    }
+
+    static java.util.stream.Stream<Platform> transitivePlatforms() {
+        return TransitiveSection.PLATFORMS.stream();
     }
 }

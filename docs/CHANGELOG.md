@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **No double blank lines between sections in `llms-full.txt`, Copilot, Junie, and `CONVENTIONS.md`** (#726).
+  **Every project that generates `llms-full.txt`, `.github/copilot-instructions.md`, `.junie/guidelines.md`
+  or `CONVENTIONS.md` gets a whitespace-only change to its generated block on the next build**: double blank
+  lines (`\n\n\n`) between sections are removed. Four outputs printed two blank lines in a row, each for its
+  own reason: `LlmsRenderer` emitted headings with a leading newline in full mode while each `LLMS_FULL`
+  formatter arm already closed with a blank line; `CopilotRenderer` in full mode emitted an empty
+  `## Locked Files — DO NOT MODIFY` heading and description when nothing was locked; `JunieRenderer`
+  similarly emitted an empty `## Locked Files (Do Not Modify)` heading and description when nothing was
+  locked; and `GuardrailContentBuilder.withTransitiveAppendix` appended a leading newline before
+  `## Inherited Guardrails (dependencies)` even when the preceding platform content already ended with a
+  blank line (affecting Aider's `CONVENTIONS.md` and `llms-full.txt`). Now `LlmsRenderer` does not prepend a
+  newline to section headings in full mode, `CopilotRenderer` and `JunieRenderer` omit the locked files
+  heading when no elements are locked, and `withTransitiveAppendix` avoids doubling the blank line before
+  inherited guardrails. A fifth cause reached Copilot, Junie and every other renderer that walks
+  `AnnotationSections` or reuses one that does (Cursor, Windsurf, Zed, Codex, Qwen, Gemini, and through them
+  Cline, Firebase, Goose, Replit, Void and the Claude skill): a bare `@AIAudit` names no
+  checks and renders no entry by design, but its section heading and description were still printed,
+  leaving an empty section followed by two blank lines. `AnnotationSections.render` now rolls back a
+  headed section whose elements all render nothing, so **projects with a bare `@AIAudit` also lose that
+  empty audit heading** from those files. `AggregateBlankLineContractTest` renders all 44 annotations
+  (populated, bare, and with only optional members unset, plus a model with nothing locked) through
+  `llms-full.txt`, `CONVENTIONS.md`, Copilot and both Junie files and fails on two blank lines in a row
+  or on a heading directly under the previous line; `GuardrailContentBuilderUnitTest` asserts exactly
+  one blank line above the inherited-guardrail heading on every platform that carries it.
+
+- **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
+  **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change
+  on the next build**: a blank line is added after each `TEST-DRIVEN` entry. In Aider's `CONVENTIONS.md`
+  every per-element entry is a `#### ` heading followed by bullets, and each formatter's
+  `AIDER_CONVENTIONS` arm ends its entry with a blank line. `AITestDrivenFormatter`'s arm ended with
+  `CommonFormatterHelper.bullet("Frameworks", ...)`, which ends with a single newline, so the next entry's
+  `#### ` heading was printed directly on the line under the last bullet without a blank line between them.
+  Now `AITestDrivenFormatter` appends the trailing newline. `AllAnnotationsAllPlatformsEndToEndTest`
+  asserts that no `#### ` heading in a rendered `CONVENTIONS.md` directly follows a non-blank line.
+  Regenerated: `examples/basic/CONVENTIONS.md`, `examples/multimodule/CONVENTIONS.md`, and
+  `examples/gradle-multimodule/CONVENTIONS.md`.
+
 - **Every Gemini section is set off by exactly one blank line** (#723). **Every project that
   generates `GEMINI.md` or `gemini_instructions.md` gets a whitespace-only change to its generated
   block on the next build**: blank lines are added or removed between sections, and no text
