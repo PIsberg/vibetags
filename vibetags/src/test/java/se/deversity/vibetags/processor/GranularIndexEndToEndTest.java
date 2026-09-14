@@ -203,6 +203,44 @@ class GranularIndexEndToEndTest {
     }
 
     /**
+     * The Gemini index note must not promise automatic loading (#669).
+     *
+     * <p>Every index note used to say the scoped files "load automatically when you open the matching
+     * source file". That is true of Claude Code, Cursor, Windsurf and Copilot, and false for Gemini:
+     * Gemini CLI loads {@code GEMINI.md} files (the hierarchy, and just-in-time ones in a directory a
+     * tool touches) and nothing under {@code .gemini/rules/}, whose name appears nowhere in its
+     * source. An agent told a rule file is already in its context does not open it, so the
+     * per-element guardrails the index collapsed out of {@code GEMINI.md} never reached the model.
+     * The Gemini note has to send the agent to the file; the other platforms' notes keep the claim.
+     */
+    @Test
+    void geminiIndexNoteTellsTheAgentToReadTheRuleFile(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        h.touchOptIn(".cursorrules");
+        h.touchOptIn(".cursor/rules/.vibetags");
+        addMixedSources(h);
+        h.compile();
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("## Scoped Rules Index"), "the Gemini aggregate still collapses to an index");
+        assertFalse(gemini.contains("load automatically"),
+            "Gemini CLI never loads .gemini/rules/ by itself, so the note must not say it does:\n" + gemini);
+        assertTrue(gemini.contains("read_file"),
+            "the note names the tool Gemini CLI documents for opening a file:\n" + gemini);
+        assertTrue(gemini.contains("does not load"),
+            "the note says the files are not in context until read:\n" + gemini);
+        assertTrue(gemini.contains(".gemini/rules/{path, every non-alphanumeric"),
+            "the naming convention is still stated, or the agent cannot find the file");
+        assertTrue(gemini.contains("LOCKED FILES"), "the safety tier stays inline (invariant 6)");
+
+        String cursor = h.readFile(".cursorrules");
+        assertTrue(cursor.contains("load automatically when you open the matching source file"),
+            "Cursor does load scoped rules by glob, so its note keeps the claim:\n" + cursor);
+    }
+
+    /**
      * The markdown index drops the same derivable pointer, and keeps the FQN (issue #626).
      */
     @Test

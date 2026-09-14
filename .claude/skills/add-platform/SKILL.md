@@ -26,8 +26,10 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
   worth nothing, because JetBrains states that a project with `.cursorignore`, `.codeiumignore` or
   `.aiexclude` needs no `.aiignore` — and VibeTags writes all three. Ask what the tool *reads*, not
   what people have.
-- Check the product is alive. Cody retired 2025-07-23, Supermaven 2025-11. Nothing in the build can
-  notice a vendor sunsetting a product (#641).
+- Check the product is alive, at the vendor, not in a round-up. Cody Free and Pro ended 2025-07-23
+  while Cody Enterprise continued; Supermaven announced its sunset 2025-11-21 but kept autocomplete
+  for existing JetBrains and Neovim users (#677). Quote what the source says, no more. Nothing in the
+  build can notice a vendor sunsetting a product (#641).
 - If the path is reached by a file VibeTags already writes (`AGENTS.md`, `.cursorrules`,
   `CLAUDE.md`), a second copy of the same content is not reach, it is duplication. Say so and stop.
 

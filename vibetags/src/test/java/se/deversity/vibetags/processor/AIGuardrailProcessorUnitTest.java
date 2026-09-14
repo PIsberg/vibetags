@@ -93,10 +93,12 @@ class AIGuardrailProcessorUnitTest {
         Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        assertEquals(3, warnings.size(), "Should have 3 warnings (cursor, claude, and qwen ignore missing)");
+        // Claude is active but gets no warning: .claudeignore is deprecated (#667), so suggesting it
+        // would opt the project into an output the same build warns about.
+        assertEquals(2, warnings.size(), "Should have 2 warnings (cursor and qwen ignore missing): " + warnings);
         assertTrue(warnings.get(0).contains(".cursorignore"));
-        assertTrue(warnings.get(1).contains(".claudeignore"));
-        assertTrue(warnings.get(2).contains(".qwenignore"));
+        assertTrue(warnings.get(1).contains(".qwenignore"));
+        assertFalse(warnings.stream().anyMatch(w -> w.contains(".claudeignore")), warnings.toString());
     }
 
     @Test
@@ -160,7 +162,7 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("GEMINI.md"), "Note should list the Gemini file (gemini_instructions.md is deprecated, #641)");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
         assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
-        assertTrue(note.contains(".copilotignore"), "Note should list copilot ignore file");
+        assertFalse(note.contains(".copilotignore"), "Note must not offer the deprecated copilot ignore file (#668)");
     }
 
     @Test

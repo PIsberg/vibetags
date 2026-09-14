@@ -89,10 +89,23 @@ class OrphanWarnerTest {
             Set.of("cursor", "claude", "copilot", "qwen", "gemini"), false, true, false);
 
         assertTrue(messager.mentions(".cursorignore"), messager.warnings.toString());
-        assertTrue(messager.mentions(".claudeignore"), messager.warnings.toString());
-        assertTrue(messager.mentions(".copilotignore"), messager.warnings.toString());
         assertTrue(messager.mentions(".qwenignore"), messager.warnings.toString());
         assertTrue(messager.mentions(".aiexclude"), messager.warnings.toString());
+    }
+
+    /**
+     * The warning tells a user to create a file. Telling them to create a deprecated one (#667,
+     * #668) would have them opt into an output the same build then warns is going away.
+     */
+    @Test
+    void noWarningInvitesCreatingADeprecatedOutput() {
+        RecordingMessager messager = warn(
+            Set.of("cursor", "claude", "copilot", "qwen", "gemini", "codex"), true, true, false);
+
+        for (String file : DeprecatedServices.files().values()) {
+            assertTrue(!messager.mentions(file + " is missing"),
+                "suggests creating the deprecated " + file + ": " + messager.warnings);
+        }
     }
 
     @Test
@@ -107,11 +120,11 @@ class OrphanWarnerTest {
     @Test
     void anIgnoreFileThatExistsSilencesItsOwnWarningOnly() {
         RecordingMessager messager = warn(
-            Set.of("cursor", "cursor_ignore", "claude"), false, true, false);
+            Set.of("cursor", "cursor_ignore", "qwen"), false, true, false);
 
         assertTrue(!messager.mentions(".cursorignore"),
             "the file is there; warning about it is noise: " + messager.warnings);
-        assertTrue(messager.mentions(".claudeignore"),
+        assertTrue(messager.mentions(".qwenignore"),
             "...and must not silence the platform that really is missing one");
     }
 

@@ -32,7 +32,7 @@
 
 - **Annotate once, all platforms updated** — add `@AILocked` to `PaymentProcessor` and every AI tool's guardrail file is regenerated on the next compile. No more per-developer copy-pasting across [every generated config file](#project-facts).
 - **Derived from the code, not separate from it** — guardrails live next to the code they protect. When the code moves, the rules move with it.
-- **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened. This repository dogfoods it — the generated block in its own `CLAUDE.md` is 80 lines, with 287 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-roo-code).
+- **Granular rules keep the always-loaded context slim** — opt a platform's scoped-rules directory in (`.claude/rules/`, `.cursor/rules/`, `.windsurf/rules/`, `.github/instructions/`, `.gemini/rules/`) and its aggregate file collapses to an index: only the safety buckets (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) stay inline, and the per-element detail loads on demand when the matching source file is opened (Gemini CLI does not read `.gemini/rules/` itself, so `GEMINI.md`'s index tells the agent to open the file). This repository dogfoods it — the generated block in its own `CLAUDE.md` is 80 lines, with 287 lines of per-element detail sitting in `.claude/rules/` until they are relevant. Without it, that file grows linearly with every annotated element. See [USAGE.md](USAGE.md#-granular-rules-cursor-trae-zoo-code).
 - **Zero runtime cost** — `RetentionPolicy.SOURCE` annotations are erased at compile time; nothing reaches the JVM.
 - **CI-enforceable** — opt-in check mode (`-Avibetags.check=true`) fails the build when guardrail files have drifted from the annotations, and the [locked-files GitHub Action](action/locked-files/README.md) fails any PR whose diff touches `@AILocked` code. See [USAGE.md](USAGE.md#check-mode--ci-drift-enforcement-opt-in).
 
@@ -390,45 +390,45 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
-- **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`)
-- **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`)
+- **Antigravity AI** (`.antigravityignore`, or **Granular** `.agents/rules/*.md`). `.antigravityignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Antigravity's docs never mention it
+- **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`). `.claudeignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Claude Code's docs never mention it, and its own mechanism is `Read` deny rules in `.claude/settings.json`
 - **Cline** (the `.clinerules/*.md` directory Cline now documents, or the single `.clinerules` file, one or the other, never both). The single file is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
 - **Codeium** (`.codeiumignore`)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
-- **Double.bot** (`.doubleignore`)
-- **Firebase AI** (`.idx/airules.md`)
+- **Double.bot** (`.doubleignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Double documents no ignore file
+- **Firebase AI** (`.idx/airules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Firebase Studio sunsets on 22 March 2027
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
 - **Gemini Code Assist** (`.gemini/styleguide.md`) - Google's GitHub PR reviewer, a separate product from the Gemini CLI
 - **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
-- **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`)
+- **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`). `.copilotignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): GitHub configures Copilot content exclusion in settings, not in a file
 - **JetBrains Junie** (`.junie/guidelines.md`)
-- **Mentat** (`.mentatconfig.json`)
-- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`)
-- **Plandex** (`.plandex.yaml`)
+- **Mentat** (`.mentatconfig.json`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): the CLI is archived and read `.mentat_config.json`
+- **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Open Interpreter reads no YAML profile, and reads project instructions from `AGENTS.md`
+- **Plandex** (`.plandex.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Plandex never reads it
 - **Qwen** (`QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore`)
 - **Replit Agent** (`replit.md`)
 - **Sourcegraph Cody** (`.cody/config.json`, `.codyignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Supermaven** (`.supermavenignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
-- **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App
-- **Void Editor** (`.void/rules.md`)
+- **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Sweep is now a JetBrains assistant
+- **Void Editor** (`.void/rules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Void is deprecated, and it read `.voidrules`, not this file
 - **Windsurf IDE** (`.windsurfrules`)
 
 #### AI pull-request reviewers
 - **CodeRabbit** (`.coderabbit.yaml`) — `reviews.path_instructions` that flag PRs violating guardrails
 - **Qodo / Codium PR-Agent** (`.pr_agent.toml`) — `extra_instructions` for the reviewer and code-suggestion tools
-- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail
+- **Ellipsis** (`ellipsis.yaml`) — one `pr_review.rules` entry per guardrail - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Ellipsis's docs never mention it, and configure reviews in `.ellipsis/code_review.yaml`
 
 #### Context packers (ignore files)
 - **Repomix** (`.repomixignore`)
 - **Gitingest** (`.gitingestignore`)
 - **GPT context packer** (`.gptignore`)
-- **Ghostcoder** (`.ghostcoderignore`)
-- **Pieces for Developers** (`.piecesignore`)
+- **Ghostcoder** (`.ghostcoderignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): no tool reads it
+- **Pieces for Developers** (`.piecesignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Pieces documents no ignore file
 
 #### Granular / Directory-based formats
-- **Amazon Q** (`.amazonq/rules/*.md`)
+- **Amazon Q** (`.amazonq/rules/*.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027; use Kiro's `.kiro/steering/`
 - **Claude** (`.claude/rules/*.md` — YAML front-matter (`paths:`) + Markdown)
 - **Continue** (`.continue/rules/*.md` — YAML front-matter + Markdown, plus `.continueignore`)
 - **Cursor** (`.cursor/rules/*.mdc` — YAML front-matter + Markdown)
@@ -438,12 +438,12 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Zencoder** (`.zencoder/rules/*.md`)
 - **Antigravity AI** (`.agents/rules/*.md`)
 - **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
-- **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown)
+- **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): PearAI documents no rules directory
 - **Amazon Kiro** (`.kiro/steering/*.md`)
-- **Roo Code** (formerly Roo Cline) (`.roo/rules/*.md`, `.rooignore`, plus a `.roomodes` "VibeTags Architect" custom mode)
+- **Zoo Code** (fork of the retired Roo Code; reads the same paths) (`.roo/rules/*.md`, `.rooignore`, plus a `.roomodes` "VibeTags Architect" custom mode; [evidence](docs/PLATFORMS.md#roo-code-shut-down-and-zoo-code-reads-the-same-files))
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
-- **Universal AI** (`.ai/rules/*.md` — open standard for multi-tool projects)
+- **Universal AI** (`.ai/rules/*.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): no tool or published convention reads it
 - **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
 
 > † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because
@@ -803,7 +803,7 @@ annotations, same generated files).
 | **[Example Project](examples/basic/README.md)** | A runnable e-commerce demo that exercises all [44 annotations](#project-facts) in realistic, real-world scenarios. Includes the exact output generated for every supported platform (Cursor, Claude, Gemini, Codex CLI, Qwen, Copilot, llms.txt, …), best practices for writing effective annotations, advanced configuration (custom log path, output root, Gradle setup), and a troubleshooting guide. Start here if you want to see VibeTags in action before adding it to your own project. |
 | **[Architecture](docs/ARCHITECTURE.md)** | A technical deep-dive into how VibeTags works internally. Covers the multi-round annotation accumulation model, the file-existence opt-in mechanism, marker-based partial updates, multi-module build safety, granular rule generation and orphan cleanup, and every [output file format](#project-facts). Includes class, component, build-sequence, and data-flow diagrams. Essential reading before contributing or debugging unexpected processor behaviour. |
 | **[Load Tests](load-tests/README.md)** | The performance harness — what each test category measures (annotation-volume sweep, JMH hot-path, concurrent build), which dimensions matter for a compile-time annotation processor, how to capture release-tagged baselines under `load-tests/results/<version>/`, and how to diff two baselines. Read before adding a new benchmark or treating a stress-test number as a regression. |
-| **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Roo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
+| **[Claude Code Skill](.claude/skills/vibetags-usage/SKILL.md)** | A Claude Code `/skill` that teaches your AI assistant how to use VibeTags alongside you. Covers the full annotation reference, valid and invalid annotation combinations, how to set up granular rules for Cursor/Trae/Zoo Code, all processor options (Maven & Gradle), and a troubleshooting table for common issues. Install it in Claude Code and invoke it with `/vibetags-usage` so Claude knows the library as well as you do. |
 
 ## 🛠️ Building from Source
 
