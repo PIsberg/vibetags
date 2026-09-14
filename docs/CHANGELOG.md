@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`FingerprintShortCircuitTest` now fails when the short-circuit does not fire** (#700). Every
+  case patched the stored sidecar stamp through a `WriteCache` never bound to the module. Since
+  the cache keeps one header section per module (#556) that moved only the root-wide stamp, which
+  then disagreed with the module's own, so no compile after the patch could short-circuit. The
+  positive case asserted only unchanged mtimes, which the per-file cache also produces, and the
+  five negative cases passed whether or not their change was detected. With the skip disabled
+  outright (`WriteCache.getBuildFingerprint` returning a value that never matches) all 6 cases
+  stayed green. The patch is gone: a plain no-op recompile short-circuits, the positive case
+  asserts the `inputs unchanged since last run` NOTE, and each negative case first recompiles
+  unchanged and asserts the NOTE before asserting its change suppresses it. The same break now
+  turns all 6 red, and ignoring the run context in `getBuildFingerprint` turns
+  `shortCircuit_doesNotFire_whenProjectNameChanges` red where the old class stayed green.
+  `WriteCacheProcessorIntegrationTest.secondCompile_unchangedSources_doesNotRewriteFiles` had the
+  same shape: its no-op recompile never reached the per-file cache, so it stayed green with
+  `WriteCache.isUnchanged` forced to `false`. It now defeats the short-circuit with
+  `-Avibetags.project` and asserts `write.skip reason=cache-unchanged` in the debug log, which that
+  break turns red. Test-only change; nothing ships.
+
 ## [1.3.5] - 2026-09-13
 
 **Upgrading changes committed files.** If a granular directory is opted in (for example
