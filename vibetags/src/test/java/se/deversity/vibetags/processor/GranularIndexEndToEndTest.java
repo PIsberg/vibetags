@@ -9,6 +9,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -172,6 +175,120 @@ class GranularIndexEndToEndTest {
             "the scoped file the index points at must exist");
         assertTrue(h.readFile(".gemini/rules/com-example-Gateway.md").contains("charge"),
             "per-method contract detail lives in the scoped file");
+    }
+
+    /**
+     * The collapsed {@code GEMINI.md} keeps Gemini's own wording for everything it still prints
+     * inline (issue #721).
+     *
+     * <p>The inline safety sections are documented to read identically to full mode, and every other
+     * aggregate with its own wording keeps it when it collapses. {@code GEMINI.md} did not: its
+     * wording was registered only under the {@code gemini_instructions.md} platform, so the
+     * collapsed file fell back to the shared Cursor headings ({@code MANDATORY SECURITY AUDITS})
+     * under the shared {@code # AUTO-GENERATED AI RULES} title, and a project that added
+     * {@code .gemini/rules/} saw the safety tier it already had renamed under it.
+     *
+     * <p>Asserted against a full render of the same sources as well as by name: every heading line
+     * the collapsed file prints, bar the index it adds, must be one the full file prints.
+     */
+    @Test
+    void geminiDualOptIn_inlineSectionsKeepGeminiWording(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness full = new ProcessorTestHarness(dir.resolve("full"), false);
+        full.touchOptIn("GEMINI.md");
+        addEverySafetyBucket(full);
+        full.compile();
+        String fullGemini = full.readFile("GEMINI.md");
+        VibeTagsLogger.shutdown();
+
+        ProcessorTestHarness collapsed = new ProcessorTestHarness(dir.resolve("collapsed"), false);
+        collapsed.touchOptIn("GEMINI.md");
+        collapsed.touchOptIn(".gemini/rules/.vibetags");
+        addEverySafetyBucket(collapsed);
+        collapsed.compile();
+        String gemini = collapsed.readFile("GEMINI.md");
+
+        assertTrue(gemini.contains("## Scoped Rules Index"), "precondition: GEMINI.md collapsed:\n" + gemini);
+        for (String heading : List.of(
+                "## CONTINUOUS AUDIT REQUIREMENTS",
+                "## IGNORED ELEMENTS",
+                "## PII / PRIVACY GUARDRAILS",
+                "## CORE FUNCTIONALITY (EXTREME CAUTION)",
+                "## SECURITY-CRITICAL CODE",
+                "# GEMINI AI INSTRUCTIONS",
+                "## LOCKED FILES (DO NOT MODIFY)")) {
+            assertTrue(gemini.lines().anyMatch(heading::equals),
+                "the collapsed GEMINI.md must print Gemini's own heading '" + heading + "':\n" + gemini);
+        }
+        assertFalse(gemini.contains("MANDATORY SECURITY AUDITS"),
+            "the shared Cursor audit heading is not Gemini's wording:\n" + gemini);
+        assertFalse(gemini.contains("# AUTO-GENERATED AI RULES"),
+            "the shared title is not the one GEMINI.md prints in full mode:\n" + gemini);
+
+        Set<String> fullHeadings = headingLines(fullGemini);
+        for (String heading : headingLines(gemini)) {
+            if ("## Scoped Rules Index".equals(heading)) {
+                continue;
+            }
+            assertTrue(fullHeadings.contains(heading),
+                "collapsed GEMINI.md prints '" + heading + "', which the full GEMINI.md never does:\n"
+                    + gemini + "\n--- full ---\n" + fullGemini);
+        }
+    }
+
+    /**
+     * Gemini's {@code IGNORE} and {@code PRIVACY} headings carry no leading newline, unlike the
+     * shared ones (issue #721). In the collapsed file the first can follow the title directly, so it
+     * must be set off by a blank line there, and neither may be glued onto the line before it.
+     */
+    @Test
+    void geminiDualOptIn_headingsWithoutLeadingNewlineStartTheirOwnLine(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        h.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.*;\n"
+                + "@AIIgnore(reason = \"generated mirror\")\n"
+                + "public class Ledger {\n"
+                + "    @AIPrivacy(reason = \"IBAN\")\n"
+                + "    private String iban;\n"
+                + "    @AIContract(reason = \"partner SLA\")\n"
+                + "    public void post() {}\n"
+                + "}\n");
+        h.compile();
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("## Scoped Rules Index"), "precondition: GEMINI.md collapsed:\n" + gemini);
+        assertTrue(gemini.contains("\n\n## IGNORED ELEMENTS\n"),
+            "with nothing locked or audited the ignore heading follows the title and needs a blank line:\n" + gemini);
+        assertTrue(gemini.contains("\n## PII / PRIVACY GUARDRAILS\n"),
+            "the privacy heading must start its own line:\n" + gemini);
+        assertTrue(gemini.lines().noneMatch(l -> !l.startsWith("#") && l.contains("## ")),
+            "no heading may be glued onto the end of the line before it:\n" + gemini);
+    }
+
+    private static void addEverySafetyBucket(ProcessorTestHarness h) {
+        h.addSource("com.example.Vault",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.*;\n"
+                + "@AILocked(reason = \"crypto keys\")\n"
+                + "@AICore(sensitivity = \"Critical\", note = \"key schedule\")\n"
+                + "@AISecure(aspect = \"key handling\")\n"
+                + "@AIAudit(checkFor = {\"Timing attacks\"})\n"
+                + "public class Vault {\n"
+                + "    @AIPrivacy(reason = \"PII\")\n"
+                + "    private String ssn;\n"
+                + "    @AIIgnore(reason = \"generated mirror\")\n"
+                + "    private String mirror;\n"
+                + "    @AIContract(reason = \"partner SLA\")\n"
+                + "    public void rotate() {}\n"
+                + "}\n");
+    }
+
+    private static Set<String> headingLines(String markdown) {
+        Set<String> headings = new LinkedHashSet<>();
+        markdown.lines().filter(l -> l.startsWith("#")).forEach(headings::add);
+        return headings;
     }
 
     /**

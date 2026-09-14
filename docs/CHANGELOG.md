@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A collapsed `GEMINI.md` keeps Gemini's own wording** (#721). `GEMINI.md` renders in two
+  shapes, and only the full one printed Gemini's headings. With `.gemini/rules/` also opted in the
+  file collapses to a scoped-rules index, and the safety sections it keeps inline printed the shared
+  Cursor wording (`## 🛡️ MANDATORY SECURITY AUDITS` where full mode says
+  `## CONTINUOUS AUDIT REQUIREMENTS`) under the shared `# AUTO-GENERATED AI RULES` title. Gemini's
+  wording was registered in `SectionCatalog` under the `gemini_instructions.md` platform only: the
+  full render borrowed that platform for its section list, and the collapsed render asked for
+  `GEMINI_MD`, found nothing, and fell back to the defaults. Every other aggregate with its own
+  wording keeps it when it collapses, and the inline sections are documented to read identically to
+  full mode. `SectionCatalog` now registers the one Gemini map under both platforms, and both shapes
+  share `GeminiRenderer`'s title and locked-files opening. **If you opt into both `GEMINI.md` and
+  `.gemini/rules/`, the generated block of `GEMINI.md` changes on your next build:** the title
+  becomes `# GEMINI AI INSTRUCTIONS`, the `# Do not edit manually.` line goes, the locked heading
+  becomes `## LOCKED FILES (DO NOT MODIFY)` with its one-line instruction, and the audit, ignore,
+  privacy, core and security headings drop their emoji and take Gemini's text. The listed elements,
+  the index and anything outside the markers are unchanged, and a `GEMINI.md` without
+  `.gemini/rules/` is byte-identical. No fingerprint change is needed: the processor version is
+  already part of `BuildFingerprint`, so the upgrade regenerates. `GranularIndexEndToEndTest`
+  renders the same sources in both shapes and fails if the collapsed file prints a heading the full
+  one does not; on the unchanged code it failed at `## CONTINUOUS AUDIT REQUIREMENTS`, and with only
+  the catalog fixed it still failed at the title. The `verify-generated-files` check for
+  `examples/basic` now looks for Gemini's audit heading and fails on the shared one.
+
 - **`FingerprintShortCircuitTest` now fails when the short-circuit does not fire** (#700). Every
   case patched the stored sidecar stamp through a `WriteCache` never bound to the module. Since
   the cache keeps one header section per module (#556) that moved only the root-wide stamp, which

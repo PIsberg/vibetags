@@ -71,11 +71,12 @@ runs:
         echo "OK Gemini audit requirements"
         # GEMINI.md renders the COLLAPSED shape here, because this example opts into both it
         # and .gemini/rules/ (tier-1 invariant 6). The audit bucket is a safety bucket, so it
-        # stays inline under the shared heading rather than Gemini's full-render
-        # "CONTINUOUS AUDIT REQUIREMENTS" one, which is what this check used to look for.
+        # stays inline, and since #721 under Gemini's own "CONTINUOUS AUDIT REQUIREMENTS"
+        # heading, the one full mode prints, rather than the shared "MANDATORY SECURITY AUDITS".
         # Both halves are asserted: safety inline AND per-element detail moved out. Nothing
         # in CI pinned that pair before the example opted in.
-        grep -q "MANDATORY SECURITY AUDITS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
+        grep -q "CONTINUOUS AUDIT REQUIREMENTS" GEMINI.md || { echo "FAIL GEMINI.md audit requirements missing"; exit 1; }
+        if grep -q "MANDATORY SECURITY AUDITS" GEMINI.md; then echo "FAIL GEMINI.md printed the shared audit heading instead of Gemini's (#721)"; exit 1; fi
         grep -q "Scoped Rules Index" GEMINI.md || { echo "FAIL GEMINI.md did not collapse to a scoped-rules index despite .gemini/rules being opted in"; exit 1; }
         grep -q "gemini/rules/" GEMINI.md || { echo "FAIL GEMINI.md index points at no scoped rule files"; exit 1; }
         echo "OK GEMINI.md audit requirements (collapsed, with scoped-rules index)"

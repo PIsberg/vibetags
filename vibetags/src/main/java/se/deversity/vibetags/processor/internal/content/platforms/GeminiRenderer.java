@@ -64,20 +64,15 @@ public final class GeminiRenderer implements PlatformRenderer {
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());
+        renderTitleAndLocked(sb, model, platform, context);
         if (GranularIndexSection.indexActive(platform, context)) {
             // Both the aggregate and .gemini/rules/ are opted in, so only the always-loaded
             // safety buckets stay inline and every other bucket moves to the scoped files (#320).
-            AnnotationSections.renderIndexedPreamble(sb, model, platform, context.getGeneratedHeader());
+            // What stays inline keeps GEMINI.md's own title, locked heading and section wording,
+            // as every other collapsing aggregate does (#721).
             AnnotationSections.renderInlineSafetySections(sb, model, platform);
             GranularIndexSection.appendMarkdownIndex(sb, platform, context);
             return sb.toString();
-        }
-        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append('\n');
-
-        if (!model.locked().isEmpty()) {
-            StringBuilder sec = new StringBuilder();
-            for (TaggedElement e : model.locked()) FormatterRegistry.locked().format(e, sec, platform);
-            sb.append("\n## LOCKED FILES (DO NOT MODIFY)\nDo not suggest modifications to the following files:\n\n").append(sec);
         }
 
         if (!model.context().isEmpty()) {
@@ -89,5 +84,23 @@ public final class GeminiRenderer implements PlatformRenderer {
         AnnotationSections.render(sb, model, platform, SECTIONS);
 
         return sb.toString();
+    }
+
+    /**
+     * The opening both shapes of the file share: the Gemini title, then the locked files under
+     * Gemini's heading, the heading omitted when nothing is locked. The collapsed file used to open
+     * with the shared {@code # AUTO-GENERATED AI RULES} preamble instead, so adding
+     * {@code .gemini/rules/} renamed the title and the locked heading along with the moved buckets,
+     * and left Gemini's {@code IGNORE} heading, which has no leading newline, with no blank line
+     * after the preamble (#721).
+     */
+    private static void renderTitleAndLocked(StringBuilder sb, GuardrailModel model, Platform platform, RenderingContext context) {
+        sb.append("# GEMINI AI INSTRUCTIONS\n").append(context.getGeneratedHeader()).append('\n');
+
+        if (!model.locked().isEmpty()) {
+            StringBuilder sec = new StringBuilder();
+            for (TaggedElement e : model.locked()) FormatterRegistry.locked().format(e, sec, platform);
+            sb.append("\n## LOCKED FILES (DO NOT MODIFY)\nDo not suggest modifications to the following files:\n\n").append(sec);
+        }
     }
 }
