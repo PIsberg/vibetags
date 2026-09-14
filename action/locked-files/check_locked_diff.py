@@ -12,6 +12,11 @@ violation when:
      docs merely *mention* the annotation and reflow on every regeneration),
   3. a deleted source file contained ``@AILocked`` at the base revision.
 
+Checks 2 and 3 read the base revision. A Java source is lexed there, so ``@AILocked`` text
+inside a string literal, text block, char literal or comment is not an annotation (#708).
+Kotlin and Groovy sources, and any Java source that does not lex, keep the plain substring
+match, which errs toward failing.
+
 Environment:
   VIBETAGS_BASE_REF    ref/SHA to diff against (required)
   VIBETAGS_WARN_ONLY   'true' to emit warnings instead of failing (default 'false')
@@ -24,6 +29,7 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
@@ -32,13 +38,215 @@ HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # *mention* @AILocked, and regenerating them reflows those lines on every unrelated change.
 # The first PR this guard ever ran on was flagged for exactly that (its own dogfooding PR,
 # which reflowed generated Markdown), while a real stripped lock lives in a source file --
-# and must stay a string check on the base side, because a stripped lock is absent from the
-# regenerated report and so invisible to any report-based check.
+# and must stay a check of the base side's source, because a stripped lock is absent from the
+# regenerated report and so invisible to any report-based check. A base-side report would not
+# do either: a consumer's committed report can be stale, and a source cannot.
 SOURCE_EXTS = (".java", ".kt", ".kts", ".groovy")
 
 
 def is_lock_carrying_source(path):
     return path is not None and path.endswith(SOURCE_EXTS)
+
+
+class _Unlexable(Exception):
+    """The source is not well-formed enough to say where its literals and comments are."""
+
+
+def _translate_unicode_escapes(text):
+    """``(char, line)`` pairs after javac's unicode-escape translation (JLS 3.3).
+
+    javac translates ``\\uXXXX`` before it lexes anything, so ``"\\u0022`` is an empty string
+    rather than a string still open. Skipping the step would let an escaped quote make a real
+    annotation look quoted. ``line`` is 1-based and counts ``\\n`` only, as git does, so it
+    lines up with diff hunk numbers even in a file with lone carriage returns.
+    """
+    out = []
+    i, n, line, backslashes = 0, len(text), 1, 0
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and backslashes % 2 == 0 and text.startswith("u", i + 1):
+            j = i + 1
+            while j < n and text[j] == "u":
+                j += 1
+            digits = text[j:j + 4]
+            if len(digits) != 4 or any(d not in "0123456789abcdefABCDEF" for d in digits):
+                raise _Unlexable()  # javac rejects a malformed unicode escape
+            out.append((chr(int(digits, 16)), line))
+            i, backslashes = j + 4, 0  # a translated backslash starts no further escape
+            continue
+        backslashes = backslashes + 1 if ch == "\\" else 0
+        out.append((ch, line))
+        if ch == "\n":
+            line += 1
+        i += 1
+    return out
+
+
+def java_annotation_lines(text, name="AILocked"):
+    """The lines (1-based, as git numbers them) holding a real ``@name`` annotation, or None.
+
+    Text inside a string literal, text block, char literal or comment is not an annotation,
+    however it reads: #708 was a test-only pull request failed for editing Java fixture source
+    held in string literals. The name may be spaced from the ``@``, qualified, or split by
+    comments, as javac allows; every line from the ``@`` to the simple name counts.
+
+    None means the source did not lex (an unterminated literal or comment, a malformed unicode
+    escape, a text block with no line break after its opening quotes), so code cannot be told
+    from text. Callers then fall back to the plain substring match, which errs toward failing.
+    """
+    try:
+        return _scan_java(_translate_unicode_escapes(text), name)
+    except _Unlexable:
+        return None
+
+
+def _java_ignorable(ch):
+    """``Character.isIdentifierIgnorable``: part of an identifier, but not of its name.
+
+    javac compares identifiers with these removed, so ``AI<soft hyphen>Locked`` names the lock.
+    """
+    code = ord(ch)
+    return (code <= 0x08 or 0x0E <= code <= 0x1B or 0x7F <= code <= 0x9F
+            or unicodedata.category(ch) == "Cf")
+
+
+def _java_identifier_part(ch):
+    """``Character.isJavaIdentifierPart``, plus the other-number characters ``str.isalnum``
+    accepts (superscripts, fractions). javac rejects those outright, so no source that
+    compiles is read differently.
+    """
+    return (ch.isalnum() or ch in "_$" or _java_ignorable(ch)
+            or unicodedata.category(ch) in ("Mn", "Mc", "Pc", "Sc", "Nl"))
+
+
+def _scan_java(chars, name):
+    n = len(chars)
+
+    def at(k):
+        return chars[k][0] if k < n else ""
+
+    def is_ident(k):
+        return k < n and _java_identifier_part(chars[k][0])
+
+    def skip_comment(k):
+        """The index after a comment starting at k, or k itself when none starts there."""
+        if at(k) == "/" and at(k + 1) == "/":
+            while k < n and chars[k][0] not in "\r\n":
+                k += 1
+            return k
+        if at(k) == "/" and at(k + 1) == "*":
+            k += 2
+            while k < n and not (chars[k][0] == "*" and at(k + 1) == "/"):
+                k += 1
+            if k >= n:
+                raise _Unlexable()
+            return k + 2
+        return k
+
+    def skip_trivia(k):
+        while True:
+            while k < n and chars[k][0].isspace():
+                k += 1
+            after = skip_comment(k)
+            if after == k:
+                return k
+            k = after
+
+    def skip_quoted(k, quote):
+        """The index after a string or char literal opening at k."""
+        k += 1
+        while k < n:
+            ch = chars[k][0]
+            if ch == "\\":
+                if k + 1 >= n or chars[k + 1][0] in "\r\n":
+                    raise _Unlexable()
+                k += 2
+            elif ch == quote:
+                return k + 1
+            elif ch in "\r\n":
+                raise _Unlexable()
+            else:
+                k += 1
+        raise _Unlexable()
+
+    def skip_text_block(k):
+        """The index after a text block whose opening quotes start at k."""
+        k += 3
+        while k < n and chars[k][0] in " \t\f":
+            k += 1
+        if k >= n or chars[k][0] not in "\r\n":
+            raise _Unlexable()
+        while k < n:
+            if chars[k][0] == "\\":
+                k += 2
+            elif chars[k][0] == '"' and at(k + 1) == '"' and at(k + 2) == '"':
+                return k + 3
+            else:
+                k += 1
+        raise _Unlexable()
+
+    lines = set()
+    i = 0
+    while i < n:
+        ch = chars[i][0]
+        after = skip_comment(i)
+        if after != i:
+            i = after
+        elif ch == '"':
+            text_block = at(i + 1) == '"' and at(i + 2) == '"'
+            i = skip_text_block(i) if text_block else skip_quoted(i, '"')
+        elif ch == "'":
+            i = skip_quoted(i, "'")
+        elif ch == "@":
+            k, simple_name, name_end = skip_trivia(i + 1), "", i + 1
+            while is_ident(k):
+                start = k
+                while is_ident(k):
+                    k += 1
+                simple_name = "".join(c for c, _ in chars[start:k] if not _java_ignorable(c))
+                name_end = k
+                dot = skip_trivia(k)
+                if at(dot) != ".":
+                    break
+                k = skip_trivia(dot + 1)
+            if simple_name == name:
+                lines.update(range(chars[i][1], chars[name_end - 1][1] + 1))
+            i += 1
+        else:
+            i += 1
+    return lines
+
+
+def lock_lines(path, text):
+    """Lines of ``text`` that carry a lock, or None when only a substring match can tell.
+
+    Java is lexed. Kotlin and Groovy are not: Kotlin string templates nest code, strings and
+    comments inside a string, and a Groovy slashy string cannot be told from a division without
+    parsing, so a lexer that guessed could read a real annotation as text and pass its removal.
+    """
+    if path.endswith(".java"):
+        return java_annotation_lines(text)
+    return None
+
+
+def strips_a_lock(path, base_text, removed):
+    """Whether the removed base lines, ``(line number, text)`` pairs, held a real ``@AILocked``.
+
+    Falls back to the substring match on the removed text whenever the base cannot be read or
+    lexed, so an unsure answer fails the guard rather than passing it.
+    """
+    annotated = lock_lines(path, base_text) if base_text is not None else None
+    if annotated is None:
+        return any("@AILocked" in body for _, body in removed)
+    return any(number in annotated for number, _ in removed)
+
+
+def holds_a_lock(path, base_text):
+    """Whether a deleted file carried a real ``@AILocked``, with the same fallback."""
+    annotated = lock_lines(path, base_text)
+    if annotated is None:
+        return "@AILocked" in base_text
+    return bool(annotated)
 
 
 def run_git(*args):
@@ -49,6 +257,28 @@ def run_git(*args):
         sys.stderr.write(result.stderr)
         raise SystemExit(f"git {' '.join(args)} failed with exit code {result.returncode}")
     return result.stdout
+
+
+def run_git_exact(*args):
+    """``run_git`` without newline translation, for output whose line numbers matter.
+
+    ``text=True`` turns every lone carriage return into a line break, so a removed line from a
+    file with CR-only endings would count as several and shift the base line numbers the
+    lock-stripping check looks up.
+    """
+    result = subprocess.run(["git", *args], capture_output=True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr.decode("utf-8", errors="replace"))
+        raise SystemExit(f"git {' '.join(args)} failed with exit code {result.returncode}")
+    return result.stdout.decode("utf-8", errors="replace")
+
+
+def git_show_text(ref, path):
+    """A file's content at ``ref`` as committed, without newline translation, or None."""
+    blob = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True)
+    if blob.returncode != 0:
+        return None
+    return blob.stdout.decode("utf-8", errors="replace")
 
 
 def find_reports(root):
@@ -169,31 +399,45 @@ def locks_for(locks, diff_path):
 def parse_diff(diff_text):
     """Yields (path, old_path, hunks, removed_lines) per changed file.
 
-    path is None for deleted files; each hunk is (new_start, new_count).
-    removed_lines is the list of '-' line bodies across all hunks of the file.
+    path is None for deleted files; each hunk is (new_start, new_count). removed_lines is a
+    list of (base line number, text), one per '-' line across the file's hunks, numbered from
+    the hunk header's old side so a removed line can be looked up in the base blob.
+
+    Lines are split on "\\n" alone, as git counts them: ``str.splitlines`` also breaks on a
+    carriage return or form feed inside a line, which would shift every later number. File
+    headers are read only before a file's first hunk, so a removed line whose own text starts
+    with "-- " is a removal rather than a new "--- " header.
     """
     path = old_path = None
     hunks, removed = [], []
-    for line in diff_text.splitlines():
+    in_hunk, old_line = False, 0
+    for line in diff_text.split("\n"):
         if line.startswith("diff --git "):
             if old_path is not None or path is not None:
                 yield path, old_path, hunks, removed
             path = old_path = None
             hunks, removed = [], []
-        elif line.startswith("--- "):
-            target = line[4:]
-            old_path = None if target == "/dev/null" else target[2:]  # strip "a/"
-        elif line.startswith("+++ "):
-            target = line[4:]
-            path = None if target == "/dev/null" else target[2:]  # strip "b/"
+            in_hunk = False
         elif line.startswith("@@"):
             m = HUNK_RE.match(line)
             if m:
+                in_hunk = True
+                old_line = int(m.group(1))
                 new_start = int(m.group(3))
                 new_count = int(m.group(4)) if m.group(4) is not None else 1
                 hunks.append((new_start, new_count))
-        elif line.startswith("-") and not line.startswith("---"):
-            removed.append(line[1:])
+        elif not in_hunk:
+            if line.startswith("--- "):
+                target = line[4:]
+                old_path = None if target == "/dev/null" else target[2:]  # strip "a/"
+            elif line.startswith("+++ "):
+                target = line[4:]
+                path = None if target == "/dev/null" else target[2:]  # strip "b/"
+        elif line.startswith("-"):
+            removed.append((old_line, line[1:]))
+            old_line += 1
+        elif line.startswith(" "):
+            old_line += 1  # context line; --unified=0 emits none, but count it if present
     if old_path is not None or path is not None:
         yield path, old_path, hunks, removed
 
@@ -227,7 +471,7 @@ def main():
           f"from {len(reports)} report(s); diffing against {merge_base[:12]}")
 
     # Trailing "--" terminates options/refs so no value can be reinterpreted as a pathspec/flag.
-    diff_text = run_git("diff", "--unified=0", "--no-color", merge_base, "HEAD", "--")
+    diff_text = run_git_exact("diff", "--unified=0", "--no-color", merge_base, "HEAD", "--")
     created = added_paths(
         run_git("diff", "--name-status", "--no-color", merge_base, "HEAD", "--")
     )
@@ -243,22 +487,20 @@ def main():
         # 3. Deleted source file that contained @AILocked at base.
         if path is None and old_path is not None:
             if is_lock_carrying_source(old_path):
-                base_blob = subprocess.run(
-                    ["git", "show", f"{merge_base}:{old_path}"],
-                    capture_output=True, text=True, encoding="utf-8", errors="replace",
-                )
-                if base_blob.returncode == 0 and "@AILocked" in base_blob.stdout:
+                base_text = git_show_text(merge_base, old_path)
+                if base_text is not None and holds_a_lock(old_path, base_text):
                     violations += 1
                     print(f"::{kind} file={old_path}::Deleted file contained @AILocked code")
             continue
 
-        # 2. Lock stripping: the @AILocked annotation itself was removed from source.
-        if is_lock_carrying_source(display) and any(
-            "@AILocked" in line for line in removed_lines
-        ):
-            violations += 1
-            print(f"::{kind} file={display}::A line containing @AILocked was removed -- "
-                  "removing a lock requires explicit human review")
+        # 2. Lock stripping: the @AILocked annotation itself was removed from source. Read
+        # on the base side, because a stripped lock is absent from the regenerated report.
+        if is_lock_carrying_source(display) and removed_lines:
+            base_text = git_show_text(merge_base, old_path) if old_path else None
+            if strips_a_lock(old_path or display, base_text, removed_lines):
+                violations += 1
+                print(f"::{kind} file={display}::A line containing @AILocked was removed -- "
+                      "removing a lock requires explicit human review")
 
         # 1. Changed lines intersect a locked range at HEAD. Files this diff CREATES are
         # exempt: the lock did not exist at the base, so nobody can have violated it, and

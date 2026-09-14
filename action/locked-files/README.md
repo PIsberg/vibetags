@@ -15,6 +15,15 @@ A composite GitHub Action that **fails a pull request when its diff touches code
      merely mention the annotation and reflow on every regeneration, so they are exempt, or
    - a deleted source file contained `@AILocked` at the base revision.
 
+The last two checks read each source as it was at the base revision. A Java source is lexed there,
+so `@AILocked` text inside a string literal, text block, char literal or comment is not an
+annotation: a test that builds Java fixture source in strings can be edited freely. A real
+annotation still counts however javac allows it to be written, spaced from the `@`, qualified,
+split by a comment, or spelled with a unicode escape. When the guard cannot tell code from text it
+fails rather than passes: Kotlin and Groovy sources, and any Java source that does not lex (an
+unterminated literal or comment), keep the plain substring match. No directory is exempt, test
+sources included, because javac runs the processor over test sources too.
+
 Violations surface as inline GitHub error annotations on the offending file and line.
 
 ## Usage
