@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * <ul>
  *   <li>The {@code .vibetags-cache} sidecar is created on first compile.</li>
  *   <li>It contains entries for the platform files we wrote.</li>
- *   <li>A second compile against unchanged sources keeps file mtimes stable
- *       (cache fast-path skipped the read+write).</li>
+ *   <li>A second compile whose files render unchanged takes the cache fast path
+ *       ({@code write.skip reason=cache-unchanged}) and keeps their mtimes stable.</li>
  *   <li>Editing a generated file externally invalidates the cache for that file
  *       — the next compile re-reads and re-writes it.</li>
  * </ul>
@@ -53,6 +53,15 @@ class WriteCacheProcessorIntegrationTest {
             "cache should record CLAUDE.md: " + content);
     }
 
+    /**
+     * The per-file fast path is observed in the log, not inferred from mtimes. A no-op recompile
+     * never reaches it: the fingerprint short-circuit skips every write first. And a file whose
+     * rendered bytes are identical keeps its mtime through the read-and-compare path
+     * ({@code reason=identical-bytes}) as well, so unchanged mtimes held with the fast path
+     * disabled (issue #700). The second compile therefore changes {@code -Avibetags.project},
+     * which defeats the short-circuit without changing either file checked here, and asserts the
+     * writer skipped both with {@code reason=cache-unchanged}.
+     */
     @Test
     void secondCompile_unchangedSources_doesNotRewriteFiles(@TempDir Path tmp) throws Exception {
         ProcessorTestHarness h = ProcessorTestHarness.withExampleSources(tmp);
@@ -64,12 +73,22 @@ class WriteCacheProcessorIntegrationTest {
         long claudeMtime1 = Files.getLastModifiedTime(claude).toMillis();
         assertTrue(cursorMtime1 > 0);
 
-        // Let the filesystem clock tick so that a re-write — if one happened — would be visible.
+        // Let the filesystem clock tick so that a re-write, if one happened, would be visible.
         ProcessorTestHarness.awaitFilesystemTick(tmp);
 
-        // Recompile against the same sources — same processor instance not reused, but
-        // .vibetags-cache survives on disk.
-        ProcessorTestHarness h2 = ProcessorTestHarness.withExampleSources(tmp);
+        // Recompile against the same sources in a new processor; .vibetags-cache survives on disk.
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        ProcessorTestHarness.addExampleSources(h2);
+        h2.compile("-Avibetags.project=RenamedProject", "-Avibetags.log.level=DEBUG");
+        String log = h2.readFile("vibetags.log");
+
+        assertFalse(log.contains("round.skip reason=fingerprint-match"),
+            "precondition: a changed -Avibetags.project must defeat the fingerprint short-circuit, "
+                + "or no file reaches the per-file cache:\n" + log);
+        assertTrue(log.contains("write.skip file=.cursorrules reason=cache-unchanged"),
+            ".cursorrules must be skipped by the per-file cache fast path:\n" + log);
+        assertTrue(log.contains("write.skip file=CLAUDE.md reason=cache-unchanged"),
+            "CLAUDE.md must be skipped by the per-file cache fast path:\n" + log);
 
         long cursorMtime2 = Files.getLastModifiedTime(cursor).toMillis();
         long claudeMtime2 = Files.getLastModifiedTime(claude).toMillis();

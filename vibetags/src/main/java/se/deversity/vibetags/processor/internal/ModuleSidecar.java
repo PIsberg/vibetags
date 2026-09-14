@@ -1249,6 +1249,14 @@ public final class ModuleSidecar {
     @AIContract(reason = "Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile")
     public static String mergeFor(String serviceKey, List<ModuleSidecar> sidecars, boolean htmlMarkers) {
         boolean indexMode = isRootIndexMode(sidecars);
+        // A Markdown body that opens with YAML front matter (the Devin Desktop safety files, the
+        // Claude skill) needs that header once, at the top of the file. Stacked per module it lands
+        // inside a sub-marker, where no tool reads it, and a file created by the merge opens with
+        // none at all, so a trigger: always_on rule never loads (issue #684). YAML documents take
+        // their own merge shape below and are left alone.
+        String frontMatter = htmlMarkers && PlatformRendererRegistry.mergeShapeFor(serviceKey) == null
+            ? sharedFrontMatter(bodiesOf(serviceKey, sidecars, false))
+            : "";
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
         boolean anyPointer = false;
         for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
@@ -1264,9 +1272,11 @@ public final class ModuleSidecar {
                 if (p != null) {
                     pointer = p;
                     String digest = s.indexDigests.get(serviceKey);
-                    if (digest != null && !digest.isBlank()) parts.add(digest.strip());
+                    if (digest != null && !digest.isBlank()) {
+                        parts.add(withoutFrontMatter(digest, frontMatter).strip());
+                    }
                 } else {
-                    parts.add(body.strip());
+                    parts.add(withoutFrontMatter(body, frontMatter).strip());
                 }
             }
             if (pointer != null) {
@@ -1280,7 +1290,9 @@ public final class ModuleSidecar {
         // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
         // returned verbatim (no sub-markers), multiple are wrapped below. When at least one module
         // was linked, always wrap so every pointer keeps its owning-module sub-marker context.
-        if (!anyPointer && contributions.size() < MULTI_MODULE_THRESHOLD) return contributions.get(0).getValue();
+        if (!anyPointer && contributions.size() < MULTI_MODULE_THRESHOLD) {
+            return withFrontMatter(frontMatter, contributions.get(0).getValue());
+        }
 
         // A YAML platform has one rules:/reviews:/customModes: key, so stacking whole documents
         // below produces a file whose top-level key repeats once per module — rejected by a strict
@@ -1315,7 +1327,55 @@ public final class ModuleSidecar {
             }
             merged.append('\n');
         }
-        return merged.toString().strip();
+        return withFrontMatter(frontMatter, merged.toString().strip());
+    }
+
+    /**
+     * Every non-blank rendered body for {@code serviceKey}: the reactor bodies, or with
+     * {@code moduleOwn} the module's own nested bodies, of every sidecar given.
+     */
+    private static List<String> bodiesOf(String serviceKey, List<ModuleSidecar> sidecars, boolean moduleOwn) {
+        List<String> bodies = new ArrayList<>();
+        for (ModuleSidecar s : sidecars) {
+            String body = moduleOwn ? s.moduleBodies.get(serviceKey) : s.bodies.get(serviceKey);
+            if (body != null && !body.isBlank()) {
+                bodies.add(body.strip());
+            }
+        }
+        return bodies;
+    }
+
+    /**
+     * The YAML front matter every one of {@code bodies} opens with, or {@code ""} when any body has
+     * none or two bodies disagree. A header that differs per module is not one this merge can pick,
+     * so those bodies keep the previous stacking rather than lose one module's header.
+     */
+    static String sharedFrontMatter(List<String> bodies) {
+        String shared = null;
+        for (String body : bodies) {
+            int close = GuardrailFileWriter.frontMatterEnd(body);
+            if (close < 0) {
+                return "";
+            }
+            String header = body.substring(0, close);
+            if (shared == null) {
+                shared = header;
+            } else if (!shared.equals(header)) {
+                return "";
+            }
+        }
+        return shared == null ? "" : shared;
+    }
+
+    private static String withoutFrontMatter(String body, String frontMatter) {
+        String stripped = body.strip();
+        return !frontMatter.isEmpty() && stripped.startsWith(frontMatter)
+            ? stripped.substring(frontMatter.length())
+            : body;
+    }
+
+    private static String withFrontMatter(String frontMatter, String body) {
+        return frontMatter.isEmpty() ? body : frontMatter + "\n\n" + body;
     }
 
     /**
@@ -1360,13 +1420,18 @@ public final class ModuleSidecar {
      * then falls back to this compilation's freshly built content.
      */
     public static String mergeModuleBodies(String serviceKey, List<ModuleSidecar> sidecars, String regionId) {
-        List<String> parts = new ArrayList<>();
+        List<ModuleSidecar> region = new ArrayList<>();
         for (ModuleSidecar s : sidecars) {
-            if (!s.regionId.equals(regionId)) continue;
-            String body = s.moduleBodies.get(serviceKey);
-            if (body != null && !body.isBlank()) parts.add(body.strip());
+            if (s.regionId.equals(regionId)) region.add(s);
         }
-        return String.join("\n\n", parts);
+        List<String> bodies = bodiesOf(serviceKey, region, true);
+        // Two source sets rendering one front-matter file must still give it one header (issue #684).
+        String frontMatter = sharedFrontMatter(bodies);
+        List<String> parts = new ArrayList<>();
+        for (String body : bodies) {
+            parts.add(withoutFrontMatter(body, frontMatter).strip());
+        }
+        return parts.isEmpty() ? "" : withFrontMatter(frontMatter, String.join("\n\n", parts));
     }
 
     /**

@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/CreditCardStrategy.java"]
+globs: **/CreditCardStrategy.java
 description: "AI rules for com.example.strategy.impl.CreditCardStrategy"
 ---
 

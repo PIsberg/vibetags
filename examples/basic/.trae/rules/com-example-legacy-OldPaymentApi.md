@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/OldPaymentApi.java"]
+globs: **/OldPaymentApi.java
 description: "AI rules for com.example.legacy.OldPaymentApi"
 ---
 

@@ -591,6 +591,41 @@ public final class GranularRulesWriter {
         return "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
     }
 
+    /**
+     * Cursor's header (#699). cursor.com/docs/rules writes {@code globs:} as a bare value, several
+     * globs comma-separated ({@code docs/**}{@code /*.md, docs/**}{@code /*.mdx}). The {@code .mdc}
+     * reader Cursor ships does not parse YAML: it strips one pair of surrounding quotes and splits the
+     * rest on the commas outside a brace group, so a bracketed list reached the matcher as patterns
+     * carrying literal brackets and quotes that match no file, and no rule auto-attached. The globs
+     * are joined with bare commas through {@link #commaFreeGlobs}, so every comma separates two whole
+     * globs (#696). The evidence is in docs/PLATFORMS.md, Cursor.
+     */
+    private static String fmCursor(String desc, List<String> globs) {
+        return "---\ndescription: \"" + desc + "\"\nglobs: " + String.join(",", commaFreeGlobs(globs))
+            + "\nalwaysApply: false\n---\n\n";
+    }
+
+    /**
+     * Trae's header (#699). docs.trae.ai/ide/rules separates several patterns with {@code ,} and syncs
+     * them to {@code globs}, and the reader Trae ships splits the raw value on every comma, with no
+     * quote or bracket handling, so the value is written as Cursor's is, through
+     * {@link #commaFreeGlobs} (#696). The evidence is in docs/PLATFORMS.md, Trae.
+     */
+    private static String fmTrae(String desc, List<String> globs) {
+        return "---\nalwaysApply: false\nglobs: " + String.join(",", commaFreeGlobs(globs))
+            + "\ndescription: \"" + desc + "\"\n---\n\n";
+    }
+
+    /**
+     * Copilot's {@code applyTo:} (#696). docs.github.com: "You can specify multiple patterns by
+     * separating them with commas", {@code applyTo: "**}{@code /*.ts,**}{@code /*.tsx"}. VS Code's
+     * reader skips commas inside braces, but the docs do not promise that and the GitHub.com reader
+     * is not public, so the globs are made comma-free and every comma separates two whole globs.
+     */
+    private static String fmApplyTo(String desc, List<String> globs) {
+        return "---\napplyTo: \"" + String.join(",", commaFreeGlobs(globs)) + "\"\n---\n\n";
+    }
+
     /** No front matter at all — the platform reads the file by path, not by a globs declaration. */
     private static String fmNone(String desc, List<String> globs) {
         return "";
@@ -601,14 +636,109 @@ public final class GranularRulesWriter {
         return "---\npaths: " + arr(globs) + "\n---\n\n";
     }
 
+    /**
+     * {@code trigger: glob} and a bare {@code globs:} pattern: the front matter docs.devin.ai gives a
+     * glob rule in both {@code .devin/rules/} and {@code .windsurf/rules/} (#671, #683), so loading
+     * follows the file being read or edited rather than the model's judgement. Its trigger values
+     * are {@code always_on}, {@code manual}, {@code model_decision}, {@code agent} and {@code glob};
+     * the {@code description}/{@code alwaysApply} table on the same page is Cursor's. The docs show
+     * one pattern per rule; the vendor's own sample repository writes several as one comma-separated
+     * value, so a file with several globs joins them with commas, through {@link #commaFreeGlobs} so
+     * that every comma separates two whole globs (#685). No {@code description}: the vendor's glob
+     * example has none, and only a {@code model_decision} rule is documented as reading one.
+     */
+    private static String fmTriggerGlob(String desc, List<String> globs) {
+        return "---\ntrigger: glob\nglobs: " + String.join(",", commaFreeGlobs(globs)) + "\n---\n\n";
+    }
+
+    /**
+     * {@code globs} rewritten so none contains a comma, for a header whose reader may separate globs
+     * with commas: Devin Desktop and Windsurf (#685), and Cursor, Trae and Copilot (#696).
+     *
+     * <p>A {@code .vibetags-roles} glob may use brace alternation, {@code **}{@code /*.{java,kt}},
+     * and a reader splitting the value on commas would cut it into two patterns that match neither
+     * file type. Each brace group is expanded into one glob per alternative, nested groups included,
+     * which matches the same files. A comma no balanced group explains, possible only in a
+     * {@code .vibetags-mirror} glob line, becomes {@code ?}, which still matches the comma and keeps
+     * the pattern whole. Duplicates are dropped, first occurrence kept. A glob with no comma and no
+     * brace comes back unchanged, so single-glob headers are byte-identical to before.
+     */
+    private static List<String> commaFreeGlobs(List<String> globs) {
+        Set<String> out = new LinkedHashSet<>();
+        for (String glob : globs) {
+            for (String expanded : expandBraces(glob)) {
+                out.add(expanded.replace(',', '?'));
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    /**
+     * Every alternative of {@code glob}'s brace groups, left to right. A glob whose first brace has
+     * no matching close is returned as it is.
+     */
+    private static List<String> expandBraces(String glob) {
+        int open = glob.indexOf('{');
+        if (open < 0) {
+            return List.of(glob);
+        }
+        int close = matchingBrace(glob, open);
+        if (close < 0) {
+            return List.of(glob);
+        }
+        String prefix = glob.substring(0, open);
+        String suffix = glob.substring(close + 1);
+        List<String> expanded = new ArrayList<>();
+        for (String alternative : topLevelAlternatives(glob.substring(open + 1, close))) {
+            expanded.addAll(expandBraces(prefix + alternative + suffix));
+        }
+        return expanded;
+    }
+
+    /** Index of the brace closing the one at {@code open}, or {@code -1} when it is never closed. */
+    private static int matchingBrace(String glob, int open) {
+        int depth = 0;
+        for (int i = open; i < glob.length(); i++) {
+            char c = glob.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    /** {@code body} split on the commas that are not inside a nested brace group. */
+    private static List<String> topLevelAlternatives(String body) {
+        List<String> alternatives = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+            } else if (c == ',' && depth == 0) {
+                alternatives.add(body.substring(start, i));
+                start = i + 1;
+            }
+        }
+        alternatives.add(body.substring(start));
+        return alternatives;
+    }
+
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
-        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("trae_granular", ".md",
-            (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
-            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmCursor, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("trae_granular", ".md", GranularRulesWriter::fmTrae, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
+        // Windsurf (now Devin Desktop) reads the trigger schema, not Cursor's (#683): see fmTriggerGlob.
+        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
         new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
@@ -617,8 +747,7 @@ public final class GranularRulesWriter {
         new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
         new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("copilot_granular", ".instructions.md",
-            (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
+        new GranularFormat("copilot_granular", ".instructions.md", GranularRulesWriter::fmApplyTo,
             n -> "# Copilot Instructions for " + n + "\n\n"),
         // Grok Build loads every *.md in .grok/rules/ unconditionally and alphabetically and
         // parses no front matter, so a globs block would land in the model's context as literal
@@ -644,6 +773,9 @@ public final class GranularRulesWriter {
         // matter and activates a rule when a paths: glob matches a file in the task's context, and
         // that context includes files Cline is about to edit, so a locked class's rule arrives before
         // the edit. Loading is decided by the glob, not left to the model.
-        new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n")
+        new GranularFormat("cline_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
+        // Devin Desktop, formerly Windsurf (#671): the preferred directory, with the same front matter
+        // as the .windsurf/rules/ fallback above.
+        new GranularFormat("devin_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n")
     );
 }

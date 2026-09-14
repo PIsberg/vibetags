@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/LegacyBridgeService.java"]
+globs: **/LegacyBridgeService.java
 description: "AI rules for com.example.legacy.LegacyBridgeService"
 ---
 

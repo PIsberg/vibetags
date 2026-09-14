@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **60 config files** and **19 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **45 AI platforms**, written as **64 config files** and **20 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. Cline's `.clinerules` is counted in both figures, because VibeTags writes it as a file or as a directory, whichever the project has. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -386,7 +386,7 @@ The [44 annotations](#project-facts) group into six categories by intent. Within
 
 ### Supported AI Platforms
 
-Generated configuration files work out-of-the-box with the [**AI platforms**](#project-facts) below (Cursor, Windsurf and Antigravity each appear under two formats):
+Generated configuration files work out-of-the-box with the [**AI platforms**](#project-facts) below (Cursor, Devin Desktop and Antigravity each appear under two formats):
 
 #### Traditional / Single-file formats
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
@@ -394,8 +394,9 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`, `.claudeignore`). `.claudeignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Claude Code's docs never mention it, and its own mechanism is `Read` deny rules in `.claude/settings.json`
 - **Cline** (the `.clinerules/*.md` directory Cline now documents, or the single `.clinerules` file, one or the other, never both). The single file is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
-- **Codeium** (`.codeiumignore`)
+- **Codeium** (`.codeiumignore`, which Devin Desktop still reads under this legacy name)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
+- **Devin Desktop** (formerly Windsurf: `.windsurfrules`, the legacy single file it still reads, and `.devinignore`)
 - **Double.bot** (`.doubleignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Double documents no ignore file
 - **Firebase AI** (`.idx/airules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Firebase Studio sunsets on 22 March 2027
 - **Gemini** (`GEMINI.md`, `.aiexclude`, and `gemini_instructions.md`, which is deprecated: no Google product documents reading it)
@@ -403,7 +404,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Greptile** (`.greptile/rules.md`, `.greptile/config.json`, `greptile.json`) - AI PR reviewer; in the two JSON files VibeTags writes only a delimited span inside `ignorePatterns` (and, in `greptile.json`, `instructions`), and every other field stays yours
 - **goose** (`.goosehints`) - Block's open-source coding agent
 - **GitHub Copilot** (`.github/copilot-instructions.md`, `.copilotignore`). `.copilotignore` is deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): GitHub configures Copilot content exclusion in settings, not in a file
-- **JetBrains Junie** (`.junie/guidelines.md`)
+- **JetBrains Junie** (`.junie/AGENTS.md`, which Junie reads first, and the legacy `.junie/guidelines.md`, which it still supports)
 - **Mentat** (`.mentatconfig.json`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): the CLI is archived and read `.mentat_config.json`
 - **Open Interpreter** (`.interpreter/profiles/vibetags.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Open Interpreter reads no YAML profile, and reads project instructions from `AGENTS.md`
 - **Plandex** (`.plandex.yaml`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Plandex never reads it
@@ -413,7 +414,6 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Supermaven** (`.supermavenignore`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645))
 - **Sweep** (`sweep.yaml`) — AI code review rules for the Sweep GitHub App - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Sweep is now a JetBrains assistant
 - **Void Editor** (`.void/rules.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): Void is deprecated, and it read `.voidrules`, not this file
-- **Windsurf IDE** (`.windsurfrules`)
 
 #### AI pull-request reviewers
 - **CodeRabbit** (`.coderabbit.yaml`) — `reviews.path_instructions` that flag PRs violating guardrails
@@ -444,7 +444,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Tabnine** (`.tabnine/guidelines/*.md`)
 - **Trae** (`.trae/rules/*.md`)
 - **Universal AI** (`.ai/rules/*.md`) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): no tool or published convention reads it
-- **Windsurf** (`.windsurf/rules/*.md` — YAML front-matter + Markdown)
+- **Devin Desktop** (formerly Windsurf: `.devin/rules/*.md`, the preferred directory, with `trigger: glob` front matter, and `.windsurf/rules/*.md`, the fallback; the Devin CLI docs say both are loaded, so opt into one, [details](docs/PLATFORMS.md#windsurf-is-now-devin-desktop))
 
 > † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because
 > `AGENTS.md` is a near-universal agent file that teams often keep as a thin pointer to another
@@ -768,7 +768,7 @@ my-app/
     └── CLAUDE.md                 # loaded when working in billing/
 ```
 
-Activate any layer by creating the file or directory and compiling — VibeTags never creates opt-in files for you, and deleting one turns that layer off. The same pattern works for **Cursor** (`.cursorrules` + `.cursor/rules/`), **Windsurf** (`.windsurfrules` + `.windsurf/rules/`), and **Copilot** (`.github/copilot-instructions.md` + `.github/instructions/`).
+Activate any layer by creating the file or directory and compiling — VibeTags never creates opt-in files for you, and deleting one turns that layer off. The same pattern works for **Cursor** (`.cursorrules` + `.cursor/rules/`), **Devin Desktop**, formerly Windsurf (`.windsurfrules` + `.windsurf/rules/`), and **Copilot** (`.github/copilot-instructions.md` + `.github/instructions/`).
 
 ### When to use a root `.claude/rules/` (root granular)
 

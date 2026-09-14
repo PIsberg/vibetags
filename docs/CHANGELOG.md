@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`FingerprintShortCircuitTest` now fails when the short-circuit does not fire** (#700). Every
+  case patched the stored sidecar stamp through a `WriteCache` never bound to the module. Since
+  the cache keeps one header section per module (#556) that moved only the root-wide stamp, which
+  then disagreed with the module's own, so no compile after the patch could short-circuit. The
+  positive case asserted only unchanged mtimes, which the per-file cache also produces, and the
+  five negative cases passed whether or not their change was detected. With the skip disabled
+  outright (`WriteCache.getBuildFingerprint` returning a value that never matches) all 6 cases
+  stayed green. The patch is gone: a plain no-op recompile short-circuits, the positive case
+  asserts the `inputs unchanged since last run` NOTE, and each negative case first recompiles
+  unchanged and asserts the NOTE before asserting its change suppresses it. The same break now
+  turns all 6 red, and ignoring the run context in `getBuildFingerprint` turns
+  `shortCircuit_doesNotFire_whenProjectNameChanges` red where the old class stayed green.
+  `WriteCacheProcessorIntegrationTest.secondCompile_unchangedSources_doesNotRewriteFiles` had the
+  same shape: its no-op recompile never reached the per-file cache, so it stayed green with
+  `WriteCache.isUnchanged` forced to `false`. It now defeats the short-circuit with
+  `-Avibetags.project` and asserts `write.skip reason=cache-unchanged` in the debug log, which that
+  break turns red. Three `ProjectLifecycleEndToEndTest` cases asserted the short-circuit through
+  sidecar mtimes alone, which hold whether or not it fires, and stayed green with it disabled; they
+  now assert the NOTE and go red under the same break. That exposed the reactor steady-state case
+  as wrong: `module-core` does not skip on its first rebuild after a cold reactor pass, because
+  `module-cli` wrote its sidecar after `module-core` recorded the stamp, so the case now takes the
+  catch-up pass `MultiModuleShortCircuitTest` already takes. The two merge cases in
+  `MultiModuleProcessorTest` accepted either module's content, which the first compile had
+  already written, so they held with every round short-circuited; they now require both and
+  assert the sibling sidecar defeated the skip. Test-only change; nothing ships.
+
 ## [1.3.5] - 2026-09-13
 
 **Upgrading changes committed files.** If a granular directory is opted in (for example
@@ -18,12 +46,20 @@ regenerated files together with the version bump; a `-Avibetags.check=true` buil
 until you do. The consumer sweep for this release built all five downstream repositories against it
 and saw exactly that diff, 1 to 7 files per repository, and no other content change. With
 `.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under Changed); that
-change came after the sweep, so the sweep's diff does not include it.
+change came after the sweep, so the sweep's diff does not include it. With `.windsurf/rules/` opted
+in, the front matter of every rule file in it changes from Cursor's `description`/`globs`/`alwaysApply`
+header to `trigger: glob` and `globs:` (#683, under Fixed). That change also came after the sweep,
+so the sweep's diff does not include it either. With `.devin/rules/` or `.windsurf/rules/` opted in,
+the first build adds `+vibetags-safety.md` to that directory, and in a reactor
+`.claude/skills/vibetags-guardrails/SKILL.md` loses the copy of its front matter repeated inside
+each module's section (#684, under Added); neither is in the sweep's diff. With `.cursor/rules/` or
+`.trae/rules/` opted in, the `globs:` line of every rule file in it changes from a bracketed,
+quoted list to the bare comma-separated value both vendors document (#699, under Fixed), which is
+not in the sweep's diff either.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
-vendor before anything changed, and the table under Deprecated lists every deprecated output.
-#671 and #673 stay open:
+vendor before anything changed, and the table under Deprecated lists every deprecated output:
 
 - Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
   `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
@@ -42,6 +78,14 @@ vendor before anything changed, and the table under Deprecated lists every depre
   load automatically and tells the agent to open them (#669, under Changed).
 - Cursor calls `.cursorrules` legacy and says it "will be deprecated", but not that it stopped
   reading it, and Cline reads it too. PLATFORMS.md now says so; it is not deprecated (#672).
+- Junie checks `.junie/AGENTS.md` first and calls `.junie/guidelines.md` its "legacy format for
+  guidelines (still supported)". VibeTags now writes `.junie/AGENTS.md` too, and keeps writing the
+  legacy file without a deprecation warning (#673, under Added).
+- Windsurf is now Devin Desktop, which prefers `.devin/rules/` over the `.windsurf/rules/` fallback,
+  still reads `.windsurfrules`, and added `.devinignore` beside the legacy `.codeiumignore`.
+  VibeTags now writes `.devin/rules/` and `.devinignore` and keeps writing every Windsurf output
+  (#671, under Added). The same docs give `.windsurf/rules/` a `trigger:` front matter that VibeTags
+  had never written, and its rule files now carry it (#683, under Fixed).
 - The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
   Sourcegraph's and Supermaven's own posts (#677).
 - Open Interpreter's profiles moved to TOML, and its config loader strips `profiles` from a
@@ -54,6 +98,86 @@ vendor before anything changed, and the table under Deprecated lists every depre
   docs do and do not pin (#675).
 
 ### Added
+
+- **CI runs `doctor` against `examples/kotlin`.** `doctor --dir examples/kotlin` must exit 1 and
+  report `AccountLedger.kt:26 @AILocked on fun balanceFor` with its `@JvmName("balanceFor")` remedy,
+  and must not report `settle` or `reconcile`, whose guardrails kapt keeps. The Kotlin value-class
+  check was exercised only by `DoctorCommandTest`, so a path, encoding or line-ending difference in a
+  real checkout would have gone unnoticed; this is the Kotlin half of what #533 does for Groovy. (#693)
+
+- **Devin Desktop's `.devin/rules/` and `.devinignore`** (#671). Windsurf is now Devin Desktop, and
+  its docs call `.devin/rules/*.md` "preferred" and `.windsurf/rules/*.md` the "fallback". Each
+  rule file opens with the front matter the docs give a glob rule, `trigger: glob` and `globs:`, so
+  it loads when a matching file is read or edited. `.devinignore` takes "the same syntax as
+  `.gitignore`" and gets the `@AIIgnore` globs. `.windsurfrules`, `.windsurf/rules/` and
+  `.codeiumignore` are still written, and adding `.devin/rules/` changes none of them. The Devin CLI
+  docs say rule files in both directories are loaded, and VibeTags writes the same file into each,
+  so a project should opt into one; PLATFORMS.md quotes what the vendor says. `.windsurfrules` still collapses to an index
+  only for `.windsurf/rules/`.
+
+  `DevinDesktopEndToEndTest` was run first against the code without either service, and all 5 of
+  its original cases failed; its `.devinignore` case also went red with only the
+  `AIIgnoreFormatter` arm removed.
+
+- **Devin Desktop's rule directories now get an always-on safety tier** (#684), in
+  `.devin/rules/+vibetags-safety.md` and `.windsurf/rules/+vibetags-safety.md`. Every rule VibeTags
+  writes there is `trigger: glob` and loads only when a matching file is read or edited, so a
+  project on a rules directory alone kept no `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`,
+  `@AIAudit` or `@AISecure` guardrail in front of the agent up front. The new file opens with
+  `trigger: always_on`, which the docs say includes the "Full rule content ... in the system prompt
+  on every message", and carries the safety sections `.windsurfrules` keeps inline as an index. It
+  follows #648's shape: an implicit service per directory that takes the marker merge, write cache
+  and check mode from the aggregate path, is exempt from the orphan sweep, and is rendered even
+  when the tier is empty. With `.windsurfrules` opted in, which Devin Desktop still reads and loads
+  always on, the file names it instead of repeating the tier; with both directories, the
+  `.windsurf/rules/` file names the `.devin/rules/` one. The reactor merge now writes a front
+  matter every module shares once, above the module sections. It used to repeat it inside each
+  module's section, which left a file created by the merge with no trigger at the top, and gave
+  the Claude skill's `SKILL.md` a repeated header in reactor builds that it now loses.
+
+  `DevinSafetyTierEndToEndTest` was written first: 15 of its 16 cases failed against the branch
+  with no safety file written; the one that passed guards that the aggregate alone creates no
+  directory. With the file rendered and the merge unchanged, both reactor cases still failed on a
+  second `trigger:` line inside a module sub-marker.
+
+- **A build warning when a generated `.devin/rules/` or `.windsurf/rules/` file passes 12,000
+  characters** (#695). Devin Desktop's docs limit a workspace rule file to "12,000 characters per
+  file" without saying whether the rest is cut or the file dropped, and a role grouping many
+  elements or a safety file with many safety annotations could pass that with the build reporting
+  success. Every file VibeTags writes into either directory, `+vibetags-safety.md` included, is now
+  measured as the build leaves it, on a build the fingerprint short-circuit skips and in check mode
+  as well, and each one over the cap is named with its length. Characters are UTF-16 code units.
+  `.windsurfrules` is not measured, because the docs name no cap for it.
+
+  `RuleFileLengthEndToEndTest` was written first and all 7 cases failed with no warning emitted;
+  with the check placed before generation, as the YAML duplicate-key warning is, 5 still failed,
+  because that measures the previous build's file.
+
+- **The 12,000-character rule file warning covers Antigravity's `.agents/rules/`** (#701).
+  [Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says "Rules files are
+  limited to 12,000 characters each.", the same cap and the same silent-loss shape as #695, which
+  covered only Devin Desktop and Windsurf. A generated `.agents/rules/` file over the cap now gets the
+  same warning and the same `validation.rule-file-over-limit` log event, worded for Antigravity and
+  without the `.windsurfrules` remedy, which does not apply there. The vendor docs of every other
+  granular directory were checked for a per-file cap and none documents one; PLATFORMS.md quotes
+  what was found, including Augment's combined cap, which is not measured.
+
+  The `.agents/rules/` cases in `RuleFileLengthEndToEndTest` and `RuleFileLengthWarnerTest` were
+  written first: all 3 failed with no warning emitted, and pass with `antigravity_granular` added to
+  `RuleFileLengthRule.CAPPED_DIRECTORIES`.
+
+- **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
+  order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,
+  which it calls legacy and still supported. The new file gets the same rendering as
+  `.junie/guidelines.md`, which is still written and not deprecated. It is a separate service
+  (`junie_agents`), not the root `AGENTS.md`: that file is still written only as the sole AI config
+  file or with a marker pair. One project shape changes: a root `AGENTS.md` whose only companion
+  was `.junie/AGENTS.md` used to count as the sole config file and receive the Codex rendering, and
+  is now left untouched unless it carries a marker pair. PLATFORMS.md records what Junie's page does
+  not say, whether it reads both files when both exist.
+
+  `JunieAgentsMdEndToEndTest` was run first against the code without the service: 4 of its 6 cases
+  failed, including the root pointer gaining a Codex block beside `.junie/AGENTS.md`.
 
 - **Cline's `.clinerules/` directory now gets an always-loaded safety tier** (#648), in
   `.clinerules/+vibetags-safety.md`. Every rule file in the directory carries `paths:` front matter
@@ -445,6 +569,23 @@ vendor before anything changed, and the table under Deprecated lists every depre
 
 ### Fixed
 
+- **Cursor and Trae rule files attach by their globs again** (#699). VibeTags wrote the globs of
+  `.cursor/rules/*.mdc` and `.trae/rules/*.md` as a bracketed, quoted list,
+  `globs: ["**/PaymentProcessor.java"]`. Both vendors document a bare comma-separated value, and
+  neither tool's reader parses YAML: Cursor's removes one pair of quotes around the whole value and
+  splits on the commas outside braces, Trae's splits on every comma. The list reached the matcher as
+  a pattern carrying literal brackets and quotes, which matches no source file, and Cursor files a
+  rule that has a glob as glob-attached, so its description did not bring it in either. The value is
+  now written bare, several globs joined with commas and brace groups expanded as #696 does:
+  `globs: **/*Controller.java,**/*Endpoint.java`. Continue and PearAI keep the list, which Continue
+  documents. Neither tool was run; PLATFORMS.md has the vendor quotes, including a Cursor staff
+  reply saying "no brackets or quotes", and what the parser in each tool's shipped bundle does.
+
+  `CursorTraeGlobsFormEndToEndTest` was written first and restates each reader: all 5 cases failed
+  against the list form with no glob the reader takes matching the annotated class. Cursor 3.20.17's
+  own parser functions, run on both forms, matched none of three Java paths with the list and each
+  named file with the bare value.
+
 - **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
   two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
   ran in `async-tests` under the async-test agent. A class that drives javac passed in
@@ -463,6 +604,49 @@ vendor before anything changed, and the table under Deprecated lists every depre
   each class in its own fork; `-Dtest=NoSuchTest` and `-Dtest=NoSuchAsyncTest` still fail.
   `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
   to ignore `!` entries turns one of its cases red.
+
+- **A brace glob no longer splits in Copilot's `applyTo:` or in Cursor's and Trae's `globs:`**
+  (#696). The #685 expansion now covers the three other granular headers whose vendors document
+  several globs as a comma-separated value: docs.github.com says "You can specify multiple patterns
+  by separating them with commas", cursor.com lists `docs/**/*.md, docs/**/*.mdx` as
+  "(comma-separated)", and Trae's docs separate patterns with `,`. A `.vibetags-roles` glob such as
+  `**/*.{java,kt}` is written as one glob per alternative and a literal comma in a
+  `.vibetags-mirror` glob as `?`. Claude Code, Cline and Continue take a list whose entries are
+  matched whole, and Claude Code and Cline document brace globs in an entry, so their headers keep
+  the glob as written; the other granular platforms write no glob. Per-element headers and every
+  committed example are unchanged, since none of their globs holds a brace or comma. PLATFORMS.md
+  has the per-platform table with the quotes.
+
+  `GranularBraceGlobEndToEndTest` was written first: its Copilot, Cursor, Trae and Copilot mirror
+  cases failed with the glob split across commas, and its three list-platform cases passed.
+
+- **A brace glob no longer splits into broken halves in `.devin/rules/` and `.windsurf/rules/`**
+  (#685). Several globs are written as one comma-joined `globs:` value, the form of the vendor's
+  own sample rule (`globs: *.js, src/*.js`), so a `.vibetags-roles` glob such as `**/*.{java,kt}`
+  reads as `**/*.{java` and `kt}` to a reader that splits on commas, which would load the rule for
+  neither file type. How Devin Desktop parses the value is not documented. Brace groups are now expanded into one glob per alternative, nested groups included,
+  and a literal comma in a `.vibetags-mirror` glob line is written as `?`. Headers without braces
+  or commas, which is every per-element file, are unchanged. PLATFORMS.md records what was and was
+  not found about how the value is parsed.
+
+  `DevinDesktopEndToEndTest` gained three cases first, and all three failed against the plain
+  join with the ambiguous header in the failure output.
+
+- **`.windsurf/rules/` rule files carry Windsurf's `trigger:` front matter** (#683). They were
+  written with Cursor's `description`, `globs` and `alwaysApply` keys. The vendor's page
+  (docs.devin.ai, checked 2026-09-14) gives Windsurf rules a `trigger` field whose values are
+  `always_on`, `manual`, `model_decision`, `agent` and `glob`, and its glob example is
+  `trigger: glob` with `globs: **/*.test.ts`; the `alwaysApply` table on that page belongs to Cursor.
+  A rule with no `trigger` has no documented activation mode, so a guardrail could sit in the
+  directory and never reach Cascade. Every rule file VibeTags writes there, per element or per
+  `.vibetags-roles` role, now opens with `trigger: glob` and its glob, the same front matter
+  `.devin/rules/` uses, from the same renderer; a role with several globs joins them with commas.
+  An existing Cursor-shaped header is replaced on the next build, and text outside the markers is
+  kept. Cursor's `.cursor/rules/*.mdc` headers are unchanged.
+
+  The Windsurf cases in `DevinDesktopEndToEndTest` and `NewPlatformsEndToEndTest` failed against
+  the previous renderer (5 failures) and pass with the change; a pinned Cursor header case passed
+  on both.
 
 - **Opting into `QWEN.md` no longer overwrites `.qwen/settings.json`** (#650). That file is Qwen
   Code's own project settings file, and VibeTags wrote it as a whole-file overwrite on every compile,

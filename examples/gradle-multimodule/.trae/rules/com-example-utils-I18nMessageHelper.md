@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/I18nMessageHelper.java"]
+globs: **/I18nMessageHelper.java
 description: "AI rules for com.example.utils.I18nMessageHelper"
 ---
 

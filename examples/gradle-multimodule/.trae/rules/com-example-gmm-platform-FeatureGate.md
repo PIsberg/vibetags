@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/FeatureGate.java"]
+globs: **/FeatureGate.java
 description: "AI rules for com.example.gmm.platform.FeatureGate"
 ---
 

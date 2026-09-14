@@ -147,6 +147,7 @@ class ProcessorTestHarness {
         // v0.9.7 platforms
         touch(".clinerules");
         touch(".junie/guidelines.md");
+        touch(".junie/AGENTS.md");
         touch(".kiro/steering/.vibetags");
         // Grok Build scoped rules: granular with no aggregate sibling, so opting it in by
         // default cannot collapse another platform's aggregate to an index.
@@ -174,6 +175,10 @@ class ProcessorTestHarness {
         touch(".agents/skills/vibetags-guardrails/SKILL.md");
         touch(".zencoder/rules/.vibetags");
         touch("replit.md");
+        // Devin Desktop (formerly Windsurf): .devin/rules/ has no VibeTags aggregate sibling, so
+        // opting it in by default collapses nothing; .devinignore is its ignore file (#671)
+        touch(".devin/rules/.vibetags");
+        touch(".devinignore");
         // Context-packer ignore files
         touch(".repomixignore");
         touch(".gitingestignore");
@@ -392,7 +397,7 @@ class ProcessorTestHarness {
         return h;
     }
 
-    private static void addExampleSources(ProcessorTestHarness h) {
+    static void addExampleSources(ProcessorTestHarness h) {
         h.addSource("com.example.payment.PaymentProcessor",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +

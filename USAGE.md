@@ -484,9 +484,11 @@ Create an empty placeholder file for the service you want to support, then compi
 touch .cursorrules .cursorignore             # Traditional + ignore
 mkdir -p .cursor/rules                       # Granular rules (per-class .mdc)
 
-# --- Windsurf ---
-touch .windsurfrules                         # Traditional .windsurfrules
-mkdir -p .windsurf/rules                     # Granular rules (per-class .md)
+# --- Devin Desktop (formerly Windsurf) ---
+touch .windsurfrules                         # Traditional .windsurfrules (legacy, still read)
+mkdir -p .devin/rules                        # Granular rules, preferred directory (per-class .md, trigger: glob)
+# mkdir -p .windsurf/rules                   # Granular rules, fallback directory. Devin CLI loads both: pick one
+touch .devinignore                           # Indexing exclusion list (.codeiumignore is the legacy name)
 
 # --- Zed, Cody, Supermaven ---
 touch .rules                                 # Zed Editor
@@ -537,7 +539,7 @@ touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
-mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
+mkdir -p .junie && touch .junie/AGENTS.md    # JetBrains Junie (current; legacy .junie/guidelines.md also written)
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)

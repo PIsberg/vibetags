@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/AsyncTestConfig.java"]
+globs: **/AsyncTestConfig.java
 description: "AI rules for com.example.config.AsyncTestConfig"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.concurrent.SessionCache"
-globs: ["**/SessionCache.java"]
+globs: **/SessionCache.java
 alwaysApply: false
 ---
 

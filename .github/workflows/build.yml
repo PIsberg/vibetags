@@ -118,6 +118,42 @@ jobs:
           grep -qF "InventoryService.groovy" "$RUNNER_TEMP/doctor-groovy.txt"
           grep -qF "field 'contactEmail'" "$RUNNER_TEMP/doctor-groovy.txt"
 
+      # The Kotlin half of #533: doctor's value-class check (#688) was exercised only by
+      # DoctorCommandTest. examples/kotlin's AccountLedger.kt (#681) carries one guardrail kapt
+      # drops (balanceFor takes a value class, so its JVM name is mangled) and two it keeps
+      # (settle takes kotlin.Result, which is not mangled; reconcile is internal). Reuses the
+      # classpath file the Groovy step wrote.
+      - name: Run vibetags doctor Against The Kotlin Example (issue #693)
+        if: matrix.java == '21'
+        run: |
+          cd vibetags-cli
+          CP="target/classes:$(cat target/cp.txt)"
+          set +e
+          java -cp "$CP" se.deversity.vibetags.cli.Main doctor --dir ../examples/kotlin > "$RUNNER_TEMP/doctor-kotlin.txt" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/doctor-kotlin.txt"
+          # 1 means "findings present", and the dropped balanceFor guardrail is one. A 0 would mean
+          # doctor stopped seeing it.
+          if [ "$status" -ne 1 ]; then
+            echo "::error::doctor exited $status against examples/kotlin; expected 1 (findings)."
+            exit 1
+          fi
+          for expected in "kotlin sources:" "AccountLedger.kt:26 @AILocked on fun balanceFor" '@JvmName("balanceFor")'; do
+            if ! grep -qF "$expected" "$RUNNER_TEMP/doctor-kotlin.txt"; then
+              echo "::error::doctor output against examples/kotlin does not contain: $expected"
+              exit 1
+            fi
+          done
+          # settle and reconcile keep their guardrails, so a finding naming either is a false
+          # positive. A bare `! grep` does not fail a step under bash -e (#689), hence the if.
+          for unexpected in "fun settle" "fun reconcile"; do
+            if grep -qF "$unexpected" "$RUNNER_TEMP/doctor-kotlin.txt"; then
+              echo "::error::doctor reported '$unexpected' against examples/kotlin, whose guardrail kapt keeps."
+              exit 1
+            fi
+          done
+
       # init --list prints and creates nothing, so it is safe to run against a committed
       # example. It is the other half of the CLI a consumer meets first.
       - name: Run vibetags init --list Against The Basic Example (issue #533)
@@ -273,7 +309,7 @@ jobs:
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
-          expected=56
+          expected=57
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"
@@ -294,6 +330,10 @@ jobs:
           # Granular directories are populated per class, not with a single file.
           test "$(ls -1 .kiro/steering/ | wc -l)" -gt 10 \
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
+          # A front-matter file is merged under one header, not one per module inside the module
+          # sub-markers, where no tool reads it (#684). The Claude skill is this reactor's case.
+          test "$(grep -c '^name: vibetags-guardrails' .claude/skills/vibetags-guardrails/SKILL.md)" = "1" \
+            || { echo "SKILL.md repeats its front matter per module (#684)"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
       - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
@@ -1053,7 +1093,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=57
+          expected=58
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"

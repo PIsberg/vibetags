@@ -79,7 +79,7 @@ public final class HandAuthoredYamlKeyWarner {
     }
 
     /** {@code file} relative to {@code root} with forward slashes, or as given when it lies elsewhere. */
-    private static String displayPath(Path root, Path file) {
+    static String displayPath(Path root, Path file) {
         Path absoluteRoot = root.toAbsolutePath().normalize();
         Path absoluteFile = file.toAbsolutePath().normalize();
         Path shown = absoluteFile.startsWith(absoluteRoot) ? absoluteRoot.relativize(absoluteFile) : absoluteFile;

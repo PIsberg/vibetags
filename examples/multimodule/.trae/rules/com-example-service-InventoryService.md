@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/InventoryService.java"]
+globs: **/InventoryService.java
 description: "AI rules for com.example.service.InventoryService"
 ---
 
