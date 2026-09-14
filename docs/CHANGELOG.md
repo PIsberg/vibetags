@@ -96,6 +96,12 @@ vendor before anything changed, and the table under Deprecated lists every depre
 
 ### Added
 
+- **CI runs `doctor` against `examples/kotlin`.** `doctor --dir examples/kotlin` must exit 1 and
+  report `AccountLedger.kt:26 @AILocked on fun balanceFor` with its `@JvmName("balanceFor")` remedy,
+  and must not report `settle` or `reconcile`, whose guardrails kapt keeps. The Kotlin value-class
+  check was exercised only by `DoctorCommandTest`, so a path, encoding or line-ending difference in a
+  real checkout would have gone unnoticed; this is the Kotlin half of what #533 does for Groovy. (#693)
+
 - **Devin Desktop's `.devin/rules/` and `.devinignore`** (#671). Windsurf is now Devin Desktop, and
   its docs call `.devin/rules/*.md` "preferred" and `.windsurf/rules/*.md` the "fallback". Each
   rule file opens with the front matter the docs give a glob rule, `trigger: glob` and `globs:`, so
