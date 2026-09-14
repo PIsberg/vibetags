@@ -31,7 +31,10 @@ form as the recommended setup and the class-path form as a fallback with caveats
 
 `vibetags-cli` adds **no third-party dependency**: it is plain JDK code plus
 `vibetags-processor` as a library (for `ServiceRegistry` and the marker constants — the one
-source of truth for the platform list). Whoever launches it (jbang, `java -cp`) resolves the
+source of truth for the platform list). `doctor --classpath` reads `@kotlin.jvm.JvmInline` out of
+class files with its own constant-pool reader (`JvmInlineClasses`) rather than `kotlin-metadata-jvm`
+or ASM: the annotation is all it needs, and either library would be one more artifact for every
+launcher of the CLI to resolve (#691). Whoever launches it (jbang, `java -cp`) resolves the
 processor's transitive slf4j/logback, which is the full closure.
 
 `vibetags-annotations` has **no** third-party dependencies at all, by design. It is on the

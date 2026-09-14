@@ -3,11 +3,21 @@ package se.deversity.vibetags.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -443,8 +453,8 @@ class DoctorCommandTest {
 
     @Test
     void kotlinGuardrailOnNonFunctions_isNotFlagged() throws Exception {
-        // Types reach the stub, and properties were not measured; the check reports functions only.
-        // Text inside strings and comments declares nothing.
+        // Types reach the stub, and a bare guardrail on a property lands on its backing field, which
+        // keeps its name (#692). Text inside strings and comments declares nothing.
         kotlinProject();
         sourceFile("src/main/kotlin/com/example/ledger/Holder.kt", """
             package com.example.ledger
@@ -511,10 +521,10 @@ class DoctorCommandTest {
     }
 
     @Test
-    void kotlinJvmExposeBoxed_isNotFlagged() throws Exception {
-        // @JvmExposeBoxed makes the compiler emit a boxed, unmangled variant, and the
-        // -Xjvm-expose-boxed option does the same for a whole module. Whether kapt's stub then
-        // carries the function was never measured, so doctor stays silent rather than guess.
+    void kotlinFunctionTakingAnExposedValueClass_isStillReportedAsLost() throws Exception {
+        // @JvmExposeBoxed on a value class exposes that class's own members, not the functions
+        // elsewhere that take it: in #692's kapt build takesBoxedClass(BoxedId) was absent from
+        // CLAUDE.md. #688 stayed silent on any file mentioning the annotation.
         kotlinProject();
         sourceFile("src/main/kotlin/com/example/ledger/Exposed.kt", """
             package com.example.ledger
@@ -540,11 +550,15 @@ class DoctorCommandTest {
             fun refund(amount: Cents) {}
             """);
 
-        assertEquals(0, doctor(), out());
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Exposed.kt:12 @AILocked on fun charge"), out());
+        assertTrue(out().contains("UsesExposed.kt:6 @AILocked on fun refund"), out());
     }
 
     @Test
-    void kotlinModuleCompiledWithExposeBoxed_skipsTheCheckAndSaysSo() throws Exception {
+    void kotlinModuleCompiledWithExposeBoxed_keepsATopLevelFunctionAndSaysSo() throws Exception {
+        // Under -Xjvm-expose-boxed, #692 measured controlValueParam(AccountId) kept, as
+        // controlValueParam(com.example.shapes.AccountId). #688 skipped the whole check instead.
         kotlinProject();
         Files.writeString(dir.resolve("build.gradle.kts"), """
             kotlin { compilerOptions { freeCompilerArgs.add("-Xjvm-expose-boxed") } }
@@ -561,6 +575,621 @@ class DoctorCommandTest {
         assertEquals(0, doctor(), out());
         assertTrue(out().contains("-Xjvm-expose-boxed"), out());
         assertFalse(out().contains("fun balanceFor"), out());
+    }
+
+    // Every case below states shapes measured in #692 on Kotlin 2.4.10: one kapt build with an
+    // @AILocked or @AIInputSanitized on each shape, read back from the generated CLAUDE.md. The line
+    // numbers in the assertions count from the text block's first line.
+
+    @Test
+    void kotlinExtensionReceiverOfValueClass_isReportedAsLost() throws Exception {
+        // describe-VBQJbmA, describeOrEmpty-6_y_IbE and memberDescribe-VBQJbmA: a receiver is a
+        // parameter on the JVM, so it mangles the name and kapt leaves the function out. A value
+        // class as the receiver's type argument (List<AccountId>) kept firstRaw.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Extensions.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "display format")
+            fun AccountId.describe(): String = raw
+
+            @AILocked(reason = "display format")
+            fun AccountId?.describeOrEmpty(): String = this?.raw ?: ""
+
+            @AILocked(reason = "a type argument does not mangle")
+            fun List<AccountId>.firstRaw(): String = first().raw
+
+            class Formatter {
+                @AILocked(reason = "member extension")
+                fun AccountId.memberDescribe(): String = raw
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Extensions.kt:6 @AILocked on fun describe"), out());
+        assertTrue(out().contains("Extensions.kt:9 @AILocked on fun describeOrEmpty"), out());
+        assertTrue(out().contains("Extensions.kt:16 @AILocked on fun memberDescribe"), out());
+        assertFalse(out().contains("fun firstRaw"), out());
+    }
+
+    @Test
+    void kotlinTopLevelFunctionReturningValueClass_isNotFlagged() throws Exception {
+        // A return type mangles only a member's name. makeId(), timeoutTop() returning Duration,
+        // makeU() returning UInt, a private one, an extension with a plain receiver and a top-level
+        // suspend function returning AccountId all reached CLAUDE.md under their plain names.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Factories.kt", """
+            package com.example.ledger
+
+            import kotlin.time.Duration
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "id format")
+            fun makeId(): AccountId = AccountId("m")
+
+            @AILocked(reason = "timeouts")
+            private fun timeoutTop(): Duration? = Duration.ZERO
+
+            @AILocked(reason = "counter")
+            fun String.toCount(): UInt = 1u
+
+            @AILocked(reason = "suspend")
+            suspend fun fetchId(): AccountId = AccountId("x")
+            """);
+
+        assertEquals(0, doctor(), out());
+    }
+
+    @Test
+    void kotlinMemberReturningValueClass_isReportedAsLost_inEveryKindOfBody() throws Exception {
+        // Lost: a member of an object, of a companion, of an interface, and a suspend member
+        // (fetchMember-9bTijhI). A top-level suspend function taking a value class is lost too
+        // (fetchFor-eWJBmvc): the parameter mangles it, suspend or not.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Members.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            object Registry {
+                @AILocked(reason = "o")
+                fun current(): AccountId = AccountId("o")
+            }
+
+            class WithCompanion {
+                companion object {
+                    @AILocked(reason = "c")
+                    fun make(): AccountId = AccountId("c")
+                }
+            }
+
+            interface Lookup {
+                @AILocked(reason = "i")
+                fun find(): AccountId
+            }
+
+            class Fetcher {
+                @AILocked(reason = "s")
+                suspend fun fetch(): AccountId = AccountId("s")
+            }
+
+            @AILocked(reason = "t")
+            suspend fun fetchFor(id: AccountId): String = id.raw
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Members.kt:7 @AILocked on fun current"), out());
+        assertTrue(out().contains("Members.kt:13 @AILocked on fun make"), out());
+        assertTrue(out().contains("Members.kt:19 @AILocked on fun find"), out());
+        assertTrue(out().contains("Members.kt:24 @AILocked on fun fetch"), out());
+        assertTrue(out().contains("Members.kt:28 @AILocked on fun fetchFor"), out());
+    }
+
+    @Test
+    void kotlinPropertyAccessorGuardrails_areReportedWhereTheAccessorIsMangled() throws Exception {
+        // A bare or @field: guardrail lands on the backing field, which keeps its name (Props.a,
+        // Props.d). A top-level getter keeps its name too (getTopIdGet()). Every setter is mangled
+        // (setTopIdSet-VBQJbmA, setC-VBQJbmA, and @setparam: with it), and so is a member getter
+        // (getB--QnrX9o), including a constructor property's. @get:JvmName kept idValue().
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Props.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AILocked
+
+            @get:AILocked(reason = "top-level getter keeps its name")
+            val topId: AccountId = AccountId("t")
+
+            @set:AILocked(reason = "top-level setter is mangled")
+            var topAssigned: AccountId = AccountId("t")
+
+            class Account {
+                @AILocked(reason = "lands on the backing field")
+                val bare: AccountId = AccountId("a")
+
+                @field:AILocked(reason = "field")
+                val stored: AccountId = AccountId("f")
+
+                @get:AILocked(reason = "member getter is mangled")
+                val owner: AccountId get() = AccountId("o")
+
+                @set:AILocked(reason = "member setter is mangled")
+                var assigned: AccountId = AccountId("s")
+
+                @setparam:AIInputSanitized(AIInputSanitized.SanitizerType.XSS)
+                var incoming: AccountId = AccountId("i")
+
+                @get:JvmName("namedId")
+                @get:AILocked(reason = "explicit getter name")
+                val named: AccountId = AccountId("n")
+
+                @get:AILocked(reason = "plain type")
+                val label: String = "l"
+            }
+
+            class Holder(@get:AILocked(reason = "constructor property getter") val id: AccountId)
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Props.kt:10 @set:AILocked on property topAssigned"), out());
+        assertTrue(out().contains("Props.kt:20 @get:AILocked on property owner"), out());
+        assertTrue(out().contains("Props.kt:23 @set:AILocked on property assigned"), out());
+        assertTrue(out().contains("Props.kt:26 @setparam:AIInputSanitized on property incoming"), out());
+        assertTrue(out().contains("Props.kt:36 @get:AILocked on property id"), out());
+        for (String kept : new String[]{"property topId", "property bare", "property stored",
+            "property named", "property label"}) {
+            assertFalse(out().contains(kept), kept + " keeps its guardrail: " + out());
+        }
+    }
+
+    @Test
+    void kotlinConstructorTakingValueClass_isReportedAsLost() throws Exception {
+        // The primary and a secondary constructor taking AccountId compile to private constructors
+        // plus synthetic public ones, and neither guardrail reached CLAUDE.md; nor did one on a plain
+        // constructor parameter. A secondary constructor without a value class kept
+        // Holder(java.lang.String,boolean), and a bare guardrail on a constructor property landed on
+        // its field (Holder.idS21).
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Ctors.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AIInputSanitized
+            import se.deversity.vibetags.annotations.AILocked
+
+            class Holder @AILocked(reason = "primary") constructor(val id: AccountId) {
+                @AILocked(reason = "secondary with a value class")
+                constructor(id: AccountId, n: Int) : this(AccountId(id.raw + n))
+
+                @AILocked(reason = "secondary without one")
+                constructor(raw: String, flag: Boolean) : this(AccountId(raw + flag))
+            }
+
+            class Parser(@AIInputSanitized(AIInputSanitized.SanitizerType.PATH_TRAVERSAL) input: AccountId) {
+                val raw: String = input.raw
+            }
+
+            class Plain @AILocked(reason = "plain") constructor(val raw: String)
+
+            class Stored(@AIInputSanitized(AIInputSanitized.SanitizerType.LDAP) val id: AccountId)
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Ctors.kt:6 @AILocked on constructor Holder"), out());
+        assertTrue(out().contains("Ctors.kt:8 @AILocked on constructor Holder"), out());
+        assertTrue(out().contains("Ctors.kt:14 @AIInputSanitized (parameter input) on constructor Parser"), out());
+        assertFalse(out().contains("Ctors.kt:11"), out());
+        assertFalse(out().contains("constructor Plain"), out());
+        assertFalse(out().contains("constructor Stored"), out());
+    }
+
+    @Test
+    void kotlinMembersDeclaredInsideValueClass_areReportedAsLost() throws Exception {
+        // A value class's members compile to static describe-impl, getSize-impl and
+        // constructor-impl, whatever their own signature, and kapt left all three out. The value
+        // class itself, its underlying property's getter (TicketId.getRaw()) and its companion's
+        // plain function (Voucher.Companion.parse) kept their guardrails.
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/OrderId.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "the value class itself reaches the stub")
+            @JvmInline
+            value class OrderId(@get:AILocked(reason = "underlying getter") val raw: String) {
+                @AILocked(reason = "secondary")
+                constructor(n: Int) : this(n.toString())
+
+                @AILocked(reason = "member")
+                fun describe(): String = raw
+
+                @get:AILocked(reason = "member getter")
+                val size: Int get() = raw.length
+
+                companion object {
+                    @AILocked(reason = "a companion is an ordinary class")
+                    fun parse(raw: String): String = raw
+                }
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("OrderId.kt:9 @AILocked on constructor OrderId"), out());
+        assertTrue(out().contains("OrderId.kt:12 @AILocked on fun describe"), out());
+        assertTrue(out().contains("OrderId.kt:15 @get:AILocked on property size"), out());
+        assertFalse(out().contains("OrderId.kt:7"), out());
+        assertFalse(out().contains("fun parse"), out());
+    }
+
+    @Test
+    void kotlinJvmExposeBoxed_keepsWhatItExposesAndNothingElse() throws Exception {
+        // Kept: @JvmExposeBoxed on a function (exposedFun(AccountId)), a member of a value class
+        // carrying it (BoxedId.describe()), and a direct member of a class carrying it
+        // (ExposedHolder.take(AccountId)). Lost: a function elsewhere taking the exposed value class
+        // (takesBoxedClass), a suspend member of the exposed class, and a member of a class nested
+        // inside it (NestedInExposed.take).
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Exposed.kt", """
+            @file:OptIn(ExperimentalStdlibApi::class)
+
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            @JvmInline
+            @JvmExposeBoxed
+            value class Cents(val raw: Long) {
+                @AILocked(reason = "member of an exposed value class")
+                fun describe(): String = raw.toString()
+            }
+
+            @JvmExposeBoxed
+            @AILocked(reason = "boxed variant on the function")
+            fun charge(amount: Cents): Long = amount.raw
+
+            @AILocked(reason = "exposing the class does not expose functions elsewhere")
+            fun refund(amount: Cents): Long = amount.raw
+
+            @JvmExposeBoxed
+            class Ledger {
+                @AILocked(reason = "direct member of an exposed class")
+                fun post(id: AccountId): String = id.raw
+
+                @AILocked(reason = "suspend is not exposed")
+                suspend fun postLater(id: AccountId): String = id.raw
+
+                class Nested {
+                    @AILocked(reason = "exposure does not reach nested classes")
+                    fun post(id: AccountId): String = id.raw
+                }
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Exposed.kt:19 @AILocked on fun refund"), out());
+        assertTrue(out().contains("com.example.ledger.Cents"), out());
+        assertTrue(out().contains("Exposed.kt:27 @AILocked on fun postLater"), out());
+        assertTrue(out().contains("Exposed.kt:31 @AILocked on fun post"), out());
+        for (String kept : new String[]{"Exposed.kt:11", "Exposed.kt:16", "Exposed.kt:24"}) {
+            assertFalse(out().contains(kept), kept + " is exposed boxed: " + out());
+        }
+    }
+
+    @Test
+    void kotlinModuleCompiledWithExposeBoxed_reportsOnlyWhatTheOptionDoesNotExpose() throws Exception {
+        // A second kapt build of the same shapes with -Xjvm-expose-boxed kept everything except
+        // suspend functions taking or returning a value class, open, abstract and interface members,
+        // and a value class's secondary constructors.
+        kotlinProject();
+        Files.writeString(dir.resolve("build.gradle.kts"), """
+            kotlin { compilerOptions { freeCompilerArgs.add("-Xjvm-expose-boxed") } }
+            """);
+        sourceFile("src/main/kotlin/com/example/ledger/AccountLedger.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "boxed variant")
+            fun balanceFor(account: AccountId): Long = 0L
+
+            class Ledger {
+                @AILocked(reason = "boxed variant")
+                fun owner(): AccountId = AccountId("o")
+
+                @AILocked(reason = "suspend is not exposed")
+                suspend fun later(account: AccountId): Long = 0L
+            }
+
+            abstract class Base {
+                @AILocked(reason = "open is not exposed")
+                open fun reopen(account: AccountId): Long = 0L
+            }
+
+            interface Lookup {
+                @AILocked(reason = "interface members are not exposed")
+                fun find(): AccountId
+            }
+
+            @JvmInline
+            value class OrderId(val raw: String) {
+                @AILocked(reason = "member, exposed")
+                fun describe(): String = raw
+
+                @AILocked(reason = "secondary constructor, not exposed")
+                constructor(n: Int) : this(n.toString())
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("AccountLedger.kt:13 @AILocked on fun later"), out());
+        assertTrue(out().contains("AccountLedger.kt:18 @AILocked on fun reopen"), out());
+        assertTrue(out().contains("AccountLedger.kt:23 @AILocked on fun find"), out());
+        assertTrue(out().contains("AccountLedger.kt:32 @AILocked on constructor OrderId"), out());
+        for (String kept : new String[]{"fun balanceFor", "fun owner", "fun describe", "skipped"}) {
+            assertFalse(out().contains(kept), kept + ": " + out());
+        }
+    }
+
+    @Test
+    void kotlinExposeBoxedOption_appliesOnlyUnderTheBuildFileThatPassesIt() throws Exception {
+        kotlinProject();
+        Files.createDirectories(dir.resolve("app"));
+        Files.writeString(dir.resolve("app/build.gradle.kts"), """
+            kotlin { compilerOptions { freeCompilerArgs.add("-Xjvm-expose-boxed") } }
+            """);
+        String lookup = """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "boxed only where the option is passed")
+            fun lookup(id: AccountId): String = id.raw
+            """;
+        sourceFile("app/src/main/kotlin/com/example/ledger/AppLookup.kt", lookup);
+        sourceFile("core/src/main/kotlin/com/example/ledger/CoreLookup.kt", lookup);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("CoreLookup.kt:6 @AILocked on fun lookup"), out());
+        assertFalse(out().contains("AppLookup.kt"), out());
+    }
+
+    // ------------------------------------------------ value classes from other modules and dependencies
+    //
+    // #691. A value class declared outside the scanned sources mangles a function the same way: in the
+    // #692 fixture, Consumer.forCustomer(CustomerId), with CustomerId in a separate Gradle module, lost
+    // its guardrail. The jar cases use Java stand-ins compiled here: kotlinc writes @kotlin.jvm.JvmInline
+    // into a value class's RuntimeVisibleAnnotations (javap on the fixture's model.jar), and a Java
+    // class carrying an annotation of that name looks the same to a class-file reader.
+
+    private static final String CONSUMER = """
+        package com.acme.app
+
+        import com.acme.model.CustomerId
+        import com.acme.model.PlainCustomer
+        import se.deversity.vibetags.annotations.AILocked
+
+        @AILocked(reason = "customer lookup")
+        fun forCustomer(id: CustomerId): String = id.raw
+
+        @AILocked(reason = "an ordinary class from the same jar")
+        fun forPlain(customer: PlainCustomer): String = ""
+
+        @AILocked(reason = "kotlin.Result carries @JvmInline but is not mangled")
+        fun settle(outcome: Result<Long>): String = ""
+        """;
+
+    private int doctor(String... options) {
+        PrintStream stream = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+        String[] args = new String[options.length + 1];
+        args[0] = "doctor";
+        System.arraycopy(options, 0, args, 1, options.length);
+        return Main.run(args, stream, stream, dir);
+    }
+
+    /** Compiles the dependency stand-ins into a class directory outside every scanned source root. */
+    private Path compiledDependency() throws Exception {
+        Path src = dir.resolve("deps/src");
+        List<Path> files = List.of(
+            javaFile(src, "kotlin/jvm/JvmInline.java", """
+                package kotlin.jvm;
+
+                import java.lang.annotation.ElementType;
+                import java.lang.annotation.Retention;
+                import java.lang.annotation.RetentionPolicy;
+                import java.lang.annotation.Target;
+
+                @Retention(RetentionPolicy.RUNTIME)
+                @Target(ElementType.TYPE)
+                public @interface JvmInline {
+                }
+                """),
+            javaFile(src, "kotlin/Result.java", """
+                package kotlin;
+
+                @kotlin.jvm.JvmInline
+                public final class Result<T> {
+                }
+                """),
+            javaFile(src, "com/acme/model/CustomerId.java", """
+                package com.acme.model;
+
+                @kotlin.jvm.JvmInline
+                public final class CustomerId {
+                    public String getRaw() {
+                        return "";
+                    }
+                }
+                """),
+            javaFile(src, "com/acme/model/PlainCustomer.java", """
+                package com.acme.model;
+
+                public final class PlainCustomer {
+                }
+                """));
+        Path classes = Files.createDirectories(dir.resolve("deps/classes"));
+        List<String> args = new ArrayList<>(List.of("-d", classes.toString()));
+        files.forEach(f -> args.add(f.toString()));
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        assertEquals(0, javac.run(null, null, null, args.toArray(String[]::new)), "stand-ins must compile");
+        return classes;
+    }
+
+    private static Path javaFile(Path root, String relPath, String source) throws Exception {
+        Path file = root.resolve(relPath);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, source);
+        return file;
+    }
+
+    /** Packs a class directory, plus any extra entries, into a jar under deps/. */
+    private Path jar(Path classes, String name, Map<String, byte[]> extra) throws Exception {
+        Path jar = dir.resolve("deps").resolve(name);
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar));
+             Stream<Path> walk = Files.walk(classes)) {
+            for (Path file : walk.filter(Files::isRegularFile).sorted().toList()) {
+                out.putNextEntry(new JarEntry(classes.relativize(file).toString().replace('\\', '/')));
+                out.write(Files.readAllBytes(file));
+                out.closeEntry();
+            }
+            for (Map.Entry<String, byte[]> entry : extra.entrySet()) {
+                out.putNextEntry(new JarEntry(entry.getKey()));
+                out.write(entry.getValue());
+                out.closeEntry();
+            }
+        }
+        return jar;
+    }
+
+    @Test
+    void kotlinValueClassFromSiblingModule_isResolvedWhenDoctorRunsFromTheReactorRoot() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("model/src/main/kotlin/com/acme/model/CustomerId.kt", """
+            package com.acme.model
+
+            @JvmInline
+            value class CustomerId(val raw: String)
+            """);
+        sourceFile("app/src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+        assertTrue(out().contains("value class com.acme.model.CustomerId"), out());
+        assertFalse(out().contains("fun settle"), out());
+    }
+
+    @Test
+    void kotlinValueClassFromDependencyJar_isReportedWhenTheJarIsOnTheClasspath() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path jar = jar(compiledDependency(), "model.jar", Map.of());
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("--classpath"),
+            "a run without a classpath must say how to see dependency value classes: " + out());
+
+        stdout.reset();
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+        assertTrue(out().contains("value class com.acme.model.CustomerId"), out());
+        assertTrue(out().contains("1 value class(es) found"), "kotlin.Result is not counted: " + out());
+        assertFalse(out().contains("fun forPlain"), out());
+        assertFalse(out().contains("fun settle"), out());
+    }
+
+    @Test
+    void classDirectoryOnTheClasspath_isReadLikeAJar_andASourceDeclarationWins() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path classes = compiledDependency();
+
+        assertEquals(1, doctor("--classpath", classes.toString()), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+
+        // The sources say CustomerId is an ordinary class now; a stale class directory must not
+        // turn that into a finding.
+        sourceFile("src/main/kotlin/com/acme/model/CustomerId.kt", """
+            package com.acme.model
+
+            class CustomerId(val raw: String)
+            """);
+        stdout.reset();
+        assertEquals(0, doctor("--classpath", classes.toString()), out());
+    }
+
+    @Test
+    void unreadableClasspathEntries_areFindingsNotASilentPass() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        byte[] broken = "\u00ca\u00fe\u00ba\u00be kotlin/jvm/JvmInline".getBytes(StandardCharsets.ISO_8859_1);
+        Path jar = jar(compiledDependency(), "broken.jar", Map.of("com/acme/model/Broken.class", broken));
+        Path missing = dir.resolve("deps/missing.jar");
+
+        assertEquals(1, doctor("--classpath", jar + File.pathSeparator + missing), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"),
+            "the readable classes in a jar still count: " + out());
+        assertTrue(out().contains("com/acme/model/Broken.class"), out());
+        assertTrue(out().contains("missing.jar") && out().contains("does not exist"), out());
+    }
+
+    @Test
+    void deeplyNestedAnnotationInAClassFile_isAFindingNotACrash() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path jar = jar(compiledDependency(), "nested.jar",
+            Map.of("com/acme/model/Deep.class", classFileWithNestedAnnotation(100_000)));
+
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("com/acme/model/Deep.class"), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+    }
+
+    /** A class file whose @JvmInline annotation holds an annotation nested {@code depth} levels deep. */
+    private static byte[] classFileWithNestedAnnotation(int depth) throws Exception {
+        java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream b = new java.io.DataOutputStream(body);
+        b.writeShort(1);            // one annotation
+        for (int i = 0; i < depth; i++) {
+            b.writeShort(2);        // type: Lkotlin/jvm/JvmInline;
+            b.writeShort(1);        // one element
+            b.writeShort(2);        // element name
+            b.writeByte('@');       // whose value is another annotation
+        }
+        b.writeShort(2);
+        b.writeShort(0);
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream c = new java.io.DataOutputStream(bytes);
+        c.writeInt(0xCAFEBABE);
+        c.writeShort(0);
+        c.writeShort(65);
+        c.writeShort(5);            // constant pool count
+        c.writeByte(1);
+        c.writeUTF("RuntimeVisibleAnnotations");
+        c.writeByte(1);
+        c.writeUTF("Lkotlin/jvm/JvmInline;");
+        c.writeByte(1);
+        c.writeUTF("com/acme/model/Deep");
+        c.writeByte(7);
+        c.writeShort(3);
+        c.writeShort(0x31);         // access flags
+        c.writeShort(4);            // this class
+        c.writeShort(0);            // super class
+        c.writeShort(0);            // interfaces
+        c.writeShort(0);            // fields
+        c.writeShort(0);            // methods
+        c.writeShort(1);            // attributes
+        c.writeShort(1);
+        c.writeInt(body.size());
+        body.writeTo(c);
+        c.flush();
+        return bytes.toByteArray();
     }
 
     @Test

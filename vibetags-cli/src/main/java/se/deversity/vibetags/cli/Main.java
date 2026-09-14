@@ -1,5 +1,6 @@
 package se.deversity.vibetags.cli;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
@@ -10,6 +11,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Entry point for the VibeTags companion CLI.
@@ -75,14 +78,18 @@ public final class Main {
             return switch (command) {
                 case "init" -> new InitCommand(out, err, dir).run(rest);
                 case "doctor" -> {
+                    Optional<List<Path>> classpath = doctorClasspath(rest, err);
+                    if (classpath.isEmpty()) {
+                        yield 2;
+                    }
                     if (!rest.isEmpty()) {
                         /* A stray argument used to be ignored, so "doctor /other/project" quietly
                            reported on the current directory instead. */
-                        err.println("error: doctor takes no arguments (use --dir <path>): "
-                            + String.join(" ", rest));
+                        err.println("error: doctor takes no arguments (use --dir <path>, "
+                            + "--classpath <entries>): " + String.join(" ", rest));
                         yield 2;
                     }
-                    yield new DoctorCommand(out, dir).run();
+                    yield new DoctorCommand(out, dir, classpath.get()).run();
                 }
                 case "--version", "version" -> {
                     out.println("vibetags-cli " + version());
@@ -101,6 +108,39 @@ public final class Main {
         }
     }
 
+    /**
+     * Removes {@code --classpath <entries>} from {@code rest} and returns its entries (none when the
+     * option is absent), or empty after printing why the value is unusable. Entries are separated by
+     * the platform path separator, like {@code java -cp}, so a Maven or Gradle compile classpath can
+     * be passed as printed (#691).
+     */
+    private static Optional<List<Path>> doctorClasspath(List<String> rest, PrintStream err) {
+        List<Path> entries = new ArrayList<>();
+        int at = rest.indexOf("--classpath");
+        if (at < 0) {
+            return Optional.of(entries);
+        }
+        if (at + 1 >= rest.size()) {
+            err.println("error: --classpath needs jars or class directories, separated by '"
+                + File.pathSeparator + "'");
+            return Optional.empty();
+        }
+        for (String entry : Pattern.compile(Pattern.quote(File.pathSeparator)).splitAsStream(rest.get(at + 1)).toList()) {
+            if (entry.isBlank()) {
+                continue;
+            }
+            try {
+                entries.add(Path.of(entry.strip()).toAbsolutePath());
+            } catch (InvalidPathException e) {
+                err.println("error: --classpath entry is not a valid path: " + e.getMessage());
+                return Optional.empty();
+            }
+        }
+        rest.remove(at + 1);
+        rest.remove(at);
+        return Optional.of(entries);
+    }
+
     /** The jar's Implementation-Version, or a placeholder when run from unpackaged classes. */
     static String version() {
         String v = Main.class.getPackage().getImplementationVersion();
@@ -115,6 +155,8 @@ public final class Main {
               vibetags init --list                     list every opt-in platform key
               vibetags init --platforms claude,cursor  activate platforms (creates their opt-in files)
               vibetags doctor                          report the project's VibeTags health
+              vibetags doctor --classpath <entries>    also read Kotlin value classes from these jars
+                                                       and class directories (a compile classpath)
               vibetags --version                       print the CLI version
 
             Options:
