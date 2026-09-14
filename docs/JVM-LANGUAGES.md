@@ -64,17 +64,21 @@ were written.
 - **The package level.** Kotlin has no `package-info.kt`, so there is no compilation unit for a
   package annotation to live on. Thirteen annotations accept `ElementType.PACKAGE` and none of them
   can be used from Kotlin. There is no workaround; put the guardrail on the types instead.
-- **Functions with a value class in their JVM signature.** A function that takes or returns a
-  `@JvmInline value class` gets a mangled JVM name (`balanceFor-oKSF6Yo`), and kapt leaves every
-  such function out of the Java stub. An `@AI*` annotation on the function, or on any of its
-  parameters, reaches no processor: nothing is generated and nothing is logged. That covers your own
+- **Functions with a value class in their JVM signature.** A function that takes a
+  `@JvmInline value class`, or a member function that returns one, gets a mangled JVM name
+  (`balanceFor-oKSF6Yo`), and kapt leaves every such function out of the Java stub. An `@AI*`
+  annotation on the function, or on any of its parameters, reaches no processor: nothing is generated and nothing is logged. That covers your own
   value classes and the standard library's (`UInt`, `ULong`, `kotlin.time.Duration`). Measured on
   Kotlin 2.4.10: `AccountLedger.balanceFor(AccountId)` in `examples/kotlin`, and a function returning
   `Duration`, were absent from the stub and from every generated file. The #496 spike lost the same
   shape on `UserId`, `UserId?` and `ULong` parameters, a `UserId` return type and a parameter-level
-  `@AIInputSanitized`. Two look-alikes are not affected: a `kotlin.Result` parameter is not mangled
-  and renders as `settle(java.lang.Object)`, and a value class used only as a type argument
-  (`List<AccountId>`) leaves the name alone. **What to do instead:** give the function an explicit
+  `@AIInputSanitized`. Three look-alikes are not affected: a `kotlin.Result` parameter is not
+  mangled and renders as `settle(java.lang.Object)`, a value class used only as a type argument
+  (`List<AccountId>`) leaves the name alone, and so does a top-level function's return type
+  (`fun makeId(): AccountId`, #692). Constructors, property accessors and members declared inside a value class are lost the same way;
+  the measured table is under
+  [what `vibetags doctor` finds](#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds).
+  **What to do instead:** give the function an explicit
   `@JvmName`. kapt then emits it, and the guardrail renders under that name with the value class
   erased to its underlying type, `closeAccount(java.lang.String)` (measured). Or put the guardrail on
   the enclosing type. The `examples/kotlin` CI step fails if `balanceFor` ever appears in a generated
@@ -138,18 +142,60 @@ the next section (#688).
 
 ### Functions with a value class in their signature, and what `vibetags doctor` finds
 
-A function that takes or returns a `@JvmInline value class` gets a mangled JVM name
-(`balanceFor-oKSF6Yo`), and kapt leaves every such function out of its Java stubs. An `@AI*`
-annotation on the function, or on one of its parameters, reaches no processor: nothing is generated
-and nothing is logged. Measured on Kotlin 2.4.10 with `AccountLedger.balanceFor(AccountId)` and a
-function returning `kotlin.time.Duration` (#681). The processor cannot warn (previous section).
-**What to do instead:** give the function an explicit `@JvmName`, which switches mangling off and
-makes kapt emit it, or put the guardrail on the enclosing type.
+A function that takes a `@JvmInline value class` gets a mangled JVM name (`balanceFor-oKSF6Yo`), and
+kapt leaves every such declaration out of its Java stubs. An `@AI*` annotation on it, or on one of
+its parameters, reaches no processor: nothing is generated and nothing is logged. The processor
+cannot warn (previous section). **What to do instead:** give the function an explicit `@JvmName`,
+which switches mangling off and makes kapt emit it, or put the guardrail on the enclosing type.
 
-`vibetags doctor` reads the `.kt` sources and reports each such function as a finding: file and
-line, the guardrails it loses, the value class responsible, and the `@JvmName` workaround (#688).
-It is a heuristic over source text, not a compiler, and it is built to miss rather than to report
-something that is not lost:
+The same mechanism reaches further than functions. #692 built one fixture through kapt with an
+`@AILocked` (or, on parameters, `@AIInputSanitized`) on every shape below, 103 guardrails in all,
+then built it again with `-Xjvm-expose-boxed`, and read each guardrail back from the generated `CLAUDE.md`:
+54 lost by default, 16 with the option. Kotlin 2.4.10, kapt, JDK 21. "Lost" means absent from
+`CLAUDE.md`; no lost `@AILocked` reason appears anywhere in `build/tmp/kapt3/stubs` either.
+
+| Guardrail on | Default | `-Xjvm-expose-boxed` | Doctor |
+|---|---|---|---|
+| Top-level function taking a value class, receiver included (`fun AccountId.describe()`, `AccountId?.x()`) | lost | kept | reports |
+| Top-level function returning one (`makeId(): AccountId`, `Duration`, `UInt`, `AccountId?`; private, internal, suspend) | kept | kept | silent |
+| Top-level `suspend` function taking one | lost | lost | reports |
+| Receiver or parameter `List<AccountId>`, `kotlin.Result` parameter, `vararg raws: String` | kept | kept | silent |
+| `vararg ids: AccountId` | does not compile: "Prohibited vararg parameter type" | | |
+| Member taking or returning one: class, object, `@JvmStatic`, companion, enum, data class, nested, private, internal, override, member extension | lost | kept | reports |
+| Member `suspend` function taking or returning one | lost | lost | reports |
+| Interface member (abstract or default), `open` or `abstract` member | lost | lost | reports |
+| Property, bare or `@field:` (top-level, member, private, nullable `var`, constructor `val`) | kept | kept | silent |
+| Top-level `@get:`, with or without a backing field | kept | kept | silent |
+| Top-level `@set:` or `@setparam:` | lost | kept | reports |
+| Member `@get:`, `@set:` or `@setparam:` (class, object, companion, constructor `val`) | lost | kept | reports |
+| Interface, `open` or `abstract` member `@get:` | lost | lost | reports |
+| `@get:JvmName` or `@set:JvmName` on the property | kept | kept | silent |
+| Constructor taking one, primary or secondary, or a plain parameter of it | lost | kept | reports |
+| Secondary constructor without one, in the same class | kept | kept | silent |
+| The value class itself, and `@get:` on its underlying property | kept | kept | silent |
+| Function or `@get:` property declared inside a value class, whatever its signature (`describe-impl`) | lost | kept | reports |
+| Secondary constructor declared inside a value class (`constructor-impl`) | lost | lost | reports |
+| Companion of a value class: a plain function / a function returning one | kept / lost | kept / kept | follows the member rows |
+| `@JvmExposeBoxed` on the function or constructor (top-level, member, value-class member) | kept | kept | silent |
+| Function elsewhere taking a value class that carries `@JvmExposeBoxed` | lost | kept | reports |
+| Direct member of a class or value class carrying `@JvmExposeBoxed` (function, getter, constructor) | kept | kept | silent |
+| ...its `suspend` member, or a member of a class nested inside it | lost | lost / kept | reports |
+| `@JvmExposeBoxed` on an interface member | does not compile: "cannot expose functions which are open or abstract, or member of an interface" | | |
+| Function taking a value class declared in another Gradle module | lost | kept | reports when the module is under `--dir` |
+
+Two results overturn what #688 assumed. A return type mangles only a member: a top-level
+`fun makeId(): AccountId` keeps its guardrail, and doctor reported it until #692. And
+`-Xjvm-expose-boxed` does not make every finding wrong, which is why doctor used to skip the whole
+check under it: it keeps final, non-suspend declarations and nothing else.
+
+`vibetags doctor` reads the `.kt` sources and reports each lost declaration as a finding: file and
+line, the guardrails it loses, the value class responsible, and a remedy that the table shows to
+work (`@JvmName`, `@get:JvmName`, `@field:`, `@JvmExposeBoxed` on a constructor, or the guardrail
+on the enclosing type or the value class). It follows the Doctor column: a shape measured as kept produces
+nothing, and so does a shape that was not built, with one inference: an `open` or `abstract` member
+of a class carrying `@JvmExposeBoxed` is reported, because the compiler's own error says it cannot
+expose those. It is a heuristic over source text, not a compiler, and it is
+built to miss rather than to report something that is not lost:
 
 - **Value classes it knows.** Every `value class` (or `inline class`) declared under the scanned
   directory, plus five from the standard library: `UByte`, `UShort`, `UInt` and `ULong` ("Unsigned
@@ -158,31 +204,23 @@ something that is not lost:
   `kotlin.time.Duration` (declared `@JvmInline value class`,
   [API reference](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-duration/)). A type
   name is resolved through the file's package and imports, so `java.time.Duration`, or an ordinary
-  class sharing a value class's simple name, is not a hit.
-- **What it reports.** A function with an `@AI*` annotation, or with an `@AI*`-annotated parameter,
-  whose parameter or return type is one of those value classes, nullable forms included.
-- **What it skips, because it was measured to survive** on Kotlin 2.4.10: a `kotlin.Result`
-  parameter (`settle(java.lang.Object)`), a value class used only as a type argument
-  (`List<AccountId>`), and any function with an explicit `@JvmName`.
-- **Where it stays silent because nothing was measured.** `@JvmExposeBoxed` and the
-  `-Xjvm-expose-boxed` compiler option add a boxed, unmangled variant of value-class functions
-  ([Kotlin docs](https://kotlinlang.org/docs/java-to-kotlin-interop.html)), and whether kapt's stub
-  then carries the function is unknown. A `.kt` file mentioning `@JvmExposeBoxed` contributes no
-  value classes and no findings, and a `pom.xml` or `build.gradle[.kts]` under the directory that
-  passes `-Xjvm-expose-boxed` skips the check, with a line saying so. The option set anywhere
-  else, a precompiled `*.gradle.kts` convention plugin for example, is not seen, and there the
-  findings may be wrong.
+  class sharing a value class's simple name, is not a hit. Running doctor from a reactor root scans
+  every module under it, so a value class declared in a sibling module is known.
+- **`-Xjvm-expose-boxed`.** A `pom.xml` or `build.gradle[.kts]` that passes it applies to the `.kt`
+  files under that build file's directory, and there doctor reports only the rows that stay lost
+  with the option, with a line saying which build file it read. The option set anywhere else, a
+  precompiled `*.gradle.kts` convention plugin for example, is not seen, and there the findings for
+  the rows the option would have kept are wrong.
 
 Known misses, every one a false negative, so a clean doctor run is not proof that nothing is lost:
 
-- Value classes declared outside the scanned directory, in another module or a dependency. Running
-  doctor from a reactor root scans every module under it.
+- Value classes declared outside the scanned directory, in another module or a dependency.
 - A value class reached through a `typealias`, a nested one written as `Outer.Id`, a name declared
   both as a value class and as an ordinary type in the same package, and standard-library value
   classes not on the list above (the unsigned array types, for example).
-- Shapes never measured against kapt: an extension receiver (`fun AccountId.describe()`), `vararg`
-  parameters, a `suspend` function's return type, properties and constructors, and members declared
-  inside a value class.
+- Shapes not built in #692: extension properties, members of anonymous objects and local classes,
+  an `override` or `suspend` member inside a value class, setters and secondary constructors of a
+  class carrying `@JvmExposeBoxed`, and a `@param:` guardrail on a constructor property.
 - A guardrail written through an import alias (`import ...AILocked as Locked`), and source the text
   heuristics misread, such as string templates that nest quotes.
 
@@ -388,8 +426,9 @@ Stated so that nobody mistakes silence for evidence:
 
 - **Kotlin is verified on one Kotlin version.** The corpus member is on Kotlin 2.3.10 and
   `examples/kotlin` on 2.4.10. Nothing here sweeps a range of Kotlin releases. The value-class
-  omission and the `internal` module suffix were measured on 2.4.10 only; the corpus member was not
-  checked for either.
+  omission, the shape table behind `vibetags doctor` (#692) and the `internal` module suffix were
+  measured on 2.4.10 only; the corpus member was not checked for any of them. A Kotlin release that
+  changes mangling or kapt's stubs can turn a doctor rule into a false finding.
 - **One kapt diagnostic is unattributed.** kapt reports `vibetags.root` as an unrecognised
   processor option even though `AIGuardrailProcessor` declares it in `@SupportedOptions` and
   demonstrably receives it. It appears on 2.3.10 and not on 2.4.10. Tracked as an open question,

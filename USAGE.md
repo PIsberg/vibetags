@@ -114,10 +114,14 @@ rather than the Kotlin sources:
   point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
   the locks report.
 - **A function with a value class in its JVM signature loses its guardrails.** kapt leaves out of
-  the stub every function that takes or returns a `@JvmInline value class` (your own, `UInt`,
-  `ULong`, `kotlin.time.Duration`), so an `@AI*` annotation on it or its parameters generates
-  nothing and logs nothing. `kotlin.Result` parameters and `List<SomeValueClass>` are not affected.
-  Add an explicit `@JvmName` and kapt emits the function. Measured on Kotlin 2.4.10 (#681).
+  the stub every function that takes a `@JvmInline value class` (your own, `UInt`, `ULong`,
+  `kotlin.time.Duration`) and every member function that returns one, so an `@AI*` annotation on
+  it or its parameters generates nothing and logs nothing. Constructors taking one, member property
+  accessors (`@get:`, `@set:`) and everything declared inside a value class go the same way.
+  `kotlin.Result` parameters, `List<SomeValueClass>`, a top-level function's return type and a bare
+  or `@field:` guardrail on a property are not affected. Add an explicit `@JvmName` and kapt emits
+  the function. Measured on Kotlin 2.4.10 (#681, #692; the full table is in
+  [docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds)).
 - **An `internal` function's path contains the Kotlin module name**, which Gradle derives from the
   project's `group` and name: `reconcile$com_acme_ledger(java.lang.String)`. Renaming the project
   renames the path in every generated file and in `.vibetags-locks`. An explicit `@JvmName`, or a
@@ -442,8 +446,9 @@ that resolves the Maven coordinate.
   `VIBETAGS-START` / `VIBETAGS-END` pair, and — when the project has `.groovy` sources — which
   field-level guardrails groovyc will silently drop, by file, line and annotation (the build
   itself cannot warn; see the Groovy section above), and, when the project has `.kt` sources,
-  which Kotlin functions kapt will leave out of its stubs because a value class mangles their JVM
-  name, with the guardrails each one loses and the `@JvmName` that keeps it. The Kotlin check is
+  which Kotlin declarations kapt will leave out of its stubs because a value class mangles their
+  JVM name (functions, constructors, property accessors, members of a value class), with the
+  guardrails each one loses and the remedy that keeps it. The Kotlin check is
   a heuristic source scan: it cannot see value classes declared in another module or a
   dependency, so a clean run there is not proof that nothing is lost
   ([docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds)

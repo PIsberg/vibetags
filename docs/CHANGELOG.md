@@ -92,7 +92,9 @@ vendor before anything changed, and the table under Deprecated lists every depre
   other modules or dependencies, type aliases, and shapes never measured against kapt, such as
   extension receivers; `docs/JVM-LANGUAGES.md` lists them. Where it cannot tell, it stays silent: a
   file mentioning `@JvmExposeBoxed` is skipped, and a build file passing `-Xjvm-expose-boxed` skips
-  the check with a line saying why, because neither boxed variant was measured against kapt.
+  the check with a line saying why, because neither boxed variant was measured against kapt. Both
+  silences, and the unmeasured shapes, were replaced by measured rules before release (#692, under
+  Changed).
 
   Eleven new `DoctorCommandTest` cases. Seven failed before the code they pin existed: the three
   reporting cases, the unreadable file, the summary line the `Result` case asserts, and the two
@@ -265,6 +267,31 @@ vendor before anything changed, and the table under Deprecated lists every depre
   tested.
 
 ### Changed
+
+- **`vibetags doctor`'s Kotlin check now follows a measured table, and stopped reporting top-level
+  functions that return a value class** (#692). The #688 check reported only function shapes and
+  stayed silent on everything never built through kapt. One kapt build on Kotlin 2.4.10 put a
+  guardrail on each remaining shape, 103 in all, and read each back from the generated `CLAUDE.md`,
+  then repeated it with `-Xjvm-expose-boxed`: 54 were lost by default, 16 with the option.
+
+  Doctor now also reports extension receivers of a value-class type, suspend members returning one,
+  constructors (primary and secondary) taking one, member `@get:`/`@set:`/`@setparam:` guardrails
+  and a top-level `@set:`/`@setparam:` on a value-class property, and every function, getter and
+  secondary constructor declared inside a value class. Two #688 behaviours were wrong. A top-level
+  function's return type does not mangle, so `fun makeId(): AccountId` keeps its guardrail and was
+  a false finding. And `@JvmExposeBoxed` and `-Xjvm-expose-boxed` no longer switch the check off:
+  they keep final, non-suspend declarations, so doctor now reports what they leave out (suspend,
+  open, abstract and interface members, a value class's secondary constructors, a function taking a
+  `@JvmExposeBoxed` value class, a member of a class nested in an exposed one), and applies the
+  option only under the build file that passes it. `vararg` of a value class does not compile, so
+  it needs no rule. The table and the remaining misses are in `docs/JVM-LANGUAGES.md`.
+
+  Doctor run against the fixture reports 55 findings (the 54 losses plus `examples/kotlin`'s
+  `balanceFor`), and 16 against the `-Xjvm-expose-boxed` build, each matching a measured loss, with
+  no measured loss missed. Nine new `DoctorCommandTest` cases, all nine red against the #688 scanner
+  before the change. The two #688 `@JvmExposeBoxed` cases keep their inputs and now assert what
+  #692 measured on them: a function taking an exposed value class is reported, and a top-level
+  function under `-Xjvm-expose-boxed` is not.
 
 - Four generated outputs are now documented as naming a tool that has moved on, in
   [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`

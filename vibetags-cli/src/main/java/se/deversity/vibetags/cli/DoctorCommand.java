@@ -200,9 +200,10 @@ final class DoctorCommand {
     }
 
     /**
-     * Kotlin functions whose JVM name a value class mangles are left out of kapt's Java stubs, so
+     * Kotlin declarations whose JVM name a value class mangles are left out of kapt's Java stubs, so
      * their guardrails, and their parameters' guardrails, generate nothing while the build stays
-     * green (<a href="https://github.com/PIsberg/vibetags/issues/681">#681</a>). The processor cannot
+     * green (<a href="https://github.com/PIsberg/vibetags/issues/681">#681</a>; the shapes measured
+     * in <a href="https://github.com/PIsberg/vibetags/issues/692">#692</a>). The processor cannot
      * warn, for the same reason as the Groovy fields above. {@link KotlinValueClassScan} reads the
      * {@code .kt} sources instead, as a heuristic that prefers a miss to a false finding, and doctor
      * says so on every run so that "none found" is not read as "none lost"
@@ -213,37 +214,41 @@ final class DoctorCommand {
         if (files.isEmpty()) {
             return;
         }
-        // -Xjvm-expose-boxed gives every value-class function a boxed, unmangled variant. What kapt's
-        // stubs make of that was never measured, so every finding could be wrong: skip, and say so.
+        // -Xjvm-expose-boxed gives value-class functions a boxed, unmangled variant, which kapt's stub
+        // carries, so under a build file passing it only what the option does not expose is reported
+        // (#692). The option set somewhere doctor does not read, a convention plugin, is not seen.
         List<Path> buildFiles = new ArrayList<>(sources("pom.xml"));
         buildFiles.addAll(sources("build.gradle"));
         buildFiles.addAll(sources("build.gradle.kts"));
-        Optional<Path> exposeBoxed = buildFiles.stream()
-            .filter(p -> tryRead(p).map(text -> text.contains("-Xjvm-expose-boxed")).orElse(false))
-            .findFirst();
-        if (exposeBoxed.isPresent()) {
-            out.println("kotlin sources:  " + files.size() + " file(s); value-class check skipped: "
-                + dir.relativize(exposeBoxed.get()) + " passes -Xjvm-expose-boxed, whose effect on "
-                + "kapt's stubs was not measured");
-            return;
+        List<Path> exposeBoxedRoots = new ArrayList<>();
+        for (Path buildFile : buildFiles) {
+            if (tryRead(buildFile).map(text -> text.contains("-Xjvm-expose-boxed")).orElse(false)) {
+                exposeBoxedRoots.add(Objects.requireNonNull(buildFile.toAbsolutePath().getParent(),
+                    "a build file found under --dir has a parent directory"));
+                out.println("kotlin option:   " + dir.relativize(buildFile) + " passes -Xjvm-expose-boxed; "
+                    + "under it only suspend, open, abstract and interface members and value-class "
+                    + "secondary constructors are reported");
+            }
         }
         List<KotlinValueClassScan.Source> readable = new ArrayList<>();
         for (Path file : files) {
             Optional<String> read = tryRead(file);
             if (read.isEmpty()) {
                 problems.add("could not read " + dir.relativize(file)
-                    + " (permissions? not UTF-8?): cannot check it for guardrails on value-class functions");
+                    + " (permissions? not UTF-8?): cannot check it for guardrails on value-class declarations");
                 continue;
             }
-            readable.add(new KotlinValueClassScan.Source(dir.relativize(file).toString(), read.get()));
+            Path absolute = file.toAbsolutePath();
+            boolean exposeBoxed = exposeBoxedRoots.stream().anyMatch(absolute::startsWith);
+            readable.add(new KotlinValueClassScan.Source(dir.relativize(file).toString(), read.get(), exposeBoxed));
         }
         KotlinValueClassScan.Report report = KotlinValueClassScan.scan(readable);
         List<String> lost = report.findings();
         out.println("kotlin sources:  " + files.size() + " file(s), " + report.declaredValueClasses()
             + " value class(es) declared; "
             + (lost.isEmpty()
-                ? "no guardrails found on value-class functions"
-                : lost.size() + " function(s) whose guardrails kapt will drop"));
+                ? "no guardrails found on value-class declarations"
+                : lost.size() + " declaration(s) whose guardrails kapt will drop"));
         out.println("note: the Kotlin value-class check is a heuristic source scan. It sees value "
             + "classes declared under this directory plus UByte, UShort, UInt, ULong and "
             + "kotlin.time.Duration; one from another module or a dependency, or reached through a "
