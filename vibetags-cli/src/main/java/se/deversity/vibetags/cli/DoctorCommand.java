@@ -232,8 +232,9 @@ final class DoctorCommand {
                 exposeBoxedRoots.add(Objects.requireNonNull(buildFile.toAbsolutePath().getParent(),
                     "a build file found under --dir has a parent directory"));
                 out.println("kotlin option:   " + dir.relativize(buildFile) + " passes -Xjvm-expose-boxed; "
-                    + "under it only suspend, open, abstract and interface members and value-class "
-                    + "secondary constructors are reported");
+                    + "under it only suspend, open, abstract and interface members, value-class "
+                    + "secondary constructors, and declarations in anonymous objects, enum entry bodies and "
+                    + "local classes are reported");
             }
         }
         List<KotlinValueClassScan.Source> readable = new ArrayList<>();
@@ -262,7 +263,7 @@ final class DoctorCommand {
         out.println("kotlin sources:  " + files.size() + " file(s), " + report.declaredValueClasses()
             + " value class(es) declared; "
             + (lost.isEmpty()
-                ? "no guardrails found on value-class declarations"
+                ? "no guardrails found on declarations kapt drops"
                 : lost.size() + " declaration(s) whose guardrails kapt will drop"));
         out.println("note: the Kotlin value-class check is a heuristic source scan. It sees value "
             + "classes declared under this directory"
