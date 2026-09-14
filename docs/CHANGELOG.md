@@ -25,7 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same shape: its no-op recompile never reached the per-file cache, so it stayed green with
   `WriteCache.isUnchanged` forced to `false`. It now defeats the short-circuit with
   `-Avibetags.project` and asserts `write.skip reason=cache-unchanged` in the debug log, which that
-  break turns red. Test-only change; nothing ships.
+  break turns red. Three `ProjectLifecycleEndToEndTest` cases asserted the short-circuit through
+  sidecar mtimes alone, which hold whether or not it fires, and stayed green with it disabled; they
+  now assert the NOTE and go red under the same break. That exposed the reactor steady-state case
+  as wrong: `module-core` does not skip on its first rebuild after a cold reactor pass, because
+  `module-cli` wrote its sidecar after `module-core` recorded the stamp, so the case now takes the
+  catch-up pass `MultiModuleShortCircuitTest` already takes. The two merge cases in
+  `MultiModuleProcessorTest` accepted either module's content, which the first compile had
+  already written, so they held with every round short-circuited; they now require both and
+  assert the sibling sidecar defeated the skip. Test-only change; nothing ships.
 
 ## [1.3.5] - 2026-09-13
 
