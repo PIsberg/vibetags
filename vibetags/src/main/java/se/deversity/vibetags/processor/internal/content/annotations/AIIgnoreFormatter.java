@@ -12,7 +12,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  * Formats @AIIgnore annotations for all platforms.
  *
  * <p>The reason is rendered wherever the platform's output is prose, and omitted where it is a
- * path list a tool parses — the fifteen {@code *_IGNORE} globs, {@code .aiexclude} and Mentat's
+ * path list a tool parses — the {@code *_IGNORE} globs, {@code .aiexclude} and Mentat's
  * JSON have nowhere to put a sentence.
  *
  * <p>{@link AIIgnore#reason()} has a default, and the default is not printed: it says "Excluded
@@ -107,6 +107,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case ROO_IGNORE:
             case CONTINUE_IGNORE:
             case AUGMENT_IGNORE:
+            case DEVIN_IGNORE:
             case ANTIGRAVITY_IGNORE:
             case AIDER_IGNORE:
             case REPOMIX_IGNORE:

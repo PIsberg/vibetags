@@ -60,8 +60,11 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.roo/rules/*.md` | Zoo Code (fork of the retired Roo Code; reads the same paths), granular | Markdown |
 | `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
 | `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
-| `.windsurfrules` | Windsurf IDE | Markdown |
-| `.windsurf/rules/*.md` | Windsurf IDE (granular) | YAML front-matter + Markdown |
+| `.windsurfrules` | Devin Desktop, formerly Windsurf (legacy single file, still read; see [below](#windsurf-is-now-devin-desktop)) | Markdown |
+| `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (granular, the fallback directory) | YAML front-matter + Markdown |
+| `.devin/rules/*.md` | Devin Desktop (granular, the preferred directory) | YAML front-matter (`trigger: glob`) + Markdown |
+| `.windsurf/rules/+vibetags-safety.md` | Devin Desktop, formerly Windsurf (the always-on safety tier, written whenever `.windsurf/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
+| `.devin/rules/+vibetags-safety.md` | Devin Desktop (the always-on safety tier, written whenever `.devin/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
 | `.rules` | Zed Editor | Markdown |
 | `.cody/config.json` | Sourcegraph Cody (**deprecated**, see below) | JSON (custom commands) |
 | `.codyignore` | Sourcegraph Cody (**deprecated**, see below) | Glob patterns |
@@ -77,7 +80,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.plandex.yaml` | Plandex (**deprecated**, see below) | YAML guardrails |
 | `.doubleignore` | Double.bot (**deprecated**, see below) | Glob patterns |
 | `.interpreter/profiles/vibetags.yaml` | Open Interpreter (**deprecated**, see below) | YAML profile |
-| `.codeiumignore` | Codeium | Glob patterns |
+| `.codeiumignore` | Codeium; Devin Desktop still reads it under this legacy name | Glob patterns |
+| `.devinignore` | Devin Desktop | Glob patterns |
 | `GEMINI.md` | Google Gemini (official markdown) | Markdown |
 | `.gemini/rules/*.md` | Google Gemini (granular, per element; Gemini CLI does not load these on its own, so `GEMINI.md`'s index tells the agent to open them, #669) | Markdown |
 | `.grok/rules/*.md` | Grok Build (granular, per element) | Markdown |
@@ -90,7 +94,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-two-shapes-at-one-path)) | Markdown, no front matter |
-| `.junie/guidelines.md` | JetBrains Junie | Markdown |
+| `.junie/AGENTS.md` | JetBrains Junie (read first; not the root `AGENTS.md`, see [below](#junie-reads-junieagentsmd-first)) | Markdown |
+| `.junie/guidelines.md` | JetBrains Junie (legacy, still supported, not deprecated) | Markdown |
 | `.idx/airules.md` | Firebase AI (**deprecated**, see below) | Markdown |
 | `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
@@ -115,11 +120,11 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 
 #### Granular rules
 
-Cursor, Windsurf, Continue, Tabnine, Amazon Q, Trae, Zoo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Devin Desktop (formerly Windsurf, in `.devin/rules/` and `.windsurf/rules/`), Continue, Tabnine, Amazon Q, Trae, Zoo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
-Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
+Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. Devin Desktop's (`.devin/rules/*.md` and `.windsurf/rules/*.md`) open with `trigger: glob` and a `globs:` pattern instead; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
-**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. Gemini is the exception to what the index note says: the other four notes say the scoped files load when the matching source file is opened, and Gemini CLI never loads `.gemini/rules/` at all. Its [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) load `GEMINI.md` files only, from the global and workspace hierarchy and, just in time, from a directory a tool accesses, and `google-gemini/gemini-cli` has no reference to `.gemini/rules` (checked 2026-09-13). So `GEMINI.md`'s note tells the agent to open the element's file with the [`read_file`](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/file-system.md) tool before modifying it (#669). Pointing `GEMINI.md` at the files with `@file` imports would not load them on demand: the [import processor](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/memport.md) expands every import when `GEMINI.md` loads, which would put all the detail back into always-loaded context. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together. The directory gets the safety buckets another way, in one always-loaded file inside it; see [Cline's two shapes at one path](#clines-two-shapes-at-one-path).)
+**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. Gemini is the exception to what the index note says: the other four notes say the scoped files load when the matching source file is opened, and Gemini CLI never loads `.gemini/rules/` at all. Its [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) load `GEMINI.md` files only, from the global and workspace hierarchy and, just in time, from a directory a tool accesses, and `google-gemini/gemini-cli` has no reference to `.gemini/rules` (checked 2026-09-13). So `GEMINI.md`'s note tells the agent to open the element's file with the [`read_file`](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/file-system.md) tool before modifying it (#669). Pointing `GEMINI.md` at the files with `@file` imports would not load them on demand: the [import processor](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/memport.md) expands every import when `GEMINI.md` loads, which would put all the detail back into always-loaded context. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together. Devin Desktop is the other way round: `.devin/rules/` belongs to the tool that reads `.windsurfrules`, but only `.windsurf/rules/` collapses that file; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). The directory gets the safety buckets another way, in one always-loaded file inside it; see [Cline's two shapes at one path](#clines-two-shapes-at-one-path).)
 
 **Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
 
@@ -132,6 +137,31 @@ external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
 ```
 
 Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module.
+
+**A glob that holds a comma.** A `.vibetags-roles` glob may use brace alternation, `**/*.{java,kt}`, and a `.vibetags-mirror` glob
+line is taken whole, so either can put a comma inside one glob. Where a vendor documents several
+globs as one comma-separated value, a reader that splits on commas cuts that glob in two and the
+rule scopes to patterns that match the wrong files or none. For those platforms VibeTags expands
+each brace group into one glob per alternative, nested groups included, writes any other comma as
+`?`, and drops duplicates (#685, #696). A glob with no brace and no comma, which is every
+per-element glob, is written unchanged, so only role and mirror headers can differ. Where the vendor
+documents a list whose entries are matched whole, the glob is kept as written. Checked 2026-09-14:
+
+| Platform | Header | Documented list syntax | Expanded |
+|----------|--------|------------------------|----------|
+| GitHub Copilot | `applyTo: "..."` | "You can specify multiple patterns by separating them with commas", `applyTo: "**/*.ts,**/*.tsx"` ([docs.github.com](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions)). VS Code's reader skips commas inside braces; the GitHub.com reader is not public | yes |
+| Cursor | `globs: [...]` | `docs/**/*.md, docs/**/*.mdx` matches ".md and .mdx files under docs/ (comma-separated)" ([cursor.com/docs/rules](https://cursor.com/docs/rules)) | yes |
+| Trae | `globs: [...]` | several patterns "中间用 `,` 分隔" (separated by `,`), synced to the `globs` field ([docs.trae.cn](https://docs.trae.cn/ide/rules)) | yes |
+| Devin Desktop, Windsurf | `globs: a,b` | no multi-glob example in the docs; the vendor sample writes `globs: *.js, src/*.js` | yes (#685) |
+| Claude Code | `paths: [...]` | a YAML list, with "brace expansion to match multiple extensions in one pattern" ([code.claude.com](https://code.claude.com/docs/en/memory)) | no |
+| Cline | `paths: [...]` | "`paths` is the supported conditional. It takes an array of glob patterns", with `packages/{web,api}/**` in the docs ([docs.cline.bot](https://docs.cline.bot/features/cline-rules/conditional-rules)) | no |
+| Continue | `globs: [...]` | "either a single pattern (e.g., `"**/*.{ts,tsx}"`) or an array of patterns" ([docs.continue.dev](https://docs.continue.dev/customize/deep-dives/rules)) | no |
+| PearAI | `globs: [...]` | none found; the header is Continue's, which PearAI forked | no |
+
+Kiro, Augment, Zencoder, JetBrains AI Assistant, Grok, Gemini, Antigravity, Amazon Q, Tabnine, Roo
+Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. Whether Cursor and
+Trae read the bracketed, quoted list VibeTags writes at all, when their docs show a bare
+comma-separated value, is a separate question the expansion does not settle (#699).
 
 **Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
 
@@ -393,6 +423,151 @@ in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for ste
 the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
 it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
 file inside the directory is a file of its own and is counted as one config file.
+
+### Junie reads `.junie/AGENTS.md` first
+
+JetBrains Junie's [guidelines page](https://junie.jetbrains.com/docs/guidelines-and-memory.html)
+(checked 2026-09-14) says that when Junie CLI starts a task, "it looks for guidelines in the
+following order": first "`.junie/AGENTS.md` file in the project root", then the root "`AGENTS.md`
+file in the project root, combined with `.junie/playbook.md` and every `.junie/rules/*.md` file, if
+present", then `.junie/guidelines.md` or the `.junie/guidelines/` folder, "Junie's legacy format for
+guidelines (still supported)". VibeTags writes both Junie files with the same rendering (#673).
+`.junie/guidelines.md` is not deprecated, because the vendor still documents it as supported.
+
+- **Both files present.** The page gives an order and does not say whether Junie reads a later
+  entry once it has found an earlier one. File presence is the opt-in, so a project with both
+  files gets both, with identical content. If Junie stops at the first file it finds,
+  `.junie/guidelines.md` is never read; if it reads both, the same guardrails arrive twice. Either
+  way the second file adds nothing, so a new project should create `.junie/AGENTS.md` only.
+- **It is not the root `AGENTS.md`.** The root file is the Codex service, written only when it is
+  the sole AI config file or already carries a marker pair (invariant 4). `.junie/AGENTS.md` has its
+  own service key, `junie_agents`, and to that rule it is one more opt-in, exactly as
+  `.junie/guidelines.md` always was. One consequence changes behaviour: before #673 no service
+  claimed `.junie/AGENTS.md`, so a root `AGENTS.md` whose only companion was `.junie/AGENTS.md`
+  counted as the sole AI config file and had the Codex rendering written into it. It is now left
+  untouched unless it carries a marker pair. `JunieAgentsMdEndToEndTest` pins both sides.
+- **Junie may have created the file already.** The same page says that when Junie CLI finds other
+  agents' guidelines files on first opening a project, "it will suggest importing the instructions
+  into .junie/AGENTS.md". An imported file is hand-written content: the next build adds the VibeTags
+  block between markers and keeps everything else.
+
+### Windsurf is now Devin Desktop
+
+The Devin changelog says "Windsurf is now [Devin Desktop](https://devin.ai/blog/windsurf-is-now-devin-desktop)",
+and the editor documentation moved to docs.devin.ai. Checked in its
+[llms-full.txt](https://docs.devin.ai/llms-full.txt) on 2026-09-14, VibeTags adds two outputs for it
+(#671), keeps every Windsurf one generating, and gives `.windsurf/rules/` the front matter the same
+docs document for it (#683):
+
+| Output | What the vendor says |
+|---|---|
+| `.devin/rules/*.md` (new) | [Memories & Rules](https://docs.devin.ai/desktop/cascade/memories): workspace rules live in "`.devin/rules/*.md` (preferred) or `.windsurf/rules/*.md` (fallback)" |
+| `.windsurf/rules/*.md` | [FAQ](https://docs.devin.ai/desktop/devin-desktop-faq): "`.devin/rules/` is the preferred location and **takes precedence**, with `.windsurf/rules/` kept as a fallback for backward compatibility." |
+| `.windsurfrules` | Memories & Rules: "The legacy single-file `.windsurfrules` at the workspace root is also still read." |
+| `.devinignore` (new) | [Devin Desktop Ignore](https://docs.devin.ai/desktop/context-awareness/windsurf-ignore): "you can add a `.devinignore` file to your repo root, with the same syntax as `.gitignore`. The legacy `.codeiumignore` filename is also supported, and both can be used together." |
+| `.codeiumignore` | The legacy name in the row above |
+
+- **The front matter is the documented glob trigger, in both rule directories.** Memories & Rules:
+  "Each workspace rule declares an activation mode in its frontmatter via the `trigger` field", and
+  a `glob` rule "is applied when Cascade reads or edits a file matching the `globs` pattern". Its
+  example rule opens with `trigger: glob` and `globs: **/*.test.ts`. The Devin CLI
+  [rules page](https://docs.devin.ai/cli/extensibility/rules) lists the Windsurf trigger values as
+  `always_on`, `manual`, `model_decision`, `agent` and `glob`, and says `.devin/rules/` files "use
+  the same frontmatter as `.windsurf/rules/*.md`"; the `description`/`globs`/`alwaysApply` table on
+  that page sits under its Cursor heading. Each file in `.devin/rules/` and `.windsurf/rules/`
+  carries exactly `trigger: glob` and its glob, rendered by one front-matter builder, so the rule
+  arrives with the file it protects rather than when the model judges it relevant. Until #683 the
+  `.windsurf/rules/` files carried Cursor's header and no `trigger`, a mode the docs do not define;
+  the next build replaces that header and keeps text outside the markers.
+- **How each Windsurf case maps to a trigger.** Only `glob` and `always_on` are used, and where the
+  docs leave a gap the choice is VibeTags':
+
+  | What VibeTags writes into `.windsurf/rules/` | Front matter | Basis |
+  |---|---|---|
+  | One file per annotated element | `trigger: glob`, `globs:` its class or package glob | The vendor's glob example |
+  | A `.vibetags-roles` role file, a mirrored file, or a file several reactor modules or case-colliding stems merge into | `trigger: glob`, `globs:` every glob joined with commas, with brace groups expanded so no glob contains a comma | The vendor's sample repository writes several globs as one comma-separated value; see the next bullet |
+  | The safety guardrails (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) | `+vibetags-safety.md`: `trigger: always_on`, no `globs:` | The Desktop activation table: an `always_on` rule's "Full rule content is included in the system prompt on every message." They also stay in each element's glob file. The safety-tier bullet below says when the file only points elsewhere |
+
+  No `description` key is written: the glob example has none, and the Desktop activation table says
+  only a `model_decision` rule uses it. `manual`, `model_decision` and `agent` are never written,
+  because each leaves loading to a person or to the model's judgement, and neither page says
+  what `agent` does.
+- **Several globs are comma-joined, and no glob keeps a comma of its own** (#685). Neither docs page
+  shows a `globs:` value with more than one pattern, and no Windsurf or Devin Desktop source was
+  found to show how the value is parsed. The only multi-glob example from the vendor is in the
+  Windsurf team's sample repository, whose
+  [glob-rule-format.md](https://github.com/Windsurf-Samples/cascade-customizations-catalog/blob/main/.windsurf/rules/glob-rule-format.md)
+  opens with `trigger: glob` and `globs: *.js, src/*.js`. A GitHub code search for `"trigger: glob"
+  path:.windsurf/rules` on 2026-09-14 returned 598 files, whose `globs:` lines read: 265
+  comma-joined, 198 a single glob, 63 a bracketed `[...]` list, 26 a brace glob such as
+  `**/*.{ts,tsx}`, 14 a YAML block list, 2 space-separated, and 30 with no `globs:` line near the
+  top. Those are what users write, not evidence of what the tool accepts. So VibeTags keeps the
+  vendor's comma join and makes it unambiguous: a comma inside a brace group, which a
+  comma-splitting reader would treat as a separator, cannot appear, because each brace group is
+  expanded into one glob per alternative (`**/*.{java,kt}` is written as `**/*.java,**/*.kt`). Globs
+  come from three places: an element's own `**/Name.java` or package glob, which never contains a
+  brace or comma; a `.vibetags-roles` line, which may use braces; and a `.vibetags-mirror` glob line,
+  taken whole, where a comma no brace group explains is written as `?`, which still matches it.
+  Cursor, Trae and Copilot, whose docs also describe a comma-separated glob list, get the same
+  expansion (#696); see "A glob that holds a comma" under [Granular rules](#granular-rules).
+- **The safety tier is always on, from a file of its own** (#684). A `trigger: glob` rule loads only
+  once a matching file is read or edited, so a project on a rules directory alone had no file that
+  kept the six safety buckets in front of the agent up front, which invariant 6 exists to prevent.
+  VibeTags therefore writes `+vibetags-safety.md` into `.devin/rules/` and `.windsurf/rules/`
+  whenever that directory is opted in. Its front matter is `trigger: always_on` and nothing else,
+  the shape of the vendor's own sample
+  ([Windsurf-Samples/cascade-customizations-catalog](https://github.com/Windsurf-Samples/cascade-customizations-catalog/blob/main/.windsurf/rules/always-on-rule-format.md)),
+  and its body is the safety sections `.windsurfrules` keeps inline when it collapses to an index.
+  It is written even when the safety tier is empty, so the last removed `@AILocked` leaves a file
+  loaded on every message. The `+` keeps the name out of reach of every element, role and mirrored
+  stem, as it does for Cline.
+  - **Not repeated when another always-loaded file carries it.** With `.windsurfrules` opted in, each
+    directory's safety file holds only a sentence naming `.windsurfrules`: Memories & Rules says
+    "The legacy single-file `.windsurfrules` at the workspace root is also still read", and the CLI
+    rules page says its contents "are loaded as always-on rules", so the tier would otherwise be in
+    the system prompt twice. With both directories and no `.windsurfrules`, the `.windsurf/rules/`
+    file names `.devin/rules/+vibetags-safety.md` instead, because the CLI loads the rule files of
+    both directories and Desktop prefers `.devin/`. Neither page says whether Desktop reads a
+    same-named file from both directories; either way one copy of the tier is loaded.
+  - **In a reactor the header is written once.** Every module renders the file with its own front
+    matter, and the reactor merge used to stack whole renderings, which put each module's header
+    inside its sub-marker and left a file created by the merge with no trigger at the top. The merge
+    now writes a front matter every module shares once, above the module sections. The Claude
+    skill's `SKILL.md` had the same repeated header in reactor builds and loses it the same way.
+- **A rule file over 12,000 characters gets a build warning** (#695). The Memories & Rules page
+  gives `.devin/rules/*.md` and `.windsurf/rules/*.md` "Limited to 12,000 characters per file" and
+  does not say whether a longer file is cut or dropped. After generation, and on a build the
+  fingerprint short-circuit skips or a check-mode build, VibeTags measures every file in either
+  directory that carries its markers, `+vibetags-safety.md` included, and warns for each one over the
+  cap, naming the file and its length (`validation.rule-file-over-limit` in `vibetags.log`). A file
+  of exactly 12,000 characters is within the cap. A character is a UTF-16 code unit, what
+  `String.length()` and a JavaScript string's `length` both count; the docs do not define one, and
+  this count is never below the code point count, so a disagreement errs toward warning. A rule
+  file with no VibeTags markers is its author's and is not measured. Role files grow with their
+  role, so splitting the role in `.vibetags-roles` shortens them; the safety file shrinks to a
+  pointer when `.windsurfrules` is opted in. The page gives the single-file global rules 6,000
+  characters, a file VibeTags does not write, and names no cap for `.windsurfrules`, so neither is
+  measured.
+- **Opt into one rule directory, not both.** The same CLI page: "`.devin/` is the preferred location
+  and takes precedence over `.windsurf/`. If both `.devin/global_rules.md` and
+  `.windsurf/global_rules.md` exist, Devin CLI loads only `.devin/global_rules.md`. Rule files in
+  `.devin/rules/` and `.windsurf/rules/` are both loaded." The Desktop pages say `.devin/` takes
+  precedence without saying what that means for two rule files of the same name. VibeTags writes the
+  same file into both directories (`DevinDesktopEndToEndTest` pins it), so a project opted into
+  both can hand the agent every element guardrail twice. New projects should use `.devin/rules/`.
+- **`.windsurfrules` collapses only for `.windsurf/rules/`.** Opting into `.windsurf/rules/` still
+  turns `.windsurfrules` into a scoped-rules index. `.devin/rules/` is not wired as its granular
+  sibling, so `.windsurfrules` beside `.devin/rules/` alone stays the full aggregate and repeats
+  what the rule files say.
+- **`.devinignore` excludes from indexing.** The ignore page describes what "Devin Desktop Indexing
+  ignores". The Devin CLI [configuration page](https://docs.devin.ai/cli/extensibility/configuration)
+  adds that standalone, the CLI "does not enforce `.devinignore`, `.codeiumignore`, or
+  `.windsurfignore` files", and that "When Devin CLI runs inside Devin Desktop, all four ignore files
+  are enforced."
+
+The service keys keep their names (`windsurf`, `windsurf_granular`, `codeium_ignore`), as the Zoo
+Code keys did, because a key is what `vibetags init --platforms` takes. The new ones are
+`devin_granular` and `devin_ignore`.
 
 ### Three ignore files added, and three checked and refused
 

@@ -66,6 +66,8 @@ Gating is per platform via `GranularIndexSection.governingGranularKey` — `CLAU
 
 Cline's directory form is the one granular platform whose aggregate cannot sit beside it, because `.clinerules` is the file and the directory at once. It keeps invariant 6 through a file inside the directory instead: `cline_safety` (`.clinerules/+vibetags-safety.md`, no front matter, always loaded by Cline) is implicitly rendered whenever `cline_granular` is active, by `ClineSafetyRenderer`, from the same indexed preamble and inline safety sections `.cursorrules` uses. It is an aggregate-path service, so the marker merge and the reactor merge apply unchanged; `GranularRulesWriter.cleanupAll` excludes every file another service writes inside a granular directory, which is what stops the orphan sweep scrubbing it (#648).
 
+Devin Desktop's two rules directories get the same kind of file for a different reason: every rule VibeTags writes there is `trigger: glob`. `windsurf_safety` and `devin_safety` (`+vibetags-safety.md` inside `.windsurf/rules/` and `.devin/rules/`, `trigger: always_on`) are implicitly rendered whenever their directory is active, by `WindsurfRenderer`, from the Windsurf-worded indexed preamble and inline safety sections. When `.windsurfrules` is active, or for `.windsurf/rules/` when `.devin/rules/` is, the file only names that carrier, so the tier is not loaded twice. Because these files open with front matter, `ModuleSidecar.mergeFor` writes a front matter every module's body shares once, above the module sub-markers; before that the reactor merge buried each header inside a sub-marker (#684).
+
 **This repo dogfoods it**: the block at the bottom of this file is a scoped-rules index; the per-element detail lives in `.claude/rules/`, which your tooling loads on demand by glob.
 
 ### Annotations
@@ -183,9 +185,10 @@ and this section seem to disagree, the enforcing test decides.
   deleting one deactivates that platform permanently. Never "helpfully" create an output file.
   Two documented exceptions. Activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
   `.codex/rules/vibetags.rules`), creating `.codex/` if absent. And an opted-in granular directory is
-  filled as needed: the per-element rule files, plus, for Cline's `.clinerules/`, the always-loaded
-  `+vibetags-safety.md` (#648), because that directory has no aggregate beside it to carry the safety
-  buckets. The directory is the opt-in; the files in it are VibeTags' to create. There is no other
+  filled as needed: the per-element rule files, plus the always-loaded `+vibetags-safety.md` in
+  Cline's `.clinerules/` (#648), because that directory has no aggregate beside it to carry the
+  safety buckets, and in Devin Desktop's `.devin/rules/` and `.windsurf/rules/` (#684), whose rule
+  files all load on a glob match. The directory is the opt-in; the files in it are VibeTags' to create. There is no other
   exception: `QWEN.md` used to imply `.qwen/settings.json` and `.qwen/commands/refactor.md`, and
   neither is implied any more (#650, #655).
 - **`process()` returns `false`** so other processors still see the annotations; all writing happens
@@ -219,8 +222,9 @@ and this section seem to disagree, the enforcing test decides.
   `AnnotationValidator`, which is now a thin entry point. A rule declares the annotation it
   `scans()`, and the registry runs one round query per annotation type however many rules share it.
   A check over an output file's existing content rather than over annotated elements follows the
-  same split: the logic is a class in `processor/internal/validation/` (`DuplicateYamlKeyRule`), and
-  the class that runs it (`HandAuthoredYamlKeyWarner`) only finds the files and reports.
+  same split: the logic is a class in `processor/internal/validation/` (`DuplicateYamlKeyRule`,
+  `RuleFileLengthRule`), and the class that runs it (`HandAuthoredYamlKeyWarner`,
+  `RuleFileLengthWarner`) only finds the files and reports.
 - **Adding a platform** touches `Platform` + `PlatformRendererRegistry` + a renderer; **adding an
   annotation** touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry`. Use the
   `add-platform` / `add-annotation` skills rather than improvising.

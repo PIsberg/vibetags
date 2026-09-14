@@ -246,12 +246,11 @@ class NewPlatformsEndToEndTest {
     void testWindsurfGranularRulesHaveYamlFrontMatter() throws IOException {
         String content = windsurfGranularHarness.readFile(".windsurf/rules/com-example-payment-PaymentProcessor.md");
 
-        assertTrue(content.startsWith("---"), "Should start with YAML front-matter");
-        assertTrue(content.contains("description: \"AI rules for com.example.payment.PaymentProcessor\""),
-            "Should have description in front-matter");
-        assertTrue(content.contains("globs: [\"**/PaymentProcessor.java\"]"),
-            "Should have globs in front-matter");
-        assertTrue(content.contains("alwaysApply: false"), "Should have alwaysApply field");
+        // Windsurf's documented schema is trigger: plus globs: for a glob rule (#683), not Cursor's
+        // description/globs/alwaysApply header.
+        assertTrue(content.startsWith("---\ntrigger: glob\nglobs: **/PaymentProcessor.java\n---\n"),
+            "Should open with the glob-trigger front matter:\n" + content);
+        assertFalse(content.contains("alwaysApply"), "Should not carry Cursor's alwaysApply key");
     }
 
     @Test

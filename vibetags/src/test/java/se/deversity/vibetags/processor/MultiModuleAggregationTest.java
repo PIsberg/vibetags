@@ -144,6 +144,52 @@ class MultiModuleAggregationTest {
         assertTrue(merged.contains("com.example.KartaCli"));
     }
 
+    /**
+     * A body opening with front matter (the Devin Desktop safety files, the Claude skill) gets that
+     * header once, at the top: inside a module sub-marker no tool reads it, and a file the merge
+     * creates would open with none (#684).
+     */
+    @Test
+    void mergeFor_sharedFrontMatter_isWrittenOnceAboveTheModuleSections() {
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("devin_safety", "---\ntrigger: always_on\n---\n\n## LOCKED FILES\n* `com.example.Node`\n");
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("devin_safety", "---\ntrigger: always_on\n---\n\n## LOCKED FILES\n* `com.example.KartaCli`\n");
+
+        String merged = ModuleSidecar.mergeFor("devin_safety", List.of(graph, cli), true);
+
+        assertTrue(merged.startsWith("---\ntrigger: always_on\n---\n\n<!-- VIBETAGS-MODULE: module-"), merged);
+        assertEquals(1, merged.split("trigger:", -1).length - 1, "one header for the file:\n" + merged);
+        assertTrue(merged.contains("com.example.Node") && merged.contains("com.example.KartaCli"), merged);
+    }
+
+    /** Headers that differ per module cannot be merged into one, so neither is dropped. */
+    @Test
+    void mergeFor_differingFrontMatter_keepsEachModulesHeader() {
+        ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");
+        graph.putBody("devin_safety", "---\ntrigger: always_on\n---\n\nNode");
+        ModuleSidecar cli = new ModuleSidecar("module-cli", "module-cli");
+        cli.putBody("devin_safety", "---\ntrigger: manual\n---\n\nKartaCli");
+
+        String merged = ModuleSidecar.mergeFor("devin_safety", List.of(graph, cli), true);
+
+        assertTrue(merged.startsWith("<!-- VIBETAGS-MODULE: "), merged);
+        assertTrue(merged.contains("trigger: always_on") && merged.contains("trigger: manual"), merged);
+    }
+
+    /** Two source sets of one module rendering one front-matter file still give it one header. */
+    @Test
+    void mergeModuleBodies_sharedFrontMatter_isWrittenOnce() {
+        ModuleSidecar main = new ModuleSidecar("module-cli", "module-cli", "module-cli");
+        main.putModuleBody("devin_safety", "---\ntrigger: always_on\n---\n\nMain");
+        ModuleSidecar test = new ModuleSidecar("module-cli__test", "module-cli", "module-cli");
+        test.putModuleBody("devin_safety", "---\ntrigger: always_on\n---\n\nTest");
+
+        String merged = ModuleSidecar.mergeModuleBodies("devin_safety", List.of(main, test), "module-cli");
+
+        assertEquals("---\ntrigger: always_on\n---\n\nMain\n\nTest", merged);
+    }
+
     @Test
     void mergeFor_skipsModulesWithNoBodyForService() {
         ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");

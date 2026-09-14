@@ -58,6 +58,7 @@ public final class TransitiveSection {
         Platform.ZED,
         Platform.CLINE,
         Platform.JUNIE,
+        Platform.JUNIE_AGENTS,
         Platform.FIREBASE,
         Platform.VOID);
 

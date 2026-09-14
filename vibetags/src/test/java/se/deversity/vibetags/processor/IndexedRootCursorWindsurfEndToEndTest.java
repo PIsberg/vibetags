@@ -133,6 +133,12 @@ class IndexedRootCursorWindsurfEndToEndTest {
             "Cursor's scoped rule file for the one annotated class in module-core");
         assertEquals(1, countFiles("module-core/.windsurf/rules", ".md"),
             "Windsurf's scoped rule file for the same class");
+        // Beside it, the always-on safety file (#684). The module's own .windsurfrules keeps the
+        // safety tier inline and Devin Desktop reads both, so the safety file only points there.
+        String safety = read("module-core/.windsurf/rules/+vibetags-safety.md");
+        assertTrue(safety.startsWith("---\ntrigger: always_on\n---\n") && safety.contains(".windsurfrules")
+                && !safety.contains("## LOCKED FILES"),
+            "the module's safety file defers to its .windsurfrules:\n" + safety);
     }
 
     @Test
@@ -172,7 +178,10 @@ class IndexedRootCursorWindsurfEndToEndTest {
             return 0;
         }
         try (var files = Files.list(dir)) {
-            return files.filter(p -> p.getFileName().toString().endsWith(suffix)).count();
+            // A per-element or role rule file; the "+" safety file is not one (#684).
+            return files.map(p -> p.getFileName().toString())
+                .filter(name -> name.endsWith(suffix) && !name.startsWith("+"))
+                .count();
         }
     }
 }

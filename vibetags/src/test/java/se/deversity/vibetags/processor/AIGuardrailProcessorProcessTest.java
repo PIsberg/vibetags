@@ -366,7 +366,7 @@ class AIGuardrailProcessorProcessTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie", "kiro_granular",
+            "cline", "junie", "junie_agents", "kiro_granular",
             // Cline's .clinerules/ directory form, at the same path as the file, and the
             // always-loaded safety file inside it (#648)
             "cline_granular", "cline_safety",
@@ -391,6 +391,10 @@ class AIGuardrailProcessorProcessTest {
             "gemini_styleguide", "aider_conf", "greptile", "greptile_rules", "greptile_config",
             // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent file
             "agents_skill", "zencoder_granular", "replit",
+            // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
+            "devin_granular", "devin_ignore",
+            // The always-on safety files inside .windsurf/rules/ and .devin/rules/ (#684)
+            "windsurf_safety", "devin_safety",
             // Lean indexed root aggregate opt-in (multi-module)
             "root_index"
         );

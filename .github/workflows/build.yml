@@ -273,7 +273,7 @@ jobs:
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
-          expected=56
+          expected=57
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"
@@ -294,6 +294,10 @@ jobs:
           # Granular directories are populated per class, not with a single file.
           test "$(ls -1 .kiro/steering/ | wc -l)" -gt 10 \
             || { echo "kiro granular directory not populated in the reactor"; exit 1; }
+          # A front-matter file is merged under one header, not one per module inside the module
+          # sub-markers, where no tool reads it (#684). The Claude skill is this reactor's case.
+          test "$(grep -c '^name: vibetags-guardrails' .claude/skills/vibetags-guardrails/SKILL.md)" = "1" \
+            || { echo "SKILL.md repeats its front matter per module (#684)"; exit 1; }
           echo "All $expected services active and generating in the reactor."
 
       - name: Verify The Committed Guardrails Match The Example's Annotations (check mode)
@@ -1053,7 +1057,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=57
+          expected=58
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"

@@ -80,6 +80,13 @@ class ExampleResetScriptCoverageTest {
             if (DELIBERATE_OMISSIONS.containsKey(relative)) {
                 continue;
             }
+            // A file inside a directory the granular loop clears, such as a directory's
+            // +vibetags-safety.md (#684), is deleted with every rule file there.
+            int slash = relative.lastIndexOf('/');
+            String loopedDirectory = slash > 0 ? "\"" + relative.substring(0, slash) + "\"" : null;
+            if (Files.isRegularFile(target) && loopedDirectory != null && text.contains(loopedDirectory)) {
+                continue;
+            }
             // The script quotes every entry, in both the array and the loop, so requiring the
             // quotes keeps a substring of a longer path from passing as a match: ".claude/rules"
             // must not be satisfied by ".claude/rules/nested" appearing somewhere else.

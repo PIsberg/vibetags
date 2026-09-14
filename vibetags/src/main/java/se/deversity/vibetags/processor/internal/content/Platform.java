@@ -37,10 +37,14 @@ public enum Platform {
     ROO_IGNORE("roo_ignore"),
     CONTINUE_IGNORE("continue_ignore"),
     AUGMENT_IGNORE("augment_ignore"),
+    // Devin Desktop (formerly Windsurf) indexing exclusions, .gitignore syntax (#671)
+    DEVIN_IGNORE("devin_ignore"),
     GEMINI_MD("gemini_md"),
     ANTIGRAVITY_IGNORE("antigravity_ignore"),
     CLINE("cline"),
     JUNIE("junie"),
+    // Junie's current guidelines file, .junie/AGENTS.md, checked before the legacy guidelines.md (#673)
+    JUNIE_AGENTS("junie_agents"),
     FIREBASE("firebase"),
     CLAUDE_LOCAL("claude_local"),
     CLAUDE_SKILL("claude_skill"),
@@ -92,6 +96,12 @@ public enum Platform {
     AIASSISTANT_GRANULAR("aiassistant_granular"),
     AUGMENT_GRANULAR("augment_granular"),
     ZENCODER_GRANULAR("zencoder_granular"),
+    // Devin Desktop's preferred rules directory; .windsurf/rules/ is its fallback (#671)
+    DEVIN_GRANULAR("devin_granular"),
+    // The always-on safety files inside .windsurf/rules/ and .devin/rules/, implicitly activated by
+    // their directories (#684)
+    WINDSURF_SAFETY("windsurf_safety"),
+    DEVIN_SAFETY("devin_safety"),
     CLINE_GRANULAR("cline_granular"),
     // The always-loaded safety file inside .clinerules/, implicitly activated by cline_granular (#648)
     CLINE_SAFETY("cline_safety");

@@ -156,7 +156,7 @@ mkdir -p .github && touch .github/copilot-instructions.md
 touch llms.txt llms-full.txt CONVENTIONS.md .aiderignore
 
 # Granular rules (per-class files)
-mkdir -p .cursor/rules .windsurf/rules .continue/rules
+mkdir -p .cursor/rules .windsurf/rules .devin/rules .continue/rules
 mkdir -p .tabnine/guidelines .amazonq/rules .trae/rules .roo/rules
 mkdir -p .ai/rules .pearai/rules
 
@@ -164,9 +164,9 @@ mkdir -p .ai/rules .pearai/rules
 touch .windsurfrules .rules
 mkdir -p .cody && touch .cody/config.json && touch .codyignore
 touch .supermavenignore .mentatconfig.json sweep.yaml .plandex.yaml
-touch .doubleignore .codeiumignore
+touch .doubleignore .codeiumignore .devinignore
 mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml
-mkdir -p .junie && touch .junie/guidelines.md
+mkdir -p .junie && touch .junie/guidelines.md .junie/AGENTS.md
 mkdir -p .idx && touch .idx/airules.md
 
 # AI PR reviewers, context packers, and editors
@@ -210,7 +210,7 @@ After compilation, VibeTags populates all opted-in files with guardrail content 
 | `QWEN.md` | Qwen |
 | `gemini_instructions.md` | Gemini |
 | `.github/copilot-instructions.md` | GitHub Copilot |
-| `.windsurfrules` | Windsurf |
+| `.windsurfrules` | Devin Desktop (formerly Windsurf) |
 | `.rules` | Zed Editor |
 | `llms.txt` / `llms-full.txt` | All LLM agents (llms.txt standard) |
 | `.cody/config.json` | Sourcegraph Cody |
