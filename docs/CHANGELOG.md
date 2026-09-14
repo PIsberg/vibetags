@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
+  **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change
+  on the next build**: a blank line is added after each `TEST-DRIVEN` entry. In Aider's `CONVENTIONS.md`
+  every per-element entry is a `#### ` heading followed by bullets, and each formatter's
+  `AIDER_CONVENTIONS` arm ends its entry with a blank line. `AITestDrivenFormatter`'s arm ended with
+  `CommonFormatterHelper.bullet("Frameworks", ...)`, which ends with a single newline, so the next entry's
+  `#### ` heading was printed directly on the line under the last bullet without a blank line between them.
+  Now `AITestDrivenFormatter` appends the trailing newline. `AllAnnotationsAllPlatformsEndToEndTest`
+  asserts that no `#### ` heading in a rendered `CONVENTIONS.md` directly follows a non-blank line.
+  Regenerated: `examples/basic/CONVENTIONS.md`, `examples/multimodule/CONVENTIONS.md`, and
+  `examples/gradle-multimodule/CONVENTIONS.md`.
+
 - **Every Gemini section is set off by exactly one blank line** (#723). **Every project that
   generates `GEMINI.md` or `gemini_instructions.md` gets a whitespace-only change to its generated
   block on the next build**: blank lines are added or removed between sections, and no text

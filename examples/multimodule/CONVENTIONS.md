@@ -17,6 +17,7 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 100%
 - **Frameworks**: JUNIT_5
+
 #### IDEMPOTENT: com.example.multimodule.cli.MultiModuleCli.outputPath(java.lang.String,java.lang.String)
 - **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.
 - **Reason**: Derives output path from inputs only
@@ -302,10 +303,12 @@ This file contains project-specific coding conventions and AI guardrails extract
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 100%
 - **Frameworks**: JUNIT_5, ASSERTJ
+
 #### TEST-DRIVEN: com.example.service.OrderService.updateOrderStatus(java.lang.String,java.lang.String)
 - **Rule**: Changes MUST be accompanied by test updates.
 - **Coverage Goal**: 95%
 - **Frameworks**: JUNIT_5, MOCKITO
+
 #### THREAD-SAFE: com.example.concurrent.SessionCache
 - **Strategy**: LOCK_FREE
 - **Note**: All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map.
