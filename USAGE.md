@@ -11,7 +11,7 @@
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
-- [Granular Rules (Cursor, Trae, Roo Code)](#-granular-rules-cursor-trae-roo-code)
+- [Granular Rules (Cursor, Trae, Zoo Code)](#-granular-rules-cursor-trae-zoo-code)
 - [Qwen Configuration](#-qwen-configuration)
 - [llms.txt Standard](#-llmstxt-standard-windsurf-cascade--llm-agents)
 - [Orphaned Annotation Warnings](#️-orphaned-annotation-warnings)
@@ -36,7 +36,7 @@ For the full annotation table, processor options, and output-file formats, see a
 - **Compile-time Validation** — proactive warnings for contradictory or empty annotations
 - **Configurable Logging** — full control over log file path and level, including turning it off
 - **Granular Rules Support** — automatic generation of `.mdc` and `.md` files with YAML front-matter for precise AI scoping
-- **Expanded Tool Support** — built-in support for Aider, Roo Code, and Trae
+- **Expanded Tool Support** — built-in support for Aider, Roo Code (now its fork Zoo Code), and Trae
 
 ### Logging Configuration
 
@@ -104,7 +104,7 @@ kapt {
 Processor options (`vibetags.log.path`, `vibetags.check`, …) are passed through the same
 `kapt { arguments { ... } }` block, without the `-A` prefix.
 
-Three kapt-specific caveats, the first two consequences of kapt processing generated Java stubs
+Five kapt-specific caveats, the first four consequences of kapt processing generated Java stubs
 rather than the Kotlin sources:
 
 - **Method-body-scoped annotations are invisible.** Stubs carry no method bodies, so an
@@ -113,6 +113,15 @@ rather than the Kotlin sources:
 - **Source positions describe the stub.** The `.vibetags-locks` report's line ranges would
   point into the generated stub, not the `.kt` file, so don't opt a pure-Kotlin module into
   the locks report.
+- **A function with a value class in its JVM signature loses its guardrails.** kapt leaves out of
+  the stub every function that takes or returns a `@JvmInline value class` (your own, `UInt`,
+  `ULong`, `kotlin.time.Duration`), so an `@AI*` annotation on it or its parameters generates
+  nothing and logs nothing. `kotlin.Result` parameters and `List<SomeValueClass>` are not affected.
+  Add an explicit `@JvmName` and kapt emits the function. Measured on Kotlin 2.4.10 (#681).
+- **An `internal` function's path contains the Kotlin module name**, which Gradle derives from the
+  project's `group` and name: `reconcile$com_acme_ledger(java.lang.String)`. Renaming the project
+  renames the path in every generated file and in `.vibetags-locks`. An explicit `@JvmName`, or a
+  pinned `compilerOptions.moduleName`, keeps it stable.
 - **Some builds print `warning: The following options were not recognized by any processor:
   '[vibetags.root, kapt.kotlin.generated]'`. It is harmless and it is kapt's, not yours.** kapt
   forwards its option map to its embedded javac without registering any processor's
@@ -475,15 +484,15 @@ touch .supermavenignore                      # Supermaven (deprecated, #645)
 # --- Continue, Tabnine, Amazon Q, Universal AI ---
 mkdir -p .continue/rules                     # Continue
 mkdir -p .tabnine/guidelines                 # Tabnine
-mkdir -p .amazonq/rules                      # Amazon Q
-mkdir -p .ai/rules                           # Universal .ai/rules standard
+mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #645: Kiro's .kiro/steering/ replaces it)
+mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
 
-# --- Trae, Roo Code ---
+# --- Trae, Zoo Code ---
 mkdir -p .trae/rules                         # Trae IDE
-mkdir -p .roo/rules                          # Roo Code
+mkdir -p .roo/rules                          # Zoo Code (fork of the retired Roo Code; reads the same paths)
 
 # --- PearAI ---
-mkdir -p .pearai/rules                       # PearAI granular rules (per-class .md)
+mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #645)
 
 # --- Amazon Kiro ---
 mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
@@ -498,21 +507,21 @@ mkdir -p .augment/rules                      # Augment Code workspace rules (per
 touch .goosehints                            # goose project hints
 
 # --- Mentat, Sweep, Plandex ---
-touch .mentatconfig.json                     # Mentat AI assistant
-touch sweep.yaml                             # Sweep AI code review (GitHub App)
-touch .plandex.yaml                          # Plandex AI coding agent
+touch .mentatconfig.json                     # Mentat AI assistant (deprecated, #645)
+touch sweep.yaml                             # Sweep AI code review (GitHub App; deprecated, #645)
+touch .plandex.yaml                          # Plandex AI coding agent (deprecated, #645)
 
 # --- Double.bot, Open Interpreter, Codeium, Antigravity ---
-touch .doubleignore                          # Double.bot exclusion list
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+touch .doubleignore                          # Double.bot exclusion list (deprecated, #645)
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #645)
 touch .codeiumignore                         # Codeium exclusion list
-touch .antigravityignore                     # Antigravity AI exclusion list
+touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #645)
 
 # --- Cline, JetBrains Junie ---
 touch .clinerules                            # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                       # Cline (granular per-class rules). Same path: pick one
 #                                            # (Cline itself converts the file to the directory)
-touch .rooignore .continueignore .augmentignore  # Roo Code / Continue / Augment exclusion lists
+touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
@@ -520,7 +529,7 @@ mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
-touch CLAUDE.md .claudeignore                # Claude
+touch CLAUDE.md                              # Claude (.claudeignore is deprecated, #645: use Read deny rules in .claude/settings.json)
 touch QWEN.md .qwenignore                   # Qwen
 mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (its own opt-in)
 touch .aiexclude GEMINI.md                   # Gemini
@@ -528,7 +537,7 @@ mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub 
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # GitHub Copilot
+mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot (.copilotignore is deprecated, #645: use Content exclusion settings)
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
 
@@ -550,8 +559,6 @@ Create one or more of the following files in your project root to opt in:
   CLAUDE.md
   .github/copilot-instructions.md
   .cursorignore
-  .claudeignore
-  .copilotignore
   .qwenignore
 ```
 
@@ -599,7 +606,7 @@ mvn clean compile      # or touch any source file, then compile
 `reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path
 (see [Logging Configuration](#logging-configuration)).
 
-### 🧩 Granular Rules (Cursor, Trae, Roo Code)
+### 🧩 Granular Rules (Cursor, Trae, Zoo Code)
 
 For modern AI IDEs like **Cursor** and **Trae**, VibeTags supports a granular rule system. Instead of one giant configuration file, VibeTags generates specific files for each annotated element.
 
@@ -754,7 +761,7 @@ Critical Vulnerabilities to Prevent:
 > **`AGENTS.md` is generated only when it is the sole AI config file in the project.** It is
 > the most widely read agent-instructions file there is (Codex, Amp, OpenCode, Jules, Factory
 > Droid, Devin, Ona, Mistral Vibe and Pi read it, and so do Cursor, Windsurf, Gemini CLI, Qwen,
-> Roo, Zed, Kilo, Warp and Copilot's coding agent alongside their own files), and it is also
+> Zoo Code, Zed, Kilo, Warp and Copilot's coding agent alongside their own files), and it is also
 > the file people most often hand-write. VibeTags will not overwrite your prose, so if any
 > other AI config file exists it leaves `AGENTS.md` alone entirely.
 >

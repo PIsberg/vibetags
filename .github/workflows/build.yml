@@ -135,7 +135,7 @@ jobs:
           fi
 
       # The repo dogfoods its own guardrails but never verified them, so the committed
-      # CLAUDE.md / GEMINI.md / .claudeignore / .claude/rules could drift from what the
+      # CLAUDE.md / GEMINI.md / .claude/rules could drift from what the
       # processor writes and nothing said so — which is exactly what happened, and is only
       # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
       # this and fails on any would-be write, so a stale committed guardrail is now a red
@@ -875,6 +875,23 @@ jobs:
           # files must name the annotated Kotlin elements, stub signatures included.
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
+          # Issue #681, pinned in both directions (docs/JVM-LANGUAGES.md, Kotlin). kapt leaves a
+          # function whose JVM name is mangled by a value class out of its Java stub, so the
+          # @AILocked on AccountLedger.balanceFor reaches no processor and must appear in no
+          # generated file: if it ever does, kapt started emitting those functions and the docs
+          # are wrong. kotlin.Result is the exception (not mangled, erased to Object). An internal
+          # function's path carries the Kotlin module name, which the Kotlin Gradle plugin builds
+          # from the project's group and name, so renaming either renames the path.
+          grep -qF "com.example.kotlin.AccountLedger.settle(java.lang.Object)" CLAUDE.md
+          grep -qF 'com.example.kotlin.AccountLedger.reconcile$se_deversity_vibetags_example_vibetags_example_kotlin(java.lang.String)' CLAUDE.md
+          # "if grep; then exit 1", never "! grep": bash -e does not stop on a negated command, so a
+          # "! grep" anywhere but the last line of a step can never fail it.
+          for f in CLAUDE.md .cursorrules; do
+            if grep -qE "balanceFor|LEDGER-VALUE-CLASS-LOST" "$f"; then
+              echo "::error::$f names AccountLedger.balanceFor: kapt now emits value-class-mangled functions; update docs/JVM-LANGUAGES.md."
+              exit 1
+            fi
+          done
           # The transitive-manifest fallbacks a kapt build needs (issue #534): the manifest under
           # vibetags-manifests/ is read through -Avibetags.manifest.dir and rendered under its
           # origin coordinate; -Avibetags.manifest.max=1 keeps the first advisory rule and drops
@@ -947,8 +964,9 @@ jobs:
           # opt-in (invariant 1), and this is where a regression would show first.
           test ! -d app/.claude
           # And every committed file must match what the build just produced. Scoped to the whole
-          # example directory, not a file list: this reactor now opts into 51 services, and a list
-          # is the thing that goes stale.
+          # example directory, not a file list: this reactor opts into every service (the count is
+          # pinned by expected= in "Verify Every AI Service Is Generated in a Gradle Reactor"), and a
+          # list is the thing that goes stale.
           if [ -n "$(git status --porcelain -- .)" ]; then
             echo "::error::examples/gradle-multimodule/ guardrail files are out of date."
             git status --porcelain -- .
@@ -974,9 +992,10 @@ jobs:
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
           # The deprecation warning (#641) is excluded too, and asserted present instead. This
-          # reactor opts into all five deprecated outputs on purpose, so they keep a fixture until
-          # the major version that removes them (#645), and a build that opts in is exactly the
-          # build that must print it.
+          # reactor opts into every deprecated output it has a fixture for, on purpose, so they keep
+          # a fixture until the major version that removes them (#645), and a build that opts in is
+          # exactly the build that must print it. The number is the count of DeprecatedServices rows
+          # this reactor opts into; DeprecatedServicesTest pins the line's shape.
           #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
           ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
@@ -988,8 +1007,8 @@ jobs:
             echo "$unexpected"
             exit 1
           fi
-          if ! grep -q "5 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
-            echo "::error::the reactor opts into five deprecated outputs and was not warned about them."
+          if ! grep -q "20 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::the reactor opts into 20 deprecated outputs and was not warned about all of them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that
@@ -1365,8 +1384,13 @@ jobs:
           # The gated limitation: groovyc stubs carry no fields, so the deliberate @AIPrivacy
           # on InventoryService.contactEmail must appear in NO generated file. If it ever does,
           # groovyc gained fields in its stubs and docs/JVM-LANGUAGES.md is out of date.
-          ! grep -q "contactEmail" CLAUDE.md
-          ! grep -q "contactEmail" .cursorrules
+          # "if grep; then exit 1", never "! grep": bash -e does not stop on a negated command.
+          for f in CLAUDE.md .cursorrules; do
+            if grep -q "contactEmail" "$f"; then
+              echo "::error::$f names contactEmail: groovyc stubs now carry fields; update docs/JVM-LANGUAGES.md."
+              exit 1
+            fi
+          done
 
       - name: Verify The Groovy Example's Committed Guardrails Match Its Annotations
         if: matrix.java == '21'
@@ -1387,8 +1411,13 @@ jobs:
           cd examples/scala
           ./gradlew clean build --no-daemon
           grep -qF "com.example.scala.AuditLog" CLAUDE.md
-          ! grep -q "ReportEngine" CLAUDE.md
-          ! grep -q "ReportEngine" .cursorrules
+          # "if grep; then exit 1", never "! grep": bash -e does not stop on a negated command.
+          for f in CLAUDE.md .cursorrules; do
+            if grep -q "ReportEngine" "$f"; then
+              echo "::error::$f names ReportEngine: a Scala class reached the processor; update docs/JVM-LANGUAGES.md."
+              exit 1
+            fi
+          done
 
       - name: Verify The Scala Example's Committed Guardrails Match Its Annotations
         if: matrix.java == '21'

@@ -118,16 +118,16 @@ If that first line is not your project root, that is the whole bug.
 VibeTags **never creates files** — it only updates files that already exist. Create empty placeholder files for each platform you want to support:
 
 ```bash
-touch CLAUDE.md .claudeignore              # Claude / Claude Code
+touch CLAUDE.md                            # Claude / Claude Code (.claudeignore is deprecated, #645)
 touch CLAUDE.local.md                      # Claude Code (local override)
 mkdir -p .claude/rules                     # Claude Code (granular per-class rules)
 mkdir -p .claude/skills/vibetags-guardrails && touch .claude/skills/vibetags-guardrails/SKILL.md  # Claude Code (Skill)
 touch .cursorrules .cursorignore           # Cursor (traditional)
 mkdir -p .cursor/rules                     # Cursor (granular per-class rules)
 mkdir -p .trae/rules                       # Trae (granular per-class rules)
-mkdir -p .roo/rules                        # Roo Code (per-class rules)
+mkdir -p .roo/rules                        # Zoo Code (fork of the retired Roo Code; reads the same paths), per-class rules
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what loads CONVENTIONS.md)
-touch .rooignore .continueignore .augmentignore  # Roo / Continue / Augment exclusion lists
+touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
 touch replit.md                            # Replit Agent
 touch CONVENTIONS.md .aiderignore          # Aider
@@ -139,7 +139,7 @@ mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, r
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
-mkdir -p .github && touch .github/copilot-instructions.md .copilotignore  # Copilot
+mkdir -p .github && touch .github/copilot-instructions.md  # Copilot (.copilotignore is deprecated, #645)
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
 touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
 touch .windsurfrules                       # Windsurf IDE (traditional)
@@ -149,17 +149,17 @@ mkdir -p .cody && touch .cody/config.json .codyignore  # Sourcegraph Cody (depre
 touch .supermavenignore                    # Supermaven (deprecated, #645)
 mkdir -p .continue/rules                   # Continue (granular per-class rules)
 mkdir -p .tabnine/guidelines               # Tabnine (granular per-class rules)
-mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules)
-mkdir -p .ai/rules                         # Universal AI standard (granular)
-mkdir -p .pearai/rules                     # PearAI (granular per-class rules)
-touch .mentatconfig.json                   # Mentat
-touch sweep.yaml                           # Sweep (GitHub App)
-touch .plandex.yaml                        # Plandex
-touch .doubleignore                        # Double.bot
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter
+mkdir -p .amazonq/rules                    # Amazon Q (granular per-class rules; deprecated, #645)
+mkdir -p .ai/rules                         # Universal AI standard (granular; deprecated, #645)
+mkdir -p .pearai/rules                     # PearAI (granular per-class rules; deprecated, #645)
+touch .mentatconfig.json                   # Mentat (deprecated, #645)
+touch sweep.yaml                           # Sweep (GitHub App; deprecated, #645)
+touch .plandex.yaml                        # Plandex (deprecated, #645)
+touch .doubleignore                        # Double.bot (deprecated, #645)
+mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #645)
 touch .codeiumignore                       # Codeium
 touch GEMINI.md                            # Gemini (official markdown)
-touch .antigravityignore                   # Antigravity AI
+touch .antigravityignore                   # Antigravity AI (deprecated, #645)
 touch .clinerules                          # Cline AI assistant (single file, deprecated #645), OR:
 # mkdir -p .clinerules                     # Cline granular rules (same path: pick one)
 mkdir -p .junie && touch .junie/guidelines.md  # JetBrains Junie
@@ -170,10 +170,10 @@ mkdir -p .aiassistant/rules                # JetBrains AI Assistant (granular pe
 mkdir -p .augment/rules                    # Augment Code (granular per-class rules)
 touch .goosehints                          # goose (Block)
 touch DESIGN.md                            # AI design agents (Cursor, Claude, Copilot, etc.)
-touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis)
-touch .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore  # Context packers
-mkdir -p .void && touch .void/rules.md     # Void Editor
-touch .roomodes                            # Roo Code ("VibeTags Architect" custom mode)
+touch .coderabbit.yaml .pr_agent.toml ellipsis.yaml  # AI PR reviewers (CodeRabbit, PR-Agent, Ellipsis; ellipsis.yaml deprecated, #645)
+touch .repomixignore .gitingestignore .gptignore  # Context packers (.ghostcoderignore and .piecesignore are deprecated, #645)
+mkdir -p .void && touch .void/rules.md     # Void Editor (deprecated, #645)
+touch .roomodes                            # Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode
 ```
 
 To remove a platform: delete its file — VibeTags will never recreate it.
@@ -1397,12 +1397,12 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Windsurf IDE | YAML front-matter + Markdown |
 | `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
-| `.roo/rules/*.md`, `.rooignore` | Roo Code | Markdown |
+| `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q | Markdown |
-| `.ai/rules/*.md` | Universal AI standard | Markdown |
-| `.pearai/rules/*.md` | PearAI | YAML front-matter + Markdown |
+| `.amazonq/rules/*.md` | Amazon Q (deprecated) | Markdown |
+| `.ai/rules/*.md` | Universal AI standard (deprecated) | Markdown |
+| `.pearai/rules/*.md` | PearAI (deprecated) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
 | `.grok/rules/*.md` | Grok Build | Markdown |
 | `.agents/rules/*.md` | Antigravity | Markdown |
@@ -1412,7 +1412,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 Enable by creating the directories:
 ```bash
 mkdir -p .cursor/rules .windsurf/rules .trae/rules .roo/rules
-mkdir -p .continue/rules .tabnine/guidelines .amazonq/rules .ai/rules .pearai/rules
+mkdir -p .continue/rules .tabnine/guidelines
 mkdir -p .kiro/steering .grok/rules
 mkdir -p .agents/rules .aiassistant/rules .augment/rules
 mkdir -p .claude/rules .github/instructions
@@ -1620,7 +1620,7 @@ tasks.withType(JavaCompile) {
 
 | File(s) | Platform |
 |---|---|
-| `CLAUDE.md`, `.claudeignore` | Claude / Claude Code |
+| `CLAUDE.md`, `.claudeignore` (deprecated) | Claude / Claude Code |
 | `CLAUDE.local.md` | Claude Code (local override) |
 | `.claude/rules/*.md` | Claude Code (granular per-class rules) |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |
@@ -1629,9 +1629,8 @@ tasks.withType(JavaCompile) {
 | `.windsurfrules` | Windsurf IDE (traditional) |
 | `.windsurf/rules/*.md` | Windsurf IDE (granular per-class rules) |
 | `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
-| `.roo/rules/*.md` | Roo Code |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
-| `.roo/rules/*.md`, `.rooignore` | Roo Code |
+| `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
 | `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
@@ -1639,25 +1638,25 @@ tasks.withType(JavaCompile) {
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |
 | `.greptile/config.json` | Greptile (`@AIIgnore` paths; VibeTags owns only a span inside `ignorePatterns`) |
 | `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
-| `.antigravityignore` | Antigravity AI |
+| `.antigravityignore` | Antigravity AI (deprecated) |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
-| `.github/copilot-instructions.md`, `.copilotignore` | GitHub Copilot |
+| `.github/copilot-instructions.md`, `.copilotignore` (deprecated) | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
 | `.cody/config.json`, `.codyignore` (deprecated) | Sourcegraph Cody |
 | `.supermavenignore` (deprecated) | Supermaven |
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
-| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules) |
-| `.ai/rules/*.md` | Universal AI standard (granular) |
+| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules; deprecated) |
+| `.ai/rules/*.md` | Universal AI standard (granular; deprecated) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
-| `.pearai/rules/*.md` | PearAI (granular per-class rules) |
-| `.mentatconfig.json` | Mentat |
-| `sweep.yaml` | Sweep (GitHub App) |
-| `.plandex.yaml` | Plandex |
-| `.doubleignore` | Double.bot |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter |
+| `.pearai/rules/*.md` | PearAI (granular per-class rules; deprecated) |
+| `.mentatconfig.json` | Mentat (deprecated) |
+| `sweep.yaml` | Sweep (GitHub App; deprecated) |
+| `.plandex.yaml` | Plandex (deprecated) |
+| `.doubleignore` | Double.bot (deprecated) |
+| `.interpreter/profiles/vibetags.yaml` | Open Interpreter (deprecated) |
 | `.codeiumignore` | Codeium |
 | `.clinerules` (deprecated) | Cline AI assistant (single file) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
@@ -1670,13 +1669,13 @@ tasks.withType(JavaCompile) {
 | `.augment/rules/*.md` | Augment Code (granular per-class rules) |
 | `.goosehints` | goose (Block) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
-| `.void/rules.md` | Void Editor |
+| `.void/rules.md` | Void Editor (deprecated) |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
-| `ellipsis.yaml` | Ellipsis (AI PR reviewer) |
-| `.roomodes` | Roo Code ("VibeTags Architect" custom mode) |
+| `ellipsis.yaml` | Ellipsis (AI PR reviewer; deprecated) |
+| `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode |
 | `.repomixignore` | Repomix (context packer) |
 | `.gitingestignore` | Gitingest (context packer) |
 | `.gptignore` | GPT context packer |
-| `.ghostcoderignore` | Ghostcoder |
-| `.piecesignore` | Pieces for Developers |
+| `.ghostcoderignore` | Ghostcoder (deprecated) |
+| `.piecesignore` | Pieces for Developers (deprecated) |

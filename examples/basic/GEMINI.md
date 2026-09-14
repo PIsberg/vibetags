@@ -56,7 +56,7 @@ The following elements are security-critical. AI must not weaken security proper
 - `com.example.security.SecurityConfig`: Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
 
 - `com.example.NotificationService`
 - `com.example.compliance.GdprService`

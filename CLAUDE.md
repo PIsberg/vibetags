@@ -41,7 +41,7 @@ cd ../vibetags-bom     && mvn install            # Maven only
 # From vibetags/ (tier split and per-class map: docs/TESTS.md):
 mvn test                            # fast tier; skips @Tag("e2e")
 mvn test -Pe2e                      # the whole suite; what CI runs
-mvn test -Dtest=SomeTest            # -Dtest overrides the tag filter
+mvn test -Dtest=SomeTest            # -Dtest overrides the tag filter; runs only in its own surefire fork
 mvn compile -Pself-annotate         # regenerate this repo's own guardrail files
 
 cd examples/basic && mvn clean compile     # consumer fixture; library must be installed first

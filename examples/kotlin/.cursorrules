@@ -4,6 +4,8 @@
 # Do not edit manually.
 
 ## LOCKED FILES (DO NOT EDIT)
+* `com.example.kotlin.AccountLedger.reconcile$se_deversity_vibetags_example_vibetags_example_kotlin(java.lang.String)` - Reason: LEDGER-INTERNAL-KEPT: reconciliation batches are replayed by the audit job.
+* `com.example.kotlin.AccountLedger.settle(java.lang.Object)` - Reason: LEDGER-RESULT-KEPT: settlement outcome mapping is part of the payout contract.
 * `com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)` - Reason: Charge idempotency key derivation is contract-tested against the gateway. Changing it re-charges in-flight payments.
 
 ## CONTEXTUAL RULES

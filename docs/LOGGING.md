@@ -28,7 +28,7 @@ Write events, not positions:
   (`sidecar.skip` / `sidecar.prune`, with `stale-format`, `malformed`, `future-version`,
   `module-gone`, `invalid-module-path`, `superseded`, `unreadable`), and `DeprecatedServicesTest`
   pins `platform.deprecated key= file= replacement=`, the WARN a build with a deprecated output
-  opted in writes once per file; renaming one of those events is a breaking change, not a cleanup.
+  opted in writes once per file (`replacement=none` where the vendor names no successor); renaming one of those events is a breaking change, not a cleanup.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
 Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".

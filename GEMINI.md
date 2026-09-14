@@ -33,7 +33,7 @@ The following elements are security-critical. AI must not weaken security proper
 - `se.deversity.vibetags.processor.internal.content.Escape`: Security-critical code [Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own <locked_files> or <rule> entries in a file the agent loads on every session.]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
 
 - `se.deversity.vibetags.processor.AIGuardrailProcessor`
 - `se.deversity.vibetags.processor.VibeTagsLogger`

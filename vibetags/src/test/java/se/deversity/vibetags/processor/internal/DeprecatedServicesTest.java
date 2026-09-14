@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Four outputs name a tool that has moved on (#641). They are still written, because removing a
- * service silently freezes an opted-in consumer's file, but a consumer who opted in has to be told
+ * Some outputs name a tool that has moved on (#641, #664 to #677). They are still written, because
+ * removing a service silently freezes an opted-in consumer's file, but a consumer who opted in has to be told
  * before the next major version stops writing them. These tests pin that telling: one warning, the
  * file, the replacement, and a {@code platform.deprecated} log event per file.
  *
@@ -63,33 +64,113 @@ class DeprecatedServicesTest {
         appender.stop();
     }
 
+    /**
+     * Every deprecated output, keyed by service key: the path the warning names (a directory with a
+     * trailing '/'), then each replacement, or vendor fact where there is no replacement, it must name. One row per notice, so a deprecation that
+     * is announced in the docs but missing from {@code DeprecatedServices} fails here by name.
+     */
+    private static final Map<String, List<String>> EXPECTED = expected();
+
+    private static Map<String, List<String>> expected() {
+        Map<String, List<String>> m = new LinkedHashMap<>();
+        m.put("gemini", List.of("gemini_instructions.md", "GEMINI.md", ".gemini/styleguide.md"));
+        m.put("cody", List.of(".cody/config.json", "AGENTS.md"));
+        m.put("cody_ignore", List.of(".codyignore", "AGENTS.md"));
+        m.put("supermaven_ignore", List.of(".supermavenignore", ".cursorignore"));
+        m.put("cline", List.of(".clinerules", ".clinerules/"));
+        // Void is deprecated and archived, and its source read .voidrules, not this path (#665)
+        m.put("void", List.of(".void/rules.md", ".voidrules"));
+        // Long-tail outputs no vendor reads, each confirmed at the vendor (#666)
+        m.put("mentat", List.of(".mentatconfig.json", ".mentat_config.json"));
+        m.put("sweep", List.of("sweep.yaml", "JetBrains"));
+        m.put("plandex", List.of(".plandex.yaml", "plandex load"));
+        m.put("pearai_granular", List.of(".pearai/rules/", ".pearaiignore"));
+        m.put("ghostcoder_ignore", List.of(".ghostcoderignore", "moatless-tools"));
+        m.put("double_ignore", List.of(".doubleignore", "no ignore file"));
+        m.put("pieces_ignore", List.of(".piecesignore", "no ignore file"));
+        m.put("ai_rules_granular", List.of(".ai/rules/", "AGENTS.md"));
+        // Claude Code's docs never mention .claudeignore; Read deny rules are its mechanism (#667)
+        m.put("claude_ignore", List.of(".claudeignore", "permissions.deny", ".claude/settings.json"));
+        // GitHub's Copilot docs configure content exclusion in settings, never in a file (#668)
+        m.put("copilot_ignore", List.of(".copilotignore", "Content exclusion"));
+        // Antigravity's docs name .gitignore and read_file permissions, never this file (#670)
+        m.put("antigravity_ignore", List.of(".antigravityignore", "read_file", ".gitignore"));
+        // Announced end dates, carried in the notice (#676)
+        m.put("firebase", List.of(".idx/airules.md", "22 March 2027", ".agents/rules/"));
+        m.put("amazonq_granular", List.of(".amazonq/rules/", "30 April 2027", ".kiro/steering/"));
+        // Open Interpreter drops profiles from project config and reads AGENTS.md instead (#674)
+        m.put("interpreter", List.of(".interpreter/profiles/vibetags.yaml", ".openinterpreter/config.toml",
+            "AGENTS.md"));
+        // Ellipsis documents only .ellipsis/code_review.yaml, a pipeline of reviewer agents (#675)
+        m.put("ellipsis", List.of("ellipsis.yaml", ".ellipsis/code_review.yaml"));
+        return m;
+    }
+
     @Test
     @DisplayName("every deprecated output that is opted in is named in one warning, with its replacement")
     void oneWarningNamesEachFileAndItsReplacement(@TempDir Path root) throws IOException {
         touch(root, "CLAUDE.md");
-        touch(root, "gemini_instructions.md");
-        touch(root, ".cody/config.json");
-        touch(root, ".codyignore");
-        touch(root, ".supermavenignore");
-        touch(root, ".clinerules");
+        for (Map.Entry<String, List<String>> e : EXPECTED.entrySet()) {
+            optIn(root, e.getKey(), e.getValue().get(0));
+        }
         List<String> warnings = new ArrayList<>();
 
         ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
             ServiceRegistry.buildServiceFileMap(root));
 
         assertEquals(1, warnings.size(),
-            "five deprecated files are one warning, not five lines of build output: " + warnings);
+            EXPECTED.size() + " deprecated outputs are one warning, not one line each: " + warnings);
         String warning = warnings.get(0);
-        for (String file : List.of("gemini_instructions.md", ".cody/config.json", ".codyignore",
-                ".supermavenignore", ".clinerules")) {
-            assertTrue(warning.contains(file), "names " + file + ":\n" + warning);
-        }
-        for (String replacement : List.of("GEMINI.md", ".gemini/styleguide.md", "AGENTS.md",
-                ".cursorignore", ".clinerules/")) {
-            assertTrue(warning.contains(replacement), "names the replacement " + replacement + ":\n" + warning);
+        assertTrue(warning.startsWith("VibeTags: " + EXPECTED.size() + " opted-in outputs are deprecated"),
+            "the count build.yml's gradle-multimodule gate matches on:\n" + warning);
+        for (List<String> row : EXPECTED.values()) {
+            assertTrue(warning.contains(row.get(0)), "names " + row.get(0) + ":\n" + warning);
+            for (String replacement : row.subList(1, row.size())) {
+                assertTrue(warning.contains(replacement), "names the replacement " + replacement + ":\n" + warning);
+            }
         }
         assertTrue(warning.contains("next major version"),
             "says when the file stops being written, which is what makes it actionable:\n" + warning);
+    }
+
+    @Test
+    @DisplayName("each deprecated output opted in on its own is warned about by name")
+    void eachDeprecatedOutputWarnsOnItsOwn(@TempDir Path parent) throws IOException {
+        for (Map.Entry<String, List<String>> e : EXPECTED.entrySet()) {
+            Path root = Files.createDirectories(parent.resolve(e.getKey()));
+            touch(root, "CLAUDE.md");
+            optIn(root, e.getKey(), e.getValue().get(0));
+            List<String> warnings = new ArrayList<>();
+
+            ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
+                ServiceRegistry.buildServiceFileMap(root));
+
+            assertEquals(1, warnings.size(), e.getKey() + " alone is one warning: " + warnings);
+            assertTrue(warnings.get(0).contains(e.getValue().get(0)),
+                "names " + e.getValue().get(0) + ":\n" + warnings.get(0));
+        }
+    }
+
+    @Test
+    @DisplayName("each notice claims no more than its vendor's own statement says (#677)")
+    void noticesMatchTheirPrimarySource(@TempDir Path root) throws IOException {
+        touch(root, "CLAUDE.md");
+        touch(root, ".cody/config.json");
+        touch(root, ".supermavenignore");
+        List<String> warnings = new ArrayList<>();
+
+        ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
+            ServiceRegistry.buildServiceFileMap(root));
+
+        String warning = String.join("\n", warnings);
+        // supermaven.com/blog/sunsetting-supermaven (21 November 2025) keeps free autocomplete for
+        // existing JetBrains and Neovim users, so "discontinued" overstated it.
+        assertTrue(warning.contains("21 November 2025") && warning.contains("JetBrains and Neovim"),
+            "the Supermaven notice cites the sunset post and what it keeps running:\n" + warning);
+        assertFalse(warning.contains("discontinued"), "no discontinuation claim:\n" + warning);
+        // Sourcegraph's announcement ended Cody Free and Pro only; Cody Enterprise continues.
+        assertTrue(warning.contains("23 July 2025") && warning.contains("Cody Enterprise"),
+            "the Cody notice says which plans ended and that Enterprise did not:\n" + warning);
     }
 
     @Test
@@ -134,9 +215,8 @@ class DeprecatedServicesTest {
         // Matched per line: the note lists root-relative paths, and a substring check would trip over
         // .mentatconfig.json for Cody's config.json.
         List<String> offered = note.lines().map(String::strip).toList();
-        for (String file : List.of("gemini_instructions.md", ".cody/config.json", ".codyignore",
-                ".supermavenignore", ".clinerules")) {
-            assertFalse(offered.contains(file), "does not offer " + file + ":\n" + note);
+        for (List<String> row : EXPECTED.values()) {
+            assertFalse(offered.contains(row.get(0)), "does not offer " + row.get(0) + ":\n" + note);
         }
         assertTrue(offered.contains("GEMINI.md") && offered.contains("AGENTS.md"),
             "still offers the replacements:\n" + note);
@@ -190,12 +270,12 @@ class DeprecatedServicesTest {
     void everyDeprecatedKeyIsAnOptInKey(@TempDir Path root) {
         assertTrue(ServiceRegistry.optInKeys().containsAll(DeprecatedServices.keys()),
             "a deprecated key that is not an opt-in key can never be active: " + DeprecatedServices.keys());
-        assertEquals(Set.of("gemini", "cody", "cody_ignore", "supermaven_ignore", "cline"),
-            DeprecatedServices.keys());
+        assertEquals(EXPECTED.keySet(), DeprecatedServices.keys());
         Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
         DeprecatedServices.files().forEach((key, file) -> assertEquals(
-            root.relativize(map.get(key)).toString().replace('\\', '/'), file,
-            "the warning names the file the user created, so it has to be the mapped path for " + key));
+            root.relativize(map.get(key)).toString().replace('\\', '/')
+                + (ServiceRegistry.writesDirectory(key) ? "/" : ""), file,
+            "the warning names the path the user created, a directory with its '/', for " + key));
     }
 
     private boolean logged(String fragment) {
@@ -204,6 +284,15 @@ class DeprecatedServicesTest {
 
     private String dump() {
         return String.join("\n", appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList());
+    }
+
+    /** Creates the entry that opts into {@code key}: a directory for a granular service, else a file. */
+    private static void optIn(Path root, String key, String relative) throws IOException {
+        if (ServiceRegistry.writesDirectory(key)) {
+            Files.createDirectories(root.resolve(relative));
+        } else {
+            touch(root, relative);
+        }
     }
 
     private static void touch(Path root, String relative) throws IOException {

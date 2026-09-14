@@ -16,13 +16,42 @@ restated rule-file path, and the index note states the naming convention once in
 Changed). The `.vibetags-mod-*` sidecars that carry that content change with it. Commit the
 regenerated files together with the version bump; a `-Avibetags.check=true` build reports drift
 until you do. The consumer sweep for this release built all five downstream repositories against it
-and saw exactly that diff, 1 to 7 files per repository, and no other content change.
+and saw exactly that diff, 1 to 7 files per repository, and no other content change. With
+`.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under Changed); that
+change came after the sweep, so the sweep's diff does not include it.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
-documentation. Two products VibeTags writes for have archived repositories: Roo Code (archived
-2026-05-15; `.roo/rules/`, `.roomodes`, and `.rooignore`, which is new in this release) and Void
-(`.void/rules.md`). Several more paths are legacy, renamed or undocumented. Nothing is deprecated
-or removed in this release on the strength of that check; each finding is tracked in #664 to #677.
+documentation (#664 to #677). This release acts on the findings below, each confirmed at the
+vendor before anything changed, and the table under Deprecated lists every deprecated output.
+#671 and #673 stay open:
+
+- Roo Code shut down on 15 May 2026, and its community fork Zoo Code reads the same `.roo/rules/`,
+  `.roomodes` and `.rooignore`, confirmed in Zoo Code's own docs and source. The docs now name
+  Zoo Code for those outputs, and nothing Roo-related is deprecated (#664).
+- Void is deprecated, and its source read `.voidrules`, never `.void/rules.md`, which is
+  deprecated (#665).
+- The eight long-tail outputs in #666 were each confirmed retired or never read, and are
+  deprecated.
+- `.claudeignore` (#667), `.copilotignore` (#668) and `.antigravityignore` (#670) appear nowhere in
+  their vendors' documentation, which names a different mechanism each time. They are deprecated,
+  and the `@AIIgnore` orphan warning stops telling projects to create the first two.
+- Firebase Studio's `.idx/airules.md` and Amazon Q's `.amazonq/rules/` still work, but the vendors
+  have announced end dates (22 March 2027 and 30 April 2027), so both are deprecated a release
+  ahead of them (#676).
+- No Google product reads `.gemini/rules/`, so `GEMINI.md`'s index note stops saying those files
+  load automatically and tells the agent to open them (#669, under Changed).
+- Cursor calls `.cursorrules` legacy and says it "will be deprecated", but not that it stopped
+  reading it, and Cline reads it too. PLATFORMS.md now says so; it is not deprecated (#672).
+- The Cody and Supermaven notices from #641 claimed more than the vendors said, and now quote
+  Sourcegraph's and Supermaven's own posts (#677).
+- Open Interpreter's profiles moved to TOML, and its config loader strips `profiles` from a
+  project's `.openinterpreter/config.toml`, so there is no project-level profile to write.
+  `.interpreter/profiles/vibetags.yaml` is deprecated in favour of `AGENTS.md`, which Open
+  Interpreter documents as its project instruction file and VibeTags already writes (#674).
+- Ellipsis's documentation never mentions `ellipsis.yaml`, which is deprecated. Its current
+  `.ellipsis/code_review.yaml` is not written: it has no rules field, only reviewer agents, and
+  declaring the review stage replaces Ellipsis's built-in reviewer. PLATFORMS.md records what the
+  docs do and do not pin (#675).
 
 ### Added
 
@@ -240,9 +269,12 @@ or removed in this release on the strength of that check; each finding is tracke
 - Four generated outputs are now documented as naming a tool that has moved on, in
   [PLATFORMS.md](PLATFORMS.md). None is removed and no existing project changes: `gemini_instructions.md`
   (no Google documentation describes any product reading it), `.cody/config.json` and `.codyignore`
-  (Cody Free and Pro retired 23 July 2025; the successor Amp reads `AGENTS.md`),
-  `.supermavenignore` (standalone product discontinued November 2025; the technology is in Cursor
-  Tab and VibeTags writes `.cursorignore`), and the single-file `.clinerules`.
+  (Cody Free and Pro ended 23 July 2025, Sourcegraph points those users to Amp, which reads
+  `AGENTS.md`, and Sourcegraph's docs name neither file; Cody Enterprise continues),
+  `.supermavenignore` (Supermaven announced its sunset on 21 November 2025, keeping free
+  autocomplete only for existing JetBrains and Neovim users; Cursor Tab reads `.cursorignore`), and
+  the single-file `.clinerules`. Both notices were first written from search summaries and claimed
+  more than the vendors said; they now quote the vendors' own posts (#677).
 
   Removing a service stops an opted-in consumer's file regenerating, which leaves it looking current
   while drifting from the annotations -- worse than a file nobody reads. Removal is a breaking
@@ -295,6 +327,17 @@ or removed in this release on the strength of that check; each finding is tracke
   the existing five; the change is that the gate now runs. `AtomicityValidator` remains not-run
   pending the `async-test-agent` javaagent, and says so with `runner.agent.absent`.
 
+- `GEMINI.md`'s scoped-rules index note no longer says the rule files "load automatically when you
+  open the matching source file" (#669). Gemini CLI never loads `.gemini/rules/`: its
+  [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) name
+  only `GEMINI.md` files, the hierarchy plus just-in-time ones in a directory a tool touches, and a
+  search of `google-gemini/gemini-cli` finds no `.gemini/rules`. An agent told a rule is already
+  loaded has no reason to open it, so the detail the index moved out of `GEMINI.md` could reach the
+  model only by chance. The note now says Gemini CLI does not load the files and tells the agent to
+  open the element's file with `read_file` before modifying it. The safety tier stays inline, and
+  the other four platforms' notes are unchanged. `GranularIndexEndToEndTest` was red on the
+  unchanged renderer, then green.
+
 - The scoped-rules index no longer repeats each element's file path (issue #626). Every entry used
   to print the element twice: once as the fully qualified name in `path=`, and once as the
   dot-to-dash transform of that same name in `rules=`. `ElementNaming.granularQName` is a pure
@@ -309,16 +352,32 @@ or removed in this release on the strength of that check; each finding is tracke
 
 ### Deprecated
 
-- **`gemini_instructions.md`, `.cody/config.json`, `.codyignore`, `.supermavenignore` and the
-  single-file `.clinerules` are deprecated**, and stop being written in the next major version
-  (#645). They are still written in this release, and no generated content changes.
+- **Outputs whose tool has moved on are deprecated**, and stop being written in the next major
+  version (#645). They are still written in this release, and no generated content changes. Each
+  row was confirmed at the vendor (#641, #664 to #677).
 
   | Deprecated | Why | Use instead |
   |---|---|---|
   | `gemini_instructions.md` | No Google product documents reading it | `GEMINI.md` (Gemini CLI), `.gemini/styleguide.md` (Gemini Code Assist) |
-  | `.cody/config.json`, `.codyignore` | Sourcegraph retired Cody Free and Pro in July 2025 | `AGENTS.md`, read by its successor Amp |
-  | `.supermavenignore` | Standalone Supermaven discontinued in November 2025 | `.cursorignore`, read by Cursor Tab |
+  | `.cody/config.json`, `.codyignore` | Sourcegraph ended Cody Free and Pro on 23 July 2025 and its docs name neither file; Cody Enterprise continues | `AGENTS.md`, read by Amp, where Sourcegraph points Free and Pro users |
+  | `.supermavenignore` | Supermaven announced its sunset on 21 November 2025, keeping free autocomplete only for existing JetBrains and Neovim users | `.cursorignore`, read by Cursor Tab |
   | `.clinerules` (file) | Cline's current docs describe only a `.clinerules/` directory | the `.clinerules/` directory; Cline also reads `.cursorrules`, `.windsurfrules` and `AGENTS.md` |
+  | `.void/rules.md` | Void's README says it is deprecated and its repository is archived, and Void itself read `.voidrules`, not this file (#665) | none named by the vendor |
+  | `.mentatconfig.json` | The Mentat CLI is archived, and it read `.mentat_config.json`, not this file (#666) | none: nothing read it |
+  | `sweep.yaml` | Sweep's README now describes a JetBrains assistant, not the GitHub App that read this file, and the app's docs no longer load (#666) | none documented |
+  | `.plandex.yaml` | Plandex's source never names it, and Plandex Cloud has been winding down since 3 October 2025 (#666) | `plandex load` with the guardrail file, such as `AGENTS.md` |
+  | `.pearai/rules/` | PearAI's app repositories are archived and its docs name only `.pearaiignore` (#666) | none documented |
+  | `.ghostcoderignore` | The Ghostcoder repository redirects to `moatless-tools`, which names no such file (#666) | none: nothing reads it |
+  | `.doubleignore` | Double's documentation describes no ignore file (#666) | none documented |
+  | `.piecesignore` | Pieces' documentation describes no ignore file; it excludes applications in its settings (#666) | Pieces' application exclusions |
+  | `.ai/rules/` | No tool or published convention reads this directory (#666) | `AGENTS.md` |
+  | `.claudeignore` | Claude Code's documentation never mentions it (#667) | `Read` deny rules under `permissions.deny` in `.claude/settings.json` |
+  | `.copilotignore` | GitHub's Copilot documentation never mentions it; exclusion is a repository, organization or enterprise setting (#668) | Settings, Copilot, Content exclusion |
+  | `.antigravityignore` | Antigravity's documentation never mentions it (#670) | `read_file` Deny permission rules, or `.gitignore` with Respect .gitignore on |
+  | `.idx/airules.md` | Google is sunsetting Firebase Studio on 22 March 2027; new workspaces disabled since 22 June 2026 (#676) | `.agents/rules/`, for Google Antigravity, which Google names as a migration target |
+  | `.amazonq/rules/` | AWS ends support for the Amazon Q Developer IDE plugins on 30 April 2027 (#676) | `.kiro/steering/`, for Kiro, which AWS names |
+  | `.interpreter/profiles/vibetags.yaml` | Open Interpreter reads no YAML profile, and ignores `[profiles.*]` tables in a project's `.openinterpreter/config.toml` (#674) | `AGENTS.md`, Open Interpreter's documented project instruction file |
+  | `ellipsis.yaml` | Ellipsis's documentation never mentions it (#675) | a reviewer prompt in `.ellipsis/code_review.yaml`, written by hand; VibeTags does not write that file |
 
   A build with any of them opted in now prints one compiler warning per compilation that names
   each file, the reason, and the replacement, and `vibetags.log` gets a
@@ -338,6 +397,25 @@ or removed in this release on the strength of that check; each finding is tracke
   last time someone happened to look.
 
 ### Fixed
+
+- **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
+  two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
+  ran in `async-tests` under the async-test agent. A class that drives javac passed in
+  `default-test` and then failed there with
+  `NoClassDefFoundError: se/deversity/asynctest/telemetry/TelemetryRegistry`, turning the command
+  CLAUDE.md documents into a false red; a named `*AsyncTest` ran in `default-test` too, without the
+  agent. The `named-test-overrides-tags` profile now gives each execution its own `<test>` with an
+  exclusion for the other execution's classes, and `build-helper:regex-properties` computes each
+  execution's `failIfNoSpecifiedTests` from the pattern, so a misspelled name still fails the build.
+  Runs without `-Dtest` do not activate the profile and are unchanged. Build-only change; nothing
+  ships.
+
+  Verified by running the commands: `-Dtest=AnnotationMirrorAnchorTest` went from `BUILD FAILURE`
+  (1 error in `async-tests`) to one run in `default-test` only; `-Dtest=VibeTagsLoggerAsyncTest`
+  went from a run in each fork to one in `async-tests` with the agent attached; a mixed pattern runs
+  each class in its own fork; `-Dtest=NoSuchTest` and `-Dtest=NoSuchAsyncTest` still fail.
+  `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
+  to ignore `!` entries turns one of its cases red.
 
 - **Opting into `QWEN.md` no longer overwrites `.qwen/settings.json`** (#650). That file is Qwen
   Code's own project settings file, and VibeTags wrote it as a whole-file overwrite on every compile,
@@ -396,6 +474,31 @@ or removed in this release on the strength of that check; each finding is tracke
   The new `aNestedGitCheckoutIsNotPartOfThisBuild` case was red against the old walk (it reported
   the planted worktree and clone files alongside the real one), and removing the root exemption
   from the fix turns it and two existing cases red.
+
+- **Two silent Kotlin losses are now documented and pinned** (#681). kapt leaves out of its Java
+  stubs every function whose JVM name is mangled because it takes or returns a `@JvmInline value
+  class` (your own, `UInt`, `ULong`, `kotlin.time.Duration`), so an `@AI*` annotation on such a
+  function, or on one of its parameters, generated nothing and logged nothing, and
+  `docs/JVM-LANGUAGES.md`, the page that exists to list what each language loses, did not say so.
+  Separately, an `internal` function's path embeds the Kotlin module name, which the Kotlin Gradle
+  plugin derives from the project's `group` and name, so renaming the project renamed its
+  `.vibetags-locks` entry and its path in every generated file. Both are now in
+  `docs/JVM-LANGUAGES.md`, `USAGE.md` and the Kotlin example's README, with the `@JvmName`
+  workaround for each; nothing in the processor changed.
+
+  `examples/kotlin` gains `AccountLedger.kt`, and its CI step asserts all three outcomes on Kotlin
+  2.4.10: `balanceFor(AccountId)` is in no generated file, `settle(Result<Long>)` renders as
+  `settle(java.lang.Object)`, and `reconcile` carries the
+  `$se_deversity_vibetags_example_vibetags_example_kotlin` suffix. Each assertion was flipped once
+  and the step went red. A processor warning was not built: the processor sees only the stub, and
+  the stub's `@kotlin.Metadata` records `hasAnnotations` only for binary-retention annotations (36
+  of the #496 spike's 38 `@AILocked` functions report `false`), so it cannot tell an annotated
+  function from an unannotated one. `vibetags doctor` checks the sources instead (#688, under Added).
+
+  The same change fixes the Groovy and Scala example steps, whose `! grep` absence checks on
+  `CLAUDE.md` could never fail: `bash -e` does not stop on a negated command, so only the last line
+  of each step was live. They now use `if grep ...; then exit 1; fi`, which fails when a planted
+  match is present, where the old form exited 0.
 
 ## [1.3.4] - 2026-09-10
 
