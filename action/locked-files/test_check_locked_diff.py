@@ -335,18 +335,8 @@ LOCKED_METHOD_ENTRY = {"type": "locked", "element": "Svc.compute()", "kind": "ME
                        "reason": "pinned"}
 
 
-class AnnotationTextIsNotALockTest(GitFixture, unittest.TestCase):
-    """``@AILocked`` text that is not an annotation must not fail the guard (#708).
-
-    Measured: PR #707 changed only tests, and the guard failed it because
-    ``FingerprintShortCircuitTest`` builds Java sources as string literals and the rewrite
-    removed lines whose string contents read ``@AILocked(...)``. The removed-line check was a
-    plain substring match, so fixture text, comments and text blocks all counted as lock
-    stripping. The PR had to keep those fixture blocks byte-identical to pass.
-
-    The other direction is pinned alongside: a real annotation removed, a real locked body
-    edited and a real annotation added all behave as they did before.
-    """
+class SourceFixture(GitFixture):
+    """A git fixture that commits a base of source files, then one change on top of it."""
 
     def setUp(self):
         self.init_repo()
@@ -365,6 +355,28 @@ class AnnotationTextIsNotALockTest(GitFixture, unittest.TestCase):
         if locks is not None:
             self.write_locks(list(locks))
         self.commit("change")
+
+    def verdict(self, rel, base, changed):
+        """The guard's exit code for ``base`` then ``changed``, committed in a fresh repository."""
+        self.assertNotEqual(base, changed, "the change must change something")
+        self.init_repo()
+        self.establish({rel: base})
+        self.change({rel: changed})
+        return self.run_guard()
+
+
+class AnnotationTextIsNotALockTest(SourceFixture, unittest.TestCase):
+    """``@AILocked`` text that is not an annotation must not fail the guard (#708).
+
+    Measured: PR #707 changed only tests, and the guard failed it because
+    ``FingerprintShortCircuitTest`` builds Java sources as string literals and the rewrite
+    removed lines whose string contents read ``@AILocked(...)``. The removed-line check was a
+    plain substring match, so fixture text, comments and text blocks all counted as lock
+    stripping. The PR had to keep those fixture blocks byte-identical to pass.
+
+    The other direction is pinned alongside: a real annotation removed, a real locked body
+    edited and a real annotation added all behave as they did before.
+    """
 
     # --- annotation-like text: must pass -------------------------------------------------
 
@@ -454,13 +466,6 @@ class AnnotationTextIsNotALockTest(GitFixture, unittest.TestCase):
         self.change({}, delete=["src/main/java/Src.java"])
         self.assertEqual(self.run_guard(), 1)
 
-    def test_kotlin_sources_keep_the_text_match(self):
-        """Only Java is lexed. Kotlin string templates nest, so Kotlin stays conservative."""
-        base = 'class T {\n    val src = "@AILocked(reason = \\"r\\")"\n}\n'
-        self.establish({"src/test/kotlin/T.kt": base})
-        self.change({"src/test/kotlin/T.kt": "class T {\n}\n"})
-        self.assertEqual(self.run_guard(), 1)
-
     def test_adding_a_real_annotation_behaves_as_before(self):
         self.establish({"src/main/java/Src.java": UNLOCKED_SRC})
         entry = dict(LOCK_ENTRY, file="src/main/java/Src.java")
@@ -468,6 +473,406 @@ class AnnotationTextIsNotALockTest(GitFixture, unittest.TestCase):
         self.assertEqual(self.run_guard(), 0,
                          "introducing a lock must not fail the PR that introduces it")
 
+
+KT_LOCKED = 'class Src {\n    @AILocked(reason = "pinned")\n    val field = 1\n}\n'
+KT_UNLOCKED = "class Src {\n    val field = 1\n}\n"
+KT_FIXTURE_TEST = (
+    "class FixtureTest {\n"
+    "    val src =\n"
+    '        "package p\\n" +\n'
+    '        "@AILocked(reason = \\"original reason\\")\\n" +\n'
+    '        "class Locked\\n"\n'
+    "}\n"
+)
+
+
+class KotlinAnnotationTextIsNotALockTest(SourceFixture, unittest.TestCase):
+    """The Kotlin half of #709: fixture text passes, and no real annotation removal does.
+
+    Before #709 a Kotlin source kept the substring match, so a test holding Kotlin fixture source
+    in a string failed the guard exactly as PR #707 did for Java, while a stripped
+    ``@field:AILocked``, a qualified one or an import-aliased one, which the substring never
+    matched, passed.
+    """
+
+    SRC = "src/main/kotlin/Src.kt"
+
+    # --- annotation-like text: must pass -------------------------------------------------
+
+    def test_editing_ailocked_text_inside_a_fixture_string_passes(self):
+        edited = KT_FIXTURE_TEST.replace("original reason", "different reason")
+        self.assertEqual(self.verdict("src/test/kotlin/FixtureTest.kt", KT_FIXTURE_TEST, edited), 0)
+
+    def test_removing_ailocked_text_inside_a_raw_string_with_templates_passes(self):
+        base = ('class T {\n    val name = "X"\n    val src = """\n'
+                '        @AILocked(reason = "${name.lowercase()}")\n'
+                '        class $name\n        """\n}\n')
+        changed = base.replace('        @AILocked(reason = "${name.lowercase()}")\n', "")
+        self.assertEqual(self.verdict("src/test/kotlin/T.kt", base, changed), 0)
+
+    def test_editing_ailocked_text_in_a_string_nested_inside_a_template_passes(self):
+        base = 'class T {\n    val s = "${ listOf("@AILocked(reason = \\"a\\")").size }"\n}\n'
+        changed = base.replace('\\"a\\"', '\\"b\\"')
+        self.assertEqual(self.verdict("src/test/kotlin/T.kt", base, changed), 0)
+
+    def test_removing_ailocked_text_inside_nested_block_comments_passes(self):
+        """Kotlin block comments nest: the first ``*/`` closes only the inner comment."""
+        base = ('class T {\n    /* outer /* inner */\n'
+                '       @AILocked(reason = "x") still inside the outer comment */\n'
+                '    // and @AILocked(reason = "y") here\n    val f = 1\n}\n')
+        self.assertEqual(self.verdict(self.SRC, base, "class T {\n    val f = 1\n}\n"), 0)
+
+    def test_editing_ailocked_text_in_a_kts_script_behind_a_shebang_passes(self):
+        """A shebang line is not code, so the ``/*`` in it opens no comment."""
+        base = '#!/usr/bin/env kotlin /*\nval src = "@AILocked(reason = \\"a\\")"\n'
+        changed = base.replace('\\"a\\"', '\\"b\\"')
+        self.assertEqual(self.verdict("tools/gen.main.kts", base, changed), 0)
+
+    def test_deleting_a_file_whose_only_ailocked_is_string_text_passes(self):
+        self.establish({"src/test/kotlin/FixtureTest.kt": KT_FIXTURE_TEST,
+                        "src/main/kotlin/Keep.kt": KT_UNLOCKED})
+        self.change({}, delete=["src/test/kotlin/FixtureTest.kt"])
+        self.assertEqual(self.run_guard(), 0)
+
+    # --- real annotations: must still fail -----------------------------------------------
+
+    def test_stripping_a_real_annotation_fails_in_every_kotlin_form(self):
+        forms = {  # form: (base source, the text a stripping change removes)
+            "plain": (KT_LOCKED, '    @AILocked(reason = "pinned")\n'),
+            "field target": ('class Src(\n    @field:AILocked(reason = "a") val a: Int\n)\n',
+                             '@field:AILocked(reason = "a") '),
+            "get target": ('class Src {\n    @get:AILocked(reason = "b")\n    val b: Int = 1\n}\n',
+                           '    @get:AILocked(reason = "b")\n'),
+            "set target": ('class Src {\n    @set:AILocked(reason = "c")\n    var c: Int = 1\n}\n',
+                           '    @set:AILocked(reason = "c")\n'),
+            "qualified": ('class Src {\n'
+                          '    @se.deversity.vibetags.annotations.AILocked(reason = "q")\n'
+                          '    val field = 1\n}\n',
+                          '    @se.deversity.vibetags.annotations.AILocked(reason = "q")\n'),
+            "bracketed": ('class Src {\n    @[Suppress("x") AILocked(reason = "m")]\n'
+                          '    val field = 1\n}\n',
+                          '    @[Suppress("x") AILocked(reason = "m")]\n'),
+            "backtick-quoted": ('class Src {\n    @`AILocked`(reason = "b")\n    val field = 1\n}\n',
+                                '    @`AILocked`(reason = "b")\n'),
+            "import alias": ('import se.deversity.vibetags.annotations.AILocked as Frozen\n\n'
+                             'class Src {\n    @Frozen(reason = "a")\n    val field = 1\n}\n',
+                             '    @Frozen(reason = "a")\n'),
+            "type alias": ('typealias Frozen = se.deversity.vibetags.annotations.AILocked\n\n'
+                           'class Src {\n    @Frozen(reason = "a")\n    val field = 1\n}\n',
+                           '    @Frozen(reason = "a")\n'),
+            "inside a template": ('class Src {\n'
+                                  '    val s = "${ object { @AILocked(reason = "t") fun f() = 1 }.f() }"\n'
+                                  '}\n',
+                                  '@AILocked(reason = "t") '),
+            "inside a template after a block": ('class Src {\n'
+                                                '    val s = "${ run { 1 }\n'
+                                                '        object { @AILocked(reason = "b") fun f() = 1 }.f() }"\n'
+                                                '}\n',
+                                                '@AILocked(reason = "b") '),
+            "inside a raw string template": ('class Src {\n    val s = """\n        ${ object {\n'
+                                             '            @AILocked(reason = "r")\n'
+                                             '            fun f() = 1\n        }.f() }\n'
+                                             '        """\n}\n',
+                                             '            @AILocked(reason = "r")\n'),
+            "next to a string": ('class Src {\n'
+                                 '    val s = "@AILocked"; @AILocked(reason = "r") val f = 1\n}\n',
+                                 '@AILocked(reason = "r") '),
+            "between char literal quotes": ("class Src {\n    val c = '\"'; @AILocked(reason = \"c\") "
+                                            "val f = 1; val d = '\"'\n}\n",
+                                            '@AILocked(reason = "c") '),
+            "after nested block comments close": ('class Src {\n    /* a /* b */ c */\n'
+                                                  '    @AILocked(reason = "n") val f = 1\n}\n',
+                                                  '@AILocked(reason = "n") '),
+        }
+        for form, (base, removed) in forms.items():
+            with self.subTest(form=form):
+                self.assertEqual(self.verdict(self.SRC, base, base.replace(removed, "", 1)), 1,
+                                 f"removing a {form} @AILocked must fail")
+
+    def test_a_multi_dollar_string_falls_back_to_the_text_match(self):
+        """With multi-dollar interpolation ``$$\"\"\"${\"\"\"`` is a raw string holding ``${``, not a template.
+
+        Read as a template, the annotation below would sit inside a nested raw string and the
+        rest of the file would still balance, so it would look like text. The lexer does not
+        model the prefix, so the file does not lex and the guard fails.
+        """
+        base = ('class Src {\n    val s = $$"""${"""\n'
+                '    @AILocked(reason = "d") fun f() = 1\n'
+                '    val t = """}"""\n}\n')
+        changed = base.replace('@AILocked(reason = "d") ', "")
+        self.assertEqual(self.verdict(self.SRC, base, changed), 1)
+
+    def test_a_kotlin_source_that_does_not_lex_falls_back_to_the_text_match(self):
+        base = 'class Src {\n    val s = """\n    @AILocked(reason = "u")\n    val f = 1\n}\n'
+        changed = base.replace('    @AILocked(reason = "u")\n', "")
+        self.assertEqual(self.verdict(self.SRC, base, changed), 1)
+
+    def test_deleting_a_kotlin_file_with_a_real_annotation_fails(self):
+        self.establish({self.SRC: KT_LOCKED, "src/main/kotlin/Keep.kt": KT_UNLOCKED})
+        self.change({}, delete=[self.SRC])
+        self.assertEqual(self.run_guard(), 1)
+
+    def test_adding_a_real_annotation_behaves_as_before(self):
+        self.establish({self.SRC: KT_UNLOCKED})
+        entry = dict(LOCK_ENTRY, file=self.SRC)
+        self.change({self.SRC: KT_LOCKED}, locks=[entry])
+        self.assertEqual(self.run_guard(), 0)
+
+GROOVY_LOCKED = "class Src {\n    @AILocked(reason = 'pinned')\n    String f() { 'x' }\n}\n"
+GROOVY_UNLOCKED = "class Src {\n    String f() { 'x' }\n}\n"
+
+
+class GroovyAnnotationTextIsNotALockTest(SourceFixture, unittest.TestCase):
+    """The Groovy half of #709, lexed only where no slashy string can start.
+
+    A Groovy slashy string (``/.../``, ``$/.../$``) cannot be told from a division without parsing
+    expressions, and one holding quotes would make a real annotation look quoted. So a ``/`` in
+    code that does not start a comment sends the whole file back to the substring match.
+    """
+
+    SRC = "src/main/groovy/Src.groovy"
+
+    def test_editing_ailocked_text_inside_each_quoted_string_form_passes(self):
+        forms = {
+            "single": "    String src = '@AILocked(reason = \"original reason\")'\n",
+            "double": '    String src = "@AILocked(reason = \\"original reason\\")"\n',
+            "triple single": ("    String src = '''\n"
+                              "        @AILocked(reason = 'original reason')\n        '''\n"),
+            "triple double": ('    String src = """\n'
+                              '        @AILocked(reason = "${\'original reason\'}")\n        """\n'),
+            "gstring template": ('    String src = "${ [\'@AILocked(reason = \\"original reason\\")\']'
+                                 '.size() }"\n'),
+        }
+        for form, body in forms.items():
+            with self.subTest(form=form):
+                base = "class FixtureTest {\n" + body + "}\n"
+                changed = base.replace("original reason", "different reason")
+                self.assertEqual(self.verdict("src/test/groovy/FixtureTest.groovy", base, changed), 0)
+
+    def test_removing_an_ailocked_mention_in_a_comment_passes(self):
+        base = ("class T {\n    // mirrors @AILocked on the real class\n"
+                "    /* and @AILocked(reason = 'x') here\n     */\n    int f\n}\n")
+        self.assertEqual(self.verdict(self.SRC, base, "class T {\n    int f\n}\n"), 0)
+
+    def test_deleting_a_file_whose_only_ailocked_is_string_text_passes(self):
+        base = "class FixtureTest {\n    String src = '@AILocked(reason = \"r\")'\n}\n"
+        self.establish({"src/test/groovy/FixtureTest.groovy": base,
+                        "src/main/groovy/Keep.groovy": GROOVY_UNLOCKED})
+        self.change({}, delete=["src/test/groovy/FixtureTest.groovy"])
+        self.assertEqual(self.run_guard(), 0)
+
+    def test_stripping_a_real_annotation_fails_in_every_groovy_form(self):
+        forms = {  # form: (base source, the text a stripping change removes)
+            "plain": (GROOVY_LOCKED, "    @AILocked(reason = 'pinned')\n"),
+            "qualified": ("class Src {\n    @se.deversity.vibetags.annotations.AILocked(reason = 'q')\n"
+                          "    String f() { 'x' }\n}\n",
+                          "    @se.deversity.vibetags.annotations.AILocked(reason = 'q')\n"),
+            "import alias": ("import se.deversity.vibetags.annotations.AILocked as Frozen\n\n"
+                             "class Src {\n    @Frozen(reason = 'a')\n    String f() { 'x' }\n}\n",
+                             "    @Frozen(reason = 'a')\n"),
+            "inside a gstring template": ('class Src {\n    String s = "${ new Object() {\n'
+                                          "        @AILocked(reason = 't')\n"
+                                          "        String f() { 'x' }\n    }.f() }\"\n}\n",
+                                          "        @AILocked(reason = 't')\n"),
+            "next to a string": ("class Src {\n    String s = '@AILocked'; @AILocked(reason = 'r') "
+                                 "String f() { 'x' }\n}\n",
+                                 "@AILocked(reason = 'r') "),
+            "between slashy strings on one line": (
+                "class Src {\n    def re = /\"/; @AILocked(reason = 's') String f() { 'x' }; "
+                "def q = /\"/\n}\n",
+                "@AILocked(reason = 's') "),
+            "between slashy strings holding triple quotes": (
+                'class Src {\n    def re = /"""/\n    @AILocked(reason = \'s\')\n'
+                '    String f() { \'x\' }\n    def q = /"""/\n}\n',
+                "    @AILocked(reason = 's')\n"),
+            "between dollar-slashy strings holding triple quotes": (
+                'class Src {\n    def re = $/"""/$\n    @AILocked(reason = \'d\')\n'
+                '    String f() { \'x\' }\n    def q = $/"""/$\n}\n',
+                "    @AILocked(reason = 'd')\n"),
+            "after a comment that does not nest": (
+                "class Src {\n    /* a /* b */\n    @AILocked(reason = 'c')\n"
+                "    String f() { 'x' }\n}\n",
+                "    @AILocked(reason = 'c')\n"),
+        }
+        for form, (base, removed) in forms.items():
+            with self.subTest(form=form):
+                self.assertEqual(self.verdict(self.SRC, base, base.replace(removed, "", 1)), 1,
+                                 f"removing a {form} @AILocked must fail")
+
+    def test_a_groovy_source_with_a_division_falls_back_to_the_text_match(self):
+        """The cost of the slashy rule, pinned: after a division, string text counts again."""
+        base = ("class T {\n    int half(int n) { n / 2 }\n"
+                "    String src = '@AILocked(reason = \"r\")'\n}\n")
+        changed = "class T {\n    int half(int n) { n / 2 }\n}\n"
+        self.assertEqual(self.verdict("src/test/groovy/T.groovy", base, changed), 1)
+
+    def test_deleting_a_groovy_file_with_a_real_annotation_fails(self):
+        self.establish({self.SRC: GROOVY_LOCKED, "src/main/groovy/Keep.groovy": GROOVY_UNLOCKED})
+        self.change({}, delete=[self.SRC])
+        self.assertEqual(self.run_guard(), 1)
+
+class KotlinAnnotationLinesTest(unittest.TestCase):
+    """The Kotlin lexer that decides which base lines carry a real ``@AILocked``."""
+
+    def lines(self, src):
+        return check_locked_diff.kotlin_annotation_lines(src)
+
+    def test_finds_a_plain_annotation(self):
+        self.assertEqual(self.lines(KT_LOCKED), {2})
+
+    def test_ignores_string_raw_string_char_and_comment_text(self):
+        src = ('class A {\n'
+               '    val s = "@AILocked"\n'
+               "    val c = '\"'; val t = \"x\\\"@AILocked $c\"\n"
+               '    val u = """\n        @AILocked "quoted" ""\n        """\n'
+               '    val v = "${ "@AILocked" + "}" }"\n'
+               '    val w = """${ """@AILocked""" }"""\n'
+               '    val e = "\\${ @AILocked }"\n'
+               '    // @AILocked\n'
+               '    /* @AILocked /* nested @AILocked */ still @AILocked */\n'
+               '    /** @AILocked */\n'
+               '}\n')
+        self.assertEqual(self.lines(src), set())
+
+    def test_code_inside_a_template_is_code(self):
+        src = ('val s = "${ object {\n'
+               '    @AILocked fun f() = "}"\n'
+               '}.f() } and @AILocked text"\n')
+        self.assertEqual(self.lines(src), {2})
+
+    def test_a_template_ends_only_at_its_own_closing_brace(self):
+        """Code after a block inside a template is still template code, not string text."""
+        src = 'val s = "${ run { 1 }; object { @AILocked fun f() = 1 }.f() } @AILocked"\n'
+        self.assertEqual(self.lines(src), {1})
+        src = 'val s = "${ run { 1 }\n    object { @AILocked fun f() = 1 }.f() }"\n'
+        self.assertEqual(self.lines(src), {2})
+
+    def test_a_raw_string_has_no_escapes(self):
+        """In a raw string a backslash is text, so the quotes after it close the string."""
+        src = 'val p = """C:\\"""\n@AILocked val f = 1\nval q = """D:\\"""\n'
+        self.assertEqual(self.lines(src), {2})
+
+    def test_nested_comments_close_one_level_at_a_time(self):
+        src = "/* a /* b */ @AILocked */\n@AILocked val f = 1\n/**/ @AILocked val g = 1\n"
+        self.assertEqual(self.lines(src), {2, 3})
+
+    def test_every_annotation_form_marks_its_lines(self):
+        cases = {
+            "@field:AILocked val a = 1\n": {1},
+            "@file:AILocked\n": {1},
+            "@get:\n  AILocked val a = 1\n": {1, 2},
+            "@[Suppress(\"x\")\n  AILocked] val a = 1\n": {1, 2},
+            "@se.deversity\n  .vibetags.annotations.AILocked val a = 1\n": {1, 2},
+            "@`AILocked` val a = 1\n": {1},
+            "@AI\u00adLocked val a = 1\n": {1},
+            "val k = AILocked::class\n": {1},
+            "import se.deversity.vibetags.annotations.AILocked\n@Deprecated(\"d\") val a = 1\n": set(),
+            "import se.deversity.vibetags.annotations.AILocked as Frozen\n@Frozen val a = 1\n": {2},
+            "@Frozen val a = 1\ntypealias Frozen = AILocked\n": {1, 2},
+            "@AILockedLater val a = 1\n": set(),
+        }
+        for src, expected in cases.items():
+            with self.subTest(src=src):
+                self.assertEqual(self.lines(src), expected)
+
+    def test_a_shebang_line_is_a_comment(self):
+        self.assertEqual(self.lines("#!/usr/bin/env kotlin /*\n@AILocked val a = 1\n"), {2})
+
+    def test_anything_unbalanced_or_unrecognised_is_unsure(self):
+        for src in ('val s = "open\n',
+                    'val s = """\n open\n',
+                    "val c = 'x\n",
+                    "/* open\n",
+                    "/* a /* b */\n",
+                    'val s = "${ open\n',
+                    'val s = "${ x "\n',
+                    "}\n",
+                    "fun f() {\n",
+                    'val s = $$"$${x}"\n',
+                    'val s = "$`x`"\n',
+                    'val s = """a""""\n@AILocked val f = 1\n"""\n',
+                    'val s = """"a"""\n',
+                    'val s = "a\n@AILocked val f = 1 "\n',
+                    "val a = 1 \\\n",
+                    "val a = 1\r@AILocked val b = 2\n",
+                    "val `open = 1\n"):
+            with self.subTest(src=src):
+                self.assertIsNone(self.lines(src))
+
+
+class GroovyAnnotationLinesTest(unittest.TestCase):
+    """The Groovy lexer: quoted strings and comments, and unsure wherever a slashy string could start."""
+
+    def lines(self, src):
+        return check_locked_diff.groovy_annotation_lines(src)
+
+    def test_finds_a_plain_annotation(self):
+        self.assertEqual(self.lines(GROOVY_LOCKED), {2})
+
+    def test_ignores_string_and_comment_text(self):
+        src = ('class A {\n'
+               "    String s = '@AILocked \"'\n"
+               '    String t = "@AILocked \' $s.length ${ \'@AILocked\' + "}" }"\n'
+               "    String u = '''\n        @AILocked ${x} '' \\'''\n        '''\n"
+               '    String v = """\n        @AILocked "" ${ """@AILocked""" }\n        """\n'
+               '    // @AILocked\n'
+               '    /* @AILocked /* not nested */\n'
+               '}\n')
+        self.assertEqual(self.lines(src), set())
+
+    def test_comments_do_not_nest(self):
+        self.assertEqual(self.lines("/* a /* b */ @AILocked int f\n"), {1})
+
+    def test_single_quoted_strings_have_no_templates(self):
+        self.assertEqual(self.lines("String s = '${'\n@AILocked int f\n"), {2})
+
+    def test_qualified_and_aliased_annotations_count(self):
+        src = ("import se.deversity.vibetags.annotations.AILocked as Frozen\n"
+               "@Frozen class A {}\n@se.deversity.vibetags.annotations.AILocked class B {}\n")
+        self.assertEqual(self.lines(src), {2, 3})
+
+    def test_anything_a_slashy_string_could_start_or_unbalanced_is_unsure(self):
+        for src in ("int half = n / 2\n",
+                    "def re = /@AILocked/\n",
+                    "def re = $/@AILocked/$\n",
+                    "def m = s =~ /x/\n",
+                    'String s = "${ n / 2 }"\n',
+                    "String s = 'open\n",
+                    'String s = """\n open\n',
+                    "/* open\n",
+                    'String s = "a $ b"\n',
+                    'String s = """a""""\n@AILocked int f\n"""\n',
+                    'String s = """"a"""\n',
+                    'String s = "a\n@AILocked int f "\n',
+                    "String s = '\\u0027'\n",
+                    "// \\u000a @AILocked int f\n",
+                    "int a = 1\r@AILocked int b\n",
+                    "}\n"):
+            with self.subTest(src=src):
+                self.assertIsNone(self.lines(src))
+
+
+class RepositoryExamplesTest(unittest.TestCase):
+    """The lexers read this repository's own Kotlin and Groovy examples and find every lock.
+
+    Fixture strings alone would let a lexer pass its tests while giving up on every real source.
+    Expected lines are the ones that start with ``@AILocked``; a KDoc line mentioning it is text.
+    """
+
+    ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir)
+    KOTLIN = "examples/kotlin/src/main/kotlin/com/example/kotlin/"
+
+    def test_examples_lex_and_every_annotation_line_is_found(self):
+        examples = [self.KOTLIN + "AccountLedger.kt", self.KOTLIN + "PaymentService.kt",
+                    self.KOTLIN + "CustomerVault.kt", "examples/kotlin/build.gradle.kts",
+                    "examples/groovy/src/main/groovy/com/example/groovy/InventoryService.groovy"]
+        for rel in examples:
+            with self.subTest(file=rel):
+                with open(os.path.join(self.ROOT, rel), encoding="utf-8", newline="") as fh:
+                    text = fh.read()
+                expected = {number for number, line in enumerate(text.split("\n"), 1)
+                            if line.lstrip().startswith("@AILocked")}
+                self.assertEqual(check_locked_diff.lock_lines(rel, text), expected)
 
 class ParsePatchSectionsTest(unittest.TestCase):
     """Removed lines carry their base line number, which the lock lookup depends on."""

@@ -594,13 +594,31 @@ vendor before anything changed, and the table under Deprecated lists every depre
   source (comments, strings, text blocks, char literals, unicode escapes translated first as javac
   does) and counts a removed line only when a real annotation sat on it. That also closes the
   other direction: a stripped `@ AILocked` or `@se.deversity.vibetags.annotations.AILocked`, which
-  the substring never matched, now fails. A source that does not lex, and every Kotlin or Groovy
-  source, keeps the substring match, so an unsure answer still fails. The same change also
+  the substring never matched, now fails. A source that does not lex keeps the substring match, so
+  an unsure answer still fails; Kotlin and Groovy sources are lexed too since #709, below. The same change also
   hardens path and rename parsing: changed files are read from `git diff --raw -z` and diffed one
   at a time, and a change the guard cannot read fails the check. Reproduced on this
   repository: a one-line fixture-string edit drew `A line containing @AILocked was removed` before
   and passes after, while reordering the locked `GuardrailAnnotations.ALL` fails on both. The 4
   annotation-text cases and the spaced/qualified strip were red against the old guard.
+
+- **The locked-files guard lexes Kotlin and Groovy sources as well** (#709). After #708 only a
+  Java source was lexed, so a Kotlin or Groovy test holding fixture source that reads
+  `@AILocked(...)` in a string still failed the guard as PR #707 had, while a stripped
+  `@field:AILocked`, `@se.deversity.vibetags.annotations.AILocked`, backtick-quoted or
+  `import ... as` aliased lock, none of which contains the substring `@AILocked`, passed. The
+  Kotlin lexer tracks string templates (`${` enters code, its matching `}` returns to the string),
+  raw strings, char literals, backtick names and nested block comments, and counts every line from
+  an `@` to the lock name, through a use-site target, a qualified name or a `@[...]` group, plus
+  any other code token naming the lock or a same-file alias of it. It gives up, so the substring
+  match applies, on anything unbalanced and on a `$` in code: a multi-dollar `$$"""${"""`
+  string read as a template hides the annotation after it inside a nested string that still
+  balances. The Groovy lexer reads quoted strings, templates and non-nesting comments, and gives up
+  whenever a `/` in code does not start a comment, because a slashy string holding quotes can hide
+  an annotation the same way and cannot be told from a division; a Groovy source that divides keeps
+  the substring match. Against the #708 guard the new fixture cases gave 23 failures (text edits
+  failing, and the target, qualified, bracketed, backtick and alias strips passing), and each lexer
+  rule, disabled on its own, turned at least one test red.
 
 - **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
   two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
