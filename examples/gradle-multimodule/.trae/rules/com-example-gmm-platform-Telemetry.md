@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/Telemetry.java"]
+globs: **/Telemetry.java
 description: "AI rules for com.example.gmm.platform.Telemetry"
 ---
 

@@ -39,8 +39,6 @@ class GranularBraceGlobEndToEndTest {
 
     private static final String ROLES = "web = **/{api,web}/*.{java,kt}, **/*Endpoint.java\n";
     private static final String EXPANDED = "**/api/*.java,**/api/*.kt,**/web/*.java,**/web/*.kt,**/*Endpoint.java";
-    private static final String EXPANDED_LIST =
-        "[\"**/api/*.java\", \"**/api/*.kt\", \"**/web/*.java\", \"**/web/*.kt\", \"**/*Endpoint.java\"]";
     private static final String AS_WRITTEN_LIST = "[\"**/{api,web}/*.{java,kt}\", \"**/*Endpoint.java\"]";
 
     private static final String LOCKED_SOURCE =
@@ -73,17 +71,17 @@ class GranularBraceGlobEndToEndTest {
     @Test
     void cursorGlobsExpandABraceGlob(@TempDir Path root) throws IOException {
         String file = roleBuild(root, ".cursor/rules").readFile(".cursor/rules/web.mdc");
-        assertTrue(file.startsWith("---\ndescription: \"AI rules for role web\"\nglobs: " + EXPANDED_LIST
+        assertTrue(file.startsWith("---\ndescription: \"AI rules for role web\"\nglobs: " + EXPANDED
                 + "\nalwaysApply: false\n---\n\n"),
-            "no list entry keeps a comma a comma-splitting reader would cut:\n" + file);
+            "no glob keeps a comma a comma-splitting reader would cut:\n" + file);
     }
 
     @Test
     void traeGlobsExpandABraceGlob(@TempDir Path root) throws IOException {
         String file = roleBuild(root, ".trae/rules").readFile(".trae/rules/web.md");
-        assertTrue(file.startsWith("---\nalwaysApply: false\nglobs: " + EXPANDED_LIST
+        assertTrue(file.startsWith("---\nalwaysApply: false\nglobs: " + EXPANDED
                 + "\ndescription: \"AI rules for role web\"\n---\n\n"),
-            "no list entry keeps a comma a comma-splitting reader would cut:\n" + file);
+            "no glob keeps a comma a comma-splitting reader would cut:\n" + file);
     }
 
     /** A YAML list whose entries are matched whole already keeps a brace glob intact. */

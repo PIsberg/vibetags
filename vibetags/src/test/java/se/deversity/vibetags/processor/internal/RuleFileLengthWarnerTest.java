@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -113,6 +114,28 @@ class RuleFileLengthWarnerTest {
             warnEvents());
         assertEquals(1, warnings.size(), "one build warning per oversized file: " + warnings);
         assertTrue(warnings.get(0).startsWith("VibeTags: .windsurf/rules/web.md is 12001 characters"), warnings.get(0));
+    }
+
+    /**
+     * Antigravity's {@code .agents/rules/} carries the same cap (#701) and the same WARN event. A
+     * marker-carrying file named like the Devin Desktop safety file is not given the
+     * {@code .windsurfrules} remedy there: Antigravity has no such file.
+     */
+    @Test
+    void anOversizedAntigravityRuleLogsTheContractEventAndNamesAntigravity(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve(".agents/rules"));
+        Files.writeString(root.resolve(".agents/rules/+vibetags-safety.md"),
+            generated("a".repeat(LIMIT + 1 - markerOverhead())), StandardCharsets.UTF_8);
+
+        warn(root);
+
+        assertEquals(List.of("validation.rule-file-over-limit file=.agents/rules/+vibetags-safety.md chars=12001 limit=12000"),
+            warnEvents());
+        assertEquals(1, warnings.size(), "one build warning per oversized file: " + warnings);
+        String warning = warnings.get(0);
+        assertTrue(warning.startsWith("VibeTags: .agents/rules/+vibetags-safety.md is 12001 characters, over the 12000"
+            + " Antigravity accepts"), warning);
+        assertFalse(warning.contains(".windsurfrules") || warning.contains("Devin") || warning.contains("Windsurf"), warning);
     }
 
     /**

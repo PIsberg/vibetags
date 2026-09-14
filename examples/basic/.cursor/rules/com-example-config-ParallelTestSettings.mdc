@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.config.ParallelTestSettings"
-globs: ["**/ParallelTestSettings.java"]
+globs: **/ParallelTestSettings.java
 alwaysApply: false
 ---
 

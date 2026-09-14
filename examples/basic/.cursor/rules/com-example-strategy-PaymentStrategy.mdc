@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.strategy.PaymentStrategy"
-globs: ["**/PaymentStrategy.java"]
+globs: **/PaymentStrategy.java
 alwaysApply: false
 ---
 

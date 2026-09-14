@@ -592,21 +592,28 @@ public final class GranularRulesWriter {
     }
 
     /**
-     * Cursor's header with {@link #commaFreeGlobs} (#696). cursor.com/docs/rules documents several
-     * globs as one comma-separated value, {@code docs/**}{@code /*.md, docs/**}{@code /*.mdx}, so a
-     * comma inside a brace group reads as a separator there. The list form stays as it was, and a
-     * header whose globs hold no brace or comma, every per-element file, is byte-identical.
+     * Cursor's header (#699). cursor.com/docs/rules writes {@code globs:} as a bare value, several
+     * globs comma-separated ({@code docs/**}{@code /*.md, docs/**}{@code /*.mdx}). The {@code .mdc}
+     * reader Cursor ships does not parse YAML: it strips one pair of surrounding quotes and splits the
+     * rest on the commas outside a brace group, so a bracketed list reached the matcher as patterns
+     * carrying literal brackets and quotes that match no file, and no rule auto-attached. The globs
+     * are joined with bare commas through {@link #commaFreeGlobs}, so every comma separates two whole
+     * globs (#696). The evidence is in docs/PLATFORMS.md, Cursor.
      */
     private static String fmCursor(String desc, List<String> globs) {
-        return fmDescGlobsApply(desc, commaFreeGlobs(globs));
+        return "---\ndescription: \"" + desc + "\"\nglobs: " + String.join(",", commaFreeGlobs(globs))
+            + "\nalwaysApply: false\n---\n\n";
     }
 
     /**
-     * Trae's header (#696): docs.trae.cn/ide/rules separates several patterns with {@code ,} and
-     * syncs them to {@code globs}, so the globs are made comma-free as Cursor's are.
+     * Trae's header (#699). docs.trae.ai/ide/rules separates several patterns with {@code ,} and syncs
+     * them to {@code globs}, and the reader Trae ships splits the raw value on every comma, with no
+     * quote or bracket handling, so the value is written as Cursor's is, through
+     * {@link #commaFreeGlobs} (#696). The evidence is in docs/PLATFORMS.md, Trae.
      */
     private static String fmTrae(String desc, List<String> globs) {
-        return "---\nalwaysApply: false\nglobs: " + arr(commaFreeGlobs(globs)) + "\ndescription: \"" + desc + "\"\n---\n\n";
+        return "---\nalwaysApply: false\nglobs: " + String.join(",", commaFreeGlobs(globs))
+            + "\ndescription: \"" + desc + "\"\n---\n\n";
     }
 
     /**

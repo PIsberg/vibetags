@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.NewAnnotationsShowcase.SandboxTestHelper"
-globs: ["**/SandboxTestHelper.java"]
+globs: **/SandboxTestHelper.java
 alwaysApply: false
 ---
 

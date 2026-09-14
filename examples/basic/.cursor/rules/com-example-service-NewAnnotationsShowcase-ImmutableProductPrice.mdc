@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.NewAnnotationsShowcase.ImmutableProductPrice"
-globs: ["**/ImmutableProductPrice.java"]
+globs: **/ImmutableProductPrice.java
 alwaysApply: false
 ---
 

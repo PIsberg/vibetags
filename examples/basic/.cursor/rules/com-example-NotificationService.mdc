@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.NotificationService"
-globs: ["**/NotificationService.java"]
+globs: **/NotificationService.java
 alwaysApply: false
 ---
 

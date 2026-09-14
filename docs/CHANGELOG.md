@@ -52,7 +52,10 @@ header to `trigger: glob` and `globs:` (#683, under Fixed). That change also cam
 so the sweep's diff does not include it either. With `.devin/rules/` or `.windsurf/rules/` opted in,
 the first build adds `+vibetags-safety.md` to that directory, and in a reactor
 `.claude/skills/vibetags-guardrails/SKILL.md` loses the copy of its front matter repeated inside
-each module's section (#684, under Added); neither is in the sweep's diff.
+each module's section (#684, under Added); neither is in the sweep's diff. With `.cursor/rules/` or
+`.trae/rules/` opted in, the `globs:` line of every rule file in it changes from a bracketed,
+quoted list to the bare comma-separated value both vendors document (#699, under Fixed), which is
+not in the sweep's diff either.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
@@ -149,6 +152,19 @@ vendor before anything changed, and the table under Deprecated lists every depre
   `RuleFileLengthEndToEndTest` was written first and all 7 cases failed with no warning emitted;
   with the check placed before generation, as the YAML duplicate-key warning is, 5 still failed,
   because that measures the previous build's file.
+
+- **The 12,000-character rule file warning covers Antigravity's `.agents/rules/`** (#701).
+  [Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says "Rules files are
+  limited to 12,000 characters each.", the same cap and the same silent-loss shape as #695, which
+  covered only Devin Desktop and Windsurf. A generated `.agents/rules/` file over the cap now gets the
+  same warning and the same `validation.rule-file-over-limit` log event, worded for Antigravity and
+  without the `.windsurfrules` remedy, which does not apply there. The vendor docs of every other
+  granular directory were checked for a per-file cap and none documents one; PLATFORMS.md quotes
+  what was found, including Augment's combined cap, which is not measured.
+
+  The `.agents/rules/` cases in `RuleFileLengthEndToEndTest` and `RuleFileLengthWarnerTest` were
+  written first: all 3 failed with no warning emitted, and pass with `antigravity_granular` added to
+  `RuleFileLengthRule.CAPPED_DIRECTORIES`.
 
 - **JetBrains Junie's `.junie/AGENTS.md`** (#673). Junie's guidelines page lists it first in the
   order Junie looks for guidelines, ahead of the root `AGENTS.md` and of `.junie/guidelines.md`,
@@ -505,6 +521,23 @@ vendor before anything changed, and the table under Deprecated lists every depre
   last time someone happened to look.
 
 ### Fixed
+
+- **Cursor and Trae rule files attach by their globs again** (#699). VibeTags wrote the globs of
+  `.cursor/rules/*.mdc` and `.trae/rules/*.md` as a bracketed, quoted list,
+  `globs: ["**/PaymentProcessor.java"]`. Both vendors document a bare comma-separated value, and
+  neither tool's reader parses YAML: Cursor's removes one pair of quotes around the whole value and
+  splits on the commas outside braces, Trae's splits on every comma. The list reached the matcher as
+  a pattern carrying literal brackets and quotes, which matches no source file, and Cursor files a
+  rule that has a glob as glob-attached, so its description did not bring it in either. The value is
+  now written bare, several globs joined with commas and brace groups expanded as #696 does:
+  `globs: **/*Controller.java,**/*Endpoint.java`. Continue and PearAI keep the list, which Continue
+  documents. Neither tool was run; PLATFORMS.md has the vendor quotes, including a Cursor staff
+  reply saying "no brackets or quotes", and what the parser in each tool's shipped bundle does.
+
+  `CursorTraeGlobsFormEndToEndTest` was written first and restates each reader: all 5 cases failed
+  against the list form with no glob the reader takes matching the annotated class. Cursor 3.20.17's
+  own parser functions, run on both forms, matched none of three Java paths with the list and each
+  named file with the bare value.
 
 - **The locked-files guard no longer fails a pull request for `@AILocked` text that is not an
   annotation** (#708). The lock-stripping and deleted-file checks matched the substring

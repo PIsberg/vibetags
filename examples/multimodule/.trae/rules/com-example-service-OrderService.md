@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/OrderService.java"]
+globs: **/OrderService.java
 description: "AI rules for com.example.service.OrderService"
 ---
 

@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/GeneratedMetadata.java"]
+globs: **/GeneratedMetadata.java
 description: "AI rules for com.example.internal.GeneratedMetadata"
 ---
 

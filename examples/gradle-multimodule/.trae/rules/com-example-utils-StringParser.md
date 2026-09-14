@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/StringParser.java"]
+globs: **/StringParser.java
 description: "AI rules for com.example.utils.StringParser"
 ---
 

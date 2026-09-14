@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/GdprService.java"]
+globs: **/GdprService.java
 description: "AI rules for com.example.compliance.GdprService"
 ---
 
