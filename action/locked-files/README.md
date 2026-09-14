@@ -20,14 +20,25 @@ A composite GitHub Action that **fails a pull request when its diff touches code
 
    A change the guard cannot read fails the check rather than passing it.
 
-The lock-stripping and deleted-file checks read each source as it was at the base revision. A Java source is lexed there,
-so `@AILocked` text inside a string literal, text block, char literal or comment is not an
-annotation: a test that builds Java fixture source in strings can be edited freely. A real
-annotation still counts however javac allows it to be written, spaced from the `@`, qualified,
-split by a comment, or spelled with a unicode escape. When the guard cannot tell code from text it
-fails rather than passes: Kotlin and Groovy sources, and any Java source that does not lex (an
-unterminated literal or comment), keep the plain substring match. No directory is exempt, test
-sources included, because javac runs the processor over test sources too.
+The lock-stripping and deleted-file checks read each Java, Kotlin or Groovy source as it was at
+the base revision and lex it there, so `@AILocked` text inside a string literal, text block, char
+literal or comment is not an annotation: a test that builds fixture source in strings can be edited
+freely. A real annotation still counts however the compiler allows it to be written:
+
+- **Java:** spaced from the `@`, qualified, split by a comment, or spelled with a unicode escape.
+- **Kotlin:** also with a use-site target (`@field:AILocked`), in a `@[...]` group, backtick-quoted,
+  inside a `${...}` string template, or under a name that an `import ... as` or a `typealias` in
+  the same file gives it. Any other code token naming the lock, outside an import, counts too.
+- **Groovy:** also inside a `${...}` string template, or under an `import ... as` name.
+
+When the guard cannot tell code from text it fails rather than passes: a source that does not lex
+(an unterminated or unbalanced literal, comment, template or brace) keeps the plain substring
+match. So does a Kotlin source with a `$` outside a string, which is how a multi-dollar `$$"..."`
+string starts, and a Groovy source with a `/` in code that does not start a comment, because a
+slashy string (`/.../`, `$/.../$`) cannot be told from a division without parsing: a Groovy file
+that divides gets the substring match. An alias declared in another file is not followed, by
+either match. No directory is exempt, test sources included, because javac runs the processor
+over test sources too.
 
 Violations surface as inline GitHub error annotations on the offending file and line.
 

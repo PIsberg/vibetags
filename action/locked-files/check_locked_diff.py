@@ -15,11 +15,12 @@ before this script), lists the changed files against the merge base with
      to another extension, or changed into another file type, counts as deleted,
   4. a submodule that holds a locked element changes.
 
-Checks 2 and 3 read the base revision. A Java source is lexed there, so ``@AILocked`` text
-inside a string literal, text block, char literal or comment is not an annotation (#708).
-Kotlin and Groovy sources, and any Java source that does not lex, keep the plain substring
-match, which errs toward failing. So does anything else the guard cannot read: an unknown
-diff status, an unparseable record, or a file whose diff does not map to one section.
+Checks 2 and 3 read the base revision. A Java, Kotlin or Groovy source is lexed there, so
+``@AILocked`` text inside a string literal, text block, char literal or comment is not an
+annotation (#708, #709). A source that does not lex keeps the plain substring match, which errs
+toward failing; a Groovy source does not lex wherever a slashy string could start. So does
+anything else the guard cannot read: an unknown diff status, an unparseable record, or a file
+whose diff does not map to one section.
 
 Environment:
   VIBETAGS_BASE_REF    ref/SHA to diff against (required)
@@ -221,15 +222,279 @@ def _scan_java(chars, name):
     return lines
 
 
+def kotlin_annotation_lines(text, name="AILocked"):
+    """The lines holding a real ``@name`` annotation in a Kotlin source, or None when unsure.
+
+    Kotlin nests code inside strings: ``"${ ... }"`` and ``\"\"\"${ ... }\"\"\"`` hold arbitrary
+    expressions, including further strings, comments and annotated declarations, and block
+    comments nest. A lexer that lost track of either could read a real annotation as text and
+    pass its removal, so every construct it does not model makes it give up instead: an
+    unterminated or unbalanced literal, comment, template or brace, a ``$`` in code (the
+    multi-dollar ``$$"..."`` prefix changes what a template is), a ``$`` before a backtick in a
+    string, a raw string closed by more than three quotes, a backslash in code, a lone carriage
+    return. None sends the caller back to the substring match, which errs toward failing.
+    """
+    try:
+        return _script_annotation_lines(_lex_script(text, kotlin=True), name)
+    except _Unlexable:
+        return None
+
+
+def groovy_annotation_lines(text, name="AILocked"):
+    """The lines holding a real ``@name`` annotation in a Groovy source, or None when unsure.
+
+    Groovy's quoted strings (``'``, ``"``, ``'''``, ``\"\"\"``) and comments are lexed, with
+    ``${ ... }`` templates in the double-quoted forms. A slashy string (``/.../``, ``$/.../$``)
+    cannot be told from a division without parsing expressions, and one holding a quote would
+    make a real annotation look quoted, so a ``/`` in code that does not start a comment makes
+    the whole file unsure. So does any unicode escape (Groovy may translate one before lexing,
+    as javac does), a ``$`` in a template string that starts neither a name nor ``${``, and
+    anything the Kotlin lexer also gives up on.
+    """
+    try:
+        return _script_annotation_lines(_lex_script(text, kotlin=False), name)
+    except _Unlexable:
+        return None
+
+
+def _lex_script(text, kotlin):
+    """Kotlin or Groovy code tokens, ``(kind, value, line)``, with strings and comments removed.
+
+    ``kind`` is "ident" (``value`` is the name, identifier-ignorable characters removed),
+    "punct" (one character) or "string" (one token per literal, so tokens on either side of a
+    literal never look adjacent). Code inside a string template is tokenized as code. ``line``
+    is 1-based and counts ``\\n`` only, as git does.
+    """
+    if "\r" in text.replace("\r\n", ""):
+        raise _Unlexable()  # a lone CR: the languages disagree with git about where a line ends
+    if not kotlin and "\\u" in text:
+        raise _Unlexable()
+    chars, line = [], 1
+    for ch in text:
+        chars.append((ch, line))
+        if ch == "\n":
+            line += 1
+    n = len(chars)
+
+    def at(k):
+        return chars[k][0] if k < n else ""
+
+    def name_part(ch):
+        """A Java identifier character; Kotlin names hold no ``$``, Groovy names may."""
+        return _java_identifier_part(ch) and not (kotlin and ch == "$")
+
+    tokens = []
+    # Each frame is [mode, braces, quote, triple]: mode "code" (braces counts the "{" still open
+    # in it) or "string". The bottom frame is the file; a code frame above it is a ${ } template.
+    stack = [["code", 0, None, False]]
+    i = 0
+    if at(0) == "#" and at(1) == "!":
+        while i < n and chars[i][0] != "\n":
+            i += 1
+    while i < n:
+        frame = stack[-1]
+        ch, line = chars[i]
+        if frame[0] == "string":
+            quote, triple = frame[2], frame[3]
+            templates = kotlin or quote == '"'
+            if ch == "\\" and not (kotlin and triple):
+                if i + 1 >= n or (chars[i + 1][0] == "\n" and not triple):
+                    raise _Unlexable()
+                i += 2
+            elif ch == quote:
+                if not triple:
+                    stack.pop()
+                    i += 1
+                    continue
+                run = 0
+                while at(i + run) == quote:
+                    run += 1
+                if run > 3:
+                    raise _Unlexable()  # which three quotes close the string differs by language
+                if run == 3:
+                    stack.pop()
+                i += run
+            elif ch == "\n" and not triple:
+                raise _Unlexable()
+            elif ch == "$" and templates:
+                nxt = at(i + 1)
+                if nxt == "{":
+                    stack.append(["code", 0, None, False])
+                    i += 2
+                elif kotlin and nxt == "`":
+                    raise _Unlexable()
+                elif not kotlin and not (nxt.isalpha() or nxt in "_$"):
+                    raise _Unlexable()
+                else:
+                    i += 1
+            else:
+                i += 1
+            continue
+
+        if ch == "/" and at(i + 1) == "/":
+            while i < n and chars[i][0] != "\n":
+                i += 1
+        elif ch == "/" and at(i + 1) == "*":
+            depth, i = 1, i + 2
+            while depth:
+                if i >= n:
+                    raise _Unlexable()
+                if chars[i][0] == "*" and at(i + 1) == "/":
+                    depth, i = depth - 1, i + 2
+                elif kotlin and chars[i][0] == "/" and at(i + 1) == "*":
+                    depth, i = depth + 1, i + 2
+                else:
+                    i += 1
+        elif ch == "/" and not kotlin:
+            raise _Unlexable()  # a slashy string may start here
+        elif ch == '"' or (ch == "'" and not kotlin):
+            triple = at(i + 1) == ch and at(i + 2) == ch
+            if triple and at(i + 3) == ch:
+                raise _Unlexable()  # four quotes open differently in the two languages
+            stack.append(["string", 0, ch, triple])
+            tokens.append(("string", None, line))
+            i += 3 if triple else 1
+        elif ch == "'":
+            i += 1
+            while at(i) != "'":
+                if i >= n or chars[i][0] == "\n":
+                    raise _Unlexable()
+                if chars[i][0] == "\\":
+                    if i + 1 >= n or chars[i + 1][0] == "\n":
+                        raise _Unlexable()
+                    i += 1
+                i += 1
+            tokens.append(("string", None, line))
+            i += 1
+        elif ch == "`":
+            if not kotlin:
+                raise _Unlexable()
+            end = i + 1
+            while end < n and chars[end][0] not in "`\n":
+                end += 1
+            if at(end) != "`" or end == i + 1:
+                raise _Unlexable()
+            value = "".join(c for c, _ in chars[i + 1:end] if not _java_ignorable(c))
+            tokens.append(("ident", value, line))
+            i = end + 1
+        elif ch == "$" and kotlin:
+            raise _Unlexable()  # a multi-dollar string prefix, or nothing Kotlin allows
+        elif ch == "\\":
+            if kotlin or at(i + 1) != "\n":
+                raise _Unlexable()
+            i += 2
+        elif ch == "{":
+            frame[1] += 1
+            tokens.append(("punct", ch, line))
+            i += 1
+        elif ch == "}":
+            if frame[1] == 0:
+                if len(stack) == 1:
+                    raise _Unlexable()
+                stack.pop()  # the template ends; back in its string
+            else:
+                frame[1] -= 1
+                tokens.append(("punct", ch, line))
+            i += 1
+        elif name_part(ch):
+            start = i
+            while i < n and name_part(chars[i][0]):
+                i += 1
+            value = "".join(c for c, _ in chars[start:i] if not _java_ignorable(c))
+            tokens.append(("ident", value, line))
+        elif ch.isspace():
+            i += 1
+        else:
+            tokens.append(("punct", ch, line))
+            i += 1
+    if len(stack) != 1 or stack[0][1] != 0:
+        raise _Unlexable()
+    return tokens
+
+
+def _script_annotation_lines(tokens, name):
+    """Lines that carry a lock, from Kotlin or Groovy code tokens.
+
+    Deliberately wider than an annotation: every line from an ``@`` to a lock name after it
+    (a use-site target such as ``@field:``, a qualified name, or a ``@[...]`` group), and every
+    other code token naming the lock, such as a ``typealias`` right-hand side or a class
+    reference, counts. Names brought in by ``import ... as`` and ``typealias`` count as the lock
+    too. Only the import statement itself does not, so removing an unused import passes. A
+    wider answer can only fail a pull request that would otherwise pass.
+    """
+    count = len(tokens)
+
+    def tok(k, kind, value=None):
+        return k < count and tokens[k][0] == kind and (value is None or tokens[k][1] == value)
+
+    def chain_end(k):
+        """The index of the last name in a dotted name starting at k."""
+        while tok(k + 1, "punct", ".") and tok(k + 2, "ident"):
+            k += 2
+        return k
+
+    names, aliases, in_import = {name}, [], set()
+    for t in range(count):
+        if tok(t, "ident", "import") and tok(t + 1, "ident"):
+            k = t + 2 if tokens[t + 1][1] == "static" and tok(t + 2, "ident") else t + 1
+            end = chain_end(k)
+            in_import.update(range(k, end + 1))
+            if tok(end + 1, "ident", "as") and tok(end + 2, "ident"):
+                aliases.append((tokens[end][1], tokens[end + 2][1]))
+                in_import.update((end + 1, end + 2))
+        elif (tok(t, "ident", "typealias") and tok(t + 1, "ident") and tok(t + 2, "punct", "=")
+              and tok(t + 3, "ident")):
+            aliases.append((tokens[chain_end(t + 3)][1], tokens[t + 1][1]))
+    grown = True
+    while grown:
+        grown = False
+        for target, alias in aliases:
+            if target in names and alias not in names:
+                names.add(alias)
+                grown = True
+
+    lines = set()
+    for t in range(count):
+        kind, value, line = tokens[t]
+        if kind == "ident" and value in names and t not in in_import:
+            lines.add(line)
+        if not (kind == "punct" and value == "@"):
+            continue
+        k = t + 1
+        if tok(k, "ident") and tok(k + 1, "punct", ":"):
+            k += 2  # a use-site target: @field:, @get:, @file: and the rest
+        if tok(k, "punct", "["):
+            depth, j = 0, k
+            while True:
+                if j >= count:
+                    raise _Unlexable()
+                if tok(j, "punct", "["):
+                    depth += 1
+                elif tok(j, "punct", "]"):
+                    depth -= 1
+                    if depth == 0:
+                        break
+                elif tok(j, "ident") and tokens[j][1] in names:
+                    lines.update(range(line, tokens[j][2] + 1))
+                j += 1
+        elif tok(k, "ident"):
+            end = chain_end(k)
+            if tokens[end][1] in names:
+                lines.update(range(line, tokens[end][2] + 1))
+    return lines
+
 def lock_lines(path, text):
     """Lines of ``text`` that carry a lock, or None when only a substring match can tell.
 
-    Java is lexed. Kotlin and Groovy are not: Kotlin string templates nest code, strings and
-    comments inside a string, and a Groovy slashy string cannot be told from a division without
-    parsing, so a lexer that guessed could read a real annotation as text and pass its removal.
+    Java, Kotlin and Groovy each have their own lexer, and each answers None whenever it cannot
+    be sure where code ends and a literal or comment begins (#708, #709).
     """
     if path.endswith(".java"):
         return java_annotation_lines(text)
+    if path.endswith((".kt", ".kts")):
+        return kotlin_annotation_lines(text)
+    if path.endswith(".groovy"):
+        return groovy_annotation_lines(text)
     return None
 
 
