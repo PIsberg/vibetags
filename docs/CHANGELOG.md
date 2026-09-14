@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`llms.txt` and `llms-full.txt` no longer print an empty audit section for a bare `@AIAudit`** (#728).
+  **Projects that write `@AIAudit` without `checkFor` and generate `llms.txt` or `llms-full.txt` lose the
+  audit heading, and in `llms-full.txt` its description, from the generated block on the next build.** A bare
+  `@AIAudit` names no checks, so its formatters render no entry, but `LlmsRenderer.appendSection` still
+  printed the heading: an audit requirement naming no file and no check. It now rolls back a section whose
+  entries all render nothing, as `AnnotationSections.render` has since #726. Aider's `CONVENTIONS.md`, named in
+  the issue, was never affected: it has no section headings, and each entry carries its own. No committed
+  example uses a bare `@AIAudit`, so no generated file in this repository changes.
+  `UnsetMemberRenderingTest` now requires, on every aggregate platform, that a model holding only a bare
+  `@AIAudit` renders byte-identically to an empty model.
+
 - **No double blank lines between sections in `llms-full.txt`, Copilot, Junie, and `CONVENTIONS.md`** (#726).
   **Every project that generates `llms-full.txt`, `.github/copilot-instructions.md`, `.junie/guidelines.md`
   or `CONVENTIONS.md` gets a whitespace-only change to its generated block on the next build**: double blank

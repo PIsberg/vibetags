@@ -245,12 +245,22 @@ public final class LlmsRenderer implements PlatformRenderer {
         return sb.toString();
     }
 
+    /**
+     * Appends {@code heading} and the section's entries, or nothing at all when every entry
+     * formats to nothing: a bare {@code @AIAudit} names no checks and renders no entry, and its
+     * heading alone read as an audit requirement naming no file (#728).
+     */
     @SuppressWarnings("UnusedVariable")
     private static void appendSection(StringBuilder sb, Collection<TaggedElement> elements, Platform platform, String heading, FormatterCaller caller) {
         if (elements.isEmpty()) return;
+        int sectionStart = sb.length();
         sb.append(heading);
+        int bodyStart = sb.length();
         for (TaggedElement e : elements) {
             caller.call(e, sb);
+        }
+        if (sb.length() == bodyStart) {
+            sb.setLength(sectionStart);
         }
     }
 
