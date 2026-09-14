@@ -181,7 +181,8 @@ then built it again with `-Xjvm-expose-boxed`, and read each guardrail back from
 | Direct member of a class or value class carrying `@JvmExposeBoxed` (function, getter, constructor) | kept | kept | silent |
 | ...its `suspend` member, or a member of a class nested inside it | lost | lost / kept | reports |
 | `@JvmExposeBoxed` on an interface member | does not compile: "cannot expose functions which are open or abstract, or member of an interface" | | |
-| Function taking a value class declared in another Gradle module | lost | kept | reports when the module is under `--dir` |
+| Function taking a value class declared in another Gradle module | lost | kept | reports when the module is under `--dir`, or its jar is on `--classpath` |
+| Function taking a standard-library value class not in the built-in list (`UIntArray`) | lost | not built | reports when `kotlin-stdlib` is on `--classpath` |
 
 Two results overturn what #688 assumed. A return type mangles only a member: a top-level
 `fun makeId(): AccountId` keeps its guardrail, and doctor reported it until #692. And
@@ -206,6 +207,25 @@ built to miss rather than to report something that is not lost:
   name is resolved through the file's package and imports, so `java.time.Duration`, or an ordinary
   class sharing a value class's simple name, is not a hit. Running doctor from a reactor root scans
   every module under it, so a value class declared in a sibling module is known.
+- **Value classes from dependencies (#691).** `doctor --classpath <entries>` also reads every jar
+  and class directory given, separated by the platform path separator as for `java -cp`, and
+  counts a top-level class whose class file carries `@kotlin.jvm.JvmInline`. kotlinc writes that
+  annotation into the class file's `RuntimeVisibleAnnotations` (`javap -v` on a Kotlin 2.4.10 value
+  class), so the reader is plain JDK code over the constant pool, with no Kotlin metadata decoder.
+  `kotlin.Result` is skipped, and a name the sources declare as an ordinary class wins over a stale
+  class file. A missing entry or an unreadable class file is a finding, not a silent pass. Pass the
+  compile classpath: `mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt` for Maven, or, for
+  Gradle, a task such as the one below (both used in #691), then `--classpath "$(cat cp.txt)"`. On
+  the #692 fixture's compile classpath the reader found the `model` module's `CustomerId` plus
+  `kotlin-stdlib`'s eight unsigned value classes and `Duration`, and doctor's findings went from 55
+  to 56: the extra one is a `UIntArray` parameter, measured lost.
+
+  ```kotlin
+  tasks.register("printCompileClasspath") {
+      val classpath = sourceSets["main"].compileClasspath
+      doLast { println(classpath.asPath) }
+  }
+  ```
 - **`-Xjvm-expose-boxed`.** A `pom.xml` or `build.gradle[.kts]` that passes it applies to the `.kt`
   files under that build file's directory, and there doctor reports only the rows that stay lost
   with the option, with a line saying which build file it read. The option set anywhere else, a
@@ -214,7 +234,9 @@ built to miss rather than to report something that is not lost:
 
 Known misses, every one a false negative, so a clean doctor run is not proof that nothing is lost:
 
-- Value classes declared outside the scanned directory, in another module or a dependency.
+- Value classes declared outside the scanned directory, in another module or a dependency, when
+  their jar or class directory is not passed with `--classpath`. On the classpath, a class compiled
+  from the pre-1.5 `inline class` form without `@JvmInline`, and a nested value class, are not read.
 - A value class reached through a `typealias`, a nested one written as `Outer.Id`, a name declared
   both as a value class and as an ordinary type in the same package, and standard-library value
   classes not on the list above (the unsigned array types, for example).

@@ -31,11 +31,17 @@ final class DoctorCommand {
 
     private final PrintStream out;
     private final Path dir;
+    private final List<Path> classpath;
     private final List<String> problems = new ArrayList<>();
 
-    DoctorCommand(PrintStream out, Path dir) {
+    /**
+     * @param classpath jars and class directories to read Kotlin value classes from, for value
+     *                  classes declared in a dependency or a module outside {@code dir}; may be empty
+     */
+    DoctorCommand(PrintStream out, Path dir, List<Path> classpath) {
         this.out = out;
         this.dir = dir;
+        this.classpath = List.copyOf(classpath);
     }
 
     int run() {
@@ -242,7 +248,16 @@ final class DoctorCommand {
             boolean exposeBoxed = exposeBoxedRoots.stream().anyMatch(absolute::startsWith);
             readable.add(new KotlinValueClassScan.Source(dir.relativize(file).toString(), read.get(), exposeBoxed));
         }
-        KotlinValueClassScan.Report report = KotlinValueClassScan.scan(readable);
+        Set<String> fromClasspath = Set.of();
+        if (!classpath.isEmpty()) {
+            JvmInlineClasses.Result result = JvmInlineClasses.read(classpath);
+            fromClasspath = result.valueClasses();
+            problems.addAll(result.problems());
+            out.println("kotlin classpath: " + classpath.size() + " entr" + (classpath.size() == 1 ? "y" : "ies")
+                + ", " + result.classFiles() + " class file(s) read, " + fromClasspath.size()
+                + " value class(es) found");
+        }
+        KotlinValueClassScan.Report report = KotlinValueClassScan.scan(readable, fromClasspath);
         List<String> lost = report.findings();
         out.println("kotlin sources:  " + files.size() + " file(s), " + report.declaredValueClasses()
             + " value class(es) declared; "
@@ -250,9 +265,14 @@ final class DoctorCommand {
                 ? "no guardrails found on value-class declarations"
                 : lost.size() + " declaration(s) whose guardrails kapt will drop"));
         out.println("note: the Kotlin value-class check is a heuristic source scan. It sees value "
-            + "classes declared under this directory plus UByte, UShort, UInt, ULong and "
-            + "kotlin.time.Duration; one from another module or a dependency, or reached through a "
-            + "typealias, is not seen, so no finding here is not proof that nothing is lost");
+            + "classes declared under this directory"
+            + (classpath.isEmpty() ? "" : " or in the --classpath entries")
+            + " plus UByte, UShort, UInt, ULong and kotlin.time.Duration; one declared elsewhere"
+            + (classpath.isEmpty()
+                ? " (another module or a dependency: pass the compile classpath with --classpath to see those)"
+                : "")
+            + ", or reached through a typealias, is not seen, so no finding here is not proof that "
+            + "nothing is lost");
         problems.addAll(lost);
     }
 

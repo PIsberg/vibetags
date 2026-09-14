@@ -102,6 +102,26 @@ vendor before anything changed, and the table under Deprecated lists every depre
   each exclusion, plus import resolution, was broken once on purpose and turned exactly its own
   test red.
 
+- **`vibetags doctor --classpath` sees Kotlin value classes declared in dependencies** (#691). The
+  value-class check knew only value classes declared under `--dir`, so a function taking a domain
+  ID from a shared `model` library lost its guardrail with nothing reported, although kapt drops
+  it the same way: `Consumer.forCustomer(CustomerId)`, with `CustomerId` in another Gradle module,
+  was measured lost in the #692 fixture. `--classpath` takes jars and class directories, as for
+  `java -cp`, and doctor counts every top-level class whose class file carries
+  `@kotlin.jvm.JvmInline`, which kotlinc writes as a runtime-visible annotation. The reader is plain
+  JDK code over the constant pool, so the CLI still has no third-party dependency. `kotlin.Result`
+  is skipped, a source declaration wins over a stale class file, and a missing entry or an
+  unreadable class file is a finding. Running from a reactor root already scanned sibling modules'
+  sources; that is now pinned by a test and documented.
+
+  On the fixture's Gradle compile classpath, the reader found `CustomerId` plus the nine
+  standard-library value classes in `kotlin-stdlib`, and doctor's findings rose from 55 to 56, the
+  new one a `UIntArray` parameter measured lost. Five new `DoctorCommandTest` cases and one
+  `MainTest` case; the four that need `--classpath` were red before it existed, and the reactor-root
+  case, which passes on the old code, turned red when the sibling module was excluded from the walk.
+  The fifth feeds a class file with an annotation nested 100,000 levels deep, which crashed the
+  reader with a `StackOverflowError` until nesting was capped at 64 levels.
+
 - **A warning when a hand-authored top-level key collides with a generated YAML block** (#635).
   VibeTags keeps text outside its markers, as it must, so a user's own `read:` in `.aider.conf.yml`
   survives next to the generated one and the document declares the key twice. PyYAML keeps the

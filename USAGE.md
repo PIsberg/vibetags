@@ -449,13 +449,20 @@ that resolves the Maven coordinate.
   which Kotlin declarations kapt will leave out of its stubs because a value class mangles their
   JVM name (functions, constructors, property accessors, members of a value class), with the
   guardrails each one loses and the remedy that keeps it. The Kotlin check is
-  a heuristic source scan: it cannot see value classes declared in another module or a
-  dependency, so a clean run there is not proof that nothing is lost
+  a heuristic source scan: it sees value classes declared under `--dir`, and ones in a dependency
+  only when their jars are passed with `--classpath`, so a clean run is not proof that nothing is
+  lost
   ([docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds)
   lists what it misses). Exit code 0 means healthy, 1 means at
   least one finding needs action — usable as a cheap CI step. Either command exits 2 on a
   usage error: an argument it does not understand, or a `--dir` that is not a directory.
 - **`--dir <path>`** points either command at another project root.
+- **`doctor --classpath <entries>`** also reads Kotlin value classes from the given jars and class
+  directories, separated by `:` (`;` on Windows) as for `java -cp`, so a function taking a value
+  class from a dependency is reported too. Pass the compile classpath, for example from
+  `mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt` and `--classpath "$(cat cp.txt)"`;
+  [docs/JVM-LANGUAGES.md](docs/JVM-LANGUAGES.md#functions-with-a-value-class-in-their-signature-and-what-vibetags-doctor-finds)
+  has a Gradle task that prints it.
 
 The platform keys, file paths and marker strings are read from `vibetags-processor` at
 runtime, so the CLI cannot drift from the processor's actual behaviour.

@@ -46,6 +46,13 @@ class MainTest {
     }
 
     @Test
+    void doctorClasspathNeedsAValue() {
+        assertEquals(2, run("doctor", "--classpath"));
+        assertTrue(err().contains("--classpath needs"), err());
+        assertTrue(stdout.toString(StandardCharsets.UTF_8).isEmpty(), "no report was produced");
+    }
+
+    @Test
     void initRejectsAFlagItDoesNotUnderstand() throws Exception {
         assertEquals(2, run("init", "--platforms", "claude", "--bogus"));
         assertTrue(err().contains("--bogus"), err());

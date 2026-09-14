@@ -3,11 +3,21 @@ package se.deversity.vibetags.cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
+
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -944,6 +954,242 @@ class DoctorCommandTest {
         assertEquals(1, doctor(), out());
         assertTrue(out().contains("CoreLookup.kt:6 @AILocked on fun lookup"), out());
         assertFalse(out().contains("AppLookup.kt"), out());
+    }
+
+    // ------------------------------------------------ value classes from other modules and dependencies
+    //
+    // #691. A value class declared outside the scanned sources mangles a function the same way: in the
+    // #692 fixture, Consumer.forCustomer(CustomerId), with CustomerId in a separate Gradle module, lost
+    // its guardrail. The jar cases use Java stand-ins compiled here: kotlinc writes @kotlin.jvm.JvmInline
+    // into a value class's RuntimeVisibleAnnotations (javap on the fixture's model.jar), and a Java
+    // class carrying an annotation of that name looks the same to a class-file reader.
+
+    private static final String CONSUMER = """
+        package com.acme.app
+
+        import com.acme.model.CustomerId
+        import com.acme.model.PlainCustomer
+        import se.deversity.vibetags.annotations.AILocked
+
+        @AILocked(reason = "customer lookup")
+        fun forCustomer(id: CustomerId): String = id.raw
+
+        @AILocked(reason = "an ordinary class from the same jar")
+        fun forPlain(customer: PlainCustomer): String = ""
+
+        @AILocked(reason = "kotlin.Result carries @JvmInline but is not mangled")
+        fun settle(outcome: Result<Long>): String = ""
+        """;
+
+    private int doctor(String... options) {
+        PrintStream stream = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+        String[] args = new String[options.length + 1];
+        args[0] = "doctor";
+        System.arraycopy(options, 0, args, 1, options.length);
+        return Main.run(args, stream, stream, dir);
+    }
+
+    /** Compiles the dependency stand-ins into a class directory outside every scanned source root. */
+    private Path compiledDependency() throws Exception {
+        Path src = dir.resolve("deps/src");
+        List<Path> files = List.of(
+            javaFile(src, "kotlin/jvm/JvmInline.java", """
+                package kotlin.jvm;
+
+                import java.lang.annotation.ElementType;
+                import java.lang.annotation.Retention;
+                import java.lang.annotation.RetentionPolicy;
+                import java.lang.annotation.Target;
+
+                @Retention(RetentionPolicy.RUNTIME)
+                @Target(ElementType.TYPE)
+                public @interface JvmInline {
+                }
+                """),
+            javaFile(src, "kotlin/Result.java", """
+                package kotlin;
+
+                @kotlin.jvm.JvmInline
+                public final class Result<T> {
+                }
+                """),
+            javaFile(src, "com/acme/model/CustomerId.java", """
+                package com.acme.model;
+
+                @kotlin.jvm.JvmInline
+                public final class CustomerId {
+                    public String getRaw() {
+                        return "";
+                    }
+                }
+                """),
+            javaFile(src, "com/acme/model/PlainCustomer.java", """
+                package com.acme.model;
+
+                public final class PlainCustomer {
+                }
+                """));
+        Path classes = Files.createDirectories(dir.resolve("deps/classes"));
+        List<String> args = new ArrayList<>(List.of("-d", classes.toString()));
+        files.forEach(f -> args.add(f.toString()));
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        assertEquals(0, javac.run(null, null, null, args.toArray(String[]::new)), "stand-ins must compile");
+        return classes;
+    }
+
+    private static Path javaFile(Path root, String relPath, String source) throws Exception {
+        Path file = root.resolve(relPath);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, source);
+        return file;
+    }
+
+    /** Packs a class directory, plus any extra entries, into a jar under deps/. */
+    private Path jar(Path classes, String name, Map<String, byte[]> extra) throws Exception {
+        Path jar = dir.resolve("deps").resolve(name);
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar));
+             Stream<Path> walk = Files.walk(classes)) {
+            for (Path file : walk.filter(Files::isRegularFile).sorted().toList()) {
+                out.putNextEntry(new JarEntry(classes.relativize(file).toString().replace('\\', '/')));
+                out.write(Files.readAllBytes(file));
+                out.closeEntry();
+            }
+            for (Map.Entry<String, byte[]> entry : extra.entrySet()) {
+                out.putNextEntry(new JarEntry(entry.getKey()));
+                out.write(entry.getValue());
+                out.closeEntry();
+            }
+        }
+        return jar;
+    }
+
+    @Test
+    void kotlinValueClassFromSiblingModule_isResolvedWhenDoctorRunsFromTheReactorRoot() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("model/src/main/kotlin/com/acme/model/CustomerId.kt", """
+            package com.acme.model
+
+            @JvmInline
+            value class CustomerId(val raw: String)
+            """);
+        sourceFile("app/src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+        assertTrue(out().contains("value class com.acme.model.CustomerId"), out());
+        assertFalse(out().contains("fun settle"), out());
+    }
+
+    @Test
+    void kotlinValueClassFromDependencyJar_isReportedWhenTheJarIsOnTheClasspath() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path jar = jar(compiledDependency(), "model.jar", Map.of());
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("--classpath"),
+            "a run without a classpath must say how to see dependency value classes: " + out());
+
+        stdout.reset();
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+        assertTrue(out().contains("value class com.acme.model.CustomerId"), out());
+        assertTrue(out().contains("1 value class(es) found"), "kotlin.Result is not counted: " + out());
+        assertFalse(out().contains("fun forPlain"), out());
+        assertFalse(out().contains("fun settle"), out());
+    }
+
+    @Test
+    void classDirectoryOnTheClasspath_isReadLikeAJar_andASourceDeclarationWins() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path classes = compiledDependency();
+
+        assertEquals(1, doctor("--classpath", classes.toString()), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+
+        // The sources say CustomerId is an ordinary class now; a stale class directory must not
+        // turn that into a finding.
+        sourceFile("src/main/kotlin/com/acme/model/CustomerId.kt", """
+            package com.acme.model
+
+            class CustomerId(val raw: String)
+            """);
+        stdout.reset();
+        assertEquals(0, doctor("--classpath", classes.toString()), out());
+    }
+
+    @Test
+    void unreadableClasspathEntries_areFindingsNotASilentPass() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        byte[] broken = "\u00ca\u00fe\u00ba\u00be kotlin/jvm/JvmInline".getBytes(StandardCharsets.ISO_8859_1);
+        Path jar = jar(compiledDependency(), "broken.jar", Map.of("com/acme/model/Broken.class", broken));
+        Path missing = dir.resolve("deps/missing.jar");
+
+        assertEquals(1, doctor("--classpath", jar + File.pathSeparator + missing), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"),
+            "the readable classes in a jar still count: " + out());
+        assertTrue(out().contains("com/acme/model/Broken.class"), out());
+        assertTrue(out().contains("missing.jar") && out().contains("does not exist"), out());
+    }
+
+    @Test
+    void deeplyNestedAnnotationInAClassFile_isAFindingNotACrash() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path jar = jar(compiledDependency(), "nested.jar",
+            Map.of("com/acme/model/Deep.class", classFileWithNestedAnnotation(100_000)));
+
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("com/acme/model/Deep.class"), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+    }
+
+    /** A class file whose @JvmInline annotation holds an annotation nested {@code depth} levels deep. */
+    private static byte[] classFileWithNestedAnnotation(int depth) throws Exception {
+        java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream b = new java.io.DataOutputStream(body);
+        b.writeShort(1);            // one annotation
+        for (int i = 0; i < depth; i++) {
+            b.writeShort(2);        // type: Lkotlin/jvm/JvmInline;
+            b.writeShort(1);        // one element
+            b.writeShort(2);        // element name
+            b.writeByte('@');       // whose value is another annotation
+        }
+        b.writeShort(2);
+        b.writeShort(0);
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream c = new java.io.DataOutputStream(bytes);
+        c.writeInt(0xCAFEBABE);
+        c.writeShort(0);
+        c.writeShort(65);
+        c.writeShort(5);            // constant pool count
+        c.writeByte(1);
+        c.writeUTF("RuntimeVisibleAnnotations");
+        c.writeByte(1);
+        c.writeUTF("Lkotlin/jvm/JvmInline;");
+        c.writeByte(1);
+        c.writeUTF("com/acme/model/Deep");
+        c.writeByte(7);
+        c.writeShort(3);
+        c.writeShort(0x31);         // access flags
+        c.writeShort(4);            // this class
+        c.writeShort(0);            // super class
+        c.writeShort(0);            // interfaces
+        c.writeShort(0);            // fields
+        c.writeShort(0);            // methods
+        c.writeShort(1);            // attributes
+        c.writeShort(1);
+        c.writeInt(body.size());
+        body.writeTo(c);
+        c.flush();
+        return bytes.toByteArray();
     }
 
     @Test

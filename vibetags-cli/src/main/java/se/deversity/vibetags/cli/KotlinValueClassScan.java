@@ -48,7 +48,8 @@ import java.util.regex.Pattern;
  *
  * <p>This is a heuristic over source text, not a compiler, so a doubt produces a miss rather than a
  * false finding. A type counts only when it resolves, through the file's package and imports, to a
- * value class declared in the scanned sources or to one of {@link #STDLIB_VALUE_CLASSES}. Only the
+ * value class declared in the scanned sources, found in a class file on doctor's
+ * {@code --classpath} ({@link JvmInlineClasses}), or one of {@link #STDLIB_VALUE_CLASSES}. Only the
  * head of a type counts ({@code List<AccountId>} is not mangled), {@code kotlin.Result} is never a
  * hit, and declarations inside function bodies, anonymous objects and extension properties are not
  * reported.
@@ -204,7 +205,12 @@ final class KotlinValueClassScan {
     private KotlinValueClassScan() {
     }
 
-    static Report scan(List<Source> sources) {
+    /**
+     * Scans {@code sources}, resolving types against the value classes they declare, the standard
+     * library's, and {@code classpathValueClasses} read from compiled dependencies (#691). A name the
+     * sources declare as an ordinary type wins over a class file saying otherwise.
+     */
+    static Report scan(List<Source> sources, Set<String> classpathValueClasses) {
         List<FileContext> files = new ArrayList<>();
         Set<String> valueClasses = new HashSet<>();
         Set<String> otherTypes = new HashSet<>();
@@ -219,9 +225,13 @@ final class KotlinValueClassScan {
         // A name declared both ways (a nested value class next to a same-named top-level class)
         // cannot be told apart by text, so it is dropped rather than guessed.
         valueClasses.removeAll(otherTypes);
+        int declared = valueClasses.size();
+        Set<String> fromClasspath = new HashSet<>(classpathValueClasses);
+        fromClasspath.removeAll(otherTypes);
+        fromClasspath.remove("kotlin.Result");
+        valueClasses.addAll(fromClasspath);
         Set<String> declaredTypes = new HashSet<>(otherTypes);
         declaredTypes.addAll(valueClasses);
-        int declared = valueClasses.size();
         valueClasses.addAll(STDLIB_VALUE_CLASSES);
         Known known = new Known(valueClasses, declaredTypes);
 
