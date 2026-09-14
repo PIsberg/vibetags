@@ -539,6 +539,22 @@ vendor before anything changed, and the table under Deprecated lists every depre
   own parser functions, run on both forms, matched none of three Java paths with the list and each
   named file with the bare value.
 
+- **The locked-files guard no longer fails a pull request for `@AILocked` text that is not an
+  annotation** (#708). The lock-stripping and deleted-file checks matched the substring
+  `@AILocked` in any removed `.java` line, so PR #707, which changed only tests, failed for
+  editing Java fixture source that `FingerprintShortCircuitTest` holds in string literals, and had
+  to keep those blocks byte-identical to pass. The guard now lexes the base revision of a Java
+  source (comments, strings, text blocks, char literals, unicode escapes translated first as javac
+  does) and counts a removed line only when a real annotation sat on it. That also closes the
+  other direction: a stripped `@ AILocked` or `@se.deversity.vibetags.annotations.AILocked`, which
+  the substring never matched, now fails. A source that does not lex, and every Kotlin or Groovy
+  source, keeps the substring match, so an unsure answer still fails. The same change also
+  hardens path and rename parsing: changed files are read from `git diff --raw -z` and diffed one
+  at a time, and a change the guard cannot read fails the check. Reproduced on this
+  repository: a one-line fixture-string edit drew `A line containing @AILocked was removed` before
+  and passes after, while reordering the locked `GuardrailAnnotations.ALL` fails on both. The 4
+  annotation-text cases and the spaced/qualified strip were red against the old guard.
+
 - **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
   two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
   ran in `async-tests` under the async-test agent. A class that drives javac passed in

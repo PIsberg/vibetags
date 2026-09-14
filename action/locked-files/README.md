@@ -7,13 +7,27 @@ A composite GitHub Action that **fails a pull request when its diff touches code
 1. Touches `.vibetags-locks` (VibeTags' file-existence opt-in) and runs your build, so the
    annotation processor regenerates the machine-readable lock report fresh from the PR head —
    the report can never be stale.
-2. Parses `git diff` against the merge base with the PR base.
+2. Lists the changed files against the merge base with the PR base (`git diff --raw -z`, so
+   every path is read verbatim) and diffs each relevant file on its own.
 3. Reports a violation when:
    - a changed line range intersects a locked element's declaration range,
    - a removed line in a source file (`.java`, `.kt`, `.kts`, `.groovy`) contains the
      `@AILocked` annotation itself (lock stripping) -- generated guardrail files and docs
-     merely mention the annotation and reflow on every regeneration, so they are exempt, or
-   - a deleted source file contained `@AILocked` at the base revision.
+     merely mention the annotation and reflow on every regeneration, so they are exempt,
+   - a deleted source file contained `@AILocked` at the base revision (a source renamed to
+     another extension counts as deleted), or
+   - a submodule holding a locked element changes.
+
+   A change the guard cannot read fails the check rather than passing it.
+
+The lock-stripping and deleted-file checks read each source as it was at the base revision. A Java source is lexed there,
+so `@AILocked` text inside a string literal, text block, char literal or comment is not an
+annotation: a test that builds Java fixture source in strings can be edited freely. A real
+annotation still counts however javac allows it to be written, spaced from the `@`, qualified,
+split by a comment, or spelled with a unicode escape. When the guard cannot tell code from text it
+fails rather than passes: Kotlin and Groovy sources, and any Java source that does not lex (an
+unterminated literal or comment), keep the plain substring match. No directory is exempt, test
+sources included, because javac runs the processor over test sources too.
 
 Violations surface as inline GitHub error annotations on the offending file and line.
 
