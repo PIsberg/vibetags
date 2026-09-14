@@ -194,6 +194,12 @@ public final class GuardrailContentBuilder {
             return content;
         }
         String appendix = TransitiveSection.render(model, platform);
-        return appendix.isEmpty() ? content : content + appendix;
+        if (appendix.isEmpty()) {
+            return content;
+        }
+        if (content.endsWith("\n\n") && appendix.startsWith("\n")) {
+            return content + appendix.substring(1);
+        }
+        return content + appendix;
     }
 }

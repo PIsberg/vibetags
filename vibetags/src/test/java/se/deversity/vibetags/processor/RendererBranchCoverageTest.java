@@ -689,4 +689,14 @@ class RendererBranchCoverageTest {
                 "llms.txt must render the annotated element " + path);
         }
     }
+
+    @Test
+    void llmsRenderer_llmsFull_noDoubleBlankLines() {
+        LlmsRenderer renderer = new LlmsRenderer();
+        RenderingContext ctx =
+            new RenderingContext("Proj", "# header\n", Set.of("llms", "llms_full"));
+        String out = renderer.render(everyRenderedAnnotation().model(), Platform.LLMS_FULL, ctx);
+        assertFalse(out.contains("\n\n\n"),
+            "llms-full.txt must never contain double blank lines (\\n\\n\\n):\n" + out);
+    }
 }

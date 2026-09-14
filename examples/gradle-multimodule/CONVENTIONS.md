@@ -362,7 +362,6 @@ This file contains project-specific coding conventions and AI guardrails extract
 #### SECURITY AUDIT: com.example.gmm.app.App
 - **Required Checks**: Path Traversal
 
-
 ## Inherited Guardrails (dependencies)
 
 These come from packages this project depends on. They constrain how the dependency may be used; they are not editable from here.

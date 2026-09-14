@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **No double blank lines between sections in `llms-full.txt`, Copilot, Junie, and `CONVENTIONS.md`** (#726).
+  **Every project that generates `llms-full.txt`, `.github/copilot-instructions.md`, `.junie/guidelines.md`
+  or `CONVENTIONS.md` gets a whitespace-only change to its generated block on the next build**: double blank
+  lines (`\n\n\n`) between sections are removed. Four outputs printed two blank lines in a row, each for its
+  own reason: `LlmsRenderer` emitted headings with a leading newline in full mode while each `LLMS_FULL`
+  formatter arm already closed with a blank line; `CopilotRenderer` in full mode emitted an empty
+  `## Locked Files — DO NOT MODIFY` heading and description when nothing was locked; `JunieRenderer`
+  similarly emitted an empty `## Locked Files (Do Not Modify)` heading and description when nothing was
+  locked; and `GuardrailContentBuilder.withTransitiveAppendix` appended a leading newline before
+  `## Inherited Guardrails (dependencies)` even when the preceding platform content already ended with a
+  blank line (affecting Aider's `CONVENTIONS.md` and `llms-full.txt`). Now `LlmsRenderer` does not prepend a
+  newline to section headings in full mode, `CopilotRenderer` and `JunieRenderer` omit the locked files
+  heading when no elements are locked, and `withTransitiveAppendix` avoids doubling the blank line before
+  inherited guardrails.
+
 - **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
   **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change
   on the next build**: a blank line is added after each `TEST-DRIVEN` entry. In Aider's `CONVENTIONS.md`

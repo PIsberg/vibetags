@@ -369,4 +369,15 @@ class AllAnnotationsAllPlatformsEndToEndTest {
             }
         }
     }
+
+    @Test
+    void noDoubleBlankLinesInRenderedOutputs() throws IOException {
+        for (String file : java.util.List.of("llms-full.txt", ".github/copilot-instructions.md", "CONVENTIONS.md")) {
+            if (harness.fileExists(file)) {
+                String content = harness.readFile(file);
+                assertFalse(content.contains("\n\n\n"),
+                    file + " must never contain double blank lines (\\n\\n\\n):\n" + content);
+            }
+        }
+    }
 }
