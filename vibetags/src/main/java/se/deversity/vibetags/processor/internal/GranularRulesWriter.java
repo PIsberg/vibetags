@@ -591,6 +591,34 @@ public final class GranularRulesWriter {
         return "---\ndescription: \"" + desc + "\"\nglobs: " + arr(globs) + "\nalwaysApply: false\n---\n\n";
     }
 
+    /**
+     * Cursor's header with {@link #commaFreeGlobs} (#696). cursor.com/docs/rules documents several
+     * globs as one comma-separated value, {@code docs/**}{@code /*.md, docs/**}{@code /*.mdx}, so a
+     * comma inside a brace group reads as a separator there. The list form stays as it was, and a
+     * header whose globs hold no brace or comma, every per-element file, is byte-identical.
+     */
+    private static String fmCursor(String desc, List<String> globs) {
+        return fmDescGlobsApply(desc, commaFreeGlobs(globs));
+    }
+
+    /**
+     * Trae's header (#696): docs.trae.cn/ide/rules separates several patterns with {@code ,} and
+     * syncs them to {@code globs}, so the globs are made comma-free as Cursor's are.
+     */
+    private static String fmTrae(String desc, List<String> globs) {
+        return "---\nalwaysApply: false\nglobs: " + arr(commaFreeGlobs(globs)) + "\ndescription: \"" + desc + "\"\n---\n\n";
+    }
+
+    /**
+     * Copilot's {@code applyTo:} (#696). docs.github.com: "You can specify multiple patterns by
+     * separating them with commas", {@code applyTo: "**}{@code /*.ts,**}{@code /*.tsx"}. VS Code's
+     * reader skips commas inside braces, but the docs do not promise that and the GitHub.com reader
+     * is not public, so the globs are made comma-free and every comma separates two whole globs.
+     */
+    private static String fmApplyTo(String desc, List<String> globs) {
+        return "---\napplyTo: \"" + String.join(",", commaFreeGlobs(globs)) + "\"\n---\n\n";
+    }
+
     /** No front matter at all — the platform reads the file by path, not by a globs declaration. */
     private static String fmNone(String desc, List<String> globs) {
         return "";
@@ -617,8 +645,8 @@ public final class GranularRulesWriter {
     }
 
     /**
-     * {@code globs} rewritten so none contains a comma, for a header that separates globs with
-     * commas (#685).
+     * {@code globs} rewritten so none contains a comma, for a header whose reader may separate globs
+     * with commas: Devin Desktop and Windsurf (#685), and Cursor, Trae and Copilot (#696).
      *
      * <p>A {@code .vibetags-roles} glob may use brace alternation, {@code **}{@code /*.{java,kt}},
      * and a reader splitting the value on commas would cut it into two patterns that match neither
@@ -699,10 +727,8 @@ public final class GranularRulesWriter {
 
     // Order = historical per-class write order.
     private static final List<GranularFormat> FORMATS = List.of(
-        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("trae_granular", ".md",
-            (desc, globs) -> "---\nalwaysApply: false\nglobs: " + arr(globs) + "\ndescription: \"" + desc + "\"\n---\n\n",
-            n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmCursor, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("trae_granular", ".md", GranularRulesWriter::fmTrae, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         // Windsurf (now Devin Desktop) reads the trigger schema, not Cursor's (#683): see fmTriggerGlob.
         new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
@@ -714,8 +740,7 @@ public final class GranularRulesWriter {
         new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
         new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("copilot_granular", ".instructions.md",
-            (desc, globs) -> "---\napplyTo: \"" + String.join(",", globs) + "\"\n---\n\n",
+        new GranularFormat("copilot_granular", ".instructions.md", GranularRulesWriter::fmApplyTo,
             n -> "# Copilot Instructions for " + n + "\n\n"),
         // Grok Build loads every *.md in .grok/rules/ unconditionally and alphabetically and
         // parses no front matter, so a globs block would land in the model's context as literal

@@ -138,6 +138,31 @@ external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
 
 Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module.
 
+**A glob that holds a comma.** A `.vibetags-roles` glob may use brace alternation, `**/*.{java,kt}`, and a `.vibetags-mirror` glob
+line is taken whole, so either can put a comma inside one glob. Where a vendor documents several
+globs as one comma-separated value, a reader that splits on commas cuts that glob in two and the
+rule scopes to patterns that match the wrong files or none. For those platforms VibeTags expands
+each brace group into one glob per alternative, nested groups included, writes any other comma as
+`?`, and drops duplicates (#685, #696). A glob with no brace and no comma, which is every
+per-element glob, is written unchanged, so only role and mirror headers can differ. Where the vendor
+documents a list whose entries are matched whole, the glob is kept as written. Checked 2026-09-14:
+
+| Platform | Header | Documented list syntax | Expanded |
+|----------|--------|------------------------|----------|
+| GitHub Copilot | `applyTo: "..."` | "You can specify multiple patterns by separating them with commas", `applyTo: "**/*.ts,**/*.tsx"` ([docs.github.com](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions)). VS Code's reader skips commas inside braces; the GitHub.com reader is not public | yes |
+| Cursor | `globs: [...]` | `docs/**/*.md, docs/**/*.mdx` matches ".md and .mdx files under docs/ (comma-separated)" ([cursor.com/docs/rules](https://cursor.com/docs/rules)) | yes |
+| Trae | `globs: [...]` | several patterns "中间用 `,` 分隔" (separated by `,`), synced to the `globs` field ([docs.trae.cn](https://docs.trae.cn/ide/rules)) | yes |
+| Devin Desktop, Windsurf | `globs: a,b` | no multi-glob example in the docs; the vendor sample writes `globs: *.js, src/*.js` | yes (#685) |
+| Claude Code | `paths: [...]` | a YAML list, with "brace expansion to match multiple extensions in one pattern" ([code.claude.com](https://code.claude.com/docs/en/memory)) | no |
+| Cline | `paths: [...]` | "`paths` is the supported conditional. It takes an array of glob patterns", with `packages/{web,api}/**` in the docs ([docs.cline.bot](https://docs.cline.bot/features/cline-rules/conditional-rules)) | no |
+| Continue | `globs: [...]` | "either a single pattern (e.g., `"**/*.{ts,tsx}"`) or an array of patterns" ([docs.continue.dev](https://docs.continue.dev/customize/deep-dives/rules)) | no |
+| PearAI | `globs: [...]` | none found; the header is Continue's, which PearAI forked | no |
+
+Kiro, Augment, Zencoder, JetBrains AI Assistant, Grok, Gemini, Antigravity, Amazon Q, Tabnine, Roo
+Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. Whether Cursor and
+Trae read the bracketed, quoted list VibeTags writes at all, when their docs show a bare
+comma-separated value, is a separate question the expansion does not settle (#699).
+
 **Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
 
 **Repeated rule sentences collapse.** Within one granular file, a section covering two or more elements states its constant `- **Rule**:` sentence once (pluralized) and keeps only each element's varying detail beneath — elements whose whole stanza is shared collapse into an `- **Applies to**:` list. A section covering a single element is emitted exactly as before.
@@ -483,7 +508,8 @@ docs document for it (#683):
   come from three places: an element's own `**/Name.java` or package glob, which never contains a
   brace or comma; a `.vibetags-roles` line, which may use braces; and a `.vibetags-mirror` glob line,
   taken whole, where a comma no brace group explains is written as `?`, which still matches it.
-  Cursor's quoted list form is unaffected and keeps the glob as written.
+  Cursor, Trae and Copilot, whose docs also describe a comma-separated glob list, get the same
+  expansion (#696); see "A glob that holds a comma" under [Granular rules](#granular-rules).
 - **The safety tier is always on, from a file of its own** (#684). A `trigger: glob` rule loads only
   once a matching file is read or edited, so a project on a rules directory alone had no file that
   kept the six safety buckets in front of the agent up front, which invariant 6 exists to prevent.

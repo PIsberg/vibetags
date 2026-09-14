@@ -491,6 +491,21 @@ vendor before anything changed, and the table under Deprecated lists every depre
   `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
   to ignore `!` entries turns one of its cases red.
 
+- **A brace glob no longer splits in Copilot's `applyTo:` or in Cursor's and Trae's `globs:`**
+  (#696). The #685 expansion now covers the three other granular headers whose vendors document
+  several globs as a comma-separated value: docs.github.com says "You can specify multiple patterns
+  by separating them with commas", cursor.com lists `docs/**/*.md, docs/**/*.mdx` as
+  "(comma-separated)", and Trae's docs separate patterns with `,`. A `.vibetags-roles` glob such as
+  `**/*.{java,kt}` is written as one glob per alternative and a literal comma in a
+  `.vibetags-mirror` glob as `?`. Claude Code, Cline and Continue take a list whose entries are
+  matched whole, and Claude Code and Cline document brace globs in an entry, so their headers keep
+  the glob as written; the other granular platforms write no glob. Per-element headers and every
+  committed example are unchanged, since none of their globs holds a brace or comma. PLATFORMS.md
+  has the per-platform table with the quotes.
+
+  `GranularBraceGlobEndToEndTest` was written first: its Copilot, Cursor, Trae and Copilot mirror
+  cases failed with the glob split across commas, and its three list-platform cases passed.
+
 - **A brace glob no longer splits into broken halves in `.devin/rules/` and `.windsurf/rules/`**
   (#685). Several globs are written as one comma-joined `globs:` value, the form of the vendor's
   own sample rule (`globs: *.js, src/*.js`), so a `.vibetags-roles` glob such as `**/*.{java,kt}`

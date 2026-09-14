@@ -280,12 +280,12 @@ class DevinDesktopEndToEndTest {
                 + "globs: **/api/*.java,**/api/*.kt,**/web/*.java,**/web/*.kt,**/*Endpoint.java\n---\n\n"),
             "each brace alternative becomes a glob of its own, in order:\n" + role);
         String cursor = "---\ndescription: \"AI rules for role web\"\n"
-            + "globs: [\"**/{api,web}/*.{java,kt}\", \"**/*Endpoint.java\"]\n";
+            + "globs: [\"**/api/*.java\", \"**/api/*.kt\", \"**/web/*.java\", \"**/web/*.kt\", \"**/*Endpoint.java\"]\n";
         Files.createDirectories(root.resolve(".cursor/rules"));
         VibeTagsLogger.shutdown();
         h.compile();
         assertTrue(h.readFile(".cursor/rules/web.mdc").startsWith(cursor),
-            "Cursor's quoted list has no such ambiguity and keeps the glob as written:\n"
+            "Cursor documents its globs as comma-separated too, so its list gets the same expansion (#696):\n"
                 + h.readFile(".cursor/rules/web.mdc"));
     }
 
