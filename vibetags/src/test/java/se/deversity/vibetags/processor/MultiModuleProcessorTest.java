@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +37,13 @@ class MultiModuleProcessorTest {
     @AfterEach
     void releaseLogFile() {
         VibeTagsLogger.shutdown();
+    }
+
+    private static boolean shortCircuited(
+            List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics) {
+        return diagnostics.stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.NOTE)
+            .anyMatch(d -> d.getMessage(Locale.ROOT).contains("inputs unchanged since last run"));
     }
 
     @Test
@@ -75,12 +83,15 @@ class MultiModuleProcessorTest {
                 + "import se.deversity.vibetags.annotations.AILocked;\n"
                 + "@AILocked(reason = \"core logic\")\n"
                 + "public class A {}\n");
-        h2.compile();
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics()),
+            "the sibling sidecar must defeat the fingerprint short-circuit, or the merge never runs");
 
-        // Verify multi-module merge path executed: both modules' content should appear.
+        // Verify multi-module merge path executed: both modules' content should appear. Each
+        // module's own contribution is required: the first compile already wrote com.example.A,
+        // so accepting either one held with no merge at all (issue #700).
         String cursor = Files.readString(tmp.resolve(".cursorrules"));
-        assertTrue(cursor.contains("com.example.A") || cursor.contains("sibling"),
-            ".cursorrules must contain merged content from both modules");
+        assertTrue(cursor.contains("com.example.A") && cursor.contains("sibling reason"),
+            ".cursorrules must contain merged content from both modules:\n" + cursor);
     }
 
     @Test
@@ -117,11 +128,14 @@ class MultiModuleProcessorTest {
                 + "import se.deversity.vibetags.annotations.AIContext;\n"
                 + "@AIContext(focus = \"business rules\", avoids = \"raw SQL\")\n"
                 + "public class B {}\n");
-        h2.compile();
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics()),
+            "the sibling sidecar must defeat the fingerprint short-circuit, or the merge never runs");
 
+        // Both contributions are required: the first compile already wrote com.example.B, so
+        // accepting either one held with no merge at all (issue #700).
         String claude = Files.readString(tmp.resolve("CLAUDE.md"));
-        assertTrue(claude.contains("com.example.B") || claude.contains("contextual"),
-            "CLAUDE.md must contain content from the multi-module merge");
+        assertTrue(claude.contains("com.example.B") && claude.contains("sibling focus"),
+            "CLAUDE.md must contain content from the multi-module merge:\n" + claude);
     }
 
     @Test

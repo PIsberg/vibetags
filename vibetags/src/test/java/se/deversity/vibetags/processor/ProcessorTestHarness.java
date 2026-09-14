@@ -397,7 +397,7 @@ class ProcessorTestHarness {
         return h;
     }
 
-    private static void addExampleSources(ProcessorTestHarness h) {
+    static void addExampleSources(ProcessorTestHarness h) {
         h.addSource("com.example.payment.PaymentProcessor",
             "package com.example.payment;\n" +
             "import se.deversity.vibetags.annotations.AILocked;\n" +

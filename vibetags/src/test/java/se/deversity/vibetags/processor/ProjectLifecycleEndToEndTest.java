@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -44,6 +45,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Tag("e2e")
 class ProjectLifecycleEndToEndTest {
+
+    /** The NOTE the processor prints when the fingerprint short-circuit skips the generate phase. */
+    private static final String SKIP_NOTE = "inputs unchanged since last run";
 
     @AfterEach
     void releaseLogHandle() {
@@ -134,10 +138,10 @@ class ProjectLifecycleEndToEndTest {
      * next round computed always included an mtime that moved after the stored value was taken.
      * The three conditions could never all hold and the generate phase ran in full every time.
      *
-     * <p>{@code FingerprintShortCircuitTest} covers the branch itself, but cannot show a real build
-     * reaching it: it engineers the one state in which the old stamp could match, by deleting every
-     * sidecar and patching the stored stamp to {@code "0"}. This test is the other half of that
-     * pair — no fixture surgery, just two ordinary rebuilds.
+     * <p>The skip is observed through the NOTE the processor prints when it takes it, not inferred
+     * from the sidecar's mtime alone: an unchanged sidecar is no longer rewritten, so its mtime
+     * holds whether or not the round short-circuited, and this test stayed green with the
+     * short-circuit disabled outright (issue #700).
      *
      * <p>Two of them, deliberately. A skip that works once and not twice is the same defect one
      * build further out, and that is exactly what a stamp stored from the wrong moment produces.
@@ -164,23 +168,40 @@ class ProjectLifecycleEndToEndTest {
         Path sidecar = onlySidecar(root);
         long sidecarMtime = Files.getLastModifiedTime(sidecar).toMillis();
 
-        rebuildUnchanged(root);
+        assertTrue(rebuildUnchanged(root),
+            "a build whose inputs are unchanged must take the fingerprint short-circuit and print '"
+                + SKIP_NOTE + "'");
 
         assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
             "a build whose inputs are unchanged must short-circuit before the sidecar write. A "
                 + "rewritten sidecar moves the stamp out from under the next build too, so the "
                 + "skip could never happen twice running");
 
-        rebuildUnchanged(root);
+        assertTrue(rebuildUnchanged(root),
+            "and the build after it must short-circuit too");
         assertEquals(sidecarMtime, Files.getLastModifiedTime(sidecar).toMillis(),
             "and it must keep short-circuiting: a skip that only works once is the same bug "
                 + "one build further out");
     }
 
+    /**
+     * Steady state in a reactor starts one pass after the cold build, not straight after it: in
+     * the cold pass module-cli writes its sidecar after module-core recorded the sidecar stamp, so
+     * module-core's next round has a sibling to merge and must run in full
+     * ({@code MultiModuleShortCircuitTest} takes the same catch-up pass). This test used to rebuild
+     * straight after the cold pass and assert only sidecar mtimes, which hold either way because an
+     * unchanged sidecar is not rewritten, so it stayed green while module-core's rebuild ran in full
+     * (issue #700). It now takes the catch-up pass and asserts the skip NOTE.
+     */
     @Test
     void reactorSteadyState_eachModuleKeepsItsOwnFingerprintShortCircuit(
             @TempDir Path root) throws Exception {
         Files.createFile(root.resolve("CLAUDE.md"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
         compileModule(root, "module-core", "com.example.core.IrNode",
             locked("com.example.core", "IrNode", "Core IR node"));
         compileModule(root, "module-cli", "com.example.cli.Cli",
@@ -192,14 +213,16 @@ class ProjectLifecycleEndToEndTest {
         long cliMtime = Files.getLastModifiedTime(cliSidecar).toMillis();
 
         ProcessorTestHarness.awaitFilesystemTick(root);
-        compileModule(root, "module-cli", "com.example.cli.Cli",
-            locked("com.example.cli", "Cli", "CLI entry point"));
+        assertTrue(shortCircuited(compileModuleReturningDiagnostics(root, "module-cli", "com.example.cli.Cli",
+                locked("com.example.cli", "Cli", "CLI entry point"))),
+            "module-cli must take the fingerprint short-circuit in reactor steady state");
         assertEquals(cliMtime, Files.getLastModifiedTime(cliSidecar).toMillis(),
             "module-cli must short-circuit in reactor steady state");
 
         ProcessorTestHarness.awaitFilesystemTick(root);
-        compileModule(root, "module-core", "com.example.core.IrNode",
-            locked("com.example.core", "IrNode", "Core IR node"));
+        assertTrue(shortCircuited(compileModuleReturningDiagnostics(root, "module-core", "com.example.core.IrNode",
+                locked("com.example.core", "IrNode", "Core IR node"))),
+            "module-core must take the fingerprint short-circuit in reactor steady state");
         assertEquals(coreMtime, Files.getLastModifiedTime(coreSidecar).toMillis(),
             "module-core must short-circuit in reactor steady state");
     }
@@ -439,9 +462,12 @@ class ProjectLifecycleEndToEndTest {
         long sidecarMtime = Files.getLastModifiedTime(coreSidecar).toMillis();
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
-        compileModule(root, "module-core", "com.example.core.IrNode",
-            locked("com.example.core", "IrNode", "Core IR node"));
+        boolean skipped = shortCircuited(compileModuleReturningDiagnostics(root, "module-core",
+            "com.example.core.IrNode", locked("com.example.core", "IrNode", "Core IR node")));
 
+        assertTrue(skipped,
+            "a rebuild with nothing changed after the departure must take the fingerprint "
+                + "short-circuit and print '" + SKIP_NOTE + "'");
         assertEquals(sidecarMtime, Files.getLastModifiedTime(coreSidecar).toMillis(),
             "a rebuild with nothing changed after the departure must short-circuit before the "
                 + "sidecar write. If it does not, the cache is still tracking the rule file the "
@@ -516,13 +542,23 @@ class ProjectLifecycleEndToEndTest {
     // Helpers
     // -----------------------------------------------------------------------
 
-    /** Recompiles the same single-module sources, as an unchanged incremental build would. */
-    private static void rebuildUnchanged(Path root) throws Exception {
+    /**
+     * Recompiles the same single-module sources, as an unchanged incremental build would, and
+     * reports whether the round took the fingerprint short-circuit.
+     */
+    private static boolean rebuildUnchanged(Path root) throws Exception {
         ProcessorTestHarness.awaitFilesystemTick(root);
         ProcessorTestHarness again = new ProcessorTestHarness(root, false);
         again.addSource("com.example.Ledger", locked("com.example", "Ledger", "Reconciliation is load-bearing"));
-        again.compile();
+        boolean skipped = shortCircuited(again.compileReturningDiagnostics());
         VibeTagsLogger.shutdown();
+        return skipped;
+    }
+
+    private static boolean shortCircuited(List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics) {
+        return diagnostics.stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.NOTE)
+            .anyMatch(d -> d.getMessage(Locale.ROOT).contains(SKIP_NOTE));
     }
 
     /** Every generated file's content, keyed by path relative to the root. */
@@ -690,12 +726,20 @@ class ProjectLifecycleEndToEndTest {
     /** One module's compile into the shared reactor root, as a reactor pass would do it. */
     private static void compileModule(Path root, String module, String fqn, String source)
             throws IOException {
+        compileModuleReturningDiagnostics(root, module, fqn, source);
+    }
+
+    /** As {@link #compileModule}, returning every diagnostic the round emitted. */
+    private static List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> compileModuleReturningDiagnostics(
+            Path root, String module, String fqn, String source) throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(module));
         Files.writeString(root.resolve(module).resolve("pom.xml"),
             "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
         harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
-        harness.compile();
+        List<javax.tools.Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics =
+            harness.compileReturningDiagnostics();
         VibeTagsLogger.shutdown();
+        return diagnostics;
     }
 }
