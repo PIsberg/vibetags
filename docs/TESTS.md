@@ -155,6 +155,20 @@ class even though it is tagged, and so does `gradlew test --tests '*WriteCachePr
 Both build files special-case this deliberately: without it the command prints `Tests run: 0` and
 `BUILD SUCCESS`, a green result that ran nothing.
 
+**A named test runs only in the surefire execution that owns it.** `-Dtest` overrides the
+includes and excludes of every execution, so until #686 `mvn test -Dtest=AnnotationMirrorAnchorTest`
+ran that class in `default-test` (green) and again in `async-tests` under the agent, where it
+failed with the `TelemetryRegistry` error above: `BUILD FAILURE` for a passing test. A named
+`*AsyncTest` also ran in `default-test`, without the agent. The same `named-test-overrides-tags`
+profile now gives each execution its own `<test>`: `default-test` appends `!**/*AsyncTest`,
+`async-tests` appends a `%regex` exclusion of every other class. Whether an execution fails when
+the pattern matches nothing in it is computed from the pattern by `build-helper:regex-properties`:
+`async-tests` insists on a match only if a non-negated entry mentions `Async`, `default-test`
+unless every entry does (so `-Dtest=VibeTagsLoggerAsync*` counts as async). A mixed `-Dtest=A,BAsyncTest` runs each class in its own fork, and a
+typo such as `-Dtest=NoSuchTest` still fails with `No tests matching pattern`.
+`NamedTestExecutionRoutingTest` evaluates that wiring against a case table; Gradle has no second
+execution and needs none of it.
+
 **Per-class times are not stable enough to re-derive the split from.** They are measured under
 concurrency (`src/test/resources/junit-platform.properties` sets `parallel.enabled=true`), so a
 class's recorded time depends on what else was running beside it. `Coverage1dot0GapTest` measured
@@ -380,6 +394,7 @@ assumed.
 | `TestExecutorThreadTest` | That no test runs on a `ForkJoinWorkerThread`, which is what lets the processor's blocking write-phase join run other tests nested inside a compilation until javac overflows the stack (#659) |
 | `TestTagVocabularyTest` | The fast/e2e split itself: every `@Tag` value is one the build files filter on, and `pom.xml` and `build.gradle` still exclude the same tag |
 | `BuildToolchainParityTest` | That all three compiling modules (`vibetags`, `vibetags-annotations`, `vibetags-cli`) run the same static-analysis stack: identical Error Prone/NullAway settings, SpotBugs with Find Security Bugs, PMD and CPD against the shared `pmd-ruleset.xml`, Checkstyle against the shared config, and byte-identical `.mvn/jvm.config` — without which Error Prone silently does not run rather than failing |
+| `NamedTestExecutionRoutingTest` | That `mvn test -Dtest=...` runs each named class only in the surefire execution that owns it (#686): the `named-test-overrides-tags` profile re-filters `default-test` and `async-tests`, its `regex-properties` settings compute each execution's `failIfNoSpecifiedTests` correctly for ordinary, async, mixed, negated and misspelled patterns, the `%regex` exclusion keeps exactly the `*AsyncTest` classes, and the profile's execution ids still match the main build's |
 | `ServiceRegistryKeyParityTest` | That every `ServiceRegistry.optInKeys()` entry has a path in `buildServiceFileMap`. The two lists are hand-maintained; a key in one and not the other turns `vibetags init --platforms <key>` into an NPE on valid user input |
 | `ClaudeLocalEndToEndTest` | `CLAUDE.local.md` generation for Claude Code local overrides |
 | `ClaudeSkillEndToEndTest` | `.claude/skills/vibetags-guardrails/SKILL.md` generation, including required Skill frontmatter |

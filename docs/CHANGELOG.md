@@ -315,6 +315,25 @@ or removed in this release on the strength of that check; each finding is tracke
 
 ### Fixed
 
+- **`mvn test -Dtest=SomeTest` no longer fails a passing test** (#686). Since #629 surefire runs
+  two executions, and `-Dtest` overrides the includes and excludes of both, so the named class also
+  ran in `async-tests` under the async-test agent. A class that drives javac passed in
+  `default-test` and then failed there with
+  `NoClassDefFoundError: se/deversity/asynctest/telemetry/TelemetryRegistry`, turning the command
+  CLAUDE.md documents into a false red; a named `*AsyncTest` ran in `default-test` too, without the
+  agent. The `named-test-overrides-tags` profile now gives each execution its own `<test>` with an
+  exclusion for the other execution's classes, and `build-helper:regex-properties` computes each
+  execution's `failIfNoSpecifiedTests` from the pattern, so a misspelled name still fails the build.
+  Runs without `-Dtest` do not activate the profile and are unchanged. Build-only change; nothing
+  ships.
+
+  Verified by running the commands: `-Dtest=AnnotationMirrorAnchorTest` went from `BUILD FAILURE`
+  (1 error in `async-tests`) to one run in `default-test` only; `-Dtest=VibeTagsLoggerAsyncTest`
+  went from a run in each fork to one in `async-tests` with the agent attached; a mixed pattern runs
+  each class in its own fork; `-Dtest=NoSuchTest` and `-Dtest=NoSuchAsyncTest` still fail.
+  `NamedTestExecutionRoutingTest` was red against the unchanged POM, and weakening the async regex
+  to ignore `!` entries turns one of its cases red.
+
 - **Opting into `QWEN.md` no longer overwrites `.qwen/settings.json`** (#650). That file is Qwen
   Code's own project settings file, and VibeTags wrote it as a whole-file overwrite on every compile,
   replacing hand-set MCP servers, model choice and permissions with a fixed three-line document. It

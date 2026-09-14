@@ -509,6 +509,106 @@
             <properties>
                 <vibetags.test.excludedGroups/>
             </properties>
+            <!-- -Dtest overrides the includes and excludes of EVERY surefire execution
+                 (surefire test-mojo docs, `test`: "This parameter overrides the parameter
+                 includes, excludes"), so without the wiring below a named ordinary test also
+                 ran in async-tests, under the agent, and a javac-driving test failed there
+                 with NoClassDefFoundError: .../TelemetryRegistry while passing in default-test,
+                 and a named *AsyncTest also ran in default-test without the agent (#686).
+
+                 An explicit <test> in an execution beats the user property, so each execution
+                 re-reads ${test} and appends its own exclusion: default-test drops *AsyncTest,
+                 async-tests drops everything else. That can leave one execution with nothing to
+                 run, which failIfNoSpecifiedTests would report as a failure, so each execution's
+                 flag is computed from the pattern: async-tests insists on a match only when a
+                 non-negated entry mentions Async, default-test unless every entry does. "Async",
+                 not "AsyncTest", so a shortened glob such as VibeTagsLoggerAsync* counts as
+                 async; no ordinary test class has Async in its name.
+                 A typo therefore still fails the build instead of running nothing green.
+                 regex-properties keeps the input value when a regex does not match, so the
+                 *.raw step yields "true"/"false" or the pattern itself, and the second step
+                 folds the pattern into the other boolean. NamedTestExecutionRoutingTest pins
+                 the case table. -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>named-test-routing-raw</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>regex-properties</goal>
+                                </goals>
+                                <configuration>
+                                    <regexPropertySettings>
+                                        <regexPropertySetting>
+                                            <name>vibetags.test.async.failIfNoSpecifiedTests.raw</name>
+                                            <value>${test}</value>
+                                            <regex>^(?:.*,)?\s*+(?!!)[^,]*Async.*$</regex>
+                                            <replacement>true</replacement>
+                                            <failIfNoMatch>false</failIfNoMatch>
+                                        </regexPropertySetting>
+                                        <regexPropertySetting>
+                                            <name>vibetags.test.default.failIfNoSpecifiedTests.raw</name>
+                                            <value>${test}</value>
+                                            <regex>^\s*+(?:![^,]*|[^,]*Async[^,]*)(?:,\s*+(?:![^,]*|[^,]*Async[^,]*))*$</regex>
+                                            <replacement>false</replacement>
+                                            <failIfNoMatch>false</failIfNoMatch>
+                                        </regexPropertySetting>
+                                    </regexPropertySettings>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>named-test-routing</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>regex-properties</goal>
+                                </goals>
+                                <configuration>
+                                    <regexPropertySettings>
+                                        <regexPropertySetting>
+                                            <name>vibetags.test.async.failIfNoSpecifiedTests</name>
+                                            <value>${vibetags.test.async.failIfNoSpecifiedTests.raw}</value>
+                                            <regex>^(?!true$).*$</regex>
+                                            <replacement>false</replacement>
+                                            <failIfNoMatch>false</failIfNoMatch>
+                                        </regexPropertySetting>
+                                        <regexPropertySetting>
+                                            <name>vibetags.test.default.failIfNoSpecifiedTests</name>
+                                            <value>${vibetags.test.default.failIfNoSpecifiedTests.raw}</value>
+                                            <regex>^(?!false$).*$</regex>
+                                            <replacement>true</replacement>
+                                            <failIfNoMatch>false</failIfNoMatch>
+                                        </regexPropertySetting>
+                                    </regexPropertySettings>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-test</id>
+                                <configuration>
+                                    <test>${test},!**/*AsyncTest</test>
+                                    <failIfNoSpecifiedTests>${vibetags.test.default.failIfNoSpecifiedTests}</failIfNoSpecifiedTests>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>async-tests</id>
+                                <configuration>
+                                    <test>${test},!%regex[.*(?&lt;!AsyncTest)\.class]</test>
+                                    <failIfNoSpecifiedTests>${vibetags.test.async.failIfNoSpecifiedTests}</failIfNoSpecifiedTests>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <!-- Central Portal publishing (Maven Central) -->

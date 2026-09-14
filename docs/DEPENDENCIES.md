@@ -63,7 +63,9 @@ Nothing in this section ships. It runs.
 **Compile and package.** `maven-compiler-plugin`, `maven-surefire-plugin`, `maven-jar-plugin`,
 `maven-source-plugin`, `maven-javadoc-plugin`. Two more serve `load-tests/` alone:
 `maven-shade-plugin` builds the benchmark fat jar, and `exec-maven-plugin` gives it an `exec:java`
-entry point into `org.openjdk.jmh.Main`.
+entry point into `org.openjdk.jmh.Main`. `build-helper-maven-plugin` runs only when `-Dtest` is
+set: its `regex-properties` goal works out which surefire execution a named test belongs to, so
+the test does not also run in the other one (#686, docs/TESTS.md).
 
 **Static analysis.** Four tools, each catching something the others do not. All four run in all
 three modules that compile Java — `vibetags`, `vibetags-annotations` and `vibetags-cli` —
