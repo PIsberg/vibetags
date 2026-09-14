@@ -18,6 +18,7 @@ import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
+import se.deversity.vibetags.processor.internal.RuleFileLengthWarner;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
@@ -136,6 +137,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** SLF4J logger backed by a Logback FileAppender writing to {@code vibetags.log} in the project root. */
     private @Nullable Logger log;
+
+    /** The log options {@code log} was opened with, kept to reopen it once generation has closed it. */
+    private @Nullable String logPath;
+    private @Nullable String logLevel;
 
     /** Lazily constructed file writer; recreated on init() with the live messager + log. */
     private GuardrailFileWriter fileWriter = new GuardrailFileWriter(GENERATED_HEADER, null, null);
@@ -279,8 +284,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             ? ModuleSidecar.sanitizeId(moduleOption.trim()) : null;
 
         Path logPathOption = pathOption(options, "vibetags.log.path", messager);
-        String logPath = logPathOption == null ? null : logPathOption.toString();
-        String logLevel = options.get("vibetags.log.level");
+        this.logPath = logPathOption == null ? null : logPathOption.toString();
+        this.logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
 
         this.checkMode = booleanOption(options, "vibetags.check", false, messager);
@@ -431,6 +436,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     } else {
                         generateFiles();
                     }
+                    // After, not beside the checks above: a rule file's length is a property of
+                    // what this build leaves on disk, and measuring before generation would miss
+                    // the build that made a file too long (issue #695). Still outside
+                    // generateFiles(), so a short-circuited build and check mode measure too.
+                    warnAboutOversizedRuleFiles();
                 }
                 return false;
             }
@@ -512,6 +522,27 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Path compilationRoot = compilationRoot();
         if (moduleIdentity != null && !compilationRoot.equals(root)) {
             HandAuthoredYamlKeyWarner.warn(messager, log, root, ServiceRegistry.buildServiceFileMap(compilationRoot));
+        }
+    }
+
+    /**
+     * Warns about generated Devin Desktop and Windsurf rule files over the documented cap, in the
+     * VibeTags root and, in a reactor, in the compiling module's own directory, on the same
+     * condition as {@link #warnAboutHandAuthoredYamlKeys}. {@code generateFiles()} and
+     * {@code checkFiles()} both release the log on their way out, so it is reopened with the same
+     * options for the length check and released again.
+     */
+    private void warnAboutOversizedRuleFiles() {
+        Messager messager = getSafeMessager();
+        Logger reopened = VibeTagsLogger.forRoot(root, logPath, logLevel);
+        try {
+            RuleFileLengthWarner.warn(messager, reopened, root, ServiceRegistry.buildServiceFileMap(root));
+            Path compilationRoot = compilationRoot();
+            if (moduleIdentity != null && !compilationRoot.equals(root)) {
+                RuleFileLengthWarner.warn(messager, reopened, root, ServiceRegistry.buildServiceFileMap(compilationRoot));
+            }
+        } finally {
+            VibeTagsLogger.shutdown(root);
         }
     }
 

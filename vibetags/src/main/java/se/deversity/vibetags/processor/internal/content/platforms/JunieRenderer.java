@@ -7,8 +7,13 @@ import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
 /**
- * PlatformRenderer for generating `.junie/guidelines.md`.
+ * PlatformRenderer for Junie's two guidelines files: {@code .junie/AGENTS.md}, which Junie checks
+ * first, and the legacy {@code .junie/guidelines.md} (#673). Both get the same rendering.
  * Reuses the CursorRenderer and replaces the header.
+ *
+ * <p>{@code .junie/AGENTS.md} is not the root {@code AGENTS.md}: that one is the Codex service,
+ * written only as the sole AI config file or with a marker pair (invariant 4), and this renderer
+ * never produces its content.
  */
 public final class JunieRenderer implements PlatformRenderer {
     // CursorRenderer is stateless — one shared instance is sufficient.
