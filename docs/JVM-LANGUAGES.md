@@ -157,8 +157,9 @@ then built it again with `-Xjvm-expose-boxed`, and read each guardrail back from
 54 lost by default, 16 with the option. Kotlin 2.4.10, kapt, JDK 21. "Lost" means absent from
 `CLAUDE.md`; no lost `@AILocked` reason appears anywhere in `build/tmp/kapt3/stubs` either. #713
 added the shapes #692 had not built to the same fixture, 54 more guardrails on Kotlin 2.4.10 and
-JDK 21, read back the same way: 34 lost by default, 20 with the option. The rebuild left every #692
-result unchanged.
+JDK 21, read back the same way: 34 lost by default, 20 with the option. #714 added five on nested
+and deprecated `inline` value classes: all five lost by default, none with the option. The rebuild
+left every #692 result unchanged.
 
 | Guardrail on | Default | `-Xjvm-expose-boxed` | Doctor |
 |---|---|---|---|
@@ -203,6 +204,7 @@ result unchanged.
 | ...its `suspend` member, or a member of a class nested inside it | lost | lost / kept | reports |
 | `@JvmExposeBoxed` on an interface member | does not compile: "cannot expose functions which are open or abstract, or member of an interface" | | |
 | Function taking a value class declared in another Gradle module | lost | kept | reports when the module is under `--dir`, or its jar is on `--classpath` |
+| Function taking a nested value class (`Outer.Id`, qualified or imported) or a deprecated `inline class`, from the same module or another | lost | kept | reports; from another module when it is under `--dir` or on `--classpath` |
 | Function taking a standard-library value class not in the built-in list (`UIntArray`) | lost | kept | reports when `kotlin-stdlib` is on `--classpath` |
 
 Two results overturn what #688 assumed. A return type mangles only a member: a top-level
@@ -220,14 +222,17 @@ expose those. And in an object expression, an enum entry's body or a local class
 `@setparam:` and parameter guardrails are reported alongside the measured shapes, because the stub
 carries none of those declarations at all. The rebuilt fixture also holds five guardrails measured
 for nested and deprecated `inline` value classes (#714), all lost by default and kept with the option,
-so it loses 94 (55 + 34 + 5) by default and 36 (16 + 20) with the option. With the `model` module's
-classes on `--classpath`, doctor reports 91 by default: the losses, less the `UIntArray` parameter
-(`kotlin-stdlib` was not passed) and the three that name a nested value class, plus `examples/kotlin`'s
-`balanceFor`. Under `-Xjvm-expose-boxed` it reports exactly the 36. No finding names a kept guardrail. It is a heuristic over source text, not a compiler, and it is
-built to miss rather than to report something that is not lost:
+so it loses 94 (55 + 34 + 5) by default and 36 (16 + 20) with the option. With the fixture's Gradle
+compile classpath on `--classpath`, doctor reports 95 by default: the 94 losses plus
+`examples/kotlin`'s `balanceFor`. With only the `model` module's classes it reports 94, missing the
+`UIntArray` parameter, and under `-Xjvm-expose-boxed` exactly the 36. No finding names a kept
+guardrail.
+
+It is a heuristic over source text, not a compiler, and it is built to miss rather than to report
+something that is not lost:
 
 - **Value classes it knows.** Every `value class` (or `inline class`) declared under the scanned
-  directory, plus five from the standard library: `UByte`, `UShort`, `UInt` and `ULong` ("Unsigned
+  directory, a nested one also by its qualified name (`Outer.Id`, #714), plus five from the standard library: `UByte`, `UShort`, `UInt` and `ULong` ("Unsigned
   numbers are implemented as inline classes",
   [Kotlin docs](https://kotlinlang.org/docs/unsigned-integer-types.html)) and
   `kotlin.time.Duration` (declared `@JvmInline value class`,
@@ -237,16 +242,20 @@ built to miss rather than to report something that is not lost:
   every module under it, so a value class declared in a sibling module is known.
 - **Value classes from dependencies (#691).** `doctor --classpath <entries>` also reads every jar
   and class directory given, separated by the platform path separator as for `java -cp`, and
-  counts a top-level class whose class file carries `@kotlin.jvm.JvmInline`. kotlinc writes that
+  counts a class whose class file carries `@kotlin.jvm.JvmInline`. kotlinc writes that
   annotation into the class file's `RuntimeVisibleAnnotations` (`javap -v` on a Kotlin 2.4.10 value
   class), so the reader is plain JDK code over the constant pool, with no Kotlin metadata decoder.
-  `kotlin.Result` is skipped, and a name the sources declare as an ordinary class wins over a stale
+  kotlinc 2.4.10 writes it for the deprecated `inline class` form too, although the source has no
+  `@JvmInline` (`javap -v`, #714). A nested value class, `Outer$Id` on disk, is named `Outer.Id`
+  through the class file's `InnerClasses` attribute, which is how Kotlin source refers to it; a
+  local or anonymous class has no such name and is not counted. `kotlin.Result` is skipped, and a name the sources declare as an ordinary class wins over a stale
   class file. A missing entry or an unreadable class file is a finding, not a silent pass. Pass the
   compile classpath: `mvn -q dependency:build-classpath -Dmdep.outputFile=cp.txt` for Maven, or, for
   Gradle, a task such as the one below (both used in #691), then `--classpath "$(cat cp.txt)"`. On
   the #692 fixture's compile classpath the reader found the `model` module's `CustomerId` plus
   `kotlin-stdlib`'s eight unsigned value classes and `Duration`, and doctor's findings went from 55
-  to 56: the extra one is a `UIntArray` parameter, measured lost.
+  to 56: the extra one is a `UIntArray` parameter, measured lost. Since #714 it also finds
+  `kotlin.time.TimeSource.Monotonic.ValueTimeMark`, nested in `kotlin-stdlib`.
 
   ```kotlin
   tasks.register("printCompileClasspath") {
@@ -264,10 +273,12 @@ Known misses, every one a false negative, so a clean doctor run is not proof tha
 
 - Value classes declared outside the scanned directory, in another module or a dependency, when
   their jar or class directory is not passed with `--classpath`. On the classpath, a class compiled
-  from the pre-1.5 `inline class` form without `@JvmInline`, and a nested value class, are not read.
-- A value class reached through a `typealias`, a nested one written as `Outer.Id`, a name declared
-  both as a value class and as an ordinary type in the same package, and standard-library value
-  classes not on the list above (the unsigned array types, for example).
+  by a Kotlin release that wrote no `@JvmInline` into it is not read: the annotation arrived in
+  Kotlin 1.5, and only 2.4.10 output was checked.
+- A value class reached through a `typealias`, a name declared both as a value class and as an
+  ordinary type in the same package, a class nested inside a companion object, and standard-library
+  value classes not on the list above (the unsigned array types, for example) unless `kotlin-stdlib`
+  is on `--classpath`.
 - Shapes still not built (#713 built the rest): a declaration one level further inside an object
   expression or a local class, a local class's constructor-property accessors, an `override suspend`
   member or a setter inside a value class, and guardrails on local functions.

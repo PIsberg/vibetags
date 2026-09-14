@@ -238,6 +238,24 @@ vendor before anything changed, and the table under Deprecated lists every depre
   unreadable class file is a finding. Running from a reactor root already scanned sibling modules'
   sources; that is now pinned by a test and documented.
 
+- **`vibetags doctor` resolves nested Kotlin value classes, from sources and from `--classpath`**
+  (#714). A function taking `Outer.Id` lost its guardrail through kapt, from the same module or
+  another, and doctor said nothing: the source scan knew a nested value class only by its simple
+  name, and the class-file reader skipped every `Outer$Id` class file. Both now use the name Kotlin
+  source writes. The declaration walk records classes nested in named classes as `pkg.Outer.Id`,
+  and a dotted type resolves through its first segment's import, the file's package or a star
+  import; the reader names a nested class through its `InnerClasses` attribute, counts no local or
+  anonymous class, and turns an `InnerClasses` chain deeper than 64 into a finding rather than a
+  `StackOverflowError`. The deprecated `inline class` form needed nothing: `javap -v` shows kotlinc
+  2.4.10 writes `@kotlin.jvm.JvmInline` into its class file although the source has none, so no
+  `@kotlin.Metadata` decoding and no new dependency. Five guardrails in the #713 fixture (nested
+  and `inline class` parameters, from source and from the `model` module) were all lost by default
+  and kept with `-Xjvm-expose-boxed`; doctor went from 91 to 94 findings on the model classes and
+  reports all five. On `kotlin-stdlib` the reader now also finds
+  `kotlin.time.TimeSource.Monotonic.ValueTimeMark`. Three new `DoctorCommandTest` cases, all red
+  before the change; the nesting cap was lifted once and the cycle case failed with
+  `StackOverflowError`.
+
   On the fixture's Gradle compile classpath, the reader found `CustomerId` plus the nine
   standard-library value classes in `kotlin-stdlib`, and doctor's findings rose from 55 to 56, the
   new one a `UIntArray` parameter measured lost. Five new `DoctorCommandTest` cases and one
@@ -456,10 +474,10 @@ vendor before anything changed, and the table under Deprecated lists every depre
   bare `@AIInputSanitized` on a constructor property, which renders on the field. No `@AI*`
   annotation targets `PARAMETER` without `FIELD`, so that shape cannot be written.
 
-  Against the rebuilt fixture doctor reports every measured loss except the four it cannot see yet
-  (a `UIntArray` parameter without `kotlin-stdlib` on `--classpath`, and three nested value classes,
-  #714), and no kept guardrail; under `-Xjvm-expose-boxed` its 36 findings are exactly the 36
-  losses. Six new `DoctorCommandTest` cases, each running doctor with and without the option and
+  Against the rebuilt fixture, with its compile classpath on `--classpath`, doctor reports all 94
+  measured losses plus `examples/kotlin`'s `balanceFor`, and no kept guardrail; under
+  `-Xjvm-expose-boxed` its 36 findings are exactly the 36 losses (the 94 and 36 include the five
+  #714 guardrails below). Six new `DoctorCommandTest` cases, each running doctor with and without the option and
   asserting the finding count. Five were red against the #692 scanner; the sixth pins the
   `@JvmExposeBoxed` setters and constructors the old scanner already kept silent.
 

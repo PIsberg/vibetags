@@ -1587,6 +1587,212 @@ class DoctorCommandTest {
         return bytes.toByteArray();
     }
 
+    // ------------------------------------------------ nested and deprecated inline value classes (#714)
+    //
+    // kotlinc 2.4.10 writes @kotlin.jvm.JvmInline into a deprecated `inline class` too, and a nested
+    // value class compiles to Outer$Id, named Outer.Id through its InnerClasses attribute (javap -v on
+    // the fixture's model classes). Through kapt, a function taking either, from source or from another
+    // module, lost its guardrail and kept it under -Xjvm-expose-boxed.
+
+    @Test
+    void kotlinNestedValueClassesInSources_areResolvedByTheirQualifiedName() throws Exception {
+        kotlinProject();
+        sourceFile("src/main/kotlin/com/example/ledger/Outer.kt", """
+            package com.example.ledger
+
+            class Outer {
+                @JvmInline
+                value class Id(val raw: String)
+
+                class Mid {
+                    @JvmInline
+                    value class Deep(val raw: String)
+                }
+
+                class Plain(val raw: String)
+            }
+
+            inline class LegacyId(val raw: String)
+            """);
+        sourceFile("src/main/kotlin/com/example/ledger/Ledger.kt", """
+            package com.example.ledger
+
+            import se.deversity.vibetags.annotations.AILocked
+
+            class Ledger {
+                @AILocked(reason = "same package, no import")
+                fun samePackage(id: Outer.Id): String = id.raw
+            }
+            """);
+        sourceFile("src/main/kotlin/com/example/app/Use.kt", """
+            package com.example.app
+
+            import com.example.ledger.LegacyId
+            import com.example.ledger.Outer
+            import com.example.ledger.Outer.Mid.Deep
+            import se.deversity.vibetags.annotations.AILocked
+
+            class Use {
+                @AILocked(reason = "through the imported outer class")
+                fun qualified(id: Outer.Id): String = id.raw
+
+                @AILocked(reason = "imported nested value class")
+                fun imported(id: Deep): String = id.raw
+
+                @AILocked(reason = "fully qualified")
+                fun full(id: com.example.ledger.Outer.Mid.Deep): String = id.raw
+
+                @AILocked(reason = "deprecated inline class")
+                fun legacy(id: LegacyId): String = id.raw
+
+                @AILocked(reason = "an ordinary nested class")
+                fun plain(p: Outer.Plain): String = p.raw
+            }
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Ledger.kt:7 @AILocked on fun samePackage"), out());
+        assertTrue(out().contains("Use.kt:10 @AILocked on fun qualified"), out());
+        assertTrue(out().contains("value class com.example.ledger.Outer.Id"), out());
+        assertTrue(out().contains("Use.kt:13 @AILocked on fun imported"), out());
+        assertTrue(out().contains("Use.kt:16 @AILocked on fun full"), out());
+        assertTrue(out().contains("value class com.example.ledger.Outer.Mid.Deep"), out());
+        assertTrue(out().contains("Use.kt:19 @AILocked on fun legacy"), out());
+        assertFalse(out().contains("fun plain"), out());
+        assertFindingCount(5);
+    }
+
+    @Test
+    void nestedValueClassesInADependency_areNamedAsSourceWritesThem() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", """
+            package com.acme.app
+
+            import com.acme.model.Outer
+            import com.acme.model.Outer.Mid.Deep
+            import se.deversity.vibetags.annotations.AILocked
+
+            @AILocked(reason = "nested value class from a jar")
+            fun forId(id: Outer.Id): String = ""
+
+            @AILocked(reason = "doubly nested, imported")
+            fun forDeep(id: Deep): String = ""
+
+            @AILocked(reason = "an ordinary nested class")
+            fun forPlain(p: Outer.Plain): String = ""
+            """);
+        Path src = dir.resolve("deps/src");
+        List<Path> files = List.of(
+            javaFile(src, "kotlin/jvm/JvmInline.java", """
+                package kotlin.jvm;
+
+                import java.lang.annotation.ElementType;
+                import java.lang.annotation.Retention;
+                import java.lang.annotation.RetentionPolicy;
+                import java.lang.annotation.Target;
+
+                @Retention(RetentionPolicy.RUNTIME)
+                @Target(ElementType.TYPE)
+                public @interface JvmInline {
+                }
+                """),
+            javaFile(src, "com/acme/model/Outer.java", """
+                package com.acme.model;
+
+                public final class Outer {
+                    @kotlin.jvm.JvmInline
+                    public static final class Id {
+                    }
+
+                    public static final class Mid {
+                        @kotlin.jvm.JvmInline
+                        public static final class Deep {
+                        }
+                    }
+
+                    public static final class Plain {
+                    }
+
+                    public Object local() {
+                        @kotlin.jvm.JvmInline
+                        final class Local {
+                        }
+                        return new Local();
+                    }
+                }
+                """));
+        Path classes = Files.createDirectories(dir.resolve("deps/classes"));
+        List<String> args = new ArrayList<>(List.of("-d", classes.toString()));
+        files.forEach(f -> args.add(f.toString()));
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)),
+            "stand-ins must compile");
+        Path jar = jar(classes, "model.jar", Map.of());
+
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forId"), out());
+        assertTrue(out().contains("value class com.acme.model.Outer.Id"), out());
+        assertTrue(out().contains("Consumer.kt:11 @AILocked on fun forDeep"), out());
+        assertTrue(out().contains("2 value class(es) found"),
+            "Id and Deep count; a local class carrying @JvmInline has no source name: " + out());
+        assertFalse(out().contains("fun forPlain"), out());
+    }
+
+    @Test
+    void innerClassesNamingTheClassAsItsOwnOuter_isAFindingNotACrash() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        Path jar = jar(compiledDependency(), "loop.jar",
+            Map.of("com/acme/model/Loop$Id.class", classFileNestedInItself()));
+
+        assertEquals(1, doctor("--classpath", jar.toString()), out());
+        assertTrue(out().contains("com/acme/model/Loop$Id.class"), out());
+        assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"), out());
+    }
+
+    /** A @JvmInline class file whose InnerClasses entry names the class as its own outer class. */
+    private static byte[] classFileNestedInItself() throws Exception {
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream c = new java.io.DataOutputStream(bytes);
+        c.writeInt(0xCAFEBABE);
+        c.writeShort(0);
+        c.writeShort(65);
+        c.writeShort(7);            // constant pool count
+        c.writeByte(1);
+        c.writeUTF("RuntimeVisibleAnnotations");
+        c.writeByte(1);
+        c.writeUTF("Lkotlin/jvm/JvmInline;");
+        c.writeByte(1);
+        c.writeUTF("com/acme/model/Loop$Id");
+        c.writeByte(7);
+        c.writeShort(3);
+        c.writeByte(1);
+        c.writeUTF("InnerClasses");
+        c.writeByte(1);
+        c.writeUTF("Id");
+        c.writeShort(0x31);         // access flags
+        c.writeShort(4);            // this class
+        c.writeShort(0);            // super class
+        c.writeShort(0);            // interfaces
+        c.writeShort(0);            // fields
+        c.writeShort(0);            // methods
+        c.writeShort(2);            // attributes
+        c.writeShort(5);            // InnerClasses: one entry, Loop$Id nested in Loop$Id
+        c.writeInt(10);
+        c.writeShort(1);
+        c.writeShort(4);
+        c.writeShort(4);
+        c.writeShort(6);
+        c.writeShort(0x19);
+        c.writeShort(1);            // RuntimeVisibleAnnotations: @JvmInline
+        c.writeInt(6);
+        c.writeShort(1);
+        c.writeShort(2);
+        c.writeShort(0);
+        c.flush();
+        return bytes.toByteArray();
+    }
     @Test
     void projectWithoutKotlin_printsNoKotlinLine() throws Exception {
         mavenProjectWiredForVibeTags();

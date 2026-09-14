@@ -10,7 +10,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -26,8 +28,12 @@ import java.util.zip.ZipFile;
  * <p>kotlinc writes {@code @kotlin.jvm.JvmInline} into a value class's class-level
  * {@code RuntimeVisibleAnnotations} attribute ({@code javap -v} on a Kotlin 2.4.10 value class), so
  * the constant pool and the class attributes are all this needs: no Kotlin metadata decoder and no
- * dependency. A deprecated {@code inline class} compiled without {@code @JvmInline} is not seen, and
- * neither is a nested value class ({@code Outer$Id}), which the source scan does not resolve either.
+ * dependency. A deprecated {@code inline class}, written without {@code @JvmInline}, carries the
+ * annotation all the same when kotlinc 2.4.10 compiles it ({@code javap -v}), so it needs nothing
+ * more. A nested value class ({@code Outer$Id}) is named as the source writes it,
+ * {@code Outer.Id}, through the class file's {@code InnerClasses} attribute
+ * (<a href="https://github.com/PIsberg/vibetags/issues/714">#714</a>); a local or anonymous class
+ * has no such name and is not counted.
  */
 final class JvmInlineClasses {
 
@@ -96,9 +102,9 @@ final class JvmInlineClasses {
         }
     }
 
-    /** A top-level class file outside META-INF: the only shape a resolvable value class can have. */
+    /** A class file outside META-INF; nested ones included, since a value class can be nested (#714). */
     private static boolean isCandidate(String name) {
-        return name.endsWith(".class") && !name.startsWith("META-INF/") && name.indexOf('$') < 0
+        return name.endsWith(".class") && !name.startsWith("META-INF/")
             && !name.endsWith("module-info.class") && !name.endsWith("package-info.class");
     }
 
@@ -115,8 +121,9 @@ final class JvmInlineClasses {
     }
 
     /**
-     * The binary name of the class in {@code bytes} when its class-level
-     * {@code RuntimeVisibleAnnotations} include {@code @kotlin.jvm.JvmInline}, else empty.
+     * The name of the class in {@code bytes}, as source refers to it ({@code com.acme.Outer.Id} for the
+     * binary {@code com/acme/Outer$Id}), when its class-level {@code RuntimeVisibleAnnotations} include
+     * {@code @kotlin.jvm.JvmInline}; empty otherwise, and for a local or anonymous class.
      *
      * @throws IOException when the bytes are not a well-formed class file
      */
@@ -158,6 +165,7 @@ final class JvmInlineClasses {
         skipMembers(in);    // fields
         skipMembers(in);    // methods
         boolean inline = false;
+        Map<Integer, int[]> nesting = new HashMap<>();
         int attributes = in.readUnsignedShort();
         for (int a = 0; a < attributes; a++) {
             String name = at(utf8, in.readUnsignedShort());
@@ -167,6 +175,8 @@ final class JvmInlineClasses {
             }
             if ("RuntimeVisibleAnnotations".equals(name)) {
                 inline |= annotatedJvmInline(new DataInputStream(new ByteArrayInputStream(in.readNBytes(length))), utf8);
+            } else if ("InnerClasses".equals(name)) {
+                readInnerClasses(new DataInputStream(new ByteArrayInputStream(in.readNBytes(length))), nesting);
             } else {
                 in.skipNBytes(length);
             }
@@ -174,10 +184,43 @@ final class JvmInlineClasses {
         if (!inline) {
             return Optional.empty();
         }
-        if (thisClass <= 0 || thisClass >= count) {
-            throw new IOException("this_class out of range");
+        return sourceName(thisClass, nesting, classNames, utf8, 0);
+    }
+
+    /** Records each InnerClasses entry as inner class index to {outer class index, simple name index}. */
+    private static void readInnerClasses(DataInputStream in, Map<Integer, int[]> nesting) throws IOException {
+        int classes = in.readUnsignedShort();
+        for (int i = 0; i < classes; i++) {
+            int inner = in.readUnsignedShort();
+            int outer = in.readUnsignedShort();
+            int simpleName = in.readUnsignedShort();
+            in.skipNBytes(2);   // access flags
+            nesting.put(inner, new int[]{outer, simpleName});
         }
-        return Optional.of(at(utf8, classNames[thisClass]).replace('/', '.'));
+    }
+
+    /**
+     * The name source code uses for the class constant at {@code index}: the binary name for a
+     * top-level class, the enclosing class's source name plus the simple name for a member class, and
+     * empty for a local or anonymous class, whose entry names no outer class.
+     */
+    private static Optional<String> sourceName(int index, Map<Integer, int[]> nesting, int[] classNames,
+                                               String[] utf8, int depth) throws IOException {
+        if (depth > MAX_NESTING) {
+            throw new IOException("class nested deeper than " + MAX_NESTING);
+        }
+        if (index <= 0 || index >= classNames.length || classNames[index] == 0) {
+            throw new IOException("class constant index " + index + " out of range");
+        }
+        int[] entry = nesting.get(index);
+        if (entry == null) {
+            return Optional.of(at(utf8, classNames[index]).replace('/', '.'));
+        }
+        if (entry[0] == 0 || entry[1] == 0) {
+            return Optional.empty();
+        }
+        String simpleName = at(utf8, entry[1]);
+        return sourceName(entry[0], nesting, classNames, utf8, depth + 1).map(outer -> outer + "." + simpleName);
     }
 
     private static void skipMembers(DataInputStream in) throws IOException {

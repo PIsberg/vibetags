@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Finds {@code @AI*} guardrails on Kotlin declarations that kapt leaves out of its Java stubs.
@@ -57,7 +58,8 @@ import java.util.regex.Pattern;
  *
  * <p>This is a heuristic over source text, not a compiler, so a doubt produces a miss rather than a
  * false finding. A type counts only when it resolves, through the file's package and imports, to a
- * value class declared in the scanned sources, found in a class file on doctor's
+ * value class declared in the scanned sources (a nested one by its qualified name, {@code Outer.Id},
+ * <a href="https://github.com/PIsberg/vibetags/issues/714">#714</a>), found in a class file on doctor's
  * {@code --classpath} ({@link JvmInlineClasses}), or one of {@link #STDLIB_VALUE_CLASSES}. Only the
  * head of a type counts ({@code List<AccountId>} is not mangled), {@code kotlin.Result} is never a
  * hit, and a declaration nested inside an anonymous object or a local class, one level further in,
@@ -132,6 +134,10 @@ final class KotlinValueClassScan {
 
     /** The value classes a scan knows: declared in the sources plus the standard library's. */
     private record Known(Set<String> valueClasses, Set<String> declaredTypes) {
+    }
+
+    /** Classes declared inside named classes, by qualified name ({@code pkg.Outer.Id}), split by kind. */
+    private record Nested(Set<String> valueClasses, Set<String> otherTypes) {
     }
 
     /** An annotation as written: optional use-site target, optional qualifier, simple name. */
@@ -243,10 +249,20 @@ final class KotlinValueClassScan {
                 (m.group(1) == null ? otherTypes : valueClasses).add(qualify(file.pkg(), m.group(2)));
             }
         }
+        // A class nested in named classes is also known by its qualified name, which is how another
+        // file refers to it (Outer.Id, or imported as Outer.Id). The declaration walk tracks the
+        // enclosing classes, so a first pass with nothing known collects them (#714).
+        Nested nested = new Nested(new HashSet<>(), new HashSet<>());
+        Known nothing = new Known(Set.of(), Set.of());
+        for (FileContext file : files) {
+            scanDeclarations(file, nothing, new ArrayList<>(), nested);
+        }
         // A name declared both ways (a nested value class next to a same-named top-level class)
         // cannot be told apart by text, so it is dropped rather than guessed.
         valueClasses.removeAll(otherTypes);
         int declared = valueClasses.size();
+        otherTypes.addAll(nested.otherTypes());
+        nested.valueClasses().stream().filter(name -> !otherTypes.contains(name)).forEach(valueClasses::add);
         Set<String> fromClasspath = new HashSet<>(classpathValueClasses);
         fromClasspath.removeAll(otherTypes);
         fromClasspath.remove("kotlin.Result");
@@ -258,7 +274,7 @@ final class KotlinValueClassScan {
 
         List<String> findings = new ArrayList<>();
         for (FileContext file : files) {
-            scanDeclarations(file, known, findings);
+            scanDeclarations(file, known, findings, new Nested(new HashSet<>(), new HashSet<>()));
         }
         return new Report(findings, declared);
     }
@@ -288,9 +304,10 @@ final class KotlinValueClassScan {
      * Walks the file collecting annotations and modifiers until a declaration keyword binds them,
      * keeping a stack of the bodies it is in. Anything else discards what was collected, so an
      * annotation never travels past the declaration it belongs to. A class header arms the scope its
-     * opening brace pushes; any other brace opens a body whose declarations are not reported.
+     * opening brace pushes; any other brace opens a body whose declarations are not reported. Each
+     * class declared inside named classes is recorded in {@code nested} by its qualified name.
      */
-    private static void scanDeclarations(FileContext file, Known known, List<String> findings) {
+    private static void scanDeclarations(FileContext file, Known known, List<String> findings, Nested nested) {
         String code = file.code();
         Deque<Scope> scopes = new ArrayDeque<>();
         scopes.push(new Scope(Body.TOP, "", false, false));
@@ -329,7 +346,13 @@ final class KotlinValueClassScan {
                     } else if ("constructor".equals(word)) {
                         i = secondaryConstructor(decl, end, known, findings);
                     } else {
+                        Optional<String> outer = enclosingClasses(scopes);
                         Header header = classHeader(decl, word, end, known, findings);
+                        String name = header.body().name();
+                        if (outer.isPresent() && !name.isEmpty()) {
+                            (header.body().body() == Body.VALUE_CLASS ? nested.valueClasses() : nested.otherTypes())
+                                .add(qualify(file.pkg(), outer.get() + "." + name));
+                        }
                         i = header.resume();
                         armed = header.body();
                         armedAt = parens;
@@ -377,6 +400,25 @@ final class KotlinValueClassScan {
             }
             i++;
         }
+    }
+
+    /**
+     * The dotted names of the classes around a declaration made in the innermost of {@code scopes},
+     * outermost first ({@code Outer.Mid}), or empty at top level and inside any body without a class
+     * name: a companion, an object expression, a function body.
+     */
+    private static Optional<String> enclosingClasses(Deque<Scope> scopes) {
+        List<String> names = new ArrayList<>();
+        for (Scope scope : scopes) {   // innermost first
+            if (scope.body() == Body.TOP) {
+                break;
+            }
+            if (scope.name().isEmpty() || scope.body() == Body.LOCAL || scope.body() == Body.OTHER) {
+                return Optional.empty();
+            }
+            names.add(0, scope.name());
+        }
+        return names.isEmpty() ? Optional.empty() : Optional.of(String.join(".", names));
     }
 
     private static boolean isDeclarationKeyword(String word) {
@@ -875,20 +917,28 @@ final class KotlinValueClassScan {
     }
 
     /**
-     * Resolves a written type name to a known value class, in Kotlin's order: a qualified name as
-     * written, an explicit import, the file's own package, a star import, then the default
-     * {@code kotlin.*} import. A name that resolves to anything else, or does not resolve, is empty.
+     * Resolves a written type name to a known value class, in Kotlin's order: an explicit import of
+     * its first segment, the file's own package, then, for a dotted name, the name as written or
+     * completed by the package or a star import, and for a simple name a star import or the default
+     * {@code kotlin.*} import. {@code Outer.Id} resolves through {@code Outer} (#714). A name that
+     * resolves to anything else, or does not resolve, is empty.
      */
     private static Optional<String> resolve(FileContext file, String head, Known known) {
         Optional<String> resolved;
-        String imported = file.explicitImports().get(head);
+        int dot = head.indexOf('.');
+        String first = dot < 0 ? head : head.substring(0, dot);
+        String imported = file.explicitImports().get(first);
         String samePackage = qualify(file.pkg(), head);
-        if (head.contains(".")) {
-            resolved = Optional.of(head);
-        } else if (imported != null) {
-            resolved = Optional.of(imported);
-        } else if (known.declaredTypes().contains(samePackage)) {
+        if (imported != null) {
+            resolved = Optional.of(imported + head.substring(first.length()));
+        } else if (known.declaredTypes().contains(qualify(file.pkg(), first))) {
             resolved = Optional.of(samePackage);
+        } else if (dot >= 0) {
+            // As written (com.acme.Outer.Id), or an outer class the sources do not declare: one read
+            // from --classpath in the same package or under a star import.
+            resolved = Stream.concat(Stream.of(head, samePackage), file.starImports().stream().map(star -> star + "." + head))
+                .filter(known.valueClasses()::contains)
+                .findFirst();
         } else {
             resolved = file.starImports().stream()
                 .map(star -> star + "." + head)
