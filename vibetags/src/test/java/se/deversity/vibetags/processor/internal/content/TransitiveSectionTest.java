@@ -160,9 +160,9 @@ class TransitiveSectionTest {
         // dependency's words appear in, not a refactor, so it should fail here first.
         assertEquals(Set.of(
                 Platform.CLAUDE, Platform.CLAUDE_LOCAL, Platform.CURSOR, Platform.CODEX,
-                Platform.GEMINI, Platform.GEMINI_MD, Platform.COPILOT, Platform.QWEN,
+                Platform.GEMINI_MD, Platform.COPILOT, Platform.QWEN,
                 Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.WINDSURF, Platform.ZED,
-                Platform.CLINE, Platform.JUNIE, Platform.JUNIE_AGENTS, Platform.FIREBASE, Platform.VOID),
+                Platform.JUNIE, Platform.JUNIE_AGENTS, Platform.FIREBASE, Platform.VOID),
             Set.copyOf(TransitiveSection.PLATFORMS));
     }
 

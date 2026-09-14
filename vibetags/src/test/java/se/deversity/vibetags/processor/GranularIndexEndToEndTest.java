@@ -289,7 +289,6 @@ class GranularIndexEndToEndTest {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.touchOptIn(".cursorrules");
         h.touchOptIn(".cursor/rules/.vibetags");
-        h.touchOptIn(".clinerules");            // reuses CursorRenderer, but reads no scoped dir
         h.touchOptIn("CLAUDE.md");
         h.touchOptIn(".claude/rules/.vibetags");
         h.touchOptIn("CLAUDE.local.md");        // mirrors CLAUDE.md
@@ -299,11 +298,6 @@ class GranularIndexEndToEndTest {
         // Cursor itself collapses to an index (its sibling is active)…
         assertTrue(h.readFile(".cursorrules").contains("## Scoped Rules Index"),
             ".cursorrules collapses to an index when .cursor/rules is opted in");
-        // …but Cline, which merely reuses the Cursor format, must stay full — it has no scoped dir.
-        assertFalse(h.readFile(".clinerules").contains("## Scoped Rules Index"),
-            ".clinerules must NOT collapse — it has no granular sibling");
-        assertTrue(h.readFile(".clinerules").contains("CONTEXTUAL RULES"),
-            ".clinerules keeps the full contextual rules");
         // CLAUDE.local.md follows Claude's granular state, so it mirrors the indexed CLAUDE.md.
         assertEquals(h.readFile("CLAUDE.md"), h.readFile("CLAUDE.local.md"),
             "CLAUDE.local.md must mirror CLAUDE.md (both in index mode)");

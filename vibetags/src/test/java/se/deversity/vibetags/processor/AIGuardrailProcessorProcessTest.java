@@ -262,7 +262,7 @@ class AIGuardrailProcessorProcessTest {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
         // hasIgnore=false means no @AIIgnore annotations present — no warnings should fire
-        Set<String> active = Set.of("cursor", "claude", "copilot", "qwen", "gemini", "codex");
+        Set<String> active = Set.of("cursor", "claude", "copilot", "qwen", "gemini_md", "codex");
         processor.checkOrphanedAnnotations(messager, active, false, false, false);
 
         assertTrue(warnings.isEmpty(),
@@ -288,11 +288,11 @@ class AIGuardrailProcessorProcessTest {
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
-        Set<String> active = Set.of("gemini");
+        Set<String> active = Set.of("gemini_md");
         processor.checkOrphanedAnnotations(messager, active, true, false, false);
 
         assertTrue(warnings.stream().anyMatch(w -> w.contains(".aiexclude")),
-            "Should warn about .aiexclude when @AILocked is used and gemini is active");
+            "Should warn about .aiexclude when @AILocked is used and GEMINI.md is active");
     }
 
     @Test
@@ -301,7 +301,7 @@ class AIGuardrailProcessorProcessTest {
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
-        Set<String> active = Set.of("gemini", "codex", "aiexclude");
+        Set<String> active = Set.of("gemini_md", "codex", "aiexclude");
         processor.checkOrphanedAnnotations(messager, active, true, true, false);
 
         assertFalse(warnings.stream().anyMatch(w -> w.contains(".aiexclude")),
@@ -319,7 +319,7 @@ class AIGuardrailProcessorProcessTest {
             "claude", "claude_ignore",
             "copilot", "copilot_ignore",
             "qwen", "qwen_ignore",
-            "gemini", "codex", "aiexclude"
+            "gemini_md", "codex", "aiexclude"
         );
         processor.checkOrphanedAnnotations(messager, active, true, true, false);
 
@@ -349,13 +349,13 @@ class AIGuardrailProcessorProcessTest {
         Map<String, Path> map = ServiceRegistry.buildServiceFileMap(root);
 
         Set<String> expectedKeys = Set.of(
-            "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+            "cursor", "claude", "aiexclude", "codex", "copilot", "qwen",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "codex_config", "codex_rules", "qwen_refactor",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
-            "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
+            "windsurf", "zed",
             "windsurf_granular", "continue_granular", "tabnine_granular",
             "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
@@ -366,9 +366,8 @@ class AIGuardrailProcessorProcessTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie", "junie_agents", "kiro_granular",
-            // Cline's .clinerules/ directory form, at the same path as the file, and the
-            // always-loaded safety file inside it (#648)
+            "junie", "junie_agents", "kiro_granular",
+            // Cline's .clinerules/ directory form, and the always-loaded safety file inside it (#648)
             "cline_granular", "cline_safety",
             // Firebase AI
             "firebase",
@@ -422,7 +421,6 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(root.resolve("CLAUDE.md"),                         map.get("claude"));
         assertEquals(root.resolve(".aiexclude"),                        map.get("aiexclude"));
         assertEquals(root.resolve("AGENTS.md"),                         map.get("codex"));
-        assertEquals(root.resolve("gemini_instructions.md"),            map.get("gemini"));
         assertEquals(root.resolve(".github/copilot-instructions.md"),   map.get("copilot"));
         assertEquals(root.resolve("QWEN.md"),                           map.get("qwen"));
         assertEquals(root.resolve(".cursorignore"),                     map.get("cursor_ignore"));
@@ -1291,7 +1289,7 @@ class AIGuardrailProcessorProcessTest {
         assertFalse(Files.exists(tempDir.resolve("CLAUDE.md")));
         assertFalse(Files.exists(tempDir.resolve("AGENTS.md")));
         assertFalse(Files.exists(tempDir.resolve("QWEN.md")));
-        assertFalse(Files.exists(tempDir.resolve("gemini_instructions.md")));
+        assertFalse(Files.exists(tempDir.resolve("GEMINI.md")));
         assertFalse(Files.exists(tempDir.resolve("llms.txt")));
         assertFalse(Files.exists(tempDir.resolve("CONVENTIONS.md")));
         assertTrue(notes.stream().anyMatch(n -> n.contains("nothing will be generated")),
@@ -1348,7 +1346,7 @@ class AIGuardrailProcessorProcessTest {
         assertFalse(Files.exists(tempDir.resolve("CLAUDE.md")));
         assertFalse(Files.exists(tempDir.resolve("AGENTS.md")));
         assertFalse(Files.exists(tempDir.resolve("QWEN.md")));
-        assertFalse(Files.exists(tempDir.resolve("gemini_instructions.md")));
+        assertFalse(Files.exists(tempDir.resolve("GEMINI.md")));
         assertFalse(Files.exists(tempDir.resolve("llms.txt")));
         assertFalse(Files.exists(tempDir.resolve("CONVENTIONS.md")));
     }

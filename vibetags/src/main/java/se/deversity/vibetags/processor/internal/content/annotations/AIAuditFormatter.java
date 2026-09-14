@@ -38,7 +38,6 @@ public final class AIAuditFormatter implements AnnotationFormatter {
             case COPILOT:
                 sb.append("- `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append('\n');
                 break;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("File: `").append(className).append("`\nCritical Vulnerabilities to Prevent:");
                 for (String v : checkFor) {

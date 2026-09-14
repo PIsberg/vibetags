@@ -53,7 +53,7 @@ class SectionCatalogContractTest {
     @Test
     @DisplayName("a registered platform override wins over the shared default")
     void overrideWinsOverDefault() {
-        String gemini = SectionCatalog.header(Platform.GEMINI, SectionCatalog.Key.SANDBOX_ONLY);
+        String gemini = SectionCatalog.header(Platform.GEMINI_MD, SectionCatalog.Key.SANDBOX_ONLY);
         String windsurf = SectionCatalog.header(Platform.WINDSURF, SectionCatalog.Key.SANDBOX_ONLY);
 
         assertNotNull(gemini);

@@ -12,7 +12,9 @@ import java.util.Set;
 
 /**
  * The outputs VibeTags still writes but will stop writing in the next major version, and the one
- * warning that tells an opted-in consumer so (#641; the removal is tracked in #645).
+ * warning that tells an opted-in consumer so (#641). Their removal is tracked in #720. Five rows that
+ * were here, gemini_instructions.md, Cody's two files, .supermavenignore and the single .clinerules
+ * file, were removed in 2.0.0 (#645).
  *
  * <p>Each row names a tool that has moved on: a retired product, or a file its vendor no longer
  * documents. They are deprecated rather than removed because removing a service stops an opted-in
@@ -49,33 +51,6 @@ public final class DeprecatedServices {
 
     private static Map<String, Notice> notices() {
         Map<String, Notice> m = new LinkedHashMap<>();
-        m.put("gemini", new Notice("gemini_instructions.md",
-            "no Google product documents reading this file",
-            "use GEMINI.md for the Gemini CLI or .gemini/styleguide.md for Gemini Code Assist",
-            "GEMINI.md,.gemini/styleguide.md"));
-        // Cody: Sourcegraph ended Free and Pro only, and Cody Enterprise is still supported (#677),
-        // so the notice rests on that plus the file being absent from Sourcegraph's docs.
-        m.put("cody", new Notice(".cody/config.json",
-            "Sourcegraph ended Cody Free and Pro on 23 July 2025, and its docs do not describe this file;"
-                + " Cody Enterprise continues, and its docs replace custom commands with the Prompt Library",
-            "Sourcegraph points Free and Pro users to Amp, which reads AGENTS.md",
-            "AGENTS.md"));
-        m.put("cody_ignore", new Notice(".codyignore",
-            "Sourcegraph ended Cody Free and Pro on 23 July 2025, and its docs do not describe this file;"
-                + " Cody Enterprise excludes content through admin Context Filters",
-            "Sourcegraph points Free and Pro users to Amp, which reads AGENTS.md",
-            "AGENTS.md"));
-        // Supermaven: the sunset post keeps free autocomplete running for existing JetBrains and
-        // Neovim users, so "discontinued" would overstate it (#677).
-        m.put("supermaven_ignore", new Notice(".supermavenignore",
-            "Supermaven announced its sunset on 21 November 2025, keeping only free autocomplete for"
-                + " existing JetBrains and Neovim users",
-            "it recommends VS Code users move to Cursor, whose Tab reads .cursorignore",
-            ".cursorignore"));
-        m.put("cline", new Notice(".clinerules",
-            "Cline's current docs describe a .clinerules/ directory, not this single file",
-            "use the .clinerules/ directory; Cline also reads .cursorrules, .windsurfrules and AGENTS.md",
-            ".clinerules/"));
         // Void: the README of voideditor/void opens "Void is now deprecated", and the repository is
         // archived (last push 2026-06-02). Its convertToLLMMessageService read .voidrules, so this path was
         // never Void's own (#665).

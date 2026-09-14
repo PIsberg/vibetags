@@ -65,7 +65,7 @@ public class WriteCacheHitBenchmark {
     private GuardrailFileWriter writerWithCache;
     private GuardrailFileWriter writerNoCache;
 
-    // Small workload (1 KB body — typical .cursorignore / .codyignore size).
+    // Small workload (1 KB body — typical .cursorignore / .aiderignore size).
     private Path smallMarkerFile;
     private Path smallNonMarkerFile;
     private String smallBody;

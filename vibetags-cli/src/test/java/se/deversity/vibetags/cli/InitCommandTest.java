@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -97,9 +98,9 @@ class InitCommandTest {
     }
 
     /**
-     * {@code .clinerules} is two platforms at one path: the {@code cline} file and the
-     * {@code cline_granular} directory. An entry of the other kind is not "already active", it is
-     * the other platform, and saying otherwise tells the user they got the form they asked for.
+     * A {@code .clinerules} file left over from the single-file service removed in 2.0.0 (#645) is
+     * not the {@code cline_granular} directory. It is not "already active", and saying otherwise
+     * tells the user they got the form they asked for.
      */
     @Test
     void pathHeldByTheOtherFormOfThePlatform_isRefusedNotReportedActive() throws Exception {
@@ -109,7 +110,7 @@ class InitCommandTest {
 
         assertEquals(1, code, out() + err());
         assertFalse(out().contains("already active"), out());
-        assertTrue(err().contains(".clinerules") && err().contains("cline"), err());
+        assertTrue(err().contains(".clinerules") && err().contains("already exists as a file"), err());
         assertEquals("hand-authored\n", Files.readString(dir.resolve(".clinerules")),
             "the existing file is the user's; init must not replace it with a directory");
     }
@@ -121,8 +122,29 @@ class InitCommandTest {
         run("init", "--list");
 
         assertTrue(out().contains("cline_granular -> .clinerules  [active]"), out());
-        assertFalse(out().contains("cline -> .clinerules  [active]"),
-            "a .clinerules/ directory does not activate the single-file service:\n" + out());
+    }
+
+    /** The outputs removed in 2.0.0 (#645) are no longer offered, so init cannot opt a project back in. */
+    @Test
+    void list_offersNoOutputRemovedIn2_0_0() {
+        run("init", "--list");
+
+        for (String removed : List.of("gemini ", "cody ", "cody_ignore ", "supermaven_ignore ", "cline ")) {
+            assertFalse(out().contains("  " + removed + "->"), "still lists " + removed.trim() + ":\n" + out());
+        }
+        for (String file : List.of("gemini_instructions.md", ".cody", ".codyignore", ".supermavenignore")) {
+            assertFalse(out().contains(file), "still lists " + file + ":\n" + out());
+        }
+        assertTrue(out().contains("gemini_md -> GEMINI.md"), "the replacements are still offered:\n" + out());
+    }
+
+    @Test
+    void removedKey_isRejectedAsUnknown() {
+        int code = run("init", "--platforms", "cody_ignore");
+
+        assertEquals(2, code, out() + err());
+        assertTrue(err().contains("cody_ignore"), err());
+        assertFalse(Files.exists(dir.resolve(".codyignore")), "a removed output must not be created");
     }
 
     @Test

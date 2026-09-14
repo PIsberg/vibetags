@@ -59,7 +59,7 @@ class ProcessorTaxStressTest {
     private static final String NO_OP_CLASS = NoOpProcessor.class.getName();
 
     private static final String[] OPT_IN_FILES = {
-        ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md", "gemini_instructions.md", "QWEN.md"
+        ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md", "GEMINI.md", "QWEN.md"
     };
 
     private static final int CLASSES = 1000;

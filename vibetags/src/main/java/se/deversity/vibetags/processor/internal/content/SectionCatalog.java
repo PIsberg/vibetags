@@ -268,7 +268,7 @@ public final class SectionCatalog {
         geminiOverrides.put(Key.PROTOTYPE, "\n## EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them:\n\n");
         geminiOverrides.put(Key.SUNSET, "\n## SUNSET DEPRECATED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden:\n\n");
         geminiOverrides.put(Key.TEMPORARY, "\n## TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit:\n\n");
-        OVERRIDES.put(Platform.GEMINI, geminiOverrides);
+        OVERRIDES.put(Platform.GEMINI_MD, geminiOverrides);
     }
 
     /**
@@ -284,6 +284,14 @@ public final class SectionCatalog {
         if (overrides != null && overrides.containsKey(key)) {
             return overrides.get(key);
         }
+        return DEFAULT.get(key);
+    }
+
+    /**
+     * The shared {@code DEFAULT} header for {@code key}, ignoring every platform override. Used where
+     * a renderer deliberately prints the shared wording under a platform that has its own.
+     */
+    public static @Nullable String defaultHeader(Key key) {
         return DEFAULT.get(key);
     }
 

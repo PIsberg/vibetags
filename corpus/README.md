@@ -219,7 +219,7 @@ cannot be loaded by the tool it was written for. Ten files carry a structured fo
 (`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
 `.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
 `sweep.yaml`) and all ten parse. (`.qwen/settings.json` is no longer written since #650, so a
-current run has nine to parse; not re-measured.)
+current run has nine to parse, and eight since 2.0.0 removed `.cody/config.json` (#645); not re-measured.)
 
 Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
 switches. `.vibetags-root-index` is excluded from the emptiness rule by name, because its presence

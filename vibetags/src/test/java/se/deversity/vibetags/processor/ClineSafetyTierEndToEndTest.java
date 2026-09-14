@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -207,19 +208,25 @@ class ClineSafetyTierEndToEndTest {
             "and that role file must carry the routed element");
     }
 
-    /** The single {@code .clinerules} file already carries the safety tier inline; nothing is added. */
+    /**
+     * A leftover {@code .clinerules} file from 1.x is not the directory form, so no safety file is
+     * attempted inside it and the file itself is not written (#645).
+     */
     @Test
-    void theSingleFileFormGetsNoSafetyFile(@TempDir Path root) throws IOException {
+    void aLeftoverSingleFileGetsNoSafetyFile(@TempDir Path root) throws IOException {
         Files.writeString(root.resolve(".clinerules"), "", StandardCharsets.UTF_8);
+        Files.writeString(root.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         h.addSource("com.example.payment.Settlement", LOCKED_SOURCE);
 
         h.compile();
 
+        assertTrue(h.readFile("CLAUDE.md").contains("Settlement arithmetic is audited"),
+            "precondition: the build ran and wrote its one opted-in file");
         assertTrue(Files.isRegularFile(root.resolve(".clinerules")),
             ".clinerules must stay a file");
-        assertTrue(h.readFile(".clinerules").contains("Settlement arithmetic is audited"),
-            "the single file carries the locked class inline, as before");
+        assertEquals("", h.readFile(".clinerules"),
+            "the single .clinerules file is no longer written");
     }
 
     /**

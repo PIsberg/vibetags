@@ -46,7 +46,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `AGENTS.md` | Codex CLI | Markdown |
 | `.codex/config.toml` | Codex CLI | TOML config |
 | `.codex/rules/vibetags.rules` | Codex CLI | Starlark rules |
-| `gemini_instructions.md` | Gemini (**deprecated**, see below) | Markdown |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
 | `.copilotignore` | GitHub Copilot (**deprecated**, see below) | Glob patterns |
@@ -66,9 +65,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.windsurf/rules/+vibetags-safety.md` | Devin Desktop, formerly Windsurf (the always-on safety tier, written whenever `.windsurf/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
 | `.devin/rules/+vibetags-safety.md` | Devin Desktop (the always-on safety tier, written whenever `.devin/rules/` is; see [below](#windsurf-is-now-devin-desktop)) | YAML front-matter (`trigger: always_on`) + Markdown |
 | `.rules` | Zed Editor | Markdown |
-| `.cody/config.json` | Sourcegraph Cody (**deprecated**, see below) | JSON (custom commands) |
-| `.codyignore` | Sourcegraph Cody (**deprecated**, see below) | Glob patterns |
-| `.supermavenignore` | Supermaven (**deprecated**, see below) | Glob patterns |
 | `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
 | `.amazonq/rules/*.md` | Amazon Q (granular, **deprecated**, see below) | Markdown |
@@ -91,9 +87,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
 | `.goosehints` | goose (Block) | Markdown |
 | `.antigravityignore` | Antigravity AI (**deprecated**, see below) | Glob patterns |
-| `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
-| `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
-| `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-two-shapes-at-one-path)) | Markdown, no front matter |
+| `.clinerules/*.md` | Cline AI assistant (granular, per element; see [below](#clines-clinerules-directory)) | YAML front-matter + Markdown |
+| `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-clinerules-directory)) | Markdown, no front matter |
 | `.junie/AGENTS.md` | JetBrains Junie (read first; not the root `AGENTS.md`, see [below](#junie-reads-junieagentsmd-first)) | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie (legacy, still supported, not deprecated) | Markdown |
 | `.idx/airules.md` | Firebase AI (**deprecated**, see below) | Markdown |
@@ -124,7 +119,7 @@ Cursor, Devin Desktop (formerly Windsurf, in `.devin/rules/` and `.windsurf/rule
 
 Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. Devin Desktop's (`.devin/rules/*.md` and `.windsurf/rules/*.md`) open with `trigger: glob` and a `globs:` pattern instead; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
-**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. Gemini is the exception to what the index note says: the other four notes say the scoped files load when the matching source file is opened, and Gemini CLI never loads `.gemini/rules/` at all. Its [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) load `GEMINI.md` files only, from the global and workspace hierarchy and, just in time, from a directory a tool accesses, and `google-gemini/gemini-cli` has no reference to `.gemini/rules` (checked 2026-09-13). So `GEMINI.md`'s note tells the agent to open the element's file with the [`read_file`](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/file-system.md) tool before modifying it (#669). Pointing `GEMINI.md` at the files with `@file` imports would not load them on demand: the [import processor](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/memport.md) expands every import when `GEMINI.md` loads, which would put all the detail back into always-loaded context. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together. Devin Desktop is the other way round: `.devin/rules/` belongs to the tool that reads `.windsurfrules`, but only `.windsurf/rules/` collapses that file; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). The directory gets the safety buckets another way, in one always-loaded file inside it; see [Cline's two shapes at one path](#clines-two-shapes-at-one-path).)
+**Dual opt-in de-duplicates.** Five platforms have both an aggregate file and a granular directory: `CLAUDE.md` ↔ `.claude/rules/`, `.cursorrules` ↔ `.cursor/rules/`, `.windsurfrules` ↔ `.windsurf/rules/`, `.github/copilot-instructions.md` ↔ `.github/instructions/`, `GEMINI.md` ↔ `.gemini/rules/`. If you opt into **both** for one platform, the aggregate no longer repeats every element's guardrails: it keeps the always-loaded safety guardrails inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`) and adds a **scoped-rules index** — one line per element, with the file-naming convention stated once in the index note instead of a path repeated on every entry — while the full per-element detail lives in the scoped files. An element that `.vibetags-roles` groups onto a shared role file keeps an explicit path, because its name no longer follows the convention. Opting into only the aggregate keeps the complete inline output as before. Gemini is the exception to what the index note says: the other four notes say the scoped files load when the matching source file is opened, and Gemini CLI never loads `.gemini/rules/` at all. Its [context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) load `GEMINI.md` files only, from the global and workspace hierarchy and, just in time, from a directory a tool accesses, and `google-gemini/gemini-cli` has no reference to `.gemini/rules` (checked 2026-09-13). So `GEMINI.md`'s note tells the agent to open the element's file with the [`read_file`](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/file-system.md) tool before modifying it (#669). Pointing `GEMINI.md` at the files with `@file` imports would not load them on demand: the [import processor](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/memport.md) expands every import when `GEMINI.md` loads, which would put all the detail back into always-loaded context. (`CLAUDE.local.md` follows `CLAUDE.md`; the other fourteen granular platforms have no aggregate counterpart, so nothing is de-duplicated for them. Cline is among them: its `.clinerules` file and `.clinerules/` directory are one path, so they are never opted into together. Devin Desktop is the other way round: `.devin/rules/` belongs to the tool that reads `.windsurfrules`, but only `.windsurf/rules/` collapses that file; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). The directory gets the safety buckets another way, in one always-loaded file inside it; see [Cline's `.clinerules/` directory](#clines-clinerules-directory).)
 
 **Per-module (nested) output.** In a multi-module reactor build, opt into a file (or granular directory) *inside a module's own directory* — e.g. `touch module-a/CLAUDE.md` — and VibeTags writes that module's own guardrails there, scoped to that module's annotations. This is the context-optimal layout for tools that auto-load nested config (Claude Code nested `CLAUDE.md`, Cursor nested rules). It is additive: the reactor-**root** file still merges every module (unchanged), and a module that doesn't opt in gets no file. The scoped-rules index composes here too — a module that opts into both its aggregate and its granular dir gets an indexed module aggregate.
 
@@ -281,8 +276,7 @@ use (160 and 315 public repositories respectively, GitHub code search, 2026-09-1
 
   Opting into `config.json` alone is a valid configuration: `touch .greptile/config.json` gets you
   the exclusions and no guardrail prose, and creates no `rules.md`. The merge is keyed on the folder
-  as well as the file name, since `config.json` is far too common a name to key on alone (Cody's
-  `.cody/config.json` is also a VibeTags output, rendered whole). In a reactor, each module's
+  as well as the file name, since `config.json` is far too common a name to key on alone. In a reactor, each module's
   `ignorePatterns` span lists every module's exclusions. Greptile treats `ignorePatterns` as a
   setting that a child `.greptile/` folder overrides rather than adds to, so a module folder that
   sets its own replaces the root's for that subtree.
@@ -315,8 +309,9 @@ an ordinary file-presence opt-in: regenerated when it exists, never created.
 ### Deprecated outputs whose tool has moved on
 
 These are deprecated. They are still written, and an existing project's output does not change, but
-they stop being written in the next major version, tracked in
-[#645](https://github.com/PIsberg/vibetags/issues/645). Each names a tool that has been retired, or a
+they stop being written in a later major version, tracked in
+[#720](https://github.com/PIsberg/vibetags/issues/720). The first four went in 2.0.0; see
+[Outputs removed in 2.0.0](#outputs-removed-in-200). Each names a tool that has been retired, or a
 file its vendor does not document, and the file-presence opt-in model means a path VibeTags names is
 a path a user may create. Every row was confirmed at the vendor, not taken from a round-up.
 
@@ -332,10 +327,6 @@ across, then delete the deprecated file or directory.
 
 | Output | Status | Evidence |
 |---|---|---|
-| `gemini_instructions.md` | **No vendor source found.** Google documents `GEMINI.md` for the Gemini CLI (configurable via `contextFileName`), `.idx/airules.md` for Firebase, and `.gemini/styleguide.md` for the GitHub reviewer. This path appears in none of them. It sits in 55 public repositories, none of them VibeTags consumers, so people do write it -- but no documentation says anything reads it. | [Gemini CLI context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) |
-| `.cody/config.json`, `.codyignore` | **Plans retired, files undocumented.** Sourcegraph's announcement (25 June 2025) ended Cody Free and Pro on 23 July 2025 and names Amp, which reads `AGENTS.md`, as the path forward for those users. It also says Cody Enterprise is "not affected" and "remains fully supported, actively developed", so the product itself is not retired. The deprecation rests on the second half: Sourcegraph's docs repository (`sourcegraph/docs`, checked 2026-09-13) names neither file. Enterprise excludes content through admin-set Context Filters, custom commands moved to the Prompt Library, and the only ignore file the docs ever mention is an experimental `.cody/ignore` in the technical changelog. 4 and 3 public repositories. | [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans), [Context Filters](https://sourcegraph.com/docs/cody/capabilities/ignore-context) (#677) |
-| `.supermavenignore` | **Product sunset, autocomplete kept for existing users.** Supermaven's own post of 21 November 2025, "Sunsetting Supermaven", refunds subscribers, ends agent conversations, recommends existing VS Code users move to Cursor, and keeps free autocomplete inference running for existing JetBrains and Neovim customers "for the foreseeable future". So the plugin still completes code for some users; what ended is the product as something to adopt. Cursor's 2024 acquisition post said the plugin "will remain maintained", which the 2025 post supersedes. Cursor Tab reads `.cursorignore`, which VibeTags writes. 5 public repositories. | [Sunsetting Supermaven](https://supermaven.com/blog/sunsetting-supermaven) (#677) |
-| `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags now writes the directory form as well (see [Cline's two shapes at one path](#clines-two-shapes-at-one-path)), so the file is kept for projects that already have it rather than as the recommended opt-in. |
 | `.void/rules.md` | **Product deprecated, and the path was never Void's.** The `voideditor/void` README opens "Void is now deprecated" and says the project is "no longer accepting contributions"; the repository was archived with its last push on 2026-06-02. It names no successor, only a list of community forks. Separately, Void's own `convertToLLMMessageService.ts` reads a `.voidrules` file from each workspace folder and nothing under `.void/`, so this output was not read by Void even while it was maintained. The log event records `replacement=none` (#665). | [Void README](https://github.com/voideditor/void), [`convertToLLMMessageService.ts`](https://github.com/voideditor/void/blob/main/src/vs/workbench/contrib/void/browser/convertToLLMMessageService.ts) |
 | `.mentatconfig.json` | **CLI archived, and the path was never Mentat's.** `AbanteAI/mentat` returns 404; the CLI lives on as the archived `AbanteAI/archive-old-cli-mentat` (last push 2025-01-07). Its `mentat/config.py` loads `.mentat_config.json`, and its configuration docs name the same file, so this output was never read (#666). | [`mentat/config.py`](https://github.com/AbanteAI/archive-old-cli-mentat/blob/HEAD/mentat/config.py) |
 | `sweep.yaml` | **Product changed.** The `sweepai/sweep` README now reads "We're now building an AI coding assistant for JetBrains", sweep.dev describes only the JetBrains plugin, and docs.sweep.dev returns HTTP 402. `sweep.yaml` configured the GitHub App the README no longer describes. Search summaries say the JetBrains plugin reads a `SWEEP.md` and falls back to `CLAUDE.md` and `AGENTS.md`, but the vendor docs that would confirm it did not load, so no replacement is named (#666). | [Sweep README](https://github.com/sweepai/sweep) |
@@ -384,6 +375,30 @@ Zoo Code's source has no `.zooignore` or `.zoomodes`. The service keys (`roo_gra
 `vibetags init --platforms` takes, so renaming one would break a working command, and the paths it
 names did not change.
 
+### Outputs removed in 2.0.0
+
+Four outputs deprecated in the last 1.x release (#641) are no longer written from 2.0.0 (#645). Their keys are gone
+from the opt-in list, so a project that still has one of these files gets no regeneration and no
+warning, and the file is left exactly as the last 1.x build wrote it. It no longer tracks the
+annotations: move any hand-written content to the replacement and delete it.
+
+- `gemini_instructions.md`: use `GEMINI.md` for the Gemini CLI, or `.gemini/styleguide.md` for Gemini
+  Code Assist. `.aiexclude` is now written beside `GEMINI.md`; it used to need
+  `gemini_instructions.md` or an active `AGENTS.md` beside it.
+- `.cody/config.json` and `.codyignore`: `AGENTS.md`, which Amp reads.
+- `.supermavenignore`: `.cursorignore`, which Cursor Tab reads.
+- `.clinerules`, the single file: the `.clinerules/` directory. Cline also reads `.cursorrules`,
+  `.windsurfrules` and `AGENTS.md`.
+
+The evidence each removal rested on, as it stood in the deprecated table:
+
+| Output | Status | Evidence |
+|---|---|---|
+| `gemini_instructions.md` | **No vendor source found.** Google documents `GEMINI.md` for the Gemini CLI (configurable via `contextFileName`), `.idx/airules.md` for Firebase, and `.gemini/styleguide.md` for the GitHub reviewer. This path appears in none of them. It sits in 55 public repositories, none of them VibeTags consumers, so people do write it -- but no documentation says anything reads it. Checked once more before removal (2026-09-14): GitHub code search finds `gemini_instructions` in no repository under the `google-gemini` or `googleapis` organisations, and a web search finds no Google page naming it. The one tool found that names such a file, `create-ai-chat-context`, writes `GEMINI_INSTRUCTIONS.md` as a prompt for a user to paste into gemini.google.com, not a file any tool reads. | [Gemini CLI context docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md) |
+| `.cody/config.json`, `.codyignore` | **Plans retired, files undocumented.** Sourcegraph's announcement (25 June 2025) ended Cody Free and Pro on 23 July 2025 and names Amp, which reads `AGENTS.md`, as the path forward for those users. It also says Cody Enterprise is "not affected" and "remains fully supported, actively developed", so the product itself is not retired. The deprecation rests on the second half: Sourcegraph's docs repository (`sourcegraph/docs`, checked 2026-09-13) names neither file. Enterprise excludes content through admin-set Context Filters, custom commands moved to the Prompt Library, and the only ignore file the docs ever mention is an experimental `.cody/ignore` in the technical changelog. 4 and 3 public repositories. | [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans), [Context Filters](https://sourcegraph.com/docs/cody/capabilities/ignore-context) (#677) |
+| `.supermavenignore` | **Product sunset, autocomplete kept for existing users.** Supermaven's own post of 21 November 2025, "Sunsetting Supermaven", refunds subscribers, ends agent conversations, recommends existing VS Code users move to Cursor, and keeps free autocomplete inference running for existing JetBrains and Neovim customers "for the foreseeable future". So the plugin still completes code for some users; what ended is the product as something to adopt. Cursor's 2024 acquisition post said the plugin "will remain maintained", which the 2025 post supersedes. Cursor Tab reads `.cursorignore`, which VibeTags writes. 5 public repositories. | [Sunsetting Supermaven](https://supermaven.com/blog/sunsetting-supermaven) (#677) |
+| `.clinerules` (the single file) | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags writes the directory form (see [Cline's `.clinerules/` directory](#clines-clinerules-directory)). |
+
 ### `.cursorrules` is legacy, and not deprecated
 
 Cursor calls the single `.cursorrules` file legacy. Its
@@ -396,8 +411,8 @@ current form, and VibeTags writes it.
 
 VibeTags keeps writing `.cursorrules` with no deprecation warning (#672). "Will be deprecated" is
 an intent with no date, and the rows above are for outputs whose tool has retired them or never
-read them. The file also reaches past Cursor: Cline's loader reads it (see the `.clinerules` row
-above), so a warning would tell projects to drop a file another tool still uses. A new project on
+read them. The file also reaches past Cursor: Cline's loader reads it (see the `.clinerules` row under
+[Outputs removed in 2.0.0](#outputs-removed-in-200)), so a warning would tell projects to drop a file another tool still uses. A new project on
 Cursor should opt into `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules`
 collapses to the scoped-rules index and keeps only the safety tier inline. The file gets a
 `DeprecatedServices` notice when Cursor says it no longer reads it.
@@ -453,14 +468,12 @@ What would add to this: a project opened in current Cursor and Trae with one rul
 recording which one attaches when a matching file is opened. Continue and PearAI keep the list,
 which Continue documents; see the table under [Granular rules](#granular-rules).
 
-### Cline's two shapes at one path
+### Cline's `.clinerules/` directory
 
-Cline reads `.clinerules` as either a single file or a directory of rule files, and VibeTags writes
-both: the `cline` service for the file, `cline_granular` for the directory. They share one path, so
-which one activates is decided by what is on disk. A regular file opts into the file, a directory
-opts into the directory, and the two can never both be active in one project. The single file is
-deprecated (#645) and the directory is its replacement, so the deprecation warning fires only for a
-regular file; a project on the directory never sees it.
+Cline reads `.clinerules` as either a single file or a directory of rule files. VibeTags writes the
+directory, the `cline_granular` service, which is the shape Cline's current docs describe. It wrote
+the single file as well until 2.0.0 removed it (#645). A `.clinerules` file left on disk activates
+nothing, because a service opts in only on the kind of entry it writes.
 
 The directory's rule files carry `paths:` front matter, the same shape Claude Code uses. That is read
 from Cline's source rather than its prose: `rule-helpers.ts` parses each file's YAML front matter and
@@ -487,16 +500,16 @@ without frontmatter are always active."
 - In a reactor with `.clinerules/` at the root, every module's safety tier is merged into the one
   file under per-module markers, the same merge `.cursorrules` gets.
 
-**Cline converts the file for you, and nothing is lost when it does.** Creating a workspace rule from
-Cline's UI while a `.clinerules` file exists turns the file into a directory and moves its content
-into `.clinerules/default-rules.md`. The next build sees a directory, switches to the directory form,
+**Cline converts a leftover file for you, and nothing is lost when it does.** Creating a workspace
+rule from Cline's UI while a `.clinerules` file exists, such as the one a 1.x build left, turns the
+file into a directory and moves its content into `.clinerules/default-rules.md`. The next build sees
+a directory, writes the directory form,
 and sweeps the moved VibeTags block out of `default-rules.md` as a stale copy, leaving your own text
 in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for step.
 
-**How the README counts it.** `.clinerules` is counted once among the config files and once among
-the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
-it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
-file inside the directory is a file of its own and is counted as one config file.
+**How the README counts it.** `.clinerules/` is one of the scoped-rule directories. Until 2.0.0 the
+same path was also counted among the config files, for the single file. The safety file inside the
+directory is a file of its own and is counted as one config file.
 
 ### Junie reads `.junie/AGENTS.md` first
 

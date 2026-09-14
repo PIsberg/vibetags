@@ -38,7 +38,6 @@ public final class AIDraftFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;

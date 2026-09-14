@@ -26,12 +26,12 @@ public final class OrphanWarner {
             // No .copilotignore warning either: deprecated (#668), Copilot excludes content in settings.
             warn(messager, log, active.contains("qwen") && !active.contains("qwen_ignore"),
                 "VibeTags: @AIIgnore used but .qwenignore is missing for Qwen support. Consider creating it.");
-            warn(messager, log, (active.contains("gemini") || active.contains("codex")) && !active.contains("aiexclude"),
+            warn(messager, log, (active.contains("gemini_md") || active.contains("codex")) && !active.contains("aiexclude"),
                 "VibeTags: @AIIgnore used but .aiexclude is missing for Gemini/Codex support. Consider creating it.");
         }
 
         if (hasLocked) {
-            warn(messager, log, (active.contains("gemini") || active.contains("codex")) && !active.contains("aiexclude"),
+            warn(messager, log, (active.contains("gemini_md") || active.contains("codex")) && !active.contains("aiexclude"),
                 "VibeTags: @AILocked used but .aiexclude (hard guardrail) is missing for Gemini/Codex support. Consider creating it.");
         }
     }

@@ -268,16 +268,16 @@ class AIContractProcessorTest {
 
     @Test
     void process_withContractAnnotation_writesContractSectionToGemini() throws Exception {
-        withSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("GEMINI.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), contractRoundEnv("com.example.PaymentGateway.charge", "Bank partner API"));
             triggerGeneration(processor);
 
-            String content = processor.contentFor("gemini_instructions.md");
+            String content = processor.contentFor("GEMINI.md");
             assertTrue(content.contains("CONTRACT-FROZEN SIGNATURES"),
-                "gemini_instructions.md must have contract-frozen section");
+                "GEMINI.md must have contract-frozen section");
             assertTrue(content.contains("com.example.PaymentGateway.charge"),
-                "gemini_instructions.md must list the annotated element");
+                "GEMINI.md must list the annotated element");
         });
     }
 

@@ -244,7 +244,7 @@ class JsonValueSpansTest {
     }
 
     /**
-     * {@code config.json} is far too common a name to key on. {@code .cody/config.json} is a VibeTags
+     * {@code config.json} is far too common a name to key on. {@code .cody/config.json} was a VibeTags
      * output rendered whole; routed through this merge it would keep the user's bytes and grow a span
      * in a file that has no string value to put one in.
      */

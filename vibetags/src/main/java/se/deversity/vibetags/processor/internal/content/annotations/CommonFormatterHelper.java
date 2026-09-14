@@ -114,7 +114,6 @@ final class CommonFormatterHelper {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(clause(" - ", summary)).append('\n');
                 return true;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(clause(": ", summary)).append('\n');
                 return true;

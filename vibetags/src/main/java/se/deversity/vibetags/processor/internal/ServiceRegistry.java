@@ -26,14 +26,14 @@ public final class ServiceRegistry {
 
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(
-        "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
+        "cursor", "claude", "aiexclude", "codex", "copilot", "qwen",
         // Qwen's /refactor command: opted into by its own presence, not implied by QWEN.md (#655)
         "qwen_refactor",
         "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
         "llms", "llms_full", "aider_conventions", "aider_ignore",
         "cursor_granular", "roo_granular", "trae_granular",
         // v0.7.0 platforms
-        "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
+        "windsurf", "zed",
         "windsurf_granular", "continue_granular", "tabnine_granular",
         "amazonq_granular", "ai_rules_granular",
         // v0.8.0 platforms
@@ -45,11 +45,12 @@ public final class ServiceRegistry {
         // v0.9.6 platforms
         "gemini_md", "antigravity_ignore",
         // v0.9.7 platforms
-        "cline", "junie", "kiro_granular",
+        "junie", "kiro_granular",
         // Junie's current file, checked before .junie/guidelines.md. Not the root AGENTS.md: a
         // separate key, so the sole-file rule treats it like any other opt-in (#673)
         "junie_agents",
-        // Cline's .clinerules/ directory, mutually exclusive with the .clinerules file above
+        // Cline's .clinerules/ directory. The single .clinerules file VibeTags wrote before 2.0.0
+        // is no longer an opt-in (#645).
         "cline_granular",
         // Firebase AI
         "firebase",
@@ -133,7 +134,6 @@ public final class ServiceRegistry {
         map.put("claude",    root.resolve("CLAUDE.md"));
         map.put("aiexclude", root.resolve(".aiexclude"));
         map.put("codex",     root.resolve("AGENTS.md"));
-        map.put("gemini",    root.resolve("gemini_instructions.md"));
         map.put("copilot",   root.resolve(".github/copilot-instructions.md"));
         map.put("qwen",      root.resolve("QWEN.md"));
         map.put("cursor_ignore",  root.resolve(".cursorignore"));
@@ -156,9 +156,6 @@ public final class ServiceRegistry {
         // New platforms
         map.put("windsurf",          root.resolve(".windsurfrules"));
         map.put("zed",               root.resolve(".rules"));
-        map.put("cody",              root.resolve(".cody/config.json"));
-        map.put("cody_ignore",       root.resolve(".codyignore"));
-        map.put("supermaven_ignore", root.resolve(".supermavenignore"));
         map.put("windsurf_granular", root.resolve(".windsurf/rules"));
         // Inside that directory: the safety tier as a trigger: always_on rule (issue #684). Implicit,
         // like cline_safety, so it has no opt-in key of its own.
@@ -183,9 +180,8 @@ public final class ServiceRegistry {
         map.put("gemini_md",          root.resolve("GEMINI.md"));
         map.put("antigravity_ignore", root.resolve(".antigravityignore"));
         // v0.9.7 platforms
-        map.put("cline",         root.resolve(".clinerules"));
-        // Cline's directory form, at the same path as the file. A path is one or the other, so
-        // isOptedIn lets exactly one of the two activate (issue #642).
+        // Cline's directory form (issue #642). The single .clinerules file at the same path was
+        // removed in 2.0.0 (#645), and isOptedIn ignores a file there.
         map.put("cline_granular", root.resolve(".clinerules"));
         // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
         // codex_config under codex, so it has no opt-in key of its own.
@@ -294,10 +290,9 @@ public final class ServiceRegistry {
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             // A deprecated output is left off: this list is what a new user copies from. A directory
-            // service carries a trailing '/', because .clinerules is both a deprecated file and a
-            // current directory, and a bare name would have a new user touch the deprecated one.
-            // Paths are root-relative for the same reason: .greptile/config.json and the deprecated
-            // .cody/config.json share a file name.
+            // service carries a trailing '/', so a new user creates .clinerules/ as the directory
+            // Cline reads rather than a file nothing reads. Paths are root-relative for the same
+            // reason: the two SKILL.md entries share a file name.
             Path root = rootOf(allServiceFiles);
             allServiceFiles.entrySet().stream()
                 .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey())
@@ -312,8 +307,8 @@ public final class ServiceRegistry {
 
     /**
      * How the opt-in note names {@code path}: relative to the root, with {@code /} separators, so
-     * {@code .greptile/config.json} is not listed as a bare {@code config.json} that reads like
-     * Cody's, and the two {@code SKILL.md} entries are told apart. Falls back to the file name for a
+     * {@code .greptile/config.json} is not listed as a bare {@code config.json}, and the two
+     * {@code SKILL.md} entries are told apart. Falls back to the file name for a
      * hand-built map with no root to relativise against.
      */
     private static String optInName(@Nullable Path root, Path path) {
@@ -362,9 +357,9 @@ public final class ServiceRegistry {
      *
      * <p>The one definition of that distinction, for everything that has to know which kind of entry
      * a service's path is without looking at the disk: opt-in resolution below, the CLI's
-     * {@code init}, and the tests that count and fixture the outputs. The file name cannot answer it,
-     * because one path is both: {@code .clinerules} is the {@code cline} file and the
-     * {@code cline_granular} directory. The {@code _granular} suffix is already load-bearing
+     * {@code init}, and the tests that count and fixture the outputs. The file name cannot answer it:
+     * {@code .clinerules} is the {@code cline_granular} directory, and until 2.0.0 the same path was
+     * also the single-file {@code cline} service (#645). The {@code _granular} suffix is already load-bearing
      * elsewhere ({@code PlatformRendererRegistry} routes on it and {@code GuardrailContentBuilder}
      * filters on it), so this names an existing convention rather than inventing a second one.
      */
@@ -378,13 +373,13 @@ public final class ServiceRegistry {
      *
      * <p>This used to be a bare {@code Files.exists}, and the shape of that bug is worth keeping
      * written down. Cline reads {@code .clinerules} as a directory of rule files (its current
-     * documented shape) and as a single file (the shape VibeTags wrote first, which its loader still
-     * reads). A user following the current docs created the directory, {@code exists()} was true for
-     * it, the single-file service activated, and the writer was handed a directory to write a regular
-     * file over.
+     * documented shape) and as a single file (the shape VibeTags wrote until 2.0.0, which its loader
+     * still reads). A user following the current docs created the directory, {@code exists()} was true
+     * for it, the single-file service activated, and the writer was handed a directory to write a
+     * regular file over.
      *
-     * <p>A path cannot be both, so the entry's type is an unambiguous signal for which of the two the
-     * user meant, and the two services at that path can never both be active.
+     * <p>The single-file service is gone (#645), but the rule stands: a service activates only on the
+     * kind of entry it writes, so a leftover {@code .clinerules} file activates nothing.
      */
     public static boolean isOptedIn(String key, Path path) {
         return writesDirectory(key) ? Files.isDirectory(path) : Files.isRegularFile(path);

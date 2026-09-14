@@ -81,8 +81,9 @@ class ClineRulesDirectoryEndToEndTest {
      * The migration Cline performs itself. Creating a workspace rule from Cline's UI while a
      * {@code .clinerules} file exists runs {@code ensureLocalClineDirExists}, which turns the file
      * into a directory and moves its content, VibeTags block included, into
-     * {@code .clinerules/default-rules.md}. The next build sees a directory, so the file service is
-     * off and the directory service is on. Nothing the user wrote may be lost across that switch, and
+     * {@code .clinerules/default-rules.md}. VibeTags 1.x wrote that file and 2.0.0 no longer does
+     * (#645), so the block is whatever the last 1.x build left. The next build sees a directory and
+     * the directory service takes over. Nothing the user wrote may be lost across that switch, and
      * the aggregate block Cline carried along must not stay behind as a stale second copy of every
      * guardrail.
      */
@@ -90,12 +91,17 @@ class ClineRulesDirectoryEndToEndTest {
     void clinesOwnFileToDirectoryConversionKeepsHandTextAndDropsTheStaleBlock(@TempDir Path root)
             throws IOException {
         Path clinerules = root.resolve(".clinerules");
-        Files.writeString(clinerules, "# Team notes\n\nAlways run the linter.\n", StandardCharsets.UTF_8);
+        // What a 1.x build left in the single file: the hand text, then its hash-marked block.
+        String asFile = "# Team notes\n\nAlways run the linter.\n\n"
+            + "# VIBETAGS-START\n# AUTO-GENERATED AI RULES\n# Do not edit manually.\n\n"
+            + "## LOCKED FILES (DO NOT EDIT)\n"
+            + "- `com.example.payment.PaymentProcessor`: Core payment logic - do not refactor\n"
+            + "# VIBETAGS-END\n";
+        Files.writeString(clinerules, asFile, StandardCharsets.UTF_8);
         ProcessorTestHarness h = withLockedClass(root);
         h.compile();
-        String asFile = Files.readString(clinerules, StandardCharsets.UTF_8);
-        assertTrue(asFile.contains("VIBETAGS-START") && asFile.contains("Always run the linter."),
-            "precondition: the single-file service wrote its block around the hand text. Was:\n" + asFile);
+        assertEquals(asFile, Files.readString(clinerules, StandardCharsets.UTF_8),
+            "a .clinerules file is no longer a VibeTags output (#645), so 2.0.0 leaves it as it was");
         VibeTagsLogger.shutdown();
 
         // What Cline's ensureLocalClineDirExists does, step for step.

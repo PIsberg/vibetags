@@ -41,7 +41,6 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
-            case GEMINI:
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;

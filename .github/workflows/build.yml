@@ -309,7 +309,7 @@ jobs:
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
-          expected=57
+          expected=52
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"
@@ -320,7 +320,7 @@ jobs:
           # really got written. (.codex/* is absent on purpose: Codex is dropped unless AGENTS.md is
           # the sole AI config file, which it is not here. JSON/TOML configs are whole-file
           # overwrites with no marker, so they are not in this list.)
-          for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
+          for f in GEMINI.md QWEN.md .windsurfrules CONVENTIONS.md \
                    .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
                    .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
                    .pr_agent.toml .coderabbit.yaml; do
@@ -1033,7 +1033,7 @@ jobs:
           #
           # The deprecation warning (#641) is excluded too, and asserted present instead. This
           # reactor opts into every deprecated output it has a fixture for, on purpose, so they keep
-          # a fixture until the major version that removes them (#645), and a build that opts in is
+          # a fixture until the major version that removes them, and a build that opts in is
           # exactly the build that must print it. The number is the count of DeprecatedServices rows
           # this reactor opts into; DeprecatedServicesTest pins the line's shape.
           #
@@ -1047,8 +1047,8 @@ jobs:
             echo "$unexpected"
             exit 1
           fi
-          if ! grep -q "20 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
-            echo "::error::the reactor opts into 20 deprecated outputs and was not warned about all of them."
+          if ! grep -q "15 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::the reactor opts into 15 deprecated outputs and was not warned about all of them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that
@@ -1093,7 +1093,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=58
+          expected=53
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"
@@ -1101,7 +1101,7 @@ jobs:
             exit 1
           fi
           # Spot-check marker-based files from renderers nothing else asserts.
-          for f in GEMINI.md QWEN.md .windsurfrules .clinerules CONVENTIONS.md \
+          for f in GEMINI.md QWEN.md .windsurfrules CONVENTIONS.md \
                    .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
                    .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
                    .pr_agent.toml .coderabbit.yaml CLAUDE.local.md; do

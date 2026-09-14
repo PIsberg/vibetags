@@ -15,7 +15,6 @@ AI_FILES=(
   "QWEN.md"
   ".qwenignore"
   ".qwen/commands/refactor.md"
-  "gemini_instructions.md"
   ".github/copilot-instructions.md"
   "llms.txt"
   "llms-full.txt"
@@ -34,9 +33,6 @@ AI_FILES=(
   # VibeTags owning only a span inside its ignorePatterns value (#651).
   ".windsurfrules"
   ".rules"
-  ".cody/config.json"
-  ".codyignore"
-  ".supermavenignore"
   # v0.8.0 platforms
   ".mentatconfig.json"
   "sweep.yaml"
@@ -52,7 +48,6 @@ AI_FILES=(
   "GEMINI.md"
   ".antigravityignore"
   # v0.9.7 platforms
-  ".clinerules"
   ".junie/guidelines.md"
   ".junie/AGENTS.md"
   # Firebase AI
@@ -101,7 +96,7 @@ find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
 # Cleanup granular rules in directories. Kept in step with ServiceRegistry by
 # ExampleResetScriptCoverageTest: every directory this example opts into must appear here,
 # or a reset silently leaves the last build's rule files in place.
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules" ".zencoder/rules" ".devin/rules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules" ".zencoder/rules" ".devin/rules" ".clinerules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +

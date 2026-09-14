@@ -52,7 +52,7 @@ class ConcurrentBuildTest {
     /** File whose presence acts as the opt-in for the processor. */
     private static final String[] OPT_IN_FILES = {
         ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md",
-        "gemini_instructions.md", "QWEN.md"
+        "GEMINI.md", "QWEN.md"
     };
 
     /** Token present in the header of every file the processor generates. */

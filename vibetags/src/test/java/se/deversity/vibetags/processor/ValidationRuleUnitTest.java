@@ -369,7 +369,7 @@ class ValidationRuleUnitTest {
      *
      * <p>{@code -Avibetags.root} pins the processor's write root to the JUnit temp dir. Without it
      * the processor falls back to the real working directory, so any opt-in file
-     * (CONVENTIONS.md, gemini_instructions.md, .github/copilot-instructions.md, ...) that happens to
+     * (CONVENTIONS.md, GEMINI.md, .github/copilot-instructions.md, ...) that happens to
      * exist there gets silently overwritten with this test's fixture content on every {@code mvn
      * test} — see issue found 2026-08-07.
      */

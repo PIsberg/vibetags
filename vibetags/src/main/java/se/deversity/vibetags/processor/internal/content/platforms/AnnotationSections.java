@@ -127,6 +127,24 @@ final class AnnotationSections {
         ));
     }
 
+    /**
+     * The same safety sections under the shared {@code DEFAULT} headings instead of
+     * {@code platform}'s own. Only {@code GEMINI.md} uses it. Its Gemini wording used to be registered
+     * under the {@code gemini_instructions.md} platform, which the collapsed {@code GEMINI.md} never
+     * looked up, so that file has always printed these headings. Removing that platform in 2.0.0
+     * (#645) moved the wording to {@code GEMINI_MD}; this keeps every collapsed {@code GEMINI.md}
+     * byte-identical across the removal. Whether it should use Gemini's wording instead is #721.
+     */
+    static void renderInlineSafetySectionsInDefaultWording(StringBuilder sb, GuardrailModel model, Platform platform) {
+        render(sb, model, platform, List.of(
+            Section.of(SectionCatalog.defaultHeader(SectionCatalog.Key.AUDIT), GuardrailModel::audit, FormatterRegistry.audit()),
+            Section.of(SectionCatalog.defaultHeader(SectionCatalog.Key.IGNORE), GuardrailModel::ignore, FormatterRegistry.ignore()),
+            Section.of(SectionCatalog.defaultHeader(SectionCatalog.Key.PRIVACY), GuardrailModel::privacy, FormatterRegistry.privacy()),
+            Section.of(SectionCatalog.defaultHeader(SectionCatalog.Key.CORE), GuardrailModel::core, FormatterRegistry.core()),
+            Section.of(SectionCatalog.defaultHeader(SectionCatalog.Key.SECURE), GuardrailModel::secure, FormatterRegistry.secure())
+        ));
+    }
+
     /** Appends {@code tail} after {@code head} into one immutable list. */
     static List<Section> concat(List<Section> head, List<Section> tail) {
         List<Section> combined = new java.util.ArrayList<>(head.size() + tail.size());
