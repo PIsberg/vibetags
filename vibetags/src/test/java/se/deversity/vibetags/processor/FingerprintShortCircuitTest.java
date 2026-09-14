@@ -35,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * negative case passed whether or not its change was detected.
  *
  * <p>The negative cases therefore run a control first: recompile with nothing changed and assert
- * the skip fires, then make the one change under test and assert it does not.
+ * the skip fires, then make the one change under test and assert it does not. Their source blocks
+ * keep their original form, so this rewrite removes no line the locked-files guard would read as a
+ * stripped lock.
  */
 @Tag("e2e")
 class FingerprintShortCircuitTest {
@@ -73,20 +75,34 @@ class FingerprintShortCircuitTest {
 
     @Test
     void shortCircuit_doesNotFire_whenAnnotationChanges(@TempDir Path tmp) throws Exception {
-        String original = "@AILocked(reason = \"original reason\")\npublic class A {}\n";
-        compileA(tmp, original);
-        assertControlShortCircuits(compileA(tmp, original));
+        // Compile with one @AILocked reason.
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"original reason\")\n" +
+            "public class A {}\n");
+        h1.compile();
+        assertControlShortCircuits(compileA(tmp, "original reason", "class"));
 
         Path cursorRules = tmp.resolve(".cursorrules");
         long mtime1 = Files.getLastModifiedTime(cursorRules).toMillis();
+
         ProcessorTestHarness.awaitFilesystemTick(tmp);
 
-        // A DIFFERENT reason changes the fingerprint, so the short-circuit must NOT fire.
-        assertFalse(shortCircuited(
-                compileA(tmp, "@AILocked(reason = \"completely different reason\")\npublic class A {}\n")),
+        // Recompile with a DIFFERENT reason → fingerprint changes → short-circuit must NOT fire.
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"completely different reason\")\n" +
+            "public class A {}\n");
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics()),
             "an edited annotation attribute must not short-circuit");
 
-        assertTrue(Files.getLastModifiedTime(cursorRules).toMillis() > mtime1,
+        long mtime2 = Files.getLastModifiedTime(cursorRules).toMillis();
+
+        assertTrue(mtime2 > mtime1,
             ".cursorrules must be rewritten when annotation attributes change (fingerprint differs)");
     }
 
@@ -108,17 +124,28 @@ class FingerprintShortCircuitTest {
 
     @Test
     void shortCircuit_doesNotFire_whenProjectNameChanges(@TempDir Path tmp) throws Exception {
-        String source = "@AILocked(reason = \"stable reason\")\npublic class A {}\n";
-        // llms.txt renders the project name as its H1.
-        compileA(tmp, source, "-Avibetags.project=AlphaCorp");
+        // Compile with one project name; llms.txt renders it as the H1.
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h1.compile("-Avibetags.project=AlphaCorp");
         assertTrue(Files.readString(tmp.resolve("llms.txt")).contains("AlphaCorp"),
             "precondition: the first compile must render the project name into llms.txt");
-        assertControlShortCircuits(compileA(tmp, source, "-Avibetags.project=AlphaCorp"));
+        assertControlShortCircuits(compileA(tmp, "stable reason", "class", "-Avibetags.project=AlphaCorp"));
 
-        // A DIFFERENT project name with identical annotations. The annotation fingerprint alone
-        // cannot see the rename, so without a run-context stamp on the cache the short-circuit
-        // fires and llms.txt keeps the old name until some annotation changes.
-        assertFalse(shortCircuited(compileA(tmp, source, "-Avibetags.project=BetaCorp")),
+        // Recompile with a DIFFERENT project name and identical annotations. The annotation
+        // fingerprint alone cannot see the rename, so without a run-context stamp on the cache
+        // the short-circuit fires and llms.txt keeps the old name until some annotation changes.
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics("-Avibetags.project=BetaCorp")),
             "a changed -Avibetags.project must not short-circuit");
 
         assertTrue(Files.readString(tmp.resolve("llms.txt")).contains("BetaCorp"),
@@ -127,13 +154,24 @@ class FingerprintShortCircuitTest {
 
     @Test
     void shortCircuit_doesNotFire_whenModuleOverrideChanges(@TempDir Path tmp) throws Exception {
-        String source = "@AILocked(reason = \"stable reason\")\npublic class A {}\n";
-        compileA(tmp, source, "-Avibetags.module=alpha");
-        assertControlShortCircuits(compileA(tmp, source, "-Avibetags.module=alpha"));
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        h1.compile("-Avibetags.module=alpha");
+        assertControlShortCircuits(compileA(tmp, "stable reason", "class", "-Avibetags.module=alpha"));
 
         // Same annotations, new module name: this compilation owns a sidecar under the new id,
         // which can only be written if the short-circuit does not fire.
-        assertFalse(shortCircuited(compileA(tmp, source, "-Avibetags.module=beta")),
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"stable reason\")\n" +
+            "public class A {}\n");
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics("-Avibetags.module=beta")),
             "a changed -Avibetags.module must not short-circuit");
 
         assertTrue(Files.exists(tmp.resolve(".vibetags-mod-beta")),
@@ -149,16 +187,27 @@ class FingerprintShortCircuitTest {
      */
     @Test
     void shortCircuit_doesNotFire_whenAnElementChangesKind(@TempDir Path tmp) throws Exception {
-        String asClass = "@AILocked(reason = \"frozen\")\npublic class A {}\n";
-        compileA(tmp, asClass);
+        ProcessorTestHarness h1 = new ProcessorTestHarness(tmp);
+        h1.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"frozen\")\n" +
+            "public class A {}\n");
+        h1.compile();
         Path locks = tmp.resolve(".vibetags-locks");
         assertTrue(Files.readString(locks).contains("\"kind\":\"CLASS\""),
             "the first build reports a class");
-        assertControlShortCircuits(compileA(tmp, asClass));
+        assertControlShortCircuits(compileA(tmp, "frozen", "class"));
 
         ProcessorTestHarness.awaitFilesystemTick(tmp);
 
-        assertFalse(shortCircuited(compileA(tmp, "@AILocked(reason = \"frozen\")\npublic interface A {}\n")),
+        ProcessorTestHarness h2 = new ProcessorTestHarness(tmp);
+        h2.addSource("com.example.A",
+            "package com.example;\n" +
+            "import se.deversity.vibetags.annotations.AILocked;\n" +
+            "@AILocked(reason = \"frozen\")\n" +
+            "public interface A {}\n");
+        assertFalse(shortCircuited(h2.compileReturningDiagnostics()),
             "a class that became an interface must not short-circuit");
         String report = Files.readString(locks);
         assertTrue(report.contains("\"kind\":\"INTERFACE\""),
@@ -177,14 +226,18 @@ class FingerprintShortCircuitTest {
         return h.compileReturningDiagnostics();
     }
 
-    /** Compiles {@code com.example.A} with the given {@code @AILocked}-annotated declaration. */
-    private static List<Diagnostic<? extends JavaFileObject>> compileA(Path root, String declaration,
-            String... options) throws IOException {
+    /**
+     * The control recompile: {@code com.example.A} exactly as a negative case's first compile
+     * declared it, with the given lock reason and declaration keyword.
+     */
+    private static List<Diagnostic<? extends JavaFileObject>> compileA(Path root, String reason,
+            String keyword, String... options) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root);
         h.addSource("com.example.A",
             "package com.example;\n"
                 + "import se.deversity.vibetags.annotations.AILocked;\n"
-                + declaration);
+                + "@AILocked(reason = \"" + reason + "\")\n"
+                + "public " + keyword + " A {}\n");
         return h.compileReturningDiagnostics(options);
     }
 
