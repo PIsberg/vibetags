@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.LayeredDomainService"
-globs: ["**/LayeredDomainService.java"]
+globs: **/LayeredDomainService.java
 alwaysApply: false
 ---
 

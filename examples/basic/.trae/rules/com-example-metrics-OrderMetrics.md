@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/OrderMetrics.java"]
+globs: **/OrderMetrics.java
 description: "AI rules for com.example.metrics.OrderMetrics"
 ---
 

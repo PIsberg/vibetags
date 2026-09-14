@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/multimodule/**"]
+globs: **/multimodule/**
 description: "AI rules for role reactor-spine"
 ---
 

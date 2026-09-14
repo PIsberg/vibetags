@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/TransactionalPaymentService.java"]
+globs: **/TransactionalPaymentService.java
 description: "AI rules for com.example.service.TransactionalPaymentService"
 ---
 

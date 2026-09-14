@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.database.DatabaseConnector"
-globs: ["**/DatabaseConnector.java"]
+globs: **/DatabaseConnector.java
 alwaysApply: false
 ---
 

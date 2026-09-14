@@ -66,7 +66,7 @@ class RoleBasedGranularEndToEndTest {
         h.compile();
 
         String api = h.readFile(".cursor/rules/api-endpoints.mdc");
-        assertTrue(api.contains("globs: [\"**/*Controller.java\"]"), "role file carries the role's glob");
+        assertTrue(api.contains("globs: **/*Controller.java\n"), "role file carries the role's glob");
         assertTrue(api.contains("com.example.web.OrderController"), "both controllers grouped into the role file");
         assertTrue(api.contains("com.example.web.UserController"));
         assertTrue(api.contains("# Rules for api-endpoints"), "role name is the file heading");
@@ -149,7 +149,7 @@ class RoleBasedGranularEndToEndTest {
         h.addSource("com.example.web.OrderController", ORDER_CONTROLLER);
         h.compile();
 
-        assertTrue(h.readFile(".cursor/rules/web.mdc").contains("globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]"),
+        assertTrue(h.readFile(".cursor/rules/web.mdc").contains("globs: **/*Controller.java,**/*Endpoint.java\n"),
             "all of a role's globs appear in the frontmatter list");
     }
 
@@ -197,7 +197,7 @@ class RoleBasedGranularEndToEndTest {
         ProcessorTestHarness h = harness(dir, "web = **/*Controller.java\n");
         h.addSource("com.example.web.OrderController", ORDER_CONTROLLER);
         h.compile();
-        assertTrue(h.readFile(".cursor/rules/web.mdc").contains("globs: [\"**/*Controller.java\"]"),
+        assertTrue(h.readFile(".cursor/rules/web.mdc").contains("globs: **/*Controller.java\n"),
             "precondition: the role file starts out with the role's first glob");
 
         ProcessorTestHarness.awaitFilesystemTick(dir);
@@ -206,7 +206,7 @@ class RoleBasedGranularEndToEndTest {
         h.compile();
 
         String web = h.readFile(".cursor/rules/web.mdc");
-        assertTrue(web.contains("globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]"),
+        assertTrue(web.contains("globs: **/*Controller.java,**/*Endpoint.java\n"),
             "a glob added to the role must reach the existing file's front matter, or the rule "
                 + "silently keeps applying to the old set of files:\n" + web);
         assertTrue(web.contains("com.example.web.OrderController"), "the body must still be there:\n" + web);

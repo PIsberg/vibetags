@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: ["**/EvidenceBasedShowcase.java"]
+globs: **/EvidenceBasedShowcase.java
 description: "AI rules for com.example.service.EvidenceBasedShowcase"
 ---
 

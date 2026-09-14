@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.NewAnnotationsShowcase"
-globs: ["**/NewAnnotationsShowcase.java"]
+globs: **/NewAnnotationsShowcase.java
 alwaysApply: false
 ---
 

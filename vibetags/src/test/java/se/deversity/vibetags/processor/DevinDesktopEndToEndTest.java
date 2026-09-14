@@ -232,11 +232,12 @@ class DevinDesktopEndToEndTest {
     }
 
     /**
-     * Cursor's rules keep the header they had: the Windsurf fix must not reach the format the two
-     * used to share. Pinned whole, for a per-element file and a role file.
+     * Cursor's rules keep Cursor's own header, {@code description}, a bare comma-separated
+     * {@code globs} (#699) and {@code alwaysApply}: the Windsurf trigger schema must not reach the
+     * format the two used to share. Pinned whole, for a per-element file and a role file.
      */
     @Test
-    void cursorRuleFrontMatterIsUnchanged(@TempDir Path root) throws IOException {
+    void cursorRuleKeepsCursorsOwnFrontMatter(@TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(".cursor/rules"));
         Files.createDirectories(root.resolve(".windsurf/rules"));
@@ -249,12 +250,12 @@ class DevinDesktopEndToEndTest {
         String element = h.readFile(".cursor/rules/com-example-payment-PaymentProcessor.mdc");
         assertTrue(element.startsWith(
             "---\ndescription: \"AI rules for com.example.payment.PaymentProcessor\"\n"
-                + "globs: [\"**/PaymentProcessor.java\"]\nalwaysApply: false\n---\n\n"
+                + "globs: **/PaymentProcessor.java\nalwaysApply: false\n---\n\n"
                 + "<!-- VIBETAGS-START -->\n# Rules for PaymentProcessor\n"), element);
         String role = h.readFile(".cursor/rules/web.mdc");
         assertTrue(role.startsWith(
             "---\ndescription: \"AI rules for role web\"\n"
-                + "globs: [\"**/*Controller.java\", \"**/*Endpoint.java\"]\nalwaysApply: false\n---\n\n"
+                + "globs: **/*Controller.java,**/*Endpoint.java\nalwaysApply: false\n---\n\n"
                 + "<!-- VIBETAGS-START -->\n# Rules for web\n"), role);
     }
 
@@ -280,7 +281,7 @@ class DevinDesktopEndToEndTest {
                 + "globs: **/api/*.java,**/api/*.kt,**/web/*.java,**/web/*.kt,**/*Endpoint.java\n---\n\n"),
             "each brace alternative becomes a glob of its own, in order:\n" + role);
         String cursor = "---\ndescription: \"AI rules for role web\"\n"
-            + "globs: [\"**/api/*.java\", \"**/api/*.kt\", \"**/web/*.java\", \"**/web/*.kt\", \"**/*Endpoint.java\"]\n";
+            + "globs: **/api/*.java,**/api/*.kt,**/web/*.java,**/web/*.kt,**/*Endpoint.java\n";
         Files.createDirectories(root.resolve(".cursor/rules"));
         VibeTagsLogger.shutdown();
         h.compile();

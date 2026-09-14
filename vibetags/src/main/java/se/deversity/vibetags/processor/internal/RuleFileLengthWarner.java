@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * Runs {@link RuleFileLengthRule} over the rule files VibeTags writes into Devin Desktop and
- * Windsurf rule directories (issue #695).
+ * Runs {@link RuleFileLengthRule} over the rule files VibeTags writes into the Devin Desktop,
+ * Windsurf and Antigravity rule directories (issues #695, #701).
  *
  * <p>The processor calls this after {@code generateFiles()} or {@code checkFiles()} returns, so it
  * reads each file as the build leaves it: the content this build just wrote, the unchanged file a
@@ -59,12 +59,13 @@ public final class RuleFileLengthWarner {
                 continue;
             }
             for (Path file : files) {
-                measure(messager, log, displayRoot, file);
+                measure(messager, log, displayRoot, serviceKey, file);
             }
         }
     }
 
-    private static void measure(Messager messager, @Nullable Logger log, Path displayRoot, Path file) {
+    private static void measure(Messager messager, @Nullable Logger log, Path displayRoot, String serviceKey,
+                                Path file) {
         String shown = HandAuthoredYamlKeyWarner.displayPath(displayRoot, file);
         String content;
         try {
@@ -89,7 +90,7 @@ public final class RuleFileLengthWarner {
         Path fileName = file.getFileName();
         boolean safetyFile = fileName != null && ServiceRegistry.SAFETY_TIER_FILE.equals(fileName.toString());
         messager.printMessage(Diagnostic.Kind.WARNING,
-            ValidationContext.PREFIX + RuleFileLengthRule.message(shown, length, safetyFile));
+            ValidationContext.PREFIX + RuleFileLengthRule.message(serviceKey, shown, length, safetyFile));
         if (log != null) {
             log.warn("validation.rule-file-over-limit file={} chars={} limit={}",
                 shown, length, RuleFileLengthRule.WORKSPACE_RULE_FILE_LIMIT);
