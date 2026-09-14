@@ -515,9 +515,9 @@ vendor before anything changed, and the table under Deprecated lists every depre
   does) and counts a removed line only when a real annotation sat on it. That also closes the
   other direction: a stripped `@ AILocked` or `@se.deversity.vibetags.annotations.AILocked`, which
   the substring never matched, now fails. A source that does not lex, and every Kotlin or Groovy
-  source, keeps the substring match, so an unsure answer still fails. Diff parsing now numbers
-  removed lines from git's own line breaks and reads file headers only before a file's first hunk;
-  before, a removed line starting `-- ` overwrote the file's base path. Reproduced on this
+  source, keeps the substring match, so an unsure answer still fails. The same change also
+  hardens path and rename parsing: changed files are read from `git diff --raw -z` and diffed one
+  at a time, and a change the guard cannot read fails the check. Reproduced on this
   repository: a one-line fixture-string edit drew `A line containing @AILocked was removed` before
   and passes after, while reordering the locked `GuardrailAnnotations.ALL` fails on both. The 4
   annotation-text cases and the spaced/qualified strip were red against the old guard.
