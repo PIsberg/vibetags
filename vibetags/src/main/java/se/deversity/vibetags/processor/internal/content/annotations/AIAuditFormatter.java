@@ -40,11 +40,13 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("File: `").append(className).append("`\nCritical Vulnerabilities to Prevent:");
+                // The blank line that separates two blocks opens each block rather than closing it:
+                // a trailing one doubled the gap before the next heading, which brings its own (#723).
+                sb.append("\nFile: `").append(className).append("`\nCritical Vulnerabilities to Prevent:");
                 for (String v : checkFor) {
                     sb.append("\n- ").append(v);
                 }
-                sb.append("\n\n");
+                sb.append('\n');
                 break;
             case LLMS:
                 sb.append("- [").append(element.displayName()).append("](").append(className).append("): check for ").append(checkForJoined).append('\n');

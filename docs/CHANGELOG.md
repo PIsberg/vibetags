@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every Gemini section is set off by exactly one blank line** (#723). **Every project that
+  generates `GEMINI.md` or `gemini_instructions.md` gets a whitespace-only change to its generated
+  block on the next build**: blank lines are added or removed between sections, and no text
+  changes. Gemini's spacing was carried in two places. Most of its headings open with a blank line,
+  but `## IGNORED ELEMENTS`, `## IMPLEMENTATION TASKS` and `## PII / PRIVACY GUARDRAILS` did not,
+  and relied on the audit block's trailing blank line instead. After any other list they sat on the
+  line directly under the last bullet, which is how an agent reading the raw file sees one section
+  run into the next. After an audit block, every heading that did bring its blank line got two, and
+  so did the first heading under the generated header, which printed a blank line of its own. Now
+  every Gemini heading opens with its blank line, the audit blocks open with theirs instead of
+  closing with it, and the header adds none. `GranularIndexEndToEndTest` renders the full
+  `GEMINI.md`, `gemini_instructions.md` and the collapsed `GEMINI.md` and fails on any `## ` heading
+  or `File:` audit block without a blank line above it, or on two blank lines in a row; on the
+  unchanged code it failed on the two blank lines under the header, with `## IMPLEMENTATION TASKS`
+  and `## PII / PRIVACY GUARDRAILS` glued under their lists in the same render.
+  `SectionCatalogContractTest` now requires every catalog header, for every platform, to open with
+  a newline. Regenerated: this repository's `GEMINI.md` and the Gemini files in `examples/basic`,
+  `examples/multimodule`, `examples/multimodule-indexed` and `examples/gradle-multimodule`, each
+  diff empty under `git diff --ignore-blank-lines`. Other platforms were checked for the same glued
+  shape: none of their catalog headings omit the newline. Aider's `CONVENTIONS.md` glues the entry
+  after a `TEST-DRIVEN` entry for a different reason, a formatter arm without a trailing blank line
+  (#725), and `llms-full.txt`, Copilot, Junie and `CONVENTIONS.md` print double blank lines for
+  causes of their own (#726).
+
 - **A collapsed `GEMINI.md` keeps Gemini's own wording** (#721). `GEMINI.md` renders in two
   shapes, and only the full one printed Gemini's headings. With `.gemini/rules/` also opted in the
   file collapses to a scoped-rules index, and the safety sections it keeps inline printed the shared

@@ -80,4 +80,21 @@ class SectionCatalogContractTest {
         assertTrue(audit.startsWith("\n## CONTINUOUS AUDIT REQUIREMENTS\n"),
             "GEMINI_MD must resolve Gemini's override, not the shared default: " + audit);
     }
+
+    @Test
+    @DisplayName("every header opens with its own newline, for every platform and key")
+    void everyHeaderOpensWithANewline() {
+        // A renderer appends a header straight after the previous section's last bullet, which
+        // ends in a single newline. A header that does not open with one of its own prints
+        // directly under that bullet; Gemini's IGNORE, DRAFT and PRIVACY did (#723).
+        for (Platform platform : Platform.values()) {
+            for (SectionCatalog.Key key : SectionCatalog.Key.values()) {
+                String header = SectionCatalog.header(platform, key);
+                if (header != null) {
+                    assertTrue(header.startsWith("\n"),
+                        platform + "/" + key + " must open with a newline: " + header);
+                }
+            }
+        }
+    }
 }
