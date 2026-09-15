@@ -7,162 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **`llms.txt` and `llms-full.txt` no longer print empty Locked Files and Contextual Rules headings** (#730).
-  **Every project that generates `llms.txt` or `llms-full.txt` from a module with nothing locked, or with no
-  `@AIContext`, loses that empty heading (and in `llms-full.txt` its description) from the generated block on
-  the next build.** `LlmsRenderer` printed both headings unconditionally, while every other section went
-  through `appendSection`, so a module with nothing in them got headings with nothing under them, repeated
-  once per module in a reactor. Both sections now go through `appendSection`. The compact locked heading was
-  the only one without a leading newline, so skipping it would have put the next heading under two blank
-  lines; `appendSection` drops a heading's leading newline when the buffer already ends on a blank line.
-  `AggregateBlankLineContractTest` now covers `llms.txt` as well, adds a model with nothing locked and no
-  context, and fails when either heading is printed with nothing under it. Regenerated
-  `examples/multimodule` (6 empty headings removed from each file) and `examples/gradle-multimodule` (3 each).
-
-- **`llms.txt` and `llms-full.txt` no longer print an empty audit section for a bare `@AIAudit`** (#728).
-  **Projects that write `@AIAudit` without `checkFor` and generate `llms.txt` or `llms-full.txt` lose the
-  audit heading, and in `llms-full.txt` its description, from the generated block on the next build.** A bare
-  `@AIAudit` names no checks, so its formatters render no entry, but `LlmsRenderer.appendSection` still
-  printed the heading: an audit requirement naming no file and no check. It now rolls back a section whose
-  entries all render nothing, as `AnnotationSections.render` has since #726. Aider's `CONVENTIONS.md`, named in
-  the issue, was never affected: it has no section headings, and each entry carries its own. No committed
-  example uses a bare `@AIAudit`, so no generated file in this repository changes.
-  `UnsetMemberRenderingTest` now requires, on every aggregate platform, that a model holding only a bare
-  `@AIAudit` renders byte-identically to an empty model.
-
-- **No double blank lines between sections in `llms-full.txt`, Copilot, Junie, and `CONVENTIONS.md`** (#726).
-  **Every project that generates `llms-full.txt`, `.github/copilot-instructions.md`, `.junie/guidelines.md`
-  or `CONVENTIONS.md` gets a whitespace-only change to its generated block on the next build**: double blank
-  lines (`\n\n\n`) between sections are removed. Four outputs printed two blank lines in a row, each for its
-  own reason: `LlmsRenderer` emitted headings with a leading newline in full mode while each `LLMS_FULL`
-  formatter arm already closed with a blank line; `CopilotRenderer` in full mode emitted an empty
-  `## Locked Files — DO NOT MODIFY` heading and description when nothing was locked; `JunieRenderer`
-  similarly emitted an empty `## Locked Files (Do Not Modify)` heading and description when nothing was
-  locked; and `GuardrailContentBuilder.withTransitiveAppendix` appended a leading newline before
-  `## Inherited Guardrails (dependencies)` even when the preceding platform content already ended with a
-  blank line (affecting Aider's `CONVENTIONS.md` and `llms-full.txt`). Now `LlmsRenderer` does not prepend a
-  newline to section headings in full mode, `CopilotRenderer` and `JunieRenderer` omit the locked files
-  heading when no elements are locked, and `withTransitiveAppendix` avoids doubling the blank line before
-  inherited guardrails. A fifth cause reached Copilot, Junie and every other renderer that walks
-  `AnnotationSections` or reuses one that does (Cursor, Windsurf, Zed, Codex, Qwen, Gemini, and through them
-  Cline, Firebase, Goose, Replit, Void and the Claude skill): a bare `@AIAudit` names no
-  checks and renders no entry by design, but its section heading and description were still printed,
-  leaving an empty section followed by two blank lines. `AnnotationSections.render` now rolls back a
-  headed section whose elements all render nothing, so **projects with a bare `@AIAudit` also lose that
-  empty audit heading** from those files. `AggregateBlankLineContractTest` renders all 44 annotations
-  (populated, bare, and with only optional members unset, plus a model with nothing locked) through
-  `llms-full.txt`, `CONVENTIONS.md`, Copilot and both Junie files and fails on two blank lines in a row
-  or on a heading directly under the previous line; `GuardrailContentBuilderUnitTest` asserts exactly
-  one blank line above the inherited-guardrail heading on every platform that carries it.
-
-- **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
-  **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change
-  on the next build**: a blank line is added after each `TEST-DRIVEN` entry. In Aider's `CONVENTIONS.md`
-  every per-element entry is a `#### ` heading followed by bullets, and each formatter's
-  `AIDER_CONVENTIONS` arm ends its entry with a blank line. `AITestDrivenFormatter`'s arm ended with
-  `CommonFormatterHelper.bullet("Frameworks", ...)`, which ends with a single newline, so the next entry's
-  `#### ` heading was printed directly on the line under the last bullet without a blank line between them.
-  Now `AITestDrivenFormatter` appends the trailing newline. `AllAnnotationsAllPlatformsEndToEndTest`
-  asserts that no `#### ` heading in a rendered `CONVENTIONS.md` directly follows a non-blank line.
-  Regenerated: `examples/basic/CONVENTIONS.md`, `examples/multimodule/CONVENTIONS.md`, and
-  `examples/gradle-multimodule/CONVENTIONS.md`.
-
-- **Every Gemini section is set off by exactly one blank line** (#723). **Every project that
-  generates `GEMINI.md` or `gemini_instructions.md` gets a whitespace-only change to its generated
-  block on the next build**: blank lines are added or removed between sections, and no text
-  changes. Gemini's spacing was carried in two places. Most of its headings open with a blank line,
-  but `## IGNORED ELEMENTS`, `## IMPLEMENTATION TASKS` and `## PII / PRIVACY GUARDRAILS` did not,
-  and relied on the audit block's trailing blank line instead. After any other list they sat on the
-  line directly under the last bullet, which is how an agent reading the raw file sees one section
-  run into the next. After an audit block, every heading that did bring its blank line got two, and
-  so did the first heading under the generated header, which printed a blank line of its own. Now
-  every Gemini heading opens with its blank line, the audit blocks open with theirs instead of
-  closing with it, and the header adds none. `GranularIndexEndToEndTest` renders the full
-  `GEMINI.md`, `gemini_instructions.md` and the collapsed `GEMINI.md` and fails on any `## ` heading
-  or `File:` audit block without a blank line above it, or on two blank lines in a row; on the
-  unchanged code it failed on the two blank lines under the header, with `## IMPLEMENTATION TASKS`
-  and `## PII / PRIVACY GUARDRAILS` glued under their lists in the same render.
-  `SectionCatalogContractTest` now requires every catalog header, for every platform, to open with
-  a newline. Regenerated: this repository's `GEMINI.md` and the Gemini files in `examples/basic`,
-  `examples/multimodule`, `examples/multimodule-indexed` and `examples/gradle-multimodule`, each
-  diff empty under `git diff --ignore-blank-lines`. Other platforms were checked for the same glued
-  shape: none of their catalog headings omit the newline. Aider's `CONVENTIONS.md` glues the entry
-  after a `TEST-DRIVEN` entry for a different reason, a formatter arm without a trailing blank line
-  (#725), and `llms-full.txt`, Copilot, Junie and `CONVENTIONS.md` print double blank lines for
-  causes of their own (#726).
-
-- **A collapsed `GEMINI.md` keeps Gemini's own wording** (#721). `GEMINI.md` renders in two
-  shapes, and only the full one printed Gemini's headings. With `.gemini/rules/` also opted in the
-  file collapses to a scoped-rules index, and the safety sections it keeps inline printed the shared
-  Cursor wording (`## 🛡️ MANDATORY SECURITY AUDITS` where full mode says
-  `## CONTINUOUS AUDIT REQUIREMENTS`) under the shared `# AUTO-GENERATED AI RULES` title. Gemini's
-  wording was registered in `SectionCatalog` under the `gemini_instructions.md` platform only: the
-  full render borrowed that platform for its section list, and the collapsed render asked for
-  `GEMINI_MD`, found nothing, and fell back to the defaults. Every other aggregate with its own
-  wording keeps it when it collapses, and the inline sections are documented to read identically to
-  full mode. `SectionCatalog` now registers the one Gemini map under both platforms, and both shapes
-  share `GeminiRenderer`'s title and locked-files opening. **If you opt into both `GEMINI.md` and
-  `.gemini/rules/`, the generated block of `GEMINI.md` changes on your next build:** the title
-  becomes `# GEMINI AI INSTRUCTIONS`, the `# Do not edit manually.` line goes, the locked heading
-  becomes `## LOCKED FILES (DO NOT MODIFY)` with its one-line instruction, and the audit, ignore,
-  privacy, core and security headings drop their emoji and take Gemini's text. The listed elements,
-  the index and anything outside the markers are unchanged, and a `GEMINI.md` without
-  `.gemini/rules/` is byte-identical. No fingerprint change is needed: the processor version is
-  already part of `BuildFingerprint`, so the upgrade regenerates. `GranularIndexEndToEndTest`
-  renders the same sources in both shapes and fails if the collapsed file prints a heading the full
-  one does not; on the unchanged code it failed at `## CONTINUOUS AUDIT REQUIREMENTS`, and with only
-  the catalog fixed it still failed at the title. The `verify-generated-files` check for
-  `examples/basic` now looks for Gemini's audit heading and fails on the shared one.
-
-- **`FingerprintShortCircuitTest` now fails when the short-circuit does not fire** (#700). Every
-  case patched the stored sidecar stamp through a `WriteCache` never bound to the module. Since
-  the cache keeps one header section per module (#556) that moved only the root-wide stamp, which
-  then disagreed with the module's own, so no compile after the patch could short-circuit. The
-  positive case asserted only unchanged mtimes, which the per-file cache also produces, and the
-  five negative cases passed whether or not their change was detected. With the skip disabled
-  outright (`WriteCache.getBuildFingerprint` returning a value that never matches) all 6 cases
-  stayed green. The patch is gone: a plain no-op recompile short-circuits, the positive case
-  asserts the `inputs unchanged since last run` NOTE, and each negative case first recompiles
-  unchanged and asserts the NOTE before asserting its change suppresses it. The same break now
-  turns all 6 red, and ignoring the run context in `getBuildFingerprint` turns
-  `shortCircuit_doesNotFire_whenProjectNameChanges` red where the old class stayed green.
-  `WriteCacheProcessorIntegrationTest.secondCompile_unchangedSources_doesNotRewriteFiles` had the
-  same shape: its no-op recompile never reached the per-file cache, so it stayed green with
-  `WriteCache.isUnchanged` forced to `false`. It now defeats the short-circuit with
-  `-Avibetags.project` and asserts `write.skip reason=cache-unchanged` in the debug log, which that
-  break turns red. Three `ProjectLifecycleEndToEndTest` cases asserted the short-circuit through
-  sidecar mtimes alone, which hold whether or not it fires, and stayed green with it disabled; they
-  now assert the NOTE and go red under the same break. That exposed the reactor steady-state case
-  as wrong: `module-core` does not skip on its first rebuild after a cold reactor pass, because
-  `module-cli` wrote its sidecar after `module-core` recorded the stamp, so the case now takes the
-  catch-up pass `MultiModuleShortCircuitTest` already takes. The two merge cases in
-  `MultiModuleProcessorTest` accepted either module's content, which the first compile had
-  already written, so they held with every round short-circuited; they now require both and
-  assert the sibling sidecar defeated the skip. Test-only change; nothing ships.
-
-## [1.3.5] - 2026-09-13
+## [1.3.5] - 2026-09-15
 
 **Upgrading changes committed files.** If a granular directory is opted in (for example
 `.claude/rules/` or `.gemini/rules/`), the scoped-rules index in the matching aggregate
 (`CLAUDE.md`, `GEMINI.md` and the others) is rewritten on the first build: each entry drops its
 restated rule-file path, and the index note states the naming convention once instead (#626, under
-Changed). The `.vibetags-mod-*` sidecars that carry that content change with it. Commit the
-regenerated files together with the version bump; a `-Avibetags.check=true` build reports drift
-until you do. The consumer sweep for this release built all five downstream repositories against it
-and saw exactly that diff, 1 to 7 files per repository, and no other content change. With
-`.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under Changed); that
-change came after the sweep, so the sweep's diff does not include it. With `.windsurf/rules/` opted
-in, the front matter of every rule file in it changes from Cursor's `description`/`globs`/`alwaysApply`
-header to `trigger: glob` and `globs:` (#683, under Fixed). That change also came after the sweep,
-so the sweep's diff does not include it either. With `.devin/rules/` or `.windsurf/rules/` opted in,
-the first build adds `+vibetags-safety.md` to that directory, and in a reactor
-`.claude/skills/vibetags-guardrails/SKILL.md` loses the copy of its front matter repeated inside
-each module's section (#684, under Added); neither is in the sweep's diff. With `.cursor/rules/` or
-`.trae/rules/` opted in, the `globs:` line of every rule file in it changes from a bracketed,
-quoted list to the bare comma-separated value both vendors document (#699, under Fixed), which is
-not in the sweep's diff either.
+Changed). With `.gemini/rules/` opted in, `GEMINI.md`'s index note text also changes (#669, under
+Changed). `GEMINI.md` itself takes Gemini's own section wording, drops its `# Do not edit manually.`
+line and sets every section off by one blank line (#721, #723, under Fixed). `llms.txt`,
+`llms-full.txt`, `CONVENTIONS.md`, `.github/copilot-instructions.md` and the Junie files lose empty
+headings and doubled blank lines (#725, #726, #728, #730, under Fixed). The `.vibetags-mod-*`
+sidecars that carry that content change with it. Commit the regenerated files together with the
+version bump; a `-Avibetags.check=true` build reports drift until you do.
+
+With `.windsurf/rules/` opted in, the front matter of every rule file in it changes from Cursor's
+`description`/`globs`/`alwaysApply` header to `trigger: glob` and `globs:` (#683, under Fixed). With
+`.devin/rules/` or `.windsurf/rules/` opted in, the first build adds `+vibetags-safety.md` to that
+directory, and in a reactor `.claude/skills/vibetags-guardrails/SKILL.md` loses the copy of its
+front matter repeated inside each module's section (#684, under Added). With `.cursor/rules/` or
+`.trae/rules/` opted in, the `globs:` line of every rule file in it changes from a bracketed, quoted
+list to the bare comma-separated value both vendors document (#699, under Fixed).
+
+**Consumer sweep.** On 2026-09-15 all five downstream repositories built and passed their own tests
+against the code this release tags. Each had 1 to 7 generated files change, and every change was one
+named above: the #626 index, `GEMINI.md`'s wording and spacing, and the empty `llms.txt` headings.
+The set of annotated elements named in each changed file was identical before and after. None of the
+five opts into `.windsurf/rules/`, `.devin/rules/`, `.cursor/rules/` or `.trae/rules/`, so the sweep
+does not exercise #683, #684 or #699.
 
 **Platform re-check.** Release step 0b checked every generated path against its vendor's own
 documentation (#664 to #677). This release acts on the findings below, each confirmed at the
@@ -719,6 +591,139 @@ vendor before anything changed, and the table under Deprecated lists every depre
   last time someone happened to look.
 
 ### Fixed
+
+- **`llms.txt` and `llms-full.txt` no longer print empty Locked Files and Contextual Rules headings** (#730).
+  **Every project that generates `llms.txt` or `llms-full.txt` from a module with nothing locked, or with no
+  `@AIContext`, loses that empty heading (and in `llms-full.txt` its description) from the generated block on
+  the next build.** `LlmsRenderer` printed both headings unconditionally, while every other section went
+  through `appendSection`, so a module with nothing in them got headings with nothing under them, repeated
+  once per module in a reactor. Both sections now go through `appendSection`. The compact locked heading was
+  the only one without a leading newline, so skipping it would have put the next heading under two blank
+  lines; `appendSection` drops a heading's leading newline when the buffer already ends on a blank line.
+  `AggregateBlankLineContractTest` now covers `llms.txt` as well, adds a model with nothing locked and no
+  context, and fails when either heading is printed with nothing under it. Regenerated
+  `examples/multimodule` (6 empty headings removed from each file) and `examples/gradle-multimodule` (3 each).
+
+- **`llms.txt` and `llms-full.txt` no longer print an empty audit section for a bare `@AIAudit`** (#728).
+  **Projects that write `@AIAudit` without `checkFor` and generate `llms.txt` or `llms-full.txt` lose the
+  audit heading, and in `llms-full.txt` its description, from the generated block on the next build.** A bare
+  `@AIAudit` names no checks, so its formatters render no entry, but `LlmsRenderer.appendSection` still
+  printed the heading: an audit requirement naming no file and no check. It now rolls back a section whose
+  entries all render nothing, as `AnnotationSections.render` has since #726. Aider's `CONVENTIONS.md`, named in
+  the issue, was never affected: it has no section headings, and each entry carries its own. No committed
+  example uses a bare `@AIAudit`, so no generated file in this repository changes.
+  `UnsetMemberRenderingTest` now requires, on every aggregate platform, that a model holding only a bare
+  `@AIAudit` renders byte-identically to an empty model.
+
+- **No double blank lines between sections in `llms-full.txt`, Copilot, Junie, and `CONVENTIONS.md`** (#726).
+  **Every project that generates `llms-full.txt`, `.github/copilot-instructions.md`, `.junie/guidelines.md`
+  or `CONVENTIONS.md` gets a whitespace-only change to its generated block on the next build**: double blank
+  lines (`\n\n\n`) between sections are removed. Four outputs printed two blank lines in a row, each for its
+  own reason: `LlmsRenderer` emitted headings with a leading newline in full mode while each `LLMS_FULL`
+  formatter arm already closed with a blank line; `CopilotRenderer` in full mode emitted an empty
+  `## Locked Files — DO NOT MODIFY` heading and description when nothing was locked; `JunieRenderer`
+  similarly emitted an empty `## Locked Files (Do Not Modify)` heading and description when nothing was
+  locked; and `GuardrailContentBuilder.withTransitiveAppendix` appended a leading newline before
+  `## Inherited Guardrails (dependencies)` even when the preceding platform content already ended with a
+  blank line (affecting Aider's `CONVENTIONS.md` and `llms-full.txt`). Now `LlmsRenderer` does not prepend a
+  newline to section headings in full mode, `CopilotRenderer` and `JunieRenderer` omit the locked files
+  heading when no elements are locked, and `withTransitiveAppendix` avoids doubling the blank line before
+  inherited guardrails. A fifth cause reached Copilot, Junie and every other renderer that walks
+  `AnnotationSections` or reuses one that does (Cursor, Windsurf, Zed, Codex, Qwen, Gemini, and through them
+  Cline, Firebase, Goose, Replit, Void and the Claude skill): a bare `@AIAudit` names no
+  checks and renders no entry by design, but its section heading and description were still printed,
+  leaving an empty section followed by two blank lines. `AnnotationSections.render` now rolls back a
+  headed section whose elements all render nothing, so **projects with a bare `@AIAudit` also lose that
+  empty audit heading** from those files. `AggregateBlankLineContractTest` renders all 44 annotations
+  (populated, bare, and with only optional members unset, plus a model with nothing locked) through
+  `llms-full.txt`, `CONVENTIONS.md`, Copilot and both Junie files and fails on two blank lines in a row
+  or on a heading directly under the previous line; `GuardrailContentBuilderUnitTest` asserts exactly
+  one blank line above the inherited-guardrail heading on every platform that carries it.
+
+- **Aider CONVENTIONS.md prints the entry after a TEST-DRIVEN entry with a separating blank line** (#725).
+  **Every project that generates `CONVENTIONS.md` and uses `@AITestDriven` gets a whitespace-only change
+  on the next build**: a blank line is added after each `TEST-DRIVEN` entry. In Aider's `CONVENTIONS.md`
+  every per-element entry is a `#### ` heading followed by bullets, and each formatter's
+  `AIDER_CONVENTIONS` arm ends its entry with a blank line. `AITestDrivenFormatter`'s arm ended with
+  `CommonFormatterHelper.bullet("Frameworks", ...)`, which ends with a single newline, so the next entry's
+  `#### ` heading was printed directly on the line under the last bullet without a blank line between them.
+  Now `AITestDrivenFormatter` appends the trailing newline. `AllAnnotationsAllPlatformsEndToEndTest`
+  asserts that no `#### ` heading in a rendered `CONVENTIONS.md` directly follows a non-blank line.
+  Regenerated: `examples/basic/CONVENTIONS.md`, `examples/multimodule/CONVENTIONS.md`, and
+  `examples/gradle-multimodule/CONVENTIONS.md`.
+
+- **Every Gemini section is set off by exactly one blank line** (#723). **Every project that
+  generates `GEMINI.md` or `gemini_instructions.md` gets a whitespace-only change to its generated
+  block on the next build**: blank lines are added or removed between sections, and no text
+  changes. Gemini's spacing was carried in two places. Most of its headings open with a blank line,
+  but `## IGNORED ELEMENTS`, `## IMPLEMENTATION TASKS` and `## PII / PRIVACY GUARDRAILS` did not,
+  and relied on the audit block's trailing blank line instead. After any other list they sat on the
+  line directly under the last bullet, which is how an agent reading the raw file sees one section
+  run into the next. After an audit block, every heading that did bring its blank line got two, and
+  so did the first heading under the generated header, which printed a blank line of its own. Now
+  every Gemini heading opens with its blank line, the audit blocks open with theirs instead of
+  closing with it, and the header adds none. `GranularIndexEndToEndTest` renders the full
+  `GEMINI.md`, `gemini_instructions.md` and the collapsed `GEMINI.md` and fails on any `## ` heading
+  or `File:` audit block without a blank line above it, or on two blank lines in a row; on the
+  unchanged code it failed on the two blank lines under the header, with `## IMPLEMENTATION TASKS`
+  and `## PII / PRIVACY GUARDRAILS` glued under their lists in the same render.
+  `SectionCatalogContractTest` now requires every catalog header, for every platform, to open with
+  a newline. Regenerated: this repository's `GEMINI.md` and the Gemini files in `examples/basic`,
+  `examples/multimodule`, `examples/multimodule-indexed` and `examples/gradle-multimodule`, each
+  diff empty under `git diff --ignore-blank-lines`. Other platforms were checked for the same glued
+  shape: none of their catalog headings omit the newline. Aider's `CONVENTIONS.md` glues the entry
+  after a `TEST-DRIVEN` entry for a different reason, a formatter arm without a trailing blank line
+  (#725), and `llms-full.txt`, Copilot, Junie and `CONVENTIONS.md` print double blank lines for
+  causes of their own (#726).
+
+- **A collapsed `GEMINI.md` keeps Gemini's own wording** (#721). `GEMINI.md` renders in two
+  shapes, and only the full one printed Gemini's headings. With `.gemini/rules/` also opted in the
+  file collapses to a scoped-rules index, and the safety sections it keeps inline printed the shared
+  Cursor wording (`## 🛡️ MANDATORY SECURITY AUDITS` where full mode says
+  `## CONTINUOUS AUDIT REQUIREMENTS`) under the shared `# AUTO-GENERATED AI RULES` title. Gemini's
+  wording was registered in `SectionCatalog` under the `gemini_instructions.md` platform only: the
+  full render borrowed that platform for its section list, and the collapsed render asked for
+  `GEMINI_MD`, found nothing, and fell back to the defaults. Every other aggregate with its own
+  wording keeps it when it collapses, and the inline sections are documented to read identically to
+  full mode. `SectionCatalog` now registers the one Gemini map under both platforms, and both shapes
+  share `GeminiRenderer`'s title and locked-files opening. **If you opt into both `GEMINI.md` and
+  `.gemini/rules/`, the generated block of `GEMINI.md` changes on your next build:** the title
+  becomes `# GEMINI AI INSTRUCTIONS`, the `# Do not edit manually.` line goes, the locked heading
+  becomes `## LOCKED FILES (DO NOT MODIFY)` with its one-line instruction, and the audit, ignore,
+  privacy, core and security headings drop their emoji and take Gemini's text. The listed elements,
+  the index and anything outside the markers are unchanged, and a `GEMINI.md` without
+  `.gemini/rules/` is byte-identical. No fingerprint change is needed: the processor version is
+  already part of `BuildFingerprint`, so the upgrade regenerates. `GranularIndexEndToEndTest`
+  renders the same sources in both shapes and fails if the collapsed file prints a heading the full
+  one does not; on the unchanged code it failed at `## CONTINUOUS AUDIT REQUIREMENTS`, and with only
+  the catalog fixed it still failed at the title. The `verify-generated-files` check for
+  `examples/basic` now looks for Gemini's audit heading and fails on the shared one.
+
+- **`FingerprintShortCircuitTest` now fails when the short-circuit does not fire** (#700). Every
+  case patched the stored sidecar stamp through a `WriteCache` never bound to the module. Since
+  the cache keeps one header section per module (#556) that moved only the root-wide stamp, which
+  then disagreed with the module's own, so no compile after the patch could short-circuit. The
+  positive case asserted only unchanged mtimes, which the per-file cache also produces, and the
+  five negative cases passed whether or not their change was detected. With the skip disabled
+  outright (`WriteCache.getBuildFingerprint` returning a value that never matches) all 6 cases
+  stayed green. The patch is gone: a plain no-op recompile short-circuits, the positive case
+  asserts the `inputs unchanged since last run` NOTE, and each negative case first recompiles
+  unchanged and asserts the NOTE before asserting its change suppresses it. The same break now
+  turns all 6 red, and ignoring the run context in `getBuildFingerprint` turns
+  `shortCircuit_doesNotFire_whenProjectNameChanges` red where the old class stayed green.
+  `WriteCacheProcessorIntegrationTest.secondCompile_unchangedSources_doesNotRewriteFiles` had the
+  same shape: its no-op recompile never reached the per-file cache, so it stayed green with
+  `WriteCache.isUnchanged` forced to `false`. It now defeats the short-circuit with
+  `-Avibetags.project` and asserts `write.skip reason=cache-unchanged` in the debug log, which that
+  break turns red. Three `ProjectLifecycleEndToEndTest` cases asserted the short-circuit through
+  sidecar mtimes alone, which hold whether or not it fires, and stayed green with it disabled; they
+  now assert the NOTE and go red under the same break. That exposed the reactor steady-state case
+  as wrong: `module-core` does not skip on its first rebuild after a cold reactor pass, because
+  `module-cli` wrote its sidecar after `module-core` recorded the stamp, so the case now takes the
+  catch-up pass `MultiModuleShortCircuitTest` already takes. The two merge cases in
+  `MultiModuleProcessorTest` accepted either module's content, which the first compile had
+  already written, so they held with every round short-circuited; they now require both and
+  assert the sibling sidecar defeated the skip. Test-only change; nothing ships.
 
 - **Cursor and Trae rule files attach by their globs again** (#699). VibeTags wrote the globs of
   `.cursor/rules/*.mdc` and `.trae/rules/*.md` as a bracketed, quoted list,
