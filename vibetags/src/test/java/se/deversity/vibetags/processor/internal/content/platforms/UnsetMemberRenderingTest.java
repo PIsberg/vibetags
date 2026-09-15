@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
 import java.lang.annotation.Annotation;
@@ -198,6 +199,38 @@ class UnsetMemberRenderingTest {
         assertEquals(List.of(), dropped,
             platform + " renders these annotations when their members are populated but drops them "
                 + "when written bare, so the plain form of the annotation reaches nobody");
+    }
+
+    /**
+     * An annotation named in {@link #RENDERS_NOTHING_WHEN_BARE} leaves no trace in the file either.
+     *
+     * <p>A bare {@code @AIAudit} names no checks, so its formatters print no entry. The sections
+     * that hold those entries were still printed: {@code llms.txt} and {@code llms-full.txt} gave
+     * the audit heading and description with nothing under them (#728), and the renderers built on
+     * {@code AnnotationSections} did the same until #726. An agent reading that file sees an
+     * audit requirement that names no file and no check. So the render must be byte-identical to
+     * one of a model without the annotation.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("aggregatePlatforms")
+    @DisplayName("an annotation that renders nothing when bare leaves the file as though it were absent")
+    void annotationsThatRenderNothingLeaveNoEmptySection(Platform platform) {
+        String absent = PlatformRendererRegistry.getRenderer(platform)
+            .render(GuardrailModel.builder().build(), platform, CONTEXT);
+        List<String> traces = new ArrayList<>();
+        for (Class<? extends Annotation> type : RENDERS_NOTHING_WHEN_BARE) {
+            GuardrailModel onlyBare = GuardrailModel.builder()
+                .add(type, GuardrailModels.elementWithMembersUnset(type))
+                .build();
+            String bare = PlatformRendererRegistry.getRenderer(platform).render(onlyBare, platform, CONTEXT);
+            if (!java.util.Objects.equals(absent, bare)) {
+                traces.add(type.getSimpleName() + ":\n" + bare);
+            }
+        }
+
+        assertEquals(List.of(), traces,
+            platform + " prints something for an annotation whose formatters render nothing when it "
+                + "is written bare, typically a section heading with no entry under it");
     }
 
     @Test

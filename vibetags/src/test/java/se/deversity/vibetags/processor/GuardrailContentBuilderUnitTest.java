@@ -180,8 +180,8 @@ class GuardrailContentBuilderUnitTest {
         doReturn(Set.of(reg)).when(re).getElementsAnnotatedWith(AIRegulation.class);
 
         // appendParallelTests/appendLegacyBridge/appendPublicApi/appendStrictExceptions/
-        // appendStrictTypes/appendInternationalized/appendStrictClasspath/appendSchemaSafe/
-        // appendSandboxOnly/appendPure/appendPrototype do not call getAnnotation() — element only.
+        // appendStrictTypes/appendInternationalized/appendStrictClasspath/appendSchemaSafe do not call
+        // getAnnotation() — element only.
         Element parallelTests = namedClassElement("com.example.ParallelTests");
         doReturn(Set.of(parallelTests)).when(re).getElementsAnnotatedWith(
             se.deversity.vibetags.annotations.AIParallelTests.class);
@@ -256,7 +256,13 @@ class GuardrailContentBuilderUnitTest {
         doReturn(Set.of(callersOnly)).when(re).getElementsAnnotatedWith(
             se.deversity.vibetags.annotations.AICallersOnly.class);
 
+        // The sandbox-only, pure and prototype formatters return early without their annotation, and
+        // a section whose entries all render nothing is no longer printed (#728), so these need one.
         Element sandboxOnly = namedClassElement("com.example.SandboxOnly");
+        se.deversity.vibetags.annotations.AISandboxOnly soAnn =
+            mock(se.deversity.vibetags.annotations.AISandboxOnly.class);
+        when(soAnn.reason()).thenReturn("");
+        when(sandboxOnly.getAnnotation(se.deversity.vibetags.annotations.AISandboxOnly.class)).thenReturn(soAnn);
         doReturn(Set.of(sandboxOnly)).when(re).getElementsAnnotatedWith(
             se.deversity.vibetags.annotations.AISandboxOnly.class);
 
@@ -269,6 +275,9 @@ class GuardrailContentBuilderUnitTest {
             se.deversity.vibetags.annotations.AIMemoryBudget.class);
 
         Element pure = namedClassElement("com.example.Pure");
+        se.deversity.vibetags.annotations.AIPure pureAnn = mock(se.deversity.vibetags.annotations.AIPure.class);
+        when(pureAnn.reason()).thenReturn("");
+        when(pure.getAnnotation(se.deversity.vibetags.annotations.AIPure.class)).thenReturn(pureAnn);
         doReturn(Set.of(pure)).when(re).getElementsAnnotatedWith(
             se.deversity.vibetags.annotations.AIPure.class);
 
@@ -314,6 +323,10 @@ class GuardrailContentBuilderUnitTest {
             se.deversity.vibetags.annotations.AIExplain.class);
 
         Element prototype = namedClassElement("com.example.Prototype");
+        se.deversity.vibetags.annotations.AIPrototype protoAnn =
+            mock(se.deversity.vibetags.annotations.AIPrototype.class);
+        when(protoAnn.reason()).thenReturn("");
+        when(prototype.getAnnotation(se.deversity.vibetags.annotations.AIPrototype.class)).thenReturn(protoAnn);
         doReturn(Set.of(prototype)).when(re).getElementsAnnotatedWith(
             se.deversity.vibetags.annotations.AIPrototype.class);
 
