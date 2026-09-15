@@ -173,6 +173,23 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   work="$ROOT/$repo"
   wt=""
   if [ "$contended" -eq 1 ]; then
+    # Look up any existing worktree that currently holds $BRANCH
+    existing_wt=$(git -C "$ROOT/$repo" worktree list --porcelain | awk -v branch="refs/heads/$BRANCH" '
+      $1 == "worktree" { wt = substr($0, 10) }
+      $1 == "branch" && $2 == branch { print wt }
+    ')
+    if [ -n "$existing_wt" ]; then
+      wt_name="${existing_wt##*[/\\]}"
+      if [ "$wt_name" = "wt-$repo" ]; then
+        git -C "$ROOT/$repo" worktree remove --force "$existing_wt" 2>/dev/null || true
+        rm -rf "$existing_wt"
+        git -C "$ROOT/$repo" worktree prune
+      else
+        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "branch in use by $existing_wt"
+        continue
+      fi
+    fi
+
     wt="$LOGDIR/wt-$repo"
     rm -rf "$wt"
     git -C "$ROOT/$repo" worktree prune
