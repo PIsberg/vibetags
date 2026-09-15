@@ -637,8 +637,9 @@ class AIGuardrailProcessorProcessTest {
             processor.process(Set.of(), emptyRoundEnv());
             triggerGeneration(processor);
             String content = Files.readString(tempDir.resolve("llms.txt"), java.nio.charset.StandardCharsets.UTF_8);
-            assertTrue(content.contains("## Locked Files"),      "llms.txt should have Locked Files section");
-            assertTrue(content.contains("## Contextual Rules"),  "llms.txt should have Contextual Rules section");
+            // Nothing is annotated, so neither section has an entry to put under its heading (#730).
+            assertFalse(content.contains("## Locked Files"),     "llms.txt must not print an empty Locked Files heading");
+            assertFalse(content.contains("## Contextual Rules"), "llms.txt must not print an empty Contextual Rules heading");
             assertTrue(content.contains("> AI guardrail rules"), "llms.txt should have summary blockquote");
         } finally {
             VibeTagsLogger.shutdown(); // release file handle so @TempDir can be deleted
@@ -662,8 +663,9 @@ class AIGuardrailProcessorProcessTest {
             processor.process(Set.of(), emptyRoundEnv());
             triggerGeneration(processor);
             String content = Files.readString(tempDir.resolve("llms-full.txt"), java.nio.charset.StandardCharsets.UTF_8);
-            assertTrue(content.contains("## Locked Files (Do Not Edit)"), "llms-full.txt should have expanded Locked Files header");
-            assertTrue(content.contains("## Contextual Rules"),            "llms-full.txt should have Contextual Rules section");
+            // Nothing is annotated, so neither section has an entry to put under its heading (#730).
+            assertFalse(content.contains("## Locked Files"),               "llms-full.txt must not print an empty Locked Files heading");
+            assertFalse(content.contains("## Contextual Rules"),           "llms-full.txt must not print an empty Contextual Rules heading");
             assertTrue(content.contains("> Complete AI guardrail"),        "llms-full.txt should have full summary blockquote");
         } finally {
             VibeTagsLogger.shutdown(); // release file handle so @TempDir can be deleted
