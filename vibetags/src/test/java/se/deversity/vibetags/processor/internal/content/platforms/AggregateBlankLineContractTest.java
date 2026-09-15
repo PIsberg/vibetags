@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code llms-full.txt}, {@code CONVENTIONS.md}, {@code .github/copilot-instructions.md} and both
- * Junie files set every heading off by exactly one blank line (#725, #726).
+ * {@code llms.txt}, {@code llms-full.txt}, {@code CONVENTIONS.md}, {@code .github/copilot-instructions.md}
+ * and both Junie files set every heading off by exactly one blank line (#725, #726, #730).
  *
  * <p>The spacing between sections has two owners: the heading string and the formatter arm that
  * rendered the entry before it. #726 took the leading newline off every {@code llms-full.txt}
@@ -35,6 +35,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the last bullet, as #725 found in Aider. So both directions are asserted, for all 44 annotations,
  * with members populated, with every member unset, and with only the optional ones unset. The
  * nothing-locked model reaches the Copilot and Junie branch that drops the empty locked heading.
+ *
+ * <p>{@code llms.txt} and {@code llms-full.txt} printed their locked and contextual headings
+ * unconditionally, so a module with nothing locked and no {@code @AIContext} got two headings with
+ * nothing under them, once per module in a reactor (#730). The compact file's locked heading is the
+ * only one with no leading newline, so dropping it is also what could leave two blank lines above
+ * the next heading; the nothing-locked-or-contextual model covers that.
  */
 class AggregateBlankLineContractTest {
 
@@ -43,7 +49,7 @@ class AggregateBlankLineContractTest {
         Set.of("llms", "llms_full", "aider_conventions", "copilot", "cursor", "junie", "junie_agents"));
 
     private static final List<Platform> PLATFORMS = List.of(
-        Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.COPILOT, Platform.JUNIE, Platform.JUNIE_AGENTS);
+        Platform.LLMS, Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.COPILOT, Platform.JUNIE, Platform.JUNIE_AGENTS);
 
     static Stream<Arguments> renders() {
         List<Arguments> out = new ArrayList<>();
@@ -56,6 +62,8 @@ class AggregateBlankLineContractTest {
                 (Supplier<GuardrailModel>) GuardrailModels::everyAnnotationWithOptionalMembersUnset));
             out.add(Arguments.of(platform, "nothing locked",
                 (Supplier<GuardrailModel>) AggregateBlankLineContractTest::everyAnnotationButLocked));
+            out.add(Arguments.of(platform, "nothing locked or contextual",
+                (Supplier<GuardrailModel>) AggregateBlankLineContractTest::everyAnnotationButLockedOrContext));
         }
         return out.stream();
     }
@@ -85,7 +93,7 @@ class AggregateBlankLineContractTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("lockedHeadingPlatforms")
-    void aFullRenderWithNothingLockedPrintsNoLockedHeading(Platform platform) {
+    void aRenderWithNothingLockedPrintsNoLockedHeading(Platform platform) {
         String populated = PlatformRendererRegistry.getRenderer(platform)
             .render(GuardrailModels.everyAnnotation(), platform, CONTEXT);
         String unlocked = PlatformRendererRegistry.getRenderer(platform)
@@ -102,13 +110,49 @@ class AggregateBlankLineContractTest {
     }
 
     static Stream<Platform> lockedHeadingPlatforms() {
-        return Stream.of(Platform.COPILOT, Platform.JUNIE, Platform.JUNIE_AGENTS);
+        return Stream.of(Platform.COPILOT, Platform.JUNIE, Platform.JUNIE_AGENTS, Platform.LLMS, Platform.LLMS_FULL);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("llmsPlatforms")
+    void anLlmsRenderWithNoContextPrintsNoContextualHeading(Platform platform) {
+        String populated = PlatformRendererRegistry.getRenderer(platform)
+            .render(GuardrailModels.everyAnnotation(), platform, CONTEXT);
+        String contextless = PlatformRendererRegistry.getRenderer(platform)
+            .render(everyAnnotationBut(AIContext.class), platform, CONTEXT);
+        String bare = PlatformRendererRegistry.getRenderer(platform)
+            .render(everyAnnotationButLockedOrContext(), platform, CONTEXT);
+
+        assertTrue(populated.contains("## Contextual Rules"),
+            "precondition: " + platform + " prints its contextual heading when there is context:\n" + populated);
+        assertFalse(contextless.contains("## Contextual Rules"),
+            platform + " prints an empty contextual heading when nothing has @AIContext:\n" + contextless);
+        assertTrue(contextless.contains("## Locked Files"),
+            platform + " must keep its locked section when only context is missing:\n" + contextless);
+        assertFalse(bare.contains("## Locked Files") || bare.contains("## Contextual Rules"),
+            platform + " prints an empty locked or contextual heading:\n" + bare);
+        assertTrue(bare.contains("## 🔐 Security-Critical Code"),
+            platform + " must still render the remaining sections:\n" + bare);
+    }
+
+    static Stream<Platform> llmsPlatforms() {
+        return Stream.of(Platform.LLMS, Platform.LLMS_FULL);
     }
 
     private static GuardrailModel everyAnnotationButLocked() {
+        return everyAnnotationBut(AILocked.class);
+    }
+
+    private static GuardrailModel everyAnnotationButLockedOrContext() {
+        return everyAnnotationBut(AILocked.class, AIContext.class);
+    }
+
+    @SafeVarargs
+    private static GuardrailModel everyAnnotationBut(Class<? extends Annotation>... excluded) {
+        List<Class<? extends Annotation>> skip = List.of(excluded);
         GuardrailModel.Builder builder = GuardrailModel.builder();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            if (type != AILocked.class) {
+            if (!skip.contains(type)) {
                 builder.add(type, GuardrailModels.element(type));
             }
         }

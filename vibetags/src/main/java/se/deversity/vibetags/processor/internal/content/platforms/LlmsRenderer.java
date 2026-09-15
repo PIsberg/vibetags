@@ -35,20 +35,19 @@ public final class LlmsRenderer implements PlatformRenderer {
               .append("GitHub Copilot, and Gemini.\n\n");
         }
 
-        // 1. Locked Files
-        sb.append(full ? "## Locked Files (Do Not Edit)\nThe following files are locked. AI tools MUST NOT propose modifications to them.\n\n" : "## Locked Files\n");
-        for (TaggedElement e : model.locked()) {
-            FormatterRegistry.locked().format(e, sb, platform);
-        }
+        // 1. Locked Files. Like every section below, printed only when something is in it: a module
+        // with nothing locked and no @AIContext got both headings with nothing under them (#730).
+        // Sections use lambdas (FormatterCaller is @FunctionalInterface), which avoid the hidden
+        // outer-class reference that anonymous classes carry.
+        appendSection(sb, model.locked(), platform,
+            full ? "## Locked Files (Do Not Edit)\nThe following files are locked. AI tools MUST NOT propose modifications to them.\n\n" : "## Locked Files\n",
+            (e, buf) -> FormatterRegistry.locked().format(e, buf, platform));
 
         // 2. Contextual Rules
-        sb.append(full ? "## Contextual Rules\nThese files have specific context and focus areas for AI assistance.\n\n" : "\n## Contextual Rules\n");
-        for (TaggedElement e : model.context()) {
-            FormatterRegistry.context().format(e, sb, platform);
-        }
+        appendSection(sb, model.context(), platform,
+            full ? "## Contextual Rules\nThese files have specific context and focus areas for AI assistance.\n\n" : "\n## Contextual Rules\n",
+            (e, buf) -> FormatterRegistry.context().format(e, buf, platform));
 
-        // 3–27: remaining sections use lambdas (FormatterCaller is @FunctionalInterface).
-        // Lambdas avoid the hidden outer-class reference that anonymous classes carry.
         appendSection(sb, model.audit(), platform,
             full ? "## Mandatory Security Audit Requirements\nWhen writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.\n\n" : "\n## Security Audit Requirements\n",
             (e, buf) -> FormatterRegistry.audit().format(e, buf, platform));
@@ -249,12 +248,18 @@ public final class LlmsRenderer implements PlatformRenderer {
      * Appends {@code heading} and the section's entries, or nothing at all when every entry
      * formats to nothing: a bare {@code @AIAudit} names no checks and renders no entry, and its
      * heading alone read as an audit requirement naming no file (#728).
+     *
+     * <p>A compact heading carries its own leading newline, except the locked one, which follows
+     * the file header's blank line directly. When the locked section is skipped the next compact
+     * heading lands on that blank line, so its leading newline is dropped rather than printing two
+     * blank lines in a row (#730).
      */
     @SuppressWarnings("UnusedVariable")
     private static void appendSection(StringBuilder sb, Collection<TaggedElement> elements, Platform platform, String heading, FormatterCaller caller) {
         if (elements.isEmpty()) return;
         int sectionStart = sb.length();
-        sb.append(heading);
+        boolean onBlankLine = sb.length() >= 2 && sb.charAt(sb.length() - 1) == '\n' && sb.charAt(sb.length() - 2) == '\n';
+        sb.append(heading, onBlankLine && heading.startsWith("\n") ? 1 : 0, heading.length());
         int bodyStart = sb.length();
         for (TaggedElement e : elements) {
             caller.call(e, sb);

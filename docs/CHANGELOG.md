@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`llms.txt` and `llms-full.txt` no longer print empty Locked Files and Contextual Rules headings** (#730).
+  **Every project that generates `llms.txt` or `llms-full.txt` from a module with nothing locked, or with no
+  `@AIContext`, loses that empty heading (and in `llms-full.txt` its description) from the generated block on
+  the next build.** `LlmsRenderer` printed both headings unconditionally, while every other section went
+  through `appendSection`, so a module with nothing in them got headings with nothing under them, repeated
+  once per module in a reactor. Both sections now go through `appendSection`. The compact locked heading was
+  the only one without a leading newline, so skipping it would have put the next heading under two blank
+  lines; `appendSection` drops a heading's leading newline when the buffer already ends on a blank line.
+  `AggregateBlankLineContractTest` now covers `llms.txt` as well, adds a model with nothing locked and no
+  context, and fails when either heading is printed with nothing under it. Regenerated
+  `examples/multimodule` (6 empty headings removed from each file) and `examples/gradle-multimodule` (3 each).
+
 - **`llms.txt` and `llms-full.txt` no longer print an empty audit section for a bare `@AIAudit`** (#728).
   **Projects that write `@AIAudit` without `checkFor` and generate `llms.txt` or `llms-full.txt` lose the
   audit heading, and in `llms-full.txt` its description, from the generated block on the next build.** A bare
