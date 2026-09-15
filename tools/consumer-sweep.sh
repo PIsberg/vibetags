@@ -43,12 +43,12 @@ if [ -z "$VERSION" ]; then
 fi
 shift || true
 
-# repo : build tool : maven goals : gradle tasks
+# repo : build tool : maven goals : gradle tasks [: required jdk]
 # Maven and Gradle need separate commands: "verify" is a Maven lifecycle phase and Gradle
 # has no such task, which showed up as a spurious FAIL for common-license-lib.
 CONSUMERS="
 blindbean:maven:clean verify:
-codekarta:both:clean verify:clean build
+codekarta:both:clean verify:clean build:21
 common-license-lib:both:clean verify:clean build
 skill3:gradle::clean build
 async-test-lib:both:clean verify:clean build
@@ -137,7 +137,7 @@ printf '%s\n' "-----------------------------------------------------------------
 
 # IFS=: rather than word-splitting $CONSUMERS: the build command contains a space, and
 # "for entry in $CONSUMERS" would split "clean verify" into two entries.
-while IFS=: read -r repo tool mvncmd gradlecmd; do
+while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   [ -z "$repo" ] && continue
 
   want "$repo" "$@" || continue
@@ -167,12 +167,52 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
     continue
   fi
 
+  # Consumers that pin a JDK version (e.g. codekarta pins JDK 21-25) need JAVA_HOME set to
+  # that JDK, or the build fails before VibeTags runs. Resolve the path from an environment
+  # variable such as JDK21_HOME so no machine path is committed. When unset and the default
+  # JDK differs, skip the repo rather than building on the wrong JDK (#737).
+  repo_java_home=""
+  if [ -n "${reqjdk:-}" ]; then
+    jdk_var="JDK${reqjdk}_HOME"
+    repo_java_home="${!jdk_var:-}"
+    if [ -z "$repo_java_home" ]; then
+      cur_jdk=""
+      if command -v java >/dev/null 2>&1; then
+        cur_jdk=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d. -f1)
+      fi
+      if [ "$cur_jdk" != "$reqjdk" ]; then
+        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "requires JDK $reqjdk (set JDK${reqjdk}_HOME)"
+        continue
+      fi
+    elif [ ! -d "$repo_java_home" ]; then
+      printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "JDK${reqjdk}_HOME ($repo_java_home) not found"
+      continue
+    fi
+  fi
+
   git -C "$ROOT/$repo" fetch -q origin || true
 
   # A contended repo is swept in a detached worktree so its checkout is never touched.
   work="$ROOT/$repo"
   wt=""
   if [ "$contended" -eq 1 ]; then
+    # Look up any existing worktree that currently holds $BRANCH
+    existing_wt=$(git -C "$ROOT/$repo" worktree list --porcelain | awk -v branch="refs/heads/$BRANCH" '
+      $1 == "worktree" { wt = substr($0, 10) }
+      $1 == "branch" && $2 == branch { print wt }
+    ')
+    if [ -n "$existing_wt" ]; then
+      wt_name="${existing_wt##*[/\\]}"
+      if [ "$wt_name" = "wt-$repo" ]; then
+        git -C "$ROOT/$repo" worktree remove --force "$existing_wt" 2>/dev/null || true
+        rm -rf "$existing_wt"
+        git -C "$ROOT/$repo" worktree prune
+      else
+        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "branch in use by $existing_wt"
+        continue
+      fi
+    fi
+
     wt="$LOGDIR/wt-$repo"
     rm -rf "$wt"
     git -C "$ROOT/$repo" worktree prune
@@ -213,6 +253,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
   # `while read` loop below — so one successful Gradle build consumed the remaining repo lines
   # and the sweep stopped early, having printed its "nothing was committed" footer as though it
   # had finished. A sweep that silently covers two repos of five is worse than one that fails.
+  saved_java_home="${JAVA_HOME:-}"
+  saved_path="$PATH"
+  if [ -n "$repo_java_home" ]; then
+    export JAVA_HOME="$repo_java_home"
+    export PATH="$repo_java_home/bin:$PATH"
+  fi
+
   case "$tool" in
     maven) (cd "$work" && $MVN -q $mvncmd) > "$log" 2>&1 </dev/null || status=$? ;;
     gradle) (cd "$work" && $GRADLE -q $ginit $gradlecmd) > "$log" 2>&1 </dev/null || status=$? ;;
@@ -223,6 +270,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
       fi
       ;;
   esac
+
+  if [ -n "$saved_java_home" ]; then
+    export JAVA_HOME="$saved_java_home"
+  else
+    unset JAVA_HOME
+  fi
+  export PATH="$saved_path"
 
   # Generated-guardrail drift, counted from `git diff --numstat` rather than `git status`.
   # status lists a file whose line endings changed even when its text did not, and on Windows
@@ -242,12 +296,21 @@ while IFS=: read -r repo tool mvncmd gradlecmd; do
             | wc -l | tr -d ' ')
   eolonly=$(git -C "$work" status --porcelain | wc -l | tr -d ' ')
 
+  toolchain_err=0
+  if grep -q "RequireJavaVersion" "$log" 2>/dev/null || ([ -f "$log.gradle" ] && grep -q "RequireJavaVersion" "$log.gradle" 2>/dev/null); then
+    toolchain_err=1
+  fi
+
   if [ "$status" -eq 0 ]; then
     result=PASS
+  elif [ "$toolchain_err" -eq 1 ]; then
+    result=ERROR
   else
     result=FAIL
   fi
   notes="log: $log"
+  [ "$toolchain_err" -eq 1 ] && notes="toolchain: RequireJavaVersion failed; $notes"
+  [ -n "$repo_java_home" ] && notes="JDK $reqjdk via JDK${reqjdk}_HOME; $notes"
   [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
