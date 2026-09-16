@@ -174,7 +174,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   repo_java_home=""
   if [ -n "${reqjdk:-}" ]; then
     jdk_var="JDK${reqjdk}_HOME"
-    repo_java_home="${!jdk_var:-}"
+    eval "repo_java_home=\"\${$jdk_var:-}\""
     if [ -z "$repo_java_home" ]; then
       cur_jdk=""
       if command -v java >/dev/null 2>&1; then
