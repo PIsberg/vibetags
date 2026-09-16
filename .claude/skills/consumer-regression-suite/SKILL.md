@@ -53,13 +53,13 @@ It commits nothing, pushes nothing and opens nothing.
 
 Consumers, and how each declares the version:
 
-| repo | build | declares the version in |
-|---|---|---|
-| `blindbean` | Maven (`mvnw`) | `pom.xml` |
-| `codekarta` | Maven + Gradle | `pom.xml` **and** `build.gradle.kts` — both, kept in sync |
-| `common-license-lib` | Maven + Gradle | `pom.xml` **and** `build.gradle.kts` |
-| `skill3` | Gradle | `build.gradle` |
-| `async-test-lib` | Maven + Gradle | `pom.xml` only; Gradle reads it from the POM |
+| repo | build | JDK | declares the version in |
+|---|---|---|---|
+| `blindbean` | Maven (`mvnw`) | default | `pom.xml` |
+| `codekarta` | Maven + Gradle | 21 (`JDK21_HOME`) | `pom.xml` **and** `build.gradle.kts` — both, kept in sync |
+| `common-license-lib` | Maven + Gradle | default | `pom.xml` **and** `build.gradle.kts` |
+| `skill3` | Gradle | default | `build.gradle` |
+| `async-test-lib` | Maven + Gradle | default | `pom.xml` only; Gradle reads it from the POM |
 
 Add a repo by adding a row to `CONSUMERS` in the script, not by running it by hand.
 
@@ -148,3 +148,9 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
   for the duration of the build, restoring the file afterwards and saying so in the notes. A row
   carrying that note is a real build result; do not silently promote it to "1.0.x works for this
   consumer as shipped" — as shipped, that consumer cannot see the artifact at all.
+- **A consumer that pins a JDK fails on a newer default JDK before VibeTags runs.** `codekarta`
+  requires JDK 21 through 25, so sweeping on a newer default JDK reports false failures for
+  JaCoCo instrumentation. Provide `JDK21_HOME` so the script switches `JAVA_HOME` for that
+  repo's build, or let the script skip it; enforcer `RequireJavaVersion` failures are reported
+  as toolchain errors rather than regressions.
+
