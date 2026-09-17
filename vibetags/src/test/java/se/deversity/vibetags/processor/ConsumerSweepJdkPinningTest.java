@@ -73,6 +73,46 @@ class ConsumerSweepJdkPinningTest {
     }
 
     @Test
+    @DisplayName("codekarta builds on a default JDK 25, inside its 21-25 range, when JDK21_HOME is unset")
+    void unsetJdkEnvVarBuildsOnDefaultJdkInsideRange() throws Exception {
+        Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
+        assumeTrue(Files.isRegularFile(script), "consumer-sweep.sh not reachable; skipping");
+
+        Path root = Files.createTempDirectory("sweep-consumer-root");
+        syntheticRepoAt(root.resolve("codekarta"));
+
+        Path defaultJava = fakeJavaDir("25.0.1", "DEFAULT-JAVA");
+        Path tmpDir = Files.createTempDirectory("sweep-tmp");
+        List<String> rows = runSweep(root, tmpDir, "9.9.9", "codekarta",
+            Map.of("JDK21_HOME", ""), defaultJava);
+
+        String row = rowFor(rows, "codekarta");
+        assertEquals("PASS", resultOf(row),
+            "codekarta's enforcer allows JDK 21 through 25, so a default JDK 25 must be built on (#743). Row was: "
+                + row + System.lineSeparator() + String.join(System.lineSeparator(), rows));
+    }
+
+    @Test
+    @DisplayName("codekarta is skipped on a default JDK 20, below its 21-25 range, when JDK21_HOME is unset")
+    void unsetJdkEnvVarSkipsDefaultJdkBelowRange() throws Exception {
+        Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
+        assumeTrue(Files.isRegularFile(script), "consumer-sweep.sh not reachable; skipping");
+
+        Path root = Files.createTempDirectory("sweep-consumer-root");
+        syntheticRepoAt(root.resolve("codekarta"));
+
+        Path defaultJava = fakeJavaDir("20.0.2", "DEFAULT-JAVA");
+        Path tmpDir = Files.createTempDirectory("sweep-tmp");
+        List<String> rows = runSweep(root, tmpDir, "9.9.9", "codekarta",
+            Map.of("JDK21_HOME", ""), defaultJava);
+
+        String row = rowFor(rows, "codekarta");
+        assertEquals("SKIP", resultOf(row),
+            "a default JDK below the pinned range must be skipped, not built on (#743). Row was: "
+                + row + System.lineSeparator() + String.join(System.lineSeparator(), rows));
+    }
+
+    @Test
     @DisplayName("setting JDK21_HOME runs the build with that JDK's JAVA_HOME and java")
     void settingJdkEnvVarSetsJavaHomeDuringBuild() throws Exception {
         Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
