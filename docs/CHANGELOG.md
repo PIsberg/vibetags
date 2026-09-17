@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The consumer sweep no longer reports a repository as `ERROR` because an earlier sweep of the
+  same version left its worktree under a different `TMPDIR` (#736). `git worktree prune` keeps a
+  worktree whose directory still exists, so the branch stayed checked out there and `worktree add`
+  failed before the build ran. The sweep now removes a worktree holding the branch when it follows
+  its own `wt-<repo>` naming, and skips the repository, naming the path, when it does not.
+- The consumer sweep no longer reports a JDK-pinned consumer as `FAIL` on a newer default JDK
+  (#737). A consumer entry can name the JDK it needs; the sweep builds it with `JAVA_HOME` from
+  `JDK<n>_HOME`, skips it by name when that variable is unset and the default JDK differs, and
+  reports an enforcer `RequireJavaVersion` failure as `ERROR` with a toolchain note. On 2026-09-15
+  codekarta reported `FAIL` on JDK 26 and passed on JDK 21. The skip test asserted nothing on JDK 21,
+  which is every Windows and macOS leg of CI, because it branched on the test JVM's version rather
+  than the `java` the script reads; it now pins that `java` on `PATH` in both directions.
+
 ## [1.3.5] - 2026-09-15
 
 **Upgrading changes committed files.** If a granular directory is opted in (for example

@@ -153,4 +153,3 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
   JaCoCo instrumentation. Provide `JDK21_HOME` so the script switches `JAVA_HOME` for that
   repo's build, or let the script skip it; enforcer `RequireJavaVersion` failures are reported
   as toolchain errors rather than regressions.
-
