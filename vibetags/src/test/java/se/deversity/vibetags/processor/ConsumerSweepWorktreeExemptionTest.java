@@ -71,21 +71,15 @@ class ConsumerSweepWorktreeExemptionTest {
 
     /** Runs the sweep over a synthetic consumer root, with no build reached by either repo. */
     private static List<String> runSweep(Path root) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-            "sh", "tools/consumer-sweep.sh", "9.9.9", "blindbean", "async-test-lib");
+        ProcessBuilder pb = new ProcessBuilder(ConsumerSweepShell.command(
+            "tools/consumer-sweep.sh", "9.9.9", "blindbean", "async-test-lib"));
         pb.directory(REPO_ROOT.toFile());
         pb.redirectErrorStream(true);
         pb.environment().put("VIBETAGS_CONSUMER_ROOT", root.toAbsolutePath().toString());
         // Keep the script's scratch directory inside the temp root. It rm -rf's its own worktree
         // path, and that path is shared with a real sweep run from the same machine.
         pb.environment().put("TMPDIR", root.toAbsolutePath().toString());
-        Process sweep;
-        try {
-            sweep = pb.start();
-        } catch (IOException noShell) {
-            assumeTrue(false, "no sh on PATH; the Linux CI job runs this");
-            return List.of();
-        }
+        Process sweep = pb.start();
         String out = new String(sweep.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         sweep.waitFor();
         return out.lines().toList();

@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codekarta reported `FAIL` on JDK 26 and passed on JDK 21. The skip test asserted nothing on JDK 21,
   which is every Windows and macOS leg of CI, because it branched on the test JVM's version rather
   than the `java` the script reads; it now pins that `java` on `PATH` in both directions.
+- The consumer-sweep tests no longer skip silently where `sh` is not on `PATH` (#744). Maven run
+  from PowerShell on Windows reported all six as skipped. They now fall back to Git for Windows'
+  `bin/sh.exe`, found through `git --exec-path`, and with no shell at all they fail under `CI=true`
+  instead of reporting a green skip. Measured on Windows from PowerShell: 6 skipped before, 14 run
+  and 0 skipped after, counting the new `ConsumerSweepShellTest`.
 
 ## [1.3.5] - 2026-09-15
 
