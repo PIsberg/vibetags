@@ -90,19 +90,13 @@ class ConsumerSweepWorktreeCleanupTest {
 
     private static List<String> runSweep(Path root, Path tmpDir, String version, String repo)
             throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-            "sh", "tools/consumer-sweep.sh", version, repo);
+        ProcessBuilder pb = new ProcessBuilder(ConsumerSweepShell.command(
+            "tools/consumer-sweep.sh", version, repo));
         pb.directory(REPO_ROOT.toFile());
         pb.redirectErrorStream(true);
         pb.environment().put("VIBETAGS_CONSUMER_ROOT", root.toAbsolutePath().toString());
         pb.environment().put("TMPDIR", tmpDir.toAbsolutePath().toString());
-        Process sweep;
-        try {
-            sweep = pb.start();
-        } catch (IOException noShell) {
-            assumeTrue(false, "no sh on PATH; the Linux CI job runs this");
-            return List.of();
-        }
+        Process sweep = pb.start();
         String out = new String(sweep.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         sweep.waitFor();
         return out.lines().toList();
