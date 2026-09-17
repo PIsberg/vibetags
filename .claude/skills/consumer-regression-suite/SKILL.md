@@ -56,7 +56,7 @@ Consumers, and how each declares the version:
 | repo | build | JDK | declares the version in |
 |---|---|---|---|
 | `blindbean` | Maven (`mvnw`) | default | `pom.xml` |
-| `codekarta` | Maven + Gradle | 21 (`JDK21_HOME`) | `pom.xml` **and** `build.gradle.kts` — both, kept in sync |
+| `codekarta` | Maven + Gradle | 21 to 25 (`JDK21_HOME`) | `pom.xml` **and** `build.gradle.kts` — both, kept in sync |
 | `common-license-lib` | Maven + Gradle | default | `pom.xml` **and** `build.gradle.kts` |
 | `skill3` | Gradle | default | `build.gradle` |
 | `async-test-lib` | Maven + Gradle | default | `pom.xml` only; Gradle reads it from the POM |
@@ -151,5 +151,6 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
 - **A consumer that pins a JDK fails on a newer default JDK before VibeTags runs.** `codekarta`
   requires JDK 21 through 25, so sweeping on a newer default JDK reports false failures for
   JaCoCo instrumentation. Provide `JDK21_HOME` so the script switches `JAVA_HOME` for that
-  repo's build, or let the script skip it; enforcer `RequireJavaVersion` failures are reported
+  repo's build. Without it the script builds on a default JDK inside the row's range (`21-25`)
+  and skips the repo, naming the range, outside it; enforcer `RequireJavaVersion` failures are reported
   as toolchain errors rather than regressions.

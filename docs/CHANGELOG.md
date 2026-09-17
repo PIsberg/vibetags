@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its own `wt-<repo>` naming, and skips the repository, naming the path, when it does not.
 - The consumer sweep no longer reports a JDK-pinned consumer as `FAIL` on a newer default JDK
   (#737). A consumer entry can name the JDK it needs; the sweep builds it with `JAVA_HOME` from
-  `JDK<n>_HOME`, skips it by name when that variable is unset and the default JDK differs, and
+  `JDK<n>_HOME`, builds on the default JDK when that variable is unset and the default is inside the entry's range
+  (`21-25` for codekarta, matching its enforcer's `[21,26)`, #743), skips it by name otherwise, and
   reports an enforcer `RequireJavaVersion` failure as `ERROR` with a toolchain note. On 2026-09-15
   codekarta reported `FAIL` on JDK 26 and passed on JDK 21. The skip test asserted nothing on JDK 21,
   which is every Windows and macOS leg of CI, because it branched on the test JVM's version rather

@@ -43,12 +43,12 @@ if [ -z "$VERSION" ]; then
 fi
 shift || true
 
-# repo : build tool : maven goals : gradle tasks [: required jdk]
+# repo : build tool : maven goals : gradle tasks [: required jdk, one major or a range like 21-25]
 # Maven and Gradle need separate commands: "verify" is a Maven lifecycle phase and Gradle
 # has no such task, which showed up as a spurious FAIL for common-license-lib.
 CONSUMERS="
 blindbean:maven:clean verify:
-codekarta:both:clean verify:clean build:21
+codekarta:both:clean verify:clean build:21-25
 common-license-lib:both:clean verify:clean build
 skill3:gradle::clean build
 async-test-lib:both:clean verify:clean build
@@ -167,25 +167,35 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
     continue
   fi
 
-  # Consumers that pin a JDK version (e.g. codekarta pins JDK 21-25) need JAVA_HOME set to
-  # that JDK, or the build fails before VibeTags runs. Resolve the path from an environment
-  # variable such as JDK21_HOME so no machine path is committed. When unset and the default
-  # JDK differs, skip the repo rather than building on the wrong JDK (#737).
+  # Consumers that pin a JDK (codekarta's enforcer allows [21,26)) need a JDK in that range, or
+  # the build fails before VibeTags runs. The column is one major ("21") or an inclusive range
+  # ("21-25"). JDK<low>_HOME, when set, is always used, so no machine path is committed. When it
+  # is unset, the default java is built on if its major is in range and skipped by name
+  # otherwise. Matching only the exact low major skipped codekarta on a default JDK 25 it builds
+  # on fine (#737, #743).
   repo_java_home=""
+  jdk_low=""
   if [ -n "${reqjdk:-}" ]; then
-    jdk_var="JDK${reqjdk}_HOME"
+    jdk_low="${reqjdk%%-*}"
+    jdk_high="${reqjdk##*-}"
+    jdk_var="JDK${jdk_low}_HOME"
     eval "repo_java_home=\"\${$jdk_var:-}\""
     if [ -z "$repo_java_home" ]; then
       cur_jdk=""
       if command -v java >/dev/null 2>&1; then
         cur_jdk=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d. -f1)
       fi
-      if [ "$cur_jdk" != "$reqjdk" ]; then
-        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "requires JDK $reqjdk (set JDK${reqjdk}_HOME)"
+      in_range=0
+      case "$cur_jdk" in
+        ''|*[!0-9]*) ;;
+        *) [ "$cur_jdk" -ge "$jdk_low" ] && [ "$cur_jdk" -le "$jdk_high" ] && in_range=1 ;;
+      esac
+      if [ "$in_range" -eq 0 ]; then
+        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "requires JDK $reqjdk, default is ${cur_jdk:-none} (set $jdk_var)"
         continue
       fi
     elif [ ! -d "$repo_java_home" ]; then
-      printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "JDK${reqjdk}_HOME ($repo_java_home) not found"
+      printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "$jdk_var ($repo_java_home) not found"
       continue
     fi
   fi
@@ -310,7 +320,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   fi
   notes="log: $log"
   [ "$toolchain_err" -eq 1 ] && notes="toolchain: RequireJavaVersion failed; $notes"
-  [ -n "$repo_java_home" ] && notes="JDK $reqjdk via JDK${reqjdk}_HOME; $notes"
+  [ -n "$repo_java_home" ] && notes="JDK $jdk_low via $jdk_var; $notes"
   [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
