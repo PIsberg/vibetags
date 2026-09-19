@@ -29,6 +29,10 @@ final class AnnotationProxies {
     private AnnotationProxies() {
     }
 
+    // The proxy must live where the annotation interface lives, which is that interface's own
+    // loader. The context loader PMD prefers is KSP's host's, not the loader KSP gave this
+    // processor, and may not see the annotation (as in SingleLineAnnotation, for the same reason).
+    @SuppressWarnings("PMD.UseProperClassLoader")
     static <A extends Annotation> A create(Class<A> type, AnnotationData data) {
         Object proxy = Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type},
             new Handler(type, data));

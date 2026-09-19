@@ -38,6 +38,9 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
 
     private final SymbolProcessorEnvironment environment;
     private final Processor delegate;
+    // @Target lookups need the loader that holds vibetags-annotations, which is the one KSP loaded
+    // this processor with; the thread's context loader PMD prefers is not guaranteed to see it.
+    @SuppressWarnings("PMD.UseProperClassLoader")
     private final AnnotationReader annotations = new AnnotationReader(KspGuardrailProcessor.class.getClassLoader());
     private final List<KSFile> sources = new ArrayList<>();
     private @Nullable KspProcessingEnvironment processingEnvironment;
