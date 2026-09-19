@@ -4,6 +4,8 @@ import com.google.devtools.ksp.UtilsKt;
 import com.google.devtools.ksp.processing.Resolver;
 import com.google.devtools.ksp.symbol.AnnotationUseSiteTarget;
 import com.google.devtools.ksp.symbol.ClassKind;
+import com.google.devtools.ksp.symbol.FileLocation;
+import com.google.devtools.ksp.symbol.KSNode;
 import com.google.devtools.ksp.symbol.KSAnnotated;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
 import com.google.devtools.ksp.symbol.KSDeclaration;
@@ -17,12 +19,15 @@ import com.google.devtools.ksp.symbol.KSTypeParameter;
 import com.google.devtools.ksp.symbol.KSTypeReference;
 import com.google.devtools.ksp.symbol.KSValueParameter;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.type.TypeMirror;
+import java.io.IOException;
 import java.lang.annotation.ElementType;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -58,6 +64,11 @@ import java.util.Set;
  *       setter's parameter, which kapt names {@code p0}.</li>
  *   <li>An {@code inline} function with a {@code reified} type parameter, and a function whose JVM
  *       name is mangled (a value-class parameter), have no stub at all.</li>
+ *   <li>{@code @JvmExposeBoxed} (on the function, constructor or property, or on its class) gives a
+ *       mangled declaration a stub after all: under its {@code jvmName} or its own name, with the
+ *       value class boxed in the signature.</li>
+ *   <li>{@code @JvmSuppressWildcards} on a class, function or property applies to every parameter
+ *       type beneath it, the nearest one winning ({@link JvmTypes} handles type and argument uses).</li>
  * </ul>
  */
 final class StubBuilder {
@@ -66,10 +77,12 @@ final class StubBuilder {
     private static final String JVM_FIELD = "kotlin.jvm.JvmField";
     private static final String JVM_OVERLOADS = "kotlin.jvm.JvmOverloads";
     private static final String JVM_NAME = "kotlin.jvm.JvmName";
+    private static final String JVM_EXPOSE_BOXED = "kotlin.jvm.JvmExposeBoxed";
 
     private final Resolver resolver;
     private final AnnotationReader annotations;
     private final boolean defaultImpls;
+    private final boolean paramProperty;
     private final Map<String, KTypeElement> declared = new LinkedHashMap<>();
     private final JvmTypes types = new JvmTypes(declared);
     private final Map<String, KPackageElement> packages = new HashMap<>();
@@ -77,6 +90,7 @@ final class StubBuilder {
     private final Map<KTypeElement, KTypeElement> defaultImplsOf = new HashMap<>();
     private final List<KTypeElement> roots = new ArrayList<>();
     private final List<String> dropped = new ArrayList<>();
+    private final Map<String, Optional<KotlinExtent>> extents = new HashMap<>();
 
     /**
      * @param defaultImpls whether interfaces get a {@code DefaultImpls} class, which every
@@ -84,9 +98,21 @@ final class StubBuilder {
      *                     name {@code all}) produces
      */
     StubBuilder(Resolver resolver, AnnotationReader annotations, boolean defaultImpls) {
+        this(resolver, annotations, defaultImpls, true);
+    }
+
+    /**
+     * @param paramProperty whether a constructor {@code val}'s annotation with no use-site target
+     *                      lands on the field as well as the parameter: Kotlin 2.2's
+     *                      {@code param-property} default. {@code false} is {@code first-only}, the
+     *                      default before 2.2 and what {@code -Xannotation-default-target=first-only}
+     *                      restores: the parameter alone when the annotation may target one.
+     */
+    StubBuilder(Resolver resolver, AnnotationReader annotations, boolean defaultImpls, boolean paramProperty) {
         this.resolver = resolver;
         this.annotations = annotations;
         this.defaultImpls = defaultImpls;
+        this.paramProperty = paramProperty;
     }
 
     /** Builds the model for {@code files}, in the order given. */
@@ -100,7 +126,8 @@ final class StubBuilder {
 
     /** The members of one declaring type, and where the members kapt relocates end up. */
     private record Owner(KTypeElement type, JvmTypes.Scope scope, Kind kind,
-                         @Nullable KTypeElement outer, boolean valueClass) {
+                         @Nullable KTypeElement outer, boolean valueClass,
+                         boolean suppressWildcards, boolean exposeBoxed) {
         enum Kind { FACADE, CLASS, INTERFACE, OBJECT, COMPANION }
 
         boolean isStaticContext() {
@@ -116,16 +143,17 @@ final class StubBuilder {
         List<KTypeElement> fileRoots = new ArrayList<>();
         for (KSDeclaration declaration : list(file.getDeclarations().iterator())) {
             if (declaration instanceof KSClassDeclaration cls) {
-                fileRoots.add(buildClass(cls, pkg, source, JvmTypes.Scope.empty()));
+                fileRoots.add(buildClass(cls, pkg, source, JvmTypes.Scope.empty(), false));
             } else if (declaration instanceof KSFunctionDeclaration || declaration instanceof KSPropertyDeclaration) {
                 if (facade == null) {
                     facade = facade(declaration, pkg, file, source);
                 }
-                Owner owner = new Owner(facade, JvmTypes.Scope.empty(), Owner.Kind.FACADE, null, false);
+                Owner owner = new Owner(facade, JvmTypes.Scope.empty(), Owner.Kind.FACADE, null, false,
+                    false, false);
                 if (declaration instanceof KSFunctionDeclaration function) {
                     function(function, owner);
                 } else {
-                    property((KSPropertyDeclaration) declaration, owner);
+                    property((KSPropertyDeclaration) declaration, owner, false);
                 }
             }
         }
@@ -153,7 +181,8 @@ final class StubBuilder {
         return facade;
     }
 
-    private KTypeElement buildClass(KSClassDeclaration cls, KElement parent, Path source, JvmTypes.Scope outerScope) {
+    private KTypeElement buildClass(KSClassDeclaration cls, KElement parent, Path source, JvmTypes.Scope outerScope,
+                                    boolean outerSuppressWildcards) {
         ElementKind kind = switch (cls.getClassKind()) {
             case INTERFACE -> ElementKind.INTERFACE;
             case ENUM_CLASS -> ElementKind.ENUM;
@@ -173,6 +202,7 @@ final class StubBuilder {
         }
         KTypeElement type = parent.adopt(new KTypeElement(kind, simple, qualified, nesting, javaModifiers(cls), source));
         declared.put(qualified, type);
+        type.locate(locate(cls, false));
         // TYPE covers annotation types too, which is how Java reads it.
         place(annotations.read(cls), type, ElementType.TYPE);
 
@@ -195,8 +225,10 @@ final class StubBuilder {
         } else {
             ownerKind = Owner.Kind.CLASS;
         }
+        Boolean suppressed = JvmTypes.suppression(cls);
         Owner owner = new Owner(type, scope, ownerKind,
-            parent instanceof KTypeElement outerType ? outerType : null, isValueClass(cls));
+            parent instanceof KTypeElement outerType ? outerType : null, isValueClass(cls),
+            suppressed != null ? suppressed : outerSuppressWildcards, hasAnnotation(cls, JVM_EXPOSE_BOXED));
 
         KSFunctionDeclaration primary = cls.getPrimaryConstructor();
         List<KSDeclaration> members = list(cls.getDeclarations().iterator());
@@ -218,7 +250,7 @@ final class StubBuilder {
                 if (nested.getClassKind() == ClassKind.ENUM_ENTRY) {
                     enumConstant(nested, type);
                 } else {
-                    buildClass(nested, type, source, scope);
+                    buildClass(nested, type, source, scope, owner.suppressWildcards());
                 }
             } else if (member instanceof KSFunctionDeclaration function) {
                 if (UtilsKt.isConstructor(function)) {
@@ -229,7 +261,7 @@ final class StubBuilder {
                     function(function, owner);
                 }
             } else if (member instanceof KSPropertyDeclaration property) {
-                property(property, owner);
+                property(property, owner, constructorProperties.contains(property.getSimpleName().asString()));
             }
         }
         if (primaryElement != null && cls.getModifiers().contains(com.google.devtools.ksp.symbol.Modifier.DATA)) {
@@ -267,24 +299,29 @@ final class StubBuilder {
         KVariableElement constant = enumType.adopt(new KVariableElement(ElementKind.ENUM_CONSTANT,
             entry.getSimpleName().asString(), EnumSet.of(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL),
             enumType.asType()));
+        constant.locate(locate(entry, true));
         place(annotations.read(entry), constant, ElementType.FIELD);
     }
 
     private @Nullable KExecutableElement constructor(KSFunctionDeclaration function, Owner owner,
                                                      Map<String, List<AnnotationReader.Use>> propertyUses) {
         List<KSValueParameter> parameters = function.getParameters();
-        if (owner.valueClass() || takesValueClass(parameters, null)) {
+        boolean exposed = owner.exposeBoxed() || hasAnnotation(function, JVM_EXPOSE_BOXED);
+        if ((owner.valueClass() || takesValueClass(parameters, null)) && !exposed) {
             noteDropped(annotations.read(function), "constructor of " + owner.type().getQualifiedName(),
-                "a value class compiles its constructors to a synthetic pair, which has no Java stub");
+                "a value class compiles its constructors to a synthetic pair, which has no Java stub;"
+                    + " @JvmExposeBoxed gives it one");
             return null;
         }
+        Sig sig = new Sig(suppressWildcards(function, owner), exposed);
         boolean varArgs = !parameters.isEmpty() && parameters.get(parameters.size() - 1).isVararg();
         KExecutableElement constructor = owner.type().adopt(new KExecutableElement(ElementKind.CONSTRUCTOR,
             "<init>", javaModifiers(function), varArgs, false));
+        constructor.locate(locate(function, false));
         place(annotations.read(function), constructor, ElementType.CONSTRUCTOR);
         for (int i = 0; i < parameters.size(); i++) {
             KSValueParameter parameter = parameters.get(i);
-            KVariableElement element = constructor.addParameter(parameter(parameter, i, owner.scope()));
+            KVariableElement element = constructor.addParameter(parameter(parameter, i, owner.scope(), sig));
             placeParameter(annotations.read(parameter), element);
             com.google.devtools.ksp.symbol.KSName declared = parameter.getName();
             String name = declared == null ? "" : declared.asString();
@@ -304,6 +341,7 @@ final class StubBuilder {
         KExecutableElement copy = owner.type().adopt(new KExecutableElement(ElementKind.METHOD, "copy",
             EnumSet.of(Modifier.PUBLIC, Modifier.FINAL), false, false));
         copy.setReturnType(owner.type().asType());
+        copy.locate(primary.location());
         for (KVariableElement parameter : primary.parameters()) {
             KVariableElement element = copy.addParameter(new KVariableElement(ElementKind.PARAMETER,
                 parameter.getSimpleName().toString(), Set.of(), parameter.asType()));
@@ -318,26 +356,29 @@ final class StubBuilder {
             noteDropped(function, owner, "it is inline with a reified type parameter, which has no Java stub");
             return;
         }
-        if (!hasAnnotation(function, JVM_NAME) && manglesName(function, owner)) {
+        boolean mangled = !hasAnnotation(function, JVM_NAME) && manglesName(function, owner);
+        boolean exposed = mangled && (owner.exposeBoxed() || hasAnnotation(function, JVM_EXPOSE_BOXED));
+        if (mangled && !exposed) {
             // Mangled for a value class: not a Java identifier, so kapt writes no stub.
             noteDropped(function, owner, "a value class in its signature mangles its JVM name, which has no Java stub;"
-                + " give it a @JvmName or move the guardrail to the class");
+                + " give it a @JvmName or @JvmExposeBoxed, or move the guardrail to the class");
             return;
         }
-        String name = jvmName(function);
+        String name = exposed ? exposedName(function) : jvmName(function);
         int suffix = name.indexOf('-');
         if (suffix >= 0) {
             // KSP reports a mangled name where the compiler writes a plain one (kotlin.Result is
             // exempt from mangling; a top-level function returning a value class is not mangled).
             name = name.substring(0, suffix);
         }
+        Sig sig = new Sig(suppressWildcards(function, owner), exposed);
         boolean isAbstract = function.isAbstract();
         Set<Modifier> modifiers = javaModifiers(function);
         if (owner.kind() == Owner.Kind.FACADE) {
             modifiers.add(Modifier.STATIC);
         }
         boolean isDefault = owner.kind() == Owner.Kind.INTERFACE && !isAbstract;
-        KExecutableElement method = method(function, name, owner.type(), owner.scope(), modifiers, isDefault, null);
+        KExecutableElement method = method(function, name, owner.type(), owner.scope(), modifiers, isDefault, null, sig);
         methods.computeIfAbsent(function, key -> new ArrayList<>()).add(method);
         overloads(function, method, owner.type(), receiverCount(function));
 
@@ -345,22 +386,23 @@ final class StubBuilder {
         if (owner.kind() == Owner.Kind.COMPANION && outer != null && hasAnnotation(function, JVM_STATIC)) {
             Set<Modifier> statics = javaModifiers(function);
             statics.add(Modifier.STATIC);
-            method(function, name, outer, owner.scope(), statics, false, null);
+            method(function, name, outer, owner.scope(), statics, false, null, sig);
         }
         if (isDefault && defaultImpls) {
             method(function, name, defaultImpls(owner.type()), owner.scope(),
-                EnumSet.of(Modifier.PUBLIC, Modifier.STATIC), false, owner.type().asType());
+                EnumSet.of(Modifier.PUBLIC, Modifier.STATIC), false, owner.type().asType(), sig);
         }
     }
 
     private KExecutableElement method(KSFunctionDeclaration function, String name, KTypeElement target,
                                       JvmTypes.Scope outerScope, Set<Modifier> modifiers, boolean isDefault,
-                                      @Nullable TypeMirror self) {
+                                      @Nullable TypeMirror self, Sig sig) {
         boolean suspend = function.getModifiers().contains(com.google.devtools.ksp.symbol.Modifier.SUSPEND);
         List<KSValueParameter> parameters = function.getParameters();
         boolean varArgs = !suspend && !parameters.isEmpty() && parameters.get(parameters.size() - 1).isVararg();
         KExecutableElement method = target.adopt(new KExecutableElement(ElementKind.METHOD, name, modifiers,
             varArgs, isDefault));
+        method.locate(locate(function, false));
         Map<String, KTypeParameterElement> typeParameters = new LinkedHashMap<>();
         for (KSTypeParameter parameter : function.getTypeParameters()) {
             KTypeParameterElement element = new KTypeParameterElement(parameter.getName().asString(), method);
@@ -379,10 +421,10 @@ final class StubBuilder {
         if (receiver != null) {
             method.addParameter(new KVariableElement(ElementKind.PARAMETER,
                 "$this$" + function.getSimpleName().asString(), Set.of(),
-                types.render(receiver, JvmTypes.Position.PARAMETER, scope)));
+                types.render(receiver, JvmTypes.Position.PARAMETER, scope, sig.suppressWildcards(), sig.boxed())));
         }
         for (int i = 0; i < parameters.size(); i++) {
-            KVariableElement element = method.addParameter(parameter(parameters.get(i), i, scope));
+            KVariableElement element = method.addParameter(parameter(parameters.get(i), i, scope, sig));
             placeParameter(annotations.read(parameters.get(i)), element);
         }
         if (suspend) {
@@ -394,10 +436,42 @@ final class StubBuilder {
         return method;
     }
 
-    private KVariableElement parameter(KSValueParameter parameter, int index, JvmTypes.Scope scope) {
+    /**
+     * What decides how a declaration's parameter types are spelled: whether
+     * {@code @JvmSuppressWildcards} is in force (its own, or the nearest enclosing class's), and
+     * whether it is the boxed variant {@code @JvmExposeBoxed} exposes.
+     */
+    private record Sig(boolean suppressWildcards, boolean boxed) {
+    }
+
+    private static boolean suppressWildcards(KSDeclaration declaration, Owner owner) {
+        Boolean own = JvmTypes.suppression(declaration);
+        return own != null ? own : owner.suppressWildcards();
+    }
+
+    /** The name {@code @JvmExposeBoxed} gives its variant: its {@code jvmName}, or the declared name. */
+    private static String exposedName(KSFunctionDeclaration function) {
+        Iterator<com.google.devtools.ksp.symbol.KSAnnotation> it = function.getAnnotations().iterator();
+        while (it.hasNext()) {
+            com.google.devtools.ksp.symbol.KSAnnotation annotation = it.next();
+            KSType type = annotation.getAnnotationType().resolve();
+            com.google.devtools.ksp.symbol.KSName name = type.getDeclaration().getQualifiedName();
+            if (name != null && JVM_EXPOSE_BOXED.equals(name.asString())) {
+                for (com.google.devtools.ksp.symbol.KSValueArgument argument : annotation.getArguments()) {
+                    if (argument.getValue() instanceof String given && !given.isEmpty()) {
+                        return given;
+                    }
+                }
+            }
+        }
+        return function.getSimpleName().asString();
+    }
+
+    private KVariableElement parameter(KSValueParameter parameter, int index, JvmTypes.Scope scope, Sig sig) {
         com.google.devtools.ksp.symbol.KSName declared = parameter.getName();
         String name = declared == null ? "p" + index : declared.asString();
-        TypeMirror type = types.render(parameter.getType(), JvmTypes.Position.PARAMETER, scope);
+        TypeMirror type = types.render(parameter.getType(), JvmTypes.Position.PARAMETER, scope,
+            sig.suppressWildcards(), sig.boxed());
         if (parameter.isVararg()) {
             type = new KTypeMirror.Arr(type);
         }
@@ -425,6 +499,7 @@ final class StubBuilder {
             KExecutableElement copy = target.adopt(new KExecutableElement(full.getKind(),
                 full.getSimpleName().toString(), full.getModifiers(), false, full.isDefault()));
             copy.setReturnType(full.getReturnType());
+            copy.locate(full.location());
             List<KVariableElement> kept = full.parameters();
             for (int i = 0; i < kept.size(); i++) {
                 if (!omit.contains(i)) {
@@ -442,7 +517,7 @@ final class StubBuilder {
         return function.getExtensionReceiver() == null ? 0 : 1;
     }
 
-    private void property(KSPropertyDeclaration property, Owner owner) {
+    private void property(KSPropertyDeclaration property, Owner owner, boolean constructorProperty) {
         String name = property.getSimpleName().asString();
         List<AnnotationReader.Use> uses = annotations.read(property);
         KSPropertyGetter getter = property.getGetter();
@@ -459,7 +534,11 @@ final class StubBuilder {
         for (AnnotationReader.Use use : uses) {
             AnnotationUseSiteTarget target = use.target();
             if (target == null) {
-                if (annotations.allows(use.data().type(), ElementType.FIELD)) {
+                String type = use.data().type();
+                // first-only: the constructor parameter already took it (the constructor places it).
+                boolean parameterTookIt = constructorProperty && !paramProperty
+                    && annotations.allows(type, ElementType.PARAMETER);
+                if (annotations.allows(type, ElementType.FIELD) && !parameterTookIt) {
                     fieldUses.add(use);
                 }
             } else {
@@ -495,8 +574,10 @@ final class StubBuilder {
                 modifiers.add(Modifier.FINAL);
             }
             String fieldName = property.isDelegated() ? name + "$delegate" : name;
+            SourceLocation where = locate(property, constructorProperty);
             KVariableElement field = fieldOwner.adopt(new KVariableElement(ElementKind.FIELD, fieldName,
                 modifiers, types.render(property.getType(), JvmTypes.Position.FIELD, owner.scope())));
+            field.locate(where);
             fieldUses.forEach(use -> field.annotate(use.data()));
         }
 
@@ -505,30 +586,38 @@ final class StubBuilder {
         }
         boolean isAbstract = UtilsKt.isAbstract(property);
         boolean jvmStatic = hasAnnotation(property, JVM_STATIC);
-        boolean receiverIsValue = isValueClass(property.getExtensionReceiver());
-        boolean typeIsValue = isValueClass(property.getType());
+        boolean exposed = owner.exposeBoxed() || hasAnnotation(property, JVM_EXPOSE_BOXED);
+        boolean receiverIsValue = !exposed && isValueClass(property.getExtensionReceiver());
+        boolean typeIsValue = !exposed && isValueClass(property.getType());
+        Sig sig = new Sig(suppressWildcards(property, owner), exposed);
         String where = " of property " + name + " in " + owner.type().getQualifiedName();
         String why = "a value class in its signature mangles its JVM name, which has no Java stub";
         if (getter != null) {
-            if (owner.valueClass() || receiverIsValue || typeIsValue && owner.kind() != Owner.Kind.FACADE) {
+            if (owner.valueClass() && !exposed || receiverIsValue || typeIsValue && owner.kind() != Owner.Kind.FACADE) {
                 noteDropped(getterUses, "the getter" + where, why);
             } else {
-                String getterName = accessorName(getter, "get", name);
-                accessor(property, getterName, owner, isAbstract, jvmStatic, null, getterUses, List.of());
+                String getterName = unmangled(accessorName(getter, "get", name));
+                accessor(property, getterName, owner, isAbstract, jvmStatic, null, getterUses, List.of(), sig);
             }
         }
         if (property.isMutable() && setter != null
                 && !setter.getModifiers().contains(com.google.devtools.ksp.symbol.Modifier.PRIVATE)) {
-            if (owner.valueClass() || receiverIsValue || typeIsValue) {
+            if (owner.valueClass() && !exposed || receiverIsValue || typeIsValue) {
                 noteDropped(setterUses, "the setter" + where, why);
                 noteDropped(setParamUses, "the setter parameter" + where, why);
             } else {
-                String setterName = accessorName(setter, "set", name);
+                String setterName = unmangled(accessorName(setter, "set", name));
                 accessor(property, setterName, owner, isAbstract, jvmStatic,
-                    types.render(property.getType(), JvmTypes.Position.PARAMETER, owner.scope()), setterUses,
-                    setParamUses);
+                    types.render(property.getType(), JvmTypes.Position.PARAMETER, owner.scope(),
+                        sig.suppressWildcards(), sig.boxed()), setterUses, setParamUses, sig);
             }
         }
+    }
+
+    /** {@code name} without the {@code -suffix} KSP reports for a variant the compiler writes plainly. */
+    private static String unmangled(String name) {
+        int suffix = name.indexOf('-');
+        return suffix < 0 ? name : name.substring(0, suffix);
     }
 
     private String accessorName(com.google.devtools.ksp.symbol.KSPropertyAccessor accessor, String prefix,
@@ -551,7 +640,7 @@ final class StubBuilder {
      */
     private void accessor(KSPropertyDeclaration property, String name, Owner owner, boolean isAbstract,
                           boolean jvmStatic, @Nullable TypeMirror value, List<AnnotationReader.Use> uses,
-                          List<AnnotationReader.Use> parameterUses) {
+                          List<AnnotationReader.Use> parameterUses, Sig sig) {
         if (name.indexOf('-') >= 0) {
             return;
         }
@@ -563,24 +652,26 @@ final class StubBuilder {
             modifiers.add(Modifier.ABSTRACT);
         }
         boolean isDefault = owner.kind() == Owner.Kind.INTERFACE && !isAbstract;
-        accessorOn(owner.type(), property, name, modifiers, isDefault, null, value, owner.scope(), uses, parameterUses);
+        accessorOn(owner.type(), property, name, modifiers, isDefault, null, value, owner.scope(), uses,
+            parameterUses, sig);
         KTypeElement outer = owner.outer();
         if (owner.kind() == Owner.Kind.COMPANION && outer != null && jvmStatic) {
             accessorOn(outer, property, name, EnumSet.of(Modifier.PUBLIC, Modifier.STATIC), false, null,
-                value, owner.scope(), uses, parameterUses);
+                value, owner.scope(), uses, parameterUses, sig);
         }
         if (isDefault && defaultImpls) {
             accessorOn(defaultImpls(owner.type()), property, name, EnumSet.of(Modifier.PUBLIC, Modifier.STATIC),
-                false, owner.type().asType(), value, owner.scope(), uses, parameterUses);
+                false, owner.type().asType(), value, owner.scope(), uses, parameterUses, sig);
         }
     }
 
     private void accessorOn(KTypeElement target, KSPropertyDeclaration property, String name, Set<Modifier> modifiers,
                             boolean isDefault, @Nullable TypeMirror self, @Nullable TypeMirror value,
                             JvmTypes.Scope scope, List<AnnotationReader.Use> uses,
-                            List<AnnotationReader.Use> parameterUses) {
+                            List<AnnotationReader.Use> parameterUses, Sig sig) {
         KExecutableElement method = target.adopt(new KExecutableElement(ElementKind.METHOD, name, modifiers,
             false, isDefault));
+        method.locate(locate(property, false));
         method.setReturnType(value == null
             ? types.render(property.getType(), JvmTypes.Position.RETURN, scope)
             : KTypeMirror.NoneType.VOID);
@@ -591,7 +682,7 @@ final class StubBuilder {
         if (receiver != null) {
             method.addParameter(new KVariableElement(ElementKind.PARAMETER,
                 "$this$" + property.getSimpleName().asString(), Set.of(),
-                types.render(receiver, JvmTypes.Position.PARAMETER, scope)));
+                types.render(receiver, JvmTypes.Position.PARAMETER, scope, sig.suppressWildcards(), sig.boxed())));
         }
         if (value != null) {
             KVariableElement parameter = method.addParameter(
@@ -609,6 +700,34 @@ final class StubBuilder {
             declared.put(qualified, impls);
             return impls;
         });
+    }
+
+    /**
+     * Where {@code node} is written: the file KSP reports, from the first annotation line above its
+     * declaration to where the declaration ends ({@link KotlinExtent}), or {@code null} for a
+     * declaration with no file (a library symbol).
+     *
+     * @param listItem whether the declaration is a constructor property or an enum entry
+     */
+    private @Nullable SourceLocation locate(KSNode node, boolean listItem) {
+        if (!(node.getLocation() instanceof FileLocation at)) {
+            return null;
+        }
+        int line = at.getLineNumber();
+        Optional<KotlinExtent> extent = extents.computeIfAbsent(at.getFilePath(), StubBuilder::readExtent);
+        if (extent.isEmpty()) {
+            return new SourceLocation(at.getFilePath(), line, line);
+        }
+        return new SourceLocation(at.getFilePath(), extent.get().start(line),
+            Math.max(line, extent.get().end(line, listItem)));
+    }
+
+    private static Optional<KotlinExtent> readExtent(String file) {
+        try {
+            return Optional.of(new KotlinExtent(Files.readString(Path.of(file))));
+        } catch (IOException | RuntimeException unreadable) {
+            return Optional.empty(); // a start line with no end is still a position
+        }
     }
 
     /** Places annotations written with no use-site target, where the annotation may go. */

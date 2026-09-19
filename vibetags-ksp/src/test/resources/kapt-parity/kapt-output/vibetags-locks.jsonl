@@ -84,4 +84,24 @@
 {"type":"locked","element":"com.fx.vc.Money.cents","kind":"FIELD","reason":"value class field"}
 {"type":"locked","element":"com.fx.vc.ValueClassesKt.makeUid()","kind":"METHOD","reason":"top-level returns value class"}
 {"type":"locked","element":"com.fx.vc.ValueClassesKt.maybeUid()","kind":"METHOD","reason":"top-level returns nullable value class"}
+{"type":"locked","element":"com.fx.wc.Boxing.Boxing(com.fx.wc.Eid)","kind":"CONSTRUCTOR","reason":"exposed boxed ctor"}
+{"type":"locked","element":"com.fx.wc.Boxing.Boxing(int)","kind":"CONSTRUCTOR","reason":"plain ctor"}
+{"type":"locked","element":"com.fx.wc.Boxing.exposed(com.fx.wc.Eid)","kind":"METHOD","reason":"exposed boxed fun"}
+{"type":"locked","element":"com.fx.wc.Boxing.exposedAs(com.fx.wc.Eid)","kind":"METHOD","reason":"exposed boxed, renamed"}
+{"type":"locked","element":"com.fx.wc.Exposed.Exposed(java.lang.String)","kind":"CONSTRUCTOR","reason":"ctor of an exposed value class"}
+{"type":"locked","element":"com.fx.wc.Exposed.getTwice()","kind":"METHOD","reason":"getter of an exposed value class"}
+{"type":"locked","element":"com.fx.wc.Exposed.member()","kind":"METHOD","reason":"member of an exposed value class"}
+{"type":"locked","element":"com.fx.wc.Exposed.with(com.fx.wc.Eid)","kind":"METHOD","reason":"member of an exposed value class taking one"}
+{"type":"locked","element":"com.fx.wc.ExposedHolder.getCurrent()","kind":"METHOD","reason":"value-class getter in an exposed class"}
+{"type":"locked","element":"com.fx.wc.ExposedHolder.plain(int)","kind":"METHOD","reason":"plain fun in an exposed class"}
+{"type":"locked","element":"com.fx.wc.ExposedHolder.take(com.fx.wc.Eid)","kind":"METHOD","reason":"value-class fun in an exposed class"}
+{"type":"locked","element":"com.fx.wc.Quiet.inClass(java.util.List<com.fx.wc.Base>)","kind":"METHOD","reason":"suppressed on the class"}
+{"type":"locked","element":"com.fx.wc.Quiet.overridden(java.util.List<? extends com.fx.wc.Base>)","kind":"METHOD","reason":"class suppression overridden"}
+{"type":"locked","element":"com.fx.wc.Wild.both(java.util.List<? extends com.fx.wc.Leaf>)","kind":"METHOD","reason":"forced and suppressed"}
+{"type":"locked","element":"com.fx.wc.Wild.forced(java.util.List<? extends com.fx.wc.Leaf>)","kind":"METHOD","reason":"forced on a final argument"}
+{"type":"locked","element":"com.fx.wc.Wild.onArgument(java.util.Map<java.lang.String,java.util.List<com.fx.wc.Base>>)","kind":"METHOD","reason":"suppressed on an argument"}
+{"type":"locked","element":"com.fx.wc.Wild.onFunction(java.util.List<com.fx.wc.Base>,java.lang.Comparable<com.fx.wc.Leaf>)","kind":"METHOD","reason":"suppressed on the function"}
+{"type":"locked","element":"com.fx.wc.Wild.onType(java.util.List<com.fx.wc.Base>)","kind":"METHOD","reason":"suppressed on the type"}
+{"type":"locked","element":"com.fx.wc.Wild.plain(java.util.List<? extends com.fx.wc.Base>,java.lang.Comparable<? super com.fx.wc.Leaf>)","kind":"METHOD","reason":"default wildcards"}
+{"type":"locked","element":"com.fx.wc.Wild.turnedOff(java.util.List<? extends com.fx.wc.Base>)","kind":"METHOD","reason":"suppression turned off"}
 # VIBETAGS-END

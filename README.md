@@ -249,10 +249,10 @@ ksp {
 }
 ```
 
-Every processor option is a `ksp { arg(...) }`. Two differences from kapt: `.vibetags-locks`
-entries carry no line ranges (under kapt they pointed into the generated stubs), and a guardrail on a
-function kapt has no stub for (a value class in its signature) is reported as a build warning instead
-of being dropped without a word. Details: [USAGE.md](USAGE.md#kotlin-ksp-configuration).
+Every processor option is a `ksp { arg(...) }`. Two differences from kapt: `.vibetags-locks` line
+ranges point at the `.kt` source (under kapt they pointed into the generated stubs), and a guardrail
+on a function kapt has no stub for (a value class in its signature) is reported as a build warning
+instead of being dropped without a word. Details: [USAGE.md](USAGE.md#kotlin-ksp-configuration).
 
 </details>
 

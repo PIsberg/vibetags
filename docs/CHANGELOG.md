@@ -15,11 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adapter, not a second implementation: it presents KSP's declarations to the unchanged
   `AIGuardrailProcessor` as the elements kapt's stubs would have contained, so element paths, and
   therefore `.vibetags-locks` entries, granular rule filenames and sidecars, do not change when a
-  project switches front ends. `StubParityTest` compares 90 annotated elements and every generated
+  project switches front ends. `StubParityTest` compares 110 annotated elements and every generated
   file of a fixture with a recorded kapt build, byte for byte, and CI builds `examples/kotlin-ksp`
   (the kapt example's sources through KSP) and fails unless its output equals the kapt example's.
-  Differences from kapt: `.vibetags-locks` carries no line ranges, and a guardrail on a function kapt
-  has no stub for (a value class in its signature) is reported as a build warning instead of being
+  Differences from kapt: `.vibetags-locks` line ranges point at the `.kt` source rather than a
+  generated stub, and a guardrail on a function kapt has no stub for (a value class in its signature) is reported as a build warning instead of being
   lost silently. An incremental KSP build regenerates from the whole module: without that, KSP shows
   a processor only the changed files, and the first test run of the adapter rewrote `CLAUDE.md` from
   one file and dropped the untouched file's guardrail.

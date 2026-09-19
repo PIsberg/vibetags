@@ -248,6 +248,66 @@
     <file path="com.fx.vc.ValueClassesKt.maybeUid()">
       <reason>top-level returns nullable value class</reason>
     </file>
+    <file path="com.fx.wc.Boxing.Boxing(com.fx.wc.Eid)">
+      <reason>exposed boxed ctor</reason>
+    </file>
+    <file path="com.fx.wc.Boxing.Boxing(int)">
+      <reason>plain ctor</reason>
+    </file>
+    <file path="com.fx.wc.Boxing.exposed(com.fx.wc.Eid)">
+      <reason>exposed boxed fun</reason>
+    </file>
+    <file path="com.fx.wc.Boxing.exposedAs(com.fx.wc.Eid)">
+      <reason>exposed boxed, renamed</reason>
+    </file>
+    <file path="com.fx.wc.Exposed.Exposed(java.lang.String)">
+      <reason>ctor of an exposed value class</reason>
+    </file>
+    <file path="com.fx.wc.Exposed.getTwice()">
+      <reason>getter of an exposed value class</reason>
+    </file>
+    <file path="com.fx.wc.Exposed.member()">
+      <reason>member of an exposed value class</reason>
+    </file>
+    <file path="com.fx.wc.Exposed.with(com.fx.wc.Eid)">
+      <reason>member of an exposed value class taking one</reason>
+    </file>
+    <file path="com.fx.wc.ExposedHolder.getCurrent()">
+      <reason>value-class getter in an exposed class</reason>
+    </file>
+    <file path="com.fx.wc.ExposedHolder.plain(int)">
+      <reason>plain fun in an exposed class</reason>
+    </file>
+    <file path="com.fx.wc.ExposedHolder.take(com.fx.wc.Eid)">
+      <reason>value-class fun in an exposed class</reason>
+    </file>
+    <file path="com.fx.wc.Quiet.inClass(java.util.List&lt;com.fx.wc.Base&gt;)">
+      <reason>suppressed on the class</reason>
+    </file>
+    <file path="com.fx.wc.Quiet.overridden(java.util.List&lt;? extends com.fx.wc.Base&gt;)">
+      <reason>class suppression overridden</reason>
+    </file>
+    <file path="com.fx.wc.Wild.both(java.util.List&lt;? extends com.fx.wc.Leaf&gt;)">
+      <reason>forced and suppressed</reason>
+    </file>
+    <file path="com.fx.wc.Wild.forced(java.util.List&lt;? extends com.fx.wc.Leaf&gt;)">
+      <reason>forced on a final argument</reason>
+    </file>
+    <file path="com.fx.wc.Wild.onArgument(java.util.Map&lt;java.lang.String,java.util.List&lt;com.fx.wc.Base&gt;&gt;)">
+      <reason>suppressed on an argument</reason>
+    </file>
+    <file path="com.fx.wc.Wild.onFunction(java.util.List&lt;com.fx.wc.Base&gt;,java.lang.Comparable&lt;com.fx.wc.Leaf&gt;)">
+      <reason>suppressed on the function</reason>
+    </file>
+    <file path="com.fx.wc.Wild.onType(java.util.List&lt;com.fx.wc.Base&gt;)">
+      <reason>suppressed on the type</reason>
+    </file>
+    <file path="com.fx.wc.Wild.plain(java.util.List&lt;? extends com.fx.wc.Base&gt;,java.lang.Comparable&lt;? super com.fx.wc.Leaf&gt;)">
+      <reason>default wildcards</reason>
+    </file>
+    <file path="com.fx.wc.Wild.turnedOff(java.util.List&lt;? extends com.fx.wc.Base&gt;)">
+      <reason>suppression turned off</reason>
+    </file>
   </locked_files>
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
@@ -272,6 +332,11 @@
     <element path="com.fx.vc.Account"/>
     <element path="com.fx.vc.Money"/>
     <element path="com.fx.vc.ValueClassesKt"/>
+    <element path="com.fx.wc.Boxing"/>
+    <element path="com.fx.wc.Exposed"/>
+    <element path="com.fx.wc.ExposedHolder"/>
+    <element path="com.fx.wc.Quiet"/>
+    <element path="com.fx.wc.Wild"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

@@ -1,6 +1,7 @@
 package se.deversity.vibetags.ksp.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -30,6 +31,7 @@ abstract class KElement implements Element {
     private final List<AnnotationData> annotations = new ArrayList<>();
     private final List<KElement> enclosed = new ArrayList<>();
     private @Nullable KElement enclosing;
+    private @Nullable SourceLocation location;
 
     KElement(ElementKind kind, String simpleName, Set<Modifier> modifiers) {
         this.kind = kind;
@@ -70,6 +72,15 @@ abstract class KElement implements Element {
 
     final List<KElement> enclosedElements() {
         return enclosed;
+    }
+
+    /** Where the Kotlin declaration this element stands for is written, when known. */
+    final @Nullable SourceLocation location() {
+        return location;
+    }
+
+    final void locate(@Nullable SourceLocation where) {
+        this.location = where;
     }
 
     @Override

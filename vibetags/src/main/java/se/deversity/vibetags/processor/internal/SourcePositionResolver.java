@@ -21,7 +21,23 @@ import java.nio.file.Path;
  */
 public final class SourcePositionResolver {
 
+    /**
+     * Element positions from a front end that is not javac, where the Tree API does not exist.
+     * A {@link ProcessingEnvironment} that implements this supplies them: vibetags-ksp's does, from
+     * KSP's declaration locations, so a Kotlin build on KSP gets {@code .vibetags-locks} line ranges
+     * that point at its {@code .kt} sources. Paths may be absolute; the resolver makes those under
+     * the VibeTags root relative to it, as it does javac's.
+     */
+    @FunctionalInterface
+    public interface Source {
+        /** The position of {@code element}'s declaration, or {@code null} when it is not known. */
+        @Nullable SourceLocation locate(Element element);
+    }
+
     private final @Nullable Trees trees;
+
+    /** Positions from a non-javac front end; consulted only when there is no Tree API. */
+    private final @Nullable Source source;
 
     /**
      * The VibeTags root that reported paths are made relative to, or {@code null} to report them
@@ -30,19 +46,22 @@ public final class SourcePositionResolver {
      */
     private final @Nullable Path root;
 
-    private SourcePositionResolver(@Nullable Trees trees, @Nullable Path root) {
+    private SourcePositionResolver(@Nullable Trees trees, @Nullable Path root, @Nullable Source source) {
         this.trees = trees;
         this.root = root;
+        this.source = source;
     }
 
     /**
-     * Creates a resolver for {@code env}, or a no-op resolver when the compiler does not
-     * expose the javac Tree API. Never throws.
+     * Creates a resolver for {@code env}: the javac Tree API when the compiler exposes it, else the
+     * environment's own {@link Source} when it is one, else a no-op resolver. Never throws.
      *
      * @param root the VibeTags root; paths under it are reported relative to it
      */
     public static SourcePositionResolver forEnv(ProcessingEnvironment env, Path root) {
-        return new SourcePositionResolver(treesFor(env), root);
+        Trees trees = treesFor(env);
+        Source fallback = trees == null && env instanceof Source own ? own : null;
+        return new SourcePositionResolver(trees, root, fallback);
     }
 
     /**
@@ -111,7 +130,7 @@ public final class SourcePositionResolver {
 
     /** A resolver that always returns {@code null} — for tests and non-javac environments. */
     public static SourcePositionResolver noop() {
-        return new SourcePositionResolver(null, null);
+        return new SourcePositionResolver(null, null, null);
     }
 
     /**
@@ -119,7 +138,7 @@ public final class SourcePositionResolver {
      * included in the range), or {@code null} when it cannot be determined.
      */
     public @Nullable SourceLocation resolve(Element element) {
-        if (trees == null) return null;
+        if (trees == null) return fromSource(element);
         try {
             TreePath path = trees.getPath(element);
             if (path == null) return null;
@@ -136,6 +155,18 @@ public final class SourcePositionResolver {
             return new SourceLocation(file, startLine, endLine);
         } catch (RuntimeException e) {
             return null;
+        }
+    }
+
+    private @Nullable SourceLocation fromSource(Element element) {
+        if (source == null) return null;
+        try {
+            SourceLocation location = source.locate(element);
+            if (location == null) return null;
+            String file = relativize(location.file().replace('\\', '/'));
+            return file == null ? null : new SourceLocation(file, location.startLine(), location.endLine());
+        } catch (RuntimeException e) {
+            return null; // best-effort, like the Tree API path
         }
     }
 

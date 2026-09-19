@@ -14,4 +14,12 @@
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
 
+  <!-- PATH_TRAVERSAL_IN: the same path, KSFile's own, read to find where each declaration in it
+       ends (KotlinExtent) for the .vibetags-locks line ranges (#757). -->
+  <Match>
+    <Class name="se.deversity.vibetags.ksp.internal.StubBuilder"/>
+    <Method name="readExtent"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+
 </FindBugsFilter>

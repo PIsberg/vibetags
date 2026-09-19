@@ -175,7 +175,8 @@ Processor options (`vibetags.check`, `vibetags.enforce`, `vibetags.log.path`, ..
 `.vibetags-locks`, granular rule filenames and the reactor sidecars, so a project moving from kapt to
 KSP must see none of them change. The front end reproduces what kapt's stubs contain (file facades,
 companion fields on the outer class, `@JvmStatic` and `@JvmOverloads` copies, `DefaultImpls`, erased
-signatures, the value-class rules below), and two checks hold it there: `StubParityTest` compares 90
+signatures with `@JvmSuppressWildcards` and `@JvmWildcard` applied, `@JvmExposeBoxed` variants, the
+value-class rules below), and two checks hold it there: `StubParityTest` compares 110
 annotated elements and every generated file of a fixture with a recorded kapt build, and CI builds
 [`examples/kotlin-ksp/`](examples/kotlin-ksp/README.md) and fails unless its files equal
 `examples/kotlin`'s byte for byte.
@@ -186,19 +187,24 @@ What differs from kapt:
   signature, an inline function with a reified type parameter) has no element under KSP either, which
   keeps the paths identical, but the build now says so:
   `w: [ksp] VibeTags: @AILocked on fun balanceFor in com.example.AccountLedger reaches no guardrail file`.
-  Give the function a `@JvmName`, or move the guardrail to the class.
-- **`.vibetags-locks` has no line ranges.** Under kapt they pointed into the generated stub, not the
-  `.kt` file; KSP has no stub and no javac Tree API, so they are left out.
+  Give the function a `@JvmName` or `@JvmExposeBoxed`, or move the guardrail to the class.
+- **`.vibetags-locks` line ranges point at the `.kt` source.** Under kapt they pointed into the
+  generated stub, which is no use to `action/locked-files`. KSP reports where a declaration starts;
+  the front end reads the end from the source text by matching brackets, and starts the range at the
+  first annotation above the declaration, as javac does. A synthetic copy (`@JvmOverloads`,
+  `@JvmStatic`, `DefaultImpls`) points at the declaration it copies.
 - **Incremental builds see the whole module.** A KSP incremental run shows a processor only the
   changed files. `vibetags-ksp` registers every source as an input of one aggregating output, so any
   change puts every file back in front of it and the guardrails are regenerated from the whole module.
 - **Inherited guardrails need `vibetags.manifest.dir`**, as under kapt: KSP gives a processor no view
   of the classpath's resources.
-- **Property annotations follow Kotlin 2.2's `param-property` default.** An annotation on a
-  constructor `val` with no use-site target lands on the parameter and on the field, as it does
-  under kapt on Kotlin 2.4.10. The front end always applies that default and does not read the
-  `-Xannotation-default-target` compiler flag, so a project that sets the flag can see different
-  paths under KSP than under kapt.
+- **Property annotations follow `-Xannotation-default-target`.** An annotation on a constructor
+  `val` with no use-site target lands on the parameter and the field under `param-property` (Kotlin
+  2.2's default), and on the parameter alone under `first-only` (the default before 2.2). KSP does not
+  pass compiler arguments to a processor, so the front end follows the language version's default, and
+  a project that sets the flag mirrors it with
+  `ksp { arg("vibetags.ksp.annotationDefaultTarget", "first-only") }`. Options under `vibetags.ksp.`
+  belong to the front end and are not passed on to the processor.
 
 The same caveats as kapt otherwise apply: no method-body-scoped annotations, no package level, and an
 `internal` function's path contains the Kotlin module name.

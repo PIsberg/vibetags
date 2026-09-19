@@ -37,6 +37,7 @@ final class KspHarness {
     private final Path root;
     private final Map<String, String> options = new HashMap<>();
     private String moduleName = "main";
+    private String languageVersion = "2.2";
     private @Nullable String jvmDefault;
     private boolean incremental;
     private List<File> modified = List.of();
@@ -67,6 +68,12 @@ final class KspHarness {
         return this;
     }
 
+    /** The Kotlin language (and API) version KSP analyses with; 2.2 unless set. */
+    KspHarness languageVersion(String version) {
+        this.languageVersion = version;
+        return this;
+    }
+
     KspHarness jvmDefault(String mode) {
         this.jvmDefault = mode;
         return this;
@@ -93,8 +100,8 @@ final class KspHarness {
         config.setLibraries(List.of(jarOf(AILocked.class), jarOf(kotlin.Unit.class)));
         config.setJdkHome(new File(System.getProperty("java.home")));
         config.setJvmTarget("21");
-        config.setLanguageVersion("2.2");
-        config.setApiVersion("2.2");
+        config.setLanguageVersion(languageVersion);
+        config.setApiVersion(languageVersion);
         config.setProjectBaseDir(root.toFile());
         config.setOutputBaseDir(out.toFile());
         config.setCachesDir(out.resolve("caches").toFile());
