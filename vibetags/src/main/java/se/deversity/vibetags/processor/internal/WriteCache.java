@@ -5,6 +5,7 @@ import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.model.ContentHash;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -581,14 +582,6 @@ public final class WriteCache {
      * </ul>
      */
     private static String fingerprint(String s) {
-        int h = s.hashCode();
-        char[] out = new char[8];
-        for (int i = 7; i >= 0; i--) {
-            out[i] = HEX[h & 0xF];
-            h >>>= 4;
-        }
-        return new String(out);
+        return ContentHash.of(s);
     }
-
-    private static final char[] HEX = "0123456789abcdef".toCharArray();
 }
