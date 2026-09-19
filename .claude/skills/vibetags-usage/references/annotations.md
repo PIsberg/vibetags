@@ -1,0 +1,890 @@
+# VibeTags: Annotation reference: one section per annotation
+
+Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the element cheat sheet.
+
+### `@AILocked` — Protect critical code from modification
+
+Use on: **class, method, field**
+
+```java
+@AILocked(reason = "Tied to legacy database schema v2.3. Any change breaks production payment flow.")
+public interface PaymentProcessor {
+    String processPayment(double amount, String currency, String merchantId);
+}
+```
+
+When to use: legacy integrations, compliance-regulated code (PCI-DSS, HIPAA), algorithms that took months to stabilize.
+
+---
+
+### `@AIContext` — Guide AI behavior for a class or method
+
+Use on: **class, method**
+
+```java
+@AIContext(
+    focus = "Optimize for memory usage over CPU speed",
+    avoids = "java.util.regex, String.split(), StringBuilder in loops"
+)
+public class StringParser { ... }
+```
+
+Use `focus` to tell AI what to optimize for; use `avoids` to list libraries, patterns, or constructs it should not introduce.
+
+---
+
+### `@AIDraft` — Request an AI implementation
+
+Use on: **class, method**
+
+```java
+@AIDraft(instructions = "Implement email sending via SMTP and push notifications via FCM. Include retry logic and rate limiting.")
+public class NotificationService {
+    public void sendNotification(String userId, String message) {
+        // AI implements this
+    }
+}
+```
+
+Tip: `@AIDraft` and `@AILocked` on the same element produce a compile-time warning — they are contradictory.
+
+---
+
+### `@AIAudit` — Require continuous security auditing
+
+Use on: **class, method**
+
+```java
+@AIAudit(checkFor = {"SQL Injection", "Thread Safety issues", "Path Traversal"})
+public class DatabaseConnector { ... }
+```
+
+Every time an AI tool modifies tagged code it must explicitly state it audited the changes for each listed vulnerability.
+
+Common values for `checkFor`: `"SQL Injection"`, `"XSS"`, `"CSRF"`, `"Command Injection"`, `"Thread Safety issues"`, `"Insecure Deserialization"`, `"Authentication Bypass"`.
+
+Empty `checkFor` array produces a compile-time warning and is ignored.
+
+---
+
+### `@AIIgnore` — Exclude from AI context entirely
+
+Use on: **class, method, field**
+
+```java
+@AIIgnore(reason = "Auto-generated at build time. Manual edits are overwritten on every build.")
+public class GeneratedMetadata { ... }
+```
+
+Unlike `@AILocked` (visible but immutable), `@AIIgnore` tells AI to treat the element as if it does not exist. Use for: generated code, deprecated scaffolding, internal plumbing.
+
+---
+
+### `@AIPrivacy` — Protect PII fields and methods
+
+Use on: **class, method, field**
+
+```java
+public class UserRepository {
+    @AIPrivacy(reason = "GDPR - never log or include in error messages, test fixtures, or mock data")
+    private final String email;
+
+    @AIPrivacy(reason = "PCI-DSS - must not appear in logs, console output, or external API calls")
+    private final String creditCardToken;
+}
+```
+
+AI remains aware the element exists (for code assistance) but must never reproduce its runtime values in logs, suggestions, test fixtures, mock data, or external API calls.
+
+Using `@AIPrivacy` together with `@AIIgnore` on the same element produces a compile-time warning (redundant — `@AIIgnore` already excludes the element).
+
+---
+
+### `@AICore` — Mark sensitive core logic
+
+Use on: **class, method, field**
+
+```java
+@AICore(
+    sensitivity = "Critical",
+    note = "Core transaction engine. Well-tested. Changes require user approval."
+)
+public class TransactionEngine { ... }
+```
+
+Use `sensitivity` (default `"High"`) to indicate impact level, and `note` to provide specific warnings. AI will treat changes with extreme caution and must not refactor without explicit approval.
+
+---
+
+### `@AIPerformance` — Enforce complexity constraints
+
+Use on: **class, method**
+
+```java
+@AIPerformance(
+    constraint = "Must maintain O(1) time complexity. No heap allocations."
+)
+public class FastBuffer { ... }
+```
+
+Informs AI that logic is on a hot-path and suboptimal complexity is unacceptable. AI must reason about time and space complexity before proposing changes.
+
+---
+
+### `@AIContract` — Freeze a public API signature
+
+Use on: **class, method**
+
+```java
+@AIContract(reason = "Signature locked by OpenAPI v2 contract. checkout-service and mobile-app bind to this exact signature. A type change is a breaking API change.")
+@AIPerformance(constraint = "Must complete in <5ms p99. Called on every cart update.")
+public double calculatePrice(String productId, int quantity, String customerId) {
+    // Internal logic may be freely changed
+}
+```
+
+Tells AI: the method name, parameter types, parameter order, return type, and checked exceptions are **frozen**. Internal logic may be refactored freely. Use when:
+
+- The method signature is pinned by an OpenAPI / AsyncAPI contract
+- Other services bind to it via generated clients or message schemas
+- Changing the signature requires a major-version bump and migration coordination
+
+Unlike `@AILocked` (which prohibits all changes), `@AIContract` explicitly invites AI to improve internal logic — it only protects the public surface.
+
+**Compile-time warnings:**
+
+- `@AIContract` + `@AIDraft` on the same element — contradictory (signature is frozen, but `@AIDraft` implies the element still needs implementing)
+- `@AIContract` + `@AILocked` on the same element — overlapping intent (`@AILocked` already prohibits all changes; consider using only `@AILocked` if no changes at all are intended)
+
+---
+
+### `@AITestDriven` — Enforce a test-driven workflow
+
+Use on: **class, method**
+
+```java
+@AITestDriven(
+    framework = {AITestDriven.Framework.JUNIT_5, AITestDriven.Framework.MOCKITO},
+    coverageGoal = 90,
+    mockPolicy = "Always mock external APIs and database calls",
+    testLocation = "src/test/java/com/example/OrderServiceTest.java"
+)
+public class OrderService { ... }
+```
+
+Enforces a strict Red-Green-Refactor workflow: AI **must** include the corresponding test code in the same response as any proposed change. A change without matching tests is treated as incomplete.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `framework` | `Framework[]` | `{JUNIT_5}` | Testing frameworks the AI must use. Combine freely (e.g., `{JUNIT_5, MOCKITO}`). Options: `JUNIT_5`, `JUNIT_4`, `TESTNG`, `MOCKITO`, `ASSERTJ`, `SPOCK`, `NONE` |
+| `coverageGoal` | `int` | `100` | Minimum statement-coverage % the AI must achieve in the generated or updated tests (0–100) |
+| `testLocation` | `String` | `""` | Explicit path to the corresponding test file. Leave empty to let the AI infer the test class by naming convention |
+| `mockPolicy` | `String` | `""` | Instruction describing how external dependencies should be handled in tests |
+
+**Compile-time warnings:**
+
+- `@AITestDriven` + `@AIIgnore` on the same element — contradictory (`@AIIgnore` excludes the element from AI context entirely; `@AITestDriven` cannot enforce test coverage on an ignored element)
+- `@AITestDriven` + `@AILocked` on the same element — contradictory (`@AILocked` prohibits all modifications; `@AITestDriven` permits changes only when tests are updated — consider using only `@AILocked` if no changes at all are intended)
+- `@AITestDriven` with `coverageGoal` outside 0–100 — invalid value
+
+---
+
+### `@AIThreadSafe` — Preserve a thread-safety strategy
+
+Use on: **class, method**
+
+```java
+@AIThreadSafe(
+    strategy = AIThreadSafe.Strategy.LOCK_FREE,
+    note = "All mutations go through ConcurrentHashMap; never introduce a synchronized block on the cache map."
+)
+public class SessionCache { ... }
+```
+
+Declares an *existing* thread-safety design that AI must not silently break. Different from `@AIAudit(checkFor = "Thread Safety")` (which asks the AI to look for new bugs).
+
+**Strategies:** `SYNCHRONIZED`, `LOCK_FREE`, `IMMUTABLE`, `THREAD_LOCAL`, `OTHER`. Default `SYNCHRONIZED`.
+
+When to use: caches and registries shared across threads, atomics-backed counters, singletons guarded by a named lock, per-thread context held in `ThreadLocal`.
+
+---
+
+### `@AIImmutable` — Declare a class immutable
+
+Use on: **class**
+
+```java
+@AIImmutable(note = "Used by every test runner; safe to share across threads without copies.")
+public final class AsyncTestConfig {
+    private final int timeoutMs;
+    public AsyncTestConfig(int timeoutMs) { this.timeoutMs = timeoutMs; }
+}
+```
+
+Declares the type immutable so AI assistants will not introduce setters, mutating methods, or non-final fields. The processor warns at compile time when an `@AIImmutable` class declares a non-final, non-static instance field.
+
+When to use: value objects, config holders, snapshots passed across thread boundaries, cache keys.
+
+**Compile-time warnings:**
+
+- `@AIImmutable` on a type with a non-final, non-static instance field — violates the immutability declaration
+- `@AIThreadSafe(IMMUTABLE)` + `@AIImmutable` on the same type — redundant (`@AIImmutable` already implies thread-safety)
+
+---
+
+### `@AIDeprecated` — Route callers toward a replacement
+
+Use on: **class, method, field**
+
+```java
+@AIDeprecated(
+    replacedBy = "com.example.payment.PaymentProcessor",
+    migrationGuide = "Switch callers to PaymentProcessor.charge(). The new API uses Money instead of double.",
+    deadline = "v2.0 (2026-Q4)"
+)
+public class OldPaymentApi { ... }
+```
+
+Richer than Java's `@Deprecated`. Where `@AILocked` *preserves* an element, `@AIDeprecated` actively *routes AI toward killing it* — the AI is told to suggest migrating callers rather than extending the deprecated element.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `replacedBy` | `String` | `""` | Fully-qualified name of the replacement |
+| `migrationGuide` | `String` | `"Migrate any caller to the replacement."` | How callers should migrate |
+| `deadline` | `String` | `""` | Removal deadline (release version, ISO date, etc.) |
+
+When to use: legacy APIs being phased out, modules behind a sunset flag, methods kept only for backwards compatibility while callers migrate.
+
+**Compile-time warnings:**
+
+- `@AIDeprecated` + `@AILocked` on the same element — contradictory (locked preserves; deprecated routes callers away)
+
+---
+
+### `@AIObservability` — Protect instrumentation
+
+Use on: **class, method**
+
+```java
+@AIObservability(
+    metrics = {"orders.placed.total", "orders.placed.failed"},
+    traces  = {"order.place"},
+    logs    = {"OrderPlaced", "OrderPlacementFailed"},
+    note    = "Watched by the Orders SLO dashboard."
+)
+public void recordOrderPlaced(String orderId, boolean success) { ... }
+```
+
+Marks code whose metrics, trace spans, or log statements downstream dashboards/alerts depend on. AI assistants must not silently remove or rename the listed instrumentation.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `metrics` | `String[]` | `{}` | Metric counter/gauge names this element publishes |
+| `traces`  | `String[]` | `{}` | Trace span names this element opens |
+| `logs`    | `String[]` | `{}` | Log statement identifiers this element emits |
+| `note`    | `String`   | `""` | Free-form note (e.g., "watched by SLO dashboard X") |
+
+When to use: SLO emitters, audit-log writers, request handlers whose latency histograms feed an SLA, background workers whose failure metrics page on-call.
+
+**Compile-time warnings:**
+
+- `@AIObservability` with no `metrics`, `traces`, or `logs` — no-op (nothing to preserve)
+
+---
+
+### `@AIRegulation` — Tie code to a compliance clause
+
+Use on: **class, method, field**
+
+```java
+@AIRegulation(
+    standard = "GDPR",
+    clause = "Art. 17",
+    description = "Right to erasure — when invoked, deletes ALL PII for the given user across every connected store."
+)
+public class GdprService { ... }
+```
+
+Ties code to a specific regulatory clause (GDPR, PCI-DSS, HIPAA, SOX, …). Stronger than `@AIAudit` because it names the exact article — AI assistants must document compliance impact for every change and must not weaken the requirement.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `standard`    | `String` | *(required)* | Compliance standard name (e.g., `"GDPR"`, `"PCI-DSS"`, `"HIPAA"`, `"SOX"`) |
+| `clause`      | `String` | `""`        | Specific clause/article/section |
+| `description` | `String` | non-blank   | What this element does to satisfy the requirement |
+
+When to use: GDPR Art. 17 / Art. 20 implementations, PCI-DSS card-handling code, HIPAA-protected PHI read/write paths, SOX-relevant financial reporting and audit-log writers.
+
+**Compile-time warnings:**
+
+- `@AIRegulation` with a blank `standard` — required attribute missing
+
+---
+
+### `@AIArchitecture` — Enforce architectural layer boundaries
+
+Use on: **class**
+
+```java
+@AIArchitecture(
+    belongsTo = "domain",
+    cannotReference = {"infrastructure", "web"}
+)
+public class OrderService { ... }
+```
+
+Declares which architectural layer this class belongs to and which layers it must never import from. AI must not introduce references to forbidden layers — e.g., a domain class importing a JPA repository or an HTTP controller.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `belongsTo` | `String` | `""` | The layer or component this class belongs to (e.g., `"domain"`, `"application"`, `"web"`) |
+| `cannotReference` | `String[]` | `{}` | Layers or components this class must not import from |
+
+---
+
+### `@AILegacyBridge` — Protect compatibility bridges from modernization
+
+Use on: **class, method**
+
+```java
+@AILegacyBridge(reason = "Mirrors a v1 payment-SDK quirk; 'cleaning it up' broke the gateway in 2023")
+public class LegacyPaymentAdapter {
+    // Works around a quirk in the v1 payment provider SDK — must not be "cleaned up"
+    public String formatAmount(double amount) { ... }
+}
+```
+
+Marks code that exists solely to bridge to a legacy or upstream system with known quirks or bugs. AI must not modernize the structure, apply new patterns, or remove the "ugly" parts — they exist for a reason. Internal business logic may still be changed. The optional `reason` records *why* across AI sessions and is surfaced in the generated output.
+
+When to use: SDK adapter shims, workarounds for upstream library bugs, compatibility wrappers kept alive for old API clients.
+
+---
+
+### `@AIStrictClasspath` — Prevent dynamic loading and reflection hacks
+
+Use on: **class, method**
+
+```java
+@AIStrictClasspath(reason = "Runs in the locked-down sandbox where the SecurityManager throws on reflection")
+public class DataParser {
+    // Must only use JDK and existing compile-time classpath — no runtime class loading
+}
+```
+
+Prohibits AI from introducing dynamic class loading, custom `ClassLoader`s, runtime reflection tricks, or execution of dynamically constructed code. All dependencies must be resolvable at compile time from the existing classpath.
+
+When to use: security-sensitive execution environments, GraalVM native-image targets, OSGi modules, any code that must be fully AOT-analyzable.
+
+---
+
+### `@AIInternationalized` — Prohibit hardcoded user-facing strings
+
+Use on: **class, method**
+
+```java
+@AIInternationalized(reason = "Ships in 11 locales; a hardcoded English string failed the l10n audit last quarter")
+public class NotificationTemplateRenderer {
+    // All user-visible text must come from message bundles — never hardcoded
+}
+```
+
+Instructs AI that all user-visible text (labels, messages, error strings, button text) must be resolved through the project's i18n framework (e.g., `MessageSource`, `ResourceBundle`, `gettext`). AI must never introduce hardcoded string literals for anything a user would see.
+
+When to use: UI components, REST error responses, email templates, notification services — any code whose output reaches end users.
+
+---
+
+### `@AIPublicAPI` — Preserve backward compatibility
+
+Use on: **class, method**
+
+```java
+@AIPublicAPI(reason = "Consumed by three external partner integrations pinned to v1")
+public class ProductSearchClient {
+    public List<Product> search(String query, int maxResults) { ... }
+}
+```
+
+Declares that this element is part of a public API surface. All AI changes must be **additive and backward-compatible** — renaming methods, changing parameter types, or altering serialization formats is forbidden. Internal implementation may be improved freely.
+
+Unlike `@AIContract` (which freezes one specific signature), `@AIPublicAPI` applies the backward-compatibility rule to the entire class.
+
+When to use: SDK entry points, REST controller response shapes, message schema classes, library interfaces consumed by third parties.
+
+---
+
+### `@AISchemaSafe` — Prevent destructive schema changes
+
+Use on: **class, field**
+
+```java
+@AISchemaSafe(reason = "Replicated to the billing read-model; column changes need a backward-compatible migration")
+@Entity
+public class UserEntity {
+    @Column(name = "email", nullable = false)
+    private String email;
+}
+```
+
+Instructs AI that this class or field maps to persistent storage (database, message schema, serialization format). Destructive changes — dropping columns, renaming fields, changing types — are forbidden without explicit backward-compatible migrations. AI must propose additive-only changes.
+
+When to use: JPA/Hibernate entities, Avro/Protobuf schema classes, JSON serialization DTOs, Flyway-managed tables.
+
+---
+
+### `@AIStrictExceptions` — Enforce precise error handling
+
+Use on: **class, method**
+
+```java
+@AIStrictExceptions(reason = "A bare catch(Exception) once swallowed a rollback and double-charged customers")
+public class PaymentGatewayClient {
+    public Receipt charge(Money amount) throws PaymentDeclinedException { ... }
+}
+```
+
+Prohibits AI from catching or throwing `Exception`, `Throwable`, or other overly broad types. All exceptions must be specific, well-named, and carry descriptive messages with preserved stack traces. Silent catch blocks (`catch (Exception e) {}`) are also forbidden.
+
+When to use: external integrations, retry boundaries, error-handling layers, code that feeds into structured logging or alerting.
+
+---
+
+### `@AIStrictTypes` — Require precise domain types
+
+Use on: **class, method, field**
+
+```java
+@AIStrictTypes(reason = "Currency math broke in INC-4412 when a double leaked into the amount")
+public class PricingCalculator {
+    // Use BigDecimal for money, Instant/ZonedDateTime for time — never double or String
+    public BigDecimal calculateDiscount(Money basePrice, Percentage rate) { ... }
+}
+```
+
+Instructs AI to avoid loose types (`Object`, raw collections, `Map<String, Object>`, `double` for currency, `String` for dates) and instead use well-defined, type-safe domain models or strongly-typed transfer objects.
+
+When to use: financial calculations, time/date handling, any domain model where type safety prevents silent data corruption.
+
+---
+
+### `@AIParallelTests` — Enforce test isolation for concurrent execution
+
+Use on: **class, method**
+
+```java
+@AIParallelTests(reason = "A shared static counter caused flaky CI in build #4471 — keep cases isolated")
+public class OrderServiceTest {
+    // Tests must not share mutable state or bind to fixed ports
+}
+```
+
+Instructs AI that any generated or modified tests for this element must be safe for parallel execution. Forbidden: shared mutable static state, fixed port bindings, database rows with hard-coded IDs, execution-order dependencies. Each test must be fully self-contained.
+
+When to use: test classes run under JUnit 5 parallel execution, `@Isolated` test suites, any test module with `forkCount > 1` in Maven Surefire.
+
+---
+
+### `@AIIdempotent` — Declare an operation must be idempotent
+
+Use on: **class, method**
+
+```java
+@AIIdempotent(reason = "Called by the retry scheduler — multiple invocations must produce the same result.")
+public void processOrder(String orderId) {
+    // Must tolerate repeated calls without double-processing
+}
+```
+
+Declares that the annotated operation is expected to be idempotent. AI must not introduce side effects that cause repeated calls to produce different results (e.g., double-inserts, repeated external API calls without deduplication, counter increments on every call).
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `reason` | `String` | `""` | Free-form note explaining why idempotency is required |
+
+When to use: retry handlers, message consumers, webhook processors, payment captures, any operation exposed to at-least-once delivery.
+
+**Compile-time warnings:**
+
+- `@AIIdempotent` + `@AIDraft` on the same element — contradictory (idempotent declares a stable contract while draft marks the element as unfinished)
+
+---
+
+### `@AIFeatureFlag` — Mark code gated behind a feature flag
+
+Use on: **class, method, field**
+
+```java
+@AIFeatureFlag(flag = "checkout.new-flow", defaultValue = false)
+public void processNewCheckout(Cart cart) {
+    // Only active when the 'checkout.new-flow' flag is enabled
+}
+```
+
+Tells AI that the annotated element is gated behind a runtime feature flag. AI must preserve the flag check and must never assume the flag is always active (or always inactive). Removing the conditional guard, inlining the `true` branch, or hardcoding the default is forbidden.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `flag` | `String` | `""` | The feature flag key (e.g., `"checkout.new-flow"`) |
+| `defaultValue` | `boolean` | `false` | The flag's default value when not explicitly set |
+
+When to use: A/B experiments, gradual rollouts, kill switches, beta features, dark launches.
+
+**Compile-time warnings:**
+
+- `@AIFeatureFlag` + `@AILocked` on the same element — contradictory (locked freezes code while feature flag implies conditional execution)
+- `@AIFeatureFlag` with blank `flag` — no-op; the flag key is unspecified
+
+---
+
+### `@AISecure` — Mark security-critical code
+
+Use on: **class, method**
+
+```java
+@AISecure(aspect = "authentication")
+public class JwtTokenValidator {
+    // Any change here must be reviewed for security implications
+    public boolean validate(String token) { ... }
+}
+```
+
+Declares that the annotated element implements a security-critical concern (e.g., authentication, encryption, authorization, session management, input sanitization). AI must not weaken security properties and must explicitly flag any proposed change for security review.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `aspect` | `String` | `""` | The security concern (e.g., `"authentication"`, `"encryption"`, `"authorization"`) |
+
+When to use: JWT/OAuth token handling, cryptographic operations, authorization checks, session management, input validation against injection attacks, any code whose weakening would create a security vulnerability.
+
+**Compile-time warnings:**
+
+- `@AISecure` with blank `aspect` — advisory; consider specifying the security concern (e.g. `"authentication"`, `"encryption"`)
+- `@AISecure` + `@AIIgnore` on the same element — contradictory; `@AIIgnore` hides the element but `@AISecure` requires AI visibility for security review
+
+### `@AICallersOnly` — Restrict allowed invoking callers
+
+Use on: **class, method**
+
+```java
+@AICallersOnly({"com.example.service.PricingService", "com.example.payment.PaymentProcessor"})
+public static void executeSecureDatabaseWipe() { ... }
+```
+
+Restricts which packages or classes are permitted to invoke this method or class. Enforced by the compiler/processor to prevent AI from introducing illegal architectural bypasses.
+
+---
+
+### `@AISandboxOnly` — Restrict to mock or sandbox environments
+
+Use on: **class, method**
+
+```java
+@AISandboxOnly(reason = "Seeds fake credentials; a prod hotfix once imported it and leaked test data to staging")
+public class SandboxTestHelper { ... }
+```
+
+Restricts the target element strictly to sandbox, dev, or mock/test environments. Prevents the AI from importing or referencing sandbox utilities in production pathways.
+
+**Compile-time warnings:**
+
+- `@AISandboxOnly` + `@AIDomainModel` on the same element — contradictory (sandbox mocks should not be subjected to framework-free domain model constraints)
+
+---
+
+### `@AIMemoryBudget` — Enforce strict allocation policies
+
+Use on: **class, method**
+
+```java
+@AIMemoryBudget(AIMemoryBudget.AllocationPolicy.ZERO_ALLOCATION)
+public static int calculateFastFibonacci(int n) { ... }
+```
+
+Restricts heap allocations, autoboxing, or object instantiation inside high-performance critical sections.
+
+**Allocation Policies:** `ZERO_ALLOCATION`, `NO_AUTOBOXING`, `NO_NEW_OBJECTS`.
+
+---
+
+### `@AIPure` — Mark side-effect-free pure mathematical functions
+
+Use on: **method**
+
+```java
+@AIPure(reason = "Memoized by callers that assume referential transparency — no logging or caching side effects")
+public static int add(int a, int b) { return a + b; }
+```
+
+Declares that a method is a pure mathematical function. Must be deterministic (same input leads to same output) and have zero side effects.
+
+---
+
+### `@AIDomainModel` — Enforce Domain-Driven Design boundaries
+
+Use on: **class**
+
+```java
+@AIDomainModel(allow = {"java.math.BigDecimal"})
+public class ImmutableProductPrice { ... }
+```
+
+Enforces DDD boundaries by preventing external/framework imports. The compiler will scan and block any imports from Spring, JPA/Hibernate, Jackson, etc. unless explicitly whitelisted.
+
+---
+
+### `@AIExtensible` — Mark open-closed polymorphic extension hooks
+
+Use on: **class**
+
+```java
+@AIExtensible(AIExtensible.Strategy.STRATEGY_PATTERN)
+public interface TaxCalculatorStrategy { ... }
+```
+
+Signals that a class or interface must be extended using polymorphic designs (Open-Closed Principle). Prompts the AI to introduce strategy or visitor patterns rather than accumulating massive conditional/switch statements.
+
+**Strategies:** `STRATEGY_PATTERN`, `VISITOR_PATTERN`, `FACTORY`.
+
+---
+
+### `@AIInputSanitized` — Enforce input parameter sanitization
+
+Use on: **parameter, field**
+
+```java
+public static void executeDatabaseQuery(
+        @AIInputSanitized({AIInputSanitized.SanitizerType.SQL_INJECTION}) String sqlRawInput) { ... }
+```
+
+Enforces sanitization pipelines on input parameters or fields before they reach queries, HTML renderers, or files.
+
+**Sanitizer Types:** `SQL_INJECTION`, `XSS`, `PATH_TRAVERSAL`, `LDAP`.
+
+---
+
+### `@AISecureLogging` — Mask sensitive variables in log statements
+
+Use on: **field, parameter**
+
+```java
+public static void registerUserSession(
+        String username,
+        @AISecureLogging(AISecureLogging.MaskingPolicy.HASH) String passwordRaw) { ... }
+```
+
+Protects sensitive variables from being logged directly or leaked in console outputs.
+
+**Masking Policies:** `OMIT`, `HASH`, `MASK_CREDIT_CARD`, `MASK_EMAIL`.
+
+**Compile-time warnings:**
+
+- `@AISecureLogging` + `@AIIgnore` on the same element — redundant (`@AIIgnore` already completely excludes the element)
+
+---
+
+### `@AIExplain` — Require Chain-of-Thought mathematical/architectural explanations
+
+Use on: **class, method**
+
+```java
+@AIExplain(AIExplain.ComplexityLevel.HIGH)
+public static double runComplexMatrixMath(double[][] a, double[][] b) { ... }
+```
+
+Enforces step-by-step mathematical/architectural Chain-of-Thought (CoT) explanations of any modifications.
+
+**Complexity Levels:** `HIGH`, `MEDIUM`, `LOW`.
+
+---
+
+### `@AIPrototype` — Declare rapid disposable spikes
+
+Use on: **class**
+
+```java
+@AIPrototype(reason = "Throwaway Q3 Kafka spike — no error handling on purpose; production must not depend on it")
+public class DraftKafkaIntegrationSpike { ... }
+```
+
+Declares a rapid framework prototype. Relaxes standard strict quality rules (e.g. required i18n, coverage) within the class, but prevents it from leaking into stable production code.
+
+---
+
+### `@AISunset` — Ultra-strict api sunset deprecation guardrail
+
+Use on: **class, method, field**
+
+```java
+@AISunset(replacement = PricingService.class, jira = "DEBT-742")
+public static double deprecatedLegacyCalculatePrice(double basePrice) { ... }
+```
+
+AI models are strictly prohibited from adding any new references/calls to elements annotated with `@AISunset`.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `replacement` | `Class<?>` | `Object.class` | Fully qualified class replacement for the sunset API element |
+| `jira` | `String` | *(required)* | JIRA or issue tracking ticket for deprecation/sunset progress (e.g. "DEBT-123") |
+
+**Compile-time warnings:**
+
+- `@AISunset` + `@AIDraft` on the same element — contradictory (sunset elements must not be actively drafted or expanded)
+- `@AISunset` with blank `jira` — missing required JIRA issue key warning
+
+---
+
+### `@AITemporary` — Warn or block expired temporary logic and hotfixes
+
+Use on: **class, method**
+
+```java
+@AITemporary(expiresOn = "2028-12-31", reason = "Hotfix workaround until upstream updates their API.")
+public static void temporaryUpstreamBypass() { ... }
+```
+
+Hard stop for hotfixes, temporary stubs, or quick hacks. Warns or fails compilation once the local clock date exceeds the expiration date.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `expiresOn` | `String` | *(required)* | Expiration date in ISO format YYYY-MM-DD (e.g. "2026-06-30") |
+| `reason` | `String` | *(required)* | Rationale behind this temporary workaround |
+
+**Compile-time warnings:**
+
+- `@AITemporary` with a blank `expiresOn` — missing required expiration date
+- `@AITemporary` with an invalid `expiresOn` format (not YYYY-MM-DD)
+- `@AITemporary` where local date is after `expiresOn` — expired logic warning
+
+---
+
+### `@AIGenerated` — Redirect edits to the true source
+
+Use on: **class, method, field**
+
+```java
+@AIGenerated(from = "src/main/resources/openapi/orders.yaml",
+             regenerateWith = "mvn generate-sources",
+             editInstead = "src/main/resources/openapi/orders.yaml")
+public class OrdersApiStub { ... }
+```
+
+A **redirect**, not a wall. `@AILocked` can only say "stop", which makes an agent give up or route around the obstacle; this names where the change belongs. `@AIIgnore` is wrong in the opposite direction — an agent must still *read* generated types to understand behavior, it must only never *write* them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `from` | `String` | *(required)* | The schema, template, IDL, or upstream repo this is generated from |
+| `regenerateWith` | `String` | `""` | Command that regenerates it (e.g. `"mvn generate-sources"`) |
+| `editInstead` | `String` | `""` | The file a human should actually change, when it differs from `from` |
+
+**Compile-time warnings:**
+
+- `@AIGenerated` + `@AIIgnore` — contradictory; generated code must stay readable
+- `@AIGenerated` + `@AIDraft` — contradictory; drafting output that gets overwritten is pointless
+- `@AIGenerated` with neither `regenerateWith` nor `editInstead` — a dead end rather than a redirect
+
+---
+
+### `@AILoadBearing` — "This looks wrong and is deliberate"
+
+Use on: **class, method, field, parameter**
+
+```java
+@AILoadBearing(invariant = "Sessions are never deallocated while the dispatch source is live",
+               breaksIf = "Freeing here reintroduces a use-after-free crash under load (#412)",
+               suppressAudit = true)
+private final List<Session> retained = new ArrayList<>();
+```
+
+Unlike `@AILocked`, edits are welcome — as long as the invariant survives. Also covers the **intentional omission** case (a decorator deliberately not applied), which nothing else can express because there is no element to annotate for something that is not there.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `invariant` | `String` | *(required)* | What must remain true after any change |
+| `breaksIf` | `String` | `""` | The concrete failure — crash, leak, silent desync |
+| `suppressAudit` | `boolean` | `false` | Tells reviewers and scanners the oddity is not a defect |
+
+**Compile-time warnings:**
+
+- `@AILoadBearing` with a blank `breaksIf` — advisory; the failure mode is what makes the rule stick
+- `@AILoadBearing(suppressAudit = true)` + `@AIAudit` — contradictory instructions to the same reviewer
+
+---
+
+### `@AIBannedApi` — Forbid symbols you cannot annotate
+
+Use on: **class, method**
+
+```java
+@AIBannedApi(forbidden = {"java.lang.System.out", "java.lang.System.err"},
+             useInstead = "the injected org.slf4j.Logger",
+             reason = "Console output bypasses structured logging")
+public class OrderService { ... }
+```
+
+Hosted on the **consumer** and pointing outward, because the symbols teams actually ban — `java.util.Date`, `System.out`, a framework's `@Scheduled` — are stdlib or third-party and cannot be annotated at all. `@AIArchitecture(cannotReference)` bans a *layer*, not a *symbol*, and carries no replacement.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `forbidden` | `String[]` | *(required)* | The forbidden symbols, types, or packages |
+| `useInstead` | `String` | `""` | The sanctioned replacement |
+| `reason` | `String` | `""` | Why the API is banned here |
+
+**Compile-time warnings:**
+
+- `@AIBannedApi` with an empty `forbidden[]` — no-op; nothing is banned
+- `@AIBannedApi` with a blank `useInstead` — advisory; a ban with no route invites a worse substitute
+
+---
+
+### `@AIThreadAffinity` — Safe on exactly one thread
+
+Use on: **class, method**
+
+```java
+@AIThreadAffinity(value = AIThreadAffinity.Affinity.NAMED,
+                  thread = "Swing EDT",
+                  marshalVia = "SwingUtilities.invokeLater",
+                  symptomIfViolated = "Silent repaint corruption; no exception on most JDKs")
+public void refreshTable() { ... }
+```
+
+The inverse of `@AIThreadSafe`, which promises safety from *any* thread. These are opposite claims: tagging an EDT-pinned method `@AIThreadSafe` states something false, and leaving it untagged invites "let's move this off the main thread". An AI asked to make it thread-safe adds a lock — precisely the wrong fix, because the requirement is not mutual exclusion but *which* thread runs the call.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Affinity` | *(required)* | `MAIN_ONLY`, `NEVER_MAIN`, `BACKGROUND_ONLY`, or `NAMED` |
+| `thread` | `String` | `""` | The thread's name when `value` is `NAMED` |
+| `marshalVia` | `String` | `""` | How a caller on the wrong thread hands work across |
+| `symptomIfViolated` | `String` | `""` | What going wrong looks like — usually only under load |
+
+**Compile-time warnings:**
+
+- `@AIThreadAffinity` + `@AIThreadSafe` — contradictory; opposite claims, so one of them is false
+- `@AIThreadAffinity(NAMED)` with a blank `thread` — the required thread is unidentifiable
+- `@AIThreadAffinity` with a blank `marshalVia` — advisory; the caller is told "no" with no way to comply
+
+---
+
+### `@AIKeepInSync` — Duplicated at sites that must move together
+
+Use on: **class, method, field**
+
+```java
+@AIKeepInSync(mirrors = {"pom.xml:<version>", "README.md badge", "docs/CHANGELOG.md"},
+              reason = "The release version is asserted in three places and drifts silently",
+              enforcedBy = "ProjectFactsConsistencyTest")
+public static final String VERSION = "1.3.0";
+```
+
+The element is free to change — the failure mode is a *partial* change that desyncs a mirror no compiler checks. `@AIContract` freezes one signature so it cannot change at all; neither it nor `@AISchemaSafe` expresses "edit A ⇒ you must also edit B". Mirrors routinely point outside the compilation unit, so VibeTags can only *name* them, not verify them.
+
+| Attribute | Type | Default | Description |
+|---|---|---|---|
+| `mirrors` | `String[]` | *(required)* | The sites that must move together with this element |
+| `reason` | `String` | `""` | Why the duplication exists and what desync would break |
+| `enforcedBy` | `String` | `""` | The parity test or CI check; its absence means drift is not caught |
+
+**Compile-time warnings:**
+
+- `@AIKeepInSync` with an empty `mirrors[]` — no-op; nothing is kept in sync
+- `@AIKeepInSync` + `@AIContract` — NOTE; verify the mirrors track something other than the frozen signature
