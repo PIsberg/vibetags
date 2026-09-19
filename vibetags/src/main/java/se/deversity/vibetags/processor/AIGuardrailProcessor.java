@@ -1341,7 +1341,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (dir == null) {
                 continue; // Re-checked for the null analysis: the map lookup is @Nullable.
             }
-            Set<String> present = filenamesIn(dir);
+            Set<String> present = stemsWithAFileIn(dir);
             for (ModuleSidecar sidecar : allSidecars) {
                 // getGranularStems() is the union of two different namespaces: the stems this
                 // module writes at the ROOT, and the stems it writes into its OWN granular
@@ -1354,7 +1354,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // missing that were never meant to be there. See issue #443.
                 Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
                 for (String stem : sidecar.getGranularStems()) {
-                    if (mine.contains(stem) || moduleScoped.contains(stem) || hasFileFor(present, stem)) {
+                    if (mine.contains(stem) || moduleScoped.contains(stem) || present.contains(stem)) {
                         continue;
                     }
                     String entry = sidecar.getRegionId() + "'s " + stem;
@@ -1378,30 +1378,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
     }
 
-    /** Filenames directly inside {@code dir}, or empty when it cannot be listed. */
-    private static Set<String> filenamesIn(Path dir) {
+    /**
+     * Every stem that has a file directly inside {@code dir}, whatever the extension: for
+     * {@code com.acme.Foo.instructions.md} that is each prefix ending before a dot, so
+     * {@code com.acme.Foo} is among them. Empty when the directory cannot be listed.
+     *
+     * <p>A set rather than a {@code startsWith} scan per stem, because the caller asks once per
+     * sidecar stem per service and both counts grow with the number of annotated classes.
+     */
+    private static Set<String> stemsWithAFileIn(Path dir) {
         if (!Files.isDirectory(dir)) {
             return Set.of();
         }
+        Set<String> stems = new java.util.HashSet<>();
         try (java.util.stream.Stream<Path> entries = Files.list(dir)) {
-            return entries.map(Path::getFileName)
+            entries.map(Path::getFileName)
                 .filter(java.util.Objects::nonNull)
                 .map(Path::toString)
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+                .forEach(name -> {
+                    for (int dot = name.indexOf('.'); dot >= 0; dot = name.indexOf('.', dot + 1)) {
+                        stems.add(name.substring(0, dot));
+                    }
+                });
         } catch (IOException | RuntimeException unreadable) {
             return Set.of(); // A diagnostic must never be the thing that fails a build.
         }
-    }
-
-    /** Whether any of {@code present} is a rendering of {@code stem}, whatever the extension. */
-    private static boolean hasFileFor(Set<String> present, String stem) {
-        String prefix = stem + ".";
-        for (String name : present) {
-            if (name.startsWith(prefix)) {
-                return true;
-            }
-        }
-        return false;
+        return stems;
     }
 
 
