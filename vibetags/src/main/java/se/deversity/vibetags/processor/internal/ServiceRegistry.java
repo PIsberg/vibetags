@@ -279,7 +279,7 @@ public final class ServiceRegistry {
                 "VibeTags: AGENTS.md left untouched because other AI config files are present; "
                 + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
                 + "(remove the other AI config files), or paste a "
-                + GuardrailFileWriter.MARKER_START_MD + " / <!-- VIBETAGS-END --> pair into it, "
+                + GuardrailFileWriter.MARKER_START_MD + " / " + GuardrailFileWriter.MARKER_END_MD + " pair into it, "
                 + "to have VibeTags manage it.");
         }
 
@@ -370,6 +370,17 @@ public final class ServiceRegistry {
      */
     public static boolean writesDirectory(String key) {
         return key.endsWith("_granular");
+    }
+
+    /**
+     * True when the service is an exclusion list: a {@code *_ignore} file or {@code .aiexclude}.
+     * These are rewritten on every build, whether or not the round had annotations.
+     *
+     * <p>{@code AIGuardrailProcessor.generateFiles()} carries the same predicate inline because its
+     * body is locked. A service added here has to be added there too.
+     */
+    public static boolean isIgnoreService(String key) {
+        return key.endsWith("_ignore") || "aiexclude".equals(key);
     }
 
     /**

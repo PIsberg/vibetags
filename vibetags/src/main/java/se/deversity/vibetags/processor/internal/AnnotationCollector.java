@@ -304,11 +304,6 @@ public final class AnnotationCollector {
         this.transitiveOptIn = optedIn;
     }
 
-    /** True when this compilation's own sources carried at least one guardrail annotation. */
-    public boolean anyLocalAnnotationsFound() {
-        return anyAnnotationsFound;
-    }
-
     /**
      * Records guardrails read from dependency manifests, so they reach the snapshot every renderer
      * and the build fingerprint read from.

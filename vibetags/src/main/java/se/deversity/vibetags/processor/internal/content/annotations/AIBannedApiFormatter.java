@@ -29,11 +29,9 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                        + (useInstead.isEmpty() ? "" : " Use " + useInstead + " instead.")
                        + (reason.isEmpty() ? "" : " (" + reason + ")");
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append(CommonFormatterHelper.element("forbidden", forbidden));
@@ -44,22 +42,6 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                     sb.append("      <reason>").append(Escape.xml(reason)).append("</reason>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -78,9 +60,6 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                   .append(useInstead.isEmpty() ? "" : "- **Use instead**: " + useInstead + "\n")
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n")
                   .append("- **Rule**: These compile but are prohibited at this element.\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Banned in ").append(Escape.json(className)).append(": ")

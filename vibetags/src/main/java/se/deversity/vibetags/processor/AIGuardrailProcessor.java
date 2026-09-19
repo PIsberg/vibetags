@@ -1325,7 +1325,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         Set<String> granularServices = new java.util.LinkedHashSet<>();
         for (String service : activeServices) {
-            if (service.endsWith("_granular") && serviceFiles.get(service) != null) {
+            if (ServiceRegistry.writesDirectory(service) && serviceFiles.get(service) != null) {
                 granularServices.add(service);
             }
         }
@@ -1341,7 +1341,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (dir == null) {
                 continue; // Re-checked for the null analysis: the map lookup is @Nullable.
             }
-            Set<String> present = filenamesIn(dir);
+            Set<String> present = stemsWithAFileIn(dir);
             for (ModuleSidecar sidecar : allSidecars) {
                 // getGranularStems() is the union of two different namespaces: the stems this
                 // module writes at the ROOT, and the stems it writes into its OWN granular
@@ -1354,7 +1354,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // missing that were never meant to be there. See issue #443.
                 Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
                 for (String stem : sidecar.getGranularStems()) {
-                    if (mine.contains(stem) || moduleScoped.contains(stem) || hasFileFor(present, stem)) {
+                    if (mine.contains(stem) || moduleScoped.contains(stem) || present.contains(stem)) {
                         continue;
                     }
                     String entry = sidecar.getRegionId() + "'s " + stem;
@@ -1378,30 +1378,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
     }
 
-    /** Filenames directly inside {@code dir}, or empty when it cannot be listed. */
-    private static Set<String> filenamesIn(Path dir) {
+    /**
+     * Every stem that has a file directly inside {@code dir}, whatever the extension: for
+     * {@code com.acme.Foo.instructions.md} that is each prefix ending before a dot, so
+     * {@code com.acme.Foo} is among them. Empty when the directory cannot be listed.
+     *
+     * <p>A set rather than a {@code startsWith} scan per stem, because the caller asks once per
+     * sidecar stem per service and both counts grow with the number of annotated classes.
+     */
+    private static Set<String> stemsWithAFileIn(Path dir) {
         if (!Files.isDirectory(dir)) {
             return Set.of();
         }
+        Set<String> stems = new java.util.HashSet<>();
         try (java.util.stream.Stream<Path> entries = Files.list(dir)) {
-            return entries.map(Path::getFileName)
+            entries.map(Path::getFileName)
                 .filter(java.util.Objects::nonNull)
                 .map(Path::toString)
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+                .forEach(name -> {
+                    for (int dot = name.indexOf('.'); dot >= 0; dot = name.indexOf('.', dot + 1)) {
+                        stems.add(name.substring(0, dot));
+                    }
+                });
         } catch (IOException | RuntimeException unreadable) {
             return Set.of(); // A diagnostic must never be the thing that fails a build.
         }
-    }
-
-    /** Whether any of {@code present} is a rendering of {@code stem}, whatever the extension. */
-    private static boolean hasFileFor(Set<String> present, String stem) {
-        String prefix = stem + ".";
-        for (String name : present) {
-            if (name.startsWith(prefix)) {
-                return true;
-            }
-        }
-        return false;
+        return stems;
     }
 
 
@@ -1434,7 +1436,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return; // Single module: its own round is by definition current.
         }
         for (String service : activeServices) {
-            if (service.endsWith("_granular")) {
+            if (ServiceRegistry.writesDirectory(service)) {
                 return; // Still opted in somewhere; the collapsed shape is correct.
             }
         }
@@ -1568,7 +1570,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (filePath == null) {
                 continue; // rendered content for a service with no configured output path: nothing to check
             }
-            boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
+            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
             boolean anyContributed = isMultiModule(allSidecars)
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
                 : collector.anyAnnotationsFound();
@@ -1986,24 +1988,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Combines every sibling module's contribution into the shared output files.
-     *
-     * <p>Called by both {@code generateFiles} and {@code checkFiles}. It used to be a block copied
-     * into each, marked {@code CPD-OFF} and justified on the grounds that {@code generateFiles} is
-     * {@code @AILocked} so nothing could be lifted out of it. That reasoning does not survive
-     * contact: the lock is on the <em>step order</em> of {@code generateFiles}, and calling a pure
-     * function where the block used to sit preserves that order exactly. What the copy actually
-     * bought was drift — the check copy grew a null guard on {@code getFileName()} that the
-     * generate copy never got, so the two differed in precisely the way the comment promised they
-     * would not, and a check verdict is worthless the moment it stops reproducing generation.
-     *
-     * <p>Multi-module here means more than one sidecar <em>or</em> a reactor root that opted into
-     * the lean index: the merge path also owns pointer substitution, and a reactor where one module
-     * holds all the annotations produces exactly one sidecar, so gating purely on count would
-     * silently ignore the opt-in.
-     *
-     * @return the per-service content to write; {@code contentByService} unchanged when this is not
-     *         a multi-module build
+     * Whether the merge path applies: more than one sidecar <em>or</em> a reactor root that opted
+     * into the lean index. The merge path also owns pointer substitution, and a reactor where one
+     * module holds all the annotations produces exactly one sidecar, so gating purely on count
+     * would silently ignore the opt-in.
      */
     static boolean isMultiModule(List<ModuleSidecar> allSidecars) {
         // Counts sidecar FILES, because this gates the merge, and two source sets of one module are
@@ -2033,6 +2021,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         contentByService.forEach(sidecar::putBody);
     }
 
+    /**
+     * Combines every sibling module's contribution into the shared output files.
+     *
+     * <p>Called by both {@code generateFiles} and {@code checkFiles}. It used to be a block copied
+     * into each, marked {@code CPD-OFF} and justified on the grounds that {@code generateFiles} is
+     * {@code @AILocked} so nothing could be lifted out of it. That reasoning does not survive
+     * contact: the lock is on the <em>step order</em> of {@code generateFiles}, and calling a pure
+     * function where the block used to sit preserves that order exactly. What the copy actually
+     * bought was drift — the check copy grew a null guard on {@code getFileName()} that the
+     * generate copy never got, so the two differed in precisely the way the comment promised they
+     * would not, and a check verdict is worthless the moment it stops reproducing generation.
+     *
+     * @return the per-service content to write; {@code contentByService} unchanged when this is not
+     *         a multi-module build, in the sense of {@link #isMultiModule}
+     */
     static Map<String, String> mergeAcrossModules(Map<String, String> contentByService,
                                                   Map<String, Path> serviceFiles,
                                                   List<ModuleSidecar> allSidecars) {

@@ -217,7 +217,7 @@ public final class MirrorWriter {
     private static Set<String> granularOnly(Set<String> active) {
         Set<String> out = new LinkedHashSet<>();
         for (String s : active) {
-            if (s.endsWith("_granular")) {
+            if (ServiceRegistry.writesDirectory(s)) {
                 out.add(s);
             }
         }

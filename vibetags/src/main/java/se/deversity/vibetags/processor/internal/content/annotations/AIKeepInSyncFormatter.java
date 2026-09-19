@@ -35,11 +35,9 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                             ? " Nothing checks this automatically — a partial change desyncs silently."
                             : " Enforced by " + enforcedBy + ".");
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 for (String mirror : keepInSync.mirrors()) {
@@ -52,22 +50,6 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                   .append(Escape.xml(enforcedBy.isEmpty() ? "nothing — unenforced" : enforcedBy))
                   .append("</enforced-by>\n")
                   .append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n');
@@ -92,9 +74,6 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                   .append("- **Enforced by**: ")
                   .append(enforcedBy.isEmpty() ? "nothing — verify by hand" : enforcedBy).append('\n')
                   .append("- **Rule**: Change all sites in the same commit, or none.\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Keep in sync: editing ").append(Escape.json(className))

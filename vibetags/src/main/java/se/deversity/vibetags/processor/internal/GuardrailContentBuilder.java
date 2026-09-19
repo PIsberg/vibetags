@@ -82,7 +82,7 @@ public final class GuardrailContentBuilder {
         // of duplicating each element's full guardrails inline. renderGranular depends only on the
         // model, so ordering it ahead of the per-service loop is safe and avoids a redundant
         // per-element walk inside each renderer.
-        boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
+        boolean granularActive = activeServices.stream().anyMatch(ServiceRegistry::writesDirectory);
         Map<TaggedElement, GranularBody> elementRules = granularActive
                 ? PlatformRendererRegistry.granularRenderer().renderGranular(model)
                 : new java.util.LinkedHashMap<>();
@@ -99,7 +99,7 @@ public final class GuardrailContentBuilder {
             if (serviceKey.equals("aiexclude")) {
                 continue;
             }
-            if (serviceKey.endsWith("_granular")) {
+            if (ServiceRegistry.writesDirectory(serviceKey)) {
                 continue;
             }
 
@@ -114,32 +114,16 @@ public final class GuardrailContentBuilder {
 
         // Implicit platform activations: the Codex sidecar, the one documented exception to invariant 1
         if (activeServices.contains("codex")) {
-            String configContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_CONFIG).render(model, Platform.CODEX_CONFIG, context);
-            if (configContent != null) {
-                contentByService.put("codex_config", configContent);
-            }
-            String rulesContent = PlatformRendererRegistry.getRenderer(Platform.CODEX_RULES).render(model, Platform.CODEX_RULES, context);
-            if (rulesContent != null) {
-                contentByService.put("codex_rules", rulesContent);
-            }
+            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, model, context);
+            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, model, context);
         }
         // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file and is
         // never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered by the loop
-        // above only when the file exists (#655).
-        if (activeServices.contains("cody")) {
-            String codyContent = PlatformRendererRegistry.getRenderer(Platform.CODY).render(model, Platform.CODY, context);
-            if (codyContent != null) {
-                contentByService.put("cody", codyContent);
-            }
-        }
+        // above only when the file exists (#655). Cody is an ordinary opt-in too.
         // Cline's .clinerules/ directory has no aggregate beside it, because its aggregate is the
         // same path, so the always-loaded safety tier gets a file inside the directory (issue #648).
         if (activeServices.contains("cline_granular")) {
-            String safetyContent = PlatformRendererRegistry.getRenderer(Platform.CLINE_SAFETY)
-                .render(model, Platform.CLINE_SAFETY, context);
-            if (safetyContent != null) {
-                contentByService.put("cline_safety", safetyContent);
-            }
+            putRendered(contentByService, "cline_safety", Platform.CLINE_SAFETY, model, context);
         }
         // Devin Desktop's rules directories load every rule file on a glob match, so each gets an
         // always-on safety file of its own (issue #684). Rendered whenever the directory is active;

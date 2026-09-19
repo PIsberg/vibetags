@@ -74,14 +74,24 @@ final class AnnotationSections {
     }
 
     /**
+     * The text {@link #renderLockedPreamble} opens with, up to and including the locked heading.
+     *
+     * <p>Its own method because {@link JunieRenderer} renders through Cursor and then swaps this
+     * opening for its own. Junie used to carry a private copy of the literal, so an edit here made
+     * that replace match nothing and shipped {@code .junie/guidelines.md} under Cursor's title.
+     */
+    static String lockedPreambleOpening(String generatedHeader) {
+        return "# AUTO-GENERATED AI RULES\n" + generatedHeader
+            + "# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n";
+    }
+
+    /**
      * The "# AUTO-GENERATED AI RULES ... LOCKED FILES" opening (locked entries only, no contextual
      * rules). Used by {@link CursorRenderer} and {@link WindsurfRenderer} in scoped-index mode,
      * where {@code @AIContext} detail moves to the scoped rule files rather than the aggregate.
      */
     static void renderLockedPreamble(StringBuilder sb, GuardrailModel model, Platform platform, String generatedHeader) {
-        sb.append("# AUTO-GENERATED AI RULES\n")
-          .append(generatedHeader)
-          .append("# Do not edit manually.\n\n## LOCKED FILES (DO NOT EDIT)\n");
+        sb.append(lockedPreambleOpening(generatedHeader));
         for (TaggedElement e : model.locked()) {
             FormatterRegistry.locked().format(e, sb, platform);
         }

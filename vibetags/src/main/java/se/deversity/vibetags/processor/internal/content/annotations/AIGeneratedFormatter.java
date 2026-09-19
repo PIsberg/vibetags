@@ -32,11 +32,9 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                        + (target.isEmpty() ? "" : " — edit `" + target + "` instead")
                        + (regenerateWith.isEmpty() ? "" : ", then run `" + regenerateWith + "`") + ".";
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append(CommonFormatterHelper.element("from", from));
@@ -47,22 +45,6 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                     sb.append("      <regenerate-with>").append(Escape.xml(regenerateWith)).append("</regenerate-with>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -82,9 +64,6 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                   .append(CommonFormatterHelper.bullet("Edit instead", target))
                   .append(regenerateWith.isEmpty() ? "" : "- **Regenerate with**: " + regenerateWith + "\n")
                   .append("- **Rule**: Never hand-edit. Change the source and regenerate.\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Generated code: ").append(Escape.json(className)).append(" comes from ")

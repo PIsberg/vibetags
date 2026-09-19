@@ -50,7 +50,7 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
 - **Byte-identical output to an existing renderer**? → delegate, don't reimplement (see
   `FirebaseRenderer`, which wraps a shared `CursorRenderer` instance).
 - **Implicitly-activated sidecar of another service** (`codex_config`/`codex_rules` under
-  `codex`, `cody` under `cody`)? → do **not** add
+  `codex`, `cline_safety` under `cline_granular`)? → do **not** add
   its own key to `ServiceRegistry.OPT_IN_KEYS`; wire it into the special-case block at the bottom
   of `GuardrailContentBuilder.build()` instead.
 

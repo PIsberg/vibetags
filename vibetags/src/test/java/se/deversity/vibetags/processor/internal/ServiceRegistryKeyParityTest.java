@@ -35,4 +35,30 @@ class ServiceRegistryKeyParityTest {
                 + ". `vibetags init --platforms " + String.join(",", missing)
                 + "` would accept the key and then dereference a null path.");
     }
+
+    /**
+     * {@code generateFiles()} is locked and still spells the ignore-file predicate inline, with a
+     * third term, {@code "aider_ignore".equals(service)}, that {@code isIgnoreService} leaves out as
+     * redundant. This holds the two to the same answer for every key a build can see, so check mode
+     * and the module writer, which call the helper, cannot disagree with generation.
+     */
+    @Test
+    void isIgnoreService_agreesWithThePredicateInlinedInGenerateFiles_forEveryServiceKey() {
+        Set<String> disagreeing = new TreeSet<>();
+        Set<String> ignoreKeys = new TreeSet<>();
+        for (String service : ServiceRegistry.buildServiceFileMap(Path.of(".")).keySet()) {
+            boolean inlined = service.endsWith("_ignore") || "aider_ignore".equals(service)
+                || "aiexclude".equals(service);
+            if (inlined != ServiceRegistry.isIgnoreService(service)) {
+                disagreeing.add(service);
+            }
+            if (inlined) {
+                ignoreKeys.add(service);
+            }
+        }
+
+        assertTrue(disagreeing.isEmpty(), "isIgnoreService disagrees with generateFiles() on: " + disagreeing);
+        assertTrue(ignoreKeys.contains("aider_ignore") && ignoreKeys.contains("aiexclude"),
+            "the comparison ran over no ignore keys, so it proved nothing: " + ignoreKeys);
+    }
 }

@@ -68,23 +68,17 @@ AnnotationFormatter`:
 Two families, different plumbing:
 
 **A. Markdown bucket-walk renderers** (Cursor, Windsurf, Zed, Copilot, Qwen, Codex, Gemini) —
-each owns its own `SECTIONS` list of `AnnotationSections.Section`. Add one line to each of the
-7 files: `section(Platform.X, SectionCatalog.Key.YOUR_NAME, GuardrailModel::yourName,
-FormatterRegistry.yourName())`. If a platform instead folds the newest annotations into a shared
-trailing list (Cursor/Windsurf both reuse `AnnotationSections.EMOJI_STYLE_NEWEST_ANNOTATIONS`),
-add there instead of duplicating a per-file entry.
+all seven take their newest annotations from one list,
+`AnnotationSections.newestAnnotationSections(platform)`. Add one line there:
+`section(platform, SectionCatalog.Key.YOUR_NAME, GuardrailModel::yourName,
+FormatterRegistry.yourName())`. Do not add a per-renderer entry: a hand-maintained tail per
+renderer is how Codex and Qwen once rendered 27 of 44 annotations.
 
-**B. `ClaudeRenderer` (bespoke XML)** — hand-add a block matching the ~35 already there:
+**B. `ClaudeRenderer` (bespoke XML)** — add one call in `render()`, in the position the section
+should appear, matching the ~35 already there:
 ```java
-if (!model.yourName().isEmpty()) {
-    StringBuilder sec = new StringBuilder("  <your_name_elements>\n");
-    for (TaggedElement e : model.yourName()) {
-        FormatterRegistry.yourName().format(e, sec, Platform.CLAUDE);
-    }
-    sec.append("  </your_name_elements>\n");
-    sb.append(sec);
-    sb.append("\n<rule>...guardrail description...</rule>\n");
-}
+appendSection(sb, model.yourName(), FormatterRegistry.yourName(), "your_name_elements",
+    "\n<rule>...guardrail description...</rule>\n");
 ```
 
 **C. `SectionCatalog.java`** — add a `Key.YOUR_NAME` enum constant, then

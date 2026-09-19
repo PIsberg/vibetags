@@ -27,11 +27,9 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
         String summary = layer.isEmpty() ? prohibited
             : layer + (prohibited.isEmpty() ? "" : ". " + prohibited);
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append(CommonFormatterHelper.element("belongs_to", belongsTo));
@@ -39,22 +37,6 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                     sb.append("      <cannot_reference>").append(Escape.xml(r)).append("</cannot_reference>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append(CommonFormatterHelper.codexBullet(className, summary));
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -68,9 +50,6 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                 sb.append("#### ARCHITECTURE LAYER: ").append(className).append('\n')
                   .append(CommonFormatterHelper.bullet("Layer", belongsTo))
                   .append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append('\n');
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (architecture)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');

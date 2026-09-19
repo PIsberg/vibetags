@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.Collection;
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
@@ -37,209 +38,207 @@ public final class LlmsRenderer implements PlatformRenderer {
 
         // 1. Locked Files. Like every section below, printed only when something is in it: a module
         // with nothing locked and no @AIContext got both headings with nothing under them (#730).
-        // Sections use lambdas (FormatterCaller is @FunctionalInterface), which avoid the hidden
-        // outer-class reference that anonymous classes carry.
         appendSection(sb, model.locked(), platform,
             full ? "## Locked Files (Do Not Edit)\nThe following files are locked. AI tools MUST NOT propose modifications to them.\n\n" : "## Locked Files\n",
-            (e, buf) -> FormatterRegistry.locked().format(e, buf, platform));
+            FormatterRegistry.locked());
 
         // 2. Contextual Rules
         appendSection(sb, model.context(), platform,
             full ? "## Contextual Rules\nThese files have specific context and focus areas for AI assistance.\n\n" : "\n## Contextual Rules\n",
-            (e, buf) -> FormatterRegistry.context().format(e, buf, platform));
+            FormatterRegistry.context());
 
         appendSection(sb, model.audit(), platform,
             full ? "## Mandatory Security Audit Requirements\nWhen writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.\n\n" : "\n## Security Audit Requirements\n",
-            (e, buf) -> FormatterRegistry.audit().format(e, buf, platform));
+            FormatterRegistry.audit());
 
         // 4. Ignored Elements
         appendSection(sb, model.ignore(), platform,
             full ? "## Ignored Elements\nThe following elements must be completely excluded from AI context. Treat them as non-existent.\n\n" : "\n## Ignored Elements\n",
-            (e, buf) -> FormatterRegistry.ignore().format(e, buf, platform));
+            FormatterRegistry.ignore());
 
         // 5. Draft/TODO
         appendSection(sb, model.draft(), platform,
             full ? "## Implementation Tasks\nThe following elements are in draft mode and need implementation.\n\n" : "\n## Implementation Tasks\n",
-            (e, buf) -> FormatterRegistry.draft().format(e, buf, platform));
+            FormatterRegistry.draft());
 
         // 6. Privacy/PII
         appendSection(sb, model.privacy(), platform,
             full ? "## PII / Privacy Guardrails\nNever include runtime values of the following elements in logs, console output, external API calls, test fixtures, or mock data.\n\n" : "\n## PII / Privacy Guardrails\n",
-            (e, buf) -> FormatterRegistry.privacy().format(e, buf, platform));
+            FormatterRegistry.privacy());
 
         // 7. Core
         appendSection(sb, model.core(), platform,
             full ? "## 🧠 Core Functionality\nThe following elements are well-tested core functionality. Make changes with extreme caution.\n\n" : "\n## 🧠 Core Functionality\n",
-            (e, buf) -> FormatterRegistry.core().format(e, buf, platform));
+            FormatterRegistry.core());
 
         // 8. Performance
         appendSection(sb, model.performance(), platform,
             full ? "## ⚡ Performance Constraints\nThe following elements are on a hot-path and have strict time/space complexity constraints.\n\n" : "\n## ⚡ Performance Constraints\n",
-            (e, buf) -> FormatterRegistry.performance().format(e, buf, platform));
+            FormatterRegistry.performance());
 
         // 9. Contract
         appendSection(sb, model.contract(), platform,
             full ? "## 🔐 Contract-Frozen Signatures\nThe following elements have frozen public API signatures. Internal implementation may be changed, but you MUST NOT alter method names, parameter types, parameter order, return types, or checked exceptions.\n\n" : "\n## 🔐 Contract-Frozen Signatures\n",
-            (e, buf) -> FormatterRegistry.contract().format(e, buf, platform));
+            FormatterRegistry.contract());
 
         // 10. Test-Driven
         appendSection(sb, model.testDriven(), platform,
             full ? "## 🧪 Test-Driven Requirements\nThe following elements require a matching test update whenever their logic is modified. Changes without tests are incomplete.\n\n" : "\n## 🧪 Test-Driven Requirements\n",
-            (e, buf) -> FormatterRegistry.testDriven().format(e, buf, platform));
+            FormatterRegistry.testDriven());
 
         // 11. Thread Safe
         appendSection(sb, model.threadSafe(), platform,
             full ? "## 🧵 Thread-Safe by Design\nThese elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.\n\n" : "\n## 🧵 Thread-Safe by Design\n",
-            (e, buf) -> FormatterRegistry.threadSafe().format(e, buf, platform));
+            FormatterRegistry.threadSafe());
 
         // 12. Immutable
         appendSection(sb, model.immutable(), platform,
             full ? "## ❄️ Immutable Types\nThe following types are immutable. Never introduce non-final fields, setters, or mutating methods.\n\n" : "\n## ❄️ Immutable Types\n",
-            (e, buf) -> FormatterRegistry.immutable().format(e, buf, platform));
+            FormatterRegistry.immutable());
 
         // 13. Deprecated
         appendSection(sb, model.deprecated(), platform,
             full ? "## ⚠️ Deprecated Elements\nThe following elements are deprecated. Suggest migration to the named replacement for any caller and do not extend them.\n\n" : "\n## ⚠️ Deprecated Elements\n",
-            (e, buf) -> FormatterRegistry.deprecated().format(e, buf, platform));
+            FormatterRegistry.deprecated());
 
         // 14. Observability
         appendSection(sb, model.observability(), platform,
             full ? "## 📡 Observability Instrumentation\nThe following elements emit metrics, traces, or log statements that downstream dashboards and alerts depend on.\n\n" : "\n## 📡 Observability Instrumentation\n",
-            (e, buf) -> FormatterRegistry.observability().format(e, buf, platform));
+            FormatterRegistry.observability());
 
         // 15. Regulation
         appendSection(sb, model.regulation(), platform,
             full ? "## 📜 Regulatory Compliance\nThe following elements implement specific regulatory clauses. Document compliance impact for every change and never weaken the requirement.\n\n" : "\n## 📜 Regulatory Compliance\n",
-            (e, buf) -> FormatterRegistry.regulation().format(e, buf, platform));
+            FormatterRegistry.regulation());
 
         // 16. Parallel Tests
         appendSection(sb, model.parallelTests(), platform,
             full ? "## Strict Test Isolation\nAI tools must enforce strict isolation when generating or modifying tests for these elements.\n\n" : "\n## Strict Test Isolation\n",
-            (e, buf) -> FormatterRegistry.parallelTests().format(e, buf, platform));
+            FormatterRegistry.parallelTests());
 
         // 17. Legacy Bridge
         appendSection(sb, model.legacyBridge(), platform,
             full ? "## Legacy Compatibility Bridge\nThese elements are legacy or compatibility bridges. Do not restructure or modernize them.\n\n" : "\n## Legacy Compatibility Bridge\n",
-            (e, buf) -> FormatterRegistry.legacyBridge().format(e, buf, platform));
+            FormatterRegistry.legacyBridge());
 
         // 18. Architecture
         appendSection(sb, model.architecture(), platform,
             full ? "## Architectural Boundary Constraints\nStrict architectural layering must be respected. No illegal references or imports.\n\n" : "\n## Architectural Boundary Constraints\n",
-            (e, buf) -> FormatterRegistry.architecture().format(e, buf, platform));
+            FormatterRegistry.architecture());
 
         // 19. Public API
         appendSection(sb, model.publicApi(), platform,
             full ? "## Public API Surface Protection\nThese elements expose public API surfaces. Preserve signatures, Javadocs, and backward compatibility.\n\n" : "\n## Public API Surface Protection\n",
-            (e, buf) -> FormatterRegistry.publicApi().format(e, buf, platform));
+            FormatterRegistry.publicApi());
 
         // 20. Strict Exceptions
         appendSection(sb, model.strictExceptions(), platform,
             full ? "## Strict Exception Handling\nPrecise and robust exception handling must be enforced. No catching or throwing generic Exception.\n\n" : "\n## Strict Exception Handling\n",
-            (e, buf) -> FormatterRegistry.strictExceptions().format(e, buf, platform));
+            FormatterRegistry.strictExceptions());
 
         // 21. Strict Types
         appendSection(sb, model.strictTypes(), platform,
             full ? "## Strict Type Safety\nType safety must be strictly preserved. Loose or erased types are prohibited.\n\n" : "\n## Strict Type Safety\n",
-            (e, buf) -> FormatterRegistry.strictTypes().format(e, buf, platform));
+            FormatterRegistry.strictTypes());
 
         // 22. Internationalization
         appendSection(sb, model.internationalized(), platform,
             full ? "## Internationalization Mandate\nUser-facing strings must not be hardcoded; resolve them via localized resources.\n\n" : "\n## Internationalization Mandate\n",
-            (e, buf) -> FormatterRegistry.internationalized().format(e, buf, platform));
+            FormatterRegistry.internationalized());
 
         // 23. Strict Classpath
         appendSection(sb, model.strictClasspath(), platform,
             full ? "## Strict Classpath Integrity\nDynamic runtime class loading and reflections are strictly prohibited.\n\n" : "\n## Strict Classpath Integrity\n",
-            (e, buf) -> FormatterRegistry.strictClasspath().format(e, buf, platform));
+            FormatterRegistry.strictClasspath());
 
         // 24. Schema Safe
         appendSection(sb, model.schemaSafe(), platform,
             full ? "## Schema & Serialization Safety\nSchema and serialization compatibility must be strictly preserved.\n\n" : "\n## Schema & Serialization Safety\n",
-            (e, buf) -> FormatterRegistry.schemaSafe().format(e, buf, platform));
+            FormatterRegistry.schemaSafe());
 
         // 25. Idempotent
         appendSection(sb, model.idempotent(), platform,
             full ? "## ♻️ Idempotency Guarantees\nThese operations are idempotent — calling multiple times must produce the same result as calling once.\n\n" : "\n## ♻️ Idempotency Guarantees\n",
-            (e, buf) -> FormatterRegistry.idempotent().format(e, buf, platform));
+            FormatterRegistry.idempotent());
 
         // 26. Feature Flag
         appendSection(sb, model.featureFlag(), platform,
             full ? "## 🚩 Feature Flag Gated Code\nThese elements are gated behind a feature flag. Preserve the flag check and handle both enabled and disabled code paths.\n\n" : "\n## 🚩 Feature Flag Gated Code\n",
-            (e, buf) -> FormatterRegistry.featureFlag().format(e, buf, platform));
+            FormatterRegistry.featureFlag());
 
         // 27. Secure
         appendSection(sb, model.secure(), platform,
             full ? "## 🔐 Security-Critical Code\nThese elements are security-critical. Do not weaken security properties. Every change requires security review.\n\n" : "\n## 🔐 Security-Critical Code\n",
-            (e, buf) -> FormatterRegistry.secure().format(e, buf, platform));
+            FormatterRegistry.secure());
 
         // New annotations formatting sections for LLMS formats
         appendSection(sb, model.callersOnly(), platform,
             full ? "## Access Limitations\nThe following elements have strict caller access limits. AI must not invoke them from outside the allowed boundaries.\n\n" : "\n## Access Limitations\n",
-            (e, buf) -> FormatterRegistry.callersOnly().format(e, buf, platform));
+            FormatterRegistry.callersOnly());
 
         appendSection(sb, model.sandboxOnly(), platform,
             full ? "## Sandbox & Test Exclusion\nThe following elements are strictly sandbox/test code. Production code must never import or reference them.\n\n" : "\n## Sandbox & Test Exclusion\n",
-            (e, buf) -> FormatterRegistry.sandboxOnly().format(e, buf, platform));
+            FormatterRegistry.sandboxOnly());
 
         appendSection(sb, model.memoryBudget(), platform,
             full ? "## Memory Allocation Budgets\nThe following elements have strict heap allocation, autoboxing, or garbage budgets. Optimize allocations carefully.\n\n" : "\n## Memory Allocation Budgets\n",
-            (e, buf) -> FormatterRegistry.memoryBudget().format(e, buf, platform));
+            FormatterRegistry.memoryBudget());
 
         appendSection(sb, model.pure(), platform,
             full ? "## Deterministic Pure Functions\nThe following elements must remain pure functions without side effects or mutations.\n\n" : "\n## Deterministic Pure Functions\n",
-            (e, buf) -> FormatterRegistry.pure().format(e, buf, platform));
+            FormatterRegistry.pure());
 
         appendSection(sb, model.domainModel(), platform,
             full ? "## Framework-Free Domain Entities\nThe following elements are pure Domain Models. Do not import Spring, JPA/Hibernate, Jackson, or other framework packages.\n\n" : "\n## Framework-Free Domain Entities\n",
-            (e, buf) -> FormatterRegistry.domainModel().format(e, buf, platform));
+            FormatterRegistry.domainModel());
 
         appendSection(sb, model.extensible(), platform,
             full ? "## open-closed Extension Patterns\nThe following elements require extension using polymorphic patterns (Strategy/Visitor). Do not append branch conditionals.\n\n" : "\n## open-closed Extension Patterns\n",
-            (e, buf) -> FormatterRegistry.extensible().format(e, buf, platform));
+            FormatterRegistry.extensible());
 
         appendSection(sb, model.inputSanitized(), platform,
             full ? "## Mandatory Input Sanitization\nThe following parameters/fields must go through strict sanitizers before hitting queries or renderers.\n\n" : "\n## Mandatory Input Sanitization\n",
-            (e, buf) -> FormatterRegistry.inputSanitized().format(e, buf, platform));
+            FormatterRegistry.inputSanitized());
 
         appendSection(sb, model.secureLogging(), platform,
             full ? "## Secure Logging Masking\nThe following sensitive elements must be masked, hashed, or omitted from log/stdout streams.\n\n" : "\n## Secure Logging Masking\n",
-            (e, buf) -> FormatterRegistry.secureLogging().format(e, buf, platform));
+            FormatterRegistry.secureLogging());
 
         appendSection(sb, model.explain(), platform,
             full ? "## Required Chain-of-Thought Explanations\nAny change made to these elements requires a step-by-step mathematical/architectural proof of correctness in the PR/walkthrough.\n\n" : "\n## Required Chain-of-Thought Explanations\n",
-            (e, buf) -> FormatterRegistry.explain().format(e, buf, platform));
+            FormatterRegistry.explain());
 
         appendSection(sb, model.prototype(), platform,
             full ? "## Experimental Prototype Stubs\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them.\n\n" : "\n## Experimental Prototype Stubs\n",
-            (e, buf) -> FormatterRegistry.prototype().format(e, buf, platform));
+            FormatterRegistry.prototype());
 
         appendSection(sb, model.sunset(), platform,
             full ? "## Sunset Deprecated APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden.\n\n" : "\n## Sunset Deprecated APIs\n",
-            (e, buf) -> FormatterRegistry.sunset().format(e, buf, platform));
+            FormatterRegistry.sunset());
 
         appendSection(sb, model.temporary(), platform,
             full ? "## Temporary Code Workarounds\nTemporary stubs or hacks that must be refactored or removed before their expiration limit.\n\n" : "\n## Temporary Code Workarounds\n",
-            (e, buf) -> FormatterRegistry.temporary().format(e, buf, platform));
+            FormatterRegistry.temporary());
 
         appendSection(sb, model.generated(), platform,
             full ? "## Generated Code — Edit The Source\nThese elements are machine-generated and hand edits are silently overwritten. Read them freely; never write them.\n\n" : "\n## Generated Code — Edit The Source\n",
-            (e, buf) -> FormatterRegistry.generated().format(e, buf, platform));
+            FormatterRegistry.generated());
 
         appendSection(sb, model.loadBearing(), platform,
             full ? "## Load-Bearing Oddities\nThese look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.\n\n" : "\n## Load-Bearing Oddities\n",
-            (e, buf) -> FormatterRegistry.loadBearing().format(e, buf, platform));
+            FormatterRegistry.loadBearing());
 
         appendSection(sb, model.bannedApi(), platform,
             full ? "## Banned APIs\nThe following APIs compile at these elements but are prohibited there. Use the sanctioned replacement.\n\n" : "\n## Banned APIs\n",
-            (e, buf) -> FormatterRegistry.bannedApi().format(e, buf, platform));
+            FormatterRegistry.bannedApi());
 
         appendSection(sb, model.threadAffinity(), platform,
             full ? "## Thread Affinity (Not Thread-Safe)\nThese elements are safe on exactly one thread. Do not add locks — marshal the call onto the required thread instead.\n\n" : "\n## Thread Affinity (Not Thread-Safe)\n",
-            (e, buf) -> FormatterRegistry.threadAffinity().format(e, buf, platform));
+            FormatterRegistry.threadAffinity());
 
         appendSection(sb, model.keepInSync(), platform,
             full ? "## Mirrored Elements\nThese are duplicated elsewhere. They may change freely, but a partial change silently desyncs a mirror no compiler checks.\n\n" : "\n## Mirrored Elements\n",
-            (e, buf) -> FormatterRegistry.keepInSync().format(e, buf, platform));
+            FormatterRegistry.keepInSync());
 
         return sb.toString();
     }
@@ -254,23 +253,17 @@ public final class LlmsRenderer implements PlatformRenderer {
      * heading lands on that blank line, so its leading newline is dropped rather than printing two
      * blank lines in a row (#730).
      */
-    @SuppressWarnings("UnusedVariable")
-    private static void appendSection(StringBuilder sb, Collection<TaggedElement> elements, Platform platform, String heading, FormatterCaller caller) {
+    private static void appendSection(StringBuilder sb, Collection<TaggedElement> elements, Platform platform, String heading, AnnotationFormatter formatter) {
         if (elements.isEmpty()) return;
         int sectionStart = sb.length();
         boolean onBlankLine = sb.length() >= 2 && sb.charAt(sb.length() - 1) == '\n' && sb.charAt(sb.length() - 2) == '\n';
         sb.append(heading, onBlankLine && heading.startsWith("\n") ? 1 : 0, heading.length());
         int bodyStart = sb.length();
         for (TaggedElement e : elements) {
-            caller.call(e, sb);
+            formatter.format(e, sb, platform);
         }
         if (sb.length() == bodyStart) {
             sb.setLength(sectionStart);
         }
-    }
-
-    @FunctionalInterface
-    private interface FormatterCaller {
-        void call(TaggedElement e, StringBuilder buffer);
     }
 }

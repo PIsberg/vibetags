@@ -13,7 +13,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -87,10 +90,17 @@ public final class ModuleRootResolver {
         Path moduleRoot = null;
         // Sorted so a round that somehow mixes source sets picks the same one on every build.
         SortedSet<String> sourceSets = new TreeSet<>();
+        // Every class in a package shares its source directory, and the walk below costs up to
+        // three stats per ancestor level. Asked once per directory rather than once per class.
+        // Local to this call: the build files it looks for are the consumer's, which no VibeTags
+        // process writes, so the answer cannot change while one round is being read.
+        Map<Path, Optional<Path>> rootBySourceDir = new HashMap<>();
         for (Element element : roundEnv.getRootElements()) {
             Path sourceDir = sourceDirOf(trees, elements, element);
             if (sourceDir == null) continue;
-            Path candidate = nearestBuildFileAncestor(sourceDir);
+            Path candidate = rootBySourceDir
+                .computeIfAbsent(sourceDir, dir -> Optional.ofNullable(nearestBuildFileAncestor(dir)))
+                .orElse(null);
             if (candidate == null) continue;
             if (moduleRoot == null) {
                 moduleRoot = candidate;
