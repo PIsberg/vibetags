@@ -33,6 +33,9 @@ import java.util.Set;
 public final class KspGuardrailProcessor implements SymbolProcessor {
 
     private static final String ROOT_OPTION = "vibetags.root";
+    /** Options for this adapter, consumed here and never shown to the processor. */
+    private static final String ADAPTER_PREFIX = "vibetags.ksp.";
+    private static final String DEFAULT_TARGET_OPTION = ADAPTER_PREFIX + "annotationDefaultTarget";
     private static final String ASSOCIATION_PACKAGE = "se.deversity.vibetags.ksp";
     private static final String ASSOCIATION_NAME = "all-sources";
 
@@ -66,7 +69,7 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
             if (first) {
                 claimEveryInput(files);
             }
-            StubModel model = new StubBuilder(resolver, annotations, defaultImpls()).build(files);
+            StubModel model = new StubBuilder(resolver, annotations, defaultImpls(), paramProperty()).build(files);
             for (String lost : model.dropped()) {
                 logger.warn("VibeTags: " + lost, null);
             }
@@ -78,7 +81,7 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
                         + "whose working directory is not the project; pass ksp { arg(\"" + ROOT_OPTION
                         + "\", projectDir.absolutePath) }.", null);
                 }
-                env = new KspProcessingEnvironment(environment.getOptions(), new KspMessager(logger),
+                env = new KspProcessingEnvironment(processorOptions(), new KspMessager(logger),
                     new KspFiler(environment.getCodeGenerator(), sources), elements);
                 processingEnvironment = env;
                 delegate.init(env);
@@ -137,6 +140,38 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
                 + unsupported + "); an incremental build may regenerate guardrails from changed files only. "
                 + "Run a clean build if a guardrail goes missing.", null);
         }
+    }
+
+    /**
+     * Where a constructor {@code val}'s annotation with no use-site target goes, as
+     * {@code -Xannotation-default-target} decides it. KSP does not pass compiler arguments to a
+     * processor, so the flag is mirrored by {@value #DEFAULT_TARGET_OPTION}; without it, Kotlin's own
+     * default for the language version applies: {@code param-property} from 2.2, {@code first-only}
+     * before.
+     */
+    private boolean paramProperty() {
+        String option = environment.getOptions().get(DEFAULT_TARGET_OPTION);
+        if (option != null) {
+            String mode = option.strip();
+            if ("param-property".equals(mode)) {
+                return true;
+            }
+            if ("first-only".equals(mode) || "first-only-warn".equals(mode)) {
+                return false;
+            }
+            environment.getLogger().warn("VibeTags: " + DEFAULT_TARGET_OPTION + "=" + option
+                + " is not a value of -Xannotation-default-target (param-property, first-only, first-only-warn);"
+                + " using the language version's default.", null);
+        }
+        kotlin.KotlinVersion language = environment.getKotlinVersion();
+        return language.isAtLeast(2, 2);
+    }
+
+    /** The options the processor sees: everything but this adapter's own. */
+    private java.util.Map<String, String> processorOptions() {
+        java.util.Map<String, String> options = new java.util.LinkedHashMap<>(environment.getOptions());
+        options.keySet().removeIf(key -> key.startsWith(ADAPTER_PREFIX));
+        return options;
     }
 
     /**

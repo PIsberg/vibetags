@@ -195,11 +195,13 @@ What differs from kapt:
   change puts every file back in front of it and the guardrails are regenerated from the whole module.
 - **Inherited guardrails need `vibetags.manifest.dir`**, as under kapt: KSP gives a processor no view
   of the classpath's resources.
-- **Property annotations follow Kotlin 2.2's `param-property` default.** An annotation on a
-  constructor `val` with no use-site target lands on the parameter and on the field, as it does
-  under kapt on Kotlin 2.4.10. The front end always applies that default and does not read the
-  `-Xannotation-default-target` compiler flag, so a project that sets the flag can see different
-  paths under KSP than under kapt.
+- **Property annotations follow `-Xannotation-default-target`.** An annotation on a constructor
+  `val` with no use-site target lands on the parameter and the field under `param-property` (Kotlin
+  2.2's default), and on the parameter alone under `first-only` (the default before 2.2). KSP does not
+  pass compiler arguments to a processor, so the front end follows the language version's default, and
+  a project that sets the flag mirrors it with
+  `ksp { arg("vibetags.ksp.annotationDefaultTarget", "first-only") }`. Options under `vibetags.ksp.`
+  belong to the front end and are not passed on to the processor.
 
 The same caveats as kapt otherwise apply: no method-body-scoped annotations, no package level, and an
 `internal` function's path contains the Kotlin module name.

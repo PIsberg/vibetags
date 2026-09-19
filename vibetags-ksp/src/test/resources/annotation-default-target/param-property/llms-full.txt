@@ -1,0 +1,64 @@
+<!-- VIBETAGS-START -->
+# This Project — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+### com.fx.dt.Props.b
+- **Reason**: field target only
+
+## Mandatory Input Sanitization
+The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
+
+### com.fx.dt.Props.Props(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)#c
+- **Sanitization Requirement**: SQL_INJECTION
+
+### com.fx.dt.Props.c
+- **Sanitization Requirement**: SQL_INJECTION
+
+## Load-Bearing Oddities
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+### com.fx.dt.DataProps.DataProps(int)#f
+- This code is deliberate, not accidental.
+- **Invariant**: data class
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.DataProps.copy(int)#f
+- This code is deliberate, not accidental.
+- **Invariant**: data class
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.DataProps.f
+- This code is deliberate, not accidental.
+- **Invariant**: data class
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.NotCtor.g
+- This code is deliberate, not accidental.
+- **Invariant**: non-constructor property
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.Props.Props(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)#a
+- This code is deliberate, not accidental.
+- **Invariant**: param and field targets
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.Props.Props(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)#d
+- This code is deliberate, not accidental.
+- **Invariant**: explicit param
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.Props.a
+- This code is deliberate, not accidental.
+- **Invariant**: param and field targets
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.dt.Props.e
+- This code is deliberate, not accidental.
+- **Invariant**: explicit field
+- Edits are allowed as long as the invariant survives.
+<!-- VIBETAGS-END -->

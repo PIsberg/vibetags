@@ -76,6 +76,7 @@ final class StubBuilder {
     private final Resolver resolver;
     private final AnnotationReader annotations;
     private final boolean defaultImpls;
+    private final boolean paramProperty;
     private final Map<String, KTypeElement> declared = new LinkedHashMap<>();
     private final JvmTypes types = new JvmTypes(declared);
     private final Map<String, KPackageElement> packages = new HashMap<>();
@@ -90,9 +91,21 @@ final class StubBuilder {
      *                     name {@code all}) produces
      */
     StubBuilder(Resolver resolver, AnnotationReader annotations, boolean defaultImpls) {
+        this(resolver, annotations, defaultImpls, true);
+    }
+
+    /**
+     * @param paramProperty whether a constructor {@code val}'s annotation with no use-site target
+     *                      lands on the field as well as the parameter: Kotlin 2.2's
+     *                      {@code param-property} default. {@code false} is {@code first-only}, the
+     *                      default before 2.2 and what {@code -Xannotation-default-target=first-only}
+     *                      restores: the parameter alone when the annotation may target one.
+     */
+    StubBuilder(Resolver resolver, AnnotationReader annotations, boolean defaultImpls, boolean paramProperty) {
         this.resolver = resolver;
         this.annotations = annotations;
         this.defaultImpls = defaultImpls;
+        this.paramProperty = paramProperty;
     }
 
     /** Builds the model for {@code files}, in the order given. */
@@ -133,7 +146,7 @@ final class StubBuilder {
                 if (declaration instanceof KSFunctionDeclaration function) {
                     function(function, owner);
                 } else {
-                    property((KSPropertyDeclaration) declaration, owner);
+                    property((KSPropertyDeclaration) declaration, owner, false);
                 }
             }
         }
@@ -240,7 +253,7 @@ final class StubBuilder {
                     function(function, owner);
                 }
             } else if (member instanceof KSPropertyDeclaration property) {
-                property(property, owner);
+                property(property, owner, constructorProperties.contains(property.getSimpleName().asString()));
             }
         }
         if (primaryElement != null && cls.getModifiers().contains(com.google.devtools.ksp.symbol.Modifier.DATA)) {
@@ -491,7 +504,7 @@ final class StubBuilder {
         return function.getExtensionReceiver() == null ? 0 : 1;
     }
 
-    private void property(KSPropertyDeclaration property, Owner owner) {
+    private void property(KSPropertyDeclaration property, Owner owner, boolean constructorProperty) {
         String name = property.getSimpleName().asString();
         List<AnnotationReader.Use> uses = annotations.read(property);
         KSPropertyGetter getter = property.getGetter();
@@ -508,7 +521,11 @@ final class StubBuilder {
         for (AnnotationReader.Use use : uses) {
             AnnotationUseSiteTarget target = use.target();
             if (target == null) {
-                if (annotations.allows(use.data().type(), ElementType.FIELD)) {
+                String type = use.data().type();
+                // first-only: the constructor parameter already took it (the constructor places it).
+                boolean parameterTookIt = constructorProperty && !paramProperty
+                    && annotations.allows(type, ElementType.PARAMETER);
+                if (annotations.allows(type, ElementType.FIELD) && !parameterTookIt) {
                     fieldUses.add(use);
                 }
             } else {
