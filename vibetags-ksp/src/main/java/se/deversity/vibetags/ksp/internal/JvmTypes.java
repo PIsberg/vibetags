@@ -2,6 +2,8 @@ package se.deversity.vibetags.ksp.internal;
 
 import com.google.devtools.ksp.UtilsKt;
 import com.google.devtools.ksp.symbol.ClassKind;
+import com.google.devtools.ksp.symbol.KSAnnotated;
+import com.google.devtools.ksp.symbol.KSAnnotation;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
 import com.google.devtools.ksp.symbol.KSDeclaration;
 import com.google.devtools.ksp.symbol.KSName;
@@ -10,6 +12,7 @@ import com.google.devtools.ksp.symbol.KSTypeAlias;
 import com.google.devtools.ksp.symbol.KSTypeArgument;
 import com.google.devtools.ksp.symbol.KSTypeParameter;
 import com.google.devtools.ksp.symbol.KSTypeReference;
+import com.google.devtools.ksp.symbol.KSValueArgument;
 import com.google.devtools.ksp.symbol.Modifier;
 import com.google.devtools.ksp.symbol.Variance;
 import org.jspecify.annotations.Nullable;
@@ -18,6 +21,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -41,7 +45,8 @@ import java.util.regex.Pattern;
  *       ({@code List<String>} stays as written, {@code Set<Animal>} becomes
  *       {@code Set<? extends Animal>}). Return and field types get none.</li>
  * </ul>
- * {@code @JvmSuppressWildcards} and {@code @JvmWildcard} are not modelled.
+ * {@code @JvmSuppressWildcards} (on a class, function, property, type or argument) removes them,
+ * and {@code @JvmWildcard} on an argument forces one; see {@link #argument}.
  */
 final class JvmTypes {
 
@@ -61,6 +66,8 @@ final class JvmTypes {
     private static final Pattern SUSPEND_FUNCTION = Pattern.compile("kotlin\\.coroutines\\.SuspendFunction(\\d+)");
     private static final String CONTINUATION = "kotlin.coroutines.Continuation";
     private static final String OBJECT = "java.lang.Object";
+    private static final String JVM_SUPPRESS_WILDCARDS = "kotlin.jvm.JvmSuppressWildcards";
+    private static final String JVM_WILDCARD = "kotlin.jvm.JvmWildcard";
 
     private static final Map<String, TypeKind> PRIMITIVES = Map.of(
         "kotlin.Int", TypeKind.INT, "kotlin.Long", TypeKind.LONG, "kotlin.Short", TypeKind.SHORT,
@@ -133,10 +140,83 @@ final class JvmTypes {
 
     /** Renders {@code reference} at {@code position}, with {@code scope} resolving type parameters. */
     TypeMirror render(@Nullable KSTypeReference reference, Position position, Scope scope) {
+        return render(reference, position, scope, false);
+    }
+
+    /**
+     * As {@link #render(KSTypeReference, Position, Scope)}, inside a declaration whose
+     * {@code @JvmSuppressWildcards} (its own, or its class's) is {@code suppressed}.
+     */
+    TypeMirror render(@Nullable KSTypeReference reference, Position position, Scope scope, boolean suppressed) {
+        return render(reference, position, scope, suppressed, false);
+    }
+
+    /**
+     * As {@link #render(KSTypeReference, Position, Scope, boolean)}, and with {@code boxed} a value
+     * class at the top of the signature keeps its own type instead of its underlying one, as in the
+     * variant {@code @JvmExposeBoxed} exposes ({@code exposed(com.fx.wc.Eid)}).
+     */
+    TypeMirror render(@Nullable KSTypeReference reference, Position position, Scope scope, boolean suppressed,
+                      boolean boxed) {
         if (reference == null) {
             return declared(OBJECT, List.of());
         }
-        return render(reference.resolve(), position, scope, position == Position.PARAMETER);
+        Boolean own = suppression(reference);
+        Mode mode = new Mode(position == Position.PARAMETER, own != null ? own : suppressed, boxed);
+        return render(reference.resolve(), position, scope, mode);
+    }
+
+    /**
+     * Where a type is being rendered: inside a parameter (the only place Kotlin writes wildcards),
+     * and whether {@code @JvmSuppressWildcards} is in force there.
+     */
+    private record Mode(boolean parameter, boolean suppressed, boolean boxed) {
+        boolean wildcards() {
+            return parameter && !suppressed;
+        }
+
+        Mode suppressing(boolean suppress) {
+            return new Mode(parameter, suppress, boxed);
+        }
+    }
+
+    /**
+     * The {@code @JvmSuppressWildcards} written on {@code annotated}: its {@code suppress} value,
+     * or {@code null} when there is none, so the enclosing declaration's setting applies.
+     */
+    static @Nullable Boolean suppression(KSAnnotated annotated) {
+        Iterator<KSAnnotation> it = annotated.getAnnotations().iterator();
+        while (it.hasNext()) {
+            KSAnnotation annotation = it.next();
+            if (JVM_SUPPRESS_WILDCARDS.equals(annotationName(annotation))) {
+                for (KSValueArgument argument : annotation.getArguments()) {
+                    if (argument.getValue() instanceof Boolean value) {
+                        return value;
+                    }
+                }
+                return Boolean.TRUE;
+            }
+        }
+        return null;
+    }
+
+    private static boolean forcesWildcard(@Nullable KSAnnotated annotated) {
+        if (annotated == null) {
+            return false;
+        }
+        Iterator<KSAnnotation> it = annotated.getAnnotations().iterator();
+        while (it.hasNext()) {
+            if (JVM_WILDCARD.equals(annotationName(it.next()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static @Nullable String annotationName(KSAnnotation annotation) {
+        KSType type = annotation.getAnnotationType().resolve();
+        KSName name = type.isError() ? null : type.getDeclaration().getQualifiedName();
+        return name == null ? null : name.asString();
     }
 
     /** A reference to a declared type by name, pointing at the model's element when there is one. */
@@ -148,7 +228,7 @@ final class JvmTypes {
         return new KTypeMirror.Declared(element, arguments);
     }
 
-    private TypeMirror render(KSType original, Position position, Scope scope, boolean wildcards) {
+    private TypeMirror render(KSType original, Position position, Scope scope, Mode mode) {
         KSType type = expandAliases(original);
         boolean nullable = original.isMarkedNullable() || type.isMarkedNullable();
         if (type.isError()) {
@@ -172,12 +252,12 @@ final class JvmTypes {
             return new KTypeMirror.Arr(new KTypeMirror.Primitive(primitiveArray));
         }
         if ("kotlin.Array".equals(name)) {
-            return new KTypeMirror.Arr(arrayComponent(type, scope, wildcards));
+            return new KTypeMirror.Arr(arrayComponent(type, scope, mode));
         }
         if ("kotlin.Result".equals(name) && top) {
             return declared(OBJECT, List.of());
         }
-        if (top && isValueClass(declaration) && declaration instanceof KSClassDeclaration valueClass) {
+        if (top && !mode.boxed() && isValueClass(declaration) && declaration instanceof KSClassDeclaration valueClass) {
             TypeMirror underlying = underlyingOf(valueClass, position, scope);
             if (underlying != null) {
                 return underlying;
@@ -186,15 +266,15 @@ final class JvmTypes {
         Matcher function = FUNCTION.matcher(name);
         if (function.matches()) {
             return function("kotlin.jvm.functions.Function" + function.group(1), type.getArguments(),
-                null, scope, wildcards);
+                null, scope, mode);
         }
         Matcher suspend = SUSPEND_FUNCTION.matcher(name);
         if (suspend.matches()) {
             int arity = Integer.parseInt(suspend.group(1));
             return function("kotlin.jvm.functions.Function" + (arity + 1), type.getArguments(),
-                CONTINUATION, scope, wildcards);
+                CONTINUATION, scope, mode);
         }
-        return declaredWithArguments(javaName(name), declaration, type.getArguments(), scope, wildcards);
+        return declaredWithArguments(javaName(name), declaration, type.getArguments(), scope, mode);
     }
 
     /** {@code type} with every type alias expanded to what it names. */
@@ -208,7 +288,7 @@ final class JvmTypes {
         return current;
     }
 
-    private TypeMirror arrayComponent(KSType array, Scope scope, boolean wildcards) {
+    private TypeMirror arrayComponent(KSType array, Scope scope, Mode mode) {
         List<KSTypeArgument> arguments = array.getArguments();
         if (arguments.isEmpty() || arguments.get(0).getType() == null
                 || arguments.get(0).getVariance() == Variance.STAR) {
@@ -218,7 +298,7 @@ final class JvmTypes {
         // An array's element keeps its own wildcards but loses the array's projection:
         // Array<out Any> is Object[], not ? extends Object[].
         return component == null ? declared(OBJECT, List.of())
-            : render(component.resolve(), Position.ARGUMENT, scope, wildcards);
+            : render(component.resolve(), Position.ARGUMENT, scope, mode);
     }
 
     private static boolean isValueClass(KSDeclaration declaration) {
@@ -239,14 +319,15 @@ final class JvmTypes {
      * A suspend function type appends {@code Continuation<result>} and returns {@code Any?}.
      */
     private TypeMirror function(String javaName, List<KSTypeArgument> arguments,
-                                @Nullable String continuation, Scope scope, boolean wildcards) {
+                                @Nullable String continuation, Scope scope, Mode mode) {
+        boolean wildcards = mode.wildcards();
         List<TypeMirror> rendered = new ArrayList<>();
         int last = arguments.size() - 1;
         for (int i = 0; i < last; i++) {
-            rendered.add(argument(arguments.get(i), Variance.CONTRAVARIANT, scope, wildcards));
+            rendered.add(argument(arguments.get(i), Variance.CONTRAVARIANT, scope, mode));
         }
         if (continuation != null) {
-            TypeMirror result = last >= 0 ? argument(arguments.get(last), Variance.CONTRAVARIANT, scope, wildcards)
+            TypeMirror result = last >= 0 ? argument(arguments.get(last), Variance.CONTRAVARIANT, scope, mode)
                 : declared("kotlin.Unit", List.of());
             TypeMirror inner = last >= 0 ? stripWildcard(result) : result;
             TypeMirror continuationType = declared(continuation,
@@ -255,7 +336,7 @@ final class JvmTypes {
             TypeMirror object = declared(OBJECT, List.of());
             rendered.add(wildcards ? new KTypeMirror.Wildcard(object, null) : object);
         } else if (last >= 0) {
-            rendered.add(argument(arguments.get(last), Variance.COVARIANT, scope, wildcards));
+            rendered.add(argument(arguments.get(last), Variance.COVARIANT, scope, mode));
         }
         return declared(javaName, rendered);
     }
@@ -269,32 +350,53 @@ final class JvmTypes {
     }
 
     private TypeMirror declaredWithArguments(String javaName, KSDeclaration declaration,
-                                             List<KSTypeArgument> arguments, Scope scope, boolean wildcards) {
+                                             List<KSTypeArgument> arguments, Scope scope, Mode mode) {
         List<KSTypeParameter> parameters = declaration.getTypeParameters();
         List<TypeMirror> rendered = new ArrayList<>(arguments.size());
         for (int i = 0; i < arguments.size(); i++) {
             Variance declared = i < parameters.size() ? parameters.get(i).getVariance() : Variance.INVARIANT;
-            rendered.add(argument(arguments.get(i), declared, scope, wildcards));
+            rendered.add(argument(arguments.get(i), declared, scope, mode));
         }
         return declared(javaName, rendered);
     }
 
-    /** One type argument, with the wildcard Kotlin's JVM signature gives it in a parameter. */
-    private TypeMirror argument(KSTypeArgument argument, Variance declared, Scope scope, boolean wildcards) {
+    /**
+     * One type argument, with the wildcard Kotlin's JVM signature gives it in a parameter.
+     *
+     * <p>{@code @JvmSuppressWildcards} on the argument applies to the argument's own wildcard as
+     * well as to everything inside it ({@code Map<String, @JvmSuppressWildcards List<Base>>} is
+     * {@code Map<String,List<Base>>}); {@code @JvmWildcard} forces the wildcard even on a final class
+     * and even where suppression is in force. Both measured against kapt ({@code StubParityTest}).
+     */
+    private TypeMirror argument(KSTypeArgument argument, Variance declared, Scope scope, Mode mode) {
         Variance use = argument.getVariance();
         KSTypeReference reference = argument.getType();
         if (use == Variance.STAR || reference == null) {
-            return wildcards ? new KTypeMirror.Wildcard(null, null) : declared(OBJECT, List.of());
+            return mode.wildcards() ? new KTypeMirror.Wildcard(null, null) : declared(OBJECT, List.of());
         }
+        Boolean own = suppression(reference);
+        if (own == null) {
+            own = suppression(argument);
+        }
+        Mode inner = own == null ? mode : mode.suppressing(own);
+        boolean forced = mode.parameter() && (forcesWildcard(reference) || forcesWildcard(argument));
         KSType type = reference.resolve();
-        TypeMirror rendered = render(type, Position.ARGUMENT, scope, wildcards);
-        if (!wildcards) {
+        TypeMirror rendered = render(type, Position.ARGUMENT, scope, inner);
+        boolean contravariant = use == Variance.CONTRAVARIANT
+            || use == Variance.INVARIANT && declared == Variance.CONTRAVARIANT;
+        boolean covariant = !contravariant && (use == Variance.COVARIANT || declared == Variance.COVARIANT);
+        if (forced) {
+            if (contravariant) {
+                return new KTypeMirror.Wildcard(null, rendered);
+            }
+            return covariant ? new KTypeMirror.Wildcard(rendered, null) : rendered;
+        }
+        if (!inner.wildcards()) {
             return rendered;
         }
-        if (use == Variance.CONTRAVARIANT || use == Variance.INVARIANT && declared == Variance.CONTRAVARIANT) {
+        if (contravariant) {
             return new KTypeMirror.Wildcard(null, rendered);
         }
-        boolean covariant = use == Variance.COVARIANT || declared == Variance.COVARIANT;
         if (covariant && !isFinal(expandAliases(type))) {
             return new KTypeMirror.Wildcard(rendered, null);
         }

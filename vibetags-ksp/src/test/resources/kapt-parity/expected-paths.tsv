@@ -83,6 +83,26 @@ CLASS	com.fx.vc.Money
 FIELD	com.fx.vc.Money.cents
 METHOD	com.fx.vc.ValueClassesKt.makeUid()
 METHOD	com.fx.vc.ValueClassesKt.maybeUid()
+CONSTRUCTOR	com.fx.wc.Boxing.Boxing(com.fx.wc.Eid)
+CONSTRUCTOR	com.fx.wc.Boxing.Boxing(int)
+METHOD	com.fx.wc.Boxing.exposed(com.fx.wc.Eid)
+METHOD	com.fx.wc.Boxing.exposedAs(com.fx.wc.Eid)
+CONSTRUCTOR	com.fx.wc.Exposed.Exposed(java.lang.String)
+METHOD	com.fx.wc.Exposed.getTwice()
+METHOD	com.fx.wc.Exposed.member()
+METHOD	com.fx.wc.Exposed.with(com.fx.wc.Eid)
+METHOD	com.fx.wc.ExposedHolder.getCurrent()
+METHOD	com.fx.wc.ExposedHolder.plain(int)
+METHOD	com.fx.wc.ExposedHolder.take(com.fx.wc.Eid)
+METHOD	com.fx.wc.Quiet.inClass(java.util.List<com.fx.wc.Base>)
+METHOD	com.fx.wc.Quiet.overridden(java.util.List<? extends com.fx.wc.Base>)
+METHOD	com.fx.wc.Wild.both(java.util.List<? extends com.fx.wc.Leaf>)
+METHOD	com.fx.wc.Wild.forced(java.util.List<? extends com.fx.wc.Leaf>)
+METHOD	com.fx.wc.Wild.onArgument(java.util.Map<java.lang.String,java.util.List<com.fx.wc.Base>>)
+METHOD	com.fx.wc.Wild.onFunction(java.util.List<com.fx.wc.Base>,java.lang.Comparable<com.fx.wc.Leaf>)
+METHOD	com.fx.wc.Wild.onType(java.util.List<com.fx.wc.Base>)
+METHOD	com.fx.wc.Wild.plain(java.util.List<? extends com.fx.wc.Base>,java.lang.Comparable<? super com.fx.wc.Leaf>)
+METHOD	com.fx.wc.Wild.turnedOff(java.util.List<? extends com.fx.wc.Base>)
 PARAMETER	com.fx.Plain.Inner.Inner(int)#q
 PARAMETER	com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#id
 PARAMETER	com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#name

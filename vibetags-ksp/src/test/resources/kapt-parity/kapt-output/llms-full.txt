@@ -253,6 +253,66 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ### com.fx.vc.ValueClassesKt.maybeUid()
 - **Reason**: top-level returns nullable value class
 
+### com.fx.wc.Boxing.Boxing(com.fx.wc.Eid)
+- **Reason**: exposed boxed ctor
+
+### com.fx.wc.Boxing.Boxing(int)
+- **Reason**: plain ctor
+
+### com.fx.wc.Boxing.exposed(com.fx.wc.Eid)
+- **Reason**: exposed boxed fun
+
+### com.fx.wc.Boxing.exposedAs(com.fx.wc.Eid)
+- **Reason**: exposed boxed, renamed
+
+### com.fx.wc.Exposed.Exposed(java.lang.String)
+- **Reason**: ctor of an exposed value class
+
+### com.fx.wc.Exposed.getTwice()
+- **Reason**: getter of an exposed value class
+
+### com.fx.wc.Exposed.member()
+- **Reason**: member of an exposed value class
+
+### com.fx.wc.Exposed.with(com.fx.wc.Eid)
+- **Reason**: member of an exposed value class taking one
+
+### com.fx.wc.ExposedHolder.getCurrent()
+- **Reason**: value-class getter in an exposed class
+
+### com.fx.wc.ExposedHolder.plain(int)
+- **Reason**: plain fun in an exposed class
+
+### com.fx.wc.ExposedHolder.take(com.fx.wc.Eid)
+- **Reason**: value-class fun in an exposed class
+
+### com.fx.wc.Quiet.inClass(java.util.List<com.fx.wc.Base>)
+- **Reason**: suppressed on the class
+
+### com.fx.wc.Quiet.overridden(java.util.List<? extends com.fx.wc.Base>)
+- **Reason**: class suppression overridden
+
+### com.fx.wc.Wild.both(java.util.List<? extends com.fx.wc.Leaf>)
+- **Reason**: forced and suppressed
+
+### com.fx.wc.Wild.forced(java.util.List<? extends com.fx.wc.Leaf>)
+- **Reason**: forced on a final argument
+
+### com.fx.wc.Wild.onArgument(java.util.Map<java.lang.String,java.util.List<com.fx.wc.Base>>)
+- **Reason**: suppressed on an argument
+
+### com.fx.wc.Wild.onFunction(java.util.List<com.fx.wc.Base>,java.lang.Comparable<com.fx.wc.Leaf>)
+- **Reason**: suppressed on the function
+
+### com.fx.wc.Wild.onType(java.util.List<com.fx.wc.Base>)
+- **Reason**: suppressed on the type
+
+### com.fx.wc.Wild.plain(java.util.List<? extends com.fx.wc.Base>,java.lang.Comparable<? super com.fx.wc.Leaf>)
+- **Reason**: default wildcards
+
+### com.fx.wc.Wild.turnedOff(java.util.List<? extends com.fx.wc.Base>)
+- **Reason**: suppression turned off
+
 ## Mandatory Input Sanitization
 The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
 

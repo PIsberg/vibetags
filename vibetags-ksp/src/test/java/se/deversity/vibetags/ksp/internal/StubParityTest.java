@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -100,25 +101,27 @@ class StubParityTest {
         assertEquals(recorded("llms-full.txt"), Files.readString(root.resolve("llms-full.txt")), "llms-full.txt");
         assertEquals(recorded("vibetags-locks.jsonl"), Files.readString(root.resolve(".vibetags-locks")),
             ".vibetags-locks");
-        Set<String> kaptRules = new TreeSet<>(List.of(RULES));
+        Set<String> kaptRules = recordedRules();
+        assertTrue(kaptRules.size() > 20, () -> "the recording lost its rule files: " + kaptRules);
         Set<String> kspRules = new TreeSet<>();
         try (Stream<Path> rules = Files.list(root.resolve(".claude/rules"))) {
             rules.forEach(rule -> kspRules.add(rule.getFileName().toString()));
         }
         assertEquals(kaptRules, kspRules, "the set of granular rule files");
-        for (String rule : RULES) {
+        for (String rule : kaptRules) {
             assertEquals(recorded("rules/" + rule), Files.readString(root.resolve(".claude/rules/" + rule)), rule);
         }
     }
 
-    /** The granular rule files kapt wrote, recorded under {@code kapt-output/rules}. */
-    private static final String[] RULES = {
-        "com-fx-Base.md", "com-fx-Box.md", "com-fx-Color.md", "com-fx-Marker.md",
-        "com-fx-Plain-Companion.md", "com-fx-Plain-Inner.md", "com-fx-Plain-Nested.md", "com-fx-Plain.md",
-        "com-fx-Point.md", "com-fx-Result2-Ok.md", "com-fx-Result2.md", "com-fx-Shape-Companion.md",
-        "com-fx-Shape-DefaultImpls.md", "com-fx-Shape.md", "com-fx-Singleton.md", "com-fx-TypesFacade.md",
-        "com-fx-nested-Holder.md", "com-fx-nested-OtherKt.md",
-        "com-fx-vc-Account.md", "com-fx-vc-Money.md", "com-fx-vc-ValueClassesKt.md"};
+    /** The granular rule files kapt wrote, as recorded under {@code kapt-output/rules}. */
+    private static Set<String> recordedRules() throws IOException {
+        try (Stream<Path> rules = Files.list(Path.of(URI.create(
+                StubParityTest.class.getResource("/kapt-parity/kapt-output/rules").toString())))) {
+            Set<String> names = new TreeSet<>();
+            rules.forEach(rule -> names.add(rule.getFileName().toString()));
+            return names;
+        }
+    }
 
     private static String recorded(String name) throws IOException {
         try (InputStream in = StubParityTest.class.getResourceAsStream("/kapt-parity/kapt-output/" + name)) {

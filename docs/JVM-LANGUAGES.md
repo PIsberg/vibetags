@@ -56,7 +56,7 @@ the elements kapt's stubs would have contained, and runs the same processor over
 below about what is lost applies to both front ends, because the KSP front end reproduces kapt's
 element set rather than Kotlin's: element paths are identities, and a project that switches front
 ends must keep them. `StubParityTest` in `vibetags-ksp` holds that against a recorded kapt build
-(90 annotated elements, every generated file byte for byte), and the `examples/kotlin-ksp` CI step
+(110 annotated elements, every generated file byte for byte), and the `examples/kotlin-ksp` CI step
 holds it against `examples/kotlin`. The differences are in [USAGE.md](../USAGE.md#kotlin-ksp-configuration).
 
 ### What was measured
