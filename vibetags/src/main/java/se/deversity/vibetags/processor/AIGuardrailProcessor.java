@@ -1988,24 +1988,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Combines every sibling module's contribution into the shared output files.
-     *
-     * <p>Called by both {@code generateFiles} and {@code checkFiles}. It used to be a block copied
-     * into each, marked {@code CPD-OFF} and justified on the grounds that {@code generateFiles} is
-     * {@code @AILocked} so nothing could be lifted out of it. That reasoning does not survive
-     * contact: the lock is on the <em>step order</em> of {@code generateFiles}, and calling a pure
-     * function where the block used to sit preserves that order exactly. What the copy actually
-     * bought was drift — the check copy grew a null guard on {@code getFileName()} that the
-     * generate copy never got, so the two differed in precisely the way the comment promised they
-     * would not, and a check verdict is worthless the moment it stops reproducing generation.
-     *
-     * <p>Multi-module here means more than one sidecar <em>or</em> a reactor root that opted into
-     * the lean index: the merge path also owns pointer substitution, and a reactor where one module
-     * holds all the annotations produces exactly one sidecar, so gating purely on count would
-     * silently ignore the opt-in.
-     *
-     * @return the per-service content to write; {@code contentByService} unchanged when this is not
-     *         a multi-module build
+     * Whether the merge path applies: more than one sidecar <em>or</em> a reactor root that opted
+     * into the lean index. The merge path also owns pointer substitution, and a reactor where one
+     * module holds all the annotations produces exactly one sidecar, so gating purely on count
+     * would silently ignore the opt-in.
      */
     static boolean isMultiModule(List<ModuleSidecar> allSidecars) {
         // Counts sidecar FILES, because this gates the merge, and two source sets of one module are
@@ -2035,6 +2021,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         contentByService.forEach(sidecar::putBody);
     }
 
+    /**
+     * Combines every sibling module's contribution into the shared output files.
+     *
+     * <p>Called by both {@code generateFiles} and {@code checkFiles}. It used to be a block copied
+     * into each, marked {@code CPD-OFF} and justified on the grounds that {@code generateFiles} is
+     * {@code @AILocked} so nothing could be lifted out of it. That reasoning does not survive
+     * contact: the lock is on the <em>step order</em> of {@code generateFiles}, and calling a pure
+     * function where the block used to sit preserves that order exactly. What the copy actually
+     * bought was drift — the check copy grew a null guard on {@code getFileName()} that the
+     * generate copy never got, so the two differed in precisely the way the comment promised they
+     * would not, and a check verdict is worthless the moment it stops reproducing generation.
+     *
+     * @return the per-service content to write; {@code contentByService} unchanged when this is not
+     *         a multi-module build, in the sense of {@link #isMultiModule}
+     */
     static Map<String, String> mergeAcrossModules(Map<String, String> contentByService,
                                                   Map<String, Path> serviceFiles,
                                                   List<ModuleSidecar> allSidecars) {
