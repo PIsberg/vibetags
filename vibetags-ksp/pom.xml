@@ -34,6 +34,14 @@
             <artifactId>vibetags-processor</artifactId>
         </dependency>
 
+        <!-- Declared, not inherited through the processor: its sources use @NullMarked, and a
+             processor published by Gradle (the CI Gradle leg's) carries jspecify at runtime scope,
+             which does not reach this compile. Same scope as vibetags/pom.xml. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
+
         <!-- Provided: KSP loads processors into a classloader that already holds its own API and
              the Kotlin standard library, so shipping either would put a second copy beside it. -->
         <dependency>
