@@ -22,6 +22,7 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 | [`gradle-flat/`](gradle-flat/) | Gradle | 2 | 2 | `CLAUDE.md` only | module ids are names, not path hashes |
 | [`gradle-composite/`](gradle-composite/) | Gradle, `includeBuild` | 2 builds | 2 | `CLAUDE.md` only | both builds land in one root file |
 | [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included; inherited rules from a pre-extracted manifest render under their origin, the `manifest.max` cap drops exactly the advisory rule |
+| [`kotlin-ksp/`](kotlin-ksp/) | Gradle + KSP | 1 | 4 (`kotlin/`'s sources) | byte for byte against `kotlin/`'s committed files | the dropped value-class guardrail is warned about |
 | [`groovy/`](groovy/) | Gradle | 1 | 3 | byte for byte, whole directory | annotated class and method appear; the `@AIPrivacy` field does NOT (groovyc stubs carry no fields) |
 | [`scala/`](scala/) | Gradle | 1 | 2 | byte for byte, whole directory | annotated Java class appears, Scala class does not |
 

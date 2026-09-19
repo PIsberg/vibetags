@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusion filter for vibetags-ksp. Listed per method, as in vibetags/spotbugs-exclude.xml,
+  so that a new site is still reported.
+-->
+<FindBugsFilter>
+
+  <!-- PATH_TRAVERSAL_IN: the path is KSFile.getFilePath(), the Kotlin source file KSP is compiling,
+       turned into a Path so the processor can find the module it belongs to. It comes from the
+       compiler, not from a user, and nothing is read from it here. -->
+  <Match>
+    <Class name="se.deversity.vibetags.ksp.internal.StubBuilder"/>
+    <Method name="buildFile"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+
+</FindBugsFilter>

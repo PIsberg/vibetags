@@ -61,8 +61,8 @@ class BuildVersionParityTest {
      */
     private static final List<String> GRADLE_ANCHORS = List.of(
         "vibetags/build.gradle", "vibetags-annotations/build.gradle", "examples/basic/build.gradle",
-        "examples/kotlin/build.gradle.kts", "examples/groovy/build.gradle",
-        "examples/scala/build.gradle");
+        "examples/kotlin/build.gradle.kts", "examples/kotlin-ksp/build.gradle.kts",
+        "examples/groovy/build.gradle", "examples/scala/build.gradle");
 
     private static final char EQUALS = '=';
     private static final char SINGLE_QUOTE = '\'';
@@ -84,7 +84,7 @@ class BuildVersionParityTest {
     /** Poms that inherit from the parent and must therefore declare no version of their own. */
     private static final List<String> MANAGED_POMS = List.of(
         "vibetags/pom.xml", "vibetags-annotations/pom.xml", "vibetags-bom/pom.xml",
-        "vibetags-cli/pom.xml", "load-tests/pom.xml");
+        "vibetags-cli/pom.xml", "vibetags-ksp/pom.xml", "load-tests/pom.xml");
 
     /**
      * Consumer-shaped poms: standalone on purpose, so a user can lift them into their own project

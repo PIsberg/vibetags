@@ -68,8 +68,9 @@ dependencies {
 }
 ```
 
-Kotlin replaces `annotationProcessor` with `kapt` (KSP does not run JSR 269 processors, so it is
-not supported); Groovy needs the same two lines plus `groovyOptions.javaAnnotationProcessing = true`
+Kotlin replaces `annotationProcessor` with `kapt`, or, on KSP, with
+`ksp("se.deversity.vibetags:vibetags-ksp")` in place of the processor (same paths and files as
+kapt); Groovy needs the same two lines plus `groovyOptions.javaAnnotationProcessing = true`
 on the `GroovyCompile` task. Scala has no JSR 269 support at all, so annotate thin Java types beside
 the Scala code instead.
 

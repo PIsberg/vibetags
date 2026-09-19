@@ -15,6 +15,12 @@
 
     <!-- Import category/java/errorprone.xml, excluding rules that are deliberately not followed or suppressed -->
     <rule ref="category/java/errorprone.xml">
+        <!-- A J2EE rule: prefer the thread's context classloader. It fired twice in vibetags-ksp
+             (the annotation proxy, and the @Target lookup), and both need the loader that holds
+             vibetags-annotations. KSP loads each processor into its own classloader, which is not
+             the thread's context loader, so the context loader is the one choice that is not
+             guaranteed to see those classes. -->
+        <exclude name="UseProperClassLoader"/>
         <exclude name="AvoidCatchingGenericException"/>
         <exclude name="AvoidCatchingThrowable"/>
         <exclude name="CloseResource"/>

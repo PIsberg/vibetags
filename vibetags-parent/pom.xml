@@ -91,6 +91,12 @@
         <async-test-lib.version>1.12.1</async-test-lib.version>
         <snakeyaml.version>2.7</snakeyaml.version>
         <jmh.version>1.37</jmh.version>
+        <!-- vibetags-ksp: the KSP API it compiles against (KSP provides it at runtime), and the
+             standalone KSP2 engine plus the runtime its tests drive. kotlin-stdlib and coroutines
+             match what symbol-processing-api declares. -->
+        <ksp.version>2.3.12</ksp.version>
+        <kotlin-stdlib.version>2.3.20</kotlin-stdlib.version>
+        <kotlinx-coroutines.version>1.10.2</kotlinx-coroutines.version>
 
         <!-- Verification-only tooling: never on any module's classpath. ECJ is how CI checks
              the documented claim that the processor degrades rather than fails under a compiler
@@ -212,6 +218,31 @@
                 <artifactId>jmh-generator-annprocess</artifactId>
                 <version>${jmh.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.google.devtools.ksp</groupId>
+                <artifactId>symbol-processing-api</artifactId>
+                <version>${ksp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.devtools.ksp</groupId>
+                <artifactId>symbol-processing-aa-embeddable</artifactId>
+                <version>${ksp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.devtools.ksp</groupId>
+                <artifactId>symbol-processing-common-deps</artifactId>
+                <version>${ksp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>${kotlin-stdlib.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core-jvm</artifactId>
+                <version>${kotlinx-coroutines.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -327,7 +358,7 @@
                   A new shipping dependency therefore enters this project by editing this
                   list, in a reviewed diff, never by an agent resolving one mid-task. The
                   modules that publish artifacts (vibetags-annotations, vibetags,
-                  vibetags-cli) activate the plugin; load-tests and the examples do not,
+                  vibetags-cli, vibetags-ksp) activate the plugin; load-tests and the examples do not,
                   because their dependency surface is a workbench, not a shipment.
                 -->
                 <plugin>

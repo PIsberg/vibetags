@@ -1,0 +1,93 @@
+# Recorded from a kapt build of src/ (Kotlin 2.4.10, kapt, vibetags-processor 1.3.5, JDK 21 toolchain).
+# One line per annotated element: kind, tab, element path. Parameters have no kind in .vibetags-locks,
+# so they are listed as PARAMETER, read from the generated files.
+CLASS	com.fx.Base
+METHOD	com.fx.Base.go(int)
+CLASS	com.fx.Box
+METHOD	com.fx.Box.put(K,T)
+ENUM	com.fx.Color
+ENUM_CONSTANT	com.fx.Color.RED
+METHOD	com.fx.Color.hex()
+ANNOTATION_TYPE	com.fx.Marker
+CLASS	com.fx.Plain
+METHOD	com.fx.Plain.<T>gen(T,java.util.List<? extends T>)
+FIELD	com.fx.Plain.CCONST
+METHOD	com.fx.Plain.Companion.create()
+METHOD	com.fx.Plain.Companion.make()
+CLASS	com.fx.Plain.Inner
+METHOD	com.fx.Plain.Inner.inf()
+CLASS	com.fx.Plain.Nested
+METHOD	com.fx.Plain.Nested.nf(com.fx.Plain.Nested)
+CONSTRUCTOR	com.fx.Plain.Plain(long)
+METHOD	com.fx.Plain.alias(kotlin.jvm.functions.Function1<? super java.lang.String,kotlin.Unit>)
+METHOD	com.fx.Plain.anys(java.lang.Object,java.lang.Object,java.lang.Void)
+METHOD	com.fx.Plain.arrays(int[],java.lang.String[],java.lang.Integer[],java.lang.Object[],int[][])
+FIELD	com.fx.Plain.cjf
+METHOD	com.fx.Plain.colls(java.util.List<java.lang.String>,java.util.List<java.lang.String>,java.util.Map<java.lang.String,java.lang.Integer>,java.util.Set<? extends com.fx.Animal>,java.util.List<com.fx.Dog>,java.util.Collection<?>,java.util.Map<java.lang.String,? super com.fx.Animal>)
+FIELD	com.fx.Plain.counter
+METHOD	com.fx.Plain.create()
+FIELD	com.fx.Plain.cval
+METHOD	com.fx.Plain.defs(int)
+METHOD	com.fx.Plain.defs(int,java.lang.String)
+METHOD	com.fx.Plain.defs(int,java.lang.String,long)
+METHOD	com.fx.Plain.fns(kotlin.jvm.functions.Function1<? super java.lang.Integer,java.lang.String>,kotlin.jvm.functions.Function1<? super kotlin.coroutines.Continuation<? super kotlin.Unit>,? extends java.lang.Object>,kotlin.jvm.functions.Function1<? super java.lang.String,java.lang.Integer>)
+FIELD	com.fx.Plain.ft
+METHOD	com.fx.Plain.getComputed()
+METHOD	com.fx.Plain.hidden()
+METHOD	com.fx.Plain.inside$kapt_gt(java.lang.String)
+FIELD	com.fx.Plain.jf
+METHOD	com.fx.Plain.lam(kotlin.jvm.functions.Function0<kotlin.Unit>)
+FIELD	com.fx.Plain.late
+METHOD	com.fx.Plain.ng(java.util.Map<java.lang.String,? extends java.util.List<kotlin.Pair<java.lang.Integer,com.fx.Dog>>>)
+METHOD	com.fx.Plain.over(int)
+METHOD	com.fx.Plain.over(java.lang.String)
+METHOD	com.fx.Plain.paramAnn(java.lang.String,int)
+METHOD	com.fx.Plain.plain()
+METHOD	com.fx.Plain.plus(com.fx.Plain)
+METHOD	com.fx.Plain.prims(byte,short,char,long,float,double,boolean,java.lang.Integer)
+METHOD	com.fx.Plain.renamed()
+METHOD	com.fx.Plain.res(java.lang.Object)
+METHOD	com.fx.Plain.ret()
+FIELD	com.fx.Plain.secret
+METHOD	com.fx.Plain.setSettable(int)
+METHOD	com.fx.Plain.sus(java.lang.String,kotlin.coroutines.Continuation<? super java.lang.Integer>)
+FIELD	com.fx.Plain.tag
+METHOD	com.fx.Plain.va(int,java.lang.String...)
+METHOD	com.fx.Plain.with(int)
+CLASS	com.fx.Point
+CLASS	com.fx.Result2
+CLASS	com.fx.Result2.Ok
+INTERFACE	com.fx.Shape
+METHOD	com.fx.Shape.Companion.unit()
+METHOD	com.fx.Shape.DefaultImpls.describe(com.fx.Shape,java.lang.String)
+METHOD	com.fx.Shape.area()
+METHOD	com.fx.Shape.describe(java.lang.String)
+METHOD	com.fx.Shape.getSides()
+CLASS	com.fx.Singleton
+METHOD	com.fx.Singleton.of()
+FIELD	com.fx.Singleton.ov
+METHOD	com.fx.Singleton.st()
+FIELD	com.fx.TypesFacade.TOP_CONST
+METHOD	com.fx.TypesFacade.getLen2(java.lang.String)
+METHOD	com.fx.TypesFacade.shout(java.lang.String,int)
+METHOD	com.fx.TypesFacade.topLevel(int,java.lang.String)
+FIELD	com.fx.TypesFacade.topProp
+METHOD	com.fx.nested.Holder.run()
+METHOD	com.fx.nested.OtherKt.otherTop(long)
+METHOD	com.fx.nested.OtherKt.privTop()
+CONSTRUCTOR	com.fx.vc.Account.Account(int)
+METHOD	com.fx.vc.Account.many(java.util.List<com.fx.vc.Uid>)
+FIELD	com.fx.vc.Account.owner
+METHOD	com.fx.vc.Account.renamedTake(java.lang.String)
+CLASS	com.fx.vc.Money
+FIELD	com.fx.vc.Money.cents
+METHOD	com.fx.vc.ValueClassesKt.makeUid()
+METHOD	com.fx.vc.ValueClassesKt.maybeUid()
+PARAMETER	com.fx.Plain.Inner.Inner(int)#q
+PARAMETER	com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#id
+PARAMETER	com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#name
+PARAMETER	com.fx.Plain.paramAnn(java.lang.String,int)#first
+PARAMETER	com.fx.Plain.paramAnn(java.lang.String,int)#second
+PARAMETER	com.fx.Plain.setSp(java.lang.String)#p0
+PARAMETER	com.fx.Point.Point(int,int)#y
+PARAMETER	com.fx.Point.copy(int,int)#y

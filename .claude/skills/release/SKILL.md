@@ -139,13 +139,14 @@ cd vibetags-annotations && mvn -q install && cd ..
 cd vibetags && mvn -q clean install && cd ..
 cd vibetags-bom && mvn -q install && cd ..
 cd vibetags-cli && mvn -q clean install && cd ..
+cd vibetags-ksp && mvn -q clean install && cd ..
 cd examples/basic && mvn -q clean compile && cd ../..
 cd examples/multimodule && mvn -q clean test-compile && cd ../..
 cd examples/multimodule-indexed && mvn -q clean compile && cd ../..
 ```
 
-`vibetags-cli` is in that list because it is published too, and it depends on the processor
-as a library. Both reactor examples are there because they exercise the sidecar merge, which
+`vibetags-cli` and `vibetags-ksp` are in that list because they are published too, and both
+depend on the processor as a library. Both reactor examples are there because they exercise the sidecar merge, which
 the single-module `example` cannot reach.
 
 `test-compile`, not `compile`, for `examples/multimodule`, and the difference is not a

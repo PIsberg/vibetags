@@ -33,7 +33,7 @@ class BuildToolchainParityTest {
 
     /** The modules that compile Java and therefore owe the full stack. */
     private static final List<String> MODULES =
-        List.of("vibetags", "vibetags-annotations", "vibetags-cli");
+        List.of("vibetags", "vibetags-annotations", "vibetags-cli", "vibetags-ksp");
 
     /**
      * Error Prone settings that must hold in every module. Per-module {@code -Xep:...:OFF} entries

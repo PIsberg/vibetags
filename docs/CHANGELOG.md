@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`vibetags-ksp`: VibeTags under KSP (#496).** A Kotlin project that has moved fully to KSP could
+  not run VibeTags at all, because KSP cannot load a JSR 269 processor. It now depends on
+  `ksp("se.deversity.vibetags:vibetags-ksp")` in place of the processor. The new artifact is an
+  adapter, not a second implementation: it presents KSP's declarations to the unchanged
+  `AIGuardrailProcessor` as the elements kapt's stubs would have contained, so element paths, and
+  therefore `.vibetags-locks` entries, granular rule filenames and sidecars, do not change when a
+  project switches front ends. `StubParityTest` compares 90 annotated elements and every generated
+  file of a fixture with a recorded kapt build, byte for byte, and CI builds `examples/kotlin-ksp`
+  (the kapt example's sources through KSP) and fails unless its output equals the kapt example's.
+  Differences from kapt: `.vibetags-locks` carries no line ranges, and a guardrail on a function kapt
+  has no stub for (a value class in its signature) is reported as a build warning instead of being
+  lost silently. An incremental KSP build regenerates from the whole module: without that, KSP shows
+  a processor only the changed files, and the first test run of the adapter rewrote `CLAUDE.md` from
+  one file and dropped the untouched file's guardrail.
+
 ### Fixed
+
+- `vibetags doctor` reported a KSP project as unwired, because it looked only for
+  `vibetags-processor` in the build file. `vibetags-ksp` now counts as the processor wiring.
 
 - The consumer sweep no longer reports a repository as `ERROR` because an earlier sweep of the
   same version left its worktree under a different `TMPDIR` (#736). `git worktree prune` keeps a

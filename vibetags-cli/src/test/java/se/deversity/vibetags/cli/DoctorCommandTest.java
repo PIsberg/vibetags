@@ -72,6 +72,22 @@ class DoctorCommandTest {
         assertTrue(out().contains("claude -> CLAUDE.md"), out());
     }
 
+    /** A Kotlin build on KSP wires vibetags-ksp, which runs the processor; that is wired (#496). */
+    @Test
+    void kspWiredGradleProject_isHealthy() throws Exception {
+        Files.writeString(dir.resolve("build.gradle.kts"), """
+            plugins { id("com.google.devtools.ksp") version "2.3.12" }
+            dependencies {
+                compileOnly("se.deversity.vibetags:vibetags-annotations")
+                ksp("se.deversity.vibetags:vibetags-ksp")
+            }
+            """);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("processor wired: yes (vibetags-ksp)"), out());
+    }
+
     @Test
     void missingProcessorWiring_needsAction() throws Exception {
         Files.writeString(dir.resolve("pom.xml"), "<project/>");

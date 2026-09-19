@@ -496,6 +496,15 @@ floor, and if a class named in the table above no longer exists.
 
 ## Other modules
 
+`vibetags-ksp/src/test` runs real KSP2 in-process (`KotlinSymbolProcessing`, no Gradle) over Kotlin
+sources, by `cd vibetags-ksp && mvn test` and on every `build-maven` leg:
+
+| Test class | What it covers |
+|---|---|
+| `StubParityTest` | The kapt contract. Compiles `kapt-parity/src` through KSP and compares every annotated element's path and kind with `kapt-parity/expected-paths.tsv` (90, recorded from a real kapt build), then compares `CLAUDE.md`, `llms-full.txt`, `.vibetags-locks` and every granular rule file byte for byte with the recorded kapt output. Covers facades, companions, `@JvmStatic`, `@JvmOverloads`, `DefaultImpls`, suspend, use-site targets, variance, primitives and arrays, and each value-class shape kapt keeps or drops. Re-record from kapt when it must change; never edit it to match |
+| `KspLifecycleTest` | The JSR 269 lifecycle the adapter plays: init, rounds, one final round; file-presence opt-in; the missing-root warning; an error in a sibling processor leaves every file untouched; an incremental KSP run that is shown one dirty file still regenerates the whole module (with a control proving KSP really hands out a partial view); check mode fails on drift and passes when current; validation warnings reach KSP's log; `Class`- and enum-valued members; `-jvm-default=no-compatibility` drops `DefaultImpls`; a guardrail on a function with no stub is warned about |
+| `AnnotationProxiesTest` | The annotation instances behave as javac's: declared defaults, `IncompleteAnnotationException` for an unwritten required member, `MirroredTypeException` for a `Class` member, enum-array and number conversion, defensive array copies, equality |
+
 `vibetags-cli/src/test` has its own small suite, run by `cd vibetags-cli && mvn test` and by the
 `build-maven` and `cross-platform` CI legs (the latter are the only place its filesystem behaviour
 is exercised on Windows and macOS path separators):

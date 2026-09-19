@@ -79,5 +79,5 @@ Four consequences. The first two are cosmetic for typical use; the third loses g
 The CI step that builds this example asserts all three `AccountLedger` outcomes, so a kapt release
 that changes any of them fails the build (#681). Details: [docs/JVM-LANGUAGES.md](../../docs/JVM-LANGUAGES.md#kotlin).
 
-KSP is not supported: VibeTags is a JSR 269 processor, and KSP does not run JSR 269
-processors. kapt is the supported route for Kotlin; this example builds with Kotlin 2.4.10.
+For KSP, see [`../kotlin-ksp/`](../kotlin-ksp/README.md): it compiles these same sources through
+KSP with `vibetags-ksp`, and CI requires its output to equal this example's byte for byte. kapt is the supported route for Kotlin; this example builds with Kotlin 2.4.10.

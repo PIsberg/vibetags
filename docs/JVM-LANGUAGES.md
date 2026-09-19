@@ -26,7 +26,7 @@ were prose that nobody had run, and one of the claims was wrong for several rele
 | Language | Rating | What reaches the processor | Verified by |
 |---|---|---|---|
 | Java | **Supported** | javac runs the processor directly | `corpus/run-corpus.sh`, six libraries, 15,683 members |
-| Kotlin | **Supported, one level lost** (package) | kapt generates Java stubs and runs the processor over them; functions with a value class in their JVM signature are left out | `kotlin-obd-api`, 15 of 15 guardrails rendered; `examples/kotlin` pins the value-class loss |
+| Kotlin | **Supported, one level lost** (package) | kapt generates Java stubs and runs the processor over them, or `vibetags-ksp` presents KSP's declarations as those stubs; functions with a value class in their JVM signature are left out either way | `kotlin-obd-api`, 15 of 15 guardrails rendered; `examples/kotlin` pins the value-class loss; `examples/kotlin-ksp` pins KSP output byte-identical to kapt's |
 | Groovy | **Supported, one level lost** (field) | groovyc stubs, but only with `javaAnnotationProcessing` on | `nf-boost`, 13 of 13 expected, 2 field guardrails absent |
 | Scala | **Partial by construction** | the Java sources of a mixed module; never `.scala` | `splain`, 17 from the Java half, 0 from the Scala half |
 | Clojure | **Not possible** | nothing | n/a |
@@ -50,6 +50,14 @@ none of which were written with VibeTags in mind. See [corpus/README.md](../corp
 Every `@AI*` annotation is a plain Java annotation with `SOURCE` retention, so it applies to Kotlin
 declarations unchanged. kapt generates a Java stub per Kotlin class and runs JSR 269 processors
 over the stubs.
+
+Under KSP, `vibetags-ksp` does the same job without kapt: it builds, from KSP's view of the sources,
+the elements kapt's stubs would have contained, and runs the same processor over them. Everything
+below about what is lost applies to both front ends, because the KSP front end reproduces kapt's
+element set rather than Kotlin's: element paths are identities, and a project that switches front
+ends must keep them. `StubParityTest` in `vibetags-ksp` holds that against a recorded kapt build
+(90 annotated elements, every generated file byte for byte), and the `examples/kotlin-ksp` CI step
+holds it against `examples/kotlin`. The differences are in [USAGE.md](../USAGE.md#kotlin-ksp-configuration).
 
 ### What was measured
 
@@ -129,6 +137,10 @@ measured), or pin the module name with `kotlin { compilerOptions { moduleName.se
 together with the rename.
 
 ### Why VibeTags cannot warn about the lost functions
+
+Under KSP it can, and does: `vibetags-ksp` sees the Kotlin declaration it leaves out, and a build
+that drops a guardrail this way prints a warning naming the annotation, the function and the fix.
+The rest of this section is about kapt.
 
 The processor sees only the stub, so the omitted function is not there to warn about. Its one trace
 is the `@kotlin.Metadata` annotation kapt copies onto the stub class, whose string table does list
@@ -309,11 +321,14 @@ policy that might soften; it is how KSP is built. A Kotlin project that has migr
 cannot run VibeTags at all, today, and that is already true for teams whose remaining processors
 (Hilt, Room, Moshi, Glide) all support KSP and who therefore have no reason to keep the kapt plugin.
 
-So the exposure is real but differently shaped than it was written: not "the mechanism is being
+So the exposure was real but differently shaped than it was written: not "the mechanism is being
 withdrawn", but "the mechanism is fine and a growing share of Kotlin projects no longer load it".
-Kotlin support does not degrade gradually in that case, it goes from one level lost to nothing, and
-the only in-principle fix is a separate KSP front end reading the same annotations. Issue #496
-holds that analysis, including why the compiler-free rendering layer makes it tractable.
+
+**Closed by `vibetags-ksp` (#496).** A KSP front end now runs the same processor, and a project on
+KSP alone depends on it in place of `vibetags-processor`. It is an adapter rather than a second
+implementation: it presents KSP's declarations to `AIGuardrailProcessor` as `javax.lang.model`
+elements shaped like kapt's stubs, so the rendering, validation and write paths are the ones every
+javac build runs.
 
 ---
 

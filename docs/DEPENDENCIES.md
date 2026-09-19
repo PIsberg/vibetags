@@ -37,13 +37,20 @@ or ASM: the annotation is all it needs, and either library would be one more art
 launcher of the CLI to resolve (#691). Whoever launches it (jbang, `java -cp`) resolves the
 processor's transitive slf4j/logback, which is the full closure.
 
+`vibetags-ksp` adds **no shipping dependency** either. It needs the KSP API
+(`com.google.devtools.ksp:symbol-processing-api`, `ksp.version`) and the Kotlin standard library
+(`kotlin-stdlib.version`) to compile, both `provided`: KSP loads a processor into a classloader that
+already holds both, so shipping them would put a second copy beside KSP's own. Its runtime closure is
+`vibetags-processor`'s.
+
 `vibetags-annotations` has **no** third-party dependencies at all, by design. It is on the
 consumer's compile classpath, and anything added there is something a consumer's build has to
 resolve, shade or exclude.
 
 ## What the tests use
 
-All test-scope, all in `vibetags/`.
+All test-scope. Everything in the table is in `vibetags/`; `vibetags-ksp/` adds the three
+below it.
 
 | Artifact | Property | Why it is here |
 |---|---|---|
@@ -53,6 +60,11 @@ All test-scope, all in `vibetags/`.
 | `com.tngtech.archunit:archunit-junit5` | `archunit.version` | Enforces the layering invariant: `processor/internal/content/` must not import `javax.lang.model`, `javax.annotation.processing` or `com.sun.source`. See `ArchitectureRulesTest`. This is a rule the compiler cannot express, so a library holds it instead. |
 | `se.deversity.async-test-lib` | `async-test-lib.version` | Concurrency tests for the parallel write phase and `WriteCache`. Sibling project, published to Maven Central like any other dependency. |
 | `org.yaml:snakeyaml` | `snakeyaml.version` | Parses the six YAML documents the renderers emit. The processor itself must never gain a YAML dependency: it runs on the consumer's annotation processor path, where every extra jar is one more collision. The tests need a real parser because "the file looks right" is not the property that matters; "a strict parser sees every module's guardrails" is. `YamlMergeShapeContractTest` depends on this distinction. |
+
+`vibetags-ksp/` tests run KSP2's standalone engine in-process over real Kotlin sources:
+`com.google.devtools.ksp:symbol-processing-aa-embeddable` and `symbol-processing-common-deps`
+(`ksp.version`), and `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm`
+(`kotlinx-coroutines.version`), which the engine needs at runtime and does not bring itself.
 
 `load-tests/` additionally uses `org.openjdk.jmh:jmh-core` and `jmh-generator-annprocess`
 (`jmh.version`) for the benchmark harness. That module pins `<processor.version>` directly rather
@@ -71,7 +83,8 @@ set: its `regex-properties` goal works out which surefire execution a named test
 the test does not also run in the other one (#686, docs/TESTS.md).
 
 **Static analysis.** Four tools, each catching something the others do not. All four run in all
-three modules that compile Java — `vibetags`, `vibetags-annotations` and `vibetags-cli` —
+four modules that compile Java (`vibetags`, `vibetags-annotations`, `vibetags-cli` and
+`vibetags-ksp`)
 and `BuildToolchainParityTest` fails if one of them drops a tool, because a check that was never
 configured cannot fail and so reports nothing when it is missing.
 
@@ -83,14 +96,14 @@ configured cannot fail and so reports nothing when it is missing.
 - `maven-checkstyle-plugin` for style, also wired into `pre-commit` so it fails before the commit
   rather than in CI.
 - `spotbugs-maven-plugin` with `findsecbugs-plugin` (`findsecbugs-plugin.version`) for bytecode
-  analysis, the security rules included. `vibetags` and `vibetags-cli` carry a
+  analysis, the security rules included. `vibetags`, `vibetags-cli` and `vibetags-ksp` carry a
   `spotbugs-exclude.xml`; `vibetags-annotations` deliberately has none, so the absence of that file
   stays evidence that nothing there has been excused.
 - Error Prone (`error-prone.version`) with NullAway (`nullaway.version`), on
   `annotationProcessorPaths` of the compiler plugin, main sources only. NullAway is what makes the
   JSpecify annotations load-bearing instead of decorative. It needs the `--add-exports` flags in
   each module's `.mvn/jvm.config` to reach javac's internals: without them Error Prone does not
-  fail, it silently does not run, which is why those three files are pinned byte-identical.
+  fail, it silently does not run, which is why those four files are pinned byte-identical.
 
 **Coverage and mutation.** `jacoco-maven-plugin` measures line coverage; `pitest-maven` with
 `pitest-junit5-plugin` measures whether the tests would notice if the code were wrong. Mutation

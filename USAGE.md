@@ -6,6 +6,7 @@
 
 - [Logging Configuration](#logging-configuration)
 - [Kotlin (kapt) Configuration](#kotlin-kapt-configuration)
+- [Kotlin (KSP) Configuration](#kotlin-ksp-configuration)
 - [Other JVM Languages: Groovy, Scala, Clojure](#other-jvm-languages-groovy-scala-clojure)
 - [Transitive Guardrails: Rules That Travel With a Dependency](#transitive-guardrails-rules-that-travel-with-a-dependency)
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
@@ -79,8 +80,8 @@ tasks.withType(JavaCompile) {
 
 Every `@AI*` annotation is a plain Java annotation with `SOURCE` retention, so it applies to
 Kotlin classes and functions unchanged. VibeTags is a JSR 269 processor, which means Kotlin
-projects run it under [kapt](https://kotlinlang.org/docs/kapt.html) — KSP does not run JSR 269
-processors and is not supported.
+projects run it under [kapt](https://kotlinlang.org/docs/kapt.html), or under KSP through
+`vibetags-ksp` ([below](#kotlin-ksp-configuration)).
 
 ```kotlin
 plugins {
@@ -139,6 +140,68 @@ rather than the Kotlin sources:
 
 A complete working consumer is in [`examples/kotlin/`](examples/kotlin/README.md), built in CI
 on the JDK 21 Gradle leg.
+
+### Kotlin (KSP) Configuration
+
+KSP defines its own processor interface and cannot load a JSR 269 processor. `vibetags-ksp` bridges
+the two: a KSP `SymbolProcessorProvider` that presents each Kotlin declaration as the element kapt's
+Java stub would have contained, and runs the same `AIGuardrailProcessor` over them. Use it in place
+of `vibetags-processor`, not beside it.
+
+```kotlin
+plugins {
+    kotlin("jvm") version "2.4.10"
+    id("com.google.devtools.ksp") version "2.3.12"
+}
+
+dependencies {
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
+    ksp(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
+
+    compileOnly("se.deversity.vibetags:vibetags-annotations")
+    ksp("se.deversity.vibetags:vibetags-ksp")
+}
+
+ksp {
+    // KSP runs inside the Gradle daemon, whose working directory is not the project.
+    arg("vibetags.root", projectDir.absolutePath)
+}
+```
+
+Processor options (`vibetags.check`, `vibetags.enforce`, `vibetags.log.path`, ...) are passed as
+`ksp { arg(...) }`, without the `-A` prefix.
+
+**The same paths as kapt, by construction.** Element paths are identities: they key
+`.vibetags-locks`, granular rule filenames and the reactor sidecars, so a project moving from kapt to
+KSP must see none of them change. The front end reproduces what kapt's stubs contain (file facades,
+companion fields on the outer class, `@JvmStatic` and `@JvmOverloads` copies, `DefaultImpls`, erased
+signatures, the value-class rules below), and two checks hold it there: `StubParityTest` compares 90
+annotated elements and every generated file of a fixture with a recorded kapt build, and CI builds
+[`examples/kotlin-ksp/`](examples/kotlin-ksp/README.md) and fails unless its files equal
+`examples/kotlin`'s byte for byte.
+
+What differs from kapt:
+
+- **A lost guardrail is reported, not silent.** A function kapt has no stub for (a value class in its
+  signature, an inline function with a reified type parameter) has no element under KSP either, which
+  keeps the paths identical, but the build now says so:
+  `w: [ksp] VibeTags: @AILocked on fun balanceFor in com.example.AccountLedger reaches no guardrail file`.
+  Give the function a `@JvmName`, or move the guardrail to the class.
+- **`.vibetags-locks` has no line ranges.** Under kapt they pointed into the generated stub, not the
+  `.kt` file; KSP has no stub and no javac Tree API, so they are left out.
+- **Incremental builds see the whole module.** A KSP incremental run shows a processor only the
+  changed files. `vibetags-ksp` registers every source as an input of one aggregating output, so any
+  change puts every file back in front of it and the guardrails are regenerated from the whole module.
+- **Inherited guardrails need `vibetags.manifest.dir`**, as under kapt: KSP gives a processor no view
+  of the classpath's resources.
+- **Property annotations follow Kotlin 2.2's `param-property` default.** An annotation on a
+  constructor `val` with no use-site target lands on the parameter and on the field, as it does
+  under kapt on Kotlin 2.4.10. The front end always applies that default and does not read the
+  `-Xannotation-default-target` compiler flag, so a project that sets the flag can see different
+  paths under KSP than under kapt.
+
+The same caveats as kapt otherwise apply: no method-body-scoped annotations, no package level, and an
+`internal` function's path contains the Kotlin module name.
 
 ### Other JVM Languages: Groovy, Scala, Clojure
 

@@ -90,12 +90,16 @@ final class DoctorCommand {
             return;
         }
         String text = read.get();
-        boolean processor = text.contains("vibetags-processor");
+        // A KSP build wires vibetags-ksp in the processor's place: it runs the same processor
+        // behind a KSP front end, since KSP cannot load a JSR 269 processor (#496).
+        boolean ksp = text.contains("vibetags-ksp");
+        boolean processor = ksp || text.contains("vibetags-processor");
         boolean annotations = text.contains("vibetags-annotations");
-        out.println("processor wired: " + (processor ? "yes" : "NO — not found in " + buildFile));
+        out.println("processor wired: " + (processor ? (ksp ? "yes (vibetags-ksp)" : "yes")
+            : "NO — not found in " + buildFile));
         out.println("annotations dep: " + (annotations ? "yes" : "NO — not found in " + buildFile));
         if (!processor) {
-            problems.add("vibetags-processor is not in " + buildFile
+            problems.add("neither vibetags-processor nor vibetags-ksp is in " + buildFile
                 + " — nothing regenerates the guardrail files (see the README install snippet)");
         }
         if (!annotations) {
