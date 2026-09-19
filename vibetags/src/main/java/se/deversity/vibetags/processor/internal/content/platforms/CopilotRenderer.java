@@ -41,25 +41,12 @@ public final class CopilotRenderer implements PlatformRenderer {
         section(Platform.COPILOT, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
         section(Platform.COPILOT, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
         section(Platform.COPILOT, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
-        section(Platform.COPILOT, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
-        section(Platform.COPILOT, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.COPILOT, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.COPILOT, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.COPILOT, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
-        section(Platform.COPILOT, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.COPILOT, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
-        section(Platform.COPILOT, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.COPILOT, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.COPILOT, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
-        section(Platform.COPILOT, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
-        section(Platform.COPILOT, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
-        section(Platform.COPILOT, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
-        section(Platform.COPILOT, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
-        section(Platform.COPILOT, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.COPILOT, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.COPILOT, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.COPILOT, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.COPILOT, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
     );
+
+    /** The head above plus the shared tail, so a new annotation is listed once, in {@link AnnotationSections}. */
+    private static final List<AnnotationSections.Section> ALL_SECTIONS = AnnotationSections.concat(
+        SECTIONS, AnnotationSections.newestAnnotationSections(Platform.COPILOT));
 
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
@@ -89,7 +76,7 @@ public final class CopilotRenderer implements PlatformRenderer {
                 FormatterRegistry.context().format(e, sb, Platform.COPILOT);
             }
 
-            AnnotationSections.render(sb, model, Platform.COPILOT, SECTIONS);
+            AnnotationSections.render(sb, model, Platform.COPILOT, ALL_SECTIONS);
         }
 
         return sb.toString();

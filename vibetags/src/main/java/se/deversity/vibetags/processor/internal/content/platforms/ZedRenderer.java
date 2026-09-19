@@ -41,25 +41,12 @@ public final class ZedRenderer implements PlatformRenderer {
         section(Platform.ZED, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
         section(Platform.ZED, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
         section(Platform.ZED, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
-        section(Platform.ZED, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
-        section(Platform.ZED, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.ZED, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.ZED, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.ZED, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
-        section(Platform.ZED, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.ZED, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
-        section(Platform.ZED, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.ZED, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.ZED, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
-        section(Platform.ZED, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
-        section(Platform.ZED, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
-        section(Platform.ZED, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
-        section(Platform.ZED, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
-        section(Platform.ZED, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.ZED, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.ZED, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.ZED, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.ZED, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
     );
+
+    /** The head above plus the shared tail, so a new annotation is listed once, in {@link AnnotationSections}. */
+    private static final List<AnnotationSections.Section> ALL_SECTIONS = AnnotationSections.concat(
+        SECTIONS, AnnotationSections.newestAnnotationSections(Platform.ZED));
 
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
@@ -77,7 +64,7 @@ public final class ZedRenderer implements PlatformRenderer {
             FormatterRegistry.context().format(e, sb, Platform.ZED);
         }
 
-        AnnotationSections.render(sb, model, Platform.ZED, SECTIONS);
+        AnnotationSections.render(sb, model, Platform.ZED, ALL_SECTIONS);
 
         return sb.toString();
     }

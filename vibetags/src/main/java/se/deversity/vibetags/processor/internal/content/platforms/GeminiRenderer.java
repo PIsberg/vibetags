@@ -41,25 +41,12 @@ public final class GeminiRenderer implements PlatformRenderer {
         section(Platform.GEMINI, SectionCatalog.Key.SCHEMA_SAFE, GuardrailModel::schemaSafe, FormatterRegistry.schemaSafe()),
         section(Platform.GEMINI, SectionCatalog.Key.IDEMPOTENT, GuardrailModel::idempotent, FormatterRegistry.idempotent()),
         section(Platform.GEMINI, SectionCatalog.Key.FEATURE_FLAG, GuardrailModel::featureFlag, FormatterRegistry.featureFlag()),
-        section(Platform.GEMINI, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure()),
-        section(Platform.GEMINI, SectionCatalog.Key.CALLERS_ONLY, GuardrailModel::callersOnly, FormatterRegistry.callersOnly()),
-        section(Platform.GEMINI, SectionCatalog.Key.SANDBOX_ONLY, GuardrailModel::sandboxOnly, FormatterRegistry.sandboxOnly()),
-        section(Platform.GEMINI, SectionCatalog.Key.MEMORY_BUDGET, GuardrailModel::memoryBudget, FormatterRegistry.memoryBudget()),
-        section(Platform.GEMINI, SectionCatalog.Key.PURE, GuardrailModel::pure, FormatterRegistry.pure()),
-        section(Platform.GEMINI, SectionCatalog.Key.DOMAIN_MODEL, GuardrailModel::domainModel, FormatterRegistry.domainModel()),
-        section(Platform.GEMINI, SectionCatalog.Key.EXTENSIBLE, GuardrailModel::extensible, FormatterRegistry.extensible()),
-        section(Platform.GEMINI, SectionCatalog.Key.INPUT_SANITIZED, GuardrailModel::inputSanitized, FormatterRegistry.inputSanitized()),
-        section(Platform.GEMINI, SectionCatalog.Key.SECURE_LOGGING, GuardrailModel::secureLogging, FormatterRegistry.secureLogging()),
-        section(Platform.GEMINI, SectionCatalog.Key.EXPLAIN, GuardrailModel::explain, FormatterRegistry.explain()),
-        section(Platform.GEMINI, SectionCatalog.Key.PROTOTYPE, GuardrailModel::prototype, FormatterRegistry.prototype()),
-        section(Platform.GEMINI, SectionCatalog.Key.SUNSET, GuardrailModel::sunset, FormatterRegistry.sunset()),
-        section(Platform.GEMINI, SectionCatalog.Key.TEMPORARY, GuardrailModel::temporary, FormatterRegistry.temporary()),
-        section(Platform.GEMINI, SectionCatalog.Key.GENERATED, GuardrailModel::generated, FormatterRegistry.generated()),
-        section(Platform.GEMINI, SectionCatalog.Key.LOAD_BEARING, GuardrailModel::loadBearing, FormatterRegistry.loadBearing()),
-        section(Platform.GEMINI, SectionCatalog.Key.BANNED_API, GuardrailModel::bannedApi, FormatterRegistry.bannedApi()),
-        section(Platform.GEMINI, SectionCatalog.Key.THREAD_AFFINITY, GuardrailModel::threadAffinity, FormatterRegistry.threadAffinity()),
-        section(Platform.GEMINI, SectionCatalog.Key.KEEP_IN_SYNC, GuardrailModel::keepInSync, FormatterRegistry.keepInSync())
+        section(Platform.GEMINI, SectionCatalog.Key.SECURE, GuardrailModel::secure, FormatterRegistry.secure())
     );
+
+    /** The head above plus the shared tail, so a new annotation is listed once, in {@link AnnotationSections}. */
+    private static final List<AnnotationSections.Section> ALL_SECTIONS = AnnotationSections.concat(
+        SECTIONS, AnnotationSections.newestAnnotationSections(Platform.GEMINI));
 
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
@@ -81,7 +68,7 @@ public final class GeminiRenderer implements PlatformRenderer {
             sb.append("\n## CONTEXTUAL RULES\nApply the following context when assisting with these files:\n\n").append(sec);
         }
 
-        AnnotationSections.render(sb, model, platform, SECTIONS);
+        AnnotationSections.render(sb, model, platform, ALL_SECTIONS);
 
         return sb.toString();
     }
