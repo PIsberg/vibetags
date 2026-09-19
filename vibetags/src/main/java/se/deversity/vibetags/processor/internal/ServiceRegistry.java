@@ -279,7 +279,7 @@ public final class ServiceRegistry {
                 "VibeTags: AGENTS.md left untouched because other AI config files are present; "
                 + "it is treated as a pointer rather than a generated file. Keep only AGENTS.md "
                 + "(remove the other AI config files), or paste a "
-                + GuardrailFileWriter.MARKER_START_MD + " / <!-- VIBETAGS-END --> pair into it, "
+                + GuardrailFileWriter.MARKER_START_MD + " / " + GuardrailFileWriter.MARKER_END_MD + " pair into it, "
                 + "to have VibeTags manage it.");
         }
 
