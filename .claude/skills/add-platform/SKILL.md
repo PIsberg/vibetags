@@ -170,7 +170,7 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
       fails the build if the stated count and the distinct-bullet count disagree (Cursor and
       Windsurf are deliberately counted once each despite appearing under two formats)
     - `.claude/skills/vibetags-usage/SKILL.md` — add the `touch`/`mkdir -p` line to the Quick
-      Setup block and a row to "Supported Output Files"
+      Setup block, and a row to `references/output-files.md` in the same skill
 
 ## Three gates no Maven build runs
 

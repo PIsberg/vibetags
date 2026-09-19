@@ -32,7 +32,7 @@ New file: `vibetags-annotations/src/main/java/se/deversity/vibetags/annotations/
   reintroduce a try/catch in a formatter or renderer, since `ArchitectureRulesTest` forbids
   `javax.lang.model` there and the catch would never fire anyway.
 - Full Javadoc on the `@interface` and every attribute — `docs/ANNOTATIONS.md`'s semantics bullet
-  and the `vibetags-usage` skill's per-annotation section are meant to summarize it, not invent it.
+  and the `vibetags-usage` skill's per-annotation section (`references/annotations.md`) are meant to summarize it, not invent it.
 
 ## Step 2 — Wire the collection pipeline
 
@@ -163,10 +163,9 @@ past the last wave — currently `V5`) unless you're extending an in-flight wave
 - **`USAGE.md`** — add a `### @AIYourName — <title>` subsection under a "New in vX.Y.Z" heading,
   following the existing per-wave sections (e.g. "Design-Intent Annotations (v0.9.8)"), plus a
   Contents link near the top of the file.
-- **`.claude/skills/vibetags-usage/SKILL.md`** — add `@AIYourName` to the frontmatter
-  `description` trigger list, a full `### \`@AIYourName\`` section in "Annotations Reference"
-  (use/example/semantics/warnings, matching the existing entries' shape), a row in "Annotation
-  Combinations" if it interacts with others, a row in "Diagnosing Issues" if Step 6 added a
+- **`.claude/skills/vibetags-usage/references/`** — a full `### \`@AIYourName\`` section in
+  `annotations.md` (use/example/semantics/warnings, matching the existing entries' shape), a row
+  in `combinations.md` if it interacts with others, a row in `diagnosing.md` if Step 6 added a
   warning, and — if genuinely new rather than a format addition — the annotation belongs in every
   count/list this skill maintains for the other 38.
 - **`.claude/skills/vibetags-usage/SKILL.md`, "Element cheat sheet"** — a row in the "Every
