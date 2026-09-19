@@ -30,8 +30,8 @@ to its `PINS` table in the same change, so the report can never silently go stal
   change how the build runs (compiler, surefire, enforcer, spotbugs, pmd, error-prone,
   nullaway) can turn a green build red for reasons unrelated to the code; that is not a
   reason to skip them, it is a reason to run the full gates below.
-- Kotlin: `examples/kotlin` uses kapt; a Kotlin bump is verified by that example's Gradle
-  build, nothing less.
+- Kotlin: `examples/kotlin` uses kapt and `examples/kotlin-ksp` compiles the same sources through
+  KSP; a Kotlin or KSP bump is verified by both examples' Gradle builds, nothing less.
 
 ## Step 3 - Apply, including the mirrors
 
@@ -43,7 +43,8 @@ Edit the property in `vibetags-parent/pom.xml`. Then the places that cannot inhe
 | `pmd.version` | nothing. Both Gradle builds derive it from the parent, and `BuildVersionParityTest` fails any file that reintroduces a literal |
 | `maven-compiler-plugin.version` | literals in `examples/basic/pom.xml`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `examples/all-tiers/pom.xml`, `tools/demo/pom.xml` (consumer poms; keep them in step) |
 | Gradle wrapper | every `gradle-wrapper.properties` in the repository - ten of them, not the six this row used to list; enumerate with `git ls-files '*gradle-wrapper.properties'` rather than trusting the list - plus the version named in `docs/DEPENDENCIES.md` |
-| Kotlin | `examples/kotlin/build.gradle.kts` (`jvm` and `kapt`), the snippets in `README.md` and `examples/kotlin/README.md` |
+| Kotlin | `examples/kotlin/build.gradle.kts` (`jvm` and `kapt`), `examples/kotlin-ksp/build.gradle.kts` (`jvm`), the snippets in `README.md` and `examples/kotlin/README.md` |
+| `ksp.version` (KSP API and engine) | the KSP Gradle plugin in `examples/kotlin-ksp/build.gradle.kts` and `examples/kotlin-ksp/README.md`; `kotlin-stdlib.version` and `kotlinx-coroutines.version` in the parent follow what `symbol-processing-api` declares, so re-read its pom |
 | Groovy, Scala | `examples/groovy/build.gradle`, `examples/scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
 | pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |
 
@@ -60,7 +61,9 @@ From the repo root, in this order (each depends on the previous install):
 (cd vibetags-bom && mvn -B install) && (cd vibetags-cli && mvn -B install)
 (cd load-tests && mvn -B test-compile)
 (cd vibetags && ./gradlew clean compileTestJava --no-daemon)   # the Gradle side resolves the new pins
+(cd vibetags-ksp && mvn -B install)                             # the KSP front end against the new KSP
 (cd examples/kotlin && ./gradlew clean build --no-daemon)       # kapt against the new Kotlin
+(cd examples/kotlin-ksp && ./gradlew clean build --no-daemon)   # KSP; must match examples/kotlin byte for byte
 (cd examples/groovy && ./gradlew clean build --no-daemon)
 (cd examples/scala && ./gradlew clean build --no-daemon)
 (cd examples/basic && ./gradlew clean build --no-daemon)

@@ -1,0 +1,312 @@
+<!-- VIBETAGS-START -->
+# This Project — AI Guardrail Rules
+> Complete AI guardrail configuration generated from source annotations by VibeTags.
+
+This document contains the full set of AI guardrail rules for this project. AI tools with large context windows (such as Windsurf Cascade, Claude 4.6, or Gemini 1.5 Pro) may load this file directly instead of fetching individual documentation pages.
+
+## Locked Files (Do Not Edit)
+The following files are locked. AI tools MUST NOT propose modifications to them.
+
+### com.fx.Base
+- **Reason**: abstract
+
+### com.fx.Base.go(int)
+- **Reason**: abstract member
+
+### com.fx.Box
+- **Reason**: generic class
+
+### com.fx.Box.put(K,T)
+- **Reason**: box fun
+
+### com.fx.Color
+- **Reason**: enum
+
+### com.fx.Color.RED
+- **Reason**: enum const
+
+### com.fx.Color.hex()
+- **Reason**: enum fun
+
+### com.fx.Marker
+- **Reason**: annotation class
+
+### com.fx.Plain
+- **Reason**: plain class
+
+### com.fx.Plain.<T>gen(T,java.util.List<? extends T>)
+- **Reason**: generic
+
+### com.fx.Plain.CCONST
+- **Reason**: companion const
+
+### com.fx.Plain.Companion.create()
+- **Reason**: jvmstatic
+
+### com.fx.Plain.Companion.make()
+- **Reason**: companion fun
+
+### com.fx.Plain.Inner
+- **Reason**: inner class
+
+### com.fx.Plain.Inner.inf()
+- **Reason**: inner fun
+
+### com.fx.Plain.Nested
+- **Reason**: nested class
+
+### com.fx.Plain.Nested.nf(com.fx.Plain.Nested)
+- **Reason**: nested fun
+
+### com.fx.Plain.Plain(long)
+- **Reason**: secondary ctor
+
+### com.fx.Plain.alias(kotlin.jvm.functions.Function1<? super java.lang.String,kotlin.Unit>)
+- **Reason**: typealias
+
+### com.fx.Plain.anys(java.lang.Object,java.lang.Object,java.lang.Void)
+- **Reason**: any nothing
+
+### com.fx.Plain.arrays(int[],java.lang.String[],java.lang.Integer[],java.lang.Object[],int[][])
+- **Reason**: arrays
+
+### com.fx.Plain.cjf
+- **Reason**: companion jvmfield
+
+### com.fx.Plain.colls(java.util.List<java.lang.String>,java.util.List<java.lang.String>,java.util.Map<java.lang.String,java.lang.Integer>,java.util.Set<? extends com.fx.Animal>,java.util.List<com.fx.Dog>,java.util.Collection<?>,java.util.Map<java.lang.String,? super com.fx.Animal>)
+- **Reason**: colls
+
+### com.fx.Plain.counter
+- **Reason**: field var
+
+### com.fx.Plain.create()
+- **Reason**: jvmstatic
+
+### com.fx.Plain.cval
+- **Reason**: companion val
+
+### com.fx.Plain.defs(int)
+- **Reason**: overloads
+
+### com.fx.Plain.defs(int,java.lang.String)
+- **Reason**: overloads
+
+### com.fx.Plain.defs(int,java.lang.String,long)
+- **Reason**: overloads
+
+### com.fx.Plain.fns(kotlin.jvm.functions.Function1<? super java.lang.Integer,java.lang.String>,kotlin.jvm.functions.Function1<? super kotlin.coroutines.Continuation<? super kotlin.Unit>,? extends java.lang.Object>,kotlin.jvm.functions.Function1<? super java.lang.String,java.lang.Integer>)
+- **Reason**: fn types
+
+### com.fx.Plain.ft
+- **Reason**: field target
+
+### com.fx.Plain.getComputed()
+- **Reason**: getter
+
+### com.fx.Plain.hidden()
+- **Reason**: private fun
+
+### com.fx.Plain.inside$kapt_gt(java.lang.String)
+- **Reason**: internal
+
+### com.fx.Plain.jf
+- **Reason**: jvmfield
+
+### com.fx.Plain.lam(kotlin.jvm.functions.Function0<kotlin.Unit>)
+- **Reason**: unit returning lambda
+
+### com.fx.Plain.late
+- **Reason**: lateinit
+
+### com.fx.Plain.ng(java.util.Map<java.lang.String,? extends java.util.List<kotlin.Pair<java.lang.Integer,com.fx.Dog>>>)
+- **Reason**: nested generic
+
+### com.fx.Plain.over(int)
+- **Reason**: overload a
+
+### com.fx.Plain.over(java.lang.String)
+- **Reason**: overload b
+
+### com.fx.Plain.paramAnn(java.lang.String,int)
+- **Reason**: param ann
+
+### com.fx.Plain.plain()
+- **Reason**: plain fun
+
+### com.fx.Plain.plus(com.fx.Plain)
+- **Reason**: operator
+
+### com.fx.Plain.prims(byte,short,char,long,float,double,boolean,java.lang.Integer)
+- **Reason**: prims
+
+### com.fx.Plain.renamed()
+- **Reason**: jvmname
+
+### com.fx.Plain.res(java.lang.Object)
+- **Reason**: result
+
+### com.fx.Plain.ret()
+- **Reason**: returns list
+
+### com.fx.Plain.secret
+- **Reason**: private prop
+
+### com.fx.Plain.setSettable(int)
+- **Reason**: setter
+
+### com.fx.Plain.sus(java.lang.String,kotlin.coroutines.Continuation<? super java.lang.Integer>)
+- **Reason**: suspend
+
+### com.fx.Plain.tag
+- **Reason**: ctor val field-only
+
+### com.fx.Plain.va(int,java.lang.String...)
+- **Reason**: vararg
+
+### com.fx.Plain.with(int)
+- **Reason**: infix
+
+### com.fx.Point
+- **Reason**: data
+
+### com.fx.Result2
+- **Reason**: sealed
+
+### com.fx.Result2.Ok
+- **Reason**: sealed sub
+
+### com.fx.Shape
+- **Reason**: interface
+
+### com.fx.Shape.Companion.unit()
+- **Reason**: iface companion fun
+
+### com.fx.Shape.DefaultImpls.describe(com.fx.Shape,java.lang.String)
+- **Reason**: default fun
+
+### com.fx.Shape.area()
+- **Reason**: abstract fun
+
+### com.fx.Shape.describe(java.lang.String)
+- **Reason**: default fun
+
+### com.fx.Shape.getSides()
+- **Reason**: iface prop
+
+### com.fx.Singleton
+- **Reason**: object
+
+### com.fx.Singleton.of()
+- **Reason**: object fun
+
+### com.fx.Singleton.ov
+- **Reason**: object val
+
+### com.fx.Singleton.st()
+- **Reason**: object jvmstatic
+
+### com.fx.TypesFacade.TOP_CONST
+- **Reason**: top const
+
+### com.fx.TypesFacade.getLen2(java.lang.String)
+- **Reason**: ext prop getter
+
+### com.fx.TypesFacade.shout(java.lang.String,int)
+- **Reason**: ext fun
+
+### com.fx.TypesFacade.topLevel(int,java.lang.String)
+- **Reason**: top fun
+
+### com.fx.TypesFacade.topProp
+- **Reason**: top prop
+
+### com.fx.nested.Holder.run()
+- **Reason**: local-ish
+
+### com.fx.nested.OtherKt.otherTop(long)
+- **Reason**: facade default name
+
+### com.fx.nested.OtherKt.privTop()
+- **Reason**: private top
+
+### com.fx.vc.Account.Account(int)
+- **Reason**: secondary ctor without value class
+
+### com.fx.vc.Account.many(java.util.List<com.fx.vc.Uid>)
+- **Reason**: member takes list of value class
+
+### com.fx.vc.Account.owner
+- **Reason**: field of value class type
+
+### com.fx.vc.Account.renamedTake(java.lang.String)
+- **Reason**: member takes value class, renamed
+
+### com.fx.vc.Money
+- **Reason**: value class itself
+
+### com.fx.vc.Money.cents
+- **Reason**: value class field
+
+### com.fx.vc.ValueClassesKt.makeUid()
+- **Reason**: top-level returns value class
+
+### com.fx.vc.ValueClassesKt.maybeUid()
+- **Reason**: top-level returns nullable value class
+
+## Mandatory Input Sanitization
+The following parameters/fields must go through strict sanitizers before hitting queries or renderers.
+
+### com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#name
+- **Sanitization Requirement**: SQL_INJECTION
+
+### com.fx.Plain.paramAnn(java.lang.String,int)#second
+- **Sanitization Requirement**: SQL_INJECTION
+
+## Load-Bearing Oddities
+These look wrong, redundant, or over-defensive and are deliberate. Refactoring is allowed only while the stated invariant survives.
+
+### com.fx.Plain.Inner.Inner(int)#q
+- This code is deliberate, not accidental.
+- **Invariant**: inner ctor p
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Plain.Inner.q
+- This code is deliberate, not accidental.
+- **Invariant**: inner ctor p
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Plain.Plain(long,java.lang.String,java.lang.String)#id
+- This code is deliberate, not accidental.
+- **Invariant**: ctor val param
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Plain.id
+- This code is deliberate, not accidental.
+- **Invariant**: ctor val param
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Plain.paramAnn(java.lang.String,int)#first
+- This code is deliberate, not accidental.
+- **Invariant**: p1
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Plain.setSp(java.lang.String)#p0
+- This code is deliberate, not accidental.
+- **Invariant**: setparam
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Point.Point(int,int)#y
+- This code is deliberate, not accidental.
+- **Invariant**: data param
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Point.copy(int,int)#y
+- This code is deliberate, not accidental.
+- **Invariant**: data param
+- Edits are allowed as long as the invariant survives.
+
+### com.fx.Point.y
+- This code is deliberate, not accidental.
+- **Invariant**: data param
+- Edits are allowed as long as the invariant survives.
+<!-- VIBETAGS-END -->

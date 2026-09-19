@@ -33,6 +33,8 @@ fact another file owns.
 - [vibetags-bom/](vibetags-bom/) - the consumer BOM.
 - [vibetags-cli/](vibetags-cli/) - `vibetags init` and `vibetags doctor`, reading platform
   keys and marker strings from the processor at runtime so the CLI cannot drift.
+- [vibetags-ksp/](vibetags-ksp/) - the KSP front end: runs the processor under Kotlin Symbol
+  Processing, with element paths held identical to kapt's by `StubParityTest`.
 - [examples/](examples/README.md) - consumer fixtures built and verified in CI: Maven and
   Gradle, single- and multi-module, Kotlin, Groovy and Scala.
 - [corpus/](corpus/README.md) - third-party repositories built with VibeTags injected, in

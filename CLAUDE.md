@@ -37,6 +37,7 @@ subproject's own directory; the processor writes at the JVM working directory un
 cd vibetags-annotations && mvn install
 cd ../vibetags         && mvn clean install
 cd ../vibetags-bom     && mvn install            # Maven only
+cd ../vibetags-ksp     && mvn install            # KSP front end; after vibetags
 
 # From vibetags/ (tier split and per-class map: docs/TESTS.md):
 mvn test                            # fast tier; skips @Tag("e2e")

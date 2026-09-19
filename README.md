@@ -158,8 +158,8 @@ gradle compileJava
 <summary><b>Kotlin (Gradle + kapt)</b></summary>
 
 Every `@AI*` annotation is a plain Java annotation with `SOURCE` retention, so it works on
-Kotlin classes and functions unchanged. VibeTags runs under [kapt](https://kotlinlang.org/docs/kapt.html)
-— KSP is not supported (it does not run JSR 269 processors).
+Kotlin classes and functions unchanged. VibeTags runs under [kapt](https://kotlinlang.org/docs/kapt.html),
+or under KSP through `vibetags-ksp` (the next section).
 
 **1. Add to `build.gradle.kts`:**
 
@@ -217,6 +217,42 @@ is in [`examples/kotlin/`](examples/kotlin/README.md).
 Scala and Clojure toolchains never run JSR 269 processors, so guardrails there live on
 annotated Java neighbours ([`examples/scala/`](examples/scala/README.md)). The full support
 matrix is in [USAGE.md](USAGE.md#other-jvm-languages-groovy-scala-clojure).
+
+</details>
+
+<details>
+<summary><b>Kotlin (Gradle + KSP)</b></summary>
+
+KSP cannot load a JSR 269 processor, so a Kotlin build that has moved off kapt depends on
+`vibetags-ksp` in place of `vibetags-processor`. It runs the same processor behind a KSP front end
+and produces the same element paths and the same files as kapt:
+[`examples/kotlin-ksp/`](examples/kotlin-ksp/README.md) compiles `examples/kotlin`'s sources
+through KSP, and CI fails unless its output matches the kapt build byte for byte.
+
+```kotlin
+plugins {
+    kotlin("jvm") version "2.4.10"
+    id("com.google.devtools.ksp") version "2.3.12"
+}
+
+dependencies {
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
+    ksp(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
+
+    compileOnly("se.deversity.vibetags:vibetags-annotations")
+    ksp("se.deversity.vibetags:vibetags-ksp")
+}
+
+ksp {
+    // KSP runs inside the Gradle daemon, whose working directory is not the project.
+    arg("vibetags.root", projectDir.absolutePath)
+}
+```
+
+Every processor option is a `ksp { arg(...) }`. Two differences from kapt: `.vibetags-locks`
+entries carry no line ranges (under kapt they pointed into the generated stubs), and a guardrail on a
+function kapt has no stub for (a value class in its signature) is reported as a build warning instead
+of being dropped without a word. Details: [USAGE.md](USAGE.md#kotlin-ksp-configuration).
 
 </details>
 
@@ -472,7 +508,9 @@ vibetags/
 ├── vibetags-cli/         # Companion CLI: `init` (create opt-in files) and `doctor` (project health)
 │   ├── pom.xml
 │   └── src/              # Reads platform keys and marker rules from the processor — no second list
+├── vibetags-ksp/         # KSP front end: runs the processor under Kotlin Symbol Processing
 ├── examples/kotlin/       # Kotlin consumer built with kapt (Gradle Kotlin DSL)
+├── examples/kotlin-ksp/   # The same Kotlin sources through KSP; CI requires kapt-identical output
 ├── examples/groovy/       # Groovy consumer: joint-compilation stubs + javaAnnotationProcessing
 ├── examples/scala/        # Mixed Scala/Java consumer; CI asserts scalac's JSR 269 gap honestly
 ├── examples/gradle-multimodule/     # Gradle reactor, verified to the same depth as the Maven one

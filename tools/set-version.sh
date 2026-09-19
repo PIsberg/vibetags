@@ -26,6 +26,7 @@
 #   examples/all-tiers/pom.xml          current version rather than the last released one.
 #   tools/demo/pom.xml
 #   examples/kotlin/build.gradle.kts    Same standalone-consumer shape: their BOM
+#   examples/kotlin-ksp/build.gradle.kts
 #   examples/groovy/build.gradle        coordinates are literals kept in step here
 #   examples/scala/build.gradle         (Kotlin DSL for the first, Groovy DSL for the rest).
 #
@@ -194,6 +195,7 @@ for rel in \
     vibetags-annotations/build.gradle \
     vibetags/build.gradle \
     examples/kotlin/build.gradle.kts \
+    examples/kotlin-ksp/build.gradle.kts \
     examples/groovy/build.gradle \
     examples/scala/build.gradle \
     examples/gradle-multimodule/build.gradle \

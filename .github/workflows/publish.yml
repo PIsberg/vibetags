@@ -14,7 +14,7 @@ on:
         description: 'Tag or SHA to build and publish — the tag of the release being resumed'
         required: true
       modules:
-        description: 'Which modules to deploy: all, or a comma-separated subset of annotations,processor,bom,cli'
+        description: 'Which modules to deploy: all, or a comma-separated subset of annotations,processor,ksp,bom,cli'
         required: false
         default: 'all'
 
@@ -53,10 +53,10 @@ jobs:
           SELECTED: ${{ github.event.inputs.modules || 'all' }}
         run: |
           case "$SELECTED" in
-            *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,bom,cli"; exit 1 ;;
+            *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,ksp,bom,cli"; exit 1 ;;
           esac
           echo "selected=$SELECTED" >> "$GITHUB_OUTPUT"
-          for m in annotations processor bom cli; do
+          for m in annotations processor ksp bom cli; do
             if [ "$SELECTED" = "all" ] || echo ",$SELECTED," | grep -q ",$m,"; then
               echo "$m=true" >> "$GITHUB_OUTPUT"
             else
@@ -95,6 +95,18 @@ jobs:
         if: steps.selection.outputs.processor == 'true'
         run: |
           bash .github/scripts/deploy-to-central.sh vibetags vibetags-processor -DskipTests \
+            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+
+      # After the processor, which the KSP front end depends on and resolves from the local
+      # repository the processor step installed into; before the BOM, which manages it. Tests are
+      # skipped for the same reason as the processor's: the release commit already passed them.
+      - name: Build, sign, and deploy KSP front end to Maven Central
+        if: steps.selection.outputs.ksp == 'true'
+        run: |
+          bash .github/scripts/deploy-to-central.sh vibetags-ksp vibetags-ksp -DskipTests \
             -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
@@ -142,4 +154,6 @@ jobs:
             vibetags/target/*.jar.asc
             vibetags-cli/target/*.jar
             vibetags-cli/target/*.jar.asc
+            vibetags-ksp/target/*.jar
+            vibetags-ksp/target/*.jar.asc
             vibetags-bom/target/*.pom.asc

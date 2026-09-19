@@ -67,6 +67,9 @@ class ReleaseScriptCoverageTest {
         "docs/proposals/proposed-annotations.md",
         "docs/RELEASING.md",
         "docs/archive/CONCEPT_PLUGIN.md",
+        // Provenance of a recording: the kapt build that produced vibetags-ksp's parity fixture ran
+        // processor 1.3.5. Re-recording the fixture is what changes that line, not a release.
+        "vibetags-ksp/src/test/resources/kapt-parity/expected-paths.tsv",
         // The build-layout matrix names the release a behaviour arrived in ("Since
         // 1.2.4 the build says so ..."), which is what tells a reader hitting that Gradle
         // layout whether their version warns them. Rewriting it each release would claim

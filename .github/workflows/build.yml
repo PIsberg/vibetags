@@ -91,6 +91,18 @@ jobs:
             mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
           fi
 
+      # The KSP front end: its tests run real KSP2 in-process over Kotlin sources, including the
+      # parity suite that compares every element path and generated file with a recorded kapt
+      # build. Needs the processor this run installed. Same JDK-21-only analysis split.
+      - name: Build VibeTags KSP Front End (Maven)
+        run: |
+          cd vibetags-ksp
+          if [ "${{ matrix.java }}" = "21" ]; then
+            mvn clean install -B
+          else
+            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+          fi
+
       # doctor is the only thing that reports the groovyc field drop that examples/groovy
       # gates, and that detection was exercised only by the CLI's own unit tests — never
       # against a real checkout, which is where a path or encoding difference would show
@@ -698,6 +710,7 @@ jobs:
             examples/basic/vibetags.log
             vibetags/target/surefire-reports/
             vibetags-cli/target/surefire-reports/
+            vibetags-ksp/target/surefire-reports/
           if-no-files-found: ignore
 
   cross-platform:
@@ -953,6 +966,40 @@ jobs:
           if [ -n "$(git status --porcelain -- examples/kotlin/)" ]; then
             echo "::error::examples/kotlin/ guardrail files are out of date."
             git --no-pager diff -- examples/kotlin/
+            exit 1
+          fi
+
+      # The same sources as examples/kotlin, compiled through KSP instead of kapt (#496). The
+      # outputs must be byte-identical to the kapt example's: a difference is an element path or
+      # an ordering that changes for every consumer who switches front ends. vibetags-ksp is not
+      # part of the Gradle build, so it is installed from Maven against the processor this leg
+      # published to mavenLocal.
+      - name: Build Kotlin KSP Example Project (Gradle + KSP, parity with kapt)
+        if: matrix.java == '21'
+        run: |
+          (cd vibetags-ksp && mvn install -B -DskipTests -Dmaven.pmd.skip=true -Dspotbugs.skip=true)
+          cd examples/kotlin-ksp
+          ./gradlew clean build --no-daemon 2>&1 | tee "$RUNNER_TEMP/kotlin-ksp.txt"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error::examples/kotlin-ksp failed to build (exit $status)."
+            exit "$status"
+          fi
+          for f in CLAUDE.md .cursorrules; do
+            if ! cmp -s "$f" "../kotlin/$f"; then
+              echo "::error::examples/kotlin-ksp/$f differs from the kapt example's: KSP and kapt disagree."
+              diff "../kotlin/$f" "$f" || true
+              exit 1
+            fi
+          done
+          # kapt drops the value-class guardrail silently; under KSP the build must say so.
+          if ! grep -qF "@AILocked on fun balanceFor in com.example.kotlin.AccountLedger reaches no guardrail file" "$RUNNER_TEMP/kotlin-ksp.txt"; then
+            echo "::error::the KSP build did not warn about the dropped balanceFor guardrail."
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain -- ../kotlin-ksp/ ../kotlin/)" ]; then
+            echo "::error::the KSP build changed committed files."
+            git --no-pager status --porcelain -- ../kotlin-ksp/ ../kotlin/
             exit 1
           fi
 

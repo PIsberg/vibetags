@@ -17,8 +17,13 @@ one-line map stay there):
 - `vibetags-cli/` — companion CLI (`init` creates opt-in files, `doctor` reports project
   health). Depends on `vibetags` as a library for `ServiceRegistry.optInKeys()` and the marker
   constants — it must never carry its own platform list. Build after `vibetags`.
+- `vibetags-ksp/` — the KSP front end (#496): a `SymbolProcessorProvider` that presents Kotlin
+  declarations as kapt-shaped `javax.lang.model` elements and drives the unchanged
+  `AIGuardrailProcessor`. Depends on `vibetags` as a library; the KSP API and the Kotlin standard
+  library are `provided`. Build after `vibetags`. Its tests run real KSP2 in-process.
 - `examples/basic/`, `examples/multimodule/`, `examples/multimodule-indexed/` — demo consumers (the last
   two are reactors, asserted in CI).
+- `examples/kotlin-ksp/` — `examples/kotlin`'s sources through KSP; CI requires identical output.
 - `examples/kotlin/`, `examples/groovy/`, `examples/scala/` — JVM-language consumers, all built on
   the JDK 21 Gradle CI leg. Kotlin (kapt) and Groovy (joint-compilation stubs +
   `javaAnnotationProcessing`) get full support with the same stub caveats (no body-scoped

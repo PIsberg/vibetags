@@ -1,0 +1,5 @@
+# Opts this project into reading guardrails published by its dependencies.
+#
+# Presence of this file is the opt-in; it needs no content. KSP gives a processor no view of the
+# compile classpath's resources, so the manifests are read from the directory build.gradle.kts
+# passes as vibetags.manifest.dir (the kapt example's pre-extracted copy).
