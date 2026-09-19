@@ -373,6 +373,17 @@ public final class ServiceRegistry {
     }
 
     /**
+     * True when the service is an exclusion list: a {@code *_ignore} file or {@code .aiexclude}.
+     * These are rewritten on every build, whether or not the round had annotations.
+     *
+     * <p>{@code AIGuardrailProcessor.generateFiles()} carries the same predicate inline because its
+     * body is locked. A service added here has to be added there too.
+     */
+    public static boolean isIgnoreService(String key) {
+        return key.endsWith("_ignore") || "aiexclude".equals(key);
+    }
+
+    /**
      * True when {@code path} is the <em>kind</em> of filesystem entry service {@code key} writes,
      * i.e. when that entry is an opt-in to this service and not to another one at the same path.
      *

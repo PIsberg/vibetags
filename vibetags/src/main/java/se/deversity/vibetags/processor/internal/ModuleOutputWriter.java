@@ -135,8 +135,7 @@ public final class ModuleOutputWriter {
             }
             // Ignore-files always overwrite; other files only carry the "hasNewRules" flag when this
             // module actually had annotations (mirrors the single-module guard in generateFiles()).
-            boolean isIgnoreFile = service.endsWith("_ignore")
-                || "aider_ignore".equals(service) || "aiexclude".equals(service);
+            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
             writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
             written++;
         }

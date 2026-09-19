@@ -1568,7 +1568,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (filePath == null) {
                 continue; // rendered content for a service with no configured output path: nothing to check
             }
-            boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
+            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
             boolean anyContributed = isMultiModule(allSidecars)
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
                 : collector.anyAnnotationsFound();
