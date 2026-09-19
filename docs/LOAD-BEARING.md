@@ -28,7 +28,7 @@ be a second thing to keep in sync with the code; a parsed one cannot drift, only
 Regenerate with
 [`tools/generate-architecture-diagrams.sh`](../tools/generate-architecture-diagrams.sh); the
 whole parsed set is described in
-[ARCHITECTURE.md](ARCHITECTURE.md#parsed-diagrams-code-karta).
+[architecture/components.md](architecture/components.md#parsed-diagrams-code-karta).
 
 ### File-existence opt-in
 
@@ -99,7 +99,7 @@ the picture shows by omission: nothing here imports a compiler type, and nothing
 back up at `internal`.* The layer below it,
 [`content/`](diagrams/codekarta/content/class-diagram.svg), is drawn the same way in
 [PLATFORMS.md](PLATFORMS.md#the-rendering-layer); the whole processor, seam included, is in
-[ARCHITECTURE.md](ARCHITECTURE.md#class-diagram). `ArchitectureRulesTest` is what keeps the
+[architecture/components.md](architecture/components.md#class-diagram). `ArchitectureRulesTest` is what keeps the
 omissions true — the diagrams only make them visible.
 
 Three things make this load-bearing rather than tidy:
