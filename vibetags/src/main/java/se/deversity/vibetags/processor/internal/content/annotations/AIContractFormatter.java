@@ -19,31 +19,13 @@ public final class AIContractFormatter implements AnnotationFormatter {
         String className = element.path();
         String reason = contract.reason();
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, reason)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append(CommonFormatterHelper.element("reason", reason))
                     .append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append(CommonFormatterHelper.codexBullet(className, reason));
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -52,9 +34,6 @@ public final class AIContractFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### CONTRACT: ").append(className).append("\n- **Constraint**: Signature is frozen. Do not change method names, parameter types, return types, or checked exceptions.\n")
                     .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"reason\": \"").append(Escape.json(reason)).append("\"},\n");

@@ -21,33 +21,15 @@ public final class AISecureFormatter implements AnnotationFormatter {
         String summary = "Security-critical code" + (aspect.isEmpty() ? "" : " [" + aspect + "]")
                        + ". Do not weaken security properties. Flag any change for security review.";
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
                 if (!aspect.isEmpty()) {
                     sb.append("      <aspect>").append(Escape.xml(aspect)).append("</aspect>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Security-critical code");
@@ -60,9 +42,6 @@ public final class AISecureFormatter implements AnnotationFormatter {
                 sb.append("#### SECURITY-CRITICAL: ").append(className).append('\n')
                   .append(aspect.isEmpty() ? "" : "- **Aspect**: " + aspect + "\n")
                   .append("- **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Security-critical: ").append(Escape.json(className)).append(" [").append(Escape.json(aspect.isEmpty() ? "general" : aspect)).append("]. Do not weaken security.\"\n");

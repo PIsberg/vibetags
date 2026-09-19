@@ -21,33 +21,15 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
         String summary = "Idempotency guaranteed. Multiple invocations must produce the same result as one."
                        + (reason.isEmpty() ? "" : " Reason: " + reason);
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n      <idempotent>true</idempotent>\n");
                 if (!reason.isEmpty()) {
                     sb.append("      <reason>").append(Escape.xml(reason)).append("</reason>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- Idempotency guaranteed. Multiple invocations must produce the same result as a single invocation.\n");
@@ -59,9 +41,6 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### IDEMPOTENT: ").append(className).append("\n- **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.\n")
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n").append('\n');
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Idempotency requirement for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");

@@ -28,11 +28,9 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                        + (breaksIf.isEmpty() ? "" : " Breaks if changed: " + breaksIf)
                        + (suppressAudit ? " Not a defect — do not flag." : "");
 
+        if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
+
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
                     .append(CommonFormatterHelper.element("invariant", invariant));
@@ -43,22 +41,6 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                     sb.append("      <suppress-audit>true</suppress-audit>\n");
                 }
                 sb.append("    </element>\n");
-                break;
-            case CODEX:
-                sb.append("- **").append(className).append("**: ").append(summary).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case GEMINI:
-            case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append("\n- This code is deliberate, not accidental.\n")
@@ -77,9 +59,6 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                   .append(breaksIf.isEmpty() ? "" : "- **Breaks if changed**: " + breaksIf + "\n")
                   .append(suppressAudit ? "- **Audit**: Not a defect. Do not flag.\n" : "")
                   .append("- **Rule**: Refactor freely, but preserve the invariant.\n\n");
-                break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case SWEEP:
                 sb.append("  - \"Load-bearing: ").append(Escape.json(className)).append(" must preserve: ")
