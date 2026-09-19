@@ -735,10 +735,9 @@ public final class GuardrailFileWriter {
     public List<String> cleanupGranularDirectory(Path dir, String extension, Set<String> excludeQNames,
                                                  @Nullable String filePrefix) {
         List<String> removed = new ArrayList<>();
-        if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir)) return removed;
+        if (dir == null || !Files.isDirectory(dir)) return removed;
         try (Stream<Path> stream = Files.list(dir)) {
-            stream.filter(Files::isRegularFile)
-                  .filter(p -> p.toString().endsWith(extension))
+            stream.filter(p -> p.toString().endsWith(extension))
                   .filter(p -> {
                       // Path.getFileName() returns null only for root paths — guard for correctness.
                       // The stream is already filtered to names ending in `extension` above, so
@@ -753,6 +752,9 @@ public final class GuardrailFileWriter {
                       String qName = name.substring(0, name.length() - extension.length());
                       return !excludeQNames.contains(qName);
                   })
+                  // Last, so the stat is paid only for the files about to be removed. On a healthy
+                  // build every rule file is excluded by name above and none reaches it.
+                  .filter(Files::isRegularFile)
                   .sorted()
                   .forEach(p -> {
                       Path fn = p.getFileName();
