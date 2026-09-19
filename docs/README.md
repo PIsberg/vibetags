@@ -41,7 +41,7 @@ Read one of these before anything under `docs/`.
 
 | Document | Answers |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The deep dive: system diagram, data flow, design decisions, limitations, repository layout. The longest document here; prefer `LOAD-BEARING.md` if you only need the rules. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The deep dive: system diagram, data flow, design decisions, limitations, repository layout. A short index over twelve parts in [`architecture/`](architecture/); open the one part the task needs. Prefer `LOAD-BEARING.md` if you only need the rules. |
 | [`LOAD-BEARING.md`](LOAD-BEARING.md) | The processing flow, the marker rules, the scoped-rules index, the internal class map, and every Tier-1 invariant stated in full with its reasoning. |
 | [`PROCESSOR.md`](PROCESSOR.md) | Processor options, the write cache and fingerprint short-circuit, check mode, `.vibetags-locks`, transitive guardrails, and SPI/Gradle incremental support. |
 | [`LOGGING.md`](LOGGING.md) | The logging contract behind invariant 15: `domain.event key=value`, `reason=` on every skip. Short, and load-bearing when adding a log line. |
@@ -93,7 +93,8 @@ generated block in `CLAUDE.md`, and load on demand when a matching source file i
 agent should not read them ahead of time.
 
 For a typical task the working set is `CLAUDE.md` plus exactly one document from the tables
-above. Two of them earn a deliberate decision before loading, because each is several times the
-size of a typical reference doc: reach for `LOAD-BEARING.md` before `ARCHITECTURE.md`, since it
-answers most of what sends people to the longer file, and search `CHANGELOG.md` for the release
-or symbol you care about rather than opening it.
+above. `CHANGELOG.md` earns a deliberate decision before loading, because it is several times the
+size of a typical reference doc: search it for the release or symbol you care about rather than
+opening it. `ARCHITECTURE.md` is only an index; follow it to the one part under `architecture/`
+you need, and reach for `LOAD-BEARING.md` first, since it answers most of what sends people
+there.

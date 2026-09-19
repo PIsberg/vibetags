@@ -2,7 +2,7 @@
 
 VibeTags is a compile-time Java annotation processor (`AIGuardrailProcessor`) that generates AI
 platform guardrail files from `@AI*` annotations. Module map and per-subproject notes:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#repository-layout-notes). The reasoning behind every
+[docs/architecture/repository-layout.md](docs/architecture/repository-layout.md). The reasoning behind every
 invariant below: [docs/LOAD-BEARING.md](docs/LOAD-BEARING.md#the-invariants-stated-in-full).
 
 ## Tier-1 invariants
@@ -70,7 +70,7 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 - [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) — every third-party artifact, why it is here, what ships to consumers and what only runs the build.
 - [docs/LOAD-BEARING.md](docs/LOAD-BEARING.md) — processing flow, marker rules, the scoped-rules index, the internal class map, and the invariants in full.
 - [docs/LOGGING.md](docs/LOGGING.md) — the logging contract behind invariant 15.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — deep dive: system diagram, data flow, design decisions, limitations, repository layout notes, design history.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — index of the deep dive, split into parts under `docs/architecture/`: system diagram, data flow, design decisions, limitations, repository layout notes, design history. Open only the part you need.
 - [USAGE.md](USAGE.md) — consumer-facing usage (how to add VibeTags to a project).
 - [README.md](README.md) — the test-enforced project facts (the annotation, platform, config-file and scoped-rule-directory counts, pinned by `ProjectFactsConsistencyTest`), the platform table, install snippets.
 - [docs/WORKFLOW.md](docs/WORKFLOW.md) — what CI actually runs, step by step, and why each verification exists.

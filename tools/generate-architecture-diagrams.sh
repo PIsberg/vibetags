@@ -17,7 +17,7 @@
 #
 # Every diagram this script emits is embedded in a doc. If you add one, link it from the
 # doc whose question it answers, and add a row to the table in
-# docs/ARCHITECTURE.md#parsed-diagrams-code-karta.
+# docs/architecture/components.md#parsed-diagrams-code-karta.
 set -eu
 
 CK_VERSION="0.1.0"
