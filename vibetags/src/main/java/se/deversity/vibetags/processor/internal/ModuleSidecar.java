@@ -772,63 +772,43 @@ public final class ModuleSidecar {
         List<ModuleSidecar> result = new ArrayList<>();
         // Kept index-aligned with result so a sidecar dropped below can also be deleted.
         List<Path> resultFiles = new ArrayList<>();
-        try (Stream<Path> stream = Files.list(root)) {
-            stream.filter(p -> {
-                      // Path.getFileName() returns null only for root paths — guard for correctness.
-                      Path fn = p.getFileName();
-                      return fn != null && fn.toString().startsWith(SIDECAR_PREFIX);
-                  })
-                  .filter(p -> {
-                      Path fn = p.getFileName();
-                      return fn == null || !fn.toString().endsWith(".tmp");
-                  })
-                  .sorted(Comparator.comparing(p -> {
-                      Path fn = p.getFileName();
-                      return fn != null ? fn.toString() : "";
-                  }))
-                  .forEach(p -> {
-                      ModuleSidecar s = load(p);
-                      if (s == UNREADABLE) {
-                          // Locked, vanished, or being renamed over by the module that owns it —
-                          // a sibling save in a parallel reactor does exactly that on Windows.
-                          // Skip this round (readAll already tolerates a missing sibling) and,
-                          // above all, do not delete a file we never managed to look at.
-                          logSkipped(log, p, "unreadable");
-                          return;
-                      }
-                      if (s == null) {
-                          logDropped(log, prune, p, formatReason(p));
-                          if (prune) tryDelete(p);
-                          return;
-                      }
-                      if (s == FUTURE_VERSION) {
-                          // Written by a newer processor in a mixed-version build: skip it (its
-                          // module's content is missing from OUR merge, the newer module merges
-                          // everything correctly) but never delete a sibling's valid sidecar.
-                          logSkipped(log, p, "future-version");
-                          return;
-                      }
-                      // Stale check: if the module path (relative to root) no longer exists, prune.
-                      if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
-                          ModuleDir dir = moduleDir(root, s.modulePath);
-                          if (dir != ModuleDir.EXISTS) {
-                              logDropped(log, prune, p,
-                                  dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
-                              if (prune) tryDelete(p);
-                              return;
-                          }
-                      }
-                      result.add(s);
-                      resultFiles.add(p);
-                  });
-        } catch (IOException ignored) {
-
-            // Best-effort listing: a root we cannot read contributes no sidecars, which is the
-
-            // same outcome as a root with none. Failing here would fail a compile over a
-
-            // directory the build does not need.
-
+        // listPaths is best-effort: a root we cannot read contributes no sidecars, which is the
+        // same outcome as a root with none. Failing here would fail a compile over a directory
+        // the build does not need.
+        for (Path p : listPaths(root)) {
+            ModuleSidecar s = load(p);
+            if (s == UNREADABLE) {
+                // Locked, vanished, or being renamed over by the module that owns it —
+                // a sibling save in a parallel reactor does exactly that on Windows.
+                // Skip this round (readAll already tolerates a missing sibling) and,
+                // above all, do not delete a file we never managed to look at.
+                logSkipped(log, p, "unreadable");
+                continue;
+            }
+            if (s == null) {
+                logDropped(log, prune, p, formatReason(p));
+                if (prune) tryDelete(p);
+                continue;
+            }
+            if (s == FUTURE_VERSION) {
+                // Written by a newer processor in a mixed-version build: skip it (its
+                // module's content is missing from OUR merge, the newer module merges
+                // everything correctly) but never delete a sibling's valid sidecar.
+                logSkipped(log, p, "future-version");
+                continue;
+            }
+            // Stale check: if the module path (relative to root) no longer exists, prune.
+            if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
+                ModuleDir dir = moduleDir(root, s.modulePath);
+                if (dir != ModuleDir.EXISTS) {
+                    logDropped(log, prune, p,
+                        dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
+                    if (prune) tryDelete(p);
+                    continue;
+                }
+            }
+            result.add(s);
+            resultFiles.add(p);
         }
         dropSupersededRegions(result, resultFiles, prune, log);
         applyRootIndexModeTo(root, result);
