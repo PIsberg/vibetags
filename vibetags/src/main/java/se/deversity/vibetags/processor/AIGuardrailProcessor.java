@@ -1325,7 +1325,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         Set<String> granularServices = new java.util.LinkedHashSet<>();
         for (String service : activeServices) {
-            if (service.endsWith("_granular") && serviceFiles.get(service) != null) {
+            if (ServiceRegistry.writesDirectory(service) && serviceFiles.get(service) != null) {
                 granularServices.add(service);
             }
         }
@@ -1434,7 +1434,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return; // Single module: its own round is by definition current.
         }
         for (String service : activeServices) {
-            if (service.endsWith("_granular")) {
+            if (ServiceRegistry.writesDirectory(service)) {
                 return; // Still opted in somewhere; the collapsed shape is correct.
             }
         }

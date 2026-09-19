@@ -82,7 +82,7 @@ public final class GuardrailContentBuilder {
         // of duplicating each element's full guardrails inline. renderGranular depends only on the
         // model, so ordering it ahead of the per-service loop is safe and avoids a redundant
         // per-element walk inside each renderer.
-        boolean granularActive = activeServices.stream().anyMatch(s -> s.endsWith("_granular"));
+        boolean granularActive = activeServices.stream().anyMatch(ServiceRegistry::writesDirectory);
         Map<TaggedElement, GranularBody> elementRules = granularActive
                 ? PlatformRendererRegistry.granularRenderer().renderGranular(model)
                 : new java.util.LinkedHashMap<>();
@@ -99,7 +99,7 @@ public final class GuardrailContentBuilder {
             if (serviceKey.equals("aiexclude")) {
                 continue;
             }
-            if (serviceKey.endsWith("_granular")) {
+            if (ServiceRegistry.writesDirectory(serviceKey)) {
                 continue;
             }
 
