@@ -4,6 +4,8 @@ import com.google.devtools.ksp.UtilsKt;
 import com.google.devtools.ksp.processing.Resolver;
 import com.google.devtools.ksp.symbol.AnnotationUseSiteTarget;
 import com.google.devtools.ksp.symbol.ClassKind;
+import com.google.devtools.ksp.symbol.FileLocation;
+import com.google.devtools.ksp.symbol.KSNode;
 import com.google.devtools.ksp.symbol.KSAnnotated;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
 import com.google.devtools.ksp.symbol.KSDeclaration;
@@ -17,12 +19,15 @@ import com.google.devtools.ksp.symbol.KSTypeParameter;
 import com.google.devtools.ksp.symbol.KSTypeReference;
 import com.google.devtools.ksp.symbol.KSValueParameter;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.NestingKind;
 import javax.lang.model.type.TypeMirror;
+import java.io.IOException;
 import java.lang.annotation.ElementType;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -84,6 +90,7 @@ final class StubBuilder {
     private final Map<KTypeElement, KTypeElement> defaultImplsOf = new HashMap<>();
     private final List<KTypeElement> roots = new ArrayList<>();
     private final List<String> dropped = new ArrayList<>();
+    private final Map<String, Optional<KotlinExtent>> extents = new HashMap<>();
 
     /**
      * @param defaultImpls whether interfaces get a {@code DefaultImpls} class, which every
@@ -195,6 +202,7 @@ final class StubBuilder {
         }
         KTypeElement type = parent.adopt(new KTypeElement(kind, simple, qualified, nesting, javaModifiers(cls), source));
         declared.put(qualified, type);
+        type.locate(locate(cls, false));
         // TYPE covers annotation types too, which is how Java reads it.
         place(annotations.read(cls), type, ElementType.TYPE);
 
@@ -291,6 +299,7 @@ final class StubBuilder {
         KVariableElement constant = enumType.adopt(new KVariableElement(ElementKind.ENUM_CONSTANT,
             entry.getSimpleName().asString(), EnumSet.of(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL),
             enumType.asType()));
+        constant.locate(locate(entry, true));
         place(annotations.read(entry), constant, ElementType.FIELD);
     }
 
@@ -308,6 +317,7 @@ final class StubBuilder {
         boolean varArgs = !parameters.isEmpty() && parameters.get(parameters.size() - 1).isVararg();
         KExecutableElement constructor = owner.type().adopt(new KExecutableElement(ElementKind.CONSTRUCTOR,
             "<init>", javaModifiers(function), varArgs, false));
+        constructor.locate(locate(function, false));
         place(annotations.read(function), constructor, ElementType.CONSTRUCTOR);
         for (int i = 0; i < parameters.size(); i++) {
             KSValueParameter parameter = parameters.get(i);
@@ -331,6 +341,7 @@ final class StubBuilder {
         KExecutableElement copy = owner.type().adopt(new KExecutableElement(ElementKind.METHOD, "copy",
             EnumSet.of(Modifier.PUBLIC, Modifier.FINAL), false, false));
         copy.setReturnType(owner.type().asType());
+        copy.locate(primary.location());
         for (KVariableElement parameter : primary.parameters()) {
             KVariableElement element = copy.addParameter(new KVariableElement(ElementKind.PARAMETER,
                 parameter.getSimpleName().toString(), Set.of(), parameter.asType()));
@@ -391,6 +402,7 @@ final class StubBuilder {
         boolean varArgs = !suspend && !parameters.isEmpty() && parameters.get(parameters.size() - 1).isVararg();
         KExecutableElement method = target.adopt(new KExecutableElement(ElementKind.METHOD, name, modifiers,
             varArgs, isDefault));
+        method.locate(locate(function, false));
         Map<String, KTypeParameterElement> typeParameters = new LinkedHashMap<>();
         for (KSTypeParameter parameter : function.getTypeParameters()) {
             KTypeParameterElement element = new KTypeParameterElement(parameter.getName().asString(), method);
@@ -487,6 +499,7 @@ final class StubBuilder {
             KExecutableElement copy = target.adopt(new KExecutableElement(full.getKind(),
                 full.getSimpleName().toString(), full.getModifiers(), false, full.isDefault()));
             copy.setReturnType(full.getReturnType());
+            copy.locate(full.location());
             List<KVariableElement> kept = full.parameters();
             for (int i = 0; i < kept.size(); i++) {
                 if (!omit.contains(i)) {
@@ -561,8 +574,10 @@ final class StubBuilder {
                 modifiers.add(Modifier.FINAL);
             }
             String fieldName = property.isDelegated() ? name + "$delegate" : name;
+            SourceLocation where = locate(property, constructorProperty);
             KVariableElement field = fieldOwner.adopt(new KVariableElement(ElementKind.FIELD, fieldName,
                 modifiers, types.render(property.getType(), JvmTypes.Position.FIELD, owner.scope())));
+            field.locate(where);
             fieldUses.forEach(use -> field.annotate(use.data()));
         }
 
@@ -656,6 +671,7 @@ final class StubBuilder {
                             List<AnnotationReader.Use> parameterUses, Sig sig) {
         KExecutableElement method = target.adopt(new KExecutableElement(ElementKind.METHOD, name, modifiers,
             false, isDefault));
+        method.locate(locate(property, false));
         method.setReturnType(value == null
             ? types.render(property.getType(), JvmTypes.Position.RETURN, scope)
             : KTypeMirror.NoneType.VOID);
@@ -684,6 +700,34 @@ final class StubBuilder {
             declared.put(qualified, impls);
             return impls;
         });
+    }
+
+    /**
+     * Where {@code node} is written: the file KSP reports, from the first annotation line above its
+     * declaration to where the declaration ends ({@link KotlinExtent}), or {@code null} for a
+     * declaration with no file (a library symbol).
+     *
+     * @param listItem whether the declaration is a constructor property or an enum entry
+     */
+    private @Nullable SourceLocation locate(KSNode node, boolean listItem) {
+        if (!(node.getLocation() instanceof FileLocation at)) {
+            return null;
+        }
+        int line = at.getLineNumber();
+        Optional<KotlinExtent> extent = extents.computeIfAbsent(at.getFilePath(), StubBuilder::readExtent);
+        if (extent.isEmpty()) {
+            return new SourceLocation(at.getFilePath(), line, line);
+        }
+        return new SourceLocation(at.getFilePath(), extent.get().start(line),
+            Math.max(line, extent.get().end(line, listItem)));
+    }
+
+    private static Optional<KotlinExtent> readExtent(String file) {
+        try {
+            return Optional.of(new KotlinExtent(Files.readString(Path.of(file))));
+        } catch (IOException | RuntimeException unreadable) {
+            return Optional.empty(); // a start line with no end is still a position
+        }
     }
 
     /** Places annotations written with no use-site target, where the annotation may go. */

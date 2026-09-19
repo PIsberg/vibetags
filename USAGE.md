@@ -188,8 +188,11 @@ What differs from kapt:
   keeps the paths identical, but the build now says so:
   `w: [ksp] VibeTags: @AILocked on fun balanceFor in com.example.AccountLedger reaches no guardrail file`.
   Give the function a `@JvmName` or `@JvmExposeBoxed`, or move the guardrail to the class.
-- **`.vibetags-locks` has no line ranges.** Under kapt they pointed into the generated stub, not the
-  `.kt` file; KSP has no stub and no javac Tree API, so they are left out.
+- **`.vibetags-locks` line ranges point at the `.kt` source.** Under kapt they pointed into the
+  generated stub, which is no use to `action/locked-files`. KSP reports where a declaration starts;
+  the front end reads the end from the source text by matching brackets, and starts the range at the
+  first annotation above the declaration, as javac does. A synthetic copy (`@JvmOverloads`,
+  `@JvmStatic`, `DefaultImpls`) points at the declaration it copies.
 - **Incremental builds see the whole module.** A KSP incremental run shows a processor only the
   changed files. `vibetags-ksp` registers every source as an input of one aggregating output, so any
   change puts every file back in front of it and the guardrails are regenerated from the whole module.

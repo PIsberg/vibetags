@@ -40,6 +40,10 @@ class StubParityTest {
 
     private static final Pattern LOCKED = Pattern.compile(
         "\\{\"type\":\"locked\",\"element\":\"([^\"]+)\",\"kind\":\"([A-Z_]+)\"");
+    /** The position fields of a {@code .vibetags-locks} entry, stripped to compare with kapt's. */
+    private static final Pattern POSITION = Pattern.compile("\"file\":\"[^\"]*\",\"startLine\":\\d+,\"endLine\":\\d+,");
+    private static final Pattern LOCATED = Pattern.compile(
+        "\"element\":\"([^\"]+)\",\"kind\":\"[A-Z_]+\",\"file\":\"([^\"]+)\",\"startLine\":(\\d+),\"endLine\":(\\d+)");
     private static final Pattern PARAMETER = Pattern.compile("com\\.fx[^ `\"]*#[A-Za-z0-9_$]+");
 
     private static Path root;
@@ -91,15 +95,17 @@ class StubParityTest {
     /**
      * Stronger than the paths: the generated files themselves, byte for byte, against what kapt
      * wrote for the same sources. This pins element order as well as identity, so a project that
-     * switches front ends sees an empty diff. The one exception is {@code .vibetags-locks}, whose
-     * {@code file}/{@code startLine}/{@code endLine} under kapt point into kapt's generated stubs;
-     * KSP has no stub and no Tree API, so it omits them, and the recording has them stripped.
+     * switches front ends sees an empty diff. The one exception is the position fields of
+     * {@code .vibetags-locks} ({@code file}, {@code startLine}, {@code endLine}): kapt's point into
+     * its generated stubs and KSP's into the {@code .kt} sources (#757), so both sides are compared
+     * with them stripped, and {@link #kspLocksPointAtTheKotlinSource} checks KSP's own.
      */
     @Test
     void generatedFilesAreByteIdenticalToKapt() throws IOException {
         assertEquals(recorded("CLAUDE.md"), Files.readString(root.resolve("CLAUDE.md")), "CLAUDE.md");
         assertEquals(recorded("llms-full.txt"), Files.readString(root.resolve("llms-full.txt")), "llms-full.txt");
-        assertEquals(recorded("vibetags-locks.jsonl"), Files.readString(root.resolve(".vibetags-locks")),
+        assertEquals(recorded("vibetags-locks.jsonl"),
+            POSITION.matcher(Files.readString(root.resolve(".vibetags-locks"))).replaceAll(""),
             ".vibetags-locks");
         Set<String> kaptRules = recordedRules();
         assertTrue(kaptRules.size() > 20, () -> "the recording lost its rule files: " + kaptRules);
@@ -128,6 +134,44 @@ class StubParityTest {
             assertTrue(in != null, () -> "missing recording: " + name);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    /**
+     * Under KSP, {@code .vibetags-locks} points at the Kotlin source (#757): every locked element has
+     * a {@code .kt} file relative to the root and a range, and a sample of ranges is pinned to the
+     * fixture's own lines, including where a declaration's annotations start it, where a class body
+     * and an enum entry end, and that a synthetic copy points at the declaration it copies.
+     */
+    @Test
+    void kspLocksPointAtTheKotlinSource() throws IOException {
+        java.util.Map<String, String> ranges = new java.util.HashMap<>();
+        Matcher m = LOCATED.matcher(Files.readString(root.resolve(".vibetags-locks")));
+        while (m.find()) {
+            int start = Integer.parseInt(m.group(3));
+            int end = Integer.parseInt(m.group(4));
+            assertTrue(m.group(2).startsWith("src/com/fx/") && m.group(2).endsWith(".kt"), m.group());
+            assertTrue(start >= 1 && start <= end, m.group());
+            ranges.put(m.group(1), m.group(2) + ":" + start + "-" + end);
+        }
+        Set<String> locked = new TreeSet<>();
+        Matcher all = LOCKED.matcher(POSITION.matcher(Files.readString(root.resolve(".vibetags-locks"))).replaceAll(""));
+        while (all.find()) {
+            locked.add(all.group(1));
+        }
+        Set<String> unlocated = new TreeSet<>(locked);
+        unlocated.removeAll(ranges.keySet());
+        assertTrue(unlocated.isEmpty(), () -> "locked with no position: " + unlocated);
+
+        String types = "src/com/fx/Types.kt:";
+        assertEquals(types + "17-70", ranges.get("com.fx.Plain"), "annotation line to closing brace");
+        assertEquals(types + "33-33", ranges.get("com.fx.Plain.plain()"));
+        assertEquals(types + "40-40", ranges.get("com.fx.Plain.defs(int)"), "an @JvmOverloads copy");
+        assertEquals(types + "20-20", ranges.get("com.fx.Plain.tag"), "a constructor property");
+        assertEquals(types + "85-85", ranges.get("com.fx.Color.RED"), "an enum entry");
+        assertEquals(types + "89-95", ranges.get("com.fx.Shape"));
+        assertEquals(types + "92-92", ranges.get("com.fx.Shape.DefaultImpls.describe(com.fx.Shape,java.lang.String)"),
+            "a DefaultImpls copy points at the interface member");
+        assertEquals(types + "13-13", ranges.get("com.fx.TypesFacade.TOP_CONST"));
     }
 
     private static Set<String> parameterPaths() throws IOException {

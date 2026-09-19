@@ -1,9 +1,14 @@
 package se.deversity.vibetags.ksp.internal;
 
+import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.internal.SourcePositionResolver;
+import se.deversity.vibetags.processor.model.SourceLocation;
+
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.Locale;
@@ -14,8 +19,12 @@ import java.util.Map;
  * so {@code Trees.instance} rejects it; the processor already runs without the Tree API (ECJ and
  * Gradle's incremental wrapper take the same path), losing only source positions in
  * {@code .vibetags-locks} and the local-declaration warning.
+ *
+ * <p>It gives the positions back as a {@link SourcePositionResolver.Source}: each element carries
+ * the line range of the Kotlin declaration it stands for, so {@code .vibetags-locks} under KSP
+ * points at the {@code .kt} file (under kapt it pointed into the generated stub).
  */
-final class KspProcessingEnvironment implements ProcessingEnvironment {
+final class KspProcessingEnvironment implements ProcessingEnvironment, SourcePositionResolver.Source {
 
     private final Map<String, String> options;
     private final Messager messager;
@@ -68,5 +77,10 @@ final class KspProcessingEnvironment implements ProcessingEnvironment {
     @Override
     public Locale getLocale() {
         return Locale.getDefault();
+    }
+
+    @Override
+    public @Nullable SourceLocation locate(Element element) {
+        return element instanceof KElement known ? known.location() : null;
     }
 }
