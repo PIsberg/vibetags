@@ -22,9 +22,4 @@ public record ModuleIdentity(Path root, String sourceSet) {
 
     /** The conventional primary source set; the only one whose sidecar id carries no suffix. */
     public static final String MAIN = "main";
-
-    /** True when this is the module's primary source set (or the source set could not be told). */
-    public boolean isMain() {
-        return MAIN.equals(sourceSet);
-    }
 }

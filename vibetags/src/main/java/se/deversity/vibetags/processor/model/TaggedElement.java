@@ -119,11 +119,6 @@ public final class TaggedElement {
         return owner != null ? owner : this;
     }
 
-    /** True when this element is its own granular-rules owner (a type or a package). */
-    public boolean isOwner() {
-        return owner == null;
-    }
-
     /** The {@code @AI...} annotation of the given type carried by this element, or {@code null}. */
     public <A extends Annotation> @Nullable A annotation(Class<A> type) {
         return type.cast(annotations.get(type));
