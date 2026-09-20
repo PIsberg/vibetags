@@ -373,7 +373,25 @@ Unticked tasks that are partly done, and what is left of each:
   therefore no source set, the same trap the Java fixture hit. It passed first time, as R1's
   reading predicted, and detects: with `KspElements.getFileObjectOf` forced to return null it goes
   red on the `TESTING.md` assertion. Closes #785.
-- **Not started**: T045 (load tests, now #789), T046 (consumer sweep, now #790).
+- **A third defect, found by CI rather than locally.** Adding an annotated test source set to
+  `examples/multimodule` turned every YAML output into a document with its top-level key twice.
+  Reproduced by deleting `TESTING.md` and rebuilding: **it has nothing to do with routing.**
+  `mergeFor` groups a module's source-set sidecars into one region, then joins their bodies with a
+  blank line, which is right for Markdown and wrong for YAML, where each body carries the whole
+  scaffold. `YamlMergeShape.merge` strips the first and the second survives inside the body. Every
+  reactor fixture annotated main sources only, so no region ever had two bodies and the case was
+  unreachable. Fixed with `YamlMergeShape.mergeSourceSets`, which also merges the keyed buckets
+  (Plandex) rather than letting `splitBuckets` keep the last of two `locked:` keys and drop the
+  main source set's entries. Test first: 6 of 6 YAML platforms red in
+  `MultiModuleYamlValidityTest`, green after.
+- **A fourth, smaller one, also from CI.** The third-party corpus opts into every platform over
+  repositories with main sources only, so `TESTING.md` is opted in and correctly left empty, and
+  the corpus's "no opted-in file is empty" assertion failed on it. `check-platforms.py` now has a
+  one-entry `MAY_BE_EMPTY`, documented in `corpus/README.md`, and emptiness anywhere else still
+  fails.
+- **Not started**: T045 (load tests, now #789, with a verified finding recorded on the issue: the
+  harness compiles from in-memory `JavaFileObject`s, so no source set can be classified and the
+  measurement needs a real source tree first), T046 (consumer sweep, now #790).
 - Pulled forward from Phase 7 because the new service key turned existing gates red: the
   `docs/PLATFORMS.md` row and README config-file count (part of T042), and the empty
   `examples/basic/TESTING.md` plus its `reset-ai-files.sh` entry (part of T039).

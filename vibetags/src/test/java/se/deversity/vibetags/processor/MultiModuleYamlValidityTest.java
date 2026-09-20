@@ -137,6 +137,46 @@ class MultiModuleYamlValidityTest {
         assertTrue(String.valueOf(parseStrict(merged, fileName)).contains(ALPHA));
     }
 
+    /**
+     * The same defect one level in: one module, two source sets.
+     *
+     * <p>Maven and Gradle compile a module's main and test sources as two rounds, so a module whose
+     * test code is annotated has two sidecars sharing one region id. {@code mergeFor} groups them
+     * correctly and then joins the region's bodies with a blank line, which is right for Markdown
+     * and wrong for YAML: each body is a whole document, so the region's contribution arrives at
+     * {@code YamlMergeShape.merge} carrying two scaffolds. The merge strips the first and the
+     * second survives inside the body, top-level key and all.
+     *
+     * <p>It is the same failure the class as a whole is about, and it hid behind the same shape of
+     * fixture: every reactor example annotated main sources only, so no region ever had two bodies.
+     * A consumer that annotates a test fixture and opts into {@code .coderabbit.yaml} hits it on
+     * the first build.
+     */
+    @ParameterizedTest(name = "{2}")
+    @MethodSource("yamlServices")
+    void oneModuleWithAnnotatedMainAndTestSources_isOneValidYamlDocument(
+            String serviceKey, Platform platform, String fileName) {
+        ModuleSidecar main = new ModuleSidecar("core", "core");
+        main.putBody(serviceKey, render(platform, modelWith(ALPHA)));
+        // Same region, different source set: what ModuleSidecar's own Javadoc calls "several
+        // sidecars (one per source set) share one region id".
+        ModuleSidecar tests = new ModuleSidecar("core__test", "core", "core");
+        tests.putBody(serviceKey, render(platform, modelWith(BETA)));
+
+        String merged = ModuleSidecar.mergeFor(serviceKey, List.of(main, tests), false);
+
+        for (String key : topLevelKeys(merged)) {
+            assertEquals(1, countLines(merged, key),
+                fileName + ": '" + key + "' appears more than once at the top level after merging "
+                    + "one module's two source sets. Was:\n" + merged);
+        }
+        String flattened = String.valueOf(parseStrict(merged, fileName));
+        assertTrue(flattened.contains(ALPHA),
+            fileName + ": the main source set's guardrails must survive the parse");
+        assertTrue(flattened.contains(BETA),
+            fileName + ": the test source set's guardrails must survive the parse");
+    }
+
     /** Provenance must survive the fix: a reader still sees which module contributed what. */
     @ParameterizedTest(name = "{2}")
     @MethodSource("yamlServices")

@@ -1353,7 +1353,7 @@ public final class ModuleSidecar {
                 parts.add(pointer); // one pointer per module, after every source set's digest
             }
             if (parts.isEmpty()) continue;
-            contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), String.join("\n\n", parts)));
+            contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), joinParts(serviceKey, parts)));
         }
         if (contributions.isEmpty()) return "";
         // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
@@ -1397,6 +1397,31 @@ public final class ModuleSidecar {
             merged.append('\n');
         }
         return withFrontMatter(frontMatter, merged.toString().strip());
+    }
+
+    /**
+     * One region's contribution, built from the bodies its source sets rendered.
+     *
+     * <p>Blank-line concatenation is right for every format that reads as prose: two source sets'
+     * sections stacked under one sub-marker are exactly what a reader wants. It is wrong for a YAML
+     * document, where each body carries the platform's whole scaffold, so joining two of them puts
+     * a second {@code rules:} or {@code reviews:} inside the contribution, below the point the
+     * merge strips a scaffold from. A strict parser then rejects the file and a lenient one keeps
+     * the last block only, which is the same silent loss {@link YamlMergeShape} was written for.
+     *
+     * <p>A {@code null} from the shape means it no longer describes what the renderer emits. The
+     * old concatenation is then still the better of two wrong answers, the same judgement
+     * {@code mergeFor} already makes one level out.
+     */
+    private static String joinParts(String serviceKey, List<String> parts) {
+        YamlMergeShape shape = PlatformRendererRegistry.mergeShapeFor(serviceKey);
+        if (shape != null && parts.size() > 1) {
+            String merged = shape.mergeSourceSets(parts);
+            if (merged != null) {
+                return merged;
+            }
+        }
+        return String.join("\n\n", parts);
     }
 
     /**
